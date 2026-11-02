@@ -4,6 +4,8 @@
 // `TARIFICADOR_HOGAR_COMPANIAS_EXTRA=mapfre` (y entonces inyecta DNI, nacimiento, nombre y apellidos de la ficha).
 // Ver docs/tarificador/CONOCIMIENTO-PORTALES.md (Mapfre).
 //
+// v0.3.3 (02/11/2026) — lector por DOM de las tarjetas de #/emision-hogar/modalidades (hogar-modalidades.ts) + garantías por modalidad + aviso de controles técnicos.
+//
 // v0.3.2 (02/11/2026) — el guard deja pasar SOLO la XHR de tarificar `/PortalMediadores_fe-web/api/emision/proyectos/tarificacion` (ruta exacta; emitir sigue bloqueado).
 //
 // v0.3.1 (02/11/2026) — PRIMER RUN REAL (5b010917, volcado fallo-5b010917): pantalla «Datos de riesgo - Hogar» (#/emision-hogar/datos-riesgo).
@@ -39,6 +41,7 @@
 import type { Locator, Page } from 'playwright'
 import {
   fechaDdMmAaaaDeIso,
+  type CoberturaOferta,
   importeEs,
   redactarDatosPersonales,
   type CandidatoVersion,
@@ -54,6 +57,7 @@ import { compararFechaEs, esperarCampoAsentado, esperarEditable, importeDePrimaT
 import { cerrarAvisosModales } from './avisos.ts'
 import { ENLACE_TARIFICACION_RAPIDA, enTodosLosMarcos, localizar, ocultarSecretos, pulsablesExactos, urlSinQuery } from './entrada.ts'
 import { login } from './login.ts'
+import { evaluarEnPagina, leerModalidadesDom } from './hogar-modalidades.ts'
 
 /** Flag: APAGADO salvo env `MAPFRE_HOGAR_ACTIVO=true`; el adaptador solo está en `adapters/index.ts` bajo él (lo vigila test/mapfre-hogar.test.ts). */
 export const MAPFRE_HOGAR_ACTIVO = process.env.MAPFRE_HOGAR_ACTIVO === 'true'
@@ -254,7 +258,15 @@ export function importeDePrimaHogar(texto: string | null | undefined): number | 
   return n !== null && n > 0 ? n : null
 }
 
-export type PrimaHogarMapfre = { modalidad: string; primaAnualEur: number; primerReciboEur: number | null }
+export type PrimaHogarMapfre = {
+  modalidad: string
+  primaAnualEur: number
+  primerReciboEur: number | null
+  /** v0.3.3: garantías de la columna de esta modalidad (lector por DOM). Ausente/vacío = sin leer. */
+  coberturas?: CoberturaOferta[]
+  /** v0.3.3: avisos propios de la lectura (p. ej. controles técnicos, garantías incompletas). */
+  avisos?: string[]
+}
 
 const IMPORTE = '\\d{1,3}(?:\\.\\d{3})*,\\d{2}\\s*€|\\d+,\\d{2}\\s*€'
 const aPlano = (t: string) => sinTildes(t)
@@ -293,13 +305,13 @@ export function ofertasDesdePrimasHogar(primas: readonly PrimaHogarMapfre[], sup
     primaNetaEur: null,
     fraccionamiento: 'anual',
     importeReciboEur: p.primerReciboEur ?? p.primaAnualEur,
-    coberturas: [],
+    coberturas: p.coberturas ?? [],
     franquicias: [],
     validaHasta: null,
     referenciaPortal: null,
     pdf: null,
     desglose: null,
-    avisos: ['Prima TOTAL anual de la modalidad leída de la pantalla de precio; sin desglose neta/impuestos.', 'Garantías y capitales de la pantalla sin mapear: no se informan (el bot no descarga el PDF del presupuesto).', ...(supuestos.length ? [`Precio ESTIMADO: se tarificó con supuestos (${supuestos.join(', ')}).`] : [])],
+    avisos: ['Prima TOTAL anual de la modalidad leída de la pantalla de precio; sin desglose neta/impuestos.', p.coberturas?.length ? 'Garantías y capitales leídos de la pantalla de modalidades (columna de esta modalidad); el bot no descarga el PDF del presupuesto.' : 'Garantías y capitales de la pantalla sin mapear: no se informan (el bot no descarga el PDF del presupuesto).', ...(p.avisos ?? []), ...(supuestos.length ? [`Precio ESTIMADO: se tarificó con supuestos (${supuestos.join(', ')}).`] : [])],
   }))
 }
 
@@ -530,10 +542,10 @@ export function resumenPantallaPrecio(d: DatosPantallaPrecio, secretos: Array<st
   return `ruta ${urlSinQuery(d.url).slice(0, 120)} · títulos ${lista(d.titulos, 10)} · botones ${lista(d.botones, 20)} · campos inválidos ${lista(d.invalidos, 12)} · importes en € visibles: ${d.importes}`
 }
 
-async function datosPantalla(page: Page): Promise<DatosPantallaPrecio> {
+async function datosPantalla(page: Page, log?: (m: string, d?: Record<string, unknown>) => void): Promise<DatosPantallaPrecio> {
   const base: DatosPantallaPrecio = { url: page.url(), titulos: [], botones: [], invalidos: [], importes: 0 }
   try {
-    const d = await page.evaluate(() => {
+    const d = await evaluarEnPagina(page, () => {
       const vis = (e: Element) => { const r = (e as HTMLElement).getBoundingClientRect(); return r.width > 0 && r.height > 0 }
       const tx = (sel: string) => Array.from(document.querySelectorAll(sel)).filter(vis).map((e) => (e.textContent ?? '').trim()).filter(Boolean)
       return {
@@ -544,25 +556,36 @@ async function datosPantalla(page: Page): Promise<DatosPantallaPrecio> {
       }
     })
     return { url: page.url(), ...d }
-  } catch { return base }
+  } catch (e) {
+    // v0.3.3: el error del evaluate se registra (antes se tragaba y el atasco salía «vacío» sin saber por qué).
+    log?.('datosPantalla: evaluate falló', { error: (e instanceof Error ? e.message : String(e)).replace(/\s+/g, ' ').slice(0, 200) })
+    return base
+  }
 }
 
 /**
  * Pantalla de MODALIDADES/precio tras «SIGUIENTE»: texto visible con el formato del PDF o, si no, lectura por líneas (`primasDesdeTextoLibre`),
  * estable entre dos lecturas. Sin primas legibles → atasco con lo que se vio (títulos, botones, campos inválidos; sin datos personales). Solo lectura.
  */
-export async function leerPrecioHogar(page: Page, ctx: Pick<ContextoPortal, 'formador'>, esperaMs = ESPERA_PRECIO_MS, secretos: Array<string | undefined> = []): Promise<PrimaHogarMapfre[]> {
+export async function leerPrecioHogar(page: Page, ctx: Pick<ContextoPortal, 'formador'> & { log?: (m: string, d?: Record<string, unknown>) => void }, esperaMs = ESPERA_PRECIO_MS, secretos: Array<string | undefined> = []): Promise<PrimaHogarMapfre[]> {
   const hasta = Date.now() + esperaMs
   let previo: string | null = null
+  let errorDom: string | null = null
   for (;;) {
-    const texto = await page.locator('body').innerText({ timeout: 1_000 }).catch(() => '')
-    const delPdf = primasDesdeTextoPrecio(texto)
-    const primas = delPdf.length ? delPdf : primasDesdeTextoLibre(texto)
+    // v0.3.3: primero el DOM de las tarjetas (pantalla real); los lectores por texto quedan de respaldo.
+    const dom = await leerModalidadesDom(page)
+    if (dom.error && dom.error !== errorDom) { errorDom = dom.error; ctx.log?.('leerModalidadesDom: evaluate falló', { error: dom.error }) }
+    let primas = dom.primas
+    if (!primas.length) {
+      const texto = await page.locator('body').innerText({ timeout: 1_000 }).catch(() => '')
+      const delPdf = primasDesdeTextoPrecio(texto)
+      primas = delPdf.length ? delPdf : primasDesdeTextoLibre(texto)
+    }
     const firma = primas.length ? JSON.stringify(primas) : null
     if (firma !== null && firma === previo) return primas
     previo = firma
     if (Date.now() >= hasta) {
-      const visto = resumenPantallaPrecio(await datosPantalla(page), secretos)
+      const visto = resumenPantallaPrecio(await datosPantalla(page, ctx.log), secretos)
       await hueco(page, ctx.formador, 'Precio', `la prima anual de la pantalla de modalidades (ni el formato del PDF ni la lectura por líneas dieron primas en ${Math.round(esperaMs / 1000)} s; selector no grabado; se vio: ${visto})`)
     }
     await page.waitForTimeout(400)
@@ -574,7 +597,7 @@ export const mapfreHogar = {
   compania: 'mapfre',
   ramo: 'hogar',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.3.2',
+  version: '0.3.3',
   async tarificar(page: Page, f: FormularioHogar, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (!MAPFRE_HOGAR_ACTIVO) throw new ErrorTarificador('datos', `${ADAPTADOR}: adaptador apagado (MAPFRE_HOGAR_ACTIVO = false)`)
     planVivienda(f) // valida antes de abrir el portal
