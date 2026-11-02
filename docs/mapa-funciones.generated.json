@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-02T08:19:49Z",
-  "sha": "244854e27dcc1deaa481b09897fb03b5b6053918",
+  "generadoEn": "2026-11-02T09:34:13Z",
+  "sha": "f8fc304627dc6bb19db7a1d3d142b1e66aa14792",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -69511,7 +69511,7 @@
           "exportada": true,
           "params": "filas: readonly FilaPropagacion[], ref: VehiculoReferencia | null, origenId: string",
           "retorno": "TrabajoPropagado[]",
-          "linea": 140,
+          "linea": 143,
           "resumen": "Propagar la elección de una PERSONA (ya convertida en referencia `humano`) a los DEMÁS trabajos de la oportunidad parados por versión: los que `eleccionPorReferenciaParaTrabajo` (modo humano) resuelve"
         },
         {
@@ -69520,13 +69520,13 @@
           "exportada": true,
           "params": "ofertas: readonly O[], riesgo: unknown",
           "retorno": "O[]",
-          "linea": 151,
+          "linea": 154,
           "resumen": "Las ofertas con el supuesto de la referencia en sus avisos (si el riesgo lleva la marca y no está ya). PURA."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "22ec96096039"
+      "hash": "86610622dda7"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-verificacion-reglas.ts",
@@ -262203,7 +262203,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "07b7880a2463"
+      "hash": "52f66d310141"
     },
     {
       "ruta": "packages/module-tarificacion/src/vehiculo.ts",
