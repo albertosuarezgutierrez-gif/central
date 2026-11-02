@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-02T02:09:38Z",
-  "sha": "6d4ccca513529abe2b159c327b492dc3318fb151",
+  "generadoEn": "2026-11-02T02:48:46Z",
+  "sha": "d6db52ceb578f4ed57bcd34af9777cf17be449b4",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -50208,13 +50208,13 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "Record<string, ValorGarantia>",
-          "linea": 270,
+          "linea": 274,
           "resumen": "El jsonb guardado → garantías. Lo que no tiene la forma se ignora (no se inventa un valor)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8d391ca60f7b"
+      "hash": "591b9b8019f9"
     },
     {
       "ruta": "apps/asegura/lib/documentos/pdf-contrasena.ts",
@@ -58131,7 +58131,7 @@
           "exportada": true,
           "params": "cmp: Pick<ResultadoComparacion, 'ofertas' | 'filas'>",
           "retorno": "OfertaNormalizada[]",
-          "linea": 89,
+          "linea": 91,
           "resumen": "01/11/2026 (AS-26-0042): las ofertas cuya columna sería ENTERA «No figura» (con el cuadro con filas). Nunca se pinta una columna así: el PDF no se genera hasta que la oferta tenga garantías (el borrad"
         },
         {
@@ -58140,7 +58140,7 @@
           "exportada": true,
           "params": "ofertas: readonly OfertaNormalizada[], max = 4",
           "retorno": "OfertaNormalizada[][]",
-          "linea": 108,
+          "linea": 110,
           "resumen": "Las columnas del cuadro por página: la póliza actual (si la hay) en TODAS, para poder comparar sin volver atrás, y las ofertas repartidas hasta `max` columnas por tabla."
         },
         {
@@ -58149,7 +58149,7 @@
           "exportada": true,
           "params": "filas: readonly FilaMatriz[], ids: readonly string[]",
           "retorno": "FilaMatriz[]",
-          "linea": 119,
+          "linea": 121,
           "resumen": "Las filas del cuadro para un trozo de columnas: las que NINGUNA de esas ofertas menciona se omiten."
         },
         {
@@ -58158,7 +58158,7 @@
           "exportada": true,
           "params": "ofertas: readonly OfertaNormalizada[]",
           "retorno": "Map<string, string>",
-          "linea": 124,
+          "linea": 126,
           "resumen": "Cabecera de cada columna: compañía y, si hace falta para distinguirla, su nivel (`etiquetasOfertas`)."
         },
         {
@@ -58167,7 +58167,7 @@
           "exportada": false,
           "params": "o: Pick<OfertaNormalizada, 'firmeza' | 'fuente'>",
           "retorno": null,
-          "linea": 130
+          "linea": 132
         },
         {
           "nombre": "textoPrimaOferta",
@@ -58175,7 +58175,7 @@
           "exportada": true,
           "params": "o: Pick<OfertaNormalizada, 'primaTotal' | 'primaPeriodo' | 'firmeza' | 'fuente'>",
           "retorno": "string",
-          "linea": 139,
+          "linea": 141,
           "resumen": "· nada → «No figura». Con `*` si es un precio ESTIMADO (la compañía lo confirma al emitir)."
         },
         {
@@ -58184,7 +58184,7 @@
           "exportada": true,
           "params": "ofertas: readonly Pick<OfertaNormalizada, 'rol' | 'fuente' | 'firmeza'>[]",
           "retorno": "string",
-          "linea": 151,
+          "linea": 153,
           "resumen": "La frase de debajo del título del cuadro, según de dónde salen los precios. «Tal como constan en los documentos» solo vale para los PDF de compañía: un precio de Avant2 es un precio ESTIMADO que calcu"
         },
         {
@@ -58193,7 +58193,7 @@
           "exportada": true,
           "params": "ofertas: readonly Pick<OfertaNormalizada, 'primaTotal' | 'primaPeriodo' | 'firmeza' | 'fuente'>[]",
           "retorno": "string[]",
-          "linea": 168,
+          "linea": 170,
           "resumen": "Notas al pie del cuadro (estimados y precios que no son de un año)."
         },
         {
@@ -58202,7 +58202,7 @@
           "exportada": true,
           "params": "c: { referencia: string | null; telefono?: string | null; email?: string | null }",
           "retorno": "",
-          "linea": 183,
+          "linea": 185,
           "resumen": "La LLAMADA A LA ACCIÓN del PDF: cómo aceptar. 🚨 Sin enlace con token (el PDF se reenvía; el enlace del portal va solo por correo/WhatsApp y caduca): se acepta contestando o llamando con la REFERENCIA"
         },
         {
@@ -58211,7 +58211,7 @@
           "exportada": false,
           "params": "L: LienzoPdf, tipo: IconoCelda, x: number, yTop: number",
           "retorno": null,
-          "linea": 235,
+          "linea": 237,
           "resumen": "Dibuja el icono de una celda (✓ verde, ✗ rojo, ? gris) en un hueco de 8×8 con esquina superior izquierda (x, yTop)."
         },
         {
@@ -58220,7 +58220,7 @@
           "exportada": false,
           "params": "L: LienzoPdf, t: string, tam = 14, siguiente = 40",
           "retorno": null,
-          "linea": 249
+          "linea": 251
         },
         {
           "nombre": "pintarCuadroComparativo",
@@ -58228,7 +58228,7 @@
           "exportada": true,
           "params": "L: LienzoPdf, cmp: ResultadoComparacion, opts: { titulo?: string; recomendadaId?: string | null } = {}",
           "retorno": "Promise<void>",
-          "linea": 256,
+          "linea": 258,
           "resumen": "El cuadro de garantías (y precios) de un estudio, con la póliza actual en cada tabla y su leyenda."
         },
         {
@@ -58237,7 +58237,7 @@
           "exportada": true,
           "params": "L: LienzoPdf, narrativa: NarrativaPdf",
           "retorno": "void",
-          "linea": 366,
+          "linea": 368,
           "resumen": "«Análisis y recomendación» con la etiqueta SIEMPRE visible de quién lo redactó. No pinta nada si no hay texto."
         },
         {
@@ -58246,13 +58246,13 @@
           "exportada": true,
           "params": "L: LienzoPdf, c: { referencia: string | null; telefono?: string | null; email?: string | null }",
           "retorno": "void",
-          "linea": 391,
+          "linea": 393,
           "resumen": "La llamada a la acción: una caja cobalto, visible, con cómo aceptar y la referencia (`textoLlamadaAccion`)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "99a9873497fe"
+      "hash": "240c7d8136db"
     },
     {
       "ruta": "apps/asegura/lib/presupuesto-pdf-datos.ts",
@@ -236573,7 +236573,7 @@
           "exportada": false,
           "params": "ramo: RamoGarantias, nombre: string",
           "retorno": "string[]",
-          "linea": 137,
+          "linea": 144,
           "resumen": "Las claves del catálogo que describe UNA cobertura (normalmente una; «Rotura de faro/Casco» → una)."
         },
         {
@@ -236582,7 +236582,7 @@
           "exportada": true,
           "params": "ramo: RamoGarantias, nombre: string",
           "retorno": "string[]",
-          "linea": 149,
+          "linea": 156,
           "resumen": "Las claves del catálogo que nombra UNA cobertura por su NOMBRE (sin texto ni contexto). Lo usa la taxonomía de comparación (`normalizarGarantia` de auto/moto) para que un PDF de coche caiga en las MIS"
         },
         {
@@ -236591,7 +236591,7 @@
           "exportada": false,
           "params": "ramo: RamoGarantias, parte: string, propias: readonly string[]",
           "retorno": "string[]",
-          "linea": 166,
+          "linea": 173,
           "resumen": "Las claves de UNA parte del texto de un bloque. Dentro de un bloque de RC, una parte «RC …» o «Responsabilidad civil …» que no nombra otra RC es la RC del propio bloque (29/09/2026, Occident «RC volun"
         },
         {
@@ -236600,7 +236600,7 @@
           "exportada": false,
           "params": "ramo: RamoGarantias, texto: string | null | undefined",
           "retorno": "string[] | null",
-          "linea": 182,
+          "linea": 189,
           "resumen": "Daños propios LIMITADOS a causas concretas, escritos en PROSA (29/09/2026). Mapfre llama «Daños propios», incluida, a un bloque de su Terceros Ampliado cuyo texto es «Daños Propios por atropello de an"
         },
         {
@@ -236609,7 +236609,7 @@
           "exportada": true,
           "params": "ramo: RamoGarantias, lista: readonly CoberturaParaClasificar[] | null, opciones?: readonly OpcionProductoLegible[] | null, contexto?: ContextoGarantias | null,",
           "retorno": "GarantiasClasificadas",
-          "linea": 200,
+          "linea": 207,
           "resumen": "Lleva las coberturas de UN precio al catálogo del ramo. Todas las claves salen en el resultado: `si` (reconocida e incluida) · `no` (reconocida y marcada NO incluida) · `no_consta` (el resto). Varias "
         },
         {
@@ -236618,7 +236618,7 @@
           "exportada": true,
           "params": "contexto: ContextoGarantias | null | undefined",
           "retorno": "boolean",
-          "linea": 277,
+          "linea": 284,
           "resumen": "PURO. ¿El precio es un todo riesgo? Lo dice su CATEGORÍA (el nivel que da el vendor: «Todo Riesgo con Franquicia»…). La modalidad solo cuenta si no hay categoría: Allianz llama «MOTO DAÑOS» a un todo "
         },
         {
@@ -236627,7 +236627,7 @@
           "exportada": true,
           "params": "ramo: RamoGarantias, clave: string",
           "retorno": "boolean",
-          "linea": 296
+          "linea": 303
         },
         {
           "nombre": "etiquetasGarantiasDeLey",
@@ -236635,7 +236635,7 @@
           "exportada": true,
           "params": "ramo: RamoGarantias | null",
           "retorno": "string[]",
-          "linea": 301,
+          "linea": 308,
           "resumen": "Etiquetas de las garantías de ley del ramo, en el orden del catálogo (para «incluida siempre»)."
         },
         {
@@ -236644,7 +236644,7 @@
           "exportada": true,
           "params": "opciones: readonly OpcionProductoLegible[] | null | undefined",
           "retorno": "Record<string, EstadoGarantia>",
-          "linea": 328,
+          "linea": 335,
           "resumen": "PURO. Lo que las opciones afirman de cada garantía; lo que no afirman, no sale (no es un «no»)."
         },
         {
@@ -236653,7 +236653,7 @@
           "exportada": true,
           "params": "lista: readonly CoberturaParaClasificar[] | null, opciones?: readonly OpcionProductoLegible[] | null,",
           "retorno": "EstadoGarantia",
-          "linea": 359,
+          "linea": 366,
           "resumen": "Si el precio lleva asistencia AMPLIADA. PURO. Manda la opción con la que se tarificó (es la elección real); si no la hay, el texto de la cobertura. `no` solo con una señal explícita: la opción dice «E"
         },
         {
@@ -236662,7 +236662,7 @@
           "exportada": false,
           "params": "c: CoberturaParaClasificar",
           "retorno": "boolean",
-          "linea": 386,
+          "linea": 393,
           "resumen": "Una cobertura que el vendor manda SIN decir si va incluida y cuyo texto la declara «(opcional)»: es un extra que no está en este precio (Fidelidade hogar: «TODO RIESGO ACCIDENTAL (OPCIONAL)…», `inclui"
         },
         {
@@ -236671,7 +236671,7 @@
           "exportada": true,
           "params": "lista: readonly CoberturaParaClasificar[] | null",
           "retorno": "EstadoGarantia",
-          "linea": 391,
+          "linea": 398,
           "resumen": "PURO. Asistencia en el hogar ampliada según el texto (Fidelidade: «ASISTENCIA HOGAR AMPLIADA/BÁSICA»)."
         },
         {
@@ -236680,7 +236680,7 @@
           "exportada": true,
           "params": "texto: string | null | undefined",
           "retorno": "",
-          "linea": 410,
+          "linea": 417,
           "resumen": "Las partes de una cobertura cuyo texto las ENUMERA (Occident: «» Animales cinegéticos y domésticos: Incluida. : CONTRATADA.» Fenómenos atmosféricos con franquicia: Franquicia 600 €. : CONTRATADA»). PU"
         },
         {
@@ -236689,7 +236689,7 @@
           "exportada": true,
           "params": "ramo: RamoGarantias, nombres: readonly string[]",
           "retorno": "string[]",
-          "linea": 449,
+          "linea": 456,
           "resumen": "Nombres que el catálogo no reconoce y que tampoco están en `FUERA_DE_CATALOGO`: lo NUEVO."
         },
         {
@@ -236698,7 +236698,7 @@
           "exportada": true,
           "params": "ramo: RamoGarantias, lista: readonly CoberturaParaClasificar[] | null",
           "retorno": "string[]",
-          "linea": 456,
+          "linea": 463,
           "resumen": "Nombres que no casan con ninguna garantía del catálogo: la lista para ir afinando patrones."
         },
         {
@@ -236707,7 +236707,7 @@
           "exportada": true,
           "params": "ramo: string | null | undefined",
           "retorno": "RamoGarantias | null",
-          "linea": 463
+          "linea": 470
         },
         {
           "nombre": "descuentosDeOpciones",
@@ -236715,13 +236715,13 @@
           "exportada": true,
           "params": "opciones: readonly OpcionProductoLegible[] | null | undefined",
           "retorno": "DescuentoComercial[] | null",
-          "linea": 476,
+          "linea": 483,
           "resumen": "PURO. Los descuentos comerciales de un precio, leídos de sus opciones (29/09/2026). Medido: Allianz «Descuento comercial % (CAP)» y «(venta cruzada)», Occident y Generali «Descuento comercial». `null`"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "08fc3a62813b"
+      "hash": "b0392405799d"
     },
     {
       "ruta": "packages/module-seguros/src/claves-eiac.ts",
@@ -237351,7 +237351,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "518a7e001481"
+      "hash": "479b8c11fb64"
     },
     {
       "ruta": "packages/module-seguros/src/coherencia-cotizacion.ts",
@@ -237593,6 +237593,7 @@
       "ambito": "packages/module-seguros",
       "resumen": "EL motor de comparativa de ofertas de seguro (único para toda fuente y todo ramo, 20/10/2026): matriz garantía × oferta, tabla de precios, diferencias frente a la póliza actual y un ORDEN explicado. REGLA: `null` = «no figura en el documento» ≠ `excluida` ≠ 0. Nunca `?? 0`. Sin «mejor oferta»: el or",
       "exporta": [
+        "garantiasLeidasDeDocumento",
         "estadoTriple",
         "compararOfertas",
         "cifrasDeMatriz",
@@ -237600,12 +237601,21 @@
       ],
       "funciones": [
         {
+          "nombre": "garantiasLeidasDeDocumento",
+          "kind": "function",
+          "exportada": true,
+          "params": "o: { compania?: string | null; fuente?: string | null; avisos?: readonly string[] | null }",
+          "retorno": "boolean",
+          "linea": 148,
+          "resumen": "PURO. ¿Las garantías de esta oferta salen de un documento completo de la compañía? Lo dicen los avisos del bot («Garantías leídas del PDF del proyecto de Mapfre», «…del PDF del presupuesto de Generali"
+        },
+        {
           "nombre": "num",
           "kind": "arrow",
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "n is number",
-          "linea": 135
+          "linea": 153
         },
         {
           "nombre": "estadoEfectivo",
@@ -237613,7 +237623,7 @@
           "exportada": false,
           "params": "v: ValorGarantia | undefined",
           "retorno": "EstadoGarantia | null",
-          "linea": 138,
+          "linea": 156,
           "resumen": "Estado efectivo: si no hay estado pero sí cifra, la garantía está incluida; si no hay nada, no figura."
         },
         {
@@ -237622,7 +237632,7 @@
           "exportada": false,
           "params": "v: ValorGarantia | undefined",
           "retorno": "boolean",
-          "linea": 143
+          "linea": 161
         },
         {
           "nombre": "estadoTriple",
@@ -237630,7 +237640,7 @@
           "exportada": true,
           "params": "v: ValorGarantia | null | undefined",
           "retorno": "EstadoTriple",
-          "linea": 147,
+          "linea": 165,
           "resumen": "El estado de tres valores de una celda. Solo `excluida` declarada es «no incluida»."
         },
         {
@@ -237639,7 +237649,7 @@
           "exportada": false,
           "params": "clave: string",
           "retorno": "string",
-          "linea": 153,
+          "linea": 171,
           "resumen": "Etiqueta de una clave que no es de la taxonomía del ramo: la del catálogo de Avant2 si la tiene, si no la clave."
         },
         {
@@ -237648,7 +237658,7 @@
           "exportada": false,
           "params": "v: ValorGarantia | undefined",
           "retorno": "number | null",
-          "linea": 162,
+          "linea": 180,
           "resumen": "Importe comparable de una garantía: capital si lo hay, si no límite."
         },
         {
@@ -237657,7 +237667,7 @@
           "exportada": false,
           "params": "act: ValorGarantia | undefined, of: ValorGarantia | undefined",
           "retorno": "",
-          "linea": 165,
+          "linea": 183,
           "resumen": "+1 = la oferta es mejor que la actual, -1 peor, 0 igual o no comparable."
         },
         {
@@ -237666,7 +237676,7 @@
           "exportada": true,
           "params": "input: { ramo: RamoOferta; ofertas: OfertaNormalizada[]; superficieM2?: number | null }",
           "retorno": "ResultadoComparacion",
-          "linea": 189
+          "linea": 207
         },
         {
           "nombre": "plural",
@@ -237674,7 +237684,7 @@
           "exportada": false,
           "params": "n: number, uno: string, varios: string",
           "retorno": null,
-          "linea": 264
+          "linea": 289
         },
         {
           "nombre": "ordenar",
@@ -237682,7 +237692,7 @@
           "exportada": false,
           "params": "ofertas: readonly OfertaNormalizada[], resumen: readonly ResumenOferta[], actual: OfertaNormalizada | null",
           "retorno": "RankingComparacion",
-          "linea": 270,
+          "linea": 295,
           "resumen": "El ORDEN explicado: determinista (misma entrada → mismo orden y mismos textos) y solo con hechos del cuadro. Entran las OFERTAS con prima anual; la póliza actual es la referencia, no compite."
         },
         {
@@ -237691,7 +237701,7 @@
           "exportada": false,
           "params": "n: number, dec = 2",
           "retorno": "number",
-          "linea": 314
+          "linea": 339
         },
         {
           "nombre": "pctEs",
@@ -237699,7 +237709,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 319
+          "linea": 344
         },
         {
           "nombre": "entEs",
@@ -237707,7 +237717,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 320
+          "linea": 345
         },
         {
           "nombre": "cifrasDeMatriz",
@@ -237715,7 +237725,7 @@
           "exportada": true,
           "params": "r: ResultadoComparacion",
           "retorno": "Set<string>",
-          "linea": 327,
+          "linea": 352,
           "resumen": "Todas las cifras que aparecen en la matriz y el resumen, ya formateadas en español. Un cepo de la narrativa IA comprueba que cada número del texto esté aquí: lo que no esté, es inventado. Importes en "
         },
         {
@@ -237724,7 +237734,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string",
-          "linea": 384,
+          "linea": 409,
           "resumen": "JSON con las claves ordenadas: el mismo objeto da SIEMPRE el mismo texto."
         },
         {
@@ -237733,13 +237743,13 @@
           "exportada": true,
           "params": "input: { ramo: RamoOferta; ofertas: readonly OfertaNormalizada[]; superficieM2?: number | null; extra?: Record<string, unknown> }",
           "retorno": "string",
-          "linea": 398,
+          "linea": 423,
           "resumen": "El texto CANÓNICO de lo que entra en la comparativa (versión del motor, ramo, superficie, ofertas y lo que se pase en `extra`, p. ej. la recomendada). Lo que no cambia el resultado (la cita literal de"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "717a3ea73715"
+      "hash": "09ee02319615"
     },
     {
       "ruta": "packages/module-seguros/src/comparativa-precios.ts",
@@ -246130,7 +246140,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4e4d5466e3f3"
+      "hash": "6c854205b65e"
     },
     {
       "ruta": "packages/module-seguros/src/oportunidad-aviso.ts",
@@ -264208,6 +264218,6 @@
   ],
   "resumen": {
     "archivos": 5479,
-    "funciones": 21298
+    "funciones": 21299
   }
 }
