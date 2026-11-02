@@ -409,3 +409,18 @@ test('🚨 reservarSinDuplicado y reservarEmision re-cuentan bajo candado ANTES 
   const cot = FUENTE_LIBRO('apps/asegura/lib/codeoscopic/cotizar.ts')
   assert.match(cot, /reserva\.resultado === 'tope'\) return \{ ok: false/, 'cotizar() corta si la recuenta dice que no cabe')
 })
+
+test('🚨 el embudo de emisión distingue TopeAlcanzadoBajoCandado (tope) de un fallo de libro, y pasa env a la reserva', () => {
+  // `reservarEmision` lanza TopeAlcanzadoBajoCandado cuando, bajo el candado, ya no cabe. Antes el
+  // catch genérico lo devolvía como `sin-libro` (falso «no se pudo leer el libro»).
+  const src = FUENTE_LIBRO('apps/asegura/lib/codeoscopic/libro-emision.ts')
+  assert.match(src, /import\s*\{[^}]*TopeAlcanzadoBajoCandado[^}]*\}\s*from ['"]\.\/consumo\.ts['"]/, 'importa TopeAlcanzadoBajoCandado')
+  const iCatch = src.indexOf('await reservarEmision(')
+  const tramo = src.slice(iCatch, iCatch + 900)
+  assert.match(
+    tramo,
+    /e instanceof TopeAlcanzadoBajoCandado[\s\S]{0,120}razon:\s*e\.razon[\s\S]{0,80}mensaje:\s*e\.message/,
+    'un tope bajo candado se devuelve con su razón, no como sin-libro',
+  )
+  assert.match(tramo, /env,/, 'reservarEmision recibe el env de las opciones (tope en euros coherente)')
+})
