@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-02T18:37:24Z",
-  "sha": "d0a17e57050a0727101997f83788b3468324f776",
+  "generadoEn": "2026-11-02T19:34:23Z",
+  "sha": "82dd1bc0572652470ecfa911dc18ec34054098d2",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -228105,6 +228105,399 @@
       "hash": "9c5ac917d0a6"
     },
     {
+      "ruta": "packages/module-cima/src/sombra/comparar.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "Fase 4 de la unificación de la ingesta CIMA (spec 2026-11-02) — comparador en SOMBRA. `compararSombra` repite los ficheros crudos que el CRM ya guardó (`cima_cuarentena_crudo`, descifrados por el caller) por el pipeline de CENTRAL (`buildCimaPullDeps` + `runCimaPull`) sobre un `db` GRABADOR (`grabad",
+      "exporta": [
+        "exigirEscritorNoCentral",
+        "claveNatural",
+        "clasificarEntidades",
+        "compararSombra"
+      ],
+      "funciones": [
+        {
+          "nombre": "exigirEscritorNoCentral",
+          "kind": "function",
+          "exportada": true,
+          "params": "...envs: ReadonlyArray<Readonly<Record<string, string | undefined>>>",
+          "retorno": "void",
+          "linea": 93,
+          "resumen": "PURO. Aborta si el escritor REAL es central (en cualquiera de los entornos dados)."
+        },
+        {
+          "nombre": "esComparada",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "t: string | null",
+          "retorno": "t is TablaComparada",
+          "linea": 144
+        },
+        {
+          "nombre": "claveNatural",
+          "kind": "function",
+          "exportada": true,
+          "params": "tabla: TablaComparada, fila: Readonly<Record<string, unknown>>",
+          "retorno": "string | null",
+          "linea": 147,
+          "resumen": "PURO. Clave natural como texto estable, o `null` si falta alguna parte."
+        },
+        {
+          "nombre": "evaluar",
+          "kind": "function",
+          "exportada": false,
+          "params": "e: ExprSql, params: readonly unknown[], excluded: Readonly<Record<string, unknown>>, actual: Readonly<Record<string, unknown>>,",
+          "retorno": "unknown",
+          "linea": 155
+        },
+        {
+          "nombre": "valoresFila",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: EscrituraParseada, fila: readonly ExprSql[], params: readonly unknown[]",
+          "retorno": null,
+          "linea": 184,
+          "resumen": "Valores de una fila de VALUES (sin `default`; lo no evaluable, marcado)."
+        },
+        {
+          "nombre": "filaCrmPorClave",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: Corrida, tabla: TablaComparada, valores: Record<string, unknown>",
+          "retorno": null,
+          "linea": 205
+        },
+        {
+          "nombre": "idSintetico",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "c: Corrida",
+          "retorno": null,
+          "linea": 215
+        },
+        {
+          "nombre": "responder",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: Corrida, e: EscrituraGrabada",
+          "retorno": "Promise<unknown[]>",
+          "linea": 219,
+          "resumen": "Responde a una escritura grabada: filas del `returning` con ids coherentes (el real si la entidad ya existe en la BD, uno sintético si no) y `xmax = 0` según exista."
+        },
+        {
+          "nombre": "reconstruir",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: Corrida, escrituras: readonly EscrituraGrabada[]",
+          "retorno": null,
+          "linea": 253,
+          "resumen": "Reconstruye, en orden y sin las revertidas, el estado que central dejaría por entidad."
+        },
+        {
+          "nombre": "clasificarEntidades",
+          "kind": "function",
+          "exportada": true,
+          "params": "entidades: Iterable<EntidadCentral>, filasCrmDeLosCrudos: ReadonlyArray<{ tabla: TablaComparada; fila: FilaBd }>, descifrar?: (v: string) => string | null,",
+          "retorno": "",
+          "linea": 323,
+          "resumen": "PURO. Clasifica las entidades de central frente a la BD, y añade lo que solo tiene el CRM."
+        },
+        {
+          "nombre": "leerSinBd",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "sql, _params, modo",
+          "retorno": null,
+          "linea": 373,
+          "resumen": "Lectura por defecto sin BD (como el golden): catálogo de columnas → «existe»; resto vacío."
+        },
+        {
+          "nombre": "compararSombra",
+          "kind": "function",
+          "exportada": true,
+          "params": "opts: CompararSombraOpts",
+          "retorno": "Promise<InformeSombra>",
+          "linea": 395
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2a8e76966204"
+    },
+    {
+      "ruta": "packages/module-cima/src/sombra/ejecutar.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "Fase 4 (sombra) — ejecución contra la BD REAL en SOLO LECTURA. Lo usa `scripts/cima-sombra.mts` (y el workflow manual `cima-sombra.yml`). Cuatro seguros, en este orden: 1. `CIMA_ESCRITOR` real ≠ `central` (si no, aborta ANTES de leer la URL ni conectar); y se fuerza `process.env.CIMA_ESCRITOR = \"nin",
+      "exporta": [
+        "prepararEntornoSombra",
+        "ejecutarSombra"
+      ],
+      "funciones": [
+        {
+          "nombre": "prepararEntornoSombra",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: Record<string, string | undefined> = process.env",
+          "retorno": "void",
+          "linea": 38,
+          "resumen": "Paso 1. Lanza `CimaSombraEscritorCentralError` si el escritor real es central; si no, fija `ninguno` en el entorno del proceso (nada de lo que corra después puede escribir)."
+        },
+        {
+          "nombre": "lectorEstado",
+          "kind": "function",
+          "exportada": false,
+          "params": "tx: Tx, correduriaId: string",
+          "retorno": "LectorEstadoActual",
+          "linea": 57,
+          "resumen": "Lector del estado actual sobre la transacción de solo lectura. Las tablas y columnas salen de listas cerradas (`CLAVES_NATURALES`), nunca de datos."
+        },
+        {
+          "nombre": "lectorSql",
+          "kind": "function",
+          "exportada": false,
+          "params": "tx: Tx, fallos: { n: number }",
+          "retorno": "LectorSql",
+          "linea": 77,
+          "resumen": "Reenvío de las lecturas del pipeline. Cada una en su SAVEPOINT: si Postgres rechaza algo (p. ej. por ser solo lectura), la transacción sigue viva y la lectura sale vacía."
+        },
+        {
+          "nombre": "ejecutarSombra",
+          "kind": "function",
+          "exportada": true,
+          "params": "o: EjecutarSombraOpts = {}",
+          "retorno": "Promise<InformeSombra &",
+          "linea": 97
+        }
+      ],
+      "tablas": [
+        "cima_cuarentena_crudo",
+        "postgres"
+      ],
+      "rutaApi": null,
+      "hash": "e17bf8babdc4"
+    },
+    {
+      "ruta": "packages/module-cima/src/sombra/grabador.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "Fase 4 (sombra) — `db` de Drizzle GRABADOR para correr el pipeline de central sin escribir NADA (mismo principio que el arnés del golden, `../db/equivalencia-persist-arnes.ts`). Driver `pg-proxy`: cada sentencia pasa por aquí y - si es LECTURA pura (`esLectura`), se REENVÍA a `leerSelect` (en la som",
+      "exporta": [
+        "crearDbGrabador"
+      ],
+      "funciones": [
+        {
+          "nombre": "crearDbGrabador",
+          "kind": "function",
+          "exportada": true,
+          "params": "o: { leerSelect: LectorSql; alEscribir: ResponderEscritura }",
+          "retorno": "DbGrabador",
+          "linea": 48
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "30c11267eea3"
+    },
+    {
+      "ruta": "packages/module-cima/src/sombra/informe.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "Fase 4 (sombra) — PURO. Normalización y comparación de valores, y ENMASCARADO del informe: el informe se sube como artefacto de GitHub, así que no lleva PII en claro. Política de valores en el informe (`valorVisible`), del más al menos conservador: - columna con nombre sensible (nombre, NIF, IBAN, e",
+      "exporta": [
+        "esCifrado",
+        "normalizarValor",
+        "compararValores",
+        "valorVisible",
+        "enmascararInforme"
+      ],
+      "funciones": [
+        {
+          "nombre": "esCifrado",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "boolean",
+          "linea": 25,
+          "resumen": "Marca de cifrado de `module-seguros-pii` (AES-GCM con IV aleatorio)."
+        },
+        {
+          "nombre": "canonico",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "unknown",
+          "linea": 27
+        },
+        {
+          "nombre": "normalizarValor",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "unknown",
+          "linea": 41,
+          "resumen": "PURO. Lleva un valor de parámetro de Drizzle o de una fila de postgres.js a una forma comparable: Date/timestamp → ISO UTC; JSON (texto u objeto) → JSON canónico."
+        },
+        {
+          "nombre": "compararValores",
+          "kind": "function",
+          "exportada": true,
+          "params": "central: unknown, crm: unknown, descifrar?: (v: string) => string | null",
+          "retorno": "Igualdad",
+          "linea": 72,
+          "resumen": "PURO. Compara un valor de central con el de la BD. Los cifrados solo se comparan si hay `descifrar` (IV aleatorio: dos cifrados del mismo dato NUNCA son iguales)."
+        },
+        {
+          "nombre": "valorVisible",
+          "kind": "function",
+          "exportada": true,
+          "params": "columna: string, v: unknown",
+          "retorno": "unknown",
+          "linea": 104,
+          "resumen": "PURO. Cómo aparece un valor en el informe (ver política arriba)."
+        },
+        {
+          "nombre": "enmascararInforme",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: T",
+          "retorno": "T",
+          "linea": 123,
+          "resumen": "PURO. Pasa `sanitizePiiES` por todas las cadenas (claves incluidas) de un objeto."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a82cb790964c"
+    },
+    {
+      "ruta": "packages/module-cima/src/sombra/sql-escrituras.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "Fase 4 (sombra) — PURO. Clasifica y DESCOMPONE las sentencias SQL que genera Drizzle (`pg-core`) para la capa de BD de la ingesta, sin ejecutarlas. Dos usos: 1. `esLectura` decide qué sentencia puede REENVIARSE a la BD real (solo lectura) y cuál se GRABA sin ejecutar. Ante la duda, NO es lectura (se",
+      "exporta": [
+        "quitarBloqueo",
+        "esLectura",
+        "dividirNivelSuperior",
+        "parsearExpr",
+        "parsearEscritura"
+      ],
+      "funciones": [
+        {
+          "nombre": "quitarBloqueo",
+          "kind": "function",
+          "exportada": true,
+          "params": "sql: string",
+          "retorno": "string",
+          "linea": 45,
+          "resumen": "Quita el bloqueo final (`for update`, `for share`…) de un SELECT: en una transacción READ ONLY Postgres lo rechaza, y la sombra no necesita bloquear nada."
+        },
+        {
+          "nombre": "sinLiterales",
+          "kind": "function",
+          "exportada": false,
+          "params": "sql: string",
+          "retorno": "string",
+          "linea": 54,
+          "resumen": "Quita literales de texto e identificadores entre comillas: una columna llamada «delete» o un literal 'update' no deben confundir al clasificador."
+        },
+        {
+          "nombre": "esLectura",
+          "kind": "function",
+          "exportada": true,
+          "params": "sql: string",
+          "retorno": "boolean",
+          "linea": 60,
+          "resumen": "PURO. `true` solo si la sentencia (ya sin bloqueo final) es un SELECT/WITH sin ninguna palabra de escritura o de efecto lateral."
+        },
+        {
+          "nombre": "dividirNivelSuperior",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string, sep = \",\"",
+          "retorno": "string[]",
+          "linea": 68,
+          "resumen": "Divide por `sep` a nivel superior (fuera de paréntesis y comillas)."
+        },
+        {
+          "nombre": "buscarNivelSuperior",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string, kw: string, desde = 0",
+          "retorno": "number",
+          "linea": 93,
+          "resumen": "Posición de la palabra clave `kw` (minúsculas, rodeada de espacios) a nivel superior."
+        },
+        {
+          "nombre": "ident",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 114
+        },
+        {
+          "nombre": "columnaDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "ref: string",
+          "retorno": "",
+          "linea": 117,
+          "resumen": "Columna de una referencia `\"tabla\".\"col\"`, `\"col\"` o `col`."
+        },
+        {
+          "nombre": "parentesisCierraAlFinal",
+          "kind": "function",
+          "exportada": false,
+          "params": "t: string",
+          "retorno": "boolean",
+          "linea": 125,
+          "resumen": "`true` si el paréntesis que abre la primera vez es el que cierra al final (`coalesce(a) || coalesce(b)` NO es un coalesce)."
+        },
+        {
+          "nombre": "parsearExpr",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "ExprSql",
+          "linea": 142
+        },
+        {
+          "nombre": "parsearSet",
+          "kind": "function",
+          "exportada": false,
+          "params": "trozo: string",
+          "retorno": "Array<",
+          "linea": 160
+        },
+        {
+          "nombre": "parsearReturning",
+          "kind": "function",
+          "exportada": false,
+          "params": "sql: string, desde: number",
+          "retorno": "string[]",
+          "linea": 172
+        },
+        {
+          "nombre": "VACIA",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "verbo: EscrituraParseada[\"verbo\"], tabla: string | null",
+          "retorno": "EscrituraParseada",
+          "linea": 178
+        },
+        {
+          "nombre": "parsearEscritura",
+          "kind": "function",
+          "exportada": true,
+          "params": "sqlTexto: string",
+          "retorno": "EscrituraParseada",
+          "linea": 190,
+          "resumen": "PURO. Descompone una escritura de Drizzle. Lo que no reconoce → `verbo: \"otro\"`."
+        }
+      ],
+      "tablas": [
+        "set"
+      ],
+      "rutaApi": null,
+      "hash": "b15ccce367f8"
+    },
+    {
       "ruta": "packages/module-cima/src/wse-schemas.ts",
       "ambito": "packages/module-cima",
       "exporta": [
@@ -268439,7 +268832,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5536,
-    "funciones": 21672
+    "archivos": 5541,
+    "funciones": 21708
   }
 }
