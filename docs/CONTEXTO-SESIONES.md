@@ -12,6 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 
+## (02/11/2026) Control 2026 pisos: expenses retirada · métrica «Gastos mes» sivra
+- PR #5354 mergeado (lavandería redondeada). BD: 2025/421 → pagada (27/10); 2025/444 insertada en `limpieza_facturas`.
+- `expenses` (34 filas, congelada 27/04) está 100 % en `gastos`; duplicados AFV NO borrados (inútil). `lib/adapters/sivra.ts` pasa a leer `gastos` (daba 0€ desde mayo) + guardián (visto en rojo).
+- Hallazgo: luz/agua ene–abr con piso ROTADO entre tablas (Luxury/Duplex/Bustos); en auditoría `jefe-contabilidad` (scratchpad/anual/contabilidad). Sique 2026: 202 facturadas vs 204 salidas.
+
 ## (01/11/2026) Factura Sique Brilla octubre · cuadre por correo: lavandería redondeada
 - La factura nº 2025/444 (octubre, 1.889,06€) llegó y el triaje la procesó, pero NO se guardó: lavandería venía «285 ud × 1,70 = 485,21» (kg redondeados) y `comprobarAritmetica` la marcaba.
 - Arreglo en `lib/sivra/factura-cuadre.ts`: en lavandería se acepta si `round(total/precio) === unidades`; limpieza sigue estricta. Fixture octubre + brazo desviado (cepo visto en rojo).
