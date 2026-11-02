@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 
+## (02/11/2026) CIMA fase 4 MERGEADA (#5407): sombra de solo lectura
+- `packages/module-cima/src/sombra/` + `scripts/cima-sombra.mts` + workflow manual `cima-sombra.yml`: repite los crudos del CRM por el pipeline de central con escrituras GRABADAS (nunca ejecutadas), transacción READ ONLY, aborta si `CIMA_ESCRITOR=central`; informe con lista BLANCA de columnas + seudónimos HMAC (revisión adversarial: sin escritura ni TIREA; PII corregida).
+- Para ejecutarla faltan secretos (decide Alberto): `CIMA_SOMBRA_DATABASE_URL` (rol solo lectura) y las claves PII de producción. Recomendado: NO en GitHub; correrla una vez desde una sesión con variables temporales y rotar después.
+- Migración de limpieza aprobada en `migrations/20261102_archivar_respaldos_purgar_eventos.sql` (+rollback): SIN APLICAR (el MCP exige confirmación interactiva; 3 intentos caducados). Aplicar desde el SQL Editor o con Alberto delante.
+- Siguiente: fase 5 (corte con `CIMA_ESCRITOR`) solo tras una sombra limpia.
+
 ## (02/11/2026) CIMA fase 3 MERGEADA (#5403) + vista corredor (#5401)
 - `packages/module-cima` ya tiene capa BD (Drizzle, 18 tablas `seguros`) y red inyectadas; 1047 tests; golden de escrituras SQL = CRM. Nada lo importa aún.
 - Cepos: sin `CIMA_ESCRITOR=central` no confirma/envía a TIREA ni escribe; credenciales CIMA BLOQUEADAS siempre en central; falla sin `PII_ENCRYPTION_KEY`/`PII_LOOKUP_KEY`.

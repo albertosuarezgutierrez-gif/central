@@ -610,6 +610,25 @@ export function potenciaExactaGenerali(
   return { tipo: 'no_lo_se', texto: noLoSe, supuesto: `${que}: se marcó «${noLoSe}» (supuesto; revisar en la emisión)` }
 }
 
+/**
+ * v0.2.68 (02/11/2026, trabajo real con la 0.2.67): el grupo «potencia» puede salir DESPUÉS de elegir la versión. Con CV (referencia o riesgo): la
+ * opción exacta; si no está, la MÁS CERCANA (empate → la primera) con supuesto; sin CV: «No lo sé» con supuesto. `null` = no hay con qué decidir
+ * (sin CV y sin «No lo sé»). PURA.
+ */
+export function potenciaTardiaGenerali(opciones: readonly string[], cv: number | null): { texto: string; supuesto: string | null } | null {
+  const conCv = opciones.map((o) => ({ o, n: cvDePotenciaGenerali(o) })).filter((x): x is { o: string; n: number } => x.n !== null)
+  if (cv !== null && conCv.length > 0) {
+    const ex = potenciaExactaGenerali(opciones, cv)
+    if (ex.tipo === 'exacta') return { texto: ex.texto, supuesto: null }
+    let mejor = conCv[0]!
+    for (const x of conCv.slice(1)) if (Math.abs(x.n - cv) < Math.abs(mejor.n - cv)) mejor = x
+    return { texto: mejor.o, supuesto: `la potencia del vehículo (${Math.round(cv)} CV) no figura entre las opciones del selector de Generali: se marcó la más cercana «${mejor.o}» (supuesto; revisar en la emisión)` }
+  }
+  const noLoSe = opciones.find(esOpcionNoLoSeGenerali)
+  if (!noLoSe) return null
+  return { texto: noLoSe, supuesto: `la potencia del vehículo no consta en la referencia ni en el riesgo: se marcó «${noLoSe}» (supuesto; revisar en la emisión)` }
+}
+
 // ───────────── v0.2.36: combustible y potencia DEDUCIDOS del texto de la versión (hipótesis: sin ellos Generali no calcula) ─────────────
 
 /** Texto de la versión del riesgo (descripción de la selección o denominación confirmada), o `null`. PURA. */

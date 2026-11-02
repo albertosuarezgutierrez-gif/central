@@ -16,7 +16,7 @@ import { detalleFilaPanelVersionGenerali } from '../src/adapters/generali/reglas
 import { ErrorEleccionVersion } from '../src/adapters/allianz/auto.ts'
 import { abrirDesplegableModeloGenerali, abrirDesplegableVersionGenerali, elegirVersionListaGenerali, instalarGuardEmision, type GuardEmision } from '../src/guard.ts'
 
-test('v0.2.67 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.67'))
+test('v0.2.67 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.68'))
 
 let browser: Browser
 before(async () => {
@@ -162,15 +162,18 @@ const NUEVA_PURE: Fila[] = [
   { label: '0.9 PASSION', celdas: ['0.9 PASSION', '5P', '2014-10-01'] },
 ]
 
-test('v0.2.67 · f84801ce: lista ampliada SOLO de la generación 2014+ para un coche de 2005 → requiere_humano con la lista ENTERA (nunca «52» a ciegas)', () => {
+test('v0.2.68 · f84801ce: lista ampliada SOLO de la generación 2014+ para un coche de 2005 → se elige la más parecida y se avisa de la generación posterior (antes requiere_humano)', () => {
   for (const [que, f] of [['referencia', form()], ['gasolina sin CV', form(GASOLINA_SIN_CV)]] as const) {
-    assert.throws(
-      () => decidirVersionDesplegableGenerali(opciones(NUEVA), f, [], { ampliada: true, detalles: detalles(NUEVA) }),
-      (e: unknown) => e instanceof ErrorEleccionVersion && e.opcionesVersion.map((o) => o.etiqueta).join('|') === NUEVA.map((f) => f.label).join('|'),
-      que,
-    )
+    const d = decidirVersionDesplegableGenerali(opciones(NUEVA), f, [], { ampliada: true, detalles: detalles(NUEVA) })
+    assert.ok(NUEVA.some((x) => x.label === opciones(NUEVA)[d.indice]), que)
+    assert.match(d.supuesto ?? '', /Versión de generación posterior a la del vehículo \(lanzada 20\d\d\)/, que)
+    assert.match(d.supuesto ?? '', /se confirma al aceptar el cliente/, que)
+    assert.match(d.supuesto ?? '', /supuesto/, que)
   }
-  assert.throws(() => decidirVersionDesplegableGenerali(opciones(NUEVA_PURE), form(), [], { ampliada: true, detalles: detalles(NUEVA_PURE) }), ErrorEleccionVersion, 'similitud por «PURE» no salta la fecha')
+  const p = decidirVersionDesplegableGenerali(opciones(NUEVA_PURE), form(), [], { ampliada: true, detalles: detalles(NUEVA_PURE) })
+  assert.match(p.supuesto ?? '', /generación posterior/, 'ya no para: elige y avisa')
+  // sin referencia ni elección no se elige a ciegas
+  assert.throws(() => decidirVersionDesplegableGenerali(opciones(NUEVA), { ...form(), vehiculoReferencia: undefined }, [], { ampliada: true, detalles: detalles(NUEVA) }), ErrorEleccionVersion)
 })
 
 test('v0.2.67 · con la generación correcta en la lista ampliada: elige una de 2004, nunca una de 2014', () => {
@@ -184,7 +187,8 @@ test('v0.2.67 · con la generación correcta en la lista ampliada: elige una de 
 
 test('v0.2.67 · la fecha de matriculación también acota (versión lanzada después de matricular = imposible)', () => {
   const sinAnio = { ...(REF as object), anio: null } as unknown as FormularioAuto['vehiculoReferencia']
-  assert.throws(() => decidirVersionDesplegableGenerali(opciones(NUEVA_PURE), form({ vehiculoReferencia: sinAnio, fechaMatriculacion: '2005-06-01' }), [], { ampliada: true, detalles: detalles(NUEVA_PURE) }), ErrorEleccionVersion)
+  // 0.2.68: si todas son posteriores se elige la más parecida con aviso de generación posterior (ya no requiere_humano)
+  assert.match(decidirVersionDesplegableGenerali(opciones(NUEVA_PURE), form({ vehiculoReferencia: sinAnio, fechaMatriculacion: '2005-06-01' }), [], { ampliada: true, detalles: detalles(NUEVA_PURE) }).supuesto ?? '', /generación posterior/)
   // y un año de tolerancia sobre la referencia (año-modelo): lanzada en 2006 para una referencia de 2005 sigue en juego
   const r2006: Fila[] = [{ label: '1.1 PURE', celdas: ['1.1 PURE', '5P', '2006-01-01'] }, { label: '1.0 PURE', celdas: ['1.0 PURE', '5P', '2014-10-01'] }]
   assert.equal(opciones(r2006)[decidirVersionDesplegableGenerali(opciones(r2006), form(), [], { ampliada: true, detalles: detalles(r2006) }).indice], '1.1 PURE')

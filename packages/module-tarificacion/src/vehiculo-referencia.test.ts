@@ -71,8 +71,15 @@ describe('elegirOpcionPorVehiculoReferencia', () => {
     expect(r.supuesto).toContain('por aproximación al vehículo de referencia')
   })
 
-  it('02/11/2026: una lista entera de OTRO modelo (FORTWO ante una referencia FORFOUR) ya no se aproxima: otro_modelo', () => {
-    expect(elegirOpcionPorVehiculoReferencia(['FORTWO PASSION 52', 'FORTWO PULSE 52', 'FORTWO PURE 52'], ref)).toEqual({ tipo: 'otro_modelo' })
+  it('02/11/2026: una lista entera de OTRO modelo (FORTWO ante una referencia FORFOUR) se tarifica igual con la más parecida y AVISA (regla «que el bot coja el que haya»)', () => {
+    const r = elegirOpcionPorVehiculoReferencia(['FORTWO PASSION 52', 'FORTWO PULSE 52', 'FORTWO PURE 52'], ref, { compania: 'Allianz' })
+    expect(r).toMatchObject({ tipo: 'aproximacion', indice: 2, otroModelo: true })
+    if (r.tipo !== 'aproximacion') throw new Error('no')
+    expect(r.supuesto).toContain('Modelo distinto del de referencia')
+    expect(r.supuesto).toContain('FORTWO PURE 52')
+    expect(r.supuesto).toContain('Allianz no ofrece')
+    expect(r.supuesto).toContain('supuesto')
+    expect(r.supuesto).not.toContain(',')
   })
 
   it('varias casan: gana la más cercana en potencia/cilindrada', () => {
@@ -192,7 +199,7 @@ describe('elegirOpcionPorVehiculoReferencia · nivel versión (v0.2.62)', () => 
     const r = elegirOpcionPorVehiculoReferencia(['Otras versiones ...', 'ELECTRIC DRIVE EQ PASSION', '1.0 52KW PASSION'], ref, { nivel: 'version' })
     expect(r).toMatchObject({ etiqueta: '1.0 52KW PASSION', contradice: false })
     const solo = elegirOpcionPorVehiculoReferencia(['ELECTRIC DRIVE EQ PASSION', 'ELECTRIC DRIVE EQ'], ref, { nivel: 'version' })
-    expect(solo.tipo === 'otro_modelo' || (solo.tipo === 'aproximacion' && solo.contradice)).toBe(true)
+    expect(solo.tipo === 'aproximacion' && solo.contradice).toBe(true)
   })
   it('referencia eléctrica: no penaliza', () => {
     const r = elegirOpcionPorVehiculoReferencia(['ELECTRIC DRIVE EQ PASSION', 'ELECTRIC DRIVE EQ PULSE'], vr({ ...ref, version: 'Electric Drive EQ Passion', combustible: 'electrico' }), { nivel: 'version' })
@@ -202,8 +209,26 @@ describe('elegirOpcionPorVehiculoReferencia · nivel versión (v0.2.62)', () => 
 
 describe('MISMO modelo para todas las compañías (02/11/2026)', () => {
   const mapfre = vr({ origen: 'mapfre', version: 'Smart Forfour Pure 1.1', cc: 1124, cv: 75, puertas: 5 })
-  it('lista de versiones de OTRO modelo → otro_modelo (no se elige la más parecida)', () => {
-    expect(elegirOpcionPorVehiculoReferencia(['SMART FORTWO PASSION 52', 'SMART FORTWO PULSE 52'], mapfre)).toEqual({ tipo: 'otro_modelo' })
+  it('lista de versiones de OTRO modelo → se elige la más parecida con aviso de modelo distinto', () => {
+    const r = elegirOpcionPorVehiculoReferencia(['SMART FORTWO PASSION 52', 'SMART FORTWO PULSE 52'], mapfre)
+    expect(r).toMatchObject({ tipo: 'aproximacion', otroModelo: true })
+    if (r.tipo !== 'aproximacion') throw new Error('no')
+    expect(r.supuesto).toContain('Modelo distinto del de referencia')
+  })
+  it('otro modelo: nunca eléctrico si la referencia es gasolina y hay una no eléctrica', () => {
+    const g = vr({ origen: 'mapfre', marca: 'SMART', modelo: 'Forfour', version: 'Pure 1.1 75 CV', combustible: 'gasolina', cv: 75 })
+    const r = elegirOpcionPorVehiculoReferencia(['FORTWO ELECTRIC DRIVE EQ 82', 'FORTWO PURE 1.0 71CV', 'FORTWO ELECTRIC DRIVE EQ PASSION'], g)
+    expect(r).toMatchObject({ tipo: 'aproximacion', otroModelo: true, etiqueta: 'FORTWO PURE 1.0 71CV', combustibleDistinto: false })
+  })
+  it('otro modelo y TODAS de otro combustible: se elige igual y el aviso lo dice', () => {
+    const g = vr({ origen: 'mapfre', marca: 'SMART', modelo: 'Forfour', version: 'Pure 1.1 75 CV', combustible: 'gasolina', cv: 75 })
+    const r = elegirOpcionPorVehiculoReferencia(['FORTWO ELECTRIC DRIVE EQ 82', 'FORTWO ELECTRIC DRIVE EQ PASSION'], g, { compania: 'Generali' })
+    expect(r).toMatchObject({ tipo: 'aproximacion', otroModelo: true, combustibleDistinto: true })
+    if (r.tipo !== 'aproximacion') throw new Error('no')
+    expect(r.supuesto).toContain('otro combustible')
+  })
+  it('lista vacía sigue siendo sin_opciones (error)', () => {
+    expect(elegirOpcionPorVehiculoReferencia([], mapfre)).toEqual({ tipo: 'sin_opciones' })
   })
   it('lista del mismo modelo o sin nombre de modelo sigue eligiendo', () => {
     expect(elegirOpcionPorVehiculoReferencia(['SMART FORFOUR PASSION', 'SMART FORFOUR PURE 1.1'], mapfre)).toMatchObject({ indice: 1 })

@@ -1,0 +1,66 @@
+# CIMA fase 4 — comparador en SOMBRA, SOLO LECTURA (02/11/2026). Spec: docs/superpowers/specs/2026-11-02-unificar-ingesta-cima.md.
+#
+# Repite los ficheros crudos que guardó el CRM (`seguros.cima_cuarentena_crudo`) por el pipeline de central
+# (`packages/module-cima`) con un `db` GRABADOR: las escrituras se graban y NUNCA se ejecutan, no se habla con TIREA
+# (no hay adaptador ni token en este job) y la BD se abre en solo lectura (sesión + transacción READ ONLY, que se
+# deshace). Compara lo que central escribiría con lo que el CRM dejó (pólizas, recibos, siniestros, CEF) y sube el
+# informe (sin PII en claro) como artefacto de 7 días. Sin rama de Supabase: no cuesta dinero.
+#
+# Solo manual. Secrets de repo:
+#   CIMA_SOMBRA_DATABASE_URL      rol de SOLO LECTURA sobre `seguros` (conexión directa o pooler en modo sesión :5432)
+#   CIMA_SOMBRA_PII_ENCRYPTION_KEY  = PII_ENCRYPTION_KEY de producción (descifrar los crudos y comparar campos cifrados)
+#   CIMA_SOMBRA_PII_LOOKUP_KEY      = PII_LOOKUP_KEY de producción (resolver clientes por índice ciego, como el CRM)
+# 🚨 CIMA_ESCRITOR se fija aquí a `ninguno`; con `central` el script aborta antes de conectar.
+name: CIMA · sombra (solo lectura)
+
+on:
+  workflow_dispatch:
+    inputs:
+      limite:
+        description: 'Nº máximo de crudos (los más antiguos primero). Vacío = todos.'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cima-sombra
+  cancel-in-progress: false
+
+jobs:
+  sombra:
+    name: Comparar central con el CRM
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CIMA_SOMBRA_DATABASE_URL: ${{ secrets.CIMA_SOMBRA_DATABASE_URL }}
+      PII_ENCRYPTION_KEY: ${{ secrets.CIMA_SOMBRA_PII_ENCRYPTION_KEY }}
+      PII_LOOKUP_KEY: ${{ secrets.CIMA_SOMBRA_PII_LOOKUP_KEY }}
+      CIMA_ESCRITOR: ninguno
+      CIMA_SOMBRA_LIMITE: ${{ inputs.limite }}
+      NODE_ENV: production
+    steps:
+      - name: Comprobar secrets
+        run: |
+          [ -n "$CIMA_SOMBRA_DATABASE_URL" ] || { echo "::error::Falta CIMA_SOMBRA_DATABASE_URL"; exit 1; }
+          [ -n "$PII_ENCRYPTION_KEY" ] || { echo "::error::Falta CIMA_SOMBRA_PII_ENCRYPTION_KEY"; exit 1; }
+          [ -n "$PII_LOOKUP_KEY" ] || { echo "::error::Falta CIMA_SOMBRA_PII_LOOKUP_KEY"; exit 1; }
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'        # strip-types nativo
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install (solo module-cima y sus dependencias)
+        run: pnpm install --no-frozen-lockfile --filter "@central/module-cima..."
+      - name: Sombra
+        run: node scripts/cima-sombra.mts "$RUNNER_TEMP/cima-sombra-informe.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cima-sombra-informe
+          path: ${{ runner.temp }}/cima-sombra-informe.json
+          retention-days: 7
+          if-no-files-found: warn

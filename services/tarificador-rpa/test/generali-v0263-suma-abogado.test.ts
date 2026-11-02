@@ -4,7 +4,7 @@ import { test } from 'node:test'
 import { VERSION_GENERALI_AUTO } from '../src/adapters/generali/auto.ts'
 import { avisoSumaAbogadoGenerali, decisionesPendientesGenerali, elegirSumaAbogadoGenerali, portalDatosIncompletosGenerali, resumenEstadoCalculoGenerali } from '../src/adapters/generali/reglas.ts'
 
-test('v0.2.63 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.67'))
+test('v0.2.63 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.68'))
 
 test('suma de abogado: elige el importe más alto por TEXTO, no por value ni por posición', () => {
   assert.deepEqual(elegirSumaAbogadoGenerali(['Seleccione una suma asegurada', '1.000 €', '750 €', '500 €']), { indice: 1, importeEur: 1000, texto: '1.000 €' })
