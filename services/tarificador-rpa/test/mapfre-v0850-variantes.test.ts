@@ -207,7 +207,7 @@ test('adaptador: tarifica solo las BASICar no tarificadas, en la tarjeta base, r
 
 test('adaptador: sin BASICar en las listas o ya tarificadas no se elige nada', async () => {
   const p = portalFalso()
-  const sin = vistos().map((x) => ({ ...x, comercial: { opciones: ['TERCEROS', 'TERCEROS AMPLIADO', 'TODO RIESGO'], seleccionada: x.comercial!.seleccionada } }))
+  const sin = vistos().map((x) => ({ ...x, comercial: { opciones: ['TERCEROS', 'TERCEROS AMPLIADO', 'TODO RIESGO'], seleccionada: (x.comercial as { seleccionada: string | null }).seleccionada } }))
   assert.deepEqual((await tarificarVariantesComercialesMapfre({} as Page, sin, PRIMAS, p.elegir)).primas, [])
   const ya = await tarificarVariantesComercialesMapfre({} as Page, vistos(), [...PRIMAS, { producto: 'BASICar TERCEROS AMPLIADO', periodicidad: 'anual', primaTotalEur: 1, requiereVerificacionVehiculo: false }, { producto: 'BASICar TODO RIESGO', periodicidad: 'anual', primaTotalEur: 2, requiereVerificacionVehiculo: false }], p.elegir)
   assert.deepEqual(ya.primas, [])
