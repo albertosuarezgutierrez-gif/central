@@ -97,6 +97,7 @@ import {
   resumenDiagnosticoModalidadesGenerali,
   importeFlexibleEur,
   type DiagnosticoModalidadesMarcoGenerali,
+  type LecturaPrecioGenerali,
   type VolcadoModalidadesGenerali,
   type DiagnosticoImportesMarcoGenerali,
   resumenNavegacionGenerali,
@@ -480,6 +481,7 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * dato, la siniestralidad más favorable (aviso «supuesto» → precio estimado). Un obligatorio vacío sin regla (p. ej. una fecha) para con su nombre. Si la
  * pestaña no existe se anota y se sigue como antes; el atasco final trae el inventario (etiquetas, sin valores) de esa pestaña.
  *
+ * 0.2.69 (02/11/2026): «Verificación del riesgo» es condicional (no para si falta con la pestaña cargada) y se ofrecen TODAS las modalidades leídas como ofertas separadas.
  * 0.2.68 (02/11/2026, Alberto: «que el bot coja el que haya»): sin modelo/versión de la referencia en el catálogo (tras ampliar) se tarifica el más parecido con aviso «Modelo distinto del de referencia» (supuesto), no requiere_humano.
  *
  * 0.2.67 (02/11/2026): la fila `tr` del panel de «Versión» se identifica por su 1ª celda (el guard sigue viendo la fila entera) y la fecha de lanzamiento excluye otra generación.
@@ -487,7 +489,7 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * 0.2.65 (02/11/2026): el panel de «Versión» con columnas lista las opciones como `tr[data-label]` (no `li`): «Otras versiones ...» se localiza también ahí.
  * 0.2.64 (02/11/2026): «Garantías y Resultados» no se vuelve a pulsar si ya se pulsó en el trabajo (el guard solo lo permite una vez); solo espera al bloque.
  */
-export const VERSION_GENERALI_AUTO = '0.2.68'
+export const VERSION_GENERALI_AUTO = '0.2.69'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -1153,8 +1155,13 @@ async function elegirOpcionExactaBloqueGenerali(page: Page, ctx: ContextoPortal,
   const bloques: { marco: Frame; loc: Locator }[] = []
   for (const f of page.frames()) {
     if (f.isDetached()) continue
-    const l = f.locator(b.selBloque).filter({ visible: true })
-    const n = await l.count().catch(() => 0)
+    let l = f.locator(b.selBloque).filter({ visible: true })
+    let n = await l.count().catch(() => 0)
+    // v0.2.69: un bloque con hijos flotantes mide 0 de alto y Playwright no lo da por visible aunque sus opciones sí lo estén: vale por su control visible.
+    if (n === 0) {
+      l = f.locator(b.selBloque).filter({ has: f.locator(b.selOpcion).filter({ visible: true }) })
+      n = await l.count().catch(() => 0)
+    }
     for (let i = 0; i < n; i++) bloques.push({ marco: f, loc: l.nth(i) })
   }
   if (bloques.length === 0) return false
@@ -1192,10 +1199,20 @@ export async function elegirFormaPagoGenerali(page: Page, form: unknown, ctx: Co
   return `Forma de pago: ${pedida.etiqueta.toLowerCase()} (${pedida.porDefecto ? 'por defecto' : 'del riesgo'})`
 }
 
-async function hayBloqueVisibleGenerali(page: Page, sel: string): Promise<boolean> {
+async function hayBloqueVisibleGenerali(page: Page, sel: string, selOpcion?: string): Promise<boolean> {
   for (const f of page.frames()) {
     if (f.isDetached()) continue
     if ((await f.locator(sel).filter({ visible: true }).count().catch(() => 0)) > 0) return true
+    if (selOpcion && (await f.locator(sel).filter({ has: f.locator(selOpcion).filter({ visible: true }) }).count().catch(() => 0)) > 0) return true
+  }
+  return false
+}
+
+/** v0.2.69: ¿hay en el DOM (visible o no) algún elemento con este selector, en cualquier marco? */
+async function hayEnDomGenerali(page: Page, sel: string): Promise<boolean> {
+  for (const f of page.frames()) {
+    if (f.isDetached()) continue
+    if ((await f.locator(sel).count().catch(() => 0)) > 0) return true
   }
   return false
 }
@@ -1249,23 +1266,29 @@ export async function elegirSumaAbogadoVisibleGenerali(page: Page, ctx: Contexto
 /** v0.2.64: páginas donde ya se pulsó «Garantías y Resultados» en este trabajo (el guard no permite una segunda vez). */
 export const GARANTIAS_PULSADA_GENERALI = new WeakSet<Page>()
 
+/** v0.2.69: bloques propios de «Garantías y Resultados» (prefijo `reg1063E`): si alguno está en el DOM, la pestaña cargó. */
+const SEL_PESTANA_GARANTIAS_CARGADA_GENERALI = '#reg1063E_gridmodsegIdentification,#reg1063E_opcEnvioIdentification,select[name="reg1063E.general.ysuabo"]'
+
 /**
- * v0.2.63: antes de marcar forma de pago / envío / verificación / abogado, asegura estar en «Garantías y Resultados» (si el bloque de verificación no está a la
- * vista se pulsa la subpestaña por la puerta guardada que ya existe) y espera con reintento acotado a que aparezca. Si no aparece → `ErrorMapaIncompletoGenerali`
- * con nombre claro: no se sigue a ciegas.
+ * v0.2.63/0.2.69: antes de marcar forma de pago / envío / verificación / abogado, asegura estar en «Garantías y Resultados» (si la pestaña no cargó se pulsa la
+ * subpestaña por la puerta guardada que ya existe, una vez) y espera con reintento acotado. «Verificación del riesgo» es CONDICIONAL: con la pestaña cargada
+ * (sus otros bloques en el DOM) y sin ese bloque se sigue sin él; solo si la pestaña misma no cargó → `ErrorMapaIncompletoGenerali` con nombre claro.
+ * Devuelve si el bloque de verificación está a la vista.
  */
-export async function asegurarGarantiasYResultadosGenerali(page: Page, ctx: ContextoPortal, pausaMs = 700, intentos = 8): Promise<void> {
-  if (await hayBloqueVisibleGenerali(page, SEL_BLOQUE_VERIFICACION_GENERALI)) return
-  // v0.2.64: el guard solo deja pulsar la subpestaña UNA vez por trabajo: si ya se pulsó, no se repite el clic (solo espera acotada al bloque).
+export async function asegurarGarantiasYResultadosGenerali(page: Page, ctx: ContextoPortal, pausaMs = 700, intentos = 8): Promise<boolean> {
+  const verif = () => hayBloqueVisibleGenerali(page, SEL_BLOQUE_VERIFICACION_GENERALI, SEL_OPCION_VERIFICACION_GENERALI)
+  const cargada = async () => (await verif()) || (await hayEnDomGenerali(page, SEL_PESTANA_GARANTIAS_CARGADA_GENERALI))
+  if (await cargada()) return verif()
+  // v0.2.64: el guard solo deja pulsar la subpestaña UNA vez por trabajo: si ya se pulsó, no se repite el clic (solo espera acotada a la pestaña).
   if (ctx.pulsarSubpestanaGenerali && !GARANTIAS_PULSADA_GENERALI.has(page)) {
     GARANTIAS_PULSADA_GENERALI.add(page)
     await ctx.pulsarSubpestanaGenerali(SUBPESTANA_PRECIO_GENERALI).catch((e) => { if (e instanceof Error && /Bloqueada/.test(e.constructor.name)) throw e })
   }
   for (let i = 0; i < intentos; i++) {
-    if (await hayBloqueVisibleGenerali(page, SEL_BLOQUE_VERIFICACION_GENERALI)) return
+    if (await cargada()) return verif()
     await page.waitForTimeout(pausaMs)
   }
-  throw new ErrorMapaIncompletoGenerali(`el bloque «Verificación del riesgo» de «${SUBPESTANA_PRECIO_GENERALI}» (no apareció a la vista tras ${Math.round((intentos * pausaMs) / 1000)} s; el bot no marca forma de pago, envío ni abogado a ciegas)`)
+  throw new ErrorMapaIncompletoGenerali(`la pestaña «${SUBPESTANA_PRECIO_GENERALI}» (no cargó: ni «Modalidades de Seguro», ni «Envío e-mail», ni la suma de abogado, ni «Verificación del riesgo» aparecieron en ${Math.round((intentos * pausaMs) / 1000)} s; el bot no marca forma de pago, envío ni abogado a ciegas)`)
 }
 
 /** Pantalla leída de TODOS los marcos de la página (la vista tras la subpestaña puede estar en otro marco). */
@@ -3924,6 +3947,19 @@ export function ofertaGenerali(eur: number, supuestos: string | null, avisosLect
   }
 }
 
+/**
+ * v0.2.69 (Alberto: «todas las opciones posibles»): si la tabla de modalidades trajo 2 o más con importe, una oferta por modalidad (prima y modalidad propias; las
+ * garantías las pone `conPdfPresupuestoGenerali`); si no, la oferta única de siempre. Los avisos «Otras modalidades»/«Modalidad no marcada» sobran con todas a la vista.
+ */
+export function ofertasDeLecturaGenerali(l: Extract<LecturaPrecioGenerali, { tipo: 'unico' }>, supuestos: string | null, avisosLectura: readonly string[] = []): OfertaNormalizada[] {
+  if (!l.modalidades || l.modalidades.length < 2) return [ofertaGenerali(l.eur, supuestos, avisosLectura)]
+  const avisos = avisosLectura.filter((a) => !/^(Otras modalidades:|Modalidad no marcada en la tabla)/.test(a))
+  return l.modalidades.map((m) => ({
+    ...ofertaGenerali(m.eur, supuestos, [...avisos, `Modalidad «${m.modalidad}» (${l.modalidades!.length} modalidades leídas de la tabla de «${SUBPESTANA_PRECIO_GENERALI}»)`]),
+    producto: `Auto · Turismos (Ramo UV) · ${m.modalidad}`,
+  }))
+}
+
 /** Espera el precio tras la subpestaña: un único importe, estable en dos lecturas; si no, la última lectura. */
 async function esperarPrecioGenerali(page: Page, ignorar: readonly number[], ms = ESPERA_PRECIO_MS, vigia?: VigiaBloqueoGenerali): Promise<ReturnType<typeof leerPrecioGenerali>> {
   const fin = Date.now() + ms
@@ -4255,7 +4291,7 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
     return l
   }
   let lectura = await paso('lectura_primas', leerPrimas)
-  if (lectura.tipo === 'unico') return { ofertas: await conPdfPresupuestoGenerali(page, ctx, [ofertaGenerali(lectura.eur, texto, [...(lectura.avisos ?? []), ...avisosDatosValoracion])]) }
+  if (lectura.tipo === 'unico') return { ofertas: await conPdfPresupuestoGenerali(page, ctx, ofertasDeLecturaGenerali(lectura, texto, [...(lectura.avisos ?? []), ...avisosDatosValoracion])) }
   // v0.2.39/v0.2.40: tabla de modalidades a la vista y vacía = el portal no ha calculado: «Recalcular» (acción de la botonera, no guarda ni emite) UNA vez por la puerta del guard.
   // v0.2.40: se evalúa DESPUÉS de cada lectura y de cada «Siguiente» (en la prueba real con 0.2.39 la tabla vacía aparecía solo tras «Siguiente×1» y el bloque de antes ya había pasado).
   const avanceRecalcular: string[] = []
@@ -4304,7 +4340,7 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   const trasRecalcular = await recalcularSiHaceFalta()
   if (trasRecalcular) {
     lectura = trasRecalcular
-    if (lectura.tipo === 'unico') return { ofertas: await conPdfPresupuestoGenerali(page, ctx, [ofertaGenerali(lectura.eur, texto, [...(lectura.avisos ?? []), ...avisosFormaPago])]) }
+    if (lectura.tipo === 'unico') return { ofertas: await conPdfPresupuestoGenerali(page, ctx, ofertasDeLecturaGenerali(lectura, texto, [...(lectura.avisos ?? []), ...avisosFormaPago])) }
   }
   // v0.2.27: si la pestaña no cambió la pantalla, «Siguiente» (puerta del guard, máx. 3) avanza hacia «Garantías y Resultados».
   let lecturaFinal: Awaited<ReturnType<typeof esperarPrecioGenerali>> = lectura
@@ -4327,14 +4363,14 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
         break
       }
       lecturaFinal = await paso('lectura_primas', leerPrimas)
-      if (lecturaFinal.tipo === 'unico') return { ofertas: await conPdfPresupuestoGenerali(page, ctx, [ofertaGenerali(lecturaFinal.eur, texto, [...(lecturaFinal.avisos ?? []), ...avisosFormaPago])]) }
+      if (lecturaFinal.tipo === 'unico') return { ofertas: await conPdfPresupuestoGenerali(page, ctx, ofertasDeLecturaGenerali(lecturaFinal, texto, [...(lecturaFinal.avisos ?? []), ...avisosFormaPago])) }
     }
   }
   // v0.2.40: la tabla vacía puede aparecer SOLO tras «Siguiente» (o al terminar el bucle): «Recalcular» se evalúa también aquí, una sola vez por trabajo.
   const trasSiguiente = await recalcularSiHaceFalta()
   if (trasSiguiente) {
     lecturaFinal = trasSiguiente
-    if (lecturaFinal.tipo === 'unico') return { ofertas: await conPdfPresupuestoGenerali(page, ctx, [ofertaGenerali(lecturaFinal.eur, texto, [...(lecturaFinal.avisos ?? []), ...avisosFormaPago])]) }
+    if (lecturaFinal.tipo === 'unico') return { ofertas: await conPdfPresupuestoGenerali(page, ctx, ofertasDeLecturaGenerali(lecturaFinal, texto, [...(lecturaFinal.avisos ?? []), ...avisosFormaPago])) }
   }
   const despues = await leerPantallaPagina(page)
   const textoFinal = await textoPagina(page)

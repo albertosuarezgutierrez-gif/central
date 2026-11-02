@@ -6,7 +6,7 @@ import { listaVersionCambiadaGenerali } from '../src/adapters/generali/reglas.ts
 
 const ANTES = ['Seleccione una', 'ELECTRIC DRIVE EQ', 'ELECTRIC DRIVE EQ PASSION', 'Otras versiones ...']
 
-test('v0.2.66 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.68'))
+test('v0.2.66 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.69'))
 
 test('v0.2.66 · misma lista (aunque cambie el orden, los espacios de relleno o la elipsis) = sin cambio', () => {
   assert.equal(listaVersionCambiadaGenerali(ANTES, [...ANTES]), false)
