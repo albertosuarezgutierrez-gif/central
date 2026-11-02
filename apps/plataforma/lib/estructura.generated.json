@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-11-02T13:58:00Z",
+  "generadoEn": "2026-11-02T17:36:10Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -101,6 +101,11 @@
       "id": "module-chat",
       "tipo": "module",
       "npm": "@central/module-chat"
+    },
+    {
+      "id": "module-cima",
+      "tipo": "module",
+      "npm": "@central/module-cima"
     },
     {
       "id": "module-concursos",
@@ -1279,6 +1284,60 @@
         "evidencias": 0
       }
     },
+    "module-cima": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
     "module-concursos": {
       "almacen": {
         "estado": "no",
@@ -2262,7 +2321,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 334
+        "evidencias": 337
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2316,7 +2375,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 66
+        "evidencias": 69
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2370,7 +2429,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 52
+        "evidencias": 55
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4010,6 +4069,10 @@
     ],
     "module-asn": [],
     "module-chat": [],
+    "module-cima": [
+      "module-seguros",
+      "module-seguros-pii"
+    ],
     "module-concursos": [],
     "module-contabilidad": [],
     "module-crm": [],
@@ -7201,7 +7264,7 @@
   },
   "resumen": {
     "verticales": 13,
-    "packages": 44,
+    "packages": 45,
     "capacidades": 23,
     "skills": 44,
     "apis": 1876,
