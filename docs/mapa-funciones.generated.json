@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-02T19:34:23Z",
-  "sha": "82dd1bc0572652470ecfa911dc18ec34054098d2",
+  "generadoEn": "2026-11-02T19:40:08Z",
+  "sha": "47717a08dca2ffbb932d8a127596537721579bf0",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -228299,8 +228299,9 @@
     {
       "ruta": "packages/module-cima/src/sombra/informe.ts",
       "ambito": "packages/module-cima",
-      "resumen": "Fase 4 (sombra) — PURO. Normalización y comparación de valores, y ENMASCARADO del informe: el informe se sube como artefacto de GitHub, así que no lleva PII en claro. Política de valores en el informe (`valorVisible`), del más al menos conservador: - columna con nombre sensible (nombre, NIF, IBAN, e",
+      "resumen": "Fase 4 (sombra) — PURO. Normalización y comparación de valores, y ENMASCARADO del informe: el informe se sube como artefacto de GitHub, así que no lleva PII en claro. Política de valores en el informe (`valorVisible`): LISTA BLANCA. Solo salen en claro las columnas explícitamente no personales de `C",
       "exporta": [
+        "seudonimo",
         "esCifrado",
         "normalizarValor",
         "compararValores",
@@ -228309,12 +228310,21 @@
       ],
       "funciones": [
         {
+          "nombre": "seudonimo",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "string",
+          "linea": 59,
+          "resumen": "Seudónimo no reversible de un valor: HMAC-SHA256(sal de la ejecución), 8 hex."
+        },
+        {
           "nombre": "esCifrado",
           "kind": "arrow",
           "exportada": true,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 25,
+          "linea": 65,
           "resumen": "Marca de cifrado de `module-seguros-pii` (AES-GCM con IV aleatorio)."
         },
         {
@@ -228323,7 +228333,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "unknown",
-          "linea": 27
+          "linea": 67
         },
         {
           "nombre": "normalizarValor",
@@ -228331,7 +228341,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "unknown",
-          "linea": 41,
+          "linea": 81,
           "resumen": "PURO. Lleva un valor de parámetro de Drizzle o de una fila de postgres.js a una forma comparable: Date/timestamp → ISO UTC; JSON (texto u objeto) → JSON canónico."
         },
         {
@@ -228340,7 +228350,7 @@
           "exportada": true,
           "params": "central: unknown, crm: unknown, descifrar?: (v: string) => string | null",
           "retorno": "Igualdad",
-          "linea": 72,
+          "linea": 112,
           "resumen": "PURO. Compara un valor de central con el de la BD. Los cifrados solo se comparan si hay `descifrar` (IV aleatorio: dos cifrados del mismo dato NUNCA son iguales)."
         },
         {
@@ -228349,7 +228359,7 @@
           "exportada": true,
           "params": "columna: string, v: unknown",
           "retorno": "unknown",
-          "linea": 104,
+          "linea": 147,
           "resumen": "PURO. Cómo aparece un valor en el informe (ver política arriba)."
         },
         {
@@ -228358,13 +228368,13 @@
           "exportada": true,
           "params": "v: T",
           "retorno": "T",
-          "linea": 123,
+          "linea": 172,
           "resumen": "PURO. Pasa `sanitizePiiES` por todas las cadenas (claves incluidas) de un objeto."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a82cb790964c"
+      "hash": "c099c6bde4b3"
     },
     {
       "ruta": "packages/module-cima/src/sombra/sql-escrituras.ts",
@@ -268833,6 +268843,6 @@
   ],
   "resumen": {
     "archivos": 5541,
-    "funciones": 21708
+    "funciones": 21709
   }
 }

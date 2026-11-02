@@ -28,6 +28,7 @@ import {
   type LectorEstadoActual,
 } from "./comparar.ts";
 import { prepararEntornoSombra } from "./ejecutar.ts";
+import { valorVisible } from "./informe.ts";
 import type { LectorSql } from "./grabador.ts";
 import { esLectura, parsearEscritura } from "./sql-escrituras.ts";
 
@@ -266,4 +267,38 @@ test("(d) el informe no lleva PII en claro (NIF, IBAN, email)", async () => {
   for (const pii of [NIF, IBAN, EMAIL, "ana.perez", "21000813610123456789"]) {
     assert.ok(!texto.includes(pii), `PII en claro en el informe: ${pii}`);
   }
+});
+
+test("(d2) lista blanca: texto libre y columnas no listadas salen ocultos; estados e importes, visibles", () => {
+  assert.equal(valorVisible("comentario", "Llamar a Maria Lopez"), "<oculto>");
+  assert.equal(valorVisible("referencia", "Calle Mayor 5 Sevilla"), "<oculto>");
+  assert.equal(valorVisible("columna_nueva_inventada", "Ana"), "<oculto>");
+  assert.equal(valorVisible("columna_nueva_inventada", 12), "<oculto>");
+  assert.equal(valorVisible("tipo", "Maria"), "<oculto>");
+  // Una columna listada con un valor que no tiene la forma de su clase tampoco sale.
+  assert.equal(valorVisible("saldo_final", "Calle Mayor 5"), "<oculto>");
+  assert.equal(valorVisible("estado", "Llamar a Maria Lopez"), "<oculto>");
+  // Lo no personal sigue visible.
+  assert.equal(valorVisible("estado", "abierto"), "abierto");
+  assert.equal(valorVisible("situacion", "V"), "V");
+  assert.equal(valorVisible("codigo_entidad_dgs", "C0001"), "C0001");
+  assert.equal(valorVisible("prima_total", "12.50"), "12.50");
+  assert.equal(valorVisible("reserva_importe", 100), 100);
+  assert.equal(valorVisible("se_considera_culpable", true), true);
+  assert.equal(valorVisible("fecha_emision", "2026-01-31"), "2026-01-31");
+  assert.equal(valorVisible("periodo_inicio", new Date("2026-01-01T00:00:00Z")), "2026-01-01T00:00:00.000Z");
+  assert.equal(valorVisible("correduria_id", "cccccccc-0000-4000-8000-000000000003"), "<uuid>");
+  assert.equal(valorVisible("estado", null), null);
+});
+
+test("(d3) claves naturales seudonimizadas: estables, distintas entre sí y sin el valor en claro", () => {
+  const a = valorVisible("id_poliza_entidad", "POL-12345678Z");
+  const b = valorVisible("id_poliza_entidad", "POL-12345678Z");
+  const c = valorVisible("id_poliza_entidad", "POL-OTRA");
+  assert.match(String(a), /^h:[0-9a-f]{8}$/);
+  assert.equal(a, b, "igual valor → mismo seudónimo (la comparación sigue siendo útil)");
+  assert.notEqual(a, c);
+  assert.ok(!String(a).includes("12345678Z"));
+  assert.match(String(valorVisible("id_recibo", "R-1")), /^h:[0-9a-f]{8}$/);
+  assert.match(String(valorVisible("id_siniestro_entidad", "S-1")), /^h:[0-9a-f]{8}$/);
 });

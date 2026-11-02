@@ -2,15 +2,19 @@
  * Fase 4 (sombra) — PURO. Normalización y comparación de valores, y ENMASCARADO del
  * informe: el informe se sube como artefacto de GitHub, así que no lleva PII en claro.
  *
- * Política de valores en el informe (`valorVisible`), del más al menos conservador:
- *  - columna con nombre sensible (nombre, NIF, IBAN, email, teléfono, dirección,
- *    matrícula, descripción, datos/extra/json…) → `<oculto>`, sea cual sea el valor;
- *  - cifrado (`v1:`) → `<cifrado>`; uuid → `<uuid>`; objeto → `<json>`;
- *  - números, booleanos, fechas y códigos cortos (≤24, pasados por `sanitizePiiES`) en claro;
- *  - texto largo → `<texto N car.>`.
+ * Política de valores en el informe (`valorVisible`): LISTA BLANCA. Solo salen en claro las
+ * columnas explícitamente no personales de `COLUMNAS_VISIBLES` (estados, fechas, importes,
+ * códigos de entidad/ramo/situación, booleanos, ids técnicos uuid), y solo si el valor tiene
+ * la forma de su clase (un importe que no es número, una fecha que no es fecha → `<oculto>`).
+ *  - claves naturales (nº de póliza/recibo/siniestro de la entidad) y hash de fichero →
+ *    seudónimo `h:xxxxxxxx` (HMAC-SHA256 con sal aleatoria POR EJECUCIÓN, 8 hex): «igual/difiere»
+ *    sigue siendo útil dentro del informe y no es reversible;
+ *  - cifrado (`v1:`) → `<cifrado>`; uuid → `<uuid>`;
+ *  - TODO lo demás (texto libre, columnas no listadas, JSON) → `<oculto>`.
  * Y al final `enmascararInforme` pasa `sanitizePiiES` por TODAS las cadenas (defensa en
  * profundidad: nombres de fichero, motivos de error, claves…).
  */
+import { createHmac, randomBytes } from "node:crypto";
 import { sanitizePiiES } from "../pii-sanitizer.ts";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -18,8 +22,44 @@ const FECHA_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TS_RE = /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)(Z|[+-]\d{2}(?::?\d{2})?)?$/;
 const NUM_RE = /^-?\d+(?:\.\d+)?$/;
 
-export const COLUMNA_SENSIBLE =
-  /(nombre|apellid|dni|nif|nie\b|cif|document|iban|cuenta_banc|email|correo|telefono|movil|direcc|domicil|calle|postal|matricula|bastidor|descrip|observ|nota|lugar|conductor|tomador|asegurad|beneficiar|lookup|hash|datos|extra|json|danos|terceros|contrario)/i;
+type Clase = "importe" | "fecha" | "booleano" | "codigo" | "uuid" | "seudonimo";
+
+/** LISTA BLANCA de columnas visibles (nombre exacto → clase). Lo que no esté aquí sale oculto. */
+export const COLUMNAS_VISIBLES: Readonly<Record<string, Clase>> = Object.freeze({
+  ...Object.fromEntries(
+    ["id", "correduria_id", "cliente_id", "poliza_id", "comercial_id", "poliza_padre_id", "oportunidad_origen_id", "merged_into_poliza_id"].map((c) => [c, "uuid" as Clase]),
+  ),
+  ...Object.fromEntries(
+    ["estado", "situacion", "ramo_dgs", "codigo_entidad_dgs", "posicion_cima", "responsabilidad_cima", "clase_recibo", "forma_pago", "clase_comision", "gestion_cobro"].map((c) => [c, "codigo" as Clase]),
+  ),
+  ...Object.fromEntries(
+    ["fecha_inicio", "fecha_vencimiento", "fecha_efecto_inicial", "fecha_efecto_actual", "fecha_emision", "fecha_situacion", "fecha_solicitud", "fecha_hora", "fecha_declaracion", "periodo_inicio", "periodo_fin", "created_at", "updated_at"].map((c) => [c, "fecha" as Clase]),
+  ),
+  ...Object.fromEntries(
+    [
+      "prima_anual", "prima_mensual", "prima_bruta", "prima_total", "prima_neta", "comision_bruta", "comision_liquida", "base_comision",
+      "retencion_irpf", "reserva_importe", "indemnizacion_importe", "reserva_cima", "indemnizacion_cima", "total_pagos_cima", "total_recobros_cima",
+      "saldo_inicial", "saldo_final", "recibos_cobrados", "comisiones_recibos", "retencion_comisiones", "siniestros_pagados", "otros_conceptos",
+      "retencion_otros", "remesas",
+    ].map((c) => [c, "importe" as Clase]),
+  ),
+  ...Object.fromEntries(
+    ["verificado_por_correduria", "auditar_seguimiento", "se_considera_culpable", "daa_cima"].map((c) => [c, "booleano" as Clase]),
+  ),
+  // Claves naturales de la entidad (nº de póliza/recibo/siniestro) y hash del fichero: seudónimo.
+  ...Object.fromEntries(
+    ["id_poliza_entidad", "id_recibo", "id_siniestro_entidad", "eiac_xml_hash"].map((c) => [c, "seudonimo" as Clase]),
+  ),
+});
+
+/** Sal aleatoria por ejecución (proceso): los seudónimos no se pueden cruzar entre informes. */
+const SAL = randomBytes(32);
+
+/** Seudónimo no reversible de un valor: HMAC-SHA256(sal de la ejecución), 8 hex. */
+export function seudonimo(v: unknown): string {
+  const t = typeof v === "string" ? v : JSON.stringify(normalizarValor(v));
+  return `h:${createHmac("sha256", SAL).update(t).digest("hex").slice(0, 8)}`;
+}
 
 /** Marca de cifrado de `module-seguros-pii` (AES-GCM con IV aleatorio). */
 export const esCifrado = (v: unknown): boolean => typeof v === "string" && v.startsWith("v1:");
@@ -100,23 +140,32 @@ export function compararValores(central: unknown, crm: unknown, descifrar?: (v: 
   return "distinto";
 }
 
+const CODIGO_RE = /^[A-Za-z0-9_.\-/]{1,24}$/;
+const OCULTO = "<oculto>";
+
 /** PURO. Cómo aparece un valor en el informe (ver política arriba). */
 export function valorVisible(columna: string, v: unknown): unknown {
   if (v === null || v === undefined) return null;
-  if (COLUMNA_SENSIBLE.test(columna)) return "<oculto>";
-  if (typeof v === "number" || typeof v === "boolean") return v;
-  if (v instanceof Date) return normalizarValor(v);
-  if (typeof v === "string") {
-    if (esCifrado(v)) return "<cifrado>";
-    if (UUID_RE.test(v)) return "<uuid>";
-    const n = normalizarValor(v);
-    if (typeof n === "string" && (FECHA_RE.test(n) || /^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/.test(n))) return n;
-    if (NUM_RE.test(v)) return v;
-    if (typeof n === "string" && (n.startsWith("{") || n.startsWith("["))) return "<json>";
-    if (v.length <= 24) return sanitizePiiES(v, { maxLength: 24 });
-    return `<texto ${v.length} car.>`;
+  if (typeof v === "string" && esCifrado(v)) return "<cifrado>";
+  const clase = Object.hasOwn(COLUMNAS_VISIBLES, columna) ? COLUMNAS_VISIBLES[columna] : undefined;
+  if (!clase) return OCULTO;
+  switch (clase) {
+    case "seudonimo":
+      return seudonimo(v);
+    case "uuid":
+      return typeof v === "string" && UUID_RE.test(v) ? "<uuid>" : OCULTO;
+    case "booleano":
+      return typeof v === "boolean" ? v : OCULTO;
+    case "importe":
+      if (typeof v === "number") return Number.isFinite(v) ? v : OCULTO;
+      return typeof v === "string" && NUM_RE.test(v) ? v : OCULTO;
+    case "fecha": {
+      const n = normalizarValor(v);
+      return typeof n === "string" && (FECHA_RE.test(n) || /^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/.test(n)) ? n : OCULTO;
+    }
+    case "codigo":
+      return typeof v === "string" && CODIGO_RE.test(v) ? sanitizePiiES(v, { maxLength: 24 }) : OCULTO;
   }
-  return "<json>";
 }
 
 /** PURO. Pasa `sanitizePiiES` por todas las cadenas (claves incluidas) de un objeto. */
