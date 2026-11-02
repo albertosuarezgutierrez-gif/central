@@ -471,8 +471,10 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * «Historial Siniestral» (solo cambia la vista), se leen sus bloques NUEVOS y se rellenan los VACÍOS con regla (años asegurado, siniestros) con el riesgo o, sin
  * dato, la siniestralidad más favorable (aviso «supuesto» → precio estimado). Un obligatorio vacío sin regla (p. ej. una fecha) para con su nombre. Si la
  * pestaña no existe se anota y se sigue como antes; el atasco final trae el inventario (etiquetas, sin valores) de esa pestaña.
+ *
+ * 0.2.64 (02/11/2026): «Garantías y Resultados» no se vuelve a pulsar si ya se pulsó en el trabajo (el guard solo lo permite una vez); solo espera al bloque.
  */
-export const VERSION_GENERALI_AUTO = '0.2.63'
+export const VERSION_GENERALI_AUTO = '0.2.64'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -1231,6 +1233,9 @@ export async function elegirSumaAbogadoVisibleGenerali(page: Page, ctx: Contexto
   return null
 }
 
+/** v0.2.64: páginas donde ya se pulsó «Garantías y Resultados» en este trabajo (el guard no permite una segunda vez). */
+export const GARANTIAS_PULSADA_GENERALI = new WeakSet<Page>()
+
 /**
  * v0.2.63: antes de marcar forma de pago / envío / verificación / abogado, asegura estar en «Garantías y Resultados» (si el bloque de verificación no está a la
  * vista se pulsa la subpestaña por la puerta guardada que ya existe) y espera con reintento acotado a que aparezca. Si no aparece → `ErrorMapaIncompletoGenerali`
@@ -1238,7 +1243,11 @@ export async function elegirSumaAbogadoVisibleGenerali(page: Page, ctx: Contexto
  */
 export async function asegurarGarantiasYResultadosGenerali(page: Page, ctx: ContextoPortal, pausaMs = 700, intentos = 8): Promise<void> {
   if (await hayBloqueVisibleGenerali(page, SEL_BLOQUE_VERIFICACION_GENERALI)) return
-  if (ctx.pulsarSubpestanaGenerali) await ctx.pulsarSubpestanaGenerali(SUBPESTANA_PRECIO_GENERALI).catch((e) => { if (e instanceof Error && /Bloqueada/.test(e.constructor.name)) throw e })
+  // v0.2.64: el guard solo deja pulsar la subpestaña UNA vez por trabajo: si ya se pulsó, no se repite el clic (solo espera acotada al bloque).
+  if (ctx.pulsarSubpestanaGenerali && !GARANTIAS_PULSADA_GENERALI.has(page)) {
+    GARANTIAS_PULSADA_GENERALI.add(page)
+    await ctx.pulsarSubpestanaGenerali(SUBPESTANA_PRECIO_GENERALI).catch((e) => { if (e instanceof Error && /Bloqueada/.test(e.constructor.name)) throw e })
+  }
   for (let i = 0; i < intentos; i++) {
     if (await hayBloqueVisibleGenerali(page, SEL_BLOQUE_VERIFICACION_GENERALI)) return
     await page.waitForTimeout(pausaMs)
@@ -4082,6 +4091,7 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   // v0.2.60 (trabajo af1fb857): antes de «Garantías y Resultados», la sección «Historial Siniestral» de Datos de Valoración (origen SINCO + antecedentes).
   const historial = await paso('formulario', () => completarHistorialSiniestralGenerali(page, ctx, ant.formulario, ant.claves, opciones.esperaHistorialMs))
   avisosDatosValoracion.push(...historial.avisos)
+  GARANTIAS_PULSADA_GENERALI.add(page)
   await paso('tarificar', () => ctx.pulsarSubpestanaGenerali!(SUBPESTANA_PRECIO_GENERALI))
   // v0.2.31: si el texto no da precio único, se lee la tabla «Modalidades de Seguro» (Recibo Anual de la modalidad marcada). Solo lee.
   const conModalidades = async (l: Awaited<ReturnType<typeof esperarPrecioGenerali>>, vigia?: VigiaBloqueoGenerali): Promise<Awaited<ReturnType<typeof esperarPrecioGenerali>>> => {
