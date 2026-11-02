@@ -44,6 +44,11 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
       - name: Install
         run: pnpm install --no-frozen-lockfile
+      # Con la caché del store restaurada pnpm NO ejecuta el postinstall de @prisma/client
+      # y falta el stub `.prisma/client`: `import { PrismaClient }` revienta en los tests
+      # que cargan apps/asegura/lib/db.ts (flaky según haya caché o no). Se fuerza siempre.
+      - name: Stub de @prisma/client (determinista con o sin caché)
+        run: pnpm rebuild @prisma/client
       - name: Test (guardián + packages)
         run: pnpm test
 
