@@ -225,11 +225,11 @@ const ALLIANZ_AUTO: readonly CampoObligatorio[] = [
   }),
 ]
 
-/** Mapfre Hogar (`exigirDatosHogar`): se tarifica con la referencia catastral del BIEN (20); 14 (parcela) no vale. */
+/**
+ * Mapfre Hogar v0.3.0 (`exigirDatosHogar`): tarifica por CP + m² (+ año de construcción), SIN referencia catastral (22/10/2026: el
+ * adaptador ya no la usa). CP, m² y año los exige `BASE_HOGAR` para todas; aquí solo lo propio de Mapfre: el tomador.
+ */
 const MAPFRE_HOGAR: readonly CampoObligatorio[] = [
-  campo('inmueble.referenciaCatastral', 'referencia catastral de la vivienda (20 caracteres)', 'riesgo', {
-    presente: (r) => /^[0-9A-Z]{14}[0-9A-Z]{4}[A-Z]{2}$/.test(texto(valorEnRuta(r, 'inmueble.referenciaCatastral')).replace(/[\s-]/g, '').toUpperCase()),
-  }),
   // `pasoTomador`: si Mapfre no conoce al tomador pide nombre y primer apellido (de `datosTomador`). Asegura los inyecta desde la
   // ficha SOLO con el interruptor `TARIFICADOR_HOGAR_COMPANIAS_EXTRA=mapfre` (21/10/2026, `necesitaDatosTomador`); cerrado, ni se encola.
   { clave: 'datosTomador.nombre', etiqueta: 'nombre del tomador', bloque: 'personas', origen: 'ficha', presente: (r) => hay(obj(r.datosTomador)?.nombre) },
@@ -284,7 +284,7 @@ const DECLARACIONES: readonly Declaracion[] = [
   // Moto NSEI (0.8.7, 18/10/2026): el MISMO plan que el coche (paso 1, objeto y «Figuras»); la clase de permiso de moto, si
   // no consta, se supone «A» y se declara (no bloquea).
   { compania: 'mapfre', ramo: 'moto', propios: () => [...MAPFRE_TOMADOR, ...MAPFRE_AUTO_FIGURAS], llegaAPrecio: true, nota: 'mismo plan NSEI que el coche (que dio precio real)' },
-  { compania: 'mapfre', ramo: 'hogar', propios: () => MAPFRE_HOGAR, llegaAPrecio: false, nota: 'borrador apagado' },
+  { compania: 'mapfre', ramo: 'hogar', propios: () => MAPFRE_HOGAR, llegaAPrecio: false, nota: 'v0.3.0 por CP y m²; se enciende con MAPFRE_HOGAR_ACTIVO=true (pasa a la máquina por envDeMaquina)' },
   // Occident hogar (hueco, sin registrar): lee documento, nacimiento, CP, vía y tipo de vivienda; todos ya en la forma de hogar
   // (21/10/2026: `planFormularioHogar` lee ya el `FormularioHogar` canónico, `tomador.documentoIdentidad`).
   { compania: 'occident', ramo: 'hogar', propios: () => [], llegaAPrecio: false, nota: 'sin registrar' },

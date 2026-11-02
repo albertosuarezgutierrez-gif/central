@@ -303,12 +303,19 @@ describe('entorno del worker', () => {
     // Sin vista del explorador: solo JOB_ID + URL (la vista es opcional y va en la lista blanca).
     expect(Object.keys(env).sort()).toEqual(['JOB_ID', 'TARIFICADOR_API_URL'])
     const conVista = envDeMaquina({ jobId: '11111111-1111-4111-8111-111111111111', apiUrl: 'https://api.grupoasegura.es', vistaExplorador: 'ambas' })
-    expect(Object.keys(conVista).sort()).toEqual([...ENV_MAQUINA_PERMITIDAS].sort())
+    expect(Object.keys(conVista).sort()).toEqual(['JOB_ID', 'TARIFICADOR_API_URL', 'TARIFICADOR_EXPLORADOR_VISTA'])
     for (const v of ['dom', 'aria', 'ambas']) expect(envDeMaquina({ jobId: '11111111-1111-4111-8111-111111111111', apiUrl: 'https://a.es', vistaExplorador: v }).TARIFICADOR_EXPLORADOR_VISTA).toBe(v)
     for (const v of [undefined, null, '', 'ARIA', ' aria', 'todo', 'ambas ']) {
       expect(Object.keys(envDeMaquina({ jobId: '11111111-1111-4111-8111-111111111111', apiUrl: 'https://a.es', vistaExplorador: v as string }))).not.toContain('TARIFICADOR_EXPLORADOR_VISTA')
     }
     expect(env.TARIFICADOR_API_URL).toBe('https://api.grupoasegura.es')
+    // MAPFRE_HOGAR_ACTIVO: booleano; viaja SOLO con 'true' exacto, nunca otro valor.
+    const base = { jobId: '11111111-1111-4111-8111-111111111111', apiUrl: 'https://a.es' }
+    expect(envDeMaquina({ ...base, mapfreHogarActivo: 'true' }).MAPFRE_HOGAR_ACTIVO).toBe('true')
+    for (const v of [undefined, null, '', 'false', 'TRUE', 'True', ' true', 'true ', '1', 'yes', 'sk-secreto']) {
+      expect(Object.keys(envDeMaquina({ ...base, mapfreHogarActivo: v as string })), String(v)).not.toContain('MAPFRE_HOGAR_ACTIVO')
+    }
+    expect(Object.keys(envDeMaquina({ ...base, vistaExplorador: 'dom', mapfreHogarActivo: 'true' })).sort()).toEqual([...ENV_MAQUINA_PERMITIDAS].sort())
     expect(() => envDeMaquina({ jobId: 'no-uuid', apiUrl: 'https://a.es' })).toThrow()
     expect(() => envDeMaquina({ jobId: '11111111-1111-4111-8111-111111111111', apiUrl: 'http://a.es' })).toThrow(/https/)
     expect(() => envDeMaquina({ jobId: '11111111-1111-4111-8111-111111111111', apiUrl: 'https://u:p@a.es' })).toThrow(/credenciales/)

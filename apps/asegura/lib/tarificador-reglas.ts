@@ -577,11 +577,11 @@ export function configFly(env: Record<string, string | undefined>, imagenBd: str
 
 /**
  * La petición a la API de Fly Machines que crea la máquina de UN trabajo. El `env` sale de la lista
- * blanca de `envDeMaquina` (JOB_ID + URL + `TARIFICADOR_EXPLORADOR_VISTA` si vale dom|aria|ambas, que recibe el llamador del env del servidor): ni DATABASE_URL, ni CODEOSCOPIC_*, ni el Bearer, ni
+ * blanca de `envDeMaquina` (JOB_ID + URL + `TARIFICADOR_EXPLORADOR_VISTA` si vale dom|aria|ambas, y `MAPFRE_HOGAR_ACTIVO` solo si es exactamente 'true'; los recibe el llamador del env del servidor): ni DATABASE_URL, ni CODEOSCOPIC_*, ni el Bearer, ni
  * credenciales de portal (esas son fly secrets de la app del worker).
  */
-export function peticionMaquina(cfg: ConfigFly, jobId: string, vistaExplorador?: string | null): { url: string; init: { method: 'POST'; headers: Record<string, string>; body: string } } {
-  const env = envDeMaquina({ jobId, apiUrl: cfg.apiUrl, vistaExplorador })
+export function peticionMaquina(cfg: ConfigFly, jobId: string, vistaExplorador?: string | null, mapfreHogarActivo?: string | null): { url: string; init: { method: 'POST'; headers: Record<string, string>; body: string } } {
+  const env = envDeMaquina({ jobId, apiUrl: cfg.apiUrl, vistaExplorador, mapfreHogarActivo })
   const body = {
     name: `tarificar-${jobId.slice(0, 8)}`,
     region: REGION_FLY,

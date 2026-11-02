@@ -160,7 +160,7 @@ describe('obligatorios · propios de cada portal', () => {
       ['allianz', 'moto', ['seleccionVehiculo.clase', 'conductor.sexo', 'documentoTomador']],
       ['mapfre', 'auto', ['companiaAnterior', 'documentoTomador', 'datosTomador.nombre', 'datosTomador.apellido1']],
       ['mapfre', 'moto', ['companiaAnterior', 'documentoTomador', 'datosTomador.nombre', 'datosTomador.apellido1']],
-      ['mapfre', 'hogar', ['inmueble.referenciaCatastral', 'datosTomador.nombre', 'datosTomador.apellido1']],
+      ['mapfre', 'hogar', ['inmueble.codigoPostal', 'inmueble.superficieM2', 'inmueble.anioConstruccion', 'datosTomador.nombre', 'datosTomador.apellido1']],
       ['allianz', 'comunidades', ['tipoVivienda', 'uso', 'listaPropietarios']],
     ]
     for (const [c, r, claves] of casos) {
@@ -294,9 +294,13 @@ describe('obligatorios · propios de cada portal', () => {
     expect(faltanParaTarificar('mapfre', 'auto', sinFicha, { sinFicha: true })).toEqual([])
   })
 
-  it('Mapfre hogar: la referencia catastral de PARCELA (14) no basta; la del bien (20) sí', () => {
+  it('Mapfre hogar v0.3.0: tarifica por CP y m², sin referencia catastral; Allianz no se relaja', () => {
     const h = hogar()
-    expect(faltanParaTarificar('mapfre', 'hogar', { ...h, inmueble: { ...h.inmueble, referenciaCatastral: '1234567AB1234C' } })!.map((f) => f.clave)).toEqual(['inmueble.referenciaCatastral'])
+    for (const ref of [undefined, '', '1234567AB1234C']) {
+      expect(faltanParaTarificar('mapfre', 'hogar', { ...h, inmueble: { ...h.inmueble, referenciaCatastral: ref } }), `ref ${ref}`).toEqual([])
+    }
+    expect(faltanParaTarificar('mapfre', 'hogar', { ...h, inmueble: { ...h.inmueble, superficieM2: undefined } })!.map((f) => f.clave)).toContain('inmueble.superficieM2')
+    expect(faltanParaTarificar('mapfre', 'hogar', { ...h, inmueble: { ...h.inmueble, codigoPostal: '' } })!.map((f) => f.clave)).toContain('inmueble.codigoPostal')
     expect(faltanParaTarificar('allianz', 'hogar', { ...h, inmueble: { ...h.inmueble, referenciaCatastral: undefined } })).toEqual([])
   })
 
