@@ -44,6 +44,7 @@ model Income {
   @@map("incomes")
 }
 
+/// @deprecated tabla congelada 27/04/2026, usar gastos
 model Expense {
   id             String          @id @default(cuid())
   propertyId     String
