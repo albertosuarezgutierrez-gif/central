@@ -113,7 +113,7 @@ test('v0.2.34 · hastaPrecioGenerali: con la tabla a la vista y sin cifras NO pu
   let siguientes = 0
   const ctx = { pulsarSubpestanaGenerali: async () => {}, pulsarSiguienteGenerali: async () => { siguientes++; return {} } } as unknown as ContextoPortal
   await conPagina(`<table>${HEAD}</table><table><tr><td>${sel(false)}</td><td>Todo Riesgo</td><td>consultar</td></tr></table>`, async (page) => {
-    await assert.rejects(hastaPrecioGenerali(page, coche(), [], ctx, { esperaPrecioMs: 300 }), (e: unknown) => {
+    await assert.rejects(hastaPrecioGenerali(page, coche(), [], ctx, { esperaGarantiasMs: 0, esperaPrecioMs: 300 }), (e: unknown) => {
       if (!(e instanceof ErrorMapaIncompletoGenerali)) return false
       assert.match(e.message, /no intentado: la tabla de modalidades ya está a la vista/, e.message)
       assert.match(e.message, /forma: cab 8c;/, e.message)

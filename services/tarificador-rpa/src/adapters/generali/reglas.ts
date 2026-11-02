@@ -1043,6 +1043,8 @@ export interface EstadoCalculoGenerali {
   botones: string[]
   /** ¿Algún marco seguía cargando (`loading.html` visible o `document.readyState` ≠ complete)? null = no se pudo saber. */
   cargando: boolean | null
+  /** v0.2.63: ¿había a la vista algún bloque de decisión de «Garantías y Resultados» (suma de abogado, verificación del riesgo, forma de pago)? undefined/null = no se sabe. */
+  bloquesVisibles?: boolean | null
 }
 
 /** v0.2.42: opciones de «Forma de pago a contratar» que el robot puede pedir (texto EXACTO del portal). */
@@ -1075,7 +1077,35 @@ export function decisionesPendientesGenerali(nombres: readonly string[]): string
   const out: string[] = []
   if (nombres.some((n) => /opcEnvio|opcenv/i.test(n))) out.push('Envío e-mail')
   if (nombres.some((n) => /verifRiesgo|zvriep/i.test(n))) out.push('Verificación del riesgo')
+  if (nombres.some((n) => /ysuabo/i.test(n))) out.push('Suma libre elección de abogado')
   return out
+}
+
+/** v0.2.63: aviso de la oferta cuando el bot elige la suma de libre elección de abogado (importe más alto ofrecido). Lleva «supuesto» → precio `estimado`. */
+export const AVISO_SUMA_ABOGADO_GENERALI = 'Supuesto: suma libre elección de abogado'
+
+/**
+ * v0.2.63 (trabajo 7f358ff2): `select#reg1063E_general_ysuabo` queda en «Seleccione una suma asegurada» y el portal no calcula. Elige la opción cuyo TEXTO
+ * es el importe MÁS ALTO (por texto, no por `value`: «1.000 €» > «750 €» > «500 €»). Sin opciones con importe, o con el máximo repetido → null (no se adivina). PURA.
+ */
+export function elegirSumaAbogadoGenerali(opciones: readonly string[]): { indice: number; importeEur: number; texto: string } | null {
+  const cand: { indice: number; importeEur: number; texto: string }[] = []
+  opciones.forEach((o, indice) => {
+    const texto = String(o ?? '').replace(/\s+/g, ' ').trim()
+    const m = /^(\d{1,3}(?:\.\d{3})+|\d+)(?:,\d{1,2})?\s*(?:€|eur(?:os)?)$/i.exec(texto)
+    if (!m) return
+    const importeEur = Number(m[1]!.replace(/\./g, ''))
+    if (Number.isFinite(importeEur) && importeEur > 0) cand.push({ indice, importeEur, texto })
+  })
+  if (cand.length === 0) return null
+  const max = Math.max(...cand.map((c) => c.importeEur))
+  const top = cand.filter((c) => c.importeEur === max)
+  return top.length === 1 ? top[0]! : null
+}
+
+/** v0.2.63: texto del aviso para la oferta, con el importe elegido en formato español (p. ej. «1.000 €»). PURA. */
+export function avisoSumaAbogadoGenerali(texto: string): string {
+  return `${AVISO_SUMA_ABOGADO_GENERALI} = ${texto.replace(/\s+/g, ' ').trim()} (la más alta ofrecida)`
 }
 
 /** v0.2.42: ¿los avisos del portal dicen que faltan datos («datos incompletos», «no tiene los datos completos»)? Entonces Generali NO calcula. PURA. */
@@ -1111,7 +1141,9 @@ export function resumenEstadoCalculoGenerali(e: EstadoCalculoGenerali | null, va
   const avV = [...new Set(avisosValoracion.map((a) => s(a, 100)).filter(Boolean))].slice(0, 4)
   if (avV.length) partes.push(`avisos en «Datos de Valoración»: ${avV.map((a) => `«${a}»`).join(' · ')}`)
   const vacios = (e?.obligatoriosVacios ?? []).map((x) => s(x, 60)).filter(Boolean)
-  partes.push(`obligatorios vacíos en «Garantías y Resultados»: ${vacios.length ? vacios.join(' · ') : '(ninguno detectado)'}`)
+  // v0.2.63: sin bloques de decisión a la vista (detector fuera de la pestaña) «ninguno» NO es una afirmación: se dice que no era evaluable.
+  const sinBloques = e?.bloquesVisibles === false
+  partes.push(`obligatorios vacíos en «Garantías y Resultados»: ${vacios.length ? vacios.join(' · ') : sinBloques ? '(no evaluable: bloques de «Garantías y Resultados» no visibles)' : '(ninguno detectado)'}`)
   partes.push(`cargando: ${e?.cargando === true ? 'sí' : e?.cargando === false ? 'no' : '¿?'}`)
   const botones = (e?.botones ?? []).map((x) => s(x, 30)).filter(Boolean)
   partes.push(`botones/enlaces del marco: ${botones.length ? botones.join(' · ') : '(ninguno)'}`)

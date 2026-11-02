@@ -11,7 +11,7 @@ import { obligatoriosVaciosGenerali, resumenEstadoCalculoGenerali } from '../src
 import { validarFormularioAuto, type FormularioAuto } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../src/adaptador.ts'
 
-test('v0.2.44 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.62'))
+test('v0.2.44 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.63'))
 
 test('v0.2.44 · puro: un desplegable obligatorio en «Seleccione…» cuenta como VACÍO; los avisos de «Datos de Valoración» salen en el resumen', () => {
   assert.deepEqual(obligatoriosVaciosGenerali([
@@ -87,14 +87,14 @@ test('v0.2.44 · el atasco nombra los obligatorios vacíos de «Datos de Valorac
       pulsarSiguienteGenerali: async () => ({ dialogo: null }),
       pulsarRecalcularGenerali: async () => { recalculos++; return { dialogo: null } },
     } as unknown as ContextoPortal
-    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], ctx, { esperaPrecioMs: 200 }), (e: unknown) => {
+    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], ctx, { esperaGarantiasMs: 0, esperaPrecioMs: 200 }), (e: unknown) => {
       if (!(e instanceof ErrorMapaIncompletoGenerali)) return false
       assert.match(e.message, /obligatorios vacíos en «Datos de Valoración»: Uso del vehículo · Garaje nocturno;/, e.message.slice(0, 900))
       assert.match(e.message, /avisos en «Datos de Valoración»: «Paso con datos incompletos»/)
-      assert.match(e.message, /Bloques antes de Recalcular: forma de pago sin bloque a la vista, envío e-mail sin bloque a la vista, verificación del riesgo sin bloque a la vista\./)
+      assert.match(e.message, /Bloques antes de Recalcular: forma de pago sin bloque a la vista, envío e-mail sin bloque a la vista, verificación del riesgo sin bloque a la vista, suma de abogado sin cambio\./)
       assert.ok(e.message.length <= 1_900, String(e.message.length))
       return true
     })
   })
-  assert.equal(recalculos, 1)
+  assert.equal(recalculos, 2) // v0.2.63: segundo Recalcular (máx. 2)
 })

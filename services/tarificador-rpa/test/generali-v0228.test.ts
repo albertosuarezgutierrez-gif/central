@@ -97,7 +97,7 @@ test('v0.2.28 · atasco tras Confirmar: el mensaje trae PRONTO el motivo del gat
       pulsarSubpestanaGenerali: async () => {},
       pulsarSiguienteGenerali: () => pulsarSiguienteValoracionGenerali(page, guard, 50),
     } as unknown as ContextoPortal
-    await assert.rejects(hastaPrecioGenerali(page, coche(), [], ctx, { esperaPrecioMs: 500 }), (e: unknown) => {
+    await assert.rejects(hastaPrecioGenerali(page, coche(), [], ctx, { esperaGarantiasMs: 0, esperaPrecioMs: 500 }), (e: unknown) => {
       if (!(e instanceof ErrorMapaIncompletoGenerali)) return false
       const m = e.message
       assert.match(m, /ningún importe legible/)

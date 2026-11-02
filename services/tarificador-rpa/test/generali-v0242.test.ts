@@ -12,7 +12,7 @@ import { validarFormularioAuto, type FormularioAuto } from '@central/module-tari
 import type { ContextoPortal } from '../src/adaptador.ts'
 
 test('v0.2.42 · versión', () => {
-  assert.equal(VERSION_GENERALI_AUTO, '0.2.62')
+  assert.equal(VERSION_GENERALI_AUTO, '0.2.63')
 })
 
 let browser: Browser
@@ -109,16 +109,16 @@ test('v0.2.42 · atasco: tras «Recalcular» el mensaje trae el aviso del portal
         return { dialogo: null }
       },
     } as unknown as ContextoPortal
-    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], ctx, { esperaPrecioMs: 200 }), (e: unknown) => {
+    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], ctx, { esperaGarantiasMs: 0, esperaPrecioMs: 200 }), (e: unknown) => {
       if (!(e instanceof ErrorMapaIncompletoGenerali)) return false
-      assert.match(e.message, /Recalcular: Recalcular×1\. Estado del cálculo: Avisos del portal \(areaErrores\): «No se puede calcular con datos incompletos»; el portal da los datos por INCOMPLETOS/, e.message.slice(0, 600))
+      assert.match(e.message, /Recalcular: Recalcular×1 · Recalcular×2 \(el portal seguía con «datos incompletos»\)\. Estado del cálculo: Avisos del portal \(areaErrores\): «No se puede calcular con datos incompletos»; el portal da los datos por INCOMPLETOS/, e.message.slice(0, 600))
       assert.match(e.message, /obligatorios vacíos en «Garantías y Resultados»: Forma de pago a contratar · Suma asegurada abogado;/)
       assert.match(e.message, /cargando: no; botones\/enlaces del marco: [^;]*Recalcular/)
       assert.ok(e.message.length <= 1_900, String(e.message.length))
       return true
     })
   })
-  assert.equal(recalculos, 1)
+  assert.equal(recalculos, 2) // v0.2.63: con «datos incompletos» persistente, un segundo Recalcular (máx. 2)
 })
 
 // ── Decisión de Alberto: «Forma de pago a contratar» = Anual por defecto (opción exacta); «Envío e-mail» y «Verificación del riesgo» no se tocan ──
@@ -161,7 +161,7 @@ test('v0.2.42 · puro: forma de pago Anual por defecto, la del riesgo si es exac
 test('v0.2.42 · marca «Anual» exacta antes de «Recalcular», lee el precio y la oferta avisa «Forma de pago: anual (por defecto)»', async () => {
   const cuenta = { rec: 0, pulsados: 0 }
   await conPagina(PANTALLA_FP(FP_REAL(['Anual', 'Semestral', 'Trimestral'])), async (page) => {
-    const r = await hastaPrecioGenerali(page, formulario(), [], ctxFp(page, cuenta), { esperaPrecioMs: 300 })
+    const r = await hastaPrecioGenerali(page, formulario(), [], ctxFp(page, cuenta), { esperaGarantiasMs: 0, esperaPrecioMs: 300 })
     assert.equal(r.ofertas[0]!.primaAnualEur, 456.78)
     assert.ok(r.ofertas[0]!.avisos.includes('Forma de pago: anual (por defecto)'), r.ofertas[0]!.avisos.join(' | '))
     assert.equal(await page.locator('input[name="reg1063E.gridmodseg.yfp"]').nth(0).isChecked(), true)
@@ -174,7 +174,7 @@ test('v0.2.42 · marca «Anual» exacta antes de «Recalcular», lee el precio y
 test('v0.2.42 · sin opción EXACTA «Anual» atasca nombrando las opciones vistas y no pulsa nada', async () => {
   const cuenta = { rec: 0, pulsados: 0 }
   await conPagina(PANTALLA_FP(FP_REAL(['Anual (fraccionado)', 'Semestral'])), async (page) => {
-    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], ctxFp(page, cuenta), { esperaPrecioMs: 200 }), (e: unknown) => {
+    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], ctxFp(page, cuenta), { esperaGarantiasMs: 0, esperaPrecioMs: 200 }), (e: unknown) => {
       if (!(e instanceof ErrorMapaIncompletoGenerali)) return false
       assert.match(e.message, /la opción «Anual» de «Forma de pago a contratar» \(no existe exactamente; opciones vistas: «Anual \(fraccionado\)» · «Semestral»\)/)
       return true
@@ -191,7 +191,7 @@ test('v0.2.42 · «Envío e-mail» y «Verificación del riesgo» vacíos: no se
     const form = { ...formulario(), fraccionamiento: 'semestral' } as unknown as FormularioAuto
     const ctx = ctxFp(page, cuenta)
     ;(ctx as unknown as { pulsarRecalcularGenerali: () => Promise<{ dialogo: null }> }).pulsarRecalcularGenerali = async () => { cuenta.rec++; return { dialogo: null } }
-    await assert.rejects(hastaPrecioGenerali(page, form, [], ctx, { esperaPrecioMs: 200 }), (e: unknown) => {
+    await assert.rejects(hastaPrecioGenerali(page, form, [], ctx, { esperaGarantiasMs: 0, esperaPrecioMs: 200 }), (e: unknown) => {
       if (!(e instanceof ErrorMapaIncompletoGenerali)) return false
       assert.match(e.message, /^generali\/auto: mapa incompleto: faltan \(falta decisión de Alberto: Envío e-mail, Verificación del riesgo\) el PRECIO/, e.message.slice(0, 300))
       assert.ok(e.message.length <= 1_900, String(e.message.length))
@@ -215,7 +215,7 @@ test('v0.2.42 · la opción «Anual» pasa por la vía común del guard (`pulsar
     await page.goto(B028)
     const cuenta = { rec: 0, pulsados: 0 }
     const ctx = { ...ctxFp(page, cuenta), pulsar: async (l: import('playwright').Locator) => { cuenta.pulsados++; await pulsar(l, guard) } } as unknown as ContextoPortal
-    const r = await hastaPrecioGenerali(page, formulario(), [], ctx, { esperaPrecioMs: 300 })
+    const r = await hastaPrecioGenerali(page, formulario(), [], ctx, { esperaGarantiasMs: 0, esperaPrecioMs: 300 })
     assert.equal(r.ofertas[0]!.primaAnualEur, 456.78)
     assert.equal(await page.locator('input[name="reg1063E.gridmodseg.yfp"]').nth(0).isChecked(), true)
     assert.equal(cuenta.pulsados, 1)

@@ -14,7 +14,7 @@ import { validarFormularioAuto, type FormularioAuto } from '@central/module-tari
 import type { ContextoPortal } from '../src/adaptador.ts'
 
 // Solo diagnóstico: no cambia la tarificación, la versión no se sube.
-test('diagnóstico «Tipo de vehículo» · la versión sigue en 0.2.53', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.62'))
+test('diagnóstico «Tipo de vehículo» · la versión sigue en 0.2.53', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.63'))
 
 test('hipótesis de catálogo: solo con «Tipo de vehículo» VACÍO y una clase que no es TURISMO', () => {
   assert.match(hipotesisTipoVehiculoGenerali('vacío (wclavh «TODO TERRENO»)') ?? '', /^HIPÓTESIS \(sin confirmar\): .*«TODO TERRENO» \(no «TURISMO»\): probable hueco del catálogo/)
@@ -131,7 +131,7 @@ test('el atasco de «Tipo de vehículo» trae HIPÓTESIS, legado y fila elegida,
     assert.equal(await leerClaseTipoGenerali(page), 'vacío (wclavh «TODO TERRENO»)')
     let subpestana = 0
     const c = { pausaAccion: async () => {}, pulsarSubpestanaGenerali: async () => { subpestana++ } } as unknown as ContextoPortal
-    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], c, { esperaPrecioMs: 300, esperaProtegidosMs: 300, pruebasTipo: { trasAccionMs: 300, selectorMs: 200 } }), (e: unknown) => {
+    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], c, { esperaGarantiasMs: 0, esperaPrecioMs: 300, esperaProtegidosMs: 300, pruebasTipo: { trasAccionMs: 300, selectorMs: 200 } }), (e: unknown) => {
       assert.ok(e instanceof ErrorMapaIncompletoGenerali, String(e))
       const m = (e as Error).message
       assert.match(m, /No se pasa a «Garantías y Resultados»\. HIPÓTESIS \(sin confirmar\): «Tipo de vehículo» vacío con «Clase de vehículo» «TODO TERRENO»/)

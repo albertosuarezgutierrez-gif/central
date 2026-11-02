@@ -72,7 +72,7 @@ test('v0.2.40 · la tabla vacía aparece tras «Siguiente»: se pulsa «Recalcul
         return { dialogo: null }
       },
     } as unknown as ContextoPortal
-    const r = await hastaPrecioGenerali(page, formulario(), [], ctx, { esperaPrecioMs: 300 })
+    const r = await hastaPrecioGenerali(page, formulario(), [], ctx, { esperaGarantiasMs: 0, esperaPrecioMs: 300 })
     assert.equal(r.ofertas[0]!.primaAnualEur, 456.78)
   })
   assert.equal(siguientes, 1)
@@ -87,7 +87,7 @@ test('v0.2.40 · el resultado de «Recalcular» va AL PRINCIPIO del mensaje (pul
   ] as const) {
     const ctx = { pulsarSubpestanaGenerali: async () => {}, pulsarSiguienteGenerali: async () => ({ dialogo: null }), ...(puerta ? { pulsarRecalcularGenerali: puerta } : {}) } as unknown as ContextoPortal
     await conPagina(GRID_VACIO, async (page) => {
-      await assert.rejects(hastaPrecioGenerali(page, formulario(), [], ctx, { esperaPrecioMs: 200 }), (e: unknown) => {
+      await assert.rejects(hastaPrecioGenerali(page, formulario(), [], ctx, { esperaGarantiasMs: 0, esperaPrecioMs: 200 }), (e: unknown) => {
         if (!(e instanceof ErrorMapaIncompletoGenerali)) return false
         assert.match(e.message, esperado, e.message.slice(0, 500))
         assert.ok(e.message.length <= 1_900, String(e.message.length))
@@ -100,7 +100,7 @@ test('v0.2.40 · el resultado de «Recalcular» va AL PRINCIPIO del mensaje (pul
 test('v0.2.40 · sin tabla a la vista el mensaje dice por qué NO se intentó «Recalcular»', async () => {
   const ctx = { pulsarSubpestanaGenerali: async () => {}, pulsarSiguienteGenerali: async () => ({ dialogo: null }), pulsarRecalcularGenerali: async () => { throw new Error('no debe pulsarse') } } as unknown as ContextoPortal
   await conPagina('', async (page) => {
-    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], ctx, { esperaPrecioMs: 200 }), (e: unknown) => e instanceof ErrorMapaIncompletoGenerali && /Recalcular: Recalcular no intentado: la tabla de modalidades no estaba a la vista\./.test(e.message))
+    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], ctx, { esperaGarantiasMs: 0, esperaPrecioMs: 200 }), (e: unknown) => e instanceof ErrorMapaIncompletoGenerali && /Recalcular: Recalcular no intentado: la tabla de modalidades no estaba a la vista\./.test(e.message))
   })
 })
 

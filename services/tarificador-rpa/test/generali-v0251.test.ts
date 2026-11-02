@@ -10,7 +10,7 @@ import { ErrorMapaIncompletoGenerali, VERSION_GENERALI_AUTO, hastaPrecioGenerali
 import { validarFormularioAuto, type FormularioAuto } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../src/adaptador.ts'
 
-test('v0.2.51 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.62'))
+test('v0.2.51 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.63'))
 
 test('v0.2.51 · puro: tarea del último refresco sin valores', () => {
   assert.equal(tareaRefrescoGenerali('https://www.generali.es/emi_genAutosFormWeb/refreshEmiAutosGenA.do?tarea=updatedCampoSini&valueParameter=x&x=C0109'), 'refreshEmiAutosGenA.do tarea=updatedCampoSini')
@@ -67,7 +67,7 @@ test('v0.2.51 · caso d8584313: el portal rellena «Tipo de vehículo» TARDE (1
   await conPagina(VALORACION(1_500), async (page) => {
     let pulsada = 0
     const c = { pausaAccion: async () => {}, pulsarSubpestanaGenerali: async (t: string) => { if (t !== 'Garantías y Resultados') return; pulsada++; await page.setContent(`<html><body>${GARANTIAS}</body></html>`) } } as unknown as ContextoPortal
-    const r = await hastaPrecioGenerali(page, formulario(), [], c, { esperaPrecioMs: 300, esperaProtegidosMs: 6_000 })
+    const r = await hastaPrecioGenerali(page, formulario(), [], c, { esperaGarantiasMs: 0, esperaPrecioMs: 300, esperaProtegidosMs: 6_000 })
     assert.equal(pulsada, 1)
     assert.equal(r.ofertas[0]!.primaAnualEur, 456.78)
   })
@@ -76,7 +76,7 @@ test('v0.2.51 · caso d8584313: el portal rellena «Tipo de vehículo» TARDE (1
 test('v0.2.51 · si nunca llega: para tras la espera diciendo lo esperado y el último refresco', async () => {
   await conPagina(VALORACION(-1), async (page) => {
     const c = { pausaAccion: async () => {}, pulsarSubpestanaGenerali: async () => {} } as unknown as ContextoPortal
-    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], c, { esperaPrecioMs: 300, esperaProtegidosMs: 1_000 }), (e: unknown) => {
+    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], c, { esperaGarantiasMs: 0, esperaPrecioMs: 300, esperaProtegidosMs: 1_000 }), (e: unknown) => {
       assert.ok(e instanceof ErrorMapaIncompletoGenerali)
       assert.match((e as Error).message, /: Tipo de vehículo\. No se pasa a «Garantías y Resultados»\. diag: .*\. Pruebas \(v0\.2\.52\): .*\. Esperado 1 s \(v0\.2\.51\): bloqueados por refresco 0; último refresco del portal: \(ninguno\)\./)
       return true

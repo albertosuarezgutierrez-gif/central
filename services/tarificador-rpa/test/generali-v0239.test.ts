@@ -76,7 +76,7 @@ test('v0.2.39 · tabla vacía: pulsa «Recalcular» UNA vez por la puerta, las f
         return { dialogo: null }
       },
     } as unknown as ContextoPortal
-    const r = await hastaPrecioGenerali(page, formulario(), [], ctx, { esperaPrecioMs: 400 })
+    const r = await hastaPrecioGenerali(page, formulario(), [], ctx, { esperaGarantiasMs: 0, esperaPrecioMs: 400 })
     assert.equal(r.ofertas[0]!.primaAnualEur, 456.78)
   })
   assert.equal(recalculos, 1)
@@ -85,7 +85,7 @@ test('v0.2.39 · tabla vacía: pulsa «Recalcular» UNA vez por la puerta, las f
 test('v0.2.39 · sin puerta de «Recalcular» el atasco lo dice en «Avance» y no se pulsa nada más', async () => {
   const ctx = { pulsarSubpestanaGenerali: async () => {}, pulsarSiguienteGenerali: async () => { throw new Error('«Siguiente» no debe pulsarse') } } as unknown as ContextoPortal
   await conPagina(GRID_VACIO, async (page) => {
-    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], ctx, { esperaPrecioMs: 300 }), (e: unknown) => {
+    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], ctx, { esperaGarantiasMs: 0, esperaPrecioMs: 300 }), (e: unknown) => {
       if (!(e instanceof ErrorMapaIncompletoGenerali)) return false
       assert.match(e.message, /Recalcular no intentado: la tabla de modalidades está vacía/, e.message)
       return true
@@ -97,7 +97,7 @@ test('v0.2.39 · «Recalcular» pulsado pero la tabla sigue vacía: se pulsa una
   let n = 0
   const ctx = { pulsarSubpestanaGenerali: async () => {}, pulsarSiguienteGenerali: async () => ({}), pulsarRecalcularGenerali: async () => { n++; return { dialogo: null } } } as unknown as ContextoPortal
   await conPagina(GRID_VACIO, async (page) => {
-    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], ctx, { esperaPrecioMs: 300 }), (e: unknown) => e instanceof ErrorMapaIncompletoGenerali && /Recalcular×1/.test(e.message))
+    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], ctx, { esperaGarantiasMs: 0, esperaPrecioMs: 300 }), (e: unknown) => e instanceof ErrorMapaIncompletoGenerali && /Recalcular×1/.test(e.message))
   })
   assert.equal(n, 1)
 })
@@ -107,7 +107,7 @@ test('v0.2.39 · con la tabla ya calculada NO se pulsa «Recalcular»', async ()
   const ctx = { pulsarSubpestanaGenerali: async () => {}, pulsarRecalcularGenerali: async () => { n++ } } as unknown as ContextoPortal
   const html = GRID_VACIO.replace('<tbody id="cuerpo"></tbody>', `<tbody id="cuerpo">${FILA}</tbody>`)
   await conPagina(html, async (page) => {
-    const r = await hastaPrecioGenerali(page, formulario(), [], ctx, { esperaPrecioMs: 400 })
+    const r = await hastaPrecioGenerali(page, formulario(), [], ctx, { esperaGarantiasMs: 0, esperaPrecioMs: 400 })
     assert.equal(r.ofertas[0]!.primaAnualEur, 456.78)
   })
   assert.equal(n, 0)

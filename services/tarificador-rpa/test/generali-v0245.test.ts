@@ -12,7 +12,7 @@ import { ErrorTarificador } from '../src/errores.ts'
 import { validarFormularioAuto, type FormularioAuto } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../src/adaptador.ts'
 
-test('v0.2.45 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.62'))
+test('v0.2.45 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.63'))
 
 test('v0.2.45 · puro: igualdad EXACTA (solo tildes/mayúsculas/espacios) y una sola coincidencia; la compañía sale de la ficha', () => {
   assert.equal(indiceOpcionNormalizadaGenerali(['Seleccione', 'Furgoneta', ' TURISMO ', 'Motocicleta'], ['Turismo']), 2)
@@ -136,7 +136,7 @@ test('v0.2.45 · de punta a punta: con el precio, la oferta lleva los avisos de 
   const GARANTIAS = `<h3>Garantías y Resultados</h3><div id="areaNegocio"><table id="reg1063E_gridmodseg"><thead><tr><th></th><th>#</th><th>Modalidades de Seguro</th><th>Recibo Anual</th><th>Prima Anualidad</th></tr></thead><tbody><tr><td></td><td><input type="${SEL}" name="m" checked></td><td>Todo Riesgo</td><td>456,78</td><td>900,00</td></tr></tbody></table></div>`
   await conPagina(VALORACION(), async (page) => {
     const c = { ...ctx, pulsarSubpestanaGenerali: async () => { await page.setContent(`<html><body>${GARANTIAS}</body></html>`) } } as unknown as ContextoPortal
-    const r = await hastaPrecioGenerali(page, formulario({ companiaAnterior: 'Mapfre', aniosAseguradoAnterior: 4 }), [], c, { esperaPrecioMs: 300 })
+    const r = await hastaPrecioGenerali(page, formulario({ companiaAnterior: 'Mapfre', aniosAseguradoAnterior: 4 }), [], c, { esperaGarantiasMs: 0, esperaPrecioMs: 300 })
     assert.equal(r.ofertas[0]!.primaAnualEur, 456.78)
     for (const a of ['Tipo de vehículo: Turismo (ramo auto)', 'Compañía de procedencia: MAPFRE (compañía anterior de la ficha)']) assert.ok(r.ofertas[0]!.avisos.includes(a), r.ofertas[0]!.avisos.join(' | '))
   })

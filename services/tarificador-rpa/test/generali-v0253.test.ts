@@ -11,7 +11,7 @@ import { estadoNomiagGenerali, lineaDiagTipoVehiculoGenerali } from '../src/adap
 import { validarFormularioAuto, type FormularioAuto } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../src/adaptador.ts'
 
-test('v0.2.53 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.62'))
+test('v0.2.53 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.63'))
 
 let browser: Browser
 before(async () => {
@@ -89,7 +89,7 @@ test('v0.2.53 · el mensaje del atasco de «Tipo de vehículo» lleva la línea 
     diagGeneraliDe(page).trasSelector = await leerClaseTipoGenerali(page)
     await page.setContent(`<html><body>${VALORACION}${nomiag(NOMBRE)}</body></html>`)
     const c = { pausaAccion: async () => {}, pulsarSubpestanaGenerali: async () => {} } as unknown as ContextoPortal
-    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], c, { esperaPrecioMs: 300, esperaProtegidosMs: 300, pruebasTipo: { trasAccionMs: 300, selectorMs: 200 } }), (e: unknown) => {
+    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], c, { esperaGarantiasMs: 0, esperaPrecioMs: 300, esperaProtegidosMs: 300, pruebasTipo: { trasAccionMs: 300, selectorMs: 200 } }), (e: unknown) => {
       assert.ok(e instanceof ErrorMapaIncompletoGenerali, String(e))
       const m = (e as Error).message
       assert.match(m, /diag: nomiag=con valor; wclasv tras selector=sin campo \(wclavh sin campo\)\/antes personas=vacío \(wclavh «TURISMO»\)\/final=vacío \(wclavh «TURISMO»\); tipos=\[Turismo \| Moto\] \(marcado «Turismo»\); subtipos=\[Turismos \| Todoterreno\] \(marcado «Todoterreno»\)/)
