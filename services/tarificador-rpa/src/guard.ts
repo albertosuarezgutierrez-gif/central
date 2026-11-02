@@ -6020,7 +6020,12 @@ export async function elegirFilaVersionGenerali(page: Page, guard: GuardEmision,
   if (v === '' || v.length > 200 || c.length > 40) throw new EmisionBloqueadaError('boton', v.slice(0, 80))
   const marco = marcoSelectorVehiculosGenerali(page)
   const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
-  if (usados.has('generali:elegir-version')) throw new EmisionBloqueadaError('fase', 'la fila de versión del selector de Generali ya se eligió en este trabajo')
+  // v0.2.66: la fila «Otras versiones ...» de la tabla (espejo del desplegable) solo se pulsa TRAS elegirla en el desplegable (misma puerta de versión), una vez, con su
+  // propia clave: NO gasta la de la fila real. Cualquier otra fila sigue con la clave de siempre. Las comprobaciones de abajo (una fila, `comprobarBoton`) no cambian.
+  const filaOtras = esTextoOtrasVersionesGenerali(v)
+  if (filaOtras && (c !== '' || !usados.has(CLAVE_VERSION_OTRAS_GENERALI))) throw new EmisionBloqueadaError('fase', 'la fila «Otras versiones» de Generali solo se pulsa tras elegirla en el desplegable de versiones')
+  const claveFila = filaOtras ? 'generali:fila-version-otras' : 'generali:elegir-version'
+  if (usados.has(claveFila)) throw new EmisionBloqueadaError('fase', 'la fila de versión del selector de Generali ya se eligió en este trabajo')
   await exigirSinCuentaBancaria(page)
   const xp = `xpath=//tr[td[normalize-space(.)=${literalXpath(v)}]${c !== '' ? `][td[normalize-space(.)=${literalXpath(c)}]` : ''}]`
   const fila = marco.locator(xp).filter({ visible: true })
@@ -6030,7 +6035,7 @@ export async function elegirFilaVersionGenerali(page: Page, guard: GuardEmision,
   if (seleccionada) return
   const desc = await descripcion(fila)
   comprobarBoton(desc)
-  usados.add('generali:elegir-version')
+  usados.add(claveFila)
   AVANCES_USADOS.set(guard, usados)
   try {
     await fila.click({ timeout: MS_CLIC_NORMAL_CONFIRMAR_GENERALI })

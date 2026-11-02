@@ -350,6 +350,16 @@ export function esOpcionOtrasVersionesGenerali(texto: string): boolean {
 }
 
 /**
+ * v0.2.66 · ¿La lista de «Versión» CAMBIÓ de contenido tras «Otras versiones ...»? Compara el CONJUNTO de textos normalizados (no el nº de opciones: el portal puede
+ * recargar otras versiones con el mismo nº) e ignora el orden. Cambió = conjunto distinto Y queda alguna versión real (ni vacía ni «Otras…»). PURA.
+ */
+export function listaVersionCambiadaGenerali(antes: readonly string[], ahora: readonly string[]): boolean {
+  const firma = (l: readonly string[]) => [...new Set(l.map(normalizarCatalogo).filter((x) => x !== ''))].sort().join('\u0001')
+  if (firma(antes) === firma(ahora)) return false
+  return ahora.some((x) => !esOpcionVaciaCatalogo(x) && !esOpcionOtrasVersionesGenerali(x))
+}
+
+/**
  * La opción decidida está PUESTA en el `<select>` oculto cuando su valor Y el texto de la opción seleccionada son los de la elegida
  * (normalizados). Solo el valor no basta: si «Seleccione uno» y «Otros modelos ...» comparten valor, el valor «casa» sin elegir nada. PURA.
  */
