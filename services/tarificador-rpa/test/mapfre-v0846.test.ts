@@ -9,7 +9,7 @@ import { filasDePdf, textoDePdf } from '../src/pdf-texto.ts'
 
 const PRODUCTOS = ['TERCEROS', 'TERCEROS AMPLIADO']
 
-test('v0.8.46 · versión', () => assert.equal(mapfreAuto.version, '0.8.47'))
+test('v0.8.46 · versión', () => assert.equal(mapfreAuto.version, '0.8.48'))
 
 type Celda = [x: number, y: number, t: string]
 const pdfDe = (celdas: Celda[]) => {

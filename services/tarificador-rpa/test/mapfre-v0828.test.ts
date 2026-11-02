@@ -37,7 +37,7 @@ const FIGURAS = (sel: string) => `<body><app-figuras><mat-form-field><label><mat
 <mat-form-field><label><mat-label>Expuestos/Años</mat-label></label><input formcontrolname="expuestos" disabled></mat-form-field></app-figuras></body>`
 const PLAN = { escribibles: [{ sel: SEL_HISTORIAL.companiaAnterior, tipo: 'mat-select', etiqueta: 'compañía anterior', paso: 'figuras', valor: 'ZZ Seguros', opciones: ['ZZ Seguros'] }], pendientes: [] } as never
 
-test('v0.8.28 · la versión del bot es 0.8.29', () => assert.equal(mapfreAuto.version, '0.8.47'))
+test('v0.8.28 · la versión del bot es 0.8.29', () => assert.equal(mapfreAuto.version, '0.8.48'))
 
 test('DOM de producción (sin app-historial-siniestralidad, «Compañia» + mat-select habilitado): rellenarMatSelects lo elige con la capa común', async () => {
   const page = await pagina(FIGURAS(SELECT()))
