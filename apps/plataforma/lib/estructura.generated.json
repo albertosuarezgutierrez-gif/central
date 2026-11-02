@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-11-02T13:58:00Z",
+  "generadoEn": "2026-11-02T17:56:15Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -101,6 +101,11 @@
       "id": "module-chat",
       "tipo": "module",
       "npm": "@central/module-chat"
+    },
+    {
+      "id": "module-cima",
+      "tipo": "module",
+      "npm": "@central/module-cima"
     },
     {
       "id": "module-concursos",
@@ -778,19 +783,19 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 6
+        "evidencias": 17
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 11
       },
       "sivra": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 1
       },
       "transporte": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       }
     },
     "core-payments": {
@@ -1269,6 +1274,60 @@
       "rrhh": {
         "estado": "usado",
         "evidencias": 2
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-cima": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
       },
       "sivra": {
         "estado": "no",
@@ -2262,7 +2321,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 334
+        "evidencias": 337
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2316,7 +2375,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 66
+        "evidencias": 69
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2370,7 +2429,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 52
+        "evidencias": 55
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2506,7 +2565,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 41
+        "evidencias": 40
       },
       "rrhh": {
         "estado": "no",
@@ -4010,6 +4069,7 @@
     ],
     "module-asn": [],
     "module-chat": [],
+    "module-cima": [],
     "module-concursos": [],
     "module-contabilidad": [],
     "module-crm": [],
@@ -5753,7 +5813,6 @@
       "/api/subastas",
       "/api/subastas/criterios",
       "/api/subastas/documentos",
-      "/api/subastas/fase3-debug",
       "/api/subastas/mapa",
       "/api/subastas/mercado/idealista",
       "/api/subastas/nota-simple",
@@ -6747,7 +6806,9 @@
     }
   ],
   "saludRepo": {
-    "packagesSinDescripcion": [],
+    "packagesSinDescripcion": [
+      "module-cima"
+    ],
     "appsSinClaudeMd": [
       "asegura-web"
     ],
@@ -7201,10 +7262,10 @@
   },
   "resumen": {
     "verticales": 13,
-    "packages": 44,
+    "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1876,
+    "apis": 1875,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

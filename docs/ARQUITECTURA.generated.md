@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-02T13:58:00Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-02T17:56:15Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 44 packages · 23 capacidades · 44 skills · 1876 rutas API.
+**Resumen:** 13 apps · 45 packages · 23 capacidades · 44 skills · 1875 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -56,14 +56,14 @@
 - **Módulos que usa:** core-ai, core-catastro, core-consent, core-direccion, core-email, core-fiscal, core-identity, core-payments, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-seguros, module-seguros-portal, module-ses, module-subastas, module-tarificacion, module-trading
 - **Capacidades:** QR / portal cliente, Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
 - **Tablas (162):** agente_latidos, agente_reparaciones, agente_salud, agente_veredicto, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cierres_mes, cima_liquidaciones, comisiones_cobertura, comisiones_devengo, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, consentimiento_registro, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_asistente_accion…
-- **Rutas API:** 528
+- **Rutas API:** 527
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Informes, Notificaciones (push), Asistente / copiloto IA
 - **Tablas (17):** rrhh.acceso_otps, rrhh.avisos, rrhh.avisos_admin, rrhh.contratos_laborales, rrhh.documentos, rrhh.empleados, rrhh.empresas, rrhh.firma_otps, rrhh.firmas, rrhh.incidencias_mes, rrhh.incidencias_ubicacion, rrhh.material_empleado, rrhh.mensajes, rrhh.nominas, rrhh.push_subscriptions, rrhh.solicitudes, rrhh.usuarios_rrhh
 - **Rutas API:** 84
 ### sivra
-- **Módulos que usa:** core-ai, core-email, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
+- **Módulos que usa:** core-ai, core-email, core-identity, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
 - **Capacidades:** Eventos / catering / BEO, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, Marketing (blog/IG/SEO), Almacén / stock / ASN, Proveedores / compras, Asistente / copiloto IA
 - **Tablas (1):** gastos_fijos
 - **Rutas API:** 91
@@ -96,7 +96,7 @@
   - Lo usan: ia-rest, ialimp, plataforma
   - Depende de: —
 - **core-identity** (core) → `@central/core-identity`
-  - Lo usan: almacen, alquiler, asegura, asegura-portal, ialimp, mariscos, plataforma, rrhh, transporte
+  - Lo usan: almacen, alquiler, asegura, asegura-portal, ialimp, mariscos, plataforma, rrhh, sivra, transporte
   - Depende de: module-seguros, module-seguros-portal
 - **core-payments** (core) → `@central/core-payments`
   - Lo usan: ia-rest, ialimp, plataforma
@@ -124,6 +124,9 @@
   - Depende de: —
 - **module-chat** (module) → `@central/module-chat`
   - Lo usan: rrhh
+  - Depende de: —
+- **module-cima** (module) → `@central/module-cima`
+  - Lo usan: —
   - Depende de: —
 - **module-concursos** (module) → `@central/module-concursos`
   - Lo usan: plataforma

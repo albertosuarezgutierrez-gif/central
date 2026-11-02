@@ -13,6 +13,9 @@
   "dependencies": {
     "jose": "^5.9.3"
   },
+  "scripts": {
+    "test": "node --test src/secreto-comparar.test.ts"
+  },
   "sideEffects": false,
   "license": "UNLICENSED"
 }

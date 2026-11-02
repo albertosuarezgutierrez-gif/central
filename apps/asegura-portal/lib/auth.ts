@@ -20,7 +20,7 @@ export const COOKIE_OPTS = {
 // portal no debe valer jamás en la app interna. `requireSecret` lanza en
 // producción si falta y solo cae al literal en desarrollo — es lo que exige el
 // guardián `test/regression-secrets.test.ts` (ver `packages/core-identity/src/secret.ts`).
-const SECRET = () => requireSecret('ASEGURA_PORTAL_SESSION_SECRET', 'portal-dev-secret-change-in-prod')
+const SECRET = () => requireSecret('ASEGURA_PORTAL_SESSION_SECRET')
 
 /**
  * Hash del canal para poder buscarlo sin guardar el email o el móvil en claro.
@@ -47,7 +47,7 @@ export function hashCanal(valor: string): string {
  * usuario crea una identidad nueva vacía (landmine del CLAUDE.md de la app).
  */
 function hashConPimienta(valor: string): string {
-  const pimienta = requireSecret('ASEGURA_PORTAL_CANAL_PEPPER', 'portal-dev-pepper-change-in-prod')
+  const pimienta = requireSecret('ASEGURA_PORTAL_CANAL_PEPPER')
   return createHash('sha256').update(`${pimienta}:${valor}`).digest('hex')
 }
 

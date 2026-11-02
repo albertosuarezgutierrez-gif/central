@@ -69,6 +69,12 @@ rama_fusionada() {
 
 # --- Persist: commitea+pushea la memoria si cambió (y el uso, con cadencia). ---
 persist_memoria() {
+  # Nunca empujar a main/master desde el hook: main solo recibe cambios por PR.
+  case "$(git rev-parse --abbrev-ref HEAD 2>/dev/null)" in
+    main|master)
+      echo "persist-memoria: la rama actual es main; no se commitea ni empuja la memoria desde el hook." >&2
+      return 0 ;;
+  esac
   if rama_fusionada; then
     echo "persist-memoria: la rama ya está fusionada; no se commitea ni empuja la memoria (evita mover la punta tras el merge)." >&2
     return 0

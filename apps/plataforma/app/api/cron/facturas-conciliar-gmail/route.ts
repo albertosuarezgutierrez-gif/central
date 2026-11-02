@@ -5,6 +5,7 @@
 // Auth: Bearer CRON_SECRET (o ?secret= para disparo manual). Mismo patrón que banca-alertas.
 // Reutiliza la lógica del endpoint on-demand (lib/agente-facturas/conciliar-gmail.ts).
 import { NextRequest, NextResponse } from 'next/server'
+import { secretoCoincide, autorizacionBearerValida } from '@central/core-identity'
 import { prisma } from '@/lib/db'
 import { conciliarFacturasDesdeGmail } from '@/lib/agente-facturas/conciliar-gmail'
 import { tgAviso } from '@/lib/telegram'
@@ -15,9 +16,8 @@ export const maxDuration = 300 // IMAP + OCR es lento; con 60s moría a diario p
 
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET
-  const auth = req.headers.get('authorization')
-  const isCron = !!secret && auth === `Bearer ${secret}`
-  const isManual = !!secret && req.nextUrl.searchParams.get('secret') === secret
+  const isCron = autorizacionBearerValida(req, 'CRON_SECRET')
+  const isManual = secretoCoincide(req.nextUrl.searchParams.get('secret'), secret)
   if (!isCron && !isManual) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const cuentas = await prisma.cuenta.findMany({ select: { id: true, nombre: true } })

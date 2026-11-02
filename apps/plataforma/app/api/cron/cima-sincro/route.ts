@@ -13,6 +13,7 @@
 // 🚨 «No se ha podido comparar» también avisa: un fallo del puerto no puede
 // leerse como «todo coincide».
 import { NextRequest, NextResponse } from 'next/server'
+import { autorizacionBearerValida } from '@central/core-identity'
 import { tgAviso } from '@/lib/telegram/avisos'
 import { accionSincroCimaAsegura, contadorSincroCima, interpretarSincroCima, sincroCimaAsegura } from '@/lib/cima-sincro-asegura'
 import { conflictosDeLectura, copiadosDeRespuesta, lineasConflictos } from '@/lib/correduria/cima-sincro-resumen'
@@ -21,8 +22,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 export async function GET(req: NextRequest) {
-  const secret = process.env.CRON_SECRET
-  if (!secret || req.headers.get('authorization') !== `Bearer ${secret}`) {
+  if (!autorizacionBearerValida(req, 'CRON_SECRET')) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
 

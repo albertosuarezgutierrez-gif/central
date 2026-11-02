@@ -3,6 +3,7 @@
 // por email. Auth: Bearer CRON_SECRET (o ?secret= para disparo manual). Degrada limpio
 // sin RESEND_API_KEY. Mismo patrón que /api/cron/briefing.
 import { NextRequest, NextResponse } from 'next/server'
+import { secretoCoincide, autorizacionBearerValida } from '@central/core-identity'
 import { prisma } from '@/lib/db'
 import { getTesoreria } from '@/lib/tesoreria'
 import { fmtEur } from '@/lib/banca'
@@ -55,9 +56,8 @@ async function avisosTelegramBanca(): Promise<{ frescura: boolean; picos: boolea
 
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET
-  const auth = req.headers.get('authorization')
-  const isCron = !!secret && auth === `Bearer ${secret}`
-  const isManual = !!secret && req.nextUrl.searchParams.get('secret') === secret
+  const isCron = autorizacionBearerValida(req, 'CRON_SECRET')
+  const isManual = secretoCoincide(req.nextUrl.searchParams.get('secret'), secret)
   if (!isCron && !isManual) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const cuentas = await prisma.cuenta.findMany({ select: { id: true, nombre: true, email: true } })

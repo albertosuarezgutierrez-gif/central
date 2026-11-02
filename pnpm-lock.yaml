@@ -1043,6 +1043,9 @@ importers:
       '@central/core-email':
         specifier: workspace:*
         version: link:../../packages/core-email
+      '@central/core-identity':
+        specifier: workspace:*
+        version: link:../../packages/core-identity
       '@central/core-push':
         specifier: workspace:*
         version: link:../../packages/core-push

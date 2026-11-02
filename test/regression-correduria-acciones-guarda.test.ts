@@ -190,17 +190,10 @@ test('middleware: el pase de CRON_SECRET excluye /correduria y /api/correduria',
 test('middleware: CRON_SECRET se compara en tiempo constante (nunca ===)', () => {
   const src = MIDDLEWARE()
   assert.doesNotMatch(src, /(===|!==|==)\s*cronSecret\b|\bcronSecret\s*(===|!==|==)/, 'comparación directa con CRON_SECRET')
-  assert.match(src, /igualConstante\(bearer, cronSecret\)/)
-  assert.match(src, /igualConstante\(qs, cronSecret\)/)
-  const def = src.match(/function igualConstante\(dado: string \| null, secreto: string\): boolean \{([\s\S]*?)\n\}/)
-  assert.ok(def, 'falta igualConstante()')
-  const f = new Function('dado', 'secreto', def![1]) as (d: string | null, s: string) => boolean
-  assert.equal(f('abc123', 'abc123'), true)
-  assert.equal(f('abc124', 'abc123'), false)
-  assert.equal(f('abc', 'abc123'), false)
-  assert.equal(f('abc123abc123', 'abc123'), false)
-  assert.equal(f(null, 'abc123'), false)
-  assert.equal(f('', ''), false)
+  assert.match(src, /secretoCoincide\(bearer, cronSecret\)/)
+  assert.match(src, /secretoCoincide\(qs, cronSecret\)/)
+  assert.match(src, /import \{ secretoCoincide \} from '@central\/core-identity'/, 'el helper vive en core-identity (apto edge)')
+  assert.ok(!/function igualConstante/.test(src), 'sin copia local del comparador')
 })
 
 // ─── Cabecera de la ficha: «cliente» nunca sale de `clientes.tipo` ──────────

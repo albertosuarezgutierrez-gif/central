@@ -4,6 +4,7 @@
 // y envía un email al dueño (Resend, vía enviarAvisoEmail). Auth: Bearer CRON_SECRET
 // (o ?secret= para disparo manual). Degrada limpio sin RESEND_API_KEY.
 import { NextRequest, NextResponse } from 'next/server'
+import { secretoCoincide, autorizacionBearerValida } from '@central/core-identity'
 import { prisma } from '@/lib/db'
 import { getResumenNegocio } from '@/lib/financiero'
 import { enviarAvisoEmail } from '@/lib/notificaciones'
@@ -14,9 +15,8 @@ export const maxDuration = 60
 
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET
-  const auth = req.headers.get('authorization')
-  const isCron = !!secret && auth === `Bearer ${secret}`
-  const isManual = !!secret && req.nextUrl.searchParams.get('secret') === secret
+  const isCron = autorizacionBearerValida(req, 'CRON_SECRET')
+  const isManual = secretoCoincide(req.nextUrl.searchParams.get('secret'), secret)
   if (!isCron && !isManual) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }

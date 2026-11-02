@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { COOKIE_NAME, verifySessionToken } from './lib/auth'
 import { esRutaDeRutina } from './lib/rutas-rutina'
+import { secretoCoincide } from '@central/core-identity'
 
 // El área de OPERADOR (/admin) gestiona su propia auth (cookie plataforma_admin,
 // validada en los route handlers vía getAdmin) → se exime del gate de cuenta.
@@ -50,9 +51,6 @@ const PUBLIC = ['/login', '/api/auth', '/admin', '/api/admin', '/api/cron', '/ap
   // `STRIPE_WEBHOOK_SECRET_SIVRA` por `requireSecret`) y sin firma válida devuelve 400.
   '/api/sivra/extras/webhook',
   '/api/sivra/mercado/ingest', '/api/sivra/pricing/aplicar-propuesta',
-  // TEMPORAL Fase 3 subastas: puente de exploración de fuentes (auth por token
-  // en BD `subastas_debug_token`, hosts oficiales cerrados). Se retira al cerrar la fase.
-  '/api/subastas/fase3-debug',
   // Calendario de la landing de House Sevillana. SIN auth a propósito y de forma acotada:
   // publica solo qué noches están cogidas de una lista blanca de pisos, que es exactamente lo
   // que el motor de reservas de Smoobu ya le enseña a cualquiera que entre en él. No sale ni un
@@ -74,19 +72,6 @@ const PUBLIC = ['/login', '/api/auth', '/admin', '/api/admin', '/api/cron', '/ap
 /** Las páginas (y sus acciones de servidor) y la API de la correduría: solo con sesión de la correduría. */
 function esRutaCorreduria(pathname: string): boolean {
   return /^\/(api\/)?correduria(\/|$)/.test(pathname)
-}
-
-/**
- * Igualdad de cadenas en tiempo constante, apta para el runtime EDGE (sin `node:crypto`):
- * recorre siempre la longitud del secreto y acumula diferencias con XOR. `null`/vacío = no.
- */
-function igualConstante(dado: string | null, secreto: string): boolean {
-  if (!dado || !secreto) return false
-  let dif = dado.length ^ secreto.length
-  for (let i = 0; i < secreto.length; i++) {
-    dif |= (dado.charCodeAt(i % (dado.length || 1)) ^ secreto.charCodeAt(i))
-  }
-  return dif === 0
 }
 
 export async function middleware(req: NextRequest) {
@@ -129,8 +114,9 @@ export async function middleware(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET
   if (cronSecret && !esRutaCorreduria(pathname)) {
     const bearer = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '') ?? null
+    // `?secret=` se MANTIENE: aún lo usan los lanzamientos manuales documentados (ver informe 02/11/2026).
     const qs = req.nextUrl.searchParams.get('secret')
-    if (igualConstante(bearer, cronSecret) || igualConstante(qs, cronSecret)) return NextResponse.next()
+    if (secretoCoincide(bearer, cronSecret) || secretoCoincide(qs, cronSecret)) return NextResponse.next()
   }
 
   // Rutinas de Claude Code: llegan con el token DEDICADO de bajo privilegio (`ALERTA_TOKEN`),
@@ -142,7 +128,7 @@ export async function middleware(req: NextRequest) {
   const alertaToken = process.env.ALERTA_TOKEN
   if (alertaToken && esRutaDeRutina(pathname)) {
     const bearer = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
-    if (bearer === alertaToken) return NextResponse.next()
+    if (secretoCoincide(bearer, alertaToken)) return NextResponse.next()
   }
 
   const token = req.cookies.get(COOKIE_NAME)?.value

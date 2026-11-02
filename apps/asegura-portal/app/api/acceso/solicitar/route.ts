@@ -6,6 +6,7 @@ import { hashCanal, hashCodigo } from '@/lib/auth'
 import { obtenerCanal, registrarCanal, type TipoCanal } from '@/lib/canal'
 import { canalEmail } from '@/lib/canal-email'
 import { canalConsola } from '@/lib/canal-consola'
+import { emailEntregable } from '@/lib/email-sintaxis'
 import { getIp, rateLimit } from '@/lib/rate-limit'
 
 registrarCanal(process.env.NODE_ENV === 'production' ? canalEmail : canalConsola)
@@ -57,7 +58,10 @@ export async function POST(req: Request) {
 
   // El destino se valida DESPUÉS del tope por IP: una ristra de peticiones con
   // basura es abuso igual, y así no sale gratis.
-  if (!destinoValido(tipo, destino)) {
+  // Sintaxis entregable (RFC dot-atom): `destinoValido` deja pasar `a..b@x.es` y similares, que el SMTP
+  // rechaza con «Bad recipient address syntax» tras escribir la fila y gastar cuota. Misma respuesta 400
+  // que cualquier destino mal formado: no dice nada de si el correo existe en la cartera.
+  if (!destinoValido(tipo, destino) || (tipo === 'email' && !emailEntregable(destino))) {
     return NextResponse.json({ error: 'destino_invalido', tipo }, { status: 400 })
   }
 
