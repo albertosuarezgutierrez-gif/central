@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-02T18:26:21Z",
-  "sha": "c8a466156b13f8aa0c446ba00b104d9703493021",
+  "generadoEn": "2026-11-02T18:27:45Z",
+  "sha": "5d8d73b4aebeec92ff6a7d2939dab6f683639d99",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -11233,12 +11233,12 @@
           "exportada": true,
           "params": "req: Request, ctx: { params: Promise<{ token: string }> }",
           "retorno": null,
-          "linea": 30
+          "linea": 26
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "afe197279bc1"
+      "hash": "355a53258e21"
     },
     {
       "ruta": "apps/asegura-portal/app/datos/[token]/BuscadorVersion.tsx",
@@ -12834,7 +12834,7 @@
           "nombre": "crearSesionCorredor",
           "kind": "function",
           "exportada": true,
-          "params": "clienteId: string",
+          "params": "identidadId: string, clienteId: string",
           "retorno": "Promise<string>",
           "linea": 87
         },
@@ -12873,7 +12873,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bf199c87b928"
+      "hash": "051de8264606"
     },
     {
       "ruta": "apps/asegura-portal/lib/autorizaciones.ts",
@@ -25522,9 +25522,51 @@
       "hash": "3d8aafcece45"
     },
     {
+      "ruta": "apps/asegura-portal/lib/vista-corredor-identidad.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "Identidad POR APERTURA de la vista de corredor (02/11/2026, aprobado por Alberto). Aparte de `vista-corredor.ts` (que importa Prisma) para poder probarlo sin BD. 🚨 Antes había UNA identidad compartida (`IDENTIDAD_CORREDOR_ID`) y abrir la ficha B borraba el vínculo de A: la pestaña de A se quedaba c",
+      "exporta": [
+        "crearIdentidadDeVista",
+        "corteCaducidadVista",
+        "limpiarIdentidadesDeVistaCaducadas"
+      ],
+      "funciones": [
+        {
+          "nombre": "crearIdentidadDeVista",
+          "kind": "function",
+          "exportada": true,
+          "params": "tx: TxIdentidadVista, v: { vistaId: string; correduriaId: string; clienteId: string },",
+          "retorno": "Promise<string>",
+          "linea": 63,
+          "resumen": "Crea la identidad de ESTA apertura y su único vínculo. Va dentro de la misma transacción que gasta el enlace: si el vínculo falla, no queda una identidad suelta; y si el enlace ya estaba gastado no se"
+        },
+        {
+          "nombre": "corteCaducidadVista",
+          "kind": "function",
+          "exportada": true,
+          "params": "ahora: Date",
+          "retorno": "Date",
+          "linea": 77,
+          "resumen": "Momento antes del cual una sesión de vista ya no puede estar viva (la cookie dura `SESION_CORREDOR_SEGUNDOS`)."
+        },
+        {
+          "nombre": "limpiarIdentidadesDeVistaCaducadas",
+          "kind": "function",
+          "exportada": true,
+          "params": "db: DbLimpiezaVista, ahora: Date = new Date()",
+          "retorno": "Promise<number>",
+          "linea": 86,
+          "resumen": "Borra las identidades de vista cuya sesión ya caducó (en cascada se van su vínculo y lo que hubiera colgado de ellas) y los vínculos residuales de la identidad compartida antigua. Devuelve cuántas ide"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4bf96189c353"
+    },
+    {
       "ruta": "apps/asegura-portal/lib/vista-corredor.ts",
       "ambito": "apps/asegura-portal",
-      "resumen": "La «vista de corredor»: Alberto abre el portal COMO lo ve un cliente (08/09/2026). El enlace lo crea asegura; aquí se consume UNA vez y se monta la sesión. Reglas y constantes en `@central/module-seguros-portal/vista-corredor`. 🚨 Cómo se consigue «ver lo mismo» sin tocar ninguna lectura: la identid",
+      "resumen": "La «vista de corredor»: Alberto abre el portal COMO lo ve un cliente (08/09/2026). El enlace lo crea asegura; aquí se consume UNA vez y se monta la sesión. Reglas y constantes en `@central/module-seguros-portal/vista-corredor`. 🚨 Cómo se consigue «ver lo mismo» sin tocar ninguna lectura: cada APERT",
       "exporta": [
         "abrirVistaCorredor",
         "cerrarVistaCorredorDeSesion",
@@ -25537,7 +25579,7 @@
           "exportada": true,
           "params": "tokenCrudo: unknown",
           "retorno": "Promise<AperturaVista>",
-          "linea": 28
+          "linea": 30
         },
         {
           "nombre": "cerrarVistaCorredorDeSesion",
@@ -25545,7 +25587,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<void>",
-          "linea": 74,
+          "linea": 64,
           "resumen": "Al salir: si la sesión es la del corredor, se suelta su vínculo temporal. La ficha sale de la SESIÓN, no de un parámetro: nadie puede pedir por HTTP que se suelte el vínculo de otra. Best-effort — la "
         },
         {
@@ -25554,13 +25596,13 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<string | null>",
-          "linea": 91,
+          "linea": 87,
           "resumen": "Para la banda «Estás viendo el portal de …»: el nombre de la ficha que la sesión del corredor tiene abierta. `null` = sesión normal (no hay banda) o no se pudo leer. Igual que arriba, el id sale de la"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5f8821dd8525"
+      "hash": "b2899b5e3867"
     },
     {
       "ruta": "apps/asegura-portal/lib/vista-previa.ts",
@@ -57117,7 +57159,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<Lectura>",
-          "linea": 34
+          "linea": 35
         },
         {
           "nombre": "modulosDeFicha",
@@ -57125,7 +57167,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string,",
           "retorno": "Promise<",
-          "linea": 48,
+          "linea": 49,
           "resumen": "Lo que pinta la ficha. Un fallo de lectura se propaga (la ruta lo clasifica): nunca «sin módulos»."
         },
         {
@@ -57134,7 +57176,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, modulo: ModuloPortal, accion: 'activar' | 'retirar', actor: string,",
           "retorno": "Promise<ResultadoEscritura>",
-          "linea": 63,
+          "linea": 64,
           "resumen": "Activa/retira. El servidor RE-decide (el botón no manda) y deja una línea en `historial_interno`."
         },
         {
@@ -57143,7 +57185,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<boolean>",
-          "linea": 108,
+          "linea": 109,
           "resumen": "¿El CHECK de `portal_vinculo.origen` ya admite el origen nuevo? Lee el catálogo (lo puede leer cualquier rol)."
         },
         {
@@ -57152,7 +57194,7 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": "boolean",
-          "linea": 119,
+          "linea": 120,
           "resumen": "El CHECK rechazó el origen (SQL sin aplicar entre la comprobación y la escritura): se dice igual que arriba."
         },
         {
@@ -57161,7 +57203,7 @@
           "exportada": true,
           "params": "correduriaId: string, identidadId: string, modulo: ModuloPortal, actor: string,",
           "retorno": "Promise<ResultadoEscritura>",
-          "linea": 136,
+          "linea": 141,
           "resumen": "Activa un módulo a una identidad del portal SIN ficha (27/10/2026). En UNA transacción, con candado por identidad (el doble clic es el caso normal): vuelve a comprobar que la identidad pidió ESE módul"
         }
       ],
@@ -57172,10 +57214,32 @@
         "pg_namespace",
         "portal_identidad",
         "portal_modulo",
-        "portal_vinculo"
+        "portal_vinculo",
+        "portal_vista_corredor"
       ],
       "rutaApi": null,
-      "hash": "5d0d1bc45225"
+      "hash": "917c9f0e5e02"
+    },
+    {
+      "ruta": "apps/asegura/lib/portal-modulos-corredor.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "esIdentidadCorredor"
+      ],
+      "funciones": [
+        {
+          "nombre": "esIdentidadCorredor",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: { identidadId: string; nombre: string | null; esVistaGastada: boolean }",
+          "retorno": "boolean",
+          "linea": 14,
+          "resumen": "¿Es esta identidad la vista de corredor? La compartida antigua (`IDENTIDAD_CORREDOR_ID`) o una de las nuevas: nombre-marca exacto Y id de un enlace de `portal_vista_corredor` ya gastado (`esVistaGasta"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ed6e2075c324"
     },
     {
       "ruta": "apps/asegura/lib/portal-modulos-operador.ts",
@@ -268327,7 +268391,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5534,
-    "funciones": 21663
+    "archivos": 5536,
+    "funciones": 21667
   }
 }

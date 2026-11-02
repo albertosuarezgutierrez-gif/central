@@ -21,10 +21,6 @@ const TEXTOS: Record<Exclude<Awaited<ReturnType<typeof abrirVistaCorredor>>['est
   enlace_invalido: [404, 'Este enlace de vista de corredor no existe. Vuelve a la ficha en plataforma y genera otro.'],
   usado: [410, 'Este enlace ya se abrió una vez. Vuelve a la ficha en plataforma y genera otro.'],
   caducado: [410, 'Este enlace caducó (dura 10 minutos). Vuelve a la ficha en plataforma y genera otro.'],
-  sin_identidad_corredor: [
-    503,
-    'Falta la identidad del corredor en la base de datos (migración 2026-09-08_portal_vista_corredor.sql sin aplicar).',
-  ],
 }
 
 export async function GET(req: Request, ctx: { params: Promise<{ token: string }> }) {
@@ -34,7 +30,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ token: string }
     const [status, texto] = TEXTOS[r.estado]
     return new NextResponse(texto, { status, headers: { 'content-type': 'text/plain; charset=utf-8' } })
   }
-  const sesion = await crearSesionCorredor(r.clienteId)
+  const sesion = await crearSesionCorredor(r.identidadId, r.clienteId)
   // «Ver como el cliente» un presupuesto (18/10/2026): aterriza en su página. Solo un uuid compone la ruta (nada de
   // redirecciones abiertas); la página vuelve a autorizar por el vínculo temporal de ESTA ficha.
   const res = NextResponse.redirect(new URL(destinoVistaCorredor(new URL(req.url).searchParams.get('presupuesto')), req.url), 303)

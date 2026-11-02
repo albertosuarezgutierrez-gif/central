@@ -359,6 +359,37 @@ export function listaVersionCambiadaGenerali(antes: readonly string[], ahora: re
   return ahora.some((x) => !esOpcionVaciaCatalogo(x) && !esOpcionOtrasVersionesGenerali(x))
 }
 
+/** v0.2.67 · Lo que dice una fila del panel de «Versión» además del texto: puertas («5P») y año de la fecha de lanzamiento. `null` = no consta. */
+export type DetalleVersionGenerali = { puertas: number | null; anioLanzamiento: number | null }
+
+/**
+ * v0.2.67 · Puertas y año de lanzamiento de las celdas de una fila del panel de «Versión» (Versión | Puertas | F. lanzamiento; trabajo f84801ce).
+ * Solo celdas con la forma EXACTA («5P», «2014-10-01» o «01/10/2014»); la primera (el texto de la versión) no se mira. PURA.
+ */
+export function detalleFilaPanelVersionGenerali(celdas: readonly string[]): DetalleVersionGenerali {
+  let puertas: number | null = null
+  let anioLanzamiento: number | null = null
+  for (const c of celdas.slice(1)) {
+    const t = (c ?? '').replace(/\s+/g, ' ').trim()
+    const p = /^([2-9])\s*P(?:TAS?|UERTAS)?$/i.exec(t)
+    if (p && puertas === null) puertas = Number(p[1])
+    const f = /^((?:19|20)\d{2})-\d{2}-\d{2}$/.exec(t) ?? /^\d{1,2}\/\d{1,2}\/((?:19|20)\d{2})$/.exec(t)
+    if (f && anioLanzamiento === null) anioLanzamiento = Number(f[1])
+  }
+  return { puertas, anioLanzamiento }
+}
+
+/**
+ * v0.2.67 · Año máximo de lanzamiento compatible con el vehículo: el de 1ª matriculación (una versión lanzada después es imposible) y el año de la
+ * referencia + 1 (tolerancia de año-modelo). Sin ninguno → `null` (no se filtra nada). PURA.
+ */
+export function anioTopeLanzamientoGenerali(fechaMatriculacion: string | null | undefined, anioReferencia: number | null | undefined): number | null {
+  const m = typeof fechaMatriculacion === 'string' && /^(19|20)\d{2}-/.test(fechaMatriculacion) ? Number(fechaMatriculacion.slice(0, 4)) : null
+  const r = typeof anioReferencia === 'number' && Number.isInteger(anioReferencia) ? anioReferencia + 1 : null
+  if (m === null) return r
+  return r === null ? m : Math.min(m, r)
+}
+
 /**
  * La opción decidida está PUESTA en el `<select>` oculto cuando su valor Y el texto de la opción seleccionada son los de la elegida
  * (normalizados). Solo el valor no basta: si «Seleccione uno» y «Otros modelos ...» comparten valor, el valor «casa» sin elegir nada. PURA.
