@@ -4,6 +4,7 @@
 // `TARIFICADOR_HOGAR_COMPANIAS_EXTRA=mapfre` (y entonces inyecta DNI, nacimiento, nombre y apellidos de la ficha).
 // Ver docs/tarificador/CONOCIMIENTO-PORTALES.md (Mapfre).
 //
+// v0.3.4 (02/11/2026) — celdas por `directiva-id` (cobertura_N_M), todas las modalidades (espera a que la pantalla asiente), primer recibo y avisos coherentes.
 // v0.3.3 (02/11/2026) — lector por DOM de las tarjetas de #/emision-hogar/modalidades (hogar-modalidades.ts) + garantías por modalidad + aviso de controles técnicos.
 //
 // v0.3.2 (02/11/2026) — el guard deja pasar SOLO la XHR de tarificar `/PortalMediadores_fe-web/api/emision/proyectos/tarificacion` (ruta exacta; emitir sigue bloqueado).
@@ -311,7 +312,7 @@ export function ofertasDesdePrimasHogar(primas: readonly PrimaHogarMapfre[], sup
     referenciaPortal: null,
     pdf: null,
     desglose: null,
-    avisos: ['Prima TOTAL anual de la modalidad leída de la pantalla de precio; sin desglose neta/impuestos.', p.coberturas?.length ? 'Garantías y capitales leídos de la pantalla de modalidades (columna de esta modalidad); el bot no descarga el PDF del presupuesto.' : 'Garantías y capitales de la pantalla sin mapear: no se informan (el bot no descarga el PDF del presupuesto).', ...(p.avisos ?? []), ...(supuestos.length ? [`Precio ESTIMADO: se tarificó con supuestos (${supuestos.join(', ')}).`] : [])],
+    avisos: ['Prima TOTAL anual de la modalidad leída de la pantalla de precio; sin desglose neta/impuestos.', p.coberturas?.length ? 'Garantías y capitales leídos de la pantalla de modalidades (columna de esta modalidad); el bot no descarga el PDF del presupuesto.' : p.coberturas ? 'La pantalla de modalidades no mostró garantías con evidencia para esta modalidad (el bot no descarga el PDF del presupuesto).' : 'Garantías y capitales de la pantalla sin mapear: no se informan (el bot no descarga el PDF del presupuesto).', ...(p.avisos ?? []), ...(supuestos.length ? [`Precio ESTIMADO: se tarificó con supuestos (${supuestos.join(', ')}).`] : [])],
   }))
 }
 
@@ -576,13 +577,17 @@ export async function leerPrecioHogar(page: Page, ctx: Pick<ContextoPortal, 'for
     const dom = await leerModalidadesDom(page)
     if (dom.error && dom.error !== errorDom) { errorDom = dom.error; ctx.log?.('leerModalidadesDom: evaluate falló', { error: dom.error }) }
     let primas = dom.primas
+    // v0.3.4: Angular calcula las modalidades una a una; dos lecturas iguales con solo parte de las tarjetas calculadas NO son lectura estable.
+    const completa = !dom.primas.length || dom.asentada
     if (!primas.length) {
       const texto = await page.locator('body').innerText({ timeout: 1_000 }).catch(() => '')
       const delPdf = primasDesdeTextoPrecio(texto)
       primas = delPdf.length ? delPdf : primasDesdeTextoLibre(texto)
     }
     const firma = primas.length ? JSON.stringify(primas) : null
-    if (firma !== null && firma === previo) return primas
+    if (firma !== null && firma === previo && (completa || Date.now() >= hasta)) {
+      return completa ? primas : primas.map((p) => ({ ...p, avisos: [...(p.avisos ?? []), `Lectura posiblemente incompleta: la pantalla no terminó de calcular las ${dom.tarjetas} modalidades en ${Math.round(esperaMs / 1000)} s.`] }))
+    }
     previo = firma
     if (Date.now() >= hasta) {
       const visto = resumenPantallaPrecio(await datosPantalla(page, ctx.log), secretos)
@@ -597,7 +602,7 @@ export const mapfreHogar = {
   compania: 'mapfre',
   ramo: 'hogar',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.3.3',
+  version: '0.3.4',
   async tarificar(page: Page, f: FormularioHogar, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (!MAPFRE_HOGAR_ACTIVO) throw new ErrorTarificador('datos', `${ADAPTADOR}: adaptador apagado (MAPFRE_HOGAR_ACTIVO = false)`)
     planVivienda(f) // valida antes de abrir el portal

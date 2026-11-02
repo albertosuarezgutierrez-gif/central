@@ -1,4 +1,4 @@
-// Mapfre HOGAR v0.3.3 (02/11/2026) · pantalla #/emision-hogar/modalidades (AngularJS + Bootstrap): lector por DOM de las tarjetas de modalidad
+// Mapfre HOGAR v0.3.4 (02/11/2026) · pantalla #/emision-hogar/modalidades (AngularJS): tarjetas por DOM + celdas `directiva-id="cobertura_N_M"` (N = modalidad, M = fila).
 // (prima total anual, 1ª cuota, tarifa no aplicable) y de las GARANTÍAS por modalidad (filas × columnas). Diagnóstico del volcado real
 // fallo-3189a8f7: 3 tarjetas `div[heading]` dentro de `ng-repeat="modalidades in pchctrl.modalidadesCoberturas"`.
 //
@@ -26,10 +26,13 @@ export type CeldaSnap = {
   adicional: string
   importes: string[]
   switchOn: boolean | null
+  /** `.cobertura-no-modificable` VISIBLE con la imagen `check` del portal: incluida de serie (evidencia propia del portal). */
+  conCheck?: boolean
 }
 /** `celdas: []` = el extractor no pudo asignar la fila de forma inequívoca. */
 export type FilaSnap = { titulo: string; celdas: CeldaSnap[] }
-export type SnapshotModalidades = { tarjetas: TarjetaSnap[]; filas: FilaSnap[]; modales: string[] }
+/** `detalle` = filas `.titulo-garantia` (desglose plegado) y descuentos: no tienen celda propia por modalidad, no se informan ni cuentan como «sin asignar». */
+export type SnapshotModalidades = { tarjetas: TarjetaSnap[]; filas: FilaSnap[]; modales: string[]; detalle?: number }
 
 export const AVISO_CONTROLES_TECNICOS =
   'El portal mostró un aviso informativo de «controles técnicos» al tarificar: la prima podría variar tras esos controles.'
@@ -60,32 +63,45 @@ export const EXTRAER_MODALIDADES = (): SnapshotModalidades => {
       recuadro: txt(rec).slice(0, 200),
     }
   })
-  const titulos = Array.from(document.querySelectorAll('.titulo-cobertura, .titulo-garantia')).filter((e) => !e.parentElement?.closest('.titulo-cobertura, .titulo-garantia'))
-  const filas = titulos.map((t) => {
-    const titulo = txt(t)
-    for (let n: Element | null = t.parentElement; n; n = n.parentElement) {
-      const cols = n.querySelectorAll('.col-md-9')
-      if (cols.length === 0) continue
-      const titulosEn = Array.from(n.querySelectorAll('.titulo-cobertura, .titulo-garantia')).filter((e) => !e.parentElement?.closest('.titulo-cobertura, .titulo-garantia'))
-      if (cols.length !== 1 || titulosEn.length !== 1) return { titulo, celdas: [] }
-      const celdas = Array.from(cols[0]!.children).filter((e) => e.classList.contains('col-md-4')).map((c) => {
-        const vis = (sel: string) => Array.from(c.querySelectorAll(sel)).filter((e) => !oculto(e, c))
-        const sw = c.querySelector('.switch_checkbox input[type=checkbox], input[type=checkbox].switch_checkbox, .switch_checkbox')
-        const marcado = sw instanceof HTMLInputElement ? sw.checked : sw?.querySelector('input[type=checkbox]') instanceof HTMLInputElement ? (sw.querySelector('input[type=checkbox]') as HTMLInputElement).checked : null
-        return {
-          noContratada: vis('.cobertura-no-contratada').length > 0,
-          noModificable: vis('.cobertura-no-modificable').length > 0,
-          adicional: vis('.texto-adicional-cobertura').map(txt).join(' | ').slice(0, 200),
-          importes: vis('button.select-importe, label.texto-importe').map(txt).filter(Boolean),
-          switchOn: sw && !oculto(sw, c) ? marcado : null,
-        }
-      })
-      return { titulo, celdas }
+  // Estructura REAL: los títulos van en una columna (`.titulo-cobertura` = fila principal; `.titulo-garantia` = desglose plegado SIN celdas) y las celdas
+  // en otra, cada una con `directiva-id="cobertura_N_M"` (N = columna de modalidad, M = nº de fila principal). Los descuentos usan `descuento_NK`.
+  const anidado = (e: Element) => !!e.parentElement?.closest('.titulo-cobertura, .titulo-garantia')
+  const titulosCob = Array.from(document.querySelectorAll('.titulo-cobertura')).filter((e) => !e.classList.contains('titulo-garantia') && !anidado(e))
+  const detalle = Array.from(document.querySelectorAll('.titulo-garantia')).filter((e) => !anidado(e)).length
+  const cob = new Map<number, Map<number, Element>>()
+  let descuentos = 0
+  for (const e of Array.from(document.querySelectorAll('[directiva-id]'))) {
+    const id = e.getAttribute('directiva-id') ?? ''
+    const m = /^cobertura_(\d+)_(\d+)$/.exec(id)
+    if (m) {
+      const n = Number(m[1]), i = Number(m[2])
+      if (!cob.has(n)) cob.set(n, new Map())
+      cob.get(n)!.set(i, e)
+    } else if (/^descuento_\d+$/.test(id)) descuentos++
+  }
+  const columnas = Array.from(cob.keys()).sort((x, y) => x - y)
+  const nFilas = columnas.length ? cob.get(columnas[0]!)!.size : 0
+  const nDesc = columnas.length ? descuentos / columnas.length : 0
+  const regular = columnas.length > 0 && columnas.every((n) => cob.get(n)!.size === nFilas && Array.from({ length: nFilas }, (_, i) => cob.get(n)!.has(i)).every(Boolean)) && Number.isInteger(nDesc) && titulosCob.length === nFilas + nDesc
+  const celdaDe = (c: Element): CeldaSnap => {
+    const vis = (sel: string) => Array.from(c.querySelectorAll(sel)).filter((e) => !oculto(e, c))
+    const sw = c.querySelector('input[type=checkbox].switch_checkbox, .switch_checkbox input[type=checkbox]')
+    // el checkbox real lleva la clase `hidden` (lo pinta el <label>): se mira la visibilidad de su contenedor, no la suya.
+    const marcado = sw instanceof HTMLInputElement && sw.parentElement && !oculto(sw.parentElement, c) ? sw.checked : null
+    return {
+      noContratada: vis('.cobertura-no-contratada').length > 0,
+      noModificable: vis('.cobertura-no-modificable').length > 0,
+      conCheck: vis('.cobertura-no-modificable img[src*="check"], .cobertura-no-modificable img[alt="check"]').length > 0,
+      adicional: vis('.texto-adicional-cobertura').map(txt).join(' | ').slice(0, 200),
+      importes: vis('button.select-importe, .texto-importe').map(txt).filter(Boolean),
+      switchOn: marcado,
     }
-    return { titulo, celdas: [] }
-  })
+  }
+  const filas: FilaSnap[] = regular
+    ? titulosCob.slice(0, nFilas).map((t, i) => ({ titulo: txt(t), celdas: columnas.map((n) => celdaDe(cob.get(n)!.get(i)!)) }))
+    : titulosCob.map((t) => ({ titulo: txt(t), celdas: [] }))
   const modales = Array.from(document.querySelectorAll('.modal.in, .modal.show, .modal[style*="display: block"], .modal-dialog')).map((m) => txt(m).slice(0, 300))
-  return { tarjetas, filas, modales }
+  return { tarjetas, filas, modales, detalle }
 }
 
 const plano = (t: string) => t.normalize('NFD').replace(/\p{M}/gu, '').toUpperCase().replace(/\s+/g, ' ').trim()
@@ -106,7 +122,10 @@ export function coberturaDeCelda(titulo: string, c: CeldaSnap): CoberturaOferta 
   if (!literal) return null
   const cobertura: CoberturaOferta = { clave: literal, literal, estado: null, capital: null, limite: null, franquicia: null }
   if (c.noContratada) return { ...cobertura, estado: 'excluida' }
-  const capital = c.importes.map(importeCapital).find((n): n is number => n !== null) ?? null
+  // Interruptor APAGADO: el importe visible es solo el valor seleccionable, no un capital contratado → sin evidencia.
+  if (c.switchOn === false) return null
+  if (c.conCheck) cobertura.estado = 'incluida'
+  const capital = c.importes.map(importeCapital).find((n): n is number => n !== null && n > 0) ?? null
   if (capital !== null) { cobertura.estado = 'incluida'; cobertura.capital = capital }
   if (c.switchOn === true) cobertura.estado = 'incluida'
   const v = c.adicional ? valorDeTexto(c.adicional) : null
@@ -146,6 +165,14 @@ export function primerReciboDe(t: Pick<TarjetaSnap, 'cuotas' | 'recuadro'>): num
 }
 
 /**
+ * ¿La pantalla terminó de calcular? Cada tarjeta es «no aplicable» o tiene prima válida y su 1ª cuota (o una periodicidad no anual, que no
+ * da primer recibo). Antes de eso Angular va rellenando las modalidades una a una: leer en ese momento devuelve solo las ya calculadas. PURA.
+ */
+export function modalidadesAsentadas(s: Pick<SnapshotModalidades, 'tarjetas'>): boolean {
+  return s.tarjetas.length > 0 && s.tarjetas.every((t) => t.noAplicable || (importeDePrimaHogar(t.prima) !== null && (primerReciboDe(t) !== null || /SEMESTRAL|TRIMESTRAL|MENSUAL/.test(plano(t.recuadro)))))
+}
+
+/**
  * Snapshot del DOM → primas por modalidad (con garantías y avisos). Omite tarjetas con tarifa no aplicable visible y las de nombre/prima
  * no reconocidos (validan con `MODALIDADES_HOGAR` / `importeDePrimaHogar`). Sin ninguna tarjeta válida → `[]`. PURA.
  */
@@ -178,11 +205,11 @@ export function evaluarEnPagina<T>(page: Page, fn: () => T): Promise<T> {
 }
 
 /** Lee la pantalla (SOLO LECTURA). Si el `evaluate` falla devuelve el error (para registrarlo), nunca lo traga. */
-export async function leerModalidadesDom(page: Page): Promise<{ primas: PrimaHogarMapfre[]; error: string | null }> {
+export async function leerModalidadesDom(page: Page): Promise<{ primas: PrimaHogarMapfre[]; error: string | null; asentada: boolean; tarjetas: number }> {
   try {
     const snap = await evaluarEnPagina(page, EXTRAER_MODALIDADES)
-    return { primas: primasDesdeSnapshot(snap), error: null }
+    return { primas: primasDesdeSnapshot(snap), error: null, asentada: modalidadesAsentadas(snap), tarjetas: snap.tarjetas.length }
   } catch (e) {
-    return { primas: [], error: (e instanceof Error ? e.message : String(e)).replace(/\s+/g, ' ').slice(0, 200) }
+    return { primas: [], error: (e instanceof Error ? e.message : String(e)).replace(/\s+/g, ' ').slice(0, 200), asentada: false, tarjetas: 0 }
   }
 }
