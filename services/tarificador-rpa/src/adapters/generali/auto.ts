@@ -32,6 +32,9 @@ import {
   conAntecedentesFavorables,
   datosEquivalenciaDesdeEtiqueta,
   elegirOpcionPorVehiculoReferencia,
+  supuestoOtroModelo,
+  supuestoGeneracionPosterior,
+  textoVehiculoReferencia,
   elegirVersionAutomaticamente,
   MAX_OPCIONES_VERSION,
   PREFIJO_ELECCION_VERSION,
@@ -135,6 +138,7 @@ import {
   esOpcionNoLoSeGenerali,
   grupoCombustibleGenerali,
   potenciaExactaGenerali,
+  potenciaTardiaGenerali,
   textoVersionRiesgoGenerali,
   avisoDeducidoDeVersionGenerali,
   opcionCombustibleDeVersionGenerali,
@@ -476,12 +480,14 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * dato, la siniestralidad más favorable (aviso «supuesto» → precio estimado). Un obligatorio vacío sin regla (p. ej. una fecha) para con su nombre. Si la
  * pestaña no existe se anota y se sigue como antes; el atasco final trae el inventario (etiquetas, sin valores) de esa pestaña.
  *
+ * 0.2.68 (02/11/2026, Alberto: «que el bot coja el que haya»): sin modelo/versión de la referencia en el catálogo (tras ampliar) se tarifica el más parecido con aviso «Modelo distinto del de referencia» (supuesto), no requiere_humano.
+ *
  * 0.2.67 (02/11/2026): la fila `tr` del panel de «Versión» se identifica por su 1ª celda (el guard sigue viendo la fila entera) y la fecha de lanzamiento excluye otra generación.
  * 0.2.66 (02/11/2026): tras «Otras versiones ...» la lista no cambia (el portal solo marca «Versión» en error): espera 20 s comparando contenido y pulsa la fila espejo «Otras versiones ...» de la tabla.
  * 0.2.65 (02/11/2026): el panel de «Versión» con columnas lista las opciones como `tr[data-label]` (no `li`): «Otras versiones ...» se localiza también ahí.
  * 0.2.64 (02/11/2026): «Garantías y Resultados» no se vuelve a pulsar si ya se pulsó en el trabajo (el guard solo lo permite una vez); solo espera al bloque.
  */
-export const VERSION_GENERALI_AUTO = '0.2.67'
+export const VERSION_GENERALI_AUTO = '0.2.68'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -2111,7 +2117,13 @@ export function indicePersonaEnNivelGenerali(opciones: readonly string[], etique
 export function modeloPorReferenciaGenerali(textos: readonly string[], form: Pick<FormularioAuto, 'vehiculoReferencia'>): { indice: number; supuesto: string } | null {
   if (!form.vehiculoReferencia) return null
   const e = elegirOpcionPorVehiculoReferencia(textos, form.vehiculoReferencia, { nivel: 'modelo' })
-  return e.tipo === 'coincidencia' || e.tipo === 'aproximacion' ? { indice: e.indice, supuesto: e.supuesto } : null
+  if (e.tipo === 'coincidencia' || e.tipo === 'aproximacion') return { indice: e.indice, supuesto: e.supuesto }
+  // v0.2.68 (02/11/2026, Alberto: «que el bot coja el que haya»): ningún modelo del catálogo es el de la referencia → el más parecido, con aviso.
+  if (e.tipo === 'sin_opciones') {
+    const o = elegirOpcionPorVehiculoReferencia(textos, form.vehiculoReferencia, { nivel: 'version', compania: 'Generali' })
+    if (o.tipo === 'coincidencia' || o.tipo === 'aproximacion') return { indice: o.indice, supuesto: supuestoOtroModelo(o.etiqueta, textoVehiculoReferencia(form.vehiculoReferencia), 'Generali', !!o.combustibleDistinto) }
+  }
+  return null
 }
 
 /**
@@ -2591,6 +2603,15 @@ export function decidirVersionDesplegableGenerali(
   const todasReales = [...new Set(opciones.filter(esReal))]
   if (hayPosteriores && !opciones.some((x, i) => esReal(x) && !posterior(i))) {
     if (hayOtras) return { indice: ixOtras, supuesto: null, otras: true }
+    // v0.2.68 (02/11/2026, Alberto: «que el bot coja el que haya»): todas son de una generación posterior y no hay más que ampliar → la más parecida a la referencia, con aviso (supuesto).
+    if (form.vehiculoReferencia && todasReales.length > 0) {
+      const r = elegirOpcionPorVehiculoReferencia(todasReales, form.vehiculoReferencia, { nivel: 'version', compania: 'Generali' })
+      if (r.tipo === 'coincidencia' || r.tipo === 'aproximacion') {
+        const ix = opciones.indexOf(todasReales[r.indice]!)
+        const anio = o.detalles?.[ix]?.anioLanzamiento ?? null
+        return { indice: ix, supuesto: supuestoGeneracionPosterior(r.etiqueta, anio) }
+      }
+    }
     throw new ErrorEleccionVersion(todasReales.map((x): CandidatoVersion => ({ etiqueta: x, codigo: null })))
   }
   const reales = opciones.map((x, i) => ({ x, i })).filter((r) => !esOpcionOtrasVersionesGenerali(r.x) && !posterior(r.i))
@@ -2612,6 +2633,15 @@ export function decidirVersionDesplegableGenerali(
   }
   if (hayOtras && (persona || form.vehiculoReferencia)) return { indice: ixOtras, supuesto: null, otras: true }
   // v0.2.67: si la fecha apartó versiones, la persona ve la lista ENTERA (el tope por año podría no ser el suyo).
+  // v0.2.68 (02/11/2026, Alberto: «que el bot coja el que haya; la idea da precio y ya cuando el cliente acepte se confirma todo»): ya sin más que ampliar
+  // y sin elección de una persona, se elige la MÁS PARECIDA de lo que hay (nunca eléctrica si la referencia no lo es y hay otra) y se avisa.
+  if (!persona && form.vehiculoReferencia && unicas.length > 0 && !hayOtras) {
+    const r = elegirOpcionPorVehiculoReferencia(unicas, form.vehiculoReferencia, { nivel: 'version', compania: 'Generali' })
+    if (r.tipo === 'coincidencia' || r.tipo === 'aproximacion') {
+      const supuesto = r.otroModelo ? r.supuesto : supuestoOtroModelo(r.etiqueta, textoVehiculoReferencia(form.vehiculoReferencia), 'Generali', !!r.combustibleDistinto)
+      return { indice: opciones.indexOf(unicas[r.indice]!), supuesto }
+    }
+  }
   const lista = o.ampliada ? (hayPosteriores ? todasReales : unicas) : [...new Set(opciones.filter((x) => !esOpcionVaciaCatalogo(x)))]
   throw new ErrorEleccionVersion(lista.map((x): CandidatoVersion => ({ etiqueta: x, codigo: null })))
 }
@@ -3036,6 +3066,24 @@ export async function fotografiarSelectorGenerali(page: Page, selector: Raiz): P
 }
 
 /**
+ * v0.2.68 · El grupo «potencia» puede aparecer DESPUÉS de elegir la versión (trabajo real con la 0.2.67: «faltan los campos nuevos … «potencia» [grupo]»).
+ * Si ya salió y no estaba explicado, se marca por la MISMA puerta guardada de la potencia (`elegirPotenciaGenerali`): CV de la referencia (o del riesgo)
+ * exacto o el más cercano; sin CV, «No lo sé»; los dos últimos con supuesto. Devuelve el grupo marcado o `null` si no hay nada que hacer.
+ */
+async function completarPotenciaTardiaGenerali(page: Page, selector: Raiz, explicados: Set<string>, form: FormFichaGenerali, ctx: ContextoPortal, avisos?: string[]): Promise<string | null> {
+  const g = grupoPotenciaGenerali(await camposSelectorEstables(page, selector))
+  if (!g || explicados.has(`grupo|${g.grupo}`)) return null
+  if (!ctx.elegirPotenciaGenerali) throw new ErrorMapaIncompletoGenerali('la puerta guardada de la potencia del selector (`elegirPotenciaGenerali`) en el contexto del runner', false)
+  const cv = form.vehiculoReferencia?.cv ?? cvRiesgoGenerali(form)
+  const d = potenciaTardiaGenerali(g.opciones, typeof cv === 'number' && Number.isFinite(cv) && cv > 0 ? cv : null)
+  if (!d) throw new ErrorMapaIncompletoGenerali('la potencia que sale tras elegir la versión (sin CV en la referencia ni en el riesgo y el selector no ofrece «No lo sé»; NO se pulsa «Confirmar»)', false)
+  if (d.supuesto) avisos?.push(d.supuesto)
+  await ctx.elegirPotenciaGenerali(g.grupo, d.texto)
+  explicados.add(`grupo|${g.grupo}`)
+  return g.grupo
+}
+
+/**
  * Selector PrimeFaces: «Placas especiales» = «No», marca exacta, «Confirmar» (solo confirma el vehículo) y se PARA con hueco
  * `hueco_mapa` si la pantalla siguiente no es «Identificación del vehículo»: su inventario lo captura el modo exploración.
  */
@@ -3054,6 +3102,8 @@ async function seleccionarVehiculoPrimeFaces(page: Page, selector: Raiz, menu: M
   // v0.2.14: Potencia / Versión / tabla: se eligen y se verifica el «Resumen»; luego se avanza. Si no hay nada de eso (una sola versión) o hay campos ajenos, como antes.
   const explicados = await resolverFichaVersionGenerali(page, selector, await leerCamposSelector(selector), nuevos, form, ctx, avisos)
   if (explicados) {
+    // v0.2.68: grupo «potencia» que sale tras elegir la versión.
+    await completarPotenciaTardiaGenerali(page, selector, explicados, form, ctx, avisos)
     // v0.2.17: validación final previa a «Confirmar»: si tras combustible/potencia/versión queda un campo nuevo sin mapear, se PARA.
     const restantes = camposNuevosSelectorGenerali(antes, await leerCamposSelector(selector), [menu.base, modelo.base]).filter((c) => !explicados.has(c.clave))
     if (restantes.length > 0) {

@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-02T18:27:45Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-02T19:44:05Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 

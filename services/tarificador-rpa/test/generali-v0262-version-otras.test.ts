@@ -14,7 +14,7 @@ const AMPLIADA = ['Seleccione una', 'ELECTRIC DRIVE EQ', 'ELECTRIC DRIVE EQ PASS
 const ref = (extra: Record<string, unknown> = {}) => ({ origen: 'allianz', marca: 'SMART', modelo: 'Fortwo', version: 'PASSION 52', carroceria: null, puertas: null, cc: null, cv: null, combustible: null, anio: null, ...extra }) as unknown as FormularioAuto['vehiculoReferencia']
 const form = (extra: Partial<Form> = {}): Form => ({ ...extra }) as Form
 
-test('v0.2.62 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.67'))
+test('v0.2.62 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.68'))
 
 test('v0.2.62 · «Otras versiones ...» / «Otros …» se reconocen; una versión normal no', () => {
   assert.equal(esOpcionOtrasVersionesGenerali('Otras versiones ...'), true)
@@ -43,11 +43,21 @@ test('v0.2.62 · lista AMPLIADA: gana la de acabado PASSION no eléctrica (gasol
   }
 })
 
-test('v0.2.62 · lista ampliada sin nada aceptable (todo eléctrico): requiere_humano con la lista AMPLIADA (sin «Otras versiones»)', () => {
+test('v0.2.68 · lista ampliada sin nada aceptable (todo eléctrico): se elige la más parecida con aviso de combustible distinto (sin «Otras versiones»)', () => {
   const ampl = ['Seleccione una', 'ELECTRIC DRIVE EQ', 'ELECTRIC DRIVE EQ PASSION', 'ELECTRIC DRIVE EQ PULSE', 'Otras versiones ...']
+  const d = decidirVersionDesplegableGenerali(ampl, form({ vehiculoReferencia: ref({ combustible: 'gasolina' }) }), [], { ampliada: true })
+  assert.equal(ampl[d.indice], 'ELECTRIC DRIVE EQ PASSION')
+  assert.equal(d.otras, undefined)
+  assert.match(d.supuesto ?? '', /Modelo distinto del de referencia/)
+  assert.match(d.supuesto ?? '', /otro combustible/)
+  assert.match(d.supuesto ?? '', /supuesto/)
+})
+
+test('v0.2.68 · la elección de una persona que no casa sigue preguntando (no se enmienda)', () => {
+  const ampl = ['Seleccione una', 'ELECTRIC DRIVE EQ', 'ELECTRIC DRIVE EQ PASSION']
   assert.throws(
-    () => decidirVersionDesplegableGenerali(ampl, form({ vehiculoReferencia: ref({ combustible: 'gasolina' }) }), [], { ampliada: true }),
-    (e: unknown) => e instanceof ErrorEleccionVersion && e.opcionesVersion.map((o) => o.etiqueta).join('|') === 'ELECTRIC DRIVE EQ|ELECTRIC DRIVE EQ PASSION|ELECTRIC DRIVE EQ PULSE',
+    () => decidirVersionDesplegableGenerali(ampl, form({ eleccionVersion: { codigo: null, etiqueta: 'otra cosa' }, vehiculoReferencia: ref({ combustible: 'gasolina' }) }), [], { ampliada: true }),
+    (e: unknown) => e instanceof ErrorEleccionVersion,
   )
 })
 
@@ -83,7 +93,7 @@ test('v0.2.62 · similitud de versión: la referencia no eléctrica penaliza ELE
     assert.equal(r.contradice, false)
   }
   const solo = elegirOpcionPorVehiculoReferencia(['ELECTRIC DRIVE EQ PASSION', 'ELECTRIC DRIVE EQ'], ref(), { nivel: 'version' })
-  assert.ok(solo.tipo === 'otro_modelo' || (solo.tipo === 'aproximacion' && solo.contradice === true), 'solo eléctricas ante referencia no eléctrica: nunca se elige (Generali abre «Otras versiones»)')
+  assert.ok(solo.tipo === 'aproximacion' && solo.contradice === true, 'solo eléctricas ante referencia no eléctrica: nunca se elige (Generali abre «Otras versiones»)')
   // «Otras versiones ...» nunca es candidata.
   assert.equal(elegirOpcionPorVehiculoReferencia(['Otras versiones ...'], ref(), { nivel: 'version' }).tipo, 'sin_opciones')
 })

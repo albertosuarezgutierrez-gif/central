@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-02T19:40:08Z",
-  "sha": "47717a08dca2ffbb932d8a127596537721579bf0",
+  "generadoEn": "2026-11-02T19:44:05Z",
+  "sha": "ce71d6c7d1ef4360f7234b92c9cbbc6fbe8c2f08",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -266665,6 +266665,8 @@
         "vehiculoReferenciaDesdeSeleccion",
         "textoVehiculoReferencia",
         "supuestoVehiculoReferencia",
+        "supuestoOtroModelo",
+        "supuestoGeneracionPosterior",
         "elegirOpcionPorVehiculoReferencia",
         "vehiculoDivergeDeReferencia"
       ],
@@ -266787,7 +266789,7 @@
           "exportada": false,
           "params": "o: OpcionCatalogo",
           "retorno": "string",
-          "linea": 252
+          "linea": 254
         },
         {
           "nombre": "esOtros",
@@ -266795,7 +266797,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": "boolean",
-          "linea": 255
+          "linea": 257
         },
         {
           "nombre": "supuestoVehiculoReferencia",
@@ -266803,16 +266805,34 @@
           "exportada": true,
           "params": "tipo: 'coincidencia' | 'aproximacion', nivel: 'modelo' | 'version', etiqueta: string, origen: OrigenVehiculoReferencia",
           "retorno": "string",
-          "linea": 258,
+          "linea": 260,
           "resumen": "Aviso del supuesto (sin comas: los bots unen supuestos con «, »). PURA."
+        },
+        {
+          "nombre": "supuestoOtroModelo",
+          "kind": "function",
+          "exportada": true,
+          "params": "etiqueta: string, referencia: string, compania: string | null | undefined, combustibleDistinto = false",
+          "retorno": "string",
+          "linea": 272,
+          "resumen": "Aviso del supuesto cuando la compañía NO ofrece el modelo de la referencia y se tarifica la mejor opción disponible (regla de Alberto, 02/11/2026: «que el bot coja el que haya; la idea da precio y ya "
+        },
+        {
+          "nombre": "supuestoGeneracionPosterior",
+          "kind": "function",
+          "exportada": true,
+          "params": "etiqueta: string, anioLanzamiento: number | null",
+          "retorno": "string",
+          "linea": 281,
+          "resumen": "Aviso cuando todas las versiones son de una generación lanzada DESPUÉS de la del vehículo y se tarifica la más parecida (regla de Alberto, 02/11/2026). Sin comas. PURA."
         },
         {
           "nombre": "elegirOpcionPorVehiculoReferencia",
           "kind": "function",
           "exportada": true,
-          "params": "opciones: readonly OpcionCatalogo[], referencia: unknown, o: { nivel?: 'modelo' | 'version'; marcaLista?: string | null } = {},",
+          "params": "opciones: readonly OpcionCatalogo[], referencia: unknown, o: { nivel?: 'modelo' | 'version'; marcaLista?: string | null; compania?: string | null } = {},",
           "retorno": "EleccionPorReferencia",
-          "linea": 279,
+          "linea": 299,
           "resumen": "Elige UNA opción del catálogo de un portal con el vehículo de referencia. Regla (determinista, sin IA): 0. Fuera opciones vacías y «Otros…». Ninguna → `sin_opciones`. Sin referencia válida → `sin_refe"
         },
         {
@@ -266821,13 +266841,13 @@
           "exportada": true,
           "params": "ref: VehiculoReferencia, usado: VehiculoUsado | string",
           "retorno": "boolean",
-          "linea": 377,
+          "linea": 404,
           "resumen": "¿El vehículo con el que tarificó una compañía es OTRO que la referencia? (regla de Alberto, 02/11/2026: mismo modelo para todas.) Conservadora: solo `true` con evidencia (modelo contra modelo que no s"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8974b2cabd4d"
+      "hash": "1f345f2f79b0"
     },
     {
       "ruta": "packages/module-tarificacion/src/vehiculo.ts",
@@ -268843,6 +268863,6 @@
   ],
   "resumen": {
     "archivos": 5541,
-    "funciones": 21709
+    "funciones": 21711
   }
 }
