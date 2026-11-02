@@ -6120,7 +6120,16 @@ async function elegirItemMenuGenerali(page: Page, guard: GuardEmision, base: str
   if (primeraDeIguales ? n < 1 || n > 40 : n !== 1) throw new ErrorMapaGuardGenerali(`la opción «${t.slice(0, 60)}» en el panel «#${base}_panel» (${n} elementos con ese texto exacto; hace falta ${primeraDeIguales ? 'al menos uno' : 'exactamente uno'})`)
   const item = todos.first()
   const desc = await descripcion(item)
-  if (textoMenu(desc[0]) !== textoMenu(t)) throw new EmisionBloqueadaError('boton', String(desc[0] ?? '').slice(0, 120))
+  // v0.2.67 (trabajo f84801ce): una FILA (`tr`) lleva más columnas que el texto («52\t5P\t2014-10-01»): su identidad es la PRIMERA celda, exacta, y
+  // las DEMÁS solo pueden ser datos de catálogo con forma cerrada (vacía, puertas «5P», fecha, número); cualquier otro texto («Confirmar póliza»)
+  // sigue bloqueando como antes. Solo cambia ESTA comparación; `comprobarBoton(desc)` de abajo sigue viendo la fila ENTERA, sus atributos y ancestros.
+  const identidad = await item.evaluate((el) => {
+    if (el.tagName !== 'TR') return null
+    const celdas = Array.from((el as HTMLTableRowElement).cells).map((c) => (c.innerText ?? '').replace(/\s+/g, ' ').trim())
+    const dato = /^(?:|[2-9] ?P|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4}|\d{1,4}(?:[.,]\d{1,2})?)$/i
+    return celdas.length >= 1 && celdas.length <= 12 && celdas.slice(1).every((c) => dato.test(c)) ? celdas[0]! : null
+  })
+  if (textoMenu(identidad ?? desc[0]) !== textoMenu(t)) throw new EmisionBloqueadaError('boton', String(desc[0] ?? '').slice(0, 120))
   comprobarBoton(desc)
   usados.add(clave)
   AVANCES_USADOS.set(guard, usados)

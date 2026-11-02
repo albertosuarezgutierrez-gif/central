@@ -154,6 +154,9 @@ import {
   esOpcionVaciaCatalogo,
   esOpcionOtrasVersionesGenerali,
   listaVersionCambiadaGenerali,
+  detalleFilaPanelVersionGenerali,
+  anioTopeLanzamientoGenerali,
+  type DetalleVersionGenerali,
   fechaGenerali,
   matriculaGenerali,
   mensajeAtascoCatalogo,
@@ -473,11 +476,12 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * dato, la siniestralidad más favorable (aviso «supuesto» → precio estimado). Un obligatorio vacío sin regla (p. ej. una fecha) para con su nombre. Si la
  * pestaña no existe se anota y se sigue como antes; el atasco final trae el inventario (etiquetas, sin valores) de esa pestaña.
  *
+ * 0.2.67 (02/11/2026): la fila `tr` del panel de «Versión» se identifica por su 1ª celda (el guard sigue viendo la fila entera) y la fecha de lanzamiento excluye otra generación.
  * 0.2.66 (02/11/2026): tras «Otras versiones ...» la lista no cambia (el portal solo marca «Versión» en error): espera 20 s comparando contenido y pulsa la fila espejo «Otras versiones ...» de la tabla.
  * 0.2.65 (02/11/2026): el panel de «Versión» con columnas lista las opciones como `tr[data-label]` (no `li`): «Otras versiones ...» se localiza también ahí.
  * 0.2.64 (02/11/2026): «Garantías y Resultados» no se vuelve a pulsar si ya se pulsó en el trabajo (el guard solo lo permite una vez); solo espera al bloque.
  */
-export const VERSION_GENERALI_AUTO = '0.2.66'
+export const VERSION_GENERALI_AUTO = '0.2.67'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -2257,6 +2261,36 @@ export async function etiquetasPanelGenerali(raiz: Raiz, base: string): Promise<
 }
 
 /**
+ * v0.2.67 · Puertas y año de lanzamiento de cada opción del panel `#<base>_panel` en filas (`tr[data-label]`: Versión | Puertas | F. lanzamiento), por su
+ * `data-label` normalizado. Texto repetido con datos distintos: puertas `null` si difieren y el año MÁS ANTIGUO (solo se excluye lo posterior en todas).
+ * Panel en `li` o ilegible → mapa vacío (la decisión no cambia). Solo lee catálogo.
+ */
+export async function detallesPanelVersionGenerali(raiz: Raiz, base: string): Promise<Map<string, DetalleVersionGenerali>> {
+  const b = base.replace(/"/g, '')
+  const filas = await raiz
+    .locator(`[id="${b}_panel"] tr[data-label]`)
+    .evaluateAll((els) => els.map((el) => ({ label: el.getAttribute('data-label') ?? '', celdas: Array.from((el as HTMLTableRowElement).cells).map((c) => c.textContent ?? '') })))
+    .catch(() => [] as { label: string; celdas: string[] }[])
+  const m = new Map<string, DetalleVersionGenerali>()
+  for (const f of filas) {
+    const k = normalizarCatalogo(f.label)
+    if (k === '') continue
+    const d = detalleFilaPanelVersionGenerali(f.celdas)
+    const prev = m.get(k)
+    m.set(
+      k,
+      !prev
+        ? d
+        : {
+            puertas: prev.puertas === d.puertas ? prev.puertas : null,
+            anioLanzamiento: prev.anioLanzamiento === null || d.anioLanzamiento === null ? null : Math.min(prev.anioLanzamiento, d.anioLanzamiento),
+          },
+    )
+  }
+  return m
+}
+
+/**
  * Pone una opción ya decidida en un SelectOneMenu de PrimeFaces: abre por su disparador (puerta del guard), pulsa el `li` de `data-label`
  * exacto (puerta del guard) y, si el navegador agota el plazo, cae a `selectOption` en el select oculto + change. Comprueba que quedó puesta.
  */
@@ -2535,7 +2569,12 @@ export function decidirFilaVersionGenerali(filas: readonly FilaVersionGenerali[]
  * sea una potencia o un combustible), versión/denominación del riesgo, y si no casa, CV y combustible del riesgo. Devuelve el índice en
  * `opciones` y el supuesto; sin elección posible → `ErrorEleccionVersion` con la lista (sin repetidos). PURA salvo el lanzamiento.
  */
-export function decidirVersionDesplegableGenerali(opciones: readonly string[], form: FormFichaGenerali, otrasOpciones: readonly string[] = [], o: { ampliada?: boolean } = {}): { indice: number; supuesto: string | null; otras?: true } {
+export function decidirVersionDesplegableGenerali(
+  opciones: readonly string[],
+  form: FormFichaGenerali,
+  otrasOpciones: readonly string[] = [],
+  o: { ampliada?: boolean; detalles?: readonly (DetalleVersionGenerali | null | undefined)[] } = {},
+): { indice: number; supuesto: string | null; otras?: true } {
   const etq = form.eleccionVersion?.etiqueta?.trim() || null
   const persona = etq && !otrasOpciones.some((x) => normalizarCatalogo(x) === normalizarCatalogo(etq)) ? etq : null
   const v = vehiculoBuscadoGenerali(form)
@@ -2543,9 +2582,20 @@ export function decidirVersionDesplegableGenerali(opciones: readonly string[], f
   // v0.2.62: «Otras versiones ...» no es una versión: se aparta de la elección y solo se pulsa si nada de lo visible sirve (y no se ha ampliado ya).
   const ixOtras = opciones.findIndex(esOpcionOtrasVersionesGenerali)
   const hayOtras = ixOtras >= 0 && !o.ampliada
-  const reales = opciones.map((x, i) => ({ x, i })).filter((r) => !esOpcionOtrasVersionesGenerali(r.x))
+  const esReal = (x: string) => !esOpcionOtrasVersionesGenerali(x) && !esOpcionVaciaCatalogo(x)
+  // v0.2.67 (trabajo f84801ce): sin elección de una persona, una versión LANZADA después del vehículo (fecha del panel > año de matriculación o de la
+  // referencia + 1) es otra generación: fuera. Si no queda ninguna real → «Otras versiones ...» (1ª ronda) o requiere_humano con la lista entera.
+  const tope = persona ? null : anioTopeLanzamientoGenerali(form.fechaMatriculacion, form.vehiculoReferencia?.anio)
+  const posterior = (i: number) => tope !== null && (o.detalles?.[i]?.anioLanzamiento ?? null) !== null && o.detalles![i]!.anioLanzamiento! > tope
+  const hayPosteriores = opciones.some((x, i) => esReal(x) && posterior(i))
+  const todasReales = [...new Set(opciones.filter(esReal))]
+  if (hayPosteriores && !opciones.some((x, i) => esReal(x) && !posterior(i))) {
+    if (hayOtras) return { indice: ixOtras, supuesto: null, otras: true }
+    throw new ErrorEleccionVersion(todasReales.map((x): CandidatoVersion => ({ etiqueta: x, codigo: null })))
+  }
+  const reales = opciones.map((x, i) => ({ x, i })).filter((r) => !esOpcionOtrasVersionesGenerali(r.x) && !posterior(r.i))
   const conSolo = reales.filter((r) => !esOpcionVaciaCatalogo(r.x)).length >= 2
-  const base = conSolo ? reales : opciones.map((x, i) => ({ x, i }))
+  const base = conSolo ? reales : opciones.map((x, i) => ({ x, i })).filter((r) => !posterior(r.i))
   const e = elegirVersionDesplegableGenerali(base.map((r) => r.x), { persona, buscado, cv: cvRiesgoGenerali(form), combustible: combustibleRiesgoGenerali(form) })
   if (e.tipo === 'opcion') return { indice: base[e.indice]!.i, supuesto: e.supuesto }
   const unicas = [...new Set(e.candidatas.filter((x) => !esOpcionOtrasVersionesGenerali(x)))]
@@ -2561,7 +2611,9 @@ export function decidirVersionDesplegableGenerali(opciones: readonly string[], f
     }
   }
   if (hayOtras && (persona || form.vehiculoReferencia)) return { indice: ixOtras, supuesto: null, otras: true }
-  throw new ErrorEleccionVersion((o.ampliada ? unicas : [...new Set(opciones.filter((x) => !esOpcionVaciaCatalogo(x)))]).map((x): CandidatoVersion => ({ etiqueta: x, codigo: null })))
+  // v0.2.67: si la fecha apartó versiones, la persona ve la lista ENTERA (el tope por año podría no ser el suyo).
+  const lista = o.ampliada ? (hayPosteriores ? todasReales : unicas) : [...new Set(opciones.filter((x) => !esOpcionVaciaCatalogo(x)))]
+  throw new ErrorEleccionVersion(lista.map((x): CandidatoVersion => ({ etiqueta: x, codigo: null })))
 }
 
 /** Lee los controles del selector hasta que dos lecturas seguidas coinciden (el AJAX de combustible/potencia recarga listas) tras un mínimo; tope `esperaMs`. Solo lee. */
@@ -2591,7 +2643,13 @@ async function elegirVersionDesplegableSelector(page: Page, selector: Raiz, camp
   const select = pf ? selector.locator(`select[id="${campo.clave.replace(/"/g, '')}_input"]`) : selector.locator(`select[id="${campo.clave.replace(/"/g, '')}"]`)
   if ((await select.count().catch(() => 0)) !== 1) throw new ErrorMapaIncompletoGenerali(`el desplegable «Versión» del selector (no se localiza su <select> por «${campo.clave.slice(0, 60)}»); NO se pulsa «Confirmar»`)
   let opciones = await opcionesSelect(select)
-  let d = decidirVersionDesplegableGenerali(opciones.map((o) => o.texto), form, otras)
+  // v0.2.67: puertas y fecha de lanzamiento de cada opción, del panel en filas (solo PrimeFaces; sin panel en filas, sin detalles: decisión de siempre).
+  const detallesDe = async (ops: readonly { texto: string }[]) => {
+    if (!pf) return undefined
+    const m = await detallesPanelVersionGenerali(selector, campo.clave)
+    return m.size > 0 ? ops.map((x) => m.get(normalizarCatalogo(x.texto)) ?? null) : undefined
+  }
+  let d = decidirVersionDesplegableGenerali(opciones.map((o) => o.texto), form, otras, { detalles: await detallesDe(opciones) })
   if (d.otras) {
     // v0.2.62: nada de lo visible sirve → «Otras versiones ...» (misma puerta de versión, 2ª ronda) y se decide sobre la lista AMPLIADA.
     if (!pf) throw new ErrorMapaIncompletoGenerali('«Otras versiones ...» solo se sabe pulsar en el desplegable de PrimeFaces de «Versión»; NO se pulsa «Confirmar»')
@@ -2638,7 +2696,7 @@ async function elegirVersionDesplegableSelector(page: Page, selector: Raiz, camp
     // Deja que el AJAX termine de repintar antes de leer la lista definitiva.
     await page.waitForTimeout(MIN_RECARGA_SELECTOR_MS)
     opciones = await opcionesSelect(select)
-    d = decidirVersionDesplegableGenerali(opciones.map((o) => o.texto), form, otras, { ampliada: true })
+    d = decidirVersionDesplegableGenerali(opciones.map((o) => o.texto), form, otras, { ampliada: true, detalles: await detallesDe(opciones) })
   }
   const elegida = opciones[d.indice]!
   const actual = await leerOpcionSeleccionada(select)

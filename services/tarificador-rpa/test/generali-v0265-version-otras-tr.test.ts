@@ -34,7 +34,7 @@ before(async () => {
 })
 after(async () => { await browser?.close() })
 
-test('v0.2.65 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.66'))
+test('v0.2.65 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.67'))
 
 test('v0.2.65 · el panel de «Versión» en filas <tr data-label> se lee entero, «Otras versiones ...» incluida (antes: 0 etiquetas)', async () => {
   const page = await browser.newPage()
