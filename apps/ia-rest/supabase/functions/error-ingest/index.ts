@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { claveSecreta } from "../_shared/clave-supabase.ts";
+import { exigirServicioOSecreto } from '../_shared/auth-interna.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -10,15 +11,10 @@ const corsHeaders = {
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
-  // Validar secret interno (opcional si INTERNAL_API_SECRET está seteado)
-  const internalSecret = req.headers.get('x-internal-secret')
-  const expectedSecret = Deno.env.get('INTERNAL_API_SECRET')
-  if (expectedSecret && internalSecret !== expectedSecret) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
-  }
+  // Clave de servicio o INTERNAL_API_SECRET en x-internal-secret. FAIL-CLOSED (02/11/2026): antes,
+  // sin la variable definida, entraba cualquiera (`if (expectedSecret && …)`), y comparaba con `!==`.
+  const denegado = exigirServicioOSecreto(req, 'INTERNAL_API_SECRET', 'x-internal-secret', corsHeaders)
+  if (denegado) return denegado
 
   try {
     const body = await req.json()

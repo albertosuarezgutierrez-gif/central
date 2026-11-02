@@ -1,6 +1,9 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { claveSecreta } from "../_shared/clave-supabase.ts";
+import { exigirServicioOSecreto } from '../_shared/auth-interna.ts'
+// 02/11/2026: verify_jwt=false → exige clave de servicio o `EDGE_CRON_SECRET` en `x-cron-secret`
+// (pg_cron lo lee del Vault: vault.decrypted_secrets name='edge_cron_secret'). Fail-closed.
 
 const SUPABASE_URL    = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY     = claveSecreta()
@@ -27,7 +30,9 @@ async function enviarTelegram(msg: string) {
   })
 }
 
-serve(async () => {
+serve(async (req: Request) => {
+  const denegado = exigirServicioOSecreto(req, 'EDGE_CRON_SECRET', 'x-cron-secret')
+  if (denegado) return denegado
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY, { db: { schema: 'iarest' } })
 
   // 1. Restaurantes con CP o coordenadas

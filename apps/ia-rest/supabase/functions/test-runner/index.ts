@@ -2,6 +2,10 @@
 // Ejecuta 10 tests del pipeline y guarda resultado en transcripciones
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { cabecerasServicio, claveSecreta } from "../_shared/clave-supabase.ts";
+import { exigirServicio } from '../_shared/auth-interna.ts'
+// 02/11/2026: verify_jwt=false → solo llamadas de servidor con la clave de servicio
+// (exigirServicio, fail-closed, tiempo constante). Antes la abría cualquiera.
+// Sin llamadores en el repo: candidata a borrar del proyecto (fix-bd §1 A).
 const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
 
 const R_ID   = "50eda9f7-d19b-4078-b404-e323c8ee8089";
@@ -26,6 +30,8 @@ async function call(slug: string, body: unknown): Promise<{ok:boolean;ms:number;
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const denegado = exigirServicio(req, corsHeaders);
+  if (denegado) return denegado;
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, claveSecreta(), { db: { schema: 'iarest' } });
   const inicio = Date.now();
   const R: Record<string,unknown>[] = [];

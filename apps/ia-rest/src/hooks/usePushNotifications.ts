@@ -37,7 +37,7 @@ export function usePushNotifications(camareroId: string | null) {
 
       await fetch('/api/push/subscribe', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' },
         body: JSON.stringify({ subscription: sub.toJSON(), camarero_id: camareroId }),
       })
       setSubscribed(true)
@@ -53,7 +53,7 @@ export function usePushNotifications(camareroId: string | null) {
     if (sub) await sub.unsubscribe()
     await fetch('/api/push/subscribe', {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' },
       body: JSON.stringify({ camarero_id: camareroId }),
     })
     setSubscribed(false)

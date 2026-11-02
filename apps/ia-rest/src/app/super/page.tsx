@@ -2241,10 +2241,12 @@ function LeadHunterPanel({ C, SN, SM, onLeadCreado, sh }: { C: any; SN: string; 
               const nombre = biz?.nombre || post?.nombre_local || 'Restaurante'
               const trackUrl = landingUrl || propuestaTrackUrl || (propuestaUrl ? `https://www.iarest.es${propuestaUrl}` : null)
               const msg = `🎯 <b>Lead Hunter IA</b>\n\n<b>${nombre}</b>\n📍 ${biz?.ciudad || post?.ciudad || '—'} · ${biz?.tipo_cocina || post?.tipo_cocina || '—'}\n💶 ~${biz?.precio_mrr_estimado || '?'}€/mes${biz?.email_contacto ? `\n📧 ${biz.email_contacto}` : ''}${biz?.telefono ? `\n📞 ${biz.telefono}` : ''}\n\n${(biz?.puntos_dolor || []).map((p: string) => `→ ${p}`).join('\n') || post?.notas || ''}\n\n<b>DM:</b>\n"${result?.dm_sugerido || '—'}"${trackUrl ? `\n\n🔗 <a href="${trackUrl}">Ver propuesta</a>` : ''}\n\n✅ ¿Mandamos?`
-              await fetch('https://wswbehlcuxqxyinousql.supabase.co/functions/v1/tg-send', {
-                method: 'POST', headers: { 'Content-Type': 'application/json', 'x-secret': 'iarest-tg-2026' },
+              // Ruta de servidor con sesión super_admin; el secreto de tg-send no sale al navegador.
+              const r = await fetch('/api/super/tg-send', {
+                method: 'POST', headers: sh(),
                 body: JSON.stringify({ mensaje: msg })
               })
+              if (!r.ok) alert('No se pudo enviar a Telegram')
             }} style={{ background: `${C.amber}20`, color: C.amber, border: `1px solid ${C.amber}40`, borderRadius: 8, padding: '9px 14px', fontFamily: SM, fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>
               📱 Telegram
             </button>

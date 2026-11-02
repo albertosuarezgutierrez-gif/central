@@ -4,6 +4,10 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { claveSecreta } from "../_shared/clave-supabase.ts";
+import { exigirServicio } from '../_shared/auth-interna.ts'
+// 02/11/2026: verify_jwt=false → solo llamadas de servidor con la clave de servicio
+// (exigirServicio, fail-closed, tiempo constante). Antes la abría cualquiera.
+// Llamadores: apps/ia-rest/src/lib/notify.ts (Bearer service_role) y monitor-health (cabecerasServicio).
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -34,6 +38,9 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
+
+  const denegado = exigirServicio(req, corsHeaders)
+  if (denegado) return denegado
 
   try {
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, claveSecreta(), { db: { schema: 'iarest' } })

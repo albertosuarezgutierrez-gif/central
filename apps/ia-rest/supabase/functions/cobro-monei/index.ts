@@ -1,6 +1,10 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { claveSecreta } from "../_shared/clave-supabase.ts";
+import { exigirServicio } from '../_shared/auth-interna.ts'
+// 02/11/2026: verify_jwt=false → solo llamadas de servidor con la clave de servicio
+// (exigirServicio, fail-closed, tiempo constante). Antes la abría cualquiera.
+// Sin llamadores en el repo (02/11/2026): si un cliente externo la usaba, ahora recibe 401.
 
 // ia.rest · COBRO-MONEI v8 · con error monitoring
 
@@ -42,6 +46,9 @@ Deno.serve(async (req: Request) => {
   }
 
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
+
+  const denegado = exigirServicio(req, { 'Access-Control-Allow-Origin': '*' })
+  if (denegado) return denegado
 
   let body: any
   try { body = await req.json() }
