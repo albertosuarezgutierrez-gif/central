@@ -76,6 +76,17 @@
 
 ## Bitácora de hallazgos (lo más reciente arriba)
 
+- **2026-11-02 · pasada semanal — sin hallazgos nuevos, sin ruido.** Solo WebSearch (sin keys de
+  proveedor; sin catálogos). Cableados sin cambios en `client.ts`. **OpenRouter** `deepseek/deepseek-v4.1-flash`
+  vivo; aparece además el snapshot `-1017` (17/10); precios discrepan entre agregadores ($0,07/$0,18 ·
+  $0,15/$0,60 · $0,30/$1,20, tarifa punta/valle) — sin zanjar sin catálogo oficial. **Groq** gpt-oss-120b:
+  sin noticias de deprecación. **Visión NIM** `llama-3.2-11b-vision-instruct`: el contenedor NGC muestra
+  banner «End of Support» (última tag 01/2025, contenedor autoalojado, no el endpoint hosted); sin EOL
+  oficial del hosted ([EOL notices](https://docs.nvidia.com/ai-enterprise/lifecycle/latest/eol-notices.html));
+  riesgo abierto sin verificar con llamada real. Descubrimiento: agregadores dudosos citan Claude Haiku 5.5
+  a $0,10/$0,50 y Gemini 4 Argon ($2-4/$10-20); sin fuente oficial ni mini-eval → no cruzan el listón,
+  anotados para verificar con key. Preflight Telegram 200.
+
 - **2026-10-26 · pasada semanal — sin hallazgos nuevos, sin ruido.** Solo WebSearch (sin keys de
   proveedor; sin acceso a catálogos). **Gemini 2.5 Flash:** la fecha 16/10/2026 ya pasó; Google
   matiza que sus fechas son "mínimas" y que 2.5 queda limitado a usuarios previamente activos, sin

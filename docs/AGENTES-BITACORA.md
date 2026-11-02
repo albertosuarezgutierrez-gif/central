@@ -17,6 +17,8 @@
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
+- **2026-11-02 · buscador-ia** · hizo: pasada semanal por WebSearch (sin keys), cableados sin cambios, sin hallazgos; dudas: precios V4.1 Flash y free tier Groq siguen contradictorios entre fuentes; fallos: —; PRs/commits: solo docs
+
 - **2026-11-01 · facturas-correo** · hizo: Vía B sana (copias hoy); 7 candidatos Gmail, 1 factura real (ETTERNA 2026/11567, 59,29€, alarma, a nombre de TRIUNFO CB/Espartinas) → NO archivada, `Facturas/Revisar`; backlog 4.0: `ionos-contrato-111849515` 10,90€ marcada `fuera_del_feed` (último cargo Ionos en banco 15/07), resto de la cola ya revisada; dudas: Etterna ¿es gasto de Alberto o de un tercero (Espartinas = suministro de tercero en la skill)? Alberto la reenvió a Pilar y a jsuarezsalas; fallos: gmail-adjuntos (Vía A) caído; PRs/commits: este commit
 
 - **2026-11-01 · rrhh-compliance-calendar** · hizo: roadmap leído; 9 🔴 pendientes (fichaje, geoloc, TSA, art.28, canal denuncias, informe ITSS, Modelo 145, NIE, borrado RGPD; PRL ya hecho) y 6 🟠; recomendación: fichaje RD 8/2019 + informe ITSS; sin Telegram (noviembre sin urgencia estacional); latido ok:true; dudas: —; fallos: —; PRs/commits: este commit
