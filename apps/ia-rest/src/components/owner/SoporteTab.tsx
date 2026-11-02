@@ -6,6 +6,11 @@ import { C, SE, SN, SM, SC } from '@/lib/colors'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 
+// Sesión FIRMADA del login: las rutas /api/owner/* ya no aceptan `x-ia-restaurante-id` sin CRON_SECRET.
+function sesionFirmada(): string {
+  try { return localStorage.getItem('ia_rest_session') ?? '' } catch { return '' }
+}
+
 /* ─── Tokens de diseño ─── */
 
 /* ─── Tipos ─── */
@@ -65,7 +70,7 @@ export default function SoporteTab({ restauranteId }: Props) {
     setCargandoTickets(true)
     try {
       const res = await fetch('/api/owner/soporte', {
-        headers: { 'x-ia-restaurante-id': restauranteId },
+        headers: { 'x-ia-session': sesionFirmada() },
       })
       const json = await res.json()
       setTickets(json.tickets ?? [])
@@ -87,7 +92,7 @@ export default function SoporteTab({ restauranteId }: Props) {
     setEscalado(ticket.estado === 'escalado')
     setVista('chat')
     const res = await fetch(`/api/owner/soporte?ticket_id=${ticket.id}`, {
-      headers: { 'x-ia-restaurante-id': restauranteId },
+      headers: { 'x-ia-session': sesionFirmada() },
     })
     const json = await res.json()
     setMensajes(json.mensajes ?? [])
@@ -122,7 +127,7 @@ export default function SoporteTab({ restauranteId }: Props) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-ia-restaurante-id': restauranteId,
+          'x-ia-session': sesionFirmada(),
         },
         body: JSON.stringify({ texto: msg, ticket_id: ticketActivo?.id }),
       })
@@ -161,7 +166,7 @@ export default function SoporteTab({ restauranteId }: Props) {
     if (!ticketActivo) return
     await fetch('/api/owner/soporte', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'x-ia-restaurante-id': restauranteId },
+      headers: { 'Content-Type': 'application/json', 'x-ia-session': sesionFirmada() },
       body: JSON.stringify({ ticket_id: ticketActivo.id, estado: 'resuelto' }),
     })
     cargarTickets()

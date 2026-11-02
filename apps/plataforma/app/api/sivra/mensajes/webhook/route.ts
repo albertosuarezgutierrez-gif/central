@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse, after } from 'next/server'
 import { procesarMensajeHuesped } from '@/lib/sivra/agente-huesped/orquestador'
 import { runSync } from '@/lib/sivra/smoobu-sync'
+import { igualSeguro } from '@/lib/cron-auth'
 import { GET as autoSessionsGET } from '@/app/api/sivra/limpiadoras/auto-sessions/route'
 import { GET as applyAutoGET } from '@/app/api/sivra/pricing/apply-auto/route'
 
@@ -43,8 +44,16 @@ function reaccionarAReserva(): void {
 //                            + limpieza automática + pricing reactivo (en segundo plano).
 //  - cualquier otro        → ignorado.
 export async function POST(req: NextRequest) {
+  // Fail-CLOSED (02/11/2026): antes `if (secret && …)` dejaba pasar a cualquiera si faltaba la
+  // variable. Sin SMOOBU_WEBHOOK_SECRET solo se acepta fuera de producción (dev local).
   const secret = process.env.SMOOBU_WEBHOOK_SECRET
-  if (secret && req.nextUrl.searchParams.get('k') !== secret) {
+  const produccion = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production'
+  if (!secret) {
+    if (produccion) {
+      console.error('[smoobu-webhook] SMOOBU_WEBHOOK_SECRET NO definido en producción — se DENIEGA')
+      return NextResponse.json({ ok: false }, { status: 401 })
+    }
+  } else if (!igualSeguro(req.nextUrl.searchParams.get('k'), secret)) {
     return NextResponse.json({ ok: false }, { status: 401 })
   }
   const body: any = await req.json().catch(() => ({}))

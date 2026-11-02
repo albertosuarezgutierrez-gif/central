@@ -65,6 +65,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  if (!(await isLimpiadoraAuthorized())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const body = await req.json()
   const { property_id, reservation_id, guest_out, guest_in, checkout_time, checkin_time, session_date } = body
   try {

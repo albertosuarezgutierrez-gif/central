@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { isCronAuthorized } from '@/lib/cron-auth'
 
 // Cron diario: asigna automáticamente limpiadoras a sesiones sin asignar
 // Lógica: busca la limpiadora disponible con menos carga ese día y que tenga el piso asignado
 export async function GET(req: NextRequest) {
-  const auth = req.headers.get('authorization')
-  if (auth !== `Bearer ${process.env.CRON_SECRET}` && process.env.NODE_ENV !== 'development') {
+  if (!(await isCronAuthorized(req, { soloCabecera: true }))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

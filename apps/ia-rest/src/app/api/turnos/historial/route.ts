@@ -2,13 +2,10 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
+import { getSession } from '@/lib/session'
 
 export async function GET(req: NextRequest) {
-  let session: { id: string; restaurante_id: string; rol: string } | null = null
-  try {
-    const h = req.headers.get('x-ia-session')
-    session = h ? JSON.parse(h) : null
-  } catch { /* noop */ }
+  const session = getSession(req)
 
   if (!session?.restaurante_id) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
@@ -57,11 +54,7 @@ export async function GET(req: NextRequest) {
 
 // PATCH: el owner puede añadir una nota a un fichaje
 export async function PATCH(req: NextRequest) {
-  let session: { id: string; restaurante_id: string; rol: string } | null = null
-  try {
-    const h = req.headers.get('x-ia-session')
-    session = h ? JSON.parse(h) : null
-  } catch { /* noop */ }
+  const session = getSession(req)
 
   if (!session?.restaurante_id) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   if (!['owner', 'jefe_sala', 'super_admin'].includes(session.rol)) {

@@ -343,6 +343,10 @@ export async function cotizar(
       solicitadoPor: p.solicitadoPor,
       huella,
       forzar: p.forzar === true,
+      // Se re-cuentan bajo el candado de gasto de la correduría: el paso 4 de arriba no basta
+      // contra peticiones en paralelo (todas leerían el mismo gasto y todas pasarían).
+      topes: config.topes,
+      env,
     })
   } catch (e) {
     return {
@@ -353,6 +357,7 @@ export async function cotizar(
       }`,
     }
   }
+  if (reserva.resultado === 'tope') return { ok: false, razon: reserva.razon, mensaje: reserva.mensaje }
   if (reserva.resultado === 'reutilizar') {
     try {
       return {

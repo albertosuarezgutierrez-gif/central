@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 import { NextRequest, NextResponse } from 'next/server'
+import { secretoCronValido } from '@/lib/cron-auth'
 import { createHmac } from 'crypto'
 const CLOUD = process.env.CLOUDINARY_CLOUD_NAME||''
 const KEY   = process.env.CLOUDINARY_API_KEY||''
@@ -23,7 +24,7 @@ async function uploadCld(buf: Buffer, pid: string): Promise<string> {
   return d.public_id!
 }
 export async function GET(req: NextRequest) {
-  if (req.headers.get('x-story-secret') !== process.env.CRON_SECRET) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  if (!secretoCronValido(req.headers.get('x-story-secret'))) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const BASE = 'https://www.iarest.es/api/ig-img'
   const titulo = encodeURIComponent('VeriFactu para restaurantes guia completa 2026')
   const SLIDES = [

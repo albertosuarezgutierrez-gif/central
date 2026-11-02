@@ -13,7 +13,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
-import { getSession, getRestauranteId } from '@/lib/session'
+import { getSession, getRestauranteId, sesionParaReenviar } from '@/lib/session'
 import { crearPrintJobMarchar, crearPrintJobs } from '@/lib/courier'
 import { notificarClienteQrListo } from '@/lib/qr-notify'
 
@@ -84,7 +84,7 @@ async function enviarPush(
   }
 
   const sendPush = async (title: string, body: string) => {
-    const session = req.headers.get('x-ia-session') ?? ''
+    const session = sesionParaReenviar(req)
     await fetch(`${baseUrl}/api/push/send`, {
       method: 'POST',
       headers: {

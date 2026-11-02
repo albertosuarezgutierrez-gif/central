@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { storageObjectPath, signStorageObject, publicStorageUrl } from '@central/core-storage'
 import { clavePublicable } from '@/lib/claves-supabase'
+import { isLimpiadoraAuthorized } from '@/lib/limpiadora-auth'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_ANON = clavePublicable()
@@ -12,6 +13,7 @@ const EXPIRES = 3600 // 1h
 // Las <img> de la zona limpiadoras apuntan aquí en vez de a una URL pública.
 // El firmado lo hace el núcleo compartido @central/core-storage.
 export async function GET(req: NextRequest) {
+  if (!(await isLimpiadoraAuthorized())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const u = req.nextUrl.searchParams.get('u')
   if (!u) return NextResponse.json({ error: 'Missing u' }, { status: 400 })
 

@@ -1,11 +1,12 @@
 export const maxDuration = 30
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
+import { cronAutorizado } from '@/lib/cron-auth'
 import { renovarToken } from '@/lib/instagram'
 import { tgAlert } from '@/lib/telegram'
 
 export async function GET(req: NextRequest) {
-  if (req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  if (!cronAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
     const nuevoToken = await renovarToken()
 

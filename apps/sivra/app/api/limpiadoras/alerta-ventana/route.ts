@@ -1,13 +1,19 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
 import { gmailTransporter } from "@central/core-email"
 import { smoobuFetch } from "@/lib/smoobu"
+import { isLimpiadoraAuthorized } from "@/lib/limpiadora-auth"
+import { isCronAuthorized } from "@/lib/cron-auth"
 
 export const dynamic = "force-dynamic"
 
 // Cron: comprobar si algún checkout + checkin en mismo día tiene ventana < 3h
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Cookie de limpiadora VALIDADA en BD (no basta con que exista), sesión admin o CRON_SECRET.
+  if (!(await isCronAuthorized(req)) && !(await isLimpiadoraAuthorized())) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+  }
   try {
     const hoy = new Date().toISOString().split("T")[0]
     const d7  = new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0]

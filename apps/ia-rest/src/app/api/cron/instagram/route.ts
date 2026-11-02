@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 import { NextRequest, NextResponse } from 'next/server'
+import { cronAutorizado } from '@/lib/cron-auth'
 import { createServerClient } from '@/lib/supabase'
 import { callAI, cleanJSON } from '@/lib/ai-client'
 import { tgAlertButtons } from '@/lib/telegram'
@@ -181,7 +182,7 @@ function buildUrl(p: Record<string,string>): string {
 
 export async function GET(req: NextRequest) {
   const auth = req.headers.get('authorization')
-  const isCron = auth === `Bearer ${process.env.CRON_SECRET}`
+  const isCron = cronAutorizado(req)
   const isManual = req.nextUrl.searchParams.get('manual') === '1'
   const tipoForzado = req.nextUrl.searchParams.get('tipo') as Plantilla|null
   if (!isCron && !isManual) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })

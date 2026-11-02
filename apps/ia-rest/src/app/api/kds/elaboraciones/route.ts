@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
 
   await fetch(`${baseUrl}/api/push/send`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-ia-session': JSON.stringify({ restaurante_id: rid }) },
+    headers: { 'Content-Type': 'application/json', 'x-ia-restaurante-id': rid, 'x-ia-cron-secret': process.env.CRON_SECRET ?? '' },
     body: JSON.stringify({
       local_id: rid,
       roles: ['jefe_sala', 'owner'],

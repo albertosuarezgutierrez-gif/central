@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 import { NextRequest, NextResponse } from 'next/server'
+import { cronAutorizado } from '@/lib/cron-auth'
 
 // Siembra (una vez) un pool de clips de AMBIENTE de hostelería en Cloudinary, tomados
 // de Pexels (royalty-free, uso comercial sin atribución). Cloudinary los descarga por URL
@@ -52,7 +53,7 @@ async function uploadVideoByUrl(remoteUrl: string, pid: string): Promise<string>
 }
 
 export async function POST(req: NextRequest) {
-  if (req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`)
+  if (!cronAutorizado(req))
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   return seed()
 }

@@ -91,6 +91,7 @@ export default function LoginPage() {
   const [cuentaSelector, setCuentaSelector] = useState<null | {
     cuenta: { id: string; nombre: string }
     restaurantes: { id: string; nombre: string; ciudad?: string; plan: string; plan_status: string }[]
+    cuentaSession?: Record<string, unknown>
   }>(null)
   const [selectedRestaurante, setSelectedRestaurante] = useState('')
   const [checkoutSuccess, setCheckoutSuccess] = useState(false)
@@ -152,7 +153,7 @@ export default function LoginPage() {
         }
         if (dCuenta.tipo === 'selector') {
           // Múltiples restaurantes → mostrar selector
-          setCuentaSelector({ cuenta: dCuenta.cuenta, restaurantes: dCuenta.restaurantes })
+          setCuentaSelector({ cuenta: dCuenta.cuenta, restaurantes: dCuenta.restaurantes, cuentaSession: dCuenta.cuentaSession })
           setLoading(false)
           return
         }
@@ -193,7 +194,7 @@ export default function LoginPage() {
     try {
       const r = await fetch('/api/auth/seleccionar-restaurante', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cuenta_id: cuentaSelector.cuenta.id, restaurante_id: selectedRestaurante })
+        body: JSON.stringify({ cuenta_id: cuentaSelector.cuenta.id, restaurante_id: selectedRestaurante, cuentaSession: cuentaSelector.cuentaSession })
       })
       const d = await r.json()
       if (d.session) {

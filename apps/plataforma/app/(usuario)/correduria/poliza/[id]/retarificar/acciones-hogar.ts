@@ -10,6 +10,11 @@ import {
   precalificarHogarRetarificarAsegura,
   type RespuestaPrecalificacionHogar,
 } from '@/lib/hogar-retarificar-asegura'
+import { exigirCorreduria } from '@/lib/correduria-acceso'
+
+// 🚨 Una acción de servidor es un POST que no pasa por el layout: cada export exige la correduría
+// (cepo `test/regression-correduria-acciones-guarda.test.ts`).
+const SIN_ACCESO = 'No tienes acceso a la correduría.'
 
 export async function pedirPrecalificacionHogar(entrada: {
   polizaId: string
@@ -17,6 +22,8 @@ export async function pedirPrecalificacionHogar(entrada: {
   correcciones?: Record<string, unknown>
   referencia?: string
 }): Promise<RespuestaPrecalificacionHogar> {
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return { estado: 'sin_configurar', mensaje: SIN_ACCESO }
   return precalificarHogarRetarificarAsegura(entrada)
 }
 
@@ -31,5 +38,7 @@ export async function pedirLimitesHogar(entrada: {
   correcciones?: Record<string, unknown>
   referencia?: string
 }): Promise<RespuestaLimitesHogar> {
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return { estado: 'sin_configurar', mensaje: SIN_ACCESO }
   return limitesHogarAsegura(entrada)
 }

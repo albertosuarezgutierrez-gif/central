@@ -41,7 +41,11 @@ export async function POST(req: Request) {
     // Sync inmediato en background si hay URL iCal
     if (ical_url) {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
-      fetch(appUrl + '/api/pms/sync?connection_id=' + connection.id, { method: 'GET' })
+      const cron = process.env.CRON_SECRET
+      fetch(appUrl + '/api/pms/sync?connection_id=' + connection.id, {
+        method: 'GET',
+        headers: cron ? { authorization: `Bearer ${cron}` } : {},
+      })
         .catch(() => {})
     }
 

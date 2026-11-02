@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cabecerasClave, clavePublicable } from '@/lib/claves-supabase'
+import { isLimpiadoraAuthorized } from '@/lib/limpiadora-auth'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_ANON = clavePublicable()
 const BUCKET = 'cleaning-photos'
 
 export async function POST(req: NextRequest) {
+  if (!(await isLimpiadoraAuthorized())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
     const form = await req.formData()
     const file = form.get('file') as File | null

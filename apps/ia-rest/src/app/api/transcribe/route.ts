@@ -5,7 +5,7 @@ import { transcribir, AudioDemasiadoCortoError } from '@/lib/ear'
 import { routearComanda } from '@/lib/brain-router'
 import { crearPrintJobs, crearPrintJobCuenta } from '@/lib/courier'
 import { createServerClient } from '@/lib/supabase'
-import { getSession, getRestauranteId } from '@/lib/session'
+import { getSession, getRestauranteId, sesionParaReenviar } from '@/lib/session'
 import { azureDisponible, verificarAzure } from '@/lib/azure-speaker'
 
 // ── Cache de idempotencia en memoria (dura hasta redeploy) ──────────────
@@ -567,7 +567,7 @@ export async function POST(req: NextRequest) {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'x-ia-session': req.headers.get('x-ia-session') ?? '',
+              'x-ia-session': sesionParaReenviar(req),
             },
             body: JSON.stringify({
               comanda_id:  comanda.id,

@@ -12,6 +12,7 @@
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server'
+import { cronAutorizado } from '@/lib/cron-auth'
 import { createServerClient } from '@/lib/supabase'
 import { crearPreavisoParaComanda } from '@/lib/preaviso-server'
 
@@ -22,9 +23,7 @@ export const maxDuration = 60
 const ESTADOS_EN_COCINA = ['nueva', 'en_cocina']
 
 function autorizado(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET
-  if (!secret) return true
-  return req.headers.get('authorization') === `Bearer ${secret}`
+  return cronAutorizado(req)
 }
 
 export async function GET(req: NextRequest) {

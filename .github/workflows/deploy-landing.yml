@@ -33,14 +33,14 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Descargar fuentes (Nunito, auto-alojada)
         working-directory: apps/ialimp/landing/ialimp-es
         run: bash fetch-fonts.sh || echo "fetch-fonts falló; se despliega igual (fuente del sistema)"
 
       - name: Instalar Vercel CLI
-        run: npm i -g vercel@latest
+        run: npm i -g vercel@65.9.0
 
       - name: Deploy a producción (proyecto ialimp-landing)
         working-directory: apps/ialimp/landing/ialimp-es

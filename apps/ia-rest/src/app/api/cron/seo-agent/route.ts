@@ -12,6 +12,8 @@ import {
   agenteHabilitado, rutaEditable, dentroDeLimite, rutaEnCooldown, maxCambios, minImpresiones,
 } from '@/lib/seo/guardrails'
 import { callAITools, callAISearch } from '@/lib/ai-client'
+import { getSession } from '@/lib/session'
+import { cronAutorizado } from '@/lib/cron-auth'
 
 const TG_BOT  = process.env.TELEGRAM_BOT_TOKEN || ''
 const TG_CHAT = process.env.TELEGRAM_CHAT_ID || ''
@@ -69,11 +71,8 @@ const TOOLS = [
 
 export async function GET(req: NextRequest) {
   // Auth: cron de Vercel o super_admin
-  const auth = req.headers.get('authorization')
-  let isSuper = false
-  const sh = req.headers.get('x-ia-session')
-  if (sh) { try { isSuper = JSON.parse(sh)?.rol === 'super_admin' } catch {} }
-  if (auth !== `Bearer ${process.env.CRON_SECRET}` && !isSuper)
+  const isSuper = getSession(req)?.rol === 'super_admin'
+  if (!cronAutorizado(req) && !isSuper)
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   // Kill switch

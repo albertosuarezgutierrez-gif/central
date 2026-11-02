@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 import { NextRequest, NextResponse } from 'next/server'
+import { cronAutorizado } from '@/lib/cron-auth'
 import { createServerClient } from '@/lib/supabase'
 import { callAI, callAISearch, cleanJSON } from '@/lib/ai-client'
 import { tgAlert } from '@/lib/telegram'
@@ -77,7 +78,7 @@ JSON: {"mrr_estimado":150,"puntuacion_lead":65,"modulos_criticos":["voz","kds"],
 // ── Handler principal ────────────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
   const auth = req.headers.get('authorization')
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!cronAutorizado(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

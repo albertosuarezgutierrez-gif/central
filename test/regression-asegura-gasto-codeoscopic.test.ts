@@ -68,11 +68,13 @@ test('nadie llama al vendor por su cuenta: el POST de cotización pasa por cotiz
   // Library (el widget del vendor para pintar el formulario REAL de cada
   // compañía, en vez del catálogo estático adivinado de `opciones-producto.ts`).
   // Es una operación DISTINTA de `/insurances*`: `docs/CODEOSCOPIC-API-PORTAL.md`
-  // solo marca `POST /insurances` como facturable, y esta va detrás del mismo
-  // interruptor GRATIS que `/insurance-lines` (`ignorarInterruptor: true`).
-  // Sin confirmación explícita del fabricante de que sea gratis (no hay
-  // fixture ni sandbox), pero no es la operación que cotiza ni la que
-  // compromete un contrato — esas siguen siendo las dos excepciones de arriba.
+  // solo marca `POST /insurances` como facturable. Ya NO va detrás del
+  // interruptor gratis (`ignorarInterruptor`): la ruta
+  // `app/api/operador/codeoscopic/product-form/` la pone detrás del interruptor
+  // de EMISIÓN (`resolverConfigEmision`, `CODEOSCOPIC_EMISION_ACTIVA`). Sin
+  // confirmación explícita del fabricante de que sea gratis (no hay fixture ni
+  // sandbox); si llegara a facturarse, va a `conLibroDeEmision`. No es la
+  // operación que cotiza ni la que compromete un contrato.
   const infractores = ficheros(/^apps\/asegura\/(app|lib)\/.*\.tsx?$/)
     .filter(
       (f) =>
@@ -357,4 +359,53 @@ test('🚨 el tope en euros es fail-closed: un fallo al leer el gasto NO se conv
     /catch[\s\S]{0,160}gastadoCents:\s*0/,
     'un catch que devuelve gastadoCents: 0 sería el tope que se pone verde porque la consulta no devolvió nada',
   )
+})
+
+// ─── Ráfagas en paralelo (02/11/2026) ───────────────────────────────────────
+// La comprobación de topes de los embudos va ANTES de reservar, por otra conexión y sin candado:
+// N peticiones a la vez leen el mismo gasto y las N pasan. La reserva tiene que tomar el candado de
+// gasto de la correduría y RE-CONTAR libro y euros dentro de la misma transacción, antes del INSERT.
+function cuerpoDe(src: string, firma: string, hasta: string): string {
+  const i = src.indexOf(firma)
+  assert.ok(i >= 0, `no encuentro ${firma}: el cepo se ha quedado ciego`)
+  const j = src.indexOf(hasta, i + firma.length)
+  return src.slice(i, j > i ? j : undefined)
+}
+
+test('🚨 la recuenta bajo candado toma pg_advisory_xact_lock por correduría y vuelve a contar libro y euros', () => {
+  const src = FUENTE_LIBRO('apps/asegura/lib/codeoscopic/consumo.ts')
+  const h = cuerpoDe(src, 'async function recontarBajoCandado(', '\nexport ')
+  const iLock = h.search(/pg_advisory_xact_lock\(hashtext\('cotizar:' \|\| \$\{correduriaId\}/)
+  assert.ok(iLock > 0, 'sin el candado por correduría, dos peticiones en paralelo leen el mismo gasto y rebasan el tope')
+  for (const [patron, que] of [
+    [/consumoActual\(correduriaId, tx\)/, 'el libro de cotizar (con la tx)'],
+    [/consumoEmision\(correduriaId, q\.operacion, tx\)/, 'el libro de emisión (con la tx)'],
+    [/gastadoMesCents\([\s\S]*?tx,?\s*\)/, 'el gasto en euros (con la tx)'],
+    [/decidirTopeEuros\(/, 'la decisión del tope en euros'],
+  ] as const) {
+    const k = h.search(patron)
+    assert.ok(k > iLock, `${que} se re-cuenta DESPUÉS de tomar el candado`)
+  }
+})
+
+test('🚨 reservarSinDuplicado y reservarEmision re-cuentan bajo candado ANTES de su INSERT', () => {
+  const src = FUENTE_LIBRO('apps/asegura/lib/codeoscopic/consumo.ts')
+  const sd = cuerpoDe(src, 'export async function reservarSinDuplicado(', 'export async function consumoEmision(')
+  // Los dos caminos (con y sin columna `huella`) reservan: los dos tienen que re-contar.
+  const ins = [...sd.matchAll(/insert into seguros\.codeoscopic_consumo|await reservar\(/g)].map((m) => m.index!)
+  const rec = [...sd.matchAll(/await recontarBajoCandado\(tx,/g)].map((m) => m.index!)
+  assert.equal(ins.length, 2, 'reservarSinDuplicado tiene dos caminos de reserva')
+  assert.equal(rec.length, 2, 'cada camino de reservarSinDuplicado re-cuenta bajo candado')
+  for (let n = 0; n < 2; n++) assert.ok(rec[n] < ins[n], 'la recuenta va ANTES de cada INSERT')
+  assert.match(sd, /if \(corte\) return \{ resultado: 'tope'/, 'un «no cabe» corta la reserva')
+
+  const em = cuerpoDe(src, 'export async function reservarEmision(', '\nexport ')
+  const iRec = em.indexOf('await recontarBajoCandado(')
+  const iIns = em.indexOf('insert into seguros.codeoscopic_consumo')
+  assert.ok(iRec > 0 && iIns > iRec, 'reservarEmision re-cuenta bajo candado ANTES del INSERT')
+  assert.match(em, /\$transaction/, 'y en la MISMA transacción que el INSERT')
+  assert.match(em, /if \(corte\) throw/, 'un «no cabe» lanza: el llamante no llama al vendor')
+
+  const cot = FUENTE_LIBRO('apps/asegura/lib/codeoscopic/cotizar.ts')
+  assert.match(cot, /reserva\.resultado === 'tope'\) return \{ ok: false/, 'cotizar() corta si la recuenta dice que no cabe')
 })

@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 
+## (02/11/2026) Auditoría completa (12 agentes) + arreglos — docs/AUDITORIA-2026-11.md
+- 🔴 cerrados: 11 server actions de /correduria sin guarda (cotización 0,50€); ia-rest con sesión forjable (x-ia-session, super/impersonate, seleccionar-restaurante); sivra/ialimp rutas sin auth; crons «Bearer undefined»; BD: `iarest.ejecutar_qa_patron` = SQL libre como postgres con la clave anon → REVOKE en 73 SECURITY DEFINER (migración APLICADA `migrations/20261102_auditoria.sql`, rollback al lado).
+- Tope Codeoscopic con advisory lock; Next 15.5.28/16.4.4 (0 critical); ialimp solo cron `pms/sync` (ahora con Bearer); module-agenda borrado.
+- Memoria rotada (rotar-memoria no veía `## (fecha)`): sept/oct a docs/memoria. 10 rutinas muertas borradas, 11 PRs draft cerrados.
+- Proyecto Vercel `asegura` NO se borra: sirve app.grupoasegura.com (CRM de Manuel).
+- Pendiente: checklist manual de Alberto en el informe (rotar ALERTA_TOKEN de 7 prompts, 5 rutinas http_api, edge functions sin auth: tg-send/test-runner/push-send/cobro-*).
+
 ## (02/11/2026) Ingresos 2026 pisos: neto real fijado · PENDIENTE cuadre Smoobu
 - `incomes.amount_net_bank` (PR #5370, aplicado): si no es NULL el trigger NO recalcula comisión. Fijado en 151 Booking (Σ 82.413,08€, casando abonos banco con salidas: Duplex→BBVA …1175, resto→Kutxa …0855) + 2 Airbnb (990,37 / 524,60). Para corregir una fila: escribir `amount_net_bank`, no `amount`.
 - Gastos: +30 gastos de cargos sin gasto (2.963,33€, `revisado=false`), PriceLabs a USD, 2 comisiones Booking descartadas. `expenses` obsoleta (todo está en `gastos`).

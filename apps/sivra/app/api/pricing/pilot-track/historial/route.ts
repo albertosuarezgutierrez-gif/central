@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
+import { auth } from "@/lib/auth"
 
 export const dynamic = "force-dynamic"
 
 // GET /api/pricing/pilot-track/historial
 // Últimas filas de seguimiento del piloto por piso (para la tarjeta de /pricing-auto).
-// Detrás del login admin (middleware).
+// Detrás del login admin: el middleware ya NO lo excluye (02/11/2026) y además se comprueba aquí.
 export async function GET() {
+  const session = await auth().catch(() => null)
+  if (!session?.user) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
   const rows = await prisma.$queryRaw<{
     property_id: string; tracked_on: string; verdict: string
     days_since_booking: number | null; free_nights_60: number | null
