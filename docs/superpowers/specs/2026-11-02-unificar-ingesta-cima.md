@@ -175,3 +175,14 @@ Vuelta atrás (minutos): revertir las variables de plataforma y reactivar el wor
 
 Salida: un rescate de prueba sobre el crudo en la rama de Supabase con el mismo resultado que en el CRM.
 Vuelta atrás: reactivar `crm_seguros` (revocar es reversible si no se borra el rol).
+
+## Añadidos al plan (02/11/2026, revisados con Alberto)
+- **Credenciales CIMA/TIREA: NO se tocan** (decisión de Alberto). Viven en el adaptador Java de Fly; central lo llamará igual que el CRM (`x-internal-token`, mismo valor copiado a central). Confirmar en el código del adaptador antes del corte.
+- **Interruptor sin despliegue:** variable `CIMA_ESCRITOR=crm|central|ninguno` en ambos lados; el rollback es cambiarla.
+- **Vigía de doble escritor:** cima-guardia alerta si el mismo día escriben los dos orígenes o salta el candado.
+- **Backup antes del corte:** confirmar PITR de Supabase + volcado de `cima_*`, `polizas`, `poliza_recibos`, `siniestros`.
+- **Ensayar el rollback** durante la sombra (apagar/reactivar el cron del CRM una vez).
+- **Ventana de corte:** laborable por la mañana, fuera de fin de mes/renovaciones, Alberto disponible; nunca junto al cambio de URL del webhook de Codeoscopic.
+- **Cierre de seguridad tras el corte:** `crm_seguros` NOLOGIN, borrar secretos del proyecto Vercel `asegura`, migrar `app_user` a su `prisma_*`.
+- **Originales:** verificar que cada fichero recibido sigue copiándose a la carpeta «CIMA» de Drive.
+- **Congelar el CRM** (solo el candado) durante la migración; al terminar, actualizar la skill `cima-ingesta` y `apps/asegura/CLAUDE.md`.
