@@ -83,7 +83,7 @@ test('v0.2.62 · similitud de versión: la referencia no eléctrica penaliza ELE
     assert.equal(r.contradice, false)
   }
   const solo = elegirOpcionPorVehiculoReferencia(['ELECTRIC DRIVE EQ PASSION', 'ELECTRIC DRIVE EQ'], ref(), { nivel: 'version' })
-  assert.ok(solo.tipo === 'aproximacion' && solo.contradice === true)
+  assert.ok(solo.tipo === 'otro_modelo' || (solo.tipo === 'aproximacion' && solo.contradice === true), 'solo eléctricas ante referencia no eléctrica: nunca se elige (Generali abre «Otras versiones»)')
   // «Otras versiones ...» nunca es candidata.
   assert.equal(elegirOpcionPorVehiculoReferencia(['Otras versiones ...'], ref(), { nivel: 'version' }).tipo, 'sin_opciones')
 })

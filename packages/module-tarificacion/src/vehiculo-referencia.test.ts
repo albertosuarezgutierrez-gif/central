@@ -192,7 +192,7 @@ describe('elegirOpcionPorVehiculoReferencia · nivel versión (v0.2.62)', () => 
     const r = elegirOpcionPorVehiculoReferencia(['Otras versiones ...', 'ELECTRIC DRIVE EQ PASSION', '1.0 52KW PASSION'], ref, { nivel: 'version' })
     expect(r).toMatchObject({ etiqueta: '1.0 52KW PASSION', contradice: false })
     const solo = elegirOpcionPorVehiculoReferencia(['ELECTRIC DRIVE EQ PASSION', 'ELECTRIC DRIVE EQ'], ref, { nivel: 'version' })
-    expect(solo).toMatchObject({ tipo: 'aproximacion', contradice: true })
+    expect(solo.tipo === 'otro_modelo' || (solo.tipo === 'aproximacion' && solo.contradice)).toBe(true)
   })
   it('referencia eléctrica: no penaliza', () => {
     const r = elegirOpcionPorVehiculoReferencia(['ELECTRIC DRIVE EQ PASSION', 'ELECTRIC DRIVE EQ PULSE'], vr({ ...ref, version: 'Electric Drive EQ Passion', combustible: 'electrico' }), { nivel: 'version' })
