@@ -277,7 +277,7 @@ export function ofertaDeBot(o: OfertaBot, id: string, ramo: RamoOferta): OfertaN
   let previa: string | null = null
   for (const c of o.coberturas) {
     const mapeada = normalizarGarantia(ramo, c.literal)
-    const clave = mapeada ?? (esSub(c.literal) && previa ? previa : c.clave)
+    const clave: string = mapeada ?? (esSub(c.literal) && previa ? previa : c.clave)
     const ya = garantias[clave]
     if (ya) {
       if (esSub(c.literal)) {
