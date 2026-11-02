@@ -5,6 +5,17 @@
 > `.claude/skills/patrimonio-cfo/SKILL.md`. Diseño:
 > `docs/superpowers/specs/2026-08-22-patrimonio-cfo-design.md`.
 
+**Última pasada: 02/11/2026 (mensual, resumida).** Preflight Telegram OK (200). No hubo pasada ordinaria en octubre en este doc (la anterior es la del 02/09). Próxima: 02/12/2026.
+
+## 📸 Pasada 02/11/2026 (cifras de BD, sin recalcular gastos)
+🚨 **Radar caducado:** `RADAR-ESPANA.md` sigue en «Última pasada 01/09/2026»; no consta pasada del 01/10, 16/10 ni 01/11 (solo se refrescó `agente:m2zona` de Monte Carmelo el 01/11: 540.175€). **Termómetro del 01/09 → no se abre ningún escenario cuyo disparador sea el termómetro** (#3 y #4 siguen sin ventana). Valoraciones de House (1.222.100€) y Dúplex (290.904€) son del 01/09; la de House es un artefacto de método (ver 02/09).
+- **Neto mínimo ≈ 1.941.466€** (inmuebles 2.053.179€ + liquidez 50.082€ + IBKR 33.828€ − hipoteca 195.623€). Es un MÍNIMO: capital pendiente de la ficha es el del 24/08 (no descontadas cuotas posteriores), House sobrevalorada por m2zona. No comparable con 02/09 por cambio de fuente en Monte Carmelo (588.145€ → 540.175€).
+- Liquidez: BBVA 18.365,82€ (05/10) + Kutxabank 11.282,68€ (01/11) + BBVA personal 20.433,62€ (**saldo del 27/06, 128 días sin refrescar**). N26, Kutxa-Pilar y tarjetas: sin saldo, declaradas no sumadas.
+- IBKR 33.827,70€ (29/10): sin alerta Modelo 720 (umbral 45.000€).
+- Rotación 12m (ingresos BRUTOS por fecha de entrada, sin gastos): House 57 reservas · 168 noches · 75.016,10€ → **1.316€/reserva, 447€/noche**; Dúplex 60 · 233 · 21.760,78€ → **363€/reserva, 93€/noche**. Patrón Socorro sigue ~3,6× por reserva. Yield neto no recalculado (gastos no consultados esta pasada).
+- Recomendaciones: #1 aceptada (período 2026-27 cubierto); #2, #3, #4 siguen SIN decisión de Alberto (≈10 semanas).
+- Intake: (1) refrescar saldo BBVA personal ****2620; (2) ¿decides algo sobre #2 liquidez (colchón)?; (3) gastos de compra de Monte Carmelo (PDF de CajaSur 16/09/2021): el conector `gmail-adjuntos` volvió a fallar (CONNECTION_CLOSED).
+
 **Última pasada:** **02/09/2026 — 1ª pasada ordinaria del ciclo mensual**, con el termómetro
 del radar (01/09) ya delante. Preflight Telegram OK (200). **Próxima pasada ordinaria:
 02/10/2026.**
