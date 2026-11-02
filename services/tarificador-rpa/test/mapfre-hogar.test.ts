@@ -144,7 +144,7 @@ const FIXTURE_RIESGO = readFileSync(new URL('./fixtures/mapfre-hogar/datos-riesg
 const idsDe = (html: string) => [...html.matchAll(/<(?:input|button)\b[^>]*\bid="([^"]+)"/g)].map((m) => m[1]!)
 
 test('v0.3.1: version y opcion CP con el id real del portal (cpRadio), no el inventado', () => {
-  assert.equal(mapfreHogar.version, '0.3.2')
+  assert.equal(mapfreHogar.version, '0.3.3')
   assert.equal(SEL_HOGAR.opcionCodigoPostal, 'cpRadio')
   const codigo = readFileSync(new URL('../src/adapters/mapfre/hogar.ts', import.meta.url), 'utf8').replace(/^\s*\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '')
   assert.ok(!/cpOpcion/.test(codigo))
