@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
+import { isCronAuthorized } from '@/lib/cron-auth'
 import { getSession } from '@/lib/session'
 import { sondearEscritura } from '@/lib/sivra/seo-landing'
 
@@ -18,8 +19,9 @@ export const dynamic = 'force-dynamic'
 // Vercel `sivra`, que tiene su propia copia de la variable (el panel /operador/secretos escribe
 // el mismo valor en los dos). Para comprobar ESA, la app sivra expone su propio
 // /api/seo-token-check.
-export async function GET(req: Request) {
-  const cronOk = req.headers.get('authorization') === `Bearer ${process.env.CRON_SECRET}`
+export async function GET(req: NextRequest) {
+  // Tiempo constante y sin «Bearer undefined»: sin CRON_SECRET en producción se deniega.
+  const cronOk = isCronAuthorized(req, { soloCabecera: true })
   if (!cronOk) {
     const session = await getSession()
     if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })

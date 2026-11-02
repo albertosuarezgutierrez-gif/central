@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
-import { getRestauranteId, getSession } from '@/lib/session'
+import { getRestauranteId, getSession, resolverRestauranteIdDeCuenta } from '@/lib/session'
 import { callAI } from '@/lib/ai-client'
 
 const sb = () => createServerClient()
@@ -43,7 +43,17 @@ Responde en español. Sé empático — los restaurantes trabajan bajo mucha pre
 
 // ── GET ───────────────────────────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
-  const rid = getRestauranteId(req)
+  let rid = getRestauranteId(req)
+  // super_admin (panel /super) puede leer el ticket de otro restaurante: se valida
+  // con resolverRestauranteIdDeCuenta (owner solo dentro de su cuenta).
+  const solicitado = req.nextUrl.searchParams.get('restaurante_id')
+  if (solicitado) {
+    const session = getSession(req)
+    if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const permitido = await resolverRestauranteIdDeCuenta(sb(), session, solicitado)
+    if (!permitido) return NextResponse.json({ error: 'Sin acceso a ese restaurante' }, { status: 403 })
+    rid = permitido
+  }
   const ticketId = req.nextUrl.searchParams.get('ticket_id')
 
   if (ticketId) {

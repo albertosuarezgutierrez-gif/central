@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 import { NextRequest, NextResponse } from 'next/server'
+import { cronAutorizado } from '@/lib/cron-auth'
 import { createServerClient } from '@/lib/supabase'
 import jwt from 'jsonwebtoken'
 import { construirSeguimiento } from '@/lib/crm-sevilla'
@@ -11,7 +12,7 @@ const LOTE = 3
 const DIAS_ESPERA = 3
 
 export async function GET(req: NextRequest) {
-  if (req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!cronAutorizado(req)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
 

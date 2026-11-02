@@ -2,13 +2,14 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 import { NextRequest, NextResponse } from 'next/server'
+import { cronAutorizado } from '@/lib/cron-auth'
 import { enviarResumenOperador } from '@/lib/avisos'
 
 // Resumen diario de avisos al operador: manda UN email con todo lo acumulado por
 // tgAlert (canal 'resumen') desde el último envío. Programado en vercel.json.
 export async function GET(req: NextRequest) {
   const auth = req.headers.get('authorization')
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!cronAutorizado(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

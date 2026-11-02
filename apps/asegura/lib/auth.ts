@@ -3,6 +3,7 @@ import {
   genJti,
   createSessionToken as createToken,
   verifySessionToken as verifyToken,
+  requireSecret,
 } from '@central/core-identity'
 
 export const COOKIE_NAME = 'asegura_session'
@@ -20,14 +21,10 @@ export const COOKIE_NAME = 'asegura_session'
 const HORAS_SESION = 12
 const COOKIE_OPTS = { httpOnly: true, secure: true, sameSite: 'lax', path: '/', maxAge: 60 * 60 * HORAS_SESION } as const
 
-// Secreto PROPIO de la vertical. NUNCA fallback a literal en producción (guardián regression-secrets).
-const SECRET = () =>
-  process.env.ASEGURA_SESSION_SECRET ||
-  (process.env.NODE_ENV === 'production'
-    ? (() => {
-        throw new Error('ASEGURA_SESSION_SECRET no configurado')
-      })()
-    : 'asegura-dev-secret-change-in-prod')
+// Secreto PROPIO de la vertical, SIN fallback a literal en ningún entorno (02/11/2026): un
+// `next dev` contra la BD real con el literal de antes aceptaba tokens forjables sobre la cartera.
+// En local se pone `ASEGURA_SESSION_SECRET` en `.env.local` (guardián regression-secrets).
+const SECRET = () => requireSecret('ASEGURA_SESSION_SECRET')
 
 export { genJti }
 

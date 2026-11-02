@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { sondearEscritura } from '@/lib/seo-landing'
+import { bearerCronValido } from '@/lib/cron-auth-decision'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -15,7 +16,7 @@ export const dynamic = 'force-dynamic'
 //
 // El sondeo NO escribe nada: ver `sondearEscritura` en lib/seo-landing.ts.
 export async function GET(req: Request) {
-  const cronOk = req.headers.get('authorization') === `Bearer ${process.env.CRON_SECRET}`
+  const cronOk = bearerCronValido(req.headers.get('authorization'))
   if (!cronOk) {
     const session = await auth()
     if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })

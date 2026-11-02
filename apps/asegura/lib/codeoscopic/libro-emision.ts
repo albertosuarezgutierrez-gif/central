@@ -23,7 +23,13 @@
 
 import { randomUUID } from 'node:crypto'
 import { ErrorCodeoscopic } from './cliente.ts'
-import { cerrarDescartado, cerrarEmisionFacturable, consumoEmision, reservarEmision } from './consumo.ts'
+import {
+  cerrarDescartado,
+  cerrarEmisionFacturable,
+  consumoEmision,
+  reservarEmision,
+  TopeAlcanzadoBajoCandado,
+} from './consumo.ts'
 import {
   costeEmisionCents,
   describirCoste,
@@ -119,8 +125,11 @@ export async function conLibroDeEmision<T>(
       solicitadoPor: p.solicitadoPor,
       costeCents,
       projectId: p.projectId,
+      env,
     })
   } catch (e) {
+    // El tope re-contado bajo candado NO es un fallo del libro: es el tope.
+    if (e instanceof TopeAlcanzadoBajoCandado) return { ok: false, razon: e.razon, mensaje: e.message }
     return {
       ok: false,
       razon: 'sin-libro',

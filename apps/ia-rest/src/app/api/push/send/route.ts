@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
-import { getRestauranteId } from '@/lib/session'
+import { getSession } from '@/lib/session'
+import { secretoCronValido } from '@/lib/cron-auth'
 import { sendWebPush } from '@central/core-push'
 
 export const dynamic = 'force-dynamic'
@@ -19,11 +20,18 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const supabase = createServerClient()
-  const rid = getRestauranteId(req)
   const { title, body, mesa, camarero_ids, camarero_id, roles, restaurante_id: ridOverride, data } = await req.json()
 
-  // Resolver local_id: header tiene prioridad, pero crons pueden pasarlo en el body
-  const restauranteId = rid !== '00000000-0000-0000-0000-000000000001' ? rid : (ridOverride ?? rid)
+  // El restaurante SALE de la sesión firmada, nunca del cuerpo (antes cualquiera
+  // mandaba push a otro restaurante con `restaurante_id` en el body). Solo un
+  // cron/llamada interna con CRON_SECRET o un super_admin pueden elegirlo.
+  const esCron = secretoCronValido(req.headers.get('x-ia-cron-secret'))
+  const session = getSession(req)
+  const ridPedido = (req.headers.get('x-ia-restaurante-id') || ridOverride || null) as string | null
+  let restauranteId: string | null = null
+  if (esCron || session?.rol === 'super_admin') restauranteId = ridPedido ?? session?.restaurante_id ?? null
+  else restauranteId = session?.restaurante_id ?? null
+  if (!restauranteId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   // Aceptar tanto camarero_id (singular, desde KDS) como camarero_ids (plural)
   const ids: string[] = camarero_ids?.length ? camarero_ids : camarero_id ? [camarero_id] : []

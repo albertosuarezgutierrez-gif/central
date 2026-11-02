@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-11-02T06:54:15Z",
+  "generadoEn": "2026-11-02T12:07:57Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -86,11 +86,6 @@
       "id": "core-vehiculos",
       "tipo": "core",
       "npm": "@central/core-vehiculos"
-    },
-    {
-      "id": "module-agenda",
-      "tipo": "module",
-      "npm": "@central/module-agenda"
     },
     {
       "id": "module-alquiler",
@@ -493,7 +488,7 @@
       },
       "asegura-web": {
         "estado": "usado",
-        "evidencias": 6
+        "evidencias": 7
       },
       "housesevillana": {
         "estado": "usado",
@@ -539,7 +534,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       },
       "asegura-portal": {
         "estado": "usado",
@@ -1025,7 +1020,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 20
+        "evidencias": 21
       },
       "asegura-portal": {
         "estado": "usado",
@@ -1080,60 +1075,6 @@
       "asegura": {
         "estado": "usado",
         "evidencias": 2
-      },
-      "asegura-portal": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "asegura-web": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "housesevillana": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "ia-rest": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "ialimp": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "mariscos": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "plataforma": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "rrhh": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "sivra": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "transporte": {
-        "estado": "no",
-        "evidencias": 0
-      }
-    },
-    "module-agenda": {
-      "almacen": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "alquiler": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "asegura": {
-        "estado": "no",
-        "evidencias": 0
       },
       "asegura-portal": {
         "estado": "no",
@@ -2321,7 +2262,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 334
+        "evidencias": 337
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2375,7 +2316,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 66
+        "evidencias": 69
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2429,7 +2370,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 52
+        "evidencias": 55
       },
       "asegura-portal": {
         "estado": "usado",
@@ -3169,7 +3110,7 @@
       },
       "sivra": {
         "presente": true,
-        "evidencias": 31
+        "evidencias": 30
       },
       "transporte": {
         "presente": false,
@@ -4063,7 +4004,6 @@
     "core-storage": [],
     "core-telegram": [],
     "core-vehiculos": [],
-    "module-agenda": [],
     "module-alquiler": [
       "module-intercompany",
       "module-materiales"
@@ -5968,7 +5908,6 @@
       "/api/limpiadoras/alertas",
       "/api/limpiadoras/auth",
       "/api/limpiadoras/auto-assign",
-      "/api/limpiadoras/auto-sessions",
       "/api/limpiadoras/complete",
       "/api/limpiadoras/early-checkin",
       "/api/limpiadoras/fichar",
@@ -5981,7 +5920,6 @@
       "/api/mensajes",
       "/api/mensajes/[bookingId]",
       "/api/mensajes/[bookingId]/email",
-      "/api/mensajes/auto-reply",
       "/api/mensajes/knowledge",
       "/api/mensajes/reply",
       "/api/mercado/cron",
@@ -7263,10 +7201,10 @@
   },
   "resumen": {
     "verticales": 13,
-    "packages": 45,
+    "packages": 44,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1878,
+    "apis": 1876,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

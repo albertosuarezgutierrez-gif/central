@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-02T06:54:15Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-02T12:07:57Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 45 packages · 23 capacidades · 44 skills · 1878 rutas API.
+**Resumen:** 13 apps · 44 packages · 23 capacidades · 44 skills · 1876 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -66,7 +66,7 @@
 - **Módulos que usa:** core-ai, core-email, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
 - **Capacidades:** Eventos / catering / BEO, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, Marketing (blog/IG/SEO), Almacén / stock / ASN, Proveedores / compras, Asistente / copiloto IA
 - **Tablas (1):** gastos_fijos
-- **Rutas API:** 93
+- **Rutas API:** 91
 ### transporte
 - **Módulos que usa:** core-catastro, core-direccion, core-identity, module-flota, module-geo, module-transporte
 - **Capacidades:** —
@@ -115,9 +115,6 @@
   - Depende de: —
 - **core-vehiculos** (core) → `@central/core-vehiculos`
   - Lo usan: asegura
-  - Depende de: —
-- **module-agenda** (module) → `@central/module-agenda`
-  - Lo usan: —
   - Depende de: —
 - **module-alquiler** (module) → `@central/module-alquiler`
   - Lo usan: alquiler
@@ -281,14 +278,11 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (28/10/2026) (28/10/2026) Calendarios de pisos navegables ◀ Hoy ▶.
-- (29/09/2026) (29/09/2026) Buscador de la correduría: la matrícula de las OPORTUNIDADES no se buscaba.
-- (29/09/2026) (29/09/2026) Documento REPETIDO en una ficha no abría oportunidad.
-- (29/09/2026) (29/09/2026) Asistente /seguros AUTÓNOMO — fase 2 (auditoría + «que haga el trabajo por mí»).
-- (29/09/2026) (29/09/2026) Asistente /seguros AUTÓNOMO — fase 1 (decisión de Alberto: «tiene que hacerme todo el trabajo», emitir con botón).
-- (29/09/2026) (29/09/2026) Asistente /seguros: «no he llegado a una respuesta» con un lead dictado por WhatsApp.
-- (19/09/2026) 💸 Huésped de House (5-7/02/2027, 9-10 pax): «la web sale más cara que Booking» — diagnóstico, sin tocar código
-- (17/09/2026) 🩹 16 pólizas duplicadas en la cartera CIMA de Occident/Mapfre/Allianz, y por qué
-- (17/09/2026) 🔓 Causa real de los 500 del Submit (proyecto [nº de proyecto retirado]): un `product.options` que nunca se mandaba
-- (15/09/2026) Matrícula→vehículo para la correduría: `@central/core-vehiculos` creado, proveedor APIVehículo
+- (02/11/2026) 02/11/2026) Auditoría completa (12 agentes) + arreglos — docs/AUDITORIA-2026-11.md
+- (02/11/2026) 02/11/2026) Ingresos 2026 pisos: neto real fijado · PENDIENTE cuadre Smoobu
+- (02/11/2026) 02/11/2026) Control 2026 pisos: expenses retirada · métrica «Gastos mes» sivra
+- (01/11/2026) 01/11/2026) Factura Sique Brilla octubre · cuadre por correo: lavandería redondeada
+- (01/11/2026) 01/11/2026) Tarificador RPA · vehículo de referencia y presupuestos (#5321, #5326, #5332, #5337)
+- (01/11/2026) 01/11/2026) Agente huésped: «ready before 15?» → compuerta de horarios · PR #5334 MERGEADO (`7d7c971`)
+- (01/11/2026) 01/11/2026) Blog asegura-web · PR #5328 MERGEADO (mora art. 20 LCS)
 

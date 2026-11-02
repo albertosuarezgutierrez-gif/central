@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { syncPropertyIcal } from '@/lib/ical-sync'
 import { firmarPeticion } from '@/lib/smoobu-firma'
+import { isCronAuthorized } from '@/lib/cron-auth'
 
 export const dynamic    = 'force-dynamic'
 export const maxDuration = 60
@@ -153,6 +154,9 @@ async function syncSmoobuApi(conn: any, propMap: Map<string, any>): Promise<{ sy
 
 // ── Endpoint ──────────────────────────────────────────────────────────────────
 export async function GET(req: Request) {
+  // Solo Vercel Cron (Bearer CRON_SECRET) o el disparo interno de /api/pms/connect. Antes era
+  // público: cualquiera disparaba el sync de TODAS las propiedades (02/11/2026).
+  if (!isCronAuthorized(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
     const { searchParams } = new URL(req.url)
     const prop_id = searchParams.get('property_id')

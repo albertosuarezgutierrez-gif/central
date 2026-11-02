@@ -1780,8 +1780,9 @@ function SoporteSuperTab({ session, C, SE, SN, SM, onBadge }: { session: any; C:
 
   async function abrirTicket(ticket: any) {
     setTicketActivo(ticket)
-    const r = await fetch(`/api/owner/soporte?ticket_id=${ticket.id}`, {
-      headers: { 'x-ia-restaurante-id': ticket.restaurante_id },
+    // super_admin: sesión firmada + restaurante objetivo (validado en servidor con resolverRestauranteIdDeCuenta)
+    const r = await fetch(`/api/owner/soporte?ticket_id=${ticket.id}&restaurante_id=${encodeURIComponent(ticket.restaurante_id)}`, {
+      headers: { 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' },
     })
     const d = await r.json()
     setMensajes(d.mensajes ?? [])

@@ -7,15 +7,14 @@
  * 2. Envía push notification al owner/jefe de cada restaurante afectado
  */
 import { NextRequest, NextResponse } from 'next/server'
+import { cronAutorizado } from '@/lib/cron-auth'
 import { createServerClient } from '@/lib/supabase'
 
 export const dynamic     = 'force-dynamic'
 export const maxDuration = 30
 
 function autorizado(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET
-  if (!secret) return true
-  return req.headers.get('authorization') === `Bearer ${secret}`
+  return cronAutorizado(req)
 }
 
 export async function GET(req: NextRequest) {

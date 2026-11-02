@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { runQA } from '@/lib/qa-runner'
+import { cronAutorizado } from '@/lib/cron-auth'
 
 export const maxDuration = 60
 
 export async function GET(req: NextRequest) {
-  const secret = req.headers.get('authorization')?.replace('Bearer ', '')
-  if (secret !== process.env.CRON_SECRET) {
+  if (!cronAutorizado(req)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
 

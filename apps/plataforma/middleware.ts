@@ -71,6 +71,24 @@ const PUBLIC = ['/login', '/api/auth', '/admin', '/api/admin', '/api/cron', '/ap
 // `next.config.ts::redirects()`, que Next resuelve ANTES de que el middleware corra — dejarla
 // aquí habría sido una exención muerta para una ruta que ya no llega a este archivo.
 
+/** Las páginas (y sus acciones de servidor) y la API de la correduría: solo con sesión de la correduría. */
+function esRutaCorreduria(pathname: string): boolean {
+  return /^\/(api\/)?correduria(\/|$)/.test(pathname)
+}
+
+/**
+ * Igualdad de cadenas en tiempo constante, apta para el runtime EDGE (sin `node:crypto`):
+ * recorre siempre la longitud del secreto y acumula diferencias con XOR. `null`/vacío = no.
+ */
+function igualConstante(dado: string | null, secreto: string): boolean {
+  if (!dado || !secreto) return false
+  let dif = dado.length ^ secreto.length
+  for (let i = 0; i < secreto.length; i++) {
+    dif |= (dado.charCodeAt(i % (dado.length || 1)) ^ secreto.charCodeAt(i))
+  }
+  return dif === 0
+}
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
@@ -102,11 +120,17 @@ export async function middleware(req: NextRequest) {
   // gate de sesión los redirige 307 → /login y el handler nunca corre (así murieron los crons
   // migrados bajo /api/sivra/*). Cada handler revalida el secreto (isCronAuthorized), de modo
   // que esto NO abre los endpoints de datos: el tráfico de navegador sin secreto sigue gateado.
+  //
+  // 🔒 (02/11/2026) Comparación en TIEMPO CONSTANTE y fail-closed (sin `CRON_SECRET` o vacío, no
+  // pasa nadie). Y la llave maestra NO abre `/correduria` ni `/api/correduria`: ninguna acción ni
+  // ruta de la correduría la usa (todas exigen sesión de la correduría), y una acción de servidor
+  // es un POST a la ruta de la PÁGINA: con `?secret=` se ejecutaba sin sesión. Cepo:
+  // `test/regression-correduria-acciones-guarda.test.ts`.
   const cronSecret = process.env.CRON_SECRET
-  if (cronSecret) {
-    const bearer = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
+  if (cronSecret && !esRutaCorreduria(pathname)) {
+    const bearer = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '') ?? null
     const qs = req.nextUrl.searchParams.get('secret')
-    if (bearer === cronSecret || qs === cronSecret) return NextResponse.next()
+    if (igualConstante(bearer, cronSecret) || igualConstante(qs, cronSecret)) return NextResponse.next()
   }
 
   // Rutinas de Claude Code: llegan con el token DEDICADO de bajo privilegio (`ALERTA_TOKEN`),

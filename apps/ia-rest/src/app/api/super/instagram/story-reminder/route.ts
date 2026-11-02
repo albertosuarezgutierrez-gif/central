@@ -1,8 +1,9 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
+import { secretoCronValido } from '@/lib/cron-auth'
 import { tgSendPhoto } from '@/lib/telegram'
 export async function POST(req: NextRequest) {
-  if (req.headers.get('x-story-secret') !== process.env.CRON_SECRET) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  if (!secretoCronValido(req.headers.get('x-story-secret'))) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const { posts } = await req.json() as { posts: Array<{ titulo: string; image_url: string; num: number; total: number }> }
   let enviados = 0
   for (const post of posts) {

@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
-import { sesionAceptable } from '@/lib/session-sign'
+import { getSesionCuenta } from '@/lib/session'
 
 /**
  * GET /api/portal?action=stats|ventas|locales
@@ -12,17 +12,9 @@ import { sesionAceptable } from '@/lib/session-sign'
  */
 export async function GET(req: NextRequest) {
   // cuenta_id derivado de un token FIRMADO (no se confía en el header sin verificar)
-  const raw = req.headers.get('x-ia-session')
-  if (!raw) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-
-  let parsed: { cuenta_id?: string }
-  try { parsed = JSON.parse(raw) } catch { return NextResponse.json({ error: 'Sesión inválida' }, { status: 401 }) }
-  if (!sesionAceptable(parsed as Record<string, unknown>, 'objeto')) {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-  }
-
-  const cuentaId = parsed.cuenta_id ?? null
-  if (!cuentaId) return NextResponse.json({ error: 'Sin cuenta_id en sesión' }, { status: 401 })
+  const cuenta = getSesionCuenta(req)
+  if (!cuenta) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const cuentaId = cuenta.cuenta_id
 
   const supabase = createServerClient() // service_role — bypasa RLS
   const action = new URL(req.url).searchParams.get('action') ?? 'stats'

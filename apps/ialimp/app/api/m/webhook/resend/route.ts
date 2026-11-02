@@ -1,14 +1,19 @@
 // Webhook de Resend: rebotes y quejas de spam → baja automática del prospecto.
 // Protege la reputación de envío y cumple RGPD sin intervención.
-// Público (exento en middleware). Verifica la firma Svix si hay RESEND_WEBHOOK_SECRET.
+// Público (exento en middleware). Exige la firma Svix (RESEND_WEBHOOK_SECRET); sin él, 401 en prod.
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 
-// Verificación de firma Svix (la usa Resend). Sin secreto configurado → no bloquea (modo preview).
+// Verificación de firma Svix (la usa Resend). Fail-CLOSED (02/11/2026): sin RESEND_WEBHOOK_SECRET
+// en producción se RECHAZA (antes `return true` dejaba a cualquiera dar de baja prospectos).
 async function firmaValida(req: Request, raw: string): Promise<boolean> {
   const secret = process.env.RESEND_WEBHOOK_SECRET
-  if (!secret) return true
+  if (!secret) {
+    const produccion = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production'
+    if (produccion) console.error('[resend-webhook] RESEND_WEBHOOK_SECRET NO definido — se RECHAZA')
+    return !produccion
+  }
   const id = req.headers.get('svix-id')
   const ts = req.headers.get('svix-timestamp')
   const sigHeader = req.headers.get('svix-signature')

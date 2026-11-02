@@ -9,6 +9,8 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { callAI, cleanJSON } from '@/lib/ai-client'
+import { getSession } from '@/lib/session'
+import { cronAutorizado } from '@/lib/cron-auth'
 
 const CLIENT_ID     = process.env.GOOGLE_CLIENT_ID || ''
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || ''
@@ -380,13 +382,8 @@ async function enviarTelegram(msg: string) {
 
 export async function GET(req: NextRequest) {
   // Aceptar llamadas del cron de Vercel O de super_admin
-  const auth = req.headers.get('authorization')
-  const sessionHeader = req.headers.get('x-ia-session')
-  let isSuperAdmin = false
-  if (sessionHeader) {
-    try { const s = JSON.parse(sessionHeader); isSuperAdmin = s?.rol === 'super_admin' } catch {}
-  }
-  const isCron = auth === `Bearer ${process.env.CRON_SECRET}`
+  const isSuperAdmin = getSession(req)?.rol === 'super_admin'
+  const isCron = cronAutorizado(req)
   if (!isCron && !isSuperAdmin) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }

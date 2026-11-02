@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
+import { isCronAuthorized } from "@/lib/cron-auth"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -25,16 +26,11 @@ export const maxDuration = 60
 //   ]
 // }
 //
-// Protegido por CRON_SECRET si está definido: cabecera `Authorization: Bearer <secret>`
-// o query `?secret=<secret>`. Si CRON_SECRET no está, no exige auth (igual que los crons GET).
+// Protegido por CRON_SECRET SOLO por cabecera `Authorization: Bearer <secret>` (sin `?secret=` en
+// la URL: se filtra en logs). Sin CRON_SECRET en producción se DENIEGA (fail-closed, cron-auth.ts).
 export async function POST(req: NextRequest) {
-  const secret = process.env.CRON_SECRET
-  if (secret) {
-    const bearer = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "")
-    const qs     = req.nextUrl.searchParams.get("secret")
-    if (bearer !== secret && qs !== secret) {
-      return NextResponse.json({ error: "no autorizado" }, { status: 401 })
-    }
+  if (!(await isCronAuthorized(req, { soloCabecera: true }))) {
+    return NextResponse.json({ error: "no autorizado" }, { status: 401 })
   }
 
   let body: any

@@ -2,13 +2,10 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
+import { getSession } from '@/lib/session'
 
 export async function GET(req: NextRequest) {
-  let session: { id: string; restaurante_id: string } | null = null
-  try {
-    const h = req.headers.get('x-ia-session')
-    session = h ? JSON.parse(h) : null
-  } catch { /* noop */ }
+  const session = getSession(req)
 
   if (!session?.id || !session?.restaurante_id) {
     return NextResponse.json({ turno: null })

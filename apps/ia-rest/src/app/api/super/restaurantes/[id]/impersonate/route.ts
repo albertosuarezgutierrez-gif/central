@@ -3,12 +3,8 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { firmarSesion } from '@/lib/session-sign'
 import { createServerClient } from '@/lib/supabase'
+import { getSession } from '@/lib/session'
 
-function getSession(req: NextRequest) {
-  const header = req.headers.get('x-ia-session')
-  if (!header) return null
-  try { return JSON.parse(header) } catch { return null }
-}
 
 // POST /api/super/restaurantes/[id]/impersonate
 // Genera una sesiÃ³n temporal de owner para que el super admin acceda al panel del restaurante

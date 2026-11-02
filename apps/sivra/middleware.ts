@@ -39,6 +39,9 @@ export default auth(function middleware(req: NextRequest & { auth: any }) {
 
   // 3. APIs limpiadoras → cookie limpiadora_token OR NextAuth
   if (pathname.startsWith(LIMPIADORA_API_PREFIX)) {
+    // La cookie aquí es solo un PRE-FILTRO (el middleware corre en Edge, sin Prisma): CADA handler de
+    // /api/limpiadoras/* valida el token contra `limpiadora_sessions` con `isLimpiadoraAuthorized()`
+    // (lib/limpiadora-auth.ts). Lo vigila test/regression-sivra-limpiadoras-token.test.ts.
     const limpToken = req.cookies.get('limpiadora_token')?.value
     if (limpToken) return NextResponse.next()
     if (session) return NextResponse.next()
@@ -74,6 +77,6 @@ export default auth(function middleware(req: NextRequest & { auth: any }) {
 export const config = {
   // Crons Vercel excluidos del matcher — NO pasan por el middleware
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|icons|manifest.json|sw.js|robots.txt|sitemap.xml|api/seo-refresh|api/rates/snapshot|api/updates/sync|api/limpiadoras/auto-sessions|api/mensajes/auto-reply|api/mercado/cron|api/mercado/ingest|api/expenses/fijos/generar|api/pricing/apply|api/pricing/apply-auto|api/pricing/guard|api/pricing/resumen-diario|api/pricing/experiments/check-results|api/pricing/pilot-track).*)',
+    '/((?!_next/static|_next/image|favicon.ico|icons|manifest.json|sw.js|robots.txt|sitemap.xml|api/seo-refresh|api/rates/snapshot|api/mercado/cron|api/mercado/ingest|api/expenses/fijos/generar|api/pricing/apply|api/pricing/apply-auto|api/pricing/guard|api/pricing/resumen-diario|api/pricing/experiments/check-results).*)',
   ],
 }

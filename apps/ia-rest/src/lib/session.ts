@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { verificarSesion } from '@/lib/session-sign'
+import { verificarSesion, verificarObjeto } from '@/lib/session-sign'
+import { secretoCronValido } from '@/lib/cron-auth'
 
 export interface ApiSession {
   id: string
@@ -17,32 +18,42 @@ export interface ApiSession {
   _sig?: string
 }
 
-// Corte de seguridad. En 'false' (o sin definir) se aceptan sesiones antiguas
-// sin firma (no echa a nadie durante la migración). En 'true' solo se aceptan
-// sesiones firmadas válidas → cierra el agujero de suplantación.
-const ENFORCE = process.env.SESSION_ENFORCE === 'true'
-
-export function getSession(req: NextRequest): ApiSession | null {
+// Única puerta de lectura de la cabecera `x-ia-session` en las rutas API
+// (lo vigila test/regression-ia-rest-sesion-firmada.test.ts). La firma HMAC es
+// OBLIGATORIA siempre: el antiguo modo permisivo (variable de corte de migración,
+// que aceptaba sesiones sin `_sig`) se eliminó el 02/11/2026.
+function leerCabeceraSesion(req: NextRequest): Record<string, unknown> | null {
   const raw = req.headers.get('x-ia-session')
   if (!raw) return null
+  try {
+    const p = JSON.parse(raw)
+    return p && typeof p === 'object' && !Array.isArray(p) ? p : null
+  } catch { return null }
+}
 
-  let parsed: ApiSession
-  try { parsed = JSON.parse(raw) } catch { return null }
+export function getSession(req: NextRequest): ApiSession | null {
+  const parsed = leerCabeceraSesion(req)
+  if (!parsed) return null
+  // Sin SESSION_SECRET no se puede verificar nada → deny-by-default.
+  // Sin `_sig` o con firma incorrecta → se rechaza.
+  return verificarSesion(parsed) ? (parsed as unknown as ApiSession) : null
+}
 
-  // Fail-safe: sin SESSION_SECRET no se puede verificar NINGUNA firma. Aceptar
-  // sesiones en ese estado equivaldría a confiar en una cabecera forjable, así
-  // que se rechaza siempre (deny-by-default). El operador debe configurar
-  // SESSION_SECRET en el entorno para que la auth funcione.
-  if (!process.env.SESSION_SECRET) return null
+/** Token de CUENTA (firmarObjeto en /api/auth/pin-cuenta) enviado en `x-ia-session`. */
+export function getSesionCuenta(req: NextRequest): { cuenta_id: string; rol?: string; nombre?: string } | null {
+  const parsed = leerCabeceraSesion(req)
+  if (!parsed || !verificarObjeto(parsed)) return null
+  return typeof parsed.cuenta_id === 'string' && parsed.cuenta_id
+    ? (parsed as { cuenta_id: string; rol?: string; nombre?: string })
+    : null
+}
 
-  // Si trae firma: tiene que ser válida SIEMPRE. Una firma presente pero
-  // incorrecta = manipulación → se rechaza aunque no estemos en enforce.
-  if (parsed._sig) {
-    return verificarSesion(parsed) ? parsed : null
-  }
-
-  // Sin firma: solo se tolera durante la migración (ENFORCE=false).
-  return ENFORCE ? null : parsed
+/**
+ * Cabecera `x-ia-session` para reenviar a otra ruta interna (fetch servidor→servidor).
+ * Solo se reenvía si la firma es válida; si no, cadena vacía (la ruta destino rechazará).
+ */
+export function sesionParaReenviar(req: NextRequest): string {
+  return getSession(req) ? (req.headers.get('x-ia-session') ?? '') : ''
 }
 
 /**
@@ -75,14 +86,10 @@ export async function resolverRestauranteIdDeCuenta(
 }
 
 export function getRestauranteId(req: NextRequest): string {
-  // Header directo para cron / server-side. Con ENFORCE exige el secreto
-  // compartido CRON_SECRET; antes se tolera para no romper los crons.
+  // Header directo para cron / server-side: exige SIEMPRE el secreto compartido
+  // CRON_SECRET (fail-closed, tiempo constante).
   const direct = req.headers.get('x-ia-restaurante-id')
-  if (direct) {
-    const cs = req.headers.get('x-ia-cron-secret')
-    const ok = !!process.env.CRON_SECRET && cs === process.env.CRON_SECRET
-    if (ok || !ENFORCE) return direct
-  }
+  if (direct && secretoCronValido(req.headers.get('x-ia-cron-secret'))) return direct
 
   const s = getSession(req)
   if (s?.restaurante_id) return s.restaurante_id

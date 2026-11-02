@@ -5,6 +5,7 @@ import { auth } from '@/lib/auth'
 import { aiComplete, aiSearch } from '@/lib/ai-client'
 import { tgAlert } from '@/lib/telegram'
 import { fetchLanding, pushToGitHub, extractSeoParams, applySeoReplacements } from '@/lib/seo-landing'
+import { bearerCronValido } from '@/lib/cron-auth-decision'
 
 export const runtime = 'nodejs'
 // ⚠️ El techo debe cubrir el PEOR caso de la cadena de análisis, no el caso feliz: Serper 10s +
@@ -94,7 +95,7 @@ async function runSeoAnalysis(current: ReturnType<typeof extractSeoParams>) {
 }
 
 export async function GET(req: Request) {
-  const cronOk = req.headers.get('authorization') === `Bearer ${process.env.CRON_SECRET}`
+  const cronOk = bearerCronValido(req.headers.get('authorization'))
   // Kill switch: el cron automático solo actúa si SEO_AGENT_ENABLED === 'true'.
   // El botón manual (con sesión) funciona siempre — es una acción humana deliberada.
   if (cronOk && process.env.SEO_AGENT_ENABLED !== 'true') {

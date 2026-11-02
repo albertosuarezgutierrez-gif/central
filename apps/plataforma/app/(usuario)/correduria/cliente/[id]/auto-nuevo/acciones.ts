@@ -29,6 +29,8 @@ const SIN_ACCESO = 'No tienes acceso a la correduría.'
 
 /** Un catálogo del vendor (marcas, modelos, motores, versiones…). **Gratis.** */
 export async function pedirCatalogo(params: Record<string, string>): Promise<RespuestaCatalogo> {
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return { estado: 'sin_configurar', mensaje: SIN_ACCESO }
   return catalogoAsegura(params)
 }
 

@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 import { NextRequest, NextResponse } from 'next/server'
+import { cronAutorizado } from '@/lib/cron-auth'
 import { createServerClient } from '@/lib/supabase'
 import { callAI, cleanJSON } from '@/lib/ai-client'
 import { tgAlert } from '@/lib/telegram'
@@ -46,7 +47,7 @@ async function emailDeWeb(web: string): Promise<string | null> {
 }
 
 export async function GET(req: NextRequest) {
-  if (req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!cronAutorizado(req)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
   const supabase = createServerClient()

@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 import { NextRequest, NextResponse } from 'next/server'
+import { secretoCronValido } from '@/lib/cron-auth'
 
 // Plantillas de prompt para hostelería — el caller puede pasar su propio prompt
 // o usar uno de estos tipos predefinidos.
@@ -49,7 +50,7 @@ function urlConsulta(data: Record<string, unknown>): string {
 }
 
 export async function GET(req: NextRequest) {
-  if (req.headers.get('x-story-secret') !== process.env.CRON_SECRET)
+  if (!secretoCronValido(req.headers.get('x-story-secret')))
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const sp = req.nextUrl.searchParams
@@ -88,7 +89,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (req.headers.get('x-story-secret') !== process.env.CRON_SECRET)
+  if (!secretoCronValido(req.headers.get('x-story-secret')))
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const body = await req.json().catch(() => ({})) as {

@@ -23,6 +23,7 @@ export async function POST(req: Request) {
 // PATCH: llamado desde /mensajes cuando huésped avisa hora salida/llegada
 // Busca sesión por property_id + date, la crea si no existe
 export async function PATCH(req: Request) {
+  if (!(await isLimpiadoraAuthorized())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const { session_id, property_id, date, type, time } = await req.json()
   // type: 'early_checkout' | 'early_checkin_request'
 

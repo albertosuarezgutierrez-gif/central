@@ -15,7 +15,9 @@
 //    riesgo directamente no existe, porque no hay ningún verbo de lectura que
 //    exponer. Es la misma salvaguarda, obtenida por la forma de la pieza.
 //
-// 3. 🚨 **A la sesión la obliga el MIDDLEWARE, no el layout.** Es una corrección
+// 3. 🚨 **El middleware solo exige SESIÓN; la CORREDURÍA la exige cada acción** (02/11/2026: antes
+//    cuatro acciones de lectura no la pedían). Un cepo lo vigila: `test/regression-correduria-acciones-guarda.test.ts`.
+//    **A la sesión la obliga el MIDDLEWARE, no el layout.** Es una corrección
 //    de algo que este comentario afirmaba antes y era falso: un layout es un
 //    componente de React, se ejecuta al PINTAR una página y no intercepta nada
 //    — una acción de servidor es un POST a la ruta, no un render, así que un
@@ -59,8 +61,8 @@ import { resolverAccesoCorreduria } from '@/lib/correduria-acceso'
 
 /**
  * 🚨 El middleware solo exige SESIÓN, y el layout de `/correduria` (que sí mira quién es
- * de la correduría) no corre en una acción de servidor. Lo que gasta dinero, emite o enlaza
- * un proyecto comprueba el acceso aquí; `null` = puede seguir.
+ * de la correduría) no corre en una acción de servidor. TODA acción de este fichero (también
+ * las lecturas gratis) comprueba el acceso aquí, en su primera línea; `null` = puede seguir.
  */
 async function sinAccesoCorreduria(): Promise<string | null> {
   const session = await getSession()
@@ -74,6 +76,8 @@ async function sinAccesoCorreduria(): Promise<string | null> {
 
 /** Un catálogo del vendor (marcas, modelos, motores, versiones…). **Gratis.** */
 export async function pedirCatalogo(params: Record<string, string>): Promise<RespuestaCatalogo> {
+  const bloqueo = await sinAccesoCorreduria()
+  if (bloqueo) return { estado: 'sin_configurar', mensaje: bloqueo }
   return catalogoAsegura(params)
 }
 
@@ -85,6 +89,8 @@ export async function pedirCatalogo(params: Record<string, string>): Promise<Res
  * un fallo: esta póliza aún no tiene ninguna cotización real.
  */
 export async function pedirTarificacionGuardada(polizaId: string): Promise<RespuestaTarificacionGuardada> {
+  const bloqueo = await sinAccesoCorreduria()
+  if (bloqueo) return { estado: 'sin_configurar', mensaje: bloqueo }
   return tarificacionGuardadaAsegura(polizaId)
 }
 
@@ -178,6 +184,8 @@ export async function pedirProductForm(peticion: {
   params?: unknown[]
   body?: Record<string, unknown>
 }): Promise<RespuestaProductForm> {
+  const bloqueo = await sinAccesoCorreduria()
+  if (bloqueo) return { estado: 'sin_configurar', mensaje: bloqueo }
   return productFormAsegura(peticion)
 }
 
@@ -222,6 +230,8 @@ export async function pedirEmision(entrada: {
 
 /** Coberturas de la oferta confirmada. **Gratis** (lectura en el vendor). */
 export async function pedirCoberturas(projectId: string, offerId: string): Promise<RespuestaCoberturas> {
+  const bloqueo = await sinAccesoCorreduria()
+  if (bloqueo) return { estado: 'error', mensaje: bloqueo }
   return coberturasAsegura(projectId, offerId)
 }
 

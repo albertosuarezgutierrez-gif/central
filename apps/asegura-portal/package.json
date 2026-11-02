@@ -27,7 +27,7 @@
     "@central/module-tarificacion": "workspace:*",
     "@prisma/client": "^5.22.0",
     "jose": "^5.9.3",
-    "next": "^15.5.25",
+    "next": "^15.5.28",
     "pdf-lib": "^1.17.1",
     "pdf-parse": "^1.1.1",
     "pdfjs-dist": "^4.10.38",

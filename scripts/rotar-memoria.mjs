@@ -10,13 +10,13 @@
 //
 // Reglas:
 // - Una "entrada" = bloque que empieza en columna 0 con `- **` (bullet, el formato
-//   preferido) O `### ` (heading, tolerado — algunas sesiones lo usan) hasta la
-//   siguiente. Cualquier otro formato de arranque de entrada (`## `, `#### `, texto
+//   antiguo), `### ` (heading) o `## (dd/mm/aaaa)` (vigente desde sept. 2026) hasta la
+//   siguiente. Cualquier otro formato de arranque de entrada (`## ` sin fecha, `#### `, texto
 //   suelto en columna 0…) NO se reconoce como límite y se funde con la entrada de
 //   arriba — si añades un formato nuevo, añádelo también a `esInicioEntrada`.
 // - La fecha de una entrada sale SOLO de su cabecera: para `- **` es el texto en
 //   negrita completo (puede envolver a la línea 2 si el título es largo — se busca
-//   hasta el `**` de cierre, no solo en la línea 1); para `### ` es la línea 1
+//   hasta el `**` de cierre, no solo en la línea 1); para `###`/`##` es la línea 1
 //   entera. Las fechas citadas en el CUERPO mienten (leyes, facturas, sesiones
 //   antiguas) y nunca se miran. Si la cabecera no trae fecha (o trae dd/mm sin
 //   año), se hereda/completa con la entrada de arriba: el archivo es cronológico
@@ -68,7 +68,13 @@ export const ultimaFecha = (texto) => {
   return coincidencias[coincidencias.length - 1];
 };
 
-export const esInicioEntrada = (linea) => linea.startsWith('- **') || linea.startsWith('### ');
+// `## (dd/mm/aaaa) título` es el formato vigente desde septiembre 2026 (también `## dd/mm/aaaa`).
+// Un `## ` sin fecha al principio NO es entrada.
+const RE_H2_FECHADO = /^## \(?[0-3]?\d\/[01]\d/;
+export const esH2Entrada = (linea) => RE_H2_FECHADO.test(linea);
+
+export const esInicioEntrada = (linea) =>
+  linea.startsWith('- **') || linea.startsWith('### ') || esH2Entrada(linea);
 
 // Texto donde buscar la fecha de una entrada: para `- **` es la negrita completa
 // (puede envolver a la línea 2), para `### ` es solo la línea 1 (no llevan negrita).
@@ -102,7 +108,7 @@ export function trocear(lineas) {
   let actual = null;
   let enEntradaH3 = false;
   for (const linea of lineas) {
-    const esH3 = linea.startsWith('### ');
+    const esH3 = linea.startsWith('### ') || esH2Entrada(linea);
     const bulletFechado = linea.startsWith('- **') && /\((?:[0-3]?\d)\/(?:[01]\d)(?:\/20\d\d)?\)/.test(linea);
     const abreEntrada = esH3 || (esInicioEntrada(linea) && (!enEntradaH3 || bulletFechado));
     if (abreEntrada) {

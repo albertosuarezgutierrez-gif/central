@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-02T11:35:24Z",
-  "sha": "a155511e884e91f9714d296e9099823835067370",
+  "generadoEn": "2026-11-02T12:43:03Z",
+  "sha": "40b3c9d7130f035aad8070e00e0c3178380f5e3f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -30138,7 +30138,28 @@
       "funciones": [],
       "tablas": [],
       "rutaApi": "/api/operador/codeoscopic/product-form",
-      "hash": "74b0364b18ad"
+      "hash": "0d2c26b47140"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/codeoscopic/product-form/validar.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Lista blanca del relé `POST /api/operador/codeoscopic/product-form` (02/11/2026). PURO, sin imports: lo prueba `test/regression-correduria-product-form.test.ts` con `node --test`. ─── Por qué ───────────────────────────────────────────────────────────────── El relé reenvía a `POST /product-form-requ",
+      "exporta": [
+        "validarProductForm"
+      ],
+      "funciones": [
+        {
+          "nombre": "validarProductForm",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: { method: unknown; path: unknown }",
+          "retorno": "ValidacionProductForm",
+          "linea": 38
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "eb31c12f8f31"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/proyecto/route.ts",
@@ -35212,8 +35233,8 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 24,
-          "resumen": "Secreto PROPIO de la vertical. NUNCA fallback a literal en producción (guardián regression-secrets)."
+          "linea": 27,
+          "resumen": "Secreto PROPIO de la vertical, SIN fallback a literal en ningún entorno (02/11/2026): un `next dev` contra la BD real con el literal de antes aceptaba tokens forjables sobre la cartera. En local se po"
         },
         {
           "nombre": "hashPassword",
@@ -35221,7 +35242,7 @@
           "exportada": true,
           "params": "p: string",
           "retorno": null,
-          "linea": 34
+          "linea": 31
         },
         {
           "nombre": "verifyPassword",
@@ -35229,7 +35250,7 @@
           "exportada": true,
           "params": "p: string, hash: string",
           "retorno": null,
-          "linea": 35
+          "linea": 32
         },
         {
           "nombre": "createSessionToken",
@@ -35237,7 +35258,7 @@
           "exportada": true,
           "params": "cuentaId: string, email: string,",
           "retorno": "Promise<",
-          "linea": 37
+          "linea": 34
         },
         {
           "nombre": "verifySessionToken",
@@ -35245,14 +35266,14 @@
           "exportada": true,
           "params": "token: string,",
           "retorno": "Promise<",
-          "linea": 47
+          "linea": 44
         }
       ],
       "tablas": [
         "bcryptjs"
       ],
       "rutaApi": null,
-      "hash": "fed677d3712f"
+      "hash": "0066481e048e"
     },
     {
       "ruta": "apps/asegura/lib/aviso-abandono-solicitud.ts",
@@ -41548,7 +41569,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 18,
+          "linea": 27,
           "resumen": "¿Existe ya la columna `huella` (SQL 2026-10-08)? Vive aquí: solo este fichero nombra el libro."
         },
         {
@@ -41557,52 +41578,61 @@
           "exportada": true,
           "params": "tx: { $executeRaw: typeof prisma.$executeRaw }, e: { correduriaId: string; intentoId: string; solicitadoPor: string; projectId: string },",
           "retorno": "Promise<void>",
-          "linea": 34,
+          "linea": 47,
           "resumen": "La línea del libro de un presupuesto traído de la web. Va DENTRO de la transacción que guarda la tarificación (la FK `intento_id` la exige): o se escriben las dos, o ninguna."
         },
         {
           "nombre": "consumoActual",
           "kind": "function",
           "exportada": true,
-          "params": "correduriaId: string",
+          "params": "correduriaId: string, db: Db = prisma",
           "retorno": "Promise<Consumo>",
-          "linea": 64,
+          "linea": 77,
           "resumen": "Cuenta lo consumido hoy y este mes por esta correduría **en COTIZACIONES** (`POST /insurances`, 0,50€). 🚨 Desde el 21/09/2026 excluye los motivos de EMISIÓN (`rerate` / `submit`), que llevan su propi"
         },
         {
           "nombre": "reservar",
           "kind": "function",
           "exportada": true,
-          "params": "input: { correduriaId: string intentoId: string motivo: string solicitadoPor: string }",
+          "params": "input: { correduriaId: string intentoId: string motivo: string solicitadoPor: string }, db: Db = prisma",
           "retorno": "Promise<Reserva>",
-          "linea": 106,
+          "linea": 119,
           "resumen": "Abre la reserva ANTES de llamar al vendor. El orden importa: si se escribiera después, una caída entre la llamada y el INSERT dejaría un cargo real sin rastro en el libro — y el tope contaría de menos"
+        },
+        {
+          "nombre": "recontarBajoCandado",
+          "kind": "function",
+          "exportada": false,
+          "params": "tx: Db, correduriaId: string, q: | { tipo: 'cotizar'; topes: Topes; env: Env } | { tipo: 'emision'; operacion: OperacionEmision; topes: Topes; env: Env }, costeCents: number,",
+          "retorno": "Promise<",
+          "linea": 151,
+          "resumen": "🔒 Candado de GASTO por correduría + re-cuenta del libro y del tope en euros, DENTRO de la transacción que va a reservar (02/11/2026). Por qué: `cotizar()` y `conLibroDeEmision()` comprueban los topes"
         },
         {
           "nombre": "reservarSinDuplicado",
           "kind": "function",
           "exportada": true,
-          "params": "input: { correduriaId: string intentoId: string motivo: string solicitadoPor: string huella: string forzar?: boolean }",
+          "params": "input: { correduriaId: string intentoId: string motivo: string solicitadoPor: string huella: string forzar?: boolean /** Topes de cotizar vigentes (los de `resolverConfig`): se re-cuentan bajo candado. */ topes: Topes env?: Env }",
           "retorno": "Promise<ReservaAntiDuplicado>",
-          "linea": 133,
+          "linea": 208,
           "resumen": "Comprueba duplicado y RESERVA en la misma transacción, bajo `pg_advisory_xact_lock(hashtext(huella))`: dos pestañas con la misma petición se serializan y la segunda ve la reserva de la primera. Sin `f"
         },
         {
           "nombre": "consumoEmision",
           "kind": "function",
           "exportada": true,
-          "params": "correduriaId: string, operacion: OperacionEmision,",
+          "params": "correduriaId: string, operacion: OperacionEmision, db: Db = prisma,",
           "retorno": "Promise<Consumo>",
-          "linea": 193,
+          "linea": 279,
           "resumen": "Lo consumido hoy y este mes en UNA operación de emisión (`rerate` / `submit`). 🚨 Mismo contrato que `consumoActual`: **NO atrapa errores**. Si no se puede leer el libro, el llamante (`libro-emision.t"
         },
         {
           "nombre": "reservarEmision",
           "kind": "function",
           "exportada": true,
-          "params": "input: { correduriaId: string intentoId: string operacion: OperacionEmision solicitadoPor: string costeCents: number projectId: string | null }",
+          "params": "input: { correduriaId: string intentoId: string operacion: OperacionEmision solicitadoPor: string costeCents: number projectId: string | null env?: Env }",
           "retorno": "Promise<Reserva>",
-          "linea": 239,
+          "linea": 326,
           "resumen": "Abre la reserva de un ReRate o de un Submit ANTES de llamar al vendor. Gemela de `reservar()`, con dos diferencias que son el motivo de que exista aparte en vez de un parámetro opcional: el `motivo` e"
         },
         {
@@ -41611,7 +41641,7 @@
           "exportada": true,
           "params": "intentoId: string",
           "retorno": "Promise<void>",
-          "linea": 266,
+          "linea": 366,
           "resumen": "Cierra como facturable una línea de emisión. Aparte de `cerrarFacturable()` por una razón concreta: allí el `projectId` es lo que devuelve la cotización y no se conocía antes de llamar, así que el cie"
         },
         {
@@ -41620,7 +41650,7 @@
           "exportada": true,
           "params": "intentoId: string, projectId: string",
           "retorno": "Promise<void>",
-          "linea": 277,
+          "linea": 377,
           "resumen": "El vendor respondió: hay proyecto y, por tanto, cargo."
         },
         {
@@ -41629,16 +41659,16 @@
           "exportada": true,
           "params": "intentoId: string, evidencia: string, errorCodigo: string,",
           "retorno": "Promise<void>",
-          "linea": 299,
+          "linea": 399,
           "resumen": "Cierra como NO facturable. Exige evidencia por contrato (y por CHECK en BD). Solo hay tres evidencias admisibles, y todas significan que el vendor no llegó a tarificar: fallo de autenticación (401/403"
         },
         {
           "nombre": "gastadoMesCents",
           "kind": "function",
           "exportada": true,
-          "params": "correduriaId: string, costes: { rerate: number; submit: number; limites: number },",
+          "params": "correduriaId: string, costes: { rerate: number; submit: number; limites: number }, db: Db = prisma,",
           "retorno": "Promise<number | null>",
-          "linea": 324,
+          "linea": 424,
           "resumen": "Lo gastado este mes natural (Madrid) en el libro, en céntimos. Lo lee el tope en euros (`tope-euros-bd.ts`), que no toca la tabla: el libro solo se mira desde aquí. Las líneas de ReRate/Submit/límites"
         }
       ],
@@ -41647,7 +41677,7 @@
         "ventana"
       ],
       "rutaApi": null,
-      "hash": "013522cc1c08"
+      "hash": "fbe06bab1216"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/contador.ts",
@@ -42058,7 +42088,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9969c7d7f1ae"
+      "hash": "9a51dc06c172"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/crudo.ts",
@@ -44105,13 +44135,13 @@
           "exportada": true,
           "params": "p: { correduriaId: string operacion: OperacionEmision solicitadoPor: string /** Para poder explicar la factura línea a línea. Puede no conocerse aún. */ projectId: string | null }, llamada: () => Promise<T>, opciones: { evidenciaSinCargo?: ",
           "retorno": "Promise<GastoEmision<T>>",
-          "linea": 63,
+          "linea": 69,
           "resumen": "Envuelve UNA llamada al vendor con su línea en el libro. `llamada` se invoca **una sola vez** y su excepción se propaga tal cual: el caller (la cascada de reparación de `/oferta` y `/emitir`) necesita"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a45744f0fee1"
+      "hash": "df9d5bbaeebc"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/limites-hogar.ts",
@@ -52179,6 +52209,92 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "92614a88bf69"
+    },
+    {
+      "ruta": "apps/asegura/lib/generated/asegura-client/edge.js",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [
+        "prisma"
+      ],
+      "rutaApi": null,
+      "hash": "bb9177a6336a"
+    },
+    {
+      "ruta": "apps/asegura/lib/generated/asegura-client/index.js",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [
+        "prisma"
+      ],
+      "rutaApi": null,
+      "hash": "1f3349a9af92"
+    },
+    {
+      "ruta": "apps/asegura/lib/generated/asegura-client/runtime/edge-esm.js",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [
+        "service",
+        "unpkg",
+        "user"
+      ],
+      "rutaApi": null,
+      "hash": "2f84e2744daf"
+    },
+    {
+      "ruta": "apps/asegura/lib/generated/asegura-client/runtime/edge.js",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [
+        "service",
+        "unpkg",
+        "user"
+      ],
+      "rutaApi": null,
+      "hash": "df32d9d49f7b"
+    },
+    {
+      "ruta": "apps/asegura/lib/generated/asegura-client/runtime/library.js",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [
+        "engine",
+        "service",
+        "unpkg",
+        "user"
+      ],
+      "rutaApi": null,
+      "hash": "28e72b0fd8cb"
+    },
+    {
+      "ruta": "apps/asegura/lib/generated/asegura-client/runtime/react-native.js",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [
+        "engine",
+        "user"
+      ],
+      "rutaApi": null,
+      "hash": "85ef0058816a"
+    },
+    {
+      "ruta": "apps/asegura/lib/generated/asegura-client/runtime/wasm.js",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [
+        "engine",
+        "user"
+      ],
+      "rutaApi": null,
+      "hash": "b6f3bca67b87"
     },
     {
       "ruta": "apps/asegura/lib/google-contactos-lead.ts",
@@ -73171,14 +73287,14 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 10
+          "linea": 11
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/auth/seleccionar-restaurante",
-      "hash": "fcf9e6ed2a80"
+      "hash": "0849d62f7831"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/auth/super-login/route.ts",
@@ -73345,7 +73461,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<string>",
-          "linea": 9,
+          "linea": 10,
           "resumen": "── OAuth2: refresh_token → access_token ──────────────────────────────────────"
         },
         {
@@ -73354,7 +73470,7 @@
           "exportada": false,
           "params": "accessToken: string, name: string, parentId: string",
           "retorno": "Promise<string>",
-          "linea": 29,
+          "linea": 30,
           "resumen": "── Crear subcarpeta en Drive ──────────────────────────────────────────────────"
         },
         {
@@ -73363,7 +73479,7 @@
           "exportada": false,
           "params": "accessToken: string, folderId: string, filename: string, content: string",
           "retorno": "Promise<string>",
-          "linea": 41,
+          "linea": 42,
           "resumen": "── Subir JSON a Drive ─────────────────────────────────────────────────────────"
         },
         {
@@ -73372,7 +73488,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": "boolean",
-          "linea": 63,
+          "linea": 64,
           "resumen": "── Auth ───────────────────────────────────────────────────────────────────────"
         },
         {
@@ -73405,7 +73521,7 @@
         "next"
       ],
       "rutaApi": "/api/backup/drive",
-      "hash": "f9352ba21465"
+      "hash": "cb80cc7eb3c3"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/brain/conversar/route.ts",
@@ -75147,7 +75263,7 @@
         "next"
       ],
       "rutaApi": "/api/comanda",
-      "hash": "d2d9ac46e86e"
+      "hash": "c1cc68e32148"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/comandas/activas/route.ts",
@@ -75293,7 +75409,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": "boolean",
-          "linea": 7
+          "linea": 8
         },
         {
           "nombre": "aplicaHorario",
@@ -75301,7 +75417,7 @@
           "exportada": false,
           "params": "regla: ReglaActiva, ahora: Date",
           "retorno": "boolean",
-          "linea": 14
+          "linea": 12
         },
         {
           "nombre": "aplicaDias",
@@ -75309,7 +75425,7 @@
           "exportada": false,
           "params": "regla: ReglaActiva, ahora: Date",
           "retorno": "boolean",
-          "linea": 22
+          "linea": 20
         },
         {
           "nombre": "interpolarMensaje",
@@ -75317,7 +75433,7 @@
           "exportada": false,
           "params": "tpl: string, vars: Record<string, string | number>",
           "retorno": "string",
-          "linea": 29
+          "linea": 27
         },
         {
           "nombre": "yaAlertado",
@@ -75325,7 +75441,7 @@
           "exportada": false,
           "params": "supabase: ReturnType<typeof createServerClient>, rid: string, condicion: string, ref: string, ventanaMin = 30",
           "retorno": "Promise<boolean>",
-          "linea": 33
+          "linea": 31
         },
         {
           "nombre": "sendPush",
@@ -75333,7 +75449,7 @@
           "exportada": false,
           "params": "rid: string, title: string, body: string",
           "retorno": null,
-          "linea": 46
+          "linea": 44
         },
         {
           "nombre": "registrar",
@@ -75341,7 +75457,7 @@
           "exportada": false,
           "params": "supabase: ReturnType<typeof createServerClient>, rid: string, regla: ReglaActiva, ref: string, mensaje: string",
           "retorno": null,
-          "linea": 55
+          "linea": 53
         },
         {
           "nombre": "getUmbral",
@@ -75349,7 +75465,7 @@
           "exportada": false,
           "params": "r: ReglaActiva",
           "retorno": "number",
-          "linea": 85
+          "linea": 83
         },
         {
           "nombre": "getCond",
@@ -75357,7 +75473,7 @@
           "exportada": false,
           "params": "r: ReglaActiva",
           "retorno": "string",
-          "linea": 88
+          "linea": 86
         },
         {
           "nombre": "evalSinComanda",
@@ -75365,7 +75481,7 @@
           "exportada": false,
           "params": "supabase: ReturnType<typeof createServerClient>, rid: string, regla: ReglaActiva, alertas: string[]",
           "retorno": null,
-          "linea": 92
+          "linea": 90
         },
         {
           "nombre": "evalPlatoSinLlegar",
@@ -75373,7 +75489,7 @@
           "exportada": false,
           "params": "supabase: ReturnType<typeof createServerClient>, rid: string, regla: ReglaActiva, alertas: string[]",
           "retorno": null,
-          "linea": 108
+          "linea": 106
         },
         {
           "nombre": "evalTicketSinTocar",
@@ -75381,7 +75497,7 @@
           "exportada": false,
           "params": "supabase: ReturnType<typeof createServerClient>, rid: string, regla: ReglaActiva, alertas: string[]",
           "retorno": null,
-          "linea": 132
+          "linea": 130
         },
         {
           "nombre": "evalCuentaSinCobrar",
@@ -75389,7 +75505,7 @@
           "exportada": false,
           "params": "supabase: ReturnType<typeof createServerClient>, rid: string, regla: ReglaActiva, alertas: string[]",
           "retorno": null,
-          "linea": 155
+          "linea": 153
         },
         {
           "nombre": "evalRotacionLarga",
@@ -75397,7 +75513,7 @@
           "exportada": false,
           "params": "supabase: ReturnType<typeof createServerClient>, rid: string, regla: ReglaActiva, alertas: string[]",
           "retorno": null,
-          "linea": 172
+          "linea": 170
         },
         {
           "nombre": "evalCuentasSimultaneas",
@@ -75405,7 +75521,7 @@
           "exportada": false,
           "params": "supabase: ReturnType<typeof createServerClient>, rid: string, regla: ReglaActiva, alertas: string[]",
           "retorno": null,
-          "linea": 187
+          "linea": 185
         },
         {
           "nombre": "evalRegla",
@@ -75413,7 +75529,7 @@
           "exportada": false,
           "params": "supabase: ReturnType<typeof createServerClient>, rid: string, regla: ReglaActiva, ahora: Date, alertas: string[]",
           "retorno": null,
-          "linea": 202
+          "linea": 200
         },
         {
           "nombre": "GET",
@@ -75421,7 +75537,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 223
+          "linea": 221
         }
       ],
       "tablas": [
@@ -75429,7 +75545,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/alertas",
-      "hash": "72058c141f6c"
+      "hash": "b38e0d144c1d"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/alias-ia/route.ts",
@@ -75444,14 +75560,14 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 17
+          "linea": 18
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/cron/alias-ia",
-      "hash": "8ed05d60adae"
+      "hash": "87fdf3184819"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/avisos-resumen/route.ts",
@@ -75466,13 +75582,13 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 9,
+          "linea": 10,
           "resumen": "Resumen diario de avisos al operador: manda UN email con todo lo acumulado por tgAlert (canal 'resumen') desde el último envío. Programado en vercel.json."
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/avisos-resumen",
-      "hash": "ce9cb941c1e1"
+      "hash": "46fd55a6fb69"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/backfill-leads-sevilla/route.ts",
@@ -75487,7 +75603,7 @@
           "exportada": false,
           "params": "nombre: string, web: string, notas: string",
           "retorno": "Promise<string | null>",
-          "linea": 12,
+          "linea": 13,
           "resumen": "Clasifica el vertical de un lead a partir de su nombre/web/notas."
         },
         {
@@ -75496,7 +75612,7 @@
           "exportada": false,
           "params": "web: string",
           "retorno": "Promise<string | null>",
-          "linea": 31,
+          "linea": 32,
           "resumen": "Intenta extraer un email público de la web del negocio."
         },
         {
@@ -75505,14 +75621,14 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 48
+          "linea": 49
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/cron/backfill-leads-sevilla",
-      "hash": "7f34cc93b7c6"
+      "hash": "6cc0f6dee2de"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/blog-seo/route.ts",
@@ -75528,7 +75644,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<string>",
-          "linea": 30
+          "linea": 32
         },
         {
           "nombre": "getGscKeywords",
@@ -75536,7 +75652,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<",
-          "linea": 43
+          "linea": 45
         },
         {
           "nombre": "elegirKeyword",
@@ -75544,7 +75660,7 @@
           "exportada": false,
           "params": "keywords: any[], existentes: string[]",
           "retorno": "Promise<string | null>",
-          "linea": 66
+          "linea": 68
         },
         {
           "nombre": "generarTexto",
@@ -75552,7 +75668,7 @@
           "exportada": false,
           "params": "system: string, prompt: string",
           "retorno": "Promise<string>",
-          "linea": 111
+          "linea": 113
         },
         {
           "nombre": "parsearJSONModelo",
@@ -75560,7 +75676,7 @@
           "exportada": false,
           "params": "raw: string",
           "retorno": "any",
-          "linea": 124,
+          "linea": 126,
           "resumen": "── Parseo robusto del JSON del modelo ──────────────────────────────────────── Los modelos 8B fallan de dos formas típicas al emitir un artículo largo como JSON: (1) truncan al llegar al techo de toke"
         },
         {
@@ -75569,7 +75685,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 136,
+          "linea": 138,
           "resumen": "Escapa \\n \\r \\t y demás controles (< 0x20) que aparezcan DENTRO de una cadena JSON (fuera de cadenas se dejan tal cual). Respeta las secuencias ya escapadas."
         },
         {
@@ -75578,7 +75694,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string | null",
-          "linea": 161,
+          "linea": 163,
           "resumen": "Repara un JSON truncado: recorre distinguiendo clave/valor y contenedores, recuerda el último punto donde un VALOR quedó completo, recorta ahí y cierra los contenedores que seguían abiertos. Así un ar"
         },
         {
@@ -75587,7 +75703,7 @@
           "exportada": false,
           "params": "keyword: string",
           "retorno": "Promise<",
-          "linea": 196
+          "linea": 198
         },
         {
           "nombre": "generarTSX",
@@ -75595,7 +75711,7 @@
           "exportada": false,
           "params": "data: any, slug: string, keyword: string",
           "retorno": "string",
-          "linea": 271
+          "linea": 273
         },
         {
           "nombre": "Articulo",
@@ -75603,7 +75719,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 317
+          "linea": 319
         },
         {
           "nombre": "enviarTelegram",
@@ -75611,7 +75727,7 @@
           "exportada": false,
           "params": "msg: string",
           "retorno": null,
-          "linea": 372
+          "linea": 374
         },
         {
           "nombre": "GET",
@@ -75619,14 +75735,14 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 381
+          "linea": 383
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/cron/blog-seo",
-      "hash": "06a0782722d2"
+      "hash": "d573c1e1e90c"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/briefing-semanal/route.ts",
@@ -75642,14 +75758,14 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 25
+          "linea": 26
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/cron/briefing-semanal",
-      "hash": "4e218696df6e"
+      "hash": "d5406c6a851b"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/cobro-descuento/route.ts",
@@ -75665,7 +75781,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 13
+          "linea": 14
         },
         {
           "nombre": "autorizado",
@@ -75673,7 +75789,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": "boolean",
-          "linea": 15
+          "linea": 16
         },
         {
           "nombre": "GET",
@@ -75681,14 +75797,14 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 21
+          "linea": 20
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/cron/cobro-descuento",
-      "hash": "f4600a7b4e67"
+      "hash": "81776188079a"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/cobro-inactividad/route.ts",
@@ -75704,7 +75820,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 14
+          "linea": 15
         },
         {
           "nombre": "autoCerrarIndividuales",
@@ -75712,7 +75828,7 @@
           "exportada": false,
           "params": "supabase: ReturnType<typeof createServerClient>",
           "retorno": "Promise<number>",
-          "linea": 20,
+          "linea": 21,
           "resumen": "Cierre automático de cuentas INDIVIDUALES con tarjeta guardada (pre_auth) que llevan más del timer del dueño sin cerrar. Cobra a cada una SOLO su consumición (sesion_qr_id). Es la red de seguridad del"
         },
         {
@@ -75721,7 +75837,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": "boolean",
-          "linea": 109
+          "linea": 110
         },
         {
           "nombre": "GET",
@@ -75729,14 +75845,14 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 115
+          "linea": 114
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/cron/cobro-inactividad",
-      "hash": "d9cb92db620c"
+      "hash": "6d88c02414cf"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/cobros-eventos/route.ts",
@@ -75752,7 +75868,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": "boolean",
-          "linea": 14
+          "linea": 15
         },
         {
           "nombre": "GET",
@@ -75760,14 +75876,14 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 20
+          "linea": 19
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/cron/cobros-eventos",
-      "hash": "c456c6c62724"
+      "hash": "6be161fb6022"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/completar-locales/route.ts",
@@ -75782,7 +75898,7 @@
           "exportada": false,
           "params": "nombreGrupo: string",
           "retorno": "Promise<LocalEncontrado[]>",
-          "linea": 18
+          "linea": 19
         },
         {
           "nombre": "GET",
@@ -75790,14 +75906,14 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 41
+          "linea": 42
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/cron/completar-locales",
-      "hash": "faa6d8b7e5d7"
+      "hash": "1162107a1f1c"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/crm-emails-catering/route.ts",
@@ -75812,12 +75928,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 8
+          "linea": 9
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/crm-emails-catering",
-      "hash": "c73f8582e6e5"
+      "hash": "96a5bcfaf47a"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/crm-emails-restaurantes/route.ts",
@@ -75832,12 +75948,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 8
+          "linea": 9
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/crm-emails-restaurantes",
-      "hash": "2560cfcc3001"
+      "hash": "1487516bdcfb"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/crm-envio-auto/route.ts",
@@ -75853,7 +75969,7 @@
           "exportada": false,
           "params": "d = new Date()",
           "retorno": "boolean",
-          "linea": 28,
+          "linea": 29,
           "resumen": "Horario laboral España: L-V 9:00-19:00 (evita enviar en frío de noche o en finde)."
         },
         {
@@ -75862,7 +75978,7 @@
           "exportada": false,
           "params": "texto: string, unsubUrl: string",
           "retorno": "string",
-          "linea": 39,
+          "linea": 40,
           "resumen": "Texto plano del borrador → HTML con la identidad de ia.rest + enlace de baja (RGPD)."
         },
         {
@@ -75871,7 +75987,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 59
+          "linea": 60
         }
       ],
       "tablas": [
@@ -75879,7 +75995,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/crm-envio-auto",
-      "hash": "14bcbd9f4306"
+      "hash": "315135604887"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/crm-followup-sevilla/route.ts",
@@ -75894,7 +76010,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 13
+          "linea": 14
         }
       ],
       "tablas": [
@@ -75902,7 +76018,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/crm-followup-sevilla",
-      "hash": "82a158bb6320"
+      "hash": "83e897fcdbc0"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/crm-lead-hunter-sevilla/route.ts",
@@ -75917,12 +76033,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 8
+          "linea": 9
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/crm-lead-hunter-sevilla",
-      "hash": "bc6115cfa511"
+      "hash": "6b8fde56d1e2"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/crm-recordatorio-dia2/route.ts",
@@ -75937,7 +76053,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 7
+          "linea": 8
         }
       ],
       "tablas": [
@@ -75945,7 +76061,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/crm-recordatorio-dia2",
-      "hash": "693f5d04b333"
+      "hash": "0c78131c9fb1"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/crm-recordatorios/route.ts",
@@ -75960,14 +76076,14 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 8
+          "linea": 9
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/cron/crm-recordatorios",
-      "hash": "da468dd9b4ef"
+      "hash": "c80781f69946"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/feedback-visita/route.ts",
@@ -75983,7 +76099,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": "boolean",
-          "linea": 20
+          "linea": 21
         },
         {
           "nombre": "emailHtml",
@@ -75991,7 +76107,7 @@
           "exportada": false,
           "params": "d: { restauranteNombre: string colorPrimario: string feedbackToken: string dominio: string }",
           "retorno": null,
-          "linea": 26
+          "linea": 25
         },
         {
           "nombre": "GET",
@@ -75999,7 +76115,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 70
+          "linea": 69
         }
       ],
       "tablas": [
@@ -76007,7 +76123,7 @@
         "resend"
       ],
       "rutaApi": "/api/cron/feedback-visita",
-      "hash": "f5e078e2c101"
+      "hash": "d918dc56ecb1"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/instagram-ideas/route.ts",
@@ -76023,14 +76139,14 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 25
+          "linea": 26
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/cron/instagram-ideas",
-      "hash": "1bcac5321498"
+      "hash": "7f8450f259b3"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/instagram-metricas/route.ts",
@@ -76045,14 +76161,14 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 7
+          "linea": 8
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/cron/instagram-metricas",
-      "hash": "15aeb379ae24"
+      "hash": "b9420055fb32"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/instagram-refresh/route.ts",
@@ -76067,12 +76183,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 7
+          "linea": 8
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/instagram-refresh",
-      "hash": "7320e15c0c73"
+      "hash": "34016febdbb6"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/instagram/route.ts",
@@ -76087,7 +76203,7 @@
           "exportada": false,
           "params": "",
           "retorno": "VideoEngine",
-          "linea": 13,
+          "linea": 14,
           "resumen": "Motor de vídeo IA del Reel: Veo 3 Fast (audio nativo) por defecto; IG_VIDEO_ENGINE=kling revierte al motor anterior sin tocar código. Un solo mando en Vercel."
         },
         {
@@ -76096,7 +76212,7 @@
           "exportada": false,
           "params": "supabase: ReturnType<typeof createServerClient>",
           "retorno": "Promise<Estilo>",
-          "linea": 23,
+          "linea": 24,
           "resumen": "Director de arte: elige el estilo de la semana, rotando sin repetir el último usado."
         },
         {
@@ -76105,7 +76221,7 @@
           "exportada": false,
           "params": "d: Date = new Date()",
           "retorno": "'reel' | 'imagen' | 'carrusel'",
-          "linea": 47,
+          "linea": 48,
           "resumen": "Formato del día (semana temática): lunes y viernes → carrusel (guardados y compartidos), miércoles → Reel IA (alcance/descubrimiento). Resto → imagen."
         },
         {
@@ -76114,7 +76230,7 @@
           "exportada": false,
           "params": "supabase: ReturnType<typeof createServerClient>",
           "retorno": "Promise<",
-          "linea": 57,
+          "linea": 58,
           "resumen": "Tema de la SEMANA: el briefing del domingo propone 3 ideas de blog, Alberto elige una y toda la semana (carrusel lunes, Reel miércoles, carrusel viernes) desarrolla ESE tema. Si no hay semana en curso"
         },
         {
@@ -76123,7 +76239,7 @@
           "exportada": false,
           "params": "supabase: ReturnType<typeof createServerClient>, keyword?: string",
           "retorno": "Promise<string>",
-          "linea": 72,
+          "linea": 73,
           "resumen": "Si el blog de la semana ya está publicado, el caption remata enviando tráfico."
         },
         {
@@ -76132,7 +76248,7 @@
           "exportada": false,
           "params": "fn: () => Promise<T>, intentos = 3",
           "retorno": "Promise<T>",
-          "linea": 81,
+          "linea": 82,
           "resumen": "NIM (NVIDIA) va lento a veces: reintenta la generación con IA antes de rendirse. Sin prisa — hay margen de sobra en maxDuration (120s). Backoff 3s, 6s."
         },
         {
@@ -76141,7 +76257,7 @@
           "exportada": false,
           "params": "tema: string, hashtags: string[], modulo: string",
           "retorno": null,
-          "linea": 91,
+          "linea": 92,
           "resumen": "Contenido del reel: gancho + 3 puntos + caption (lo monta generarReel sobre slides+ambiente)."
         },
         {
@@ -76150,7 +76266,7 @@
           "exportada": false,
           "params": "tema: string, engine: VideoEngine, modulo: string",
           "retorno": "Promise<string>",
-          "linea": 111,
+          "linea": 112,
           "resumen": "Prompt cinematográfico (inglés) para el vídeo IA del Reel. Regla de oro: describir MOVIMIENTO explícito (cámara, gente, pantallas) o el modelo genera una foto. Veo 3 genera AUDIO nativo → se le dirige"
         },
         {
@@ -76159,7 +76275,7 @@
           "exportada": false,
           "params": "supabase: ReturnType<typeof createServerClient>",
           "retorno": null,
-          "linea": 128
+          "linea": 129
         },
         {
           "nombre": "generarPost",
@@ -76167,7 +76283,7 @@
           "exportada": false,
           "params": "plantilla: Plantilla, tema: string, hashtags: string[]",
           "retorno": null,
-          "linea": 148
+          "linea": 149
         },
         {
           "nombre": "buildUrl",
@@ -76175,7 +76291,7 @@
           "exportada": false,
           "params": "p: Record<string,string>",
           "retorno": "string",
-          "linea": 176
+          "linea": 177
         },
         {
           "nombre": "GET",
@@ -76183,7 +76299,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 182
+          "linea": 183
         }
       ],
       "tablas": [
@@ -76191,7 +76307,7 @@
         "other"
       ],
       "rutaApi": "/api/cron/instagram",
-      "hash": "8c617183b09d"
+      "hash": "5f156f59970c"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/lead-onboarding/route.ts",
@@ -76207,7 +76323,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 10
+          "linea": 11
         },
         {
           "nombre": "procesarLead",
@@ -76215,7 +76331,7 @@
           "exportada": false,
           "params": "lead: Record<string, unknown>, supabase: ReturnType<typeof createServerClient>",
           "retorno": null,
-          "linea": 47
+          "linea": 48
         }
       ],
       "tablas": [
@@ -76224,7 +76340,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/lead-onboarding",
-      "hash": "e4db1bc9a66d"
+      "hash": "997f125a48fa"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/mantenimiento-espacios/route.ts",
@@ -76239,7 +76355,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 5
+          "linea": 6
         },
         {
           "nombre": "tipoLabel",
@@ -76247,7 +76363,7 @@
           "exportada": false,
           "params": "tipo: string",
           "retorno": "string",
-          "linea": 7
+          "linea": 8
         },
         {
           "nombre": "emailHtml",
@@ -76255,7 +76371,7 @@
           "exportada": false,
           "params": "d: { espacioNombre: string; descripcion: string; tipo: string estado: string; proximaRevision: string; diasRestantes: number proveedorNombre: string | null; costeEstimado: number | null; notas: string | null }",
           "retorno": null,
-          "linea": 16
+          "linea": 17
         },
         {
           "nombre": "GET",
@@ -76263,7 +76379,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 57
+          "linea": 58
         }
       ],
       "tablas": [
@@ -76271,7 +76387,7 @@
         "resend"
       ],
       "rutaApi": "/api/cron/mantenimiento-espacios",
-      "hash": "ab5c712e8d4e"
+      "hash": "b4afd72c4b2c"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/pipeline-comercial/route.ts",
@@ -76288,7 +76404,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 51
+          "linea": 52
         },
         {
           "nombre": "buildPipelineBloque",
@@ -76296,7 +76412,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<string>",
-          "linea": 273,
+          "linea": 274,
           "resumen": "── Exportar resumen para reutilizar en briefing-semanal ────────────────"
         }
       ],
@@ -76304,7 +76420,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/pipeline-comercial",
-      "hash": "e30507e496d6"
+      "hash": "67fdbf01f245"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/preavisos-auto/route.ts",
@@ -76320,7 +76436,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": "boolean",
-          "linea": 24
+          "linea": 25
         },
         {
           "nombre": "GET",
@@ -76328,14 +76444,14 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 30
+          "linea": 29
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/cron/preavisos-auto",
-      "hash": "6653c2213e9b"
+      "hash": "5f56bb172a4b"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/prospeccion-apify/route.ts",
@@ -76350,12 +76466,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 8
+          "linea": 9
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/prospeccion-apify",
-      "hash": "2f7ce33599bd"
+      "hash": "a3206ae778dd"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/prospeccion-leads/route.ts",
@@ -76370,7 +76486,7 @@
           "exportada": false,
           "params": "query: string",
           "retorno": "Promise<string>",
-          "linea": 23,
+          "linea": 24,
           "resumen": "── Buscar con Gemini grounding (callAISearch) ──────────────────────────────"
         },
         {
@@ -76379,7 +76495,7 @@
           "exportada": false,
           "params": "candidato: { nombre: string ciudad: string locales_estimados: number web: string | null descripcion: string tipo: string }",
           "retorno": "Promise<",
-          "linea": 43,
+          "linea": 44,
           "resumen": "── Analizar candidato con NIM ──────────────────────────────────────────────"
         },
         {
@@ -76388,7 +76504,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 78,
+          "linea": 79,
           "resumen": "── Handler principal ────────────────────────────────────────────────────────"
         }
       ],
@@ -76396,7 +76512,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/prospeccion-leads",
-      "hash": "6ed28fd22ae2"
+      "hash": "2841ee4f021e"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/reposicion-stock/route.ts",
@@ -76412,7 +76528,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": "boolean",
-          "linea": 12
+          "linea": 13
         },
         {
           "nombre": "GET",
@@ -76420,14 +76536,14 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 18
+          "linea": 17
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/cron/reposicion-stock",
-      "hash": "82fa6731f41c"
+      "hash": "3f430ae4a01b"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/reservas-noshow/route.ts",
@@ -76443,7 +76559,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": "boolean",
-          "linea": 15
+          "linea": 16
         },
         {
           "nombre": "GET",
@@ -76451,12 +76567,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 21
+          "linea": 20
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/reservas-noshow",
-      "hash": "10e6823be6df"
+      "hash": "9ed8e4ad2c92"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/seo-agent/route.ts",
@@ -76471,7 +76587,7 @@
           "exportada": false,
           "params": "msg: string",
           "retorno": null,
-          "linea": 19
+          "linea": 21
         },
         {
           "nombre": "fn",
@@ -76479,7 +76595,7 @@
           "exportada": false,
           "params": "name: string, description: string, parameters: any",
           "retorno": null,
-          "linea": 58,
+          "linea": 60,
           "resumen": "Tools en formato OpenAI (NVIDIA NIM, function-calling). web_search es custom, respaldada por Gemini."
         },
         {
@@ -76488,12 +76604,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 70
+          "linea": 72
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/seo-agent",
-      "hash": "5a958bdf3925"
+      "hash": "31ad28cae4ac"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cuenta-nominal/route.ts",
@@ -77283,7 +77399,7 @@
           "exportada": false,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<",
-          "linea": 26,
+          "linea": 27,
           "resumen": "Flujo ASÍNCRONO (fal.ai tarda 1-5 min, más que cualquier timeout de Vercel): GET /api/ig-ai-video?tipo=restaurante → encola y devuelve { ok, jobId } GET /api/ig-ai-video?jobId=...&modelo=... → { ok, e"
         },
         {
@@ -77292,7 +77408,7 @@
           "exportada": false,
           "params": "data: Record<string, unknown>",
           "retorno": "string",
-          "linea": 45,
+          "linea": 46,
           "resumen": "El enlace de consulta lleva las URLs de cola que devolvió fal.ai al encolar (s = status_url, r = response_url) — la EF las usa tal cual, sin reconstruirlas."
         },
         {
@@ -77301,7 +77417,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 51
+          "linea": 52
         },
         {
           "nombre": "POST",
@@ -77309,12 +77425,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 90
+          "linea": 91
         }
       ],
       "tablas": [],
       "rutaApi": "/api/ig-ai-video",
-      "hash": "8feca7404d53"
+      "hash": "e5976bda4044"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/ig-img/route.tsx",
@@ -77396,7 +77512,7 @@
           "exportada": false,
           "params": "buf: Buffer, pid: string",
           "retorno": "Promise<string>",
-          "linea": 19,
+          "linea": 20,
           "resumen": "Sube un PNG a Cloudinary con basic auth (validado: la firma HMAC manual da Invalid Signature en esta cuenta)"
         },
         {
@@ -77405,7 +77521,7 @@
           "exportada": false,
           "params": "segs: Segmento[], audioPid?: string | null",
           "retorno": "string",
-          "linea": 44,
+          "linea": 45,
           "resumen": "MP4 vertical 1080x1920: concatena (fl_splice) cada segmento sobre el vídeo base. - imagen: c_pad sobre fondo de marca (estático; sin motion para máxima compatibilidad). - vídeo: c_fill al frame vertic"
         },
         {
@@ -77414,7 +77530,7 @@
           "exportada": false,
           "params": "params: Record<string, string>",
           "retorno": "string",
-          "linea": 63,
+          "linea": 64,
           "resumen": "Construye la URL de una slide de /api/ig-img."
         },
         {
@@ -77423,7 +77539,7 @@
           "exportada": true,
           "params": "opts: { titulo: string estilo?: string puntos: string[] modulo?: string audioPid?: string | null }",
           "retorno": "Promise<string>",
-          "linea": 73,
+          "linea": 74,
           "resumen": "Genera el Reel y devuelve la URL del MP4 listo para publicar. Secuencia (lo que \"vende\" en hostelería): gancho → producto en acción → ambiente real → puntos de valor (intercalando ambiente) → CTA. El "
         },
         {
@@ -77432,7 +77548,7 @@
           "exportada": true,
           "params": "url: string",
           "retorno": "Promise<'ok' | 'bad' | 'unknown'>",
-          "linea": 130,
+          "linea": 131,
           "resumen": "Calienta el MP4 en Cloudinary (el primer request dispara el render) y comprueba salud. Devuelve 'ok' | 'bad' (error claro de transformación → conviene caer a imagen) | 'unknown' (timeout / transitorio"
         },
         {
@@ -77441,12 +77557,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 144
+          "linea": 145
         }
       ],
       "tablas": [],
       "rutaApi": "/api/ig-reel",
-      "hash": "11fbc2ed1383"
+      "hash": "1b5d5dbd6176"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/instagram/callback/route.ts",
@@ -77512,14 +77628,14 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 55
+          "linea": 56
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/kds/asistente",
-      "hash": "88853a631b25"
+      "hash": "82c337b008d7"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/kds/elaboraciones/[id]/route.ts",
@@ -77542,7 +77658,7 @@
         "next"
       ],
       "rutaApi": "/api/kds/elaboraciones/[id]",
-      "hash": "67ad8bd7fd76"
+      "hash": "8626c5827e82"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/kds/elaboraciones/route.ts",
@@ -77573,7 +77689,7 @@
         "next"
       ],
       "rutaApi": "/api/kds/elaboraciones",
-      "hash": "505c683b4b36"
+      "hash": "46cc43ec60fb"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/kds/pesar-item/route.ts",
@@ -77802,7 +77918,7 @@
         "next"
       ],
       "rutaApi": "/api/marchar",
-      "hash": "aebb1036e466"
+      "hash": "d874400cee98"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/marketing/baja/route.ts",
@@ -78855,17 +78971,25 @@
       ],
       "funciones": [
         {
+          "nombre": "dentroDeLimite",
+          "kind": "function",
+          "exportada": false,
+          "params": "clave: string",
+          "retorno": "boolean",
+          "linea": 11
+        },
+        {
           "nombre": "POST",
           "kind": "function",
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 6
+          "linea": 19
         }
       ],
       "tablas": [],
       "rutaApi": "/api/onboarding/extract-carta",
-      "hash": "0462ef2a4c50"
+      "hash": "796f6172270d"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/operador/descuadres-empleado/route.ts",
@@ -83697,7 +83821,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 73,
+          "linea": 83,
           "resumen": "── POST ──────────────────────────────────────────────────────────────────────"
         },
         {
@@ -83706,7 +83830,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 174,
+          "linea": 184,
           "resumen": "── PATCH — cerrar o escalar ticket ──────────────────────────────────────────"
         }
       ],
@@ -83714,7 +83838,7 @@
         "next"
       ],
       "rutaApi": "/api/owner/soporte",
-      "hash": "6c88a66ddd35"
+      "hash": "df1a687dba71"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/owner/stock/fefo/route.ts",
@@ -84356,7 +84480,7 @@
         "next"
       ],
       "rutaApi": "/api/portal",
-      "hash": "1050172f4b8f"
+      "hash": "c30e1907df5c"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/portal/stock-central/route.ts",
@@ -84772,7 +84896,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 16
+          "linea": 17
         },
         {
           "nombre": "POST",
@@ -84780,14 +84904,14 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 20
+          "linea": 21
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/push/send",
-      "hash": "a4a10c337e9b"
+      "hash": "d34ffbc2a66b"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/push/subscribe/route.ts",
@@ -86097,7 +86221,7 @@
           "exportada": false,
           "params": "remoteUrl: string, pid: string",
           "retorno": "Promise<string>",
-          "linea": 26,
+          "linea": 27,
           "resumen": "Sube a Cloudinary por URL remota (basic auth) como resource_type=video (el audio es un recurso de tipo video en Cloudinary, que es lo que espera la capa `l_audio:`)."
         },
         {
@@ -86106,7 +86230,7 @@
           "exportada": false,
           "params": "urls: string[]",
           "retorno": "Promise<NextResponse>",
-          "linea": 43
+          "linea": 44
         },
         {
           "nombre": "parseUrls",
@@ -86114,7 +86238,7 @@
           "exportada": false,
           "params": "raw: string | null",
           "retorno": "string[]",
-          "linea": 72
+          "linea": 73
         },
         {
           "nombre": "POST",
@@ -86122,7 +86246,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 78,
+          "linea": 79,
           "resumen": "POST: Bearer CRON_SECRET, body { urls: string[] } (o ?urls= en la query)."
         },
         {
@@ -86131,13 +86255,13 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 90,
+          "linea": 91,
           "resumen": "GET: protegido por el middleware del escudo /api/super/* → lanzable desde el navegador."
         }
       ],
       "tablas": [],
       "rutaApi": "/api/super/instagram/seed-music",
-      "hash": "c7fd4bf42a9a"
+      "hash": "a4e1445cc551"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/super/instagram/seed-reel-assets/route.ts",
@@ -86153,7 +86277,7 @@
           "exportada": false,
           "params": "v: PexelsVideo",
           "retorno": "string | null",
-          "linea": 28,
+          "linea": 29,
           "resumen": "Elige el mejor fichero VERTICAL (9:16-ish) y ligero de un vídeo de Pexels."
         },
         {
@@ -86162,7 +86286,7 @@
           "exportada": false,
           "params": "remoteUrl: string, pid: string",
           "retorno": "Promise<string>",
-          "linea": 37,
+          "linea": 38,
           "resumen": "Sube a Cloudinary por URL remota (basic auth) como resource_type=video."
         },
         {
@@ -86171,7 +86295,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 54
+          "linea": 55
         },
         {
           "nombre": "GET",
@@ -86179,7 +86303,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 63,
+          "linea": 64,
           "resumen": "GET: pensado para lanzarlo desde el NAVEGADOR estando logueado en /super. El middleware (escudo __super_shield) ya protege /api/super/*, así que si la petición llega hasta aquí es porque está autoriza"
         },
         {
@@ -86188,12 +86312,12 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 67
+          "linea": 68
         }
       ],
       "tablas": [],
       "rutaApi": "/api/super/instagram/seed-reel-assets",
-      "hash": "bc570d59010e"
+      "hash": "4eb7ba1d6079"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/super/instagram/story-reminder/route.ts",
@@ -86208,12 +86332,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 4
+          "linea": 5
         }
       ],
       "tablas": [],
       "rutaApi": "/api/super/instagram/story-reminder",
-      "hash": "13b1e00a7308"
+      "hash": "ee73f518f259"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/super/instagram/test-carousel/route.ts",
@@ -86228,7 +86352,7 @@
           "exportada": false,
           "params": "buf: Buffer, pid: string",
           "retorno": "Promise<string>",
-          "linea": 8
+          "linea": 9
         },
         {
           "nombre": "GET",
@@ -86236,12 +86360,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 25
+          "linea": 26
         }
       ],
       "tablas": [],
       "rutaApi": "/api/super/instagram/test-carousel",
-      "hash": "7c7552b4420f"
+      "hash": "b617c08d054a"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/super/lead-hunter-franquicia/route.ts",
@@ -86727,12 +86851,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 6
+          "linea": 7
         }
       ],
       "tablas": [],
       "rutaApi": "/api/super/qa-agent/cron",
-      "hash": "8f5e0c412fd1"
+      "hash": "1b99306eac91"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/super/qa-agent/route.ts",
@@ -86795,20 +86919,12 @@
       ],
       "funciones": [
         {
-          "nombre": "getSession",
-          "kind": "function",
-          "exportada": false,
-          "params": "req: NextRequest",
-          "retorno": null,
-          "linea": 6
-        },
-        {
           "nombre": "GET",
           "kind": "function",
           "exportada": true,
           "params": "req: NextRequest, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 14,
+          "linea": 10,
           "resumen": "GET /api/super/restaurantes/[id]/config Devuelve configuración completa del restaurante + stats para el panel super admin"
         },
         {
@@ -86817,7 +86933,7 @@
           "exportada": true,
           "params": "req: NextRequest, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 86,
+          "linea": 82,
           "resumen": "PUT /api/super/restaurantes/[id]/config Actualiza configuración del restaurante (NIF, razón social, plan, activo, nombre_comercial)"
         }
       ],
@@ -86825,7 +86941,7 @@
         "next"
       ],
       "rutaApi": "/api/super/restaurantes/[id]/config",
-      "hash": "67795adea73b"
+      "hash": "6ad405b2bd1e"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/super/restaurantes/[id]/cuenta/route.ts",
@@ -86836,20 +86952,12 @@
       ],
       "funciones": [
         {
-          "nombre": "getSession",
-          "kind": "function",
-          "exportada": false,
-          "params": "req: NextRequest",
-          "retorno": null,
-          "linea": 9
-        },
-        {
           "nombre": "GET",
           "kind": "function",
           "exportada": true,
           "params": "req: NextRequest, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 15
+          "linea": 11
         },
         {
           "nombre": "PATCH",
@@ -86857,14 +86965,14 @@
           "exportada": true,
           "params": "req: NextRequest, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 57
+          "linea": 53
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/super/restaurantes/[id]/cuenta",
-      "hash": "6a88acfbda52"
+      "hash": "0005a523d1cc"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/super/restaurantes/[id]/impersonate/route.ts",
@@ -86874,20 +86982,12 @@
       ],
       "funciones": [
         {
-          "nombre": "getSession",
-          "kind": "function",
-          "exportada": false,
-          "params": "req: NextRequest",
-          "retorno": null,
-          "linea": 7
-        },
-        {
           "nombre": "POST",
           "kind": "function",
           "exportada": true,
           "params": "req: NextRequest, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 16,
+          "linea": 12,
           "resumen": "POST /api/super/restaurantes/[id]/impersonate Genera una sesiÃ³n temporal de owner para que el super admin acceda al panel del restaurante sin necesitar el PIN. La sesiÃ³n generada solo vale para la s"
         }
       ],
@@ -86895,7 +86995,7 @@
         "next"
       ],
       "rutaApi": "/api/super/restaurantes/[id]/impersonate",
-      "hash": "0425622ad9d3"
+      "hash": "fa36bd4cf501"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/super/restaurantes/route.ts",
@@ -86908,20 +87008,12 @@
       ],
       "funciones": [
         {
-          "nombre": "getSession",
-          "kind": "function",
-          "exportada": false,
-          "params": "req: NextRequest",
-          "retorno": null,
-          "linea": 9
-        },
-        {
           "nombre": "GET",
           "kind": "function",
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 16,
+          "linea": 12,
           "resumen": "GET /api/super/restaurantes — lista todos con métricas"
         },
         {
@@ -86930,7 +87022,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 48,
+          "linea": 44,
           "resumen": "POST /api/super/restaurantes — crear nuevo restaurante"
         },
         {
@@ -86939,7 +87031,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 99,
+          "linea": 95,
           "resumen": "PATCH /api/super/restaurantes — actualizar restaurante"
         }
       ],
@@ -86947,7 +87039,7 @@
         "next"
       ],
       "rutaApi": "/api/super/restaurantes",
-      "hash": "50c51dc516a5"
+      "hash": "44171fea2e19"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/super/seo-revert/route.ts",
@@ -87695,7 +87787,7 @@
         "next"
       ],
       "rutaApi": "/api/transcribe",
-      "hash": "03e72f13c58c"
+      "hash": "1ba909b64b62"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/turno/route.ts",
@@ -87741,14 +87833,14 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 6
+          "linea": 7
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/turnos/activo",
-      "hash": "c52996afad12"
+      "hash": "a1c0ab111b94"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/turnos/fichar/route.ts",
@@ -87805,7 +87897,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 6
+          "linea": 7
         },
         {
           "nombre": "PATCH",
@@ -87813,7 +87905,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 59,
+          "linea": 56,
           "resumen": "PATCH: el owner puede añadir una nota a un fichaje"
         }
       ],
@@ -87821,7 +87913,7 @@
         "next"
       ],
       "rutaApi": "/api/turnos/historial",
-      "hash": "dd4fa20cee2a"
+      "hash": "79171f6431cc"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/vinos/recomendar/route.ts",
@@ -88072,17 +88164,25 @@
       ],
       "funciones": [
         {
+          "nombre": "firmaValida",
+          "kind": "function",
+          "exportada": false,
+          "params": "body: string, signature: string, secret: string",
+          "retorno": "boolean",
+          "linea": 7
+        },
+        {
           "nombre": "POST",
           "kind": "function",
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 6
+          "linea": 15
         }
       ],
       "tablas": [],
       "rutaApi": "/api/webhooks/vercel-deploy",
-      "hash": "d1052d1410f4"
+      "hash": "bbac5b050b6e"
     },
     {
       "ruta": "apps/ia-rest/src/app/app/route.ts",
@@ -88720,7 +88820,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4b89566dec53"
+      "hash": "2a3634875de6"
     },
     {
       "ruta": "apps/ia-rest/src/app/cocina/page.tsx",
@@ -89810,7 +89910,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "58e452aef1b1"
+      "hash": "91244166f122"
     },
     {
       "ruta": "apps/ia-rest/src/app/manual/route.ts",
@@ -90866,7 +90966,7 @@
         "whole"
       ],
       "rutaApi": null,
-      "hash": "8017f9080ef8"
+      "hash": "61acffcd324a"
     },
     {
       "ruta": "apps/ia-rest/src/app/owner/pedidos-online/page.tsx",
@@ -92709,7 +92809,7 @@
           "exportada": false,
           "params": "{ C, SN, SM, onLeadCreado, sh }: { C: any; SN: string; SM: string; onLeadCreado: (lead: any) => void; sh: () => Record<string,string> }",
           "retorno": null,
-          "linea": 1913,
+          "linea": 1914,
           "resumen": "─── Lead Hunter IA Panel ───"
         },
         {
@@ -92718,7 +92818,7 @@
           "exportada": false,
           "params": "{ session, C, SE, SN, SM }: { session: any; C: any; SE: string; SN: string; SM: string }",
           "retorno": null,
-          "linea": 2296,
+          "linea": 2297,
           "resumen": "─── BlogSuperTab ─────────────────────────────────────────────────────────────"
         }
       ],
@@ -92727,7 +92827,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "423dcc919450"
+      "hash": "ff6701c269ed"
     },
     {
       "ruta": "apps/ia-rest/src/app/tapas-bar/page.tsx",
@@ -93141,26 +93241,6 @@
       ],
       "rutaApi": null,
       "hash": "d16e85c433b7"
-    },
-    {
-      "ruta": "apps/ia-rest/src/components/BlogSEOTab.tsx",
-      "ambito": "apps/ia-rest",
-      "exporta": [
-        "BlogSEOTab"
-      ],
-      "funciones": [
-        {
-          "nombre": "BlogSEOTab",
-          "kind": "function",
-          "exportada": true,
-          "params": "{ session }: Props",
-          "retorno": null,
-          "linea": 18
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "a6c61a308f27"
     },
     {
       "ruta": "apps/ia-rest/src/components/central/AlmacenCentral.tsx",
@@ -94461,12 +94541,21 @@
       ],
       "funciones": [
         {
+          "nombre": "sesionFirmada",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 11,
+          "resumen": "Sesión FIRMADA del login: las rutas /api/owner/* ya no aceptan `x-ia-restaurante-id` sin CRON_SECRET."
+        },
+        {
           "nombre": "relativo",
           "kind": "function",
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 63,
+          "linea": 68,
           "resumen": "─── Helpers ───"
         },
         {
@@ -94475,7 +94564,7 @@
           "exportada": false,
           "params": "estado: string",
           "retorno": "string",
-          "linea": 72
+          "linea": 77
         },
         {
           "nombre": "estadoBg",
@@ -94483,7 +94572,7 @@
           "exportada": false,
           "params": "estado: string",
           "retorno": "string",
-          "linea": 78
+          "linea": 83
         },
         {
           "nombre": "DiagnosticoTab",
@@ -94491,7 +94580,7 @@
           "exportada": true,
           "params": "{ restauranteId }: Props",
           "retorno": null,
-          "linea": 99
+          "linea": 104
         },
         {
           "nombre": "Section",
@@ -94499,7 +94588,7 @@
           "exportada": false,
           "params": "{ titulo, children }: { titulo: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 524,
+          "linea": 529,
           "resumen": "─── Sub-componentes ───"
         },
         {
@@ -94508,12 +94597,12 @@
           "exportada": false,
           "params": "{ label, valor, detalle, ok, esAdvertencia = false }: { label: string; valor: string; detalle?: string | React.ReactNode; ok: boolean; esAdvertencia?: boolean }",
           "retorno": null,
-          "linea": 539
+          "linea": 544
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "256c47b084ec"
+      "hash": "61c3e81d2740"
     },
     {
       "ruta": "apps/ia-rest/src/components/owner/EtiquetasTab.tsx",
@@ -95713,12 +95802,21 @@
       ],
       "funciones": [
         {
+          "nombre": "sesionFirmada",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 10,
+          "resumen": "Sesión FIRMADA del login: las rutas /api/owner/* ya no aceptan `x-ia-restaurante-id` sin CRON_SECRET."
+        },
+        {
           "nombre": "relativo",
           "kind": "function",
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 37,
+          "linea": 42,
           "resumen": "─── Helpers ───"
         },
         {
@@ -95727,12 +95825,12 @@
           "exportada": true,
           "params": "{ restauranteId }: Props",
           "retorno": null,
-          "linea": 51
+          "linea": 56
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bfdc50a30d9d"
+      "hash": "7e5172c79fa7"
     },
     {
       "ruta": "apps/ia-rest/src/components/owner/SupervisorTab.tsx",
@@ -98370,6 +98468,45 @@
       "hash": "09ea423741c7"
     },
     {
+      "ruta": "apps/ia-rest/src/lib/cron-auth.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [
+        "secretoCronValido",
+        "cronAutorizado"
+      ],
+      "funciones": [
+        {
+          "nombre": "igualSeguro",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: string, b: string",
+          "retorno": "boolean",
+          "linea": 9
+        },
+        {
+          "nombre": "secretoCronValido",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 17,
+          "resumen": "true solo si CRON_SECRET existe y `valor` coincide exactamente con él."
+        },
+        {
+          "nombre": "cronAutorizado",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest | Request",
+          "retorno": "boolean",
+          "linea": 24,
+          "resumen": "true solo si la cabecera Authorization es `Bearer <CRON_SECRET>` (lo que manda el cron de Vercel)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d87441e4965c"
+    },
+    {
       "ruta": "apps/ia-rest/src/lib/diagnostics.ts",
       "ambito": "apps/ia-rest",
       "resumen": "ia.rest — Sistema de diagnóstico y detección de conflictos Detecta automáticamente conflictos de integración APK↔Web y los reporta en consola. En desarrollo muestra un panel visual. Uso: importar en edge/page.tsx y llamar a runDiagnostics() /",
@@ -100131,30 +100268,59 @@
           "exportada": true,
           "params": "parsed: Record<string, unknown> | null | undefined, tipo: 'subset' | 'objeto'",
           "retorno": "boolean",
-          "linea": 93,
-          "resumen": "Regla de migración común: si trae firma, debe ser válida; si no, solo se acepta mientras SESSION_ENFORCE no esté en 'true'."
+          "linea": 94,
+          "resumen": "Regla común: la sesión tiene que venir FIRMADA y la firma ser válida. El modo permisivo de migración (aceptar sesiones sin firma) se eliminó el 02/11/2026."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4e4b667dd465"
+      "hash": "07e20d39df76"
     },
     {
       "ruta": "apps/ia-rest/src/lib/session.ts",
       "ambito": "apps/ia-rest",
       "exporta": [
         "getSession",
+        "getSesionCuenta",
+        "sesionParaReenviar",
         "resolverRestauranteIdDeCuenta",
         "getRestauranteId"
       ],
       "funciones": [
+        {
+          "nombre": "leerCabeceraSesion",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 25,
+          "resumen": "Única puerta de lectura de la cabecera `x-ia-session` en las rutas API (lo vigila test/regression-ia-rest-sesion-firmada.test.ts). La firma HMAC es OBLIGATORIA siempre: el antiguo modo permisivo (vari"
+        },
         {
           "nombre": "getSession",
           "kind": "function",
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": "ApiSession | null",
-          "linea": 25
+          "linea": 34
+        },
+        {
+          "nombre": "getSesionCuenta",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": "",
+          "linea": 43,
+          "resumen": "Token de CUENTA (firmarObjeto en /api/auth/pin-cuenta) enviado en `x-ia-session`."
+        },
+        {
+          "nombre": "sesionParaReenviar",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": "string",
+          "linea": 55,
+          "resumen": "Cabecera `x-ia-session` para reenviar a otra ruta interna (fetch servidor→servidor). Solo se reenvía si la firma es válida; si no, cadena vacía (la ruta destino rechazará)."
         },
         {
           "nombre": "resolverRestauranteIdDeCuenta",
@@ -100162,7 +100328,7 @@
           "exportada": true,
           "params": "supabase: SupabaseClient, session: ApiSession, requested: string | null | undefined",
           "retorno": "Promise<string | null>",
-          "linea": 59,
+          "linea": 70,
           "resumen": "Resuelve el restaurante_id objetivo VALIDANDO que pertenece a la cuenta de la sesión firmada. Evita IDOR cross-tenant cuando una ruta acepta un restaurante_id por query/body. - Sin `requested` o igual"
         },
         {
@@ -100171,14 +100337,14 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": "string",
-          "linea": 77
+          "linea": 88
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": null,
-      "hash": "ba262a82b8a5"
+      "hash": "1fb477446d3a"
     },
     {
       "ruta": "apps/ia-rest/src/lib/supabase.ts",
@@ -103508,7 +103674,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 8,
+          "linea": 9,
           "resumen": "Job global (procesa todas las empresas) → SOLO cron. Un admin no debe dispararlo."
         }
       ],
@@ -103521,7 +103687,7 @@
         "propietario_gastos"
       ],
       "rutaApi": "/api/admin/alertas-gastos",
-      "hash": "c6e79a34a580"
+      "hash": "5d6c47e7b4b0"
     },
     {
       "ruta": "apps/ialimp/app/api/admin/alertas/route.ts",
@@ -108674,7 +108840,7 @@
     {
       "ruta": "apps/ialimp/app/api/m/webhook/resend/route.ts",
       "ambito": "apps/ialimp",
-      "resumen": "Webhook de Resend: rebotes y quejas de spam → baja automática del prospecto. Protege la reputación de envío y cumple RGPD sin intervención. Público (exento en middleware). Verifica la firma Svix si hay RESEND_WEBHOOK_SECRET.",
+      "resumen": "Webhook de Resend: rebotes y quejas de spam → baja automática del prospecto. Protege la reputación de envío y cumple RGPD sin intervención. Público (exento en middleware). Exige la firma Svix (RESEND_WEBHOOK_SECRET); sin él, 401 en prod.",
       "exporta": [
         "POST"
       ],
@@ -108685,8 +108851,8 @@
           "exportada": false,
           "params": "req: Request, raw: string",
           "retorno": "Promise<boolean>",
-          "linea": 9,
-          "resumen": "Verificación de firma Svix (la usa Resend). Sin secreto configurado → no bloquea (modo preview)."
+          "linea": 10,
+          "resumen": "Verificación de firma Svix (la usa Resend). Fail-CLOSED (02/11/2026): sin RESEND_WEBHOOK_SECRET en producción se RECHAZA (antes `return true` dejaba a cualquiera dar de baja prospectos)."
         },
         {
           "nombre": "POST",
@@ -108694,7 +108860,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 30
+          "linea": 35
         }
       ],
       "tablas": [
@@ -108704,7 +108870,7 @@
         "next"
       ],
       "rutaApi": "/api/m/webhook/resend",
-      "hash": "7242899c6725"
+      "hash": "cf1f7fe7b32e"
     },
     {
       "ruta": "apps/ialimp/app/api/pms/connect/route.ts",
@@ -108728,7 +108894,7 @@
         "pms_connections"
       ],
       "rutaApi": "/api/pms/connect",
-      "hash": "65d100075511"
+      "hash": "a1c364e8ef9e"
     },
     {
       "ruta": "apps/ialimp/app/api/pms/sync/route.ts",
@@ -108743,7 +108909,7 @@
           "exportada": false,
           "params": "conn: any, propMap: Map<string, any>",
           "retorno": "Promise<",
-          "linea": 25,
+          "linea": 26,
           "resumen": "── Sync Smoobu API (para Alberto — mantener mientras siga usando Smoobu) ───── Reconcilia en cada pasada: da de alta/actualiza reservas (filtradas por SALIDA, que es lo que define una limpieza) y elim"
         },
         {
@@ -108752,7 +108918,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 155,
+          "linea": 156,
           "resumen": "── Endpoint ──────────────────────────────────────────────────────────────────"
         }
       ],
@@ -108765,7 +108931,7 @@
         "set"
       ],
       "rutaApi": "/api/pms/sync",
-      "hash": "affecd93f483"
+      "hash": "52169940af87"
     },
     {
       "ruta": "apps/ialimp/app/api/propietario/[token]/acceso/route.ts",
@@ -112497,6 +112663,54 @@
       ],
       "rutaApi": null,
       "hash": "b1dcafaddbbd"
+    },
+    {
+      "ruta": "apps/ialimp/lib/cron-auth.ts",
+      "ambito": "apps/ialimp",
+      "resumen": "Autorización de crons de ialimp (02/11/2026). Mismo criterio que plataforma/lib/cron-auth.ts: · Solo `Authorization: Bearer <CRON_SECRET>` (Vercel Cron lo envía solo si CRON_SECRET existe en el proyecto; en ialimp existe en Production). · Sin CRON_SECRET en producción ⇒ se DENIEGA (nunca «Bearer und",
+      "exporta": [
+        "igualSeguro",
+        "enProduccion",
+        "autorizaCron",
+        "isCronAuthorized"
+      ],
+      "funciones": [
+        {
+          "nombre": "igualSeguro",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: string | null | undefined, b: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 9
+        },
+        {
+          "nombre": "enProduccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 17
+        },
+        {
+          "nombre": "autorizaCron",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { secret?: string | null; bearer?: string | null; produccion: boolean }",
+          "retorno": "boolean",
+          "linea": 21
+        },
+        {
+          "nombre": "isCronAuthorized",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": "boolean",
+          "linea": 26
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "06c493cb5ec4"
     },
     {
       "ruta": "apps/ialimp/lib/direccion-ui.ts",
@@ -116537,7 +116751,7 @@
           "exportada": true,
           "params": "entrada: { clienteId: string }",
           "retorno": "Promise<RespuestaPrecalificacionAutoNueva>",
-          "linea": 36,
+          "linea": 38,
           "resumen": "La ficha de la persona (municipios, estado civil, huecos, consumo). **Gratis.**"
         },
         {
@@ -116546,7 +116760,7 @@
           "exportada": true,
           "params": "entrada: { clienteId: string resueltos?: Record<string, unknown> correcciones?: Record<string, unknown> /** Variante de un riesgo (29/09/2026): la oportunidad, sus figuras (rol → ficha) y la nota. */ variante?: { oportunidadId: string; figu",
           "retorno": "Promise<RespuestaRetarificar>",
-          "linea": 49,
+          "linea": 51,
           "resumen": "🚨 **CUESTA 0,50€ REALES.** `confirmado: true` lo pone `cotizarAutoNuevaAsegura()`, en el servidor y en un solo sitio — no se acepta desde el cliente. 🚫 No reintenta."
         },
         {
@@ -116555,7 +116769,7 @@
           "exportada": true,
           "params": "entrada: { clienteId: string oportunidadId: string tarificacionId?: string | null }",
           "retorno": "Promise<RespuestaTarificacionNueva>",
-          "linea": 85,
+          "linea": 87,
           "resumen": "La tarificación de auto guardada de ESTE riesgo (y, si viene, de esa variante), para retomarla sin pagar otra vez. **Gratis.** Sin `oportunidadId` no se busca: la «última del cliente» podría ser de ot"
         },
         {
@@ -116564,13 +116778,13 @@
           "exportada": true,
           "params": "entrada: { oportunidadId: string }",
           "retorno": "Promise<AperturaCotizadorAuto>",
-          "linea": 109,
+          "linea": 111,
           "resumen": "El bloque «Pedir precio» de una oportunidad de AUTO (10/10/2026, igual que `abrirCotizadorMotoDeOportunidad`): relee el RIESGO en el servidor (lo que hay en asegura ahora, no lo que pinta el navegador"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "718b68f2689e"
+      "hash": "bb5038bc9654"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/auto-nuevo/AutoNuevo.tsx",
@@ -116916,7 +117130,7 @@
           "exportada": false,
           "params": "{ ficha, resumen, tiposVivos, seguros }: { ficha: Ficha; resumen: ResumenFicha; tiposVivos: string[]; seguros: Ficha['polizas'] }",
           "retorno": null,
-          "linea": 138,
+          "linea": 143,
           "resumen": "── Siguiente paso ────────────────────────────────────────────────────────── UNA frase y UN botón con lo que toca hacer con este cliente (idea §W). La regla vive pura y testeada en `siguientePaso` de "
         },
         {
@@ -116925,7 +117139,7 @@
           "exportada": false,
           "params": "{ tiposVivos }: { tiposVivos: string[] }",
           "retorno": null,
-          "linea": 190,
+          "linea": 195,
           "resumen": "── Ramos contratados ─────────────────────────────────────────────────────── Sustituye a la «rueda de ramos» de Avant2 (24/09/2026, Alberto: «ocupa mucho y no creo que sea necesario»): en móvil se com"
         },
         {
@@ -116934,7 +117148,7 @@
           "exportada": false,
           "params": "{ resumen, idsConChip }: { resumen: ResumenFicha; idsConChip: ReadonlySet<string> }",
           "retorno": null,
-          "linea": 209
+          "linea": 214
         },
         {
           "nombre": "ProximoVencimiento",
@@ -116942,7 +117156,7 @@
           "exportada": false,
           "params": "{ proximo, idsConChip, vivas, sinFecha }: { proximo: ResumenFicha['proximo']; idsConChip: ReadonlySet<string>; vivas: number; sinFecha: number }",
           "retorno": null,
-          "linea": 264,
+          "linea": 269,
           "resumen": "La única fecha de la ficha sobre la que se puede ACTUAR, y por eso sube aquí: hasta ahora vivía dentro de una celda de la tabla de pólizas. 🚨 No es el vencimiento: es el **último día para oponerse a "
         },
         {
@@ -116951,7 +117165,7 @@
           "exportada": false,
           "params": "{ label, valor, sub, color, pequeno }: { label: string; valor: string; sub?: string; color?: string /** Para un valor que es una fecha: más pequeña para que quepa en móvil. */ pequeno?: boolean }",
           "retorno": null,
-          "linea": 308
+          "linea": 313
         },
         {
           "nombre": "EstadoCabecera",
@@ -116959,7 +117173,7 @@
           "exportada": false,
           "params": "{ estado, cotizacionesVivas, cliente }: { estado: EstadoClienteDerivado | null cotizacionesVivas: number | null /** La regla anterior, para una versión de asegura que no manda `estado`. */ cliente: boolean }",
           "retorno": null,
-          "linea": 334
+          "linea": 339
         },
         {
           "nombre": "Acciones",
@@ -116967,7 +117181,7 @@
           "exportada": false,
           "params": "{ clienteId }: { clienteId: string }",
           "retorno": null,
-          "linea": 392
+          "linea": 397
         },
         {
           "nombre": "Contacto",
@@ -116975,7 +117189,7 @@
           "exportada": false,
           "params": "{ nombre, esCliente, c, intervinientes, piiClave, contactos, polizas }: { /** Para el `aria-label` de los iconos: «Llamar a Jose Suárez». */ nombre: string /** Decide QUÉ mensaje se abre en WhatsApp. Lo calcula la cabecera, con el * mismo c",
           "retorno": null,
-          "linea": 475
+          "linea": 480
         },
         {
           "nombre": "Identidad",
@@ -116983,7 +117197,7 @@
           "exportada": false,
           "params": "{ identidad, clienteId, dePolizas, juridica }: { identidad: IdentidadFicha | null; clienteId: string; dePolizas: DatosDePolizas | null; juridica: boolean }",
           "retorno": null,
-          "linea": 584
+          "linea": 589
         },
         {
           "nombre": "Carnets",
@@ -116991,12 +117205,12 @@
           "exportada": false,
           "params": "{ carnets, dePolizas }: { carnets: CarnetFicha[] | null; dePolizas: DatosDePolizas | null }",
           "retorno": null,
-          "linea": 624
+          "linea": 629
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "daf9685136b5"
+      "hash": "a415b897a814"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/CorreosCliente.tsx",
@@ -117672,7 +117886,7 @@
           "exportada": true,
           "params": "entrada: { clienteId: string }",
           "retorno": "Promise<RespuestaPrecalificacionMotoNueva>",
-          "linea": 34,
+          "linea": 36,
           "resumen": "La ficha de la persona (municipios, estado civil, huecos, consumo). **Gratis.**"
         },
         {
@@ -117681,7 +117895,7 @@
           "exportada": true,
           "params": "entrada: { clienteId: string resueltos?: Record<string, unknown> correcciones?: Record<string, unknown> /** Variante de un riesgo (29/09/2026): la oportunidad, sus figuras (rol → ficha) y la nota. Sin ocasional: moto no lo admite. */ varian",
           "retorno": "Promise<RespuestaRetarificar>",
-          "linea": 47,
+          "linea": 49,
           "resumen": "🚨 **CUESTA 0,50€ REALES.** `confirmado: true` lo pone `cotizarMotoNuevaAsegura()`, en el servidor y en un solo sitio — no se acepta desde el cliente. 🚫 No reintenta."
         },
         {
@@ -117690,7 +117904,7 @@
           "exportada": true,
           "params": "entrada: { clienteId: string oportunidadId?: string | null tarificacionId?: string | null }",
           "retorno": "Promise<RespuestaTarificacionNueva>",
-          "linea": 82,
+          "linea": 84,
           "resumen": "La última tarificación de moto de este cliente, para retomarla sin pagar otra vez. **Gratis.** Con `oportunidadId` (variante de un riesgo) busca la de ESE riesgo y, con `tarificacionId`, esa variante "
         },
         {
@@ -117699,13 +117913,13 @@
           "exportada": true,
           "params": "entrada: { oportunidadId: string }",
           "retorno": "Promise<AperturaCotizadorMoto>",
-          "linea": 108,
+          "linea": 110,
           "resumen": "El bloque «Pedir precio» de una oportunidad de MOTO (07/10/2026): relee el RIESGO en el servidor (lo que hay en asegura ahora, no lo que pinta el navegador) y lo que el cotizador necesita, solo al ABR"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4afa9497a692"
+      "hash": "ff57c58e2cdb"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/CotizadorMoto.tsx",
@@ -117994,7 +118208,7 @@
           "exportada": true,
           "params": "entrada: { clienteId: string; ramoActual: RamoPack; oportunidadOtroId: string }",
           "retorno": "Promise<RespuestaTarificacionNueva>",
-          "linea": 20,
+          "linea": 25,
           "resumen": "La tarificación YA guardada del otro vehículo. **Gratis.** Evita pagar otra vez lo que ya se pagó."
         },
         {
@@ -118003,12 +118217,12 @@
           "exportada": true,
           "params": "entrada: { clienteId: string ramoActual: RamoPack oportunidadOtroId: string /** Del cliente (los mismos de la pantalla: es la misma persona). */ estadoCivilId: string municipioId: string fechaEfecto: string | null }",
           "retorno": "Promise<RespuestaPack>",
-          "linea": 24
+          "linea": 31
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dab4871a272b"
+      "hash": "2f115ceb5208"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/PackVehiculos.tsx",
@@ -120569,12 +120783,12 @@
           "exportada": true,
           "params": "origen: { polizaId: string } | { clienteId: string; ramo: string },",
           "retorno": "Promise<RespuestaPreciosGuardados>",
-          "linea": 23
+          "linea": 25
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8228d89c444b"
+      "hash": "cf256e4b4b82"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/GarantiasFiltradas.tsx",
@@ -125847,7 +126061,7 @@
           "exportada": true,
           "params": "entrada: { polizaId: string resueltos?: Record<string, unknown> correcciones?: Record<string, unknown> referencia?: string }",
           "retorno": "Promise<RespuestaPrecalificacionHogar>",
-          "linea": 14
+          "linea": 19
         },
         {
           "nombre": "pedirLimitesHogar",
@@ -125855,13 +126069,13 @@
           "exportada": true,
           "params": "entrada: { polizaId: string resueltos?: Record<string, unknown> correcciones?: Record<string, unknown> referencia?: string }",
           "retorno": "Promise<RespuestaLimitesHogar>",
-          "linea": 28,
+          "linea": 35,
           "resumen": "IMPORTANTE: **Pide a Codeoscopic los capitales recomendados** (`POST /home/recommend-limits`). No es gratis de forma confirmada: asegura la cuenta en el libro de consumo y la pone detrás del interrupt"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8a7b4312c3cf"
+      "hash": "76f1701e0eff"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/acciones.ts",
@@ -125884,8 +126098,8 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<string | null>",
-          "linea": 65,
-          "resumen": "🚨 El middleware solo exige SESIÓN, y el layout de `/correduria` (que sí mira quién es de la correduría) no corre en una acción de servidor. Lo que gasta dinero, emite o enlaza un proyecto comprueba e"
+          "linea": 67,
+          "resumen": "🚨 El middleware solo exige SESIÓN, y el layout de `/correduria` (que sí mira quién es de la correduría) no corre en una acción de servidor. TODA acción de este fichero (también las lecturas gratis) c"
         },
         {
           "nombre": "pedirCatalogo",
@@ -125893,7 +126107,7 @@
           "exportada": true,
           "params": "params: Record<string, string>",
           "retorno": "Promise<RespuestaCatalogo>",
-          "linea": 76,
+          "linea": 78,
           "resumen": "Un catálogo del vendor (marcas, modelos, motores, versiones…). **Gratis.**"
         },
         {
@@ -125902,7 +126116,7 @@
           "exportada": true,
           "params": "polizaId: string",
           "retorno": "Promise<RespuestaTarificacionGuardada>",
-          "linea": 87,
+          "linea": 91,
           "resumen": "La última cotización REAL ya guardada de esta póliza (11/09/2026). **Gratis — no confirma nada con el vendor.** Sirve para \"retomar\" sin volver a pagar los 0,50€ del `POST /insurances` que ya se pagó,"
         },
         {
@@ -125911,7 +126125,7 @@
           "exportada": true,
           "params": "entrada: { polizaId: string resueltos?: Record<string, unknown> correcciones?: Record<string, unknown> catastro?: Record<string, unknown> | null referencia?: string /** `true` SOLO tras «Descartar y pedir precio de cero»: ver `PeticionRetar",
           "retorno": "Promise<RespuestaRetarificar>",
-          "linea": 106,
+          "linea": 112,
           "resumen": "🚨 **CUESTA 0,50€ REALES.** `confirmado: true` lo pone `retarificarAsegura()`, en el servidor y en un solo sitio. No se acepta desde el cliente a propósito: si viajara en el cuerpo, dejaría de ser una"
         },
         {
@@ -125920,7 +126134,7 @@
           "exportada": true,
           "params": "entrada: { tarificacionId: string compania: string categoria: string producto?: string primaEur?: number modalidad?: string idPrecio?: string fechaEfectoCorregida?: string /** Respuesta del corredor a un `faltan_vendor` anterior (campo nues",
           "retorno": "Promise<RespuestaOferta>",
-          "linea": 142,
+          "linea": 148,
           "resumen": "🚨 **CONFIRMA EL PRECIO CON LA COMPAÑÍA (ReRate).** Construida el 11/09/2026, sin sandbox. Igual que `pedirCotizacion`: `confirmado: true` lo pone `ofertaAsegura()` en el servidor, y esto NO reintenta"
         },
         {
@@ -125929,7 +126143,7 @@
           "exportada": true,
           "params": "peticion: { method?: string path: string params?: unknown[] body?: Record<string, unknown> }",
           "retorno": "Promise<RespuestaProductForm>",
-          "linea": 175,
+          "linea": 181,
           "resumen": "El `dataCallback` de la Product Form Library (widget de Codeoscopic para pintar el formulario REAL de consentimiento de cada compañía). **Gratis**: no cotiza ni confirma nada con el vendor, solo relay"
         },
         {
@@ -125938,7 +126152,7 @@
           "exportada": true,
           "params": "entrada: { projectId: string campos: Record<string, unknown> primaAnual?: number | null /** Máscara de la cuenta de la ficha que el corredor confirmó en pantalla (o nada). */ cuentaConfirmada?: string | null reintentoConfirmado?: boolean ac",
           "retorno": "Promise<RespuestaEmitir>",
-          "linea": 184
+          "linea": 192
         },
         {
           "nombre": "pedirCoberturas",
@@ -125946,7 +126160,7 @@
           "exportada": true,
           "params": "projectId: string, offerId: string",
           "retorno": "Promise<RespuestaCoberturas>",
-          "linea": 224,
+          "linea": 232,
           "resumen": "Coberturas de la oferta confirmada. **Gratis** (lectura en el vendor)."
         },
         {
@@ -125955,7 +126169,7 @@
           "exportada": true,
           "params": "projectId: string, polizaId: string",
           "retorno": "Promise<VistaImportacion>",
-          "linea": 233,
+          "linea": 243,
           "resumen": "Proyecto hecho a mano en Avant2 (fila 13, 26/09/2026). La vista previa es una lectura gratis; el import enlaza el proyecto a la póliza y deja la oferta aceptada, sin ReRate ni Submit: la emisión sigue"
         },
         {
@@ -125964,12 +126178,12 @@
           "exportada": true,
           "params": "entrada: { projectId: string; polizaId: string; quoteId: string }",
           "retorno": "Promise<RespuestaImportar>",
-          "linea": 239
+          "linea": 249
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "015a17374db8"
+      "hash": "eb698562113b"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/BuscadorCatastro.tsx",
@@ -141101,13 +141315,13 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 12,
+          "linea": 13,
           "resumen": "Cron diario (tras el sync bancario): reparte la SUBCATEGORÍA de gasto personal de TODAS las cuentas. Rescata los que quedaron en 'otros_gasto' sin clasificar mandándolos a la IA gratis. Sustituye la a"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/categorizar-movimientos",
-      "hash": "0a510a95f777"
+      "hash": "4ed8212e8c3b"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/cierre-mes/route.ts",
@@ -142143,12 +142357,12 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 10
+          "linea": 11
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/paper-tracker",
-      "hash": "0ab308bd5a25"
+      "hash": "fbd5a47210ec"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/patrones-fiscal-refresh/route.ts",
@@ -142285,13 +142499,13 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 9,
+          "linea": 10,
           "resumen": "📤 Cierre de mes narrado → Telegram. Cron día 5 (ver lib/cron-dispatch.ts). Vercel dispara por GET; se mantiene POST para disparo manual. Auth Bearer CRON_SECRET (igual que resumen-semanal)."
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/resumen-mensual",
-      "hash": "d892b4e8dc61"
+      "hash": "44cfa7fb4cea"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/resumen-semanal/route.ts",
@@ -142304,13 +142518,13 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 8,
+          "linea": 9,
           "resumen": "Vercel dispara los crons por GET → el handler debe responder a GET. Se mantiene POST para disparo manual. (Antes solo exportaba POST → el cron recibía 405 y NUNCA corría.)"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/resumen-semanal",
-      "hash": "ef41d64d1f31"
+      "hash": "3f080c758b79"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/seo-correduria-agente/route.ts",
@@ -142718,12 +142932,12 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 10
+          "linea": 11
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/trading-backtest",
-      "hash": "3c864054941f"
+      "hash": "155dc3b6f9df"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/trading-cohetes-rebalanceo/route.ts",
@@ -142736,12 +142950,12 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 9
+          "linea": 10
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/trading-cohetes-rebalanceo",
-      "hash": "f8143a16c1d7"
+      "hash": "ccdcba76ea9d"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/trading-cohetes-track/route.ts",
@@ -142754,12 +142968,12 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 8
+          "linea": 9
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/trading-cohetes-track",
-      "hash": "95f44ed7434b"
+      "hash": "cdd2196ddc95"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/trading-h10/route.ts",
@@ -142772,7 +142986,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 26
+          "linea": 27
         }
       ],
       "tablas": [
@@ -142781,10 +142995,28 @@
         "trading_backtest"
       ],
       "rutaApi": "/api/cron/trading-h10",
-      "hash": "e1714bdc39a6"
+      "hash": "58c6b774d3a6"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/trading-premarket/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "handler",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 10
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/trading-premarket",
+      "hash": "2bbbb12471a9"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cron/trading-ranking/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [],
       "funciones": [
@@ -142798,26 +143030,8 @@
         }
       ],
       "tablas": [],
-      "rutaApi": "/api/cron/trading-premarket",
-      "hash": "6aed229e90a6"
-    },
-    {
-      "ruta": "apps/plataforma/app/api/cron/trading-ranking/route.ts",
-      "ambito": "apps/plataforma",
-      "exporta": [],
-      "funciones": [
-        {
-          "nombre": "handler",
-          "kind": "function",
-          "exportada": false,
-          "params": "req: NextRequest",
-          "retorno": null,
-          "linea": 8
-        }
-      ],
-      "tablas": [],
       "rutaApi": "/api/cron/trading-ranking",
-      "hash": "5b3880f57cd1"
+      "hash": "a17258b40948"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/trading-universo/route.ts",
@@ -142830,12 +143044,12 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 8
+          "linea": 9
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/trading-universo",
-      "hash": "bb33d01ecc77"
+      "hash": "1ffa8ca307eb"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/trading-watchdog/route.ts",
@@ -146985,7 +147199,7 @@
           "exportada": false,
           "params": "",
           "retorno": "void",
-          "linea": 22,
+          "linea": 23,
           "resumen": "Reacciones a un cambio de reserva que NO deben bloquear la respuesta a Smoobu (si tardaran, Smoobu daría el webhook por fallido y reintentaría). Reutilizan endpoints existentes con sus propios guards;"
         },
         {
@@ -146994,13 +147208,13 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 45,
+          "linea": 46,
           "resumen": "POST público (Smoobu lo llama). Verifica un token por querystring (?k=SMOOBU_WEBHOOK_SECRET). Smoobu manda TODOS los eventos (no filtra): { action, data:{...} }. Enrutamos por `action`: - newMessage →"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/mensajes/webhook",
-      "hash": "6150eb96b066"
+      "hash": "38a0dbb6340a"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/cron/route.ts",
@@ -148198,7 +148412,7 @@
           "exportada": false,
           "params": "raw: string",
           "retorno": "Record<string, unknown> | null",
-          "linea": 29,
+          "linea": 30,
           "resumen": "Limpia fences markdown y extrae el primer objeto JSON. null si no hay JSON válido."
         },
         {
@@ -148207,15 +148421,15 @@
           "exportada": false,
           "params": "current: ReturnType<typeof extractSeoParams>",
           "retorno": null,
-          "linea": 36
+          "linea": 37
         },
         {
           "nombre": "GET",
           "kind": "function",
           "exportada": true,
-          "params": "req: Request",
+          "params": "req: NextRequest",
           "retorno": null,
-          "linea": 58
+          "linea": 59
         }
       ],
       "tablas": [
@@ -148223,7 +148437,7 @@
         "seo_proposals"
       ],
       "rutaApi": "/api/sivra/seo-refresh",
-      "hash": "793d3f825ed9"
+      "hash": "74a2472fb408"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/seo-token-check/route.ts",
@@ -148236,15 +148450,15 @@
           "nombre": "GET",
           "kind": "function",
           "exportada": true,
-          "params": "req: Request",
+          "params": "req: NextRequest",
           "retorno": null,
-          "linea": 21,
+          "linea": 22,
           "resumen": "GET /api/sivra/seo-token-check — ¿puede GITHUB_TOKEN commitear la landing de housesevillana? Existe porque el fallo de este agente es SIEMPRE el mismo y era invisible hasta el último paso: la landing "
         }
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/seo-token-check",
-      "hash": "99dae010d068"
+      "hash": "086425e3e009"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/ses/establecimientos/route.ts",
@@ -172104,6 +172318,7 @@
       "ruta": "apps/plataforma/lib/cron-auth.ts",
       "ambito": "apps/plataforma",
       "exporta": [
+        "igualSeguro",
         "autorizaCron",
         "isCronAuthorized",
         "isAlertaTokenAuthorized",
@@ -172111,12 +172326,21 @@
       ],
       "funciones": [
         {
+          "nombre": "igualSeguro",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: string | null | undefined, b: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 8,
+          "resumen": "Comparación de secretos en TIEMPO CONSTANTE (02/11/2026). `===` corta en el primer carácter distinto y filtra por tiempo cuánto del secreto casa. Vacío o ausente ⇒ nunca casa."
+        },
+        {
           "nombre": "autorizaCron",
           "kind": "function",
           "exportada": true,
           "params": "p: { secret?: string | null bearer?: string | null qs?: string | null produccion: boolean }",
           "retorno": "boolean",
-          "linea": 21,
+          "linea": 34,
           "resumen": "Decisión PURA de si una llamada de cron está autorizada. Separada del `NextRequest` para poder testearla, porque el caso importante es justamente el que no se ve en local. 🚨 SIN SECRETO, EN PRODUCCIÓ"
         },
         {
@@ -172125,15 +172349,16 @@
           "exportada": false,
           "params": "",
           "retorno": "boolean",
-          "linea": 31
+          "linea": 44
         },
         {
           "nombre": "isCronAuthorized",
           "kind": "function",
           "exportada": true,
-          "params": "req: NextRequest",
+          "params": "req: NextRequest, opts: { soloCabecera?: boolean } = {}",
           "retorno": "boolean",
-          "linea": 35
+          "linea": 50,
+          "resumen": "`soloCabecera`: no acepta `?secret=` (se filtra en logs de acceso / Referer). Úsalo en las rutas que solo llaman Vercel Cron o el dispatcher, que siempre mandan `Authorization: Bearer`."
         },
         {
           "nombre": "isAlertaTokenAuthorized",
@@ -172141,7 +172366,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": "boolean",
-          "linea": 58,
+          "linea": 73,
           "resumen": "Token DEDICADO de bajo privilegio para las rutinas de Claude Code (sesiones efímeras que corren en un entorno cuyo campo de variables es TEXTO PLANO VISIBLE — no un almacén de secretos). Por eso NO se"
         },
         {
@@ -172150,13 +172375,13 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": "boolean",
-          "linea": 68,
+          "linea": 83,
           "resumen": "Autorización para endpoints pensados para RUTINAS: acepta el token de bajo privilegio (`ALERTA_TOKEN`) o, por compatibilidad, el `CRON_SECRET` maestro. Úsala en lugar de `isCronAuthorized` en los endp"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "47a8261588a2"
+      "hash": "9a1466f05571"
     },
     {
       "ruta": "apps/plataforma/lib/cron-dispatch.ts",
@@ -174434,7 +174659,7 @@
           "exportada": true,
           "params": "app: string",
           "retorno": "",
-          "linea": 169,
+          "linea": 168,
           "resumen": "Enlaces profundos por nodo: dónde vive cada cosa (código / Vercel / Supabase)."
         },
         {
@@ -174443,7 +174668,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "",
-          "linea": 178
+          "linea": 177
         },
         {
           "nombre": "enlacesSkill",
@@ -174451,12 +174676,12 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "",
-          "linea": 181
+          "linea": 180
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dd95deafb576"
+      "hash": "20afe053f3f6"
     },
     {
       "ruta": "apps/plataforma/lib/eval-asistente-casos.ts",
@@ -205891,17 +206116,35 @@
       ],
       "funciones": [
         {
+          "nombre": "esRutaCorreduria",
+          "kind": "function",
+          "exportada": false,
+          "params": "pathname: string",
+          "retorno": "boolean",
+          "linea": 75,
+          "resumen": "Las páginas (y sus acciones de servidor) y la API de la correduría: solo con sesión de la correduría."
+        },
+        {
+          "nombre": "igualConstante",
+          "kind": "function",
+          "exportada": false,
+          "params": "dado: string | null, secreto: string",
+          "retorno": "boolean",
+          "linea": 83,
+          "resumen": "Igualdad de cadenas en tiempo constante, apta para el runtime EDGE (sin `node:crypto`): recorre siempre la longitud del secreto y acumula diferencias con XOR. `null`/vacío = no."
+        },
+        {
           "nombre": "middleware",
           "kind": "function",
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 74
+          "linea": 92
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b1dec1d82d45"
+      "hash": "eb7abca916e3"
     },
     {
       "ruta": "apps/plataforma/scripts/backfill-gastos-titular.ts",
@@ -216482,15 +216725,15 @@
           "nombre": "GET",
           "kind": "function",
           "exportada": true,
-          "params": "",
+          "params": "req: NextRequest",
           "retorno": null,
-          "linea": 10,
+          "linea": 12,
           "resumen": "Cron: comprobar si algún checkout + checkin en mismo día tiene ventana < 3h"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/limpiadoras/alerta-ventana",
-      "hash": "ebf4d3d89fde"
+      "hash": "05f050bee2fd"
     },
     {
       "ruta": "apps/sivra/app/api/limpiadoras/alertas/route.ts",
@@ -216505,7 +216748,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 6,
+          "linea": 7,
           "resumen": "Polled by admin sidebar to push-notify urgent incidencias"
         }
       ],
@@ -216516,7 +216759,7 @@
         "next"
       ],
       "rutaApi": "/api/limpiadoras/alertas",
-      "hash": "cc6d0beda86c"
+      "hash": "e54c63e6b82b"
     },
     {
       "ruta": "apps/sivra/app/api/limpiadoras/auth/route.ts",
@@ -216605,7 +216848,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 7,
+          "linea": 8,
           "resumen": "Cron diario: asigna automáticamente limpiadoras a sesiones sin asignar Lógica: busca la limpiadora disponible con menos carga ese día y que tenga el piso asignado"
         }
       ],
@@ -216617,31 +216860,7 @@
         "next"
       ],
       "rutaApi": "/api/limpiadoras/auto-assign",
-      "hash": "fa85e4a19836"
-    },
-    {
-      "ruta": "apps/sivra/app/api/limpiadoras/auto-sessions/route.ts",
-      "ambito": "apps/sivra",
-      "exporta": [
-        "GET"
-      ],
-      "funciones": [
-        {
-          "nombre": "GET",
-          "kind": "function",
-          "exportada": true,
-          "params": "req: Request",
-          "retorno": null,
-          "linea": 16
-        }
-      ],
-      "tablas": [
-        "cleaning_sessions",
-        "incomes",
-        "next"
-      ],
-      "rutaApi": "/api/limpiadoras/auto-sessions",
-      "hash": "ad84032966ce"
+      "hash": "79b81f9c4b75"
     },
     {
       "ruta": "apps/sivra/app/api/limpiadoras/complete/route.ts",
@@ -216701,7 +216920,7 @@
         "next"
       ],
       "rutaApi": "/api/limpiadoras/early-checkin",
-      "hash": "df06e5fb585a"
+      "hash": "ddb2b9161734"
     },
     {
       "ruta": "apps/sivra/app/api/limpiadoras/fichar/route.ts",
@@ -216817,7 +217036,7 @@
         "next"
       ],
       "rutaApi": "/api/limpiadoras/inventario",
-      "hash": "6356c1aa3556"
+      "hash": "76c12a48a60c"
     },
     {
       "ruta": "apps/sivra/app/api/limpiadoras/notas/route.ts",
@@ -216834,7 +217053,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 5
+          "linea": 6
         },
         {
           "nombre": "POST",
@@ -216842,7 +217061,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 19
+          "linea": 21
         },
         {
           "nombre": "PATCH",
@@ -216850,7 +217069,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 29
+          "linea": 32
         }
       ],
       "tablas": [
@@ -216858,7 +217077,7 @@
         "next"
       ],
       "rutaApi": "/api/limpiadoras/notas",
-      "hash": "673d543701b3"
+      "hash": "510026a7cc48"
     },
     {
       "ruta": "apps/sivra/app/api/limpiadoras/photo/route.ts",
@@ -216873,13 +217092,13 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 14,
+          "linea": 15,
           "resumen": "Proxy de lectura para el bucket privado `cleaning-photos`. Recibe la URL/ruta guardada (?u=...), genera una signed URL fresca y redirige. Las <img> de la zona limpiadoras apuntan aquí en vez de a una "
         }
       ],
       "tablas": [],
       "rutaApi": "/api/limpiadoras/photo",
-      "hash": "1fcf1e51ef9a"
+      "hash": "b0b6ce95280c"
     },
     {
       "ruta": "apps/sivra/app/api/limpiadoras/sessions/route.ts",
@@ -216915,7 +217134,7 @@
         "session_completions"
       ],
       "rutaApi": "/api/limpiadoras/sessions",
-      "hash": "5b2694bf788d"
+      "hash": "9f1393b0dafe"
     },
     {
       "ruta": "apps/sivra/app/api/limpiadoras/upload-photo/route.ts",
@@ -216930,12 +217149,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 8
+          "linea": 9
         }
       ],
       "tablas": [],
       "rutaApi": "/api/limpiadoras/upload-photo",
-      "hash": "4400bd1fe3c9"
+      "hash": "8915de148953"
     },
     {
       "ruta": "apps/sivra/app/api/mensajes/[bookingId]/email/route.ts",
@@ -216999,91 +217218,6 @@
       ],
       "rutaApi": "/api/mensajes/[bookingId]",
       "hash": "00d8e156fcb0"
-    },
-    {
-      "ruta": "apps/sivra/app/api/mensajes/auto-reply/route.ts",
-      "ambito": "apps/sivra",
-      "exporta": [
-        "GET"
-      ],
-      "funciones": [
-        {
-          "nombre": "sendEmail",
-          "kind": "function",
-          "exportada": false,
-          "params": "to: string, subject: string, text: string",
-          "retorno": null,
-          "linea": 14,
-          "resumen": "── Mailer (stub — nodemailer pending setup) ──────────────────────────────────"
-        },
-        {
-          "nombre": "strip",
-          "kind": "function",
-          "exportada": false,
-          "params": "html: string",
-          "retorno": "string",
-          "linea": 21,
-          "resumen": "── Helpers ───────────────────────────────────────────────────────────────────"
-        },
-        {
-          "nombre": "isAutoHost",
-          "kind": "function",
-          "exportada": false,
-          "params": "subject: string",
-          "retorno": "boolean",
-          "linea": 29
-        },
-        {
-          "nombre": "classifyMessage",
-          "kind": "function",
-          "exportada": false,
-          "params": "text: string, subject = ''",
-          "retorno": "Classification",
-          "linea": 35
-        },
-        {
-          "nombre": "lookupKB",
-          "kind": "function",
-          "exportada": false,
-          "params": "text: string, lang: string",
-          "retorno": "Promise<string | null>",
-          "linea": 46,
-          "resumen": "── KB lookup ─────────────────────────────────────────────────────────────────"
-        },
-        {
-          "nombre": "isProcessed",
-          "kind": "function",
-          "exportada": false,
-          "params": "msgId: string",
-          "retorno": "Promise<boolean>",
-          "linea": 74,
-          "resumen": "── Already replied tracking ──────────────────────────────────────────────────"
-        },
-        {
-          "nombre": "markProcessed",
-          "kind": "function",
-          "exportada": false,
-          "params": "msgId: string, type: string",
-          "retorno": null,
-          "linea": 81
-        },
-        {
-          "nombre": "GET",
-          "kind": "function",
-          "exportada": true,
-          "params": "",
-          "retorno": null,
-          "linea": 89,
-          "resumen": "── MAIN ──────────────────────────────────────────────────────────────────────"
-        }
-      ],
-      "tablas": [
-        "knowledge_base",
-        "next",
-        "update_logs"
-      ],
-      "rutaApi": "/api/mensajes/auto-reply",
-      "hash": "ec45d84f695b"
     },
     {
       "ruta": "apps/sivra/app/api/mensajes/knowledge/route.ts",
@@ -217393,7 +217527,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 30,
+          "linea": 31,
           "resumen": "\"portal\": \"booking\", // booking | trivago | expedia | tripadvisor | ... \"scenario\": \"prop_busto_reform\", // prop_<id> para comparables por piso, o normal/corpus \"checkin\": \"2026-06-13\", \"checkout\": \"2"
         }
       ],
@@ -217403,7 +217537,7 @@
         "set"
       ],
       "rutaApi": "/api/mercado/ingest",
-      "hash": "096ed6b2c1d8"
+      "hash": "d41f41e8700d"
     },
     {
       "ruta": "apps/sivra/app/api/mercado/search/route.ts",
@@ -217865,8 +217999,8 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 10,
-          "resumen": "GET /api/pricing/pilot-track/historial Últimas filas de seguimiento del piloto por piso (para la tarjeta de /pricing-auto). Detrás del login admin (middleware)."
+          "linea": 11,
+          "resumen": "GET /api/pricing/pilot-track/historial Últimas filas de seguimiento del piloto por piso (para la tarjeta de /pricing-auto). Detrás del login admin: el middleware ya NO lo excluye (02/11/2026) y además"
         }
       ],
       "tablas": [
@@ -217874,7 +218008,7 @@
         "pricing_pilot_tracking"
       ],
       "rutaApi": "/api/pricing/pilot-track/historial",
-      "hash": "6955fbff9ffc"
+      "hash": "b3ae96aed623"
     },
     {
       "ruta": "apps/sivra/app/api/pricing/pilot-track/route.ts",
@@ -218243,7 +218377,7 @@
           "exportada": false,
           "params": "key: string, query: string",
           "retorno": "Promise<string>",
-          "linea": 32,
+          "linea": 33,
           "resumen": "Búsqueda real en Google vía Serper. Devuelve \"título | snippet\" por línea (mismo patrón que mercado)."
         },
         {
@@ -218252,7 +218386,7 @@
           "exportada": false,
           "params": "raw: string",
           "retorno": "Record<string, unknown> | null",
-          "linea": 46,
+          "linea": 47,
           "resumen": "Limpia fences markdown y extrae el primer objeto JSON. null si no hay JSON válido."
         },
         {
@@ -218261,7 +218395,7 @@
           "exportada": false,
           "params": "current: ReturnType<typeof extractSeoParams>",
           "retorno": null,
-          "linea": 53
+          "linea": 54
         },
         {
           "nombre": "GET",
@@ -218269,12 +218403,12 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 96
+          "linea": 97
         }
       ],
       "tablas": [],
       "rutaApi": "/api/seo-refresh",
-      "hash": "7722a817922e"
+      "hash": "3d4378f2691a"
     },
     {
       "ruta": "apps/sivra/app/api/seo-revert/route.ts",
@@ -218309,13 +218443,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 17,
+          "linea": 18,
           "resumen": "GET /api/seo-token-check — gemelo del de plataforma, pero sobre el GITHUB_TOKEN de ESTA app. Importa tenerlo aquí y no solo en plataforma: el cron semanal `/api/seo-refresh` corre en el proyecto Verce"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/seo-token-check",
-      "hash": "63129032d927"
+      "hash": "3fe844662e3a"
     },
     {
       "ruta": "apps/sivra/app/api/smoobu/huespedes-repetidos/route.ts",
@@ -218414,7 +218548,7 @@
           "exportada": false,
           "params": "s?: string",
           "retorno": "Date | null",
-          "linea": 22
+          "linea": 23
         },
         {
           "nombre": "nights",
@@ -218422,7 +218556,7 @@
           "exportada": false,
           "params": "ci: Date|null, co: Date|null",
           "retorno": null,
-          "linea": 25
+          "linea": 26
         },
         {
           "nombre": "fetchPage",
@@ -218430,7 +218564,7 @@
           "exportada": false,
           "params": "p:number,from:string,arrFrom?:string,arrTo?:string",
           "retorno": null,
-          "linea": 30,
+          "linea": 31,
           "resumen": "Smoobu, sin rango de llegada (`from`/`to`), SOLO devuelve reservas próximas → para un backfill del pasado hay que pasar el rango de fechas de llegada explícito. showCancellation=1: sin este flag Smoob"
         },
         {
@@ -218439,29 +218573,38 @@
           "exportada": false,
           "params": "days:number,maxPages=20,arrFrom?:string,arrTo?:string",
           "retorno": null,
-          "linea": 31
+          "linea": 32
+        },
+        {
+          "nombre": "NO_AUTORIZADO",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 35,
+          "resumen": "Llama a Smoobu con las credenciales del dueño y crea/borra `income`: solo CRON_SECRET o sesión admin (la llama el botón de /updates, con sesión). Antes era pública (excluida del matcher)."
         },
         {
           "nombre": "POST",
           "kind": "function",
           "exportada": true,
-          "params": "req:Request",
+          "params": "req:NextRequest",
           "retorno": null,
-          "linea": 32
+          "linea": 36
         },
         {
           "nombre": "GET",
           "kind": "function",
           "exportada": true,
-          "params": "req:Request",
+          "params": "req:NextRequest",
           "retorno": null,
-          "linea": 35,
+          "linea": 39,
           "resumen": "GET admite ?days=N&maxPages=M y, para backfill del pasado, ?from=YYYY-MM-DD&to=YYYY-MM-DD (rango de fechas de LLEGADA). El cron lo llama sin parámetros → ventana de 2 días, solo próximas."
         }
       ],
       "tablas": [],
       "rutaApi": "/api/updates/sync",
-      "hash": "b8e384918620"
+      "hash": "8bb8d3dfc49c"
     },
     {
       "ruta": "apps/sivra/app/layout.tsx",
@@ -219529,22 +219672,40 @@
       "ambito": "apps/sivra",
       "resumen": "Decisión PURA de cron-auth (sin imports de Next/NextAuth, para poder testearla con node --test). 🚨 SIN SECRETO, EN PRODUCCIÓN, SE DENIEGA (23/09/2026). Hasta hoy la ausencia de CRON_SECRET autorizaba a cualquiera («transición»). Es el mismo fallo que plataforma corrigió el 08/08/2026 en su `lib/cro",
       "exporta": [
-        "autorizaSecreto"
+        "igualSeguro",
+        "autorizaSecreto",
+        "bearerCronValido"
       ],
       "funciones": [
+        {
+          "nombre": "igualSeguro",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: string | null | undefined, b: string",
+          "retorno": "boolean",
+          "linea": 10
+        },
         {
           "nombre": "autorizaSecreto",
           "kind": "function",
           "exportada": true,
           "params": "p: { secret?: string | null bearer?: string | null qs?: string | null produccion: boolean }",
           "retorno": "boolean",
-          "linea": 6,
-          "resumen": "Decisión PURA de cron-auth (sin imports de Next/NextAuth, para poder testearla con node --test). 🚨 SIN SECRETO, EN PRODUCCIÓN, SE DENIEGA (23/09/2026). Hasta hoy la ausencia de CRON_SECRET autorizaba"
+          "linea": 18
+        },
+        {
+          "nombre": "bearerCronValido",
+          "kind": "function",
+          "exportada": true,
+          "params": "authorization: string | null | undefined, secret: string | undefined = process.env.CRON_SECRET",
+          "retorno": "boolean",
+          "linea": 30,
+          "resumen": "Cabecera `Authorization` de un cron ESTRICTA: sin CRON_SECRET nunca casa (ni en dev). Sustituye a la comparación a pelo con la plantilla «Bearer + process.env.CRON_SECRET», que con la variable ausente"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0c63cc4164ab"
+      "hash": "a8c41dfbba4c"
     },
     {
       "ruta": "apps/sivra/lib/cron-auth.ts",
@@ -219557,15 +219718,15 @@
           "nombre": "isCronAuthorized",
           "kind": "function",
           "exportada": true,
-          "params": "req: NextRequest, opts: { allowSession?: boolean } = {},",
+          "params": "req: NextRequest, opts: { allowSession?: boolean; soloCabecera?: boolean } = {},",
           "retorno": "Promise<boolean>",
           "linea": 12,
-          "resumen": "Autorización para endpoints de cron / escritura del módulo de pricing. Acepta: - CRON_SECRET (Bearer o ?secret=) → crons de Vercel y llamadas server-to-server. - (opcional) sesión de admin de NextAuth"
+          "resumen": "Autorización para endpoints de cron / escritura del módulo de pricing. Acepta: - CRON_SECRET (Bearer o ?secret=, salvo `soloCabecera`) → crons de Vercel y llamadas server-to-server. - (opcional) sesió"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "08aa4273004b"
+      "hash": "252c124ffbbd"
     },
     {
       "ruta": "apps/sivra/lib/limpiadora-auth.ts",
@@ -223711,56 +223872,6 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "7053dca5c12c"
-    },
-    {
-      "ruta": "packages/module-agenda/src/disponibilidad.ts",
-      "ambito": "packages/module-agenda",
-      "resumen": "Lógica de disponibilidad de la agenda: detección de solapes y filtrado de recursos disponibles en un intervalo. Funciones puras (sin BD).",
-      "exporta": [
-        "haySolape",
-        "recursoDisponible",
-        "recursosDisponibles"
-      ],
-      "funciones": [
-        {
-          "nombre": "ms",
-          "kind": "function",
-          "exportada": false,
-          "params": "iso: string",
-          "retorno": "number",
-          "linea": 5
-        },
-        {
-          "nombre": "haySolape",
-          "kind": "function",
-          "exportada": true,
-          "params": "a: Intervalo, b: Intervalo",
-          "retorno": "boolean",
-          "linea": 10,
-          "resumen": "¿Se solapan dos intervalos [inicio, fin)? (contiguos no solapan)."
-        },
-        {
-          "nombre": "recursoDisponible",
-          "kind": "function",
-          "exportada": true,
-          "params": "reservas: Reserva[], intervalo: Intervalo, opts: { incluirCanceladas?: boolean } = {},",
-          "retorno": "boolean",
-          "linea": 18,
-          "resumen": "¿Está el recurso libre en `intervalo`, dadas sus reservas? Por defecto ignora las reservas canceladas."
-        },
-        {
-          "nombre": "recursosDisponibles",
-          "kind": "function",
-          "exportada": true,
-          "params": "recursos: Recurso[], reservasPorRecurso: Record<string, Reserva[]>, intervalo: Intervalo,",
-          "retorno": "Recurso[]",
-          "linea": 31,
-          "resumen": "Filtra los recursos activos que están libres en `intervalo`."
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "53241e20c667"
     },
     {
       "ruta": "packages/module-alquiler/src/alquiler.ts",
@@ -264296,7 +264407,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5479,
-    "funciones": 21307
+    "archivos": 5485,
+    "funciones": 21311
   }
 }
