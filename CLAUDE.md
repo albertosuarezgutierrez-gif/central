@@ -40,8 +40,9 @@
   el CÓDIGO). `canal_no_disponible` (503) ≠ «el envío falló» (502). `CLAUDE.md` propio.
 - **`apps/asegura-web`** — web pública (`grupoasegura.es` + `www`). **Sin BD a propósito**: el lead va a
   plataforma reenviando `x-forwarded-for`. Analítica fail-CLOSED (sin Cookiebot no se mide). Mediador y colores
-  de `module-seguros`/`@central/brand`, nunca a mano. `app.grupoasegura.com` es el CRM de Manuel (ingesta CIMA):
-  no se toca. Guardianes en `apps/asegura-web/lib/*.test.ts`.
+  de `module-seguros`/`@central/brand`, nunca a mano. `app.grupoasegura.com` es el CRM (repo `asegura`, ingesta CIMA):
+  sin uso humano; se MIGRA solo la ingesta a central por fases (spec `docs/superpowers/specs/2026-11-02-unificar-ingesta-cima.md`).
+  Hasta el corte no se apaga ni se borra su proyecto Vercel `asegura`. Guardianes en `apps/asegura-web/lib/*.test.ts`.
 
 ## Módulos compartidos (`packages/*`, TS puro, scope `@central/*`)
 `core-ai`, `core-fiscal`, `core-push` (Web Push), `core-storage`, `core-email`, `core-identity`
