@@ -47,6 +47,8 @@ test('la máquina recibe TARIFICADOR_EXPLORADOR_VISTA solo con dom|aria|ambas ex
     assert.deepEqual(Object.keys(env).sort(), ['JOB_ID', 'TARIFICADOR_API_URL'], String(v))
   }
   assert.deepEqual(Object.keys(JSON.parse(peticionMaquina(CFG, JOB).init.body).config.env).sort(), ['JOB_ID', 'TARIFICADOR_API_URL'])
+  assert.equal(JSON.parse(peticionMaquina(CFG, JOB, null, 'true').init.body).config.env.MAPFRE_HOGAR_ACTIVO, 'true')
+  assert.equal('MAPFRE_HOGAR_ACTIVO' in JSON.parse(peticionMaquina(CFG, JOB, null, 'TRUE').init.body).config.env, false)
 })
 
 test('resultado ok: valida ofertas y exige que el PDF sea un PDF', () => {
