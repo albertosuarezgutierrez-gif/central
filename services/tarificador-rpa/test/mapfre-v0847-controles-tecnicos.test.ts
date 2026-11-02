@@ -19,7 +19,7 @@ import {
 import { cerrarControlesTecnicosMapfre, instalarGuardEmision, limpiarMensajePortalDiagnosticoHasta, rearmarContinuarMapfreTrasControlesTecnicos, type GuardEmision } from '../src/guard.ts'
 import { ErrorTarificador } from '../src/errores.ts'
 
-test('v0.8.47 · versión', () => assert.equal(mapfreAuto.version, '0.8.47'))
+test('v0.8.47 · versión', () => assert.equal(mapfreAuto.version, '0.8.48'))
 
 const TEXTO =
   'Resultado\nCódigo 232\nControles técnicos\nOperación rechazada al ser la fecha de efecto anterior a la fecha de mecanización de la póliza.\nMatrícula *\nCampo obligatorio\nNº Bastidor *\nCampo obligatorio\nTeléfono Móvil *\nEmail\nCerrar'
