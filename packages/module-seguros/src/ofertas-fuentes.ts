@@ -14,7 +14,7 @@
 //   · La franquicia que no viene es `null` = «no declarada», jamás 0.
 
 import { normalizarGarantia, type RamoOferta } from './coberturas-taxonomia.ts'
-import type { FraccionamientoOferta, OfertaNormalizada, ValorGarantia } from './comparar-ofertas.ts'
+import { garantiasLeidasDeDocumento, type FraccionamientoOferta, type OfertaNormalizada, type ValorGarantia } from './comparar-ofertas.ts'
 
 const num = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n)
 const positivo = (n: unknown): number | null => (num(n) && n > 0 ? Math.round(n * 100) / 100 : null)
@@ -267,9 +267,25 @@ export type OfertaBot = {
 
 export function ofertaDeBot(o: OfertaBot, id: string, ramo: RamoOferta): OfertaNormalizada {
   const garantias: Record<string, ValorGarantia> = {}
+  // 02/11/2026 (Mapfre, PDF del proyecto): «- FALLECIMIENTO», «*R. C. Ampliada»… son SUB-garantías (llevan «*» o «- »). Si caen en una
+  // garantía que ya está, se funden en ella (estado y detalle en la evidencia); si no tienen nombre canónico, cuelgan de la anterior.
+  const esSub = (lit: string) => /^\s*[*\-–]/.test(lit)
+  const detalleDe = (c: OfertaBot['coberturas'][number]) => {
+    const cifra = num(c.capital) ? c.capital : num(c.limite) ? c.limite : null
+    return `${c.literal.replace(/^[\s*\-–]+/, '').trim()}${cifra !== null ? ` ${cifra}` : ''}`
+  }
+  let previa: string | null = null
   for (const c of o.coberturas) {
-    const clave = normalizarGarantia(ramo, c.literal) ?? c.clave
-    if (garantias[clave]) continue
+    const mapeada = normalizarGarantia(ramo, c.literal)
+    const clave = mapeada ?? (esSub(c.literal) && previa ? previa : c.clave)
+    const ya = garantias[clave]
+    if (ya) {
+      if (esSub(c.literal)) {
+        garantias[clave] = { ...ya, estado: ya.estado ?? c.estado, evidencia: { pagina: null, texto: `${ya.evidencia?.texto ?? ''}; ${detalleDe(c)}`.slice(0, 200) } }
+      }
+      previa = clave
+      continue
+    }
     garantias[clave] = {
       estado: c.estado,
       capital: positivo(c.capital),
@@ -277,6 +293,7 @@ export function ofertaDeBot(o: OfertaBot, id: string, ramo: RamoOferta): OfertaN
       franquicia: num(c.franquicia) && c.franquicia >= 0 ? c.franquicia : null,
       evidencia: { pagina: null, texto: c.literal.slice(0, 200) },
     }
+    previa = clave
   }
   const general = o.franquicias.find((f) => f.ambito.trim().toLowerCase() === 'general')
   return {
@@ -295,5 +312,6 @@ export function ofertaDeBot(o: OfertaBot, id: string, ramo: RamoOferta): OfertaN
     firmeza: 'estimado',
     referencia: { tipo: 'trabajo_rpa', id },
     avisos: [...(o.avisos ?? [])],
+    ...(garantiasLeidasDeDocumento({ compania: o.compania, fuente: 'bot', avisos: o.avisos }) ? { garantiasDeDocumento: true } : {}),
   }
 }

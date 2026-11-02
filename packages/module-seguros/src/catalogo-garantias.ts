@@ -31,19 +31,24 @@ export type CoberturaParaClasificar = { nombre: string; incluida: boolean | null
 export type GarantiasClasificadas = { version: number; porClave: Record<string, EstadoGarantia> }
 
 /** Súbelo al cambiar patrones: lo guardado con otra versión se reclasifica desde las coberturas. */
-export const VERSION_CATALOGO = 6
+export const VERSION_CATALOGO = 7
 
 /** Misma normalización que la tabla de coberturas del portal: sin tildes, minúsculas, sin signos. */
 export function claveCobertura(nombre: string): string {
   return nombre.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9ñ ]+/g, ' ').replace(/\s+/g, ' ').trim()
+    // Abreviaturas del PDF del proyecto de Mapfre (02/11/2026): «R. C. OBLIGATORIA», «*R. D. Ampliada», «DAÑOS A. CINEGÉTICOS», «DAÑOS F. ATMOSFÉRICOS».
+    .replace(/\br c\b/g, 'rc')
+    .replace(/\br d\b/g, 'reclamacion de danos')
+    .replace(/\bf atmosfericos\b/g, 'fenomenos atmosfericos')
+    .replace(/\ba cinegeticos\b/g, 'animales cinegeticos')
 }
 
-const RC_OBLIGATORIA: GarantiaCatalogo = { clave: 'rc_obligatoria', etiqueta: 'Responsabilidad civil obligatoria', patrones: [/\bresponsabilidad civil obligatoria\b/, /\brc obligatoria\b/, /\bseguro obligatorio\b/] }
-const RC_VOLUNTARIA: GarantiaCatalogo = { clave: 'rc_voluntaria', etiqueta: 'Responsabilidad civil voluntaria', patrones: [/\bresponsabilidad civil voluntaria\b/, /\brc voluntaria\b/, /\bresponsabilidad civil suplementaria\b/] }
+const RC_OBLIGATORIA: GarantiaCatalogo = { clave: 'rc_obligatoria', etiqueta: 'Responsabilidad civil obligatoria', patrones: [/\bresponsabilidad civil obligatoria\b/, /\brc obligatoria\b/, /\bseguro obligatorio\b/, /^responsabilidad civil$/] }
+const RC_VOLUNTARIA: GarantiaCatalogo = { clave: 'rc_voluntaria', etiqueta: 'Responsabilidad civil voluntaria', patrones: [/\bresponsabilidad civil voluntaria\b/, /\brc voluntaria\b/, /\bresponsabilidad civil suplementaria\b/, /\brc (suplementaria|ampliada|complementaria)\b/,/\bresponsabilidad civil (ampliada|complementaria)\b/] }
 const DEFENSA: GarantiaCatalogo = { clave: 'defensa_juridica', etiqueta: 'Defensa jurídica', patrones: [/\bdefensa juridica\b/, /\bproteccion juridica\b/, /\breclamacion de danos\b/], excluye: [/\bmultas?\b/] }
 const MULTAS: GarantiaCatalogo = { clave: 'defensa_multas', etiqueta: 'Defensa en multas', patrones: [/\bmultas?\b/] }
-const CARNET: GarantiaCatalogo = { clave: 'retirada_carnet', etiqueta: 'Retirada de carné', patrones: [/\bretirada (del |de )?carne?t?\b/, /\bprivacion (temporal )?del? (permiso|carne?t?)\b/] }
-const ASISTENCIA_VIAJE: GarantiaCatalogo = { clave: 'asistencia_viaje', etiqueta: 'Asistencia en viaje y grúa', patrones: [/\basistencia\b/, /\bgrua\b/, /\bremolque\b/], excluye: [/\bjuridica\b/] }
+const CARNET: GarantiaCatalogo = { clave: 'retirada_carnet', etiqueta: 'Retirada de carné', patrones: [/\bretirada (del |de )?carne?t?\b/, /\bprivacion (temporal )?(del? )?(permiso|carne?t?)\b/] }
+const ASISTENCIA_VIAJE: GarantiaCatalogo = { clave: 'asistencia_viaje', etiqueta: 'Asistencia en viaje y grúa', patrones: [/\basistencia\b/, /\bgrua\b/, /\bremolque\b/], excluye: [/\bjuridica\b/, /\bsanitaria\b/] }
 /**
  * Asistencia AMPLIADA (29/09/2026). No sale del NOMBRE —todas se llaman «Asistencia en viaje»—, sino del
  * texto de la cobertura (Occident: «Asistencia en viaje amplia: Opcional (no incluida)») o de la opción
@@ -58,14 +63,16 @@ const ASISTENCIA_AMPLIADA: GarantiaCatalogo = { clave: 'asistencia_ampliada', et
  */
 const ASISTENCIA_HOGAR_AMPLIADA: GarantiaCatalogo = { clave: 'asistencia_hogar_ampliada', etiqueta: 'Asistencia en el hogar ampliada', patrones: [] }
 const SUSTITUCION: GarantiaCatalogo = { clave: 'vehiculo_sustitucion', etiqueta: 'Vehículo de sustitución', patrones: [/\bvehiculo (de )?sustitucion\b/, /\bcoche de sustitucion\b/, /\bvehiculo de reemplazo\b/] }
-const CONDUCTOR: GarantiaCatalogo = { clave: 'conductor', etiqueta: 'Seguro del conductor y ocupantes', patrones: [/\bconductor\b/, /\bocupantes\b/, /\baccidentes personales\b/] }
+const CONDUCTOR: GarantiaCatalogo = { clave: 'conductor', etiqueta: 'Seguro del conductor y ocupantes', patrones: [/\bconductor\b/, /\bocupantes\b/, /\baccidentes personales\b/,
+  // Sub-garantías del seguro del conductor en el PDF del proyecto de Mapfre (fallecimiento, invalidez, asistencia sanitaria, peatón o ciclista).
+  /\bfallecimiento\b/, /\binvalidez permanente\b/, /\basistencia sanitaria\b/, /^peaton (o|y) ciclista$/] }
 const INCENDIO_VEH: GarantiaCatalogo = { clave: 'incendio', etiqueta: 'Incendio', patrones: [/\bincendio\b/] }
 const ROBO_VEH: GarantiaCatalogo = { clave: 'robo', etiqueta: 'Robo', patrones: [/\brobo\b/, /\bhurto\b/], excluye: [/\baccesorios?\b/, /\bequipaje\b/, /\bobjetos?\b/] }
 const DANOS_PROPIOS: GarantiaCatalogo = { clave: 'danos_propios', etiqueta: 'Daños propios (todo riesgo)', patrones: [/\bdanos propios\b/, /\btodo riesgo\b/, /\bdanos al vehiculo\b/], excluye: [/\bcargador\b/] }
 const PERDIDA_TOTAL: GarantiaCatalogo = { clave: 'perdida_total', etiqueta: 'Pérdida total', patrones: [/\bperdida total\b/, /\bgrandes danos\b/, /\bsiniestro total\b/] }
 /** Choque o atropello de animales (29/09/2026). Occident lo da SUELTO en terceros («Daños propios» con solo esto dentro). */
 const ANIMALES_VEH: GarantiaCatalogo = { clave: 'colision_animales', etiqueta: 'Choque con animales', patrones: [/\banimales\b/, /\bcinegetic/, /\batropello\b/] }
-const FENOMENOS_VEH: GarantiaCatalogo = { clave: 'fenomenos_atmosfericos', etiqueta: 'Fenómenos atmosféricos', patrones: [/\bfenomenos? atmosfericos?\b/, /\bmeteorologic/, /\bgranizo\b/, /\binundacion\b/] }
+const FENOMENOS_VEH: GarantiaCatalogo = { clave: 'fenomenos_atmosfericos', etiqueta: 'Fenómenos atmosféricos', patrones: [/\bfenomenos? atmosfericos?\b/, /\bmeteorologic/, /\bgranizo\b/, /\binundacion\b/, /\bfenomenos de la naturaleza\b/] }
 
 export const CATALOGO_GARANTIAS: Record<RamoGarantias, readonly GarantiaCatalogo[]> = {
   auto: [

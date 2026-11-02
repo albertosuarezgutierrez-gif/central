@@ -193,12 +193,16 @@ export function remapearGarantiasLectura<V extends { estado: 'incluida' | 'exclu
   const genericas = new Set(GENERICO.map((x) => x.clave))
   const out: Record<string, V> = {}
   const sinEquivalencia: string[] = []
+  let previo: string | null = null
   for (const [k, v] of Object.entries(garantias)) {
     let destino: string | null
     if (propias.has(k)) destino = k
     else if (genericas.has(k)) destino = GENERICO_A_VEHICULO[k] ?? null
     else destino = normalizarGarantia(ramo, k) ?? k
     if (destino === null) { sinEquivalencia.push(k); continue }
+    // Sub-garantía sin nombre canónico («*Indemnización» del PDF de Mapfre): cuelga de la anterior, no crea fila propia.
+    if (destino === k && !propias.has(k) && /^\s*[*\-–]/.test(k) && previo !== null) continue
+    previo = destino
     const ya = out[destino]
     if (ya && !(v.estado === 'incluida' && ya.estado !== 'incluida')) continue
     out[destino] = v

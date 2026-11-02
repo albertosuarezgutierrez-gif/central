@@ -69,6 +69,8 @@ export type IconoCelda = 'si' | 'no' | 'nose'
 
 /** Lo que se escribe en una celda del cuadro (`\n` separa líneas). `null`/sin dato = «No figura». */
 export function textoCelda(c: CeldaMatriz | undefined): { texto: string; marca: MarcaCeldaPdf; icono: IconoCelda } {
+  // Garantía que el documento completo de la compañía no nombra: «No incluida» (02/11/2026: un presupuesto no lleva «No figura» por ahí).
+  if (c?.ausenteEnDocumento) return { texto: 'No incluida', marca: c.peorQueActual ? 'peor' : null, icono: 'no' }
   if (!c || !c.consta || !c.valor) return { texto: NO_FIGURA, marca: c?.hueco ? 'hueco' : null, icono: 'nose' }
   const v: ValorGarantia = c.valor
   const marca: MarcaCeldaPdf = c.hueco ? 'hueco' : c.peorQueActual ? 'peor' : c.mejorQueActual ? 'mejor' : null

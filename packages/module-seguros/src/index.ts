@@ -1488,7 +1488,7 @@ export {
 export type { RamoOferta, GrupoGarantia, TipoValorGarantia, GarantiaCanonica } from './coberturas-taxonomia.ts'
 export {
   compararOfertas, cifrasDeMatriz, UMBRAL_CONTINENTE_EUR_M2, VERSION_COMPARATIVA, FUENTES_OFERTA, CRITERIO_RANKING, estadoTriple,
-  textoHuellaComparativa,
+  textoHuellaComparativa, garantiasLeidasDeDocumento,
 } from './comparar-ofertas.ts'
 export type {
   OfertaNormalizada, ValorGarantia, ResultadoComparacion, FilaMatriz, CeldaMatriz, ResumenOferta, AlertaInfraseguro,

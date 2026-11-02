@@ -50,6 +50,11 @@ export type OfertaNormalizada = {
   nivel?: string | null
   firmeza?: 'firme' | 'condicionado' | 'estimado' | null
   referencia?: ReferenciaOferta | null
+  /**
+   * 02/11/2026: la lista de garantías se leyó de un DOCUMENTO completo de la compañía (PDF del proyecto, tabla comparativa del
+   * portal). Una garantía canónica que esa lista no nombra se muestra «No incluida», no «No figura». Ausente/false = no se sabe.
+   */
+  garantiasDeDocumento?: boolean
   /** Hechos que el adaptador no pudo dejar en un campo (se enseñan como reservas, nunca se esconden). */
   avisos?: string[]
   /**
@@ -76,6 +81,8 @@ export type CeldaMatriz = {
   peorQueActual: boolean
   mejorQueActual: boolean
   hueco: boolean
+  /** La oferta leyó su lista de un documento completo y esta garantía no figura en él: «No incluida» (no «No figura»). */
+  ausenteEnDocumento?: boolean
 }
 export type FilaMatriz = {
   clave: string
@@ -131,6 +138,17 @@ export type ResultadoComparacion = {
 export const CRITERIO_RANKING =
   'Orden por prima anual total, de menor a mayor; a igual prima, la que empeora menos garantías de la póliza actual. ' +
   'No es una recomendación: la recomendación la marca tu corredor.'
+
+/**
+ * PURO. ¿Las garantías de esta oferta salen de un documento completo de la compañía? Lo dicen los avisos del bot
+ * («Garantías leídas del PDF del proyecto de Mapfre», «…del PDF del presupuesto de Generali», «…de la tabla comparativa…
+ * de Allianz Hogar») o, en Allianz auto (el bot lee toda la tabla de coberturas del portal, sin aviso), ser oferta de bot de
+ * Allianz. La pantalla «Coberturas» de Mapfre y las listas sin leer NO cuentan.
+ */
+export function garantiasLeidasDeDocumento(o: { compania?: string | null; fuente?: string | null; avisos?: readonly string[] | null }): boolean {
+  if ((o.avisos ?? []).some((a) => /garant[ií]as le[ií]das (del PDF|de la tabla comparativa)/i.test(a))) return true
+  return o.fuente === 'bot' && /allianz/i.test(o.compania ?? '')
+}
 
 const num = (n: number | null | undefined): n is number => typeof n === 'number' && Number.isFinite(n)
 
@@ -204,13 +222,20 @@ export function compararOfertas(input: { ramo: RamoOferta; ofertas: OfertaNormal
       let peor = false
       let mejor = false
       let hueco = false
+      // Lista leída de un documento completo (con al menos una garantía): lo que no nombra es «No incluida», no «No figura».
+      const ausente = o.garantiasDeDocumento === true && v === undefined && Object.values(o.garantias).some(consta)
       if (actual && !esActual) {
         const j = juzgar(actual.garantias[clave], v)
         peor = j.peor
         mejor = j.mejor
-        hueco = estadoEfectivo(actual.garantias[clave]) === 'incluida' && !consta(v)
+        const actualLaTiene = estadoEfectivo(actual.garantias[clave]) === 'incluida'
+        if (ausente) peor = actualLaTiene
+        else hueco = actualLaTiene && !consta(v)
       }
-      return { ofertaId: o.id, valor: v ?? null, consta: consta(v), estado3: estadoTriple(v), peorQueActual: peor, mejorQueActual: mejor, hueco }
+      return {
+        ofertaId: o.id, valor: v ?? null, consta: consta(v), estado3: ausente ? 'no_incluida' as const : estadoTriple(v),
+        peorQueActual: peor, mejorQueActual: mejor, hueco, ...(ausente ? { ausenteEnDocumento: true } : {}),
+      }
     })
     // Una fila canónica que nadie menciona no aporta nada: se omite. Las extras siempre tienen algún dato.
     if (celdas.some(c => c.consta)) filas.push({ clave, etiqueta, canonica, grupo, celdas })
