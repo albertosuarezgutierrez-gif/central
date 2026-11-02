@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-02T13:58:00Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-02T17:36:10Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 44 packages · 23 capacidades · 44 skills · 1876 rutas API.
+**Resumen:** 13 apps · 45 packages · 23 capacidades · 44 skills · 1876 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -125,6 +125,9 @@
 - **module-chat** (module) → `@central/module-chat`
   - Lo usan: rrhh
   - Depende de: —
+- **module-cima** (module) → `@central/module-cima`
+  - Lo usan: —
+  - Depende de: module-seguros, module-seguros-pii
 - **module-concursos** (module) → `@central/module-concursos`
   - Lo usan: plataforma
   - Depende de: —

@@ -1281,6 +1281,25 @@ importers:
 
   packages/module-chat: {}
 
+  packages/module-cima:
+    dependencies:
+      '@central/module-seguros-pii':
+        specifier: workspace:*
+        version: link:../module-seguros-pii
+      fast-xml-parser:
+        specifier: ^5.10.1
+        version: 5.10.1
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^22.19.20
+        version: 22.19.20
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
   packages/module-concursos: {}
 
   packages/module-contabilidad: {}
