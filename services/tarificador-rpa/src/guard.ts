@@ -1875,6 +1875,83 @@ export async function cerrarClubMapfre(page: Page, guard: GuardEmision): Promise
   }
 }
 
+// ─────────── Mapfre 0.8.49 · LEER las opciones del «producto comercial» de cada tarjeta de Coberturas (Alberto, 02/11/2026) ───────────
+// Cada `prima-producto` trae un `mat-select` de producto comercial. Se ABRE una vez por tarjeta y por trabajo, se LEEN los `mat-option` del overlay y se CIERRA con
+// Escape SIN elegir. Si al cerrar cambia el valor mostrado o la prima de la tarjeta → `ErrorSelectorComercialAlteradoMapfre` (el adaptador NO lo traga: aborta).
+// Cualquier otro fallo (selector ausente, deshabilitado, overlay que no aparece) es un `ErrorTarificador` blando que el adaptador convierte en aviso. NO se elige
+// ninguna opción ni se recalcula. TARIFICAR ≠ EMITIR: guard limpio, sin ventanas de red, sin cuenta bancaria y `comprobarBoton` antes del clic.
+
+export const SEL_PRODUCTO_PRIMAS_MAPFRE = 'app-primas prima-producto, app-coberturas prima-producto'
+export type OpcionesComercialesMapfre = { opciones: string[]; seleccionada: string | null }
+
+/** El selector comercial cambió de valor o la prima se movió tras abrirlo/cerrarlo (o el panel no se cerró): se aborta el trabajo. */
+export class ErrorSelectorComercialAlteradoMapfre extends ErrorTarificador {
+  constructor(que: string) {
+    super('portal', `mapfre: selector comercial alterado (${que})`)
+    this.name = 'ErrorSelectorComercialAlteradoMapfre'
+  }
+}
+
+const MAX_OPCIONES_COMERCIALES_MAPFRE = 20
+const ESPERA_PANEL_COMERCIAL_MS = 4_000
+const compactarTexto = (t: string | null | undefined) => (t ?? '').replace(/\s+/g, ' ').trim()
+
+export async function leerOpcionesComercialesMapfre(page: Page, guard: GuardEmision, indice: number): Promise<OpcionesComercialesMapfre> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'selector comercial de Mapfre con una ventana de red abierta')
+  if (!Number.isInteger(indice) || indice < 0 || indice > 20) throw new EmisionBloqueadaError('fase', 'selector comercial de Mapfre: índice de tarjeta fuera de rango')
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (!usados.has('mapfre:continuar:figuras')) throw new EmisionBloqueadaError('fase', 'selector comercial de Mapfre fuera de orden (antes de calcular las primas)')
+  const clave = `mapfre:comercial:${indice}`
+  if (usados.has(clave)) throw new EmisionBloqueadaError('fase', 'el selector comercial de esta tarjeta ya se abrió en este trabajo')
+  await exigirSinCuentaBancaria(page)
+  const tarjeta = page.locator(SEL_PRODUCTO_PRIMAS_MAPFRE).nth(indice)
+  if ((await tarjeta.count().catch(() => 0)) !== 1) throw new ErrorTarificador('portal', 'la tarjeta no está')
+  const select = tarjeta.locator('mat-select').first()
+  if ((await select.locator('visible=true').count().catch(() => 0)) !== 1) throw new ErrorTarificador('portal', 'selector ausente o no visible')
+  const [dis, multi, ctrl] = await select.evaluate((el) => [el.getAttribute('aria-disabled'), el.getAttribute('aria-multiselectable'), el.getAttribute('aria-controls') ?? el.getAttribute('aria-owns')] as const)
+  if (dis === 'true') throw new ErrorTarificador('portal', 'selector deshabilitado')
+  if (multi === 'true') throw new ErrorTarificador('portal', 'selector de selección múltiple')
+  const leerEstado = async () => ({
+    valor: compactarTexto(await select.locator('.mat-select-value-text, .mat-mdc-select-value-text').first().textContent({ timeout: 1_500 }).catch(() => null)),
+    prima: compactarTexto(await tarjeta.locator('.caja-primas p strong').first().textContent({ timeout: 1_500 }).catch(() => null)),
+  })
+  const antes = await leerEstado()
+  const desc = await descripcion(select)
+  comprobarBoton(desc)
+  usados.add(clave)
+  AVANCES_USADOS.set(guard, usados)
+  await clicSinDialogoNativo(page, guard, select, 'selector comercial de Mapfre')
+  const overlay = page.locator('.cdk-overlay-container')
+  const porId = ctrl ? page.locator(`[id="${ctrl.replace(/"/g, '')}"]`) : null
+  const ambito = porId && (await porId.count().catch(() => 0)) > 0 ? porId : overlay
+  const filas = ambito.locator('mat-option, [role="option"]')
+  const hasta = Date.now() + ESPERA_PANEL_COMERCIAL_MS
+  while ((await filas.locator('visible=true').count().catch(() => 0)) === 0 && Date.now() < hasta) {
+    guard.comprobar()
+    await page.waitForTimeout(100)
+  }
+  const leidas = await filas.locator('visible=true').evaluateAll((els) => els.map((e) => ({
+    t: ((e as HTMLElement).innerText || e.textContent || '').replace(/\s+/g, ' ').trim(),
+    s: e.getAttribute('aria-selected') === 'true' || /\bmat-(?:mdc-)?option-?selected\b|\bmdc-list-item--selected\b|\bmat-selected\b/.test(e.className),
+  }))).catch(() => [] as { t: string; s: boolean }[])
+  await page.keyboard.press('Escape').catch(() => undefined)
+  guard.comprobar()
+  const cierre = Date.now() + ESPERA_PANEL_COMERCIAL_MS
+  while ((await filas.locator('visible=true').count().catch(() => 0)) > 0 && Date.now() < cierre) await page.waitForTimeout(100)
+  if ((await filas.locator('visible=true').count().catch(() => 0)) > 0) throw new ErrorSelectorComercialAlteradoMapfre('el panel no se cerró con Escape')
+  await page.waitForTimeout(250)
+  guard.comprobar()
+  const despues = await leerEstado()
+  if (despues.valor !== antes.valor) throw new ErrorSelectorComercialAlteradoMapfre('cambió el producto seleccionado al cerrarlo')
+  if (despues.prima !== antes.prima) throw new ErrorSelectorComercialAlteradoMapfre('cambió la prima de la tarjeta al cerrarlo')
+  const utiles = leidas.filter((o) => o.t !== '').slice(0, MAX_OPCIONES_COMERCIALES_MAPFRE)
+  if (utiles.length === 0) throw new ErrorTarificador('portal', 'el panel de opciones no apareció')
+  const marcada = utiles.find((o) => o.s)
+  const porValor = antes.valor !== '' ? utiles.find((o) => o.t === antes.valor) : undefined
+  return { opciones: utiles.map((o) => o.t.slice(0, 60)), seleccionada: (marcada ?? porValor)?.t.slice(0, 60) ?? null }
+}
+
 // ─────────── Diagnóstico de pantalla SIN datos personales (Mapfre 0.8.15 / Allianz Turismos 0.6.21, 22/10/2026) ───────────
 // Los guardados fallaban con «no aparece el botón» sin HTML guardado. Cuando no se encuentra el control, el motivo (benigno, el
 // precio no se toca) lleva ahora una lista corta de las ETIQUETAS de botones/enlaces a la vista, para saber qué hay en la pantalla.
