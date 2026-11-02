@@ -2223,8 +2223,31 @@ export function desempatarPorOrigenGenerali(opciones: readonly string[], origene
 // con datos incompletos» con «Datos de Valoración» y «Garantías y Resultados» SIN obligatorios vacíos: queda la pestaña «Historial Siniestral», que el bot
 // nunca abría. Aquí, la parte PURA: qué dato del riesgo corresponde a cada campo vacío de esa pestaña.
 
-/** Subpestaña de «Valoración Riesgo» con los antecedentes (captura del trabajo af1fb857). Solo se pulsa por la puerta guardada del contexto. */
-export const SUBPESTANA_HISTORIAL_SINIESTRAL_GENERALI = 'Historial Siniestral'
+/** v0.2.60: «Historial Siniestral» es una SECCIÓN de «Datos de Valoración» (campos `reg1063A.histSiniestral.*`), no una subpestaña. ¿Es un bloque suyo? (por el `name`). PURA. */
+export function esBloqueHistorialGenerali(b: { name: string }): boolean {
+  return /histsiniestral/i.test(String(b?.name ?? ''))
+}
+
+/** v0.2.60: ¿es el desplegable «Origen del historial siniestral» (`…histSiniestral.yhsori`)? Por `name` o por rótulo. PURA. */
+export function esCampoOrigenHistorialGenerali(b: { name: string; etiqueta: string }): boolean {
+  return /(^|\.)yhsori$/i.test(String(b?.name ?? '')) || /^origen del historial/.test(normalizarOpcionGenerali(b?.etiqueta))
+}
+
+/**
+ * v0.2.60: opción de «Origen del historial siniestral» según la ficha, elegida por el TEXTO de la opción (tolerante a mayúsculas y tildes), nunca por índice.
+ * Póliza anterior como DATO (años asegurado > 0 y no supuesto) → «Consulta al fichero SINCO»; si no → «Simulación fichero SINCO» (supuesto → estimado).
+ * Sin una única opción que case → `sinRegla`. PURA.
+ */
+export function planOrigenHistorialGenerali(
+  opciones: readonly string[],
+  f: { aniosAseguradoAnterior: number },
+  clavesSupuestas: readonly string[],
+): { tipo: 'elegir'; indice: number; supuesto: boolean } | { tipo: 'sinRegla' } {
+  const conPoliza = !clavesSupuestas.includes('aniosAseguradoAnterior') && Number.isInteger(f.aniosAseguradoAnterior) && f.aniosAseguradoAnterior > 0
+  const quiero = conPoliza ? 'consulta' : 'simulacion'
+  const ix = opciones.map((o, i) => { const n = normalizarOpcionGenerali(o); return n.includes('sinco') && n.includes(quiero) ? i : -1 }).filter((i) => i >= 0)
+  return ix.length === 1 ? { tipo: 'elegir', indice: ix[0]!, supuesto: !conPoliza } : { tipo: 'sinRegla' }
+}
 
 export type BloqueHistorialGenerali = { etiqueta: string; tipo: 'select' | 'texto' | 'opciones'; name: string; opciones: string[]; vacio: boolean; obligatorio: boolean }
 export type ClaveHistorialGenerali = 'aniosAseguradoAnterior' | 'siniestrosUltimos5Anios'
@@ -2236,7 +2259,7 @@ export type AntecedentesHistorialGenerali = { aniosAseguradoAnterior: number; si
  */
 export function valorHistorialSiniestralGenerali(etiqueta: string, f: AntecedentesHistorialGenerali): { valor: string; clave: ClaveHistorialGenerali } | null {
   const e = String(etiqueta ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
-  if (e === '' || /fecha|importe|euro|prima|cuant|bonus|bonific|porcentaje|%/.test(e)) return null
+  if (e === '' || /fecha|importe|euro|prima|cuant|bonus|bonific|porcentaje|%|origen/.test(e)) return null
   if (/anos? sin siniestr/.test(e)) return f.siniestrosUltimos5Anios === 0 ? { valor: String(f.aniosAseguradoAnterior), clave: 'aniosAseguradoAnterior' } : null
   if (/siniestr/.test(e)) return { valor: String(f.siniestrosUltimos5Anios), clave: 'siniestrosUltimos5Anios' }
   if (/\banos?\b/.test(e) && /asegurad|antigued|seguro|compan/.test(e)) return { valor: String(f.aniosAseguradoAnterior), clave: 'aniosAseguradoAnterior' }
@@ -2256,6 +2279,7 @@ export function planHistorialSiniestralGenerali(bloques: readonly BloqueHistoria
   const nombre = (b: BloqueHistorialGenerali) => sanearFragmentoGenerali(b.etiqueta).slice(0, 60)
   for (const b of bloques) {
     if (!b.vacio) continue
+    if (esCampoOrigenHistorialGenerali(b)) continue // se resuelve antes (su cambio refresca la sección)
     const v = b.tipo === 'opciones' ? null : valorHistorialSiniestralGenerali(b.etiqueta, f)
     const opcionOk = v && b.tipo === 'select' ? indiceOpcionNormalizadaGenerali(b.opciones, [v.valor]) >= 0 : true
     if (v && opcionOk) acciones.push({ bloque: b, valor: v.valor, clave: v.clave, supuesto: clavesSupuestas.includes(v.clave) })
