@@ -1,6 +1,7 @@
 'use client'
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { C, SE, SN, SM } from '@/lib/colors'
+import { renderMd as renderMdSeguro } from '@/lib/render-md'
 
 interface Msg {
   role: 'user' | 'assistant'
@@ -55,16 +56,7 @@ function stripPropuestas(text: string): string {
 }
 
 function renderMd(text: string): string {
-  text = text.replace(/\*\*(.+?)\*\*/g, `<strong style="color:${C.ink}">$1</strong>`)
-  text = text.replace(/`([^`]+)`/g, `<code style="background:${C.paper3};color:${C.red};padding:1px 5px;border-radius:3px;font-size:11px;font-family:monospace">$1</code>`)
-  text = text.replace(/^### (.+)$/gm, `<div style="font-weight:700;margin:10px 0 4px;font-size:13px;color:${C.ink2}">$1</div>`)
-  text = text.replace(/^## (.+)$/gm, `<div style="font-weight:700;margin:12px 0 6px;font-size:14px;color:${C.ink}">$1</div>`)
-  text = text.replace(/^[-•] (.+)$/gm, `<div style="display:flex;gap:6px;margin:2px 0"><span style="color:${C.red}">▸</span><span>$1</span></div>`)
-  text = text.split('\n\n').map(p => {
-    if (p.startsWith('<')) return p
-    return `<p style="margin:5px 0;line-height:1.65">${p.replace(/\n/g, '<br/>')}</p>`
-  }).join('')
-  return text
+  return renderMdSeguro(text, C)
 }
 
 const IMPACTO_COLOR: Record<string, string> = { alto: '#D9442B', medio: '#E8A33B', bajo: '#3F7D44' }

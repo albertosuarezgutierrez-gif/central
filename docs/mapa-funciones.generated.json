@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-02T12:43:03Z",
-  "sha": "40b3c9d7130f035aad8070e00e0c3178380f5e3f",
+  "generadoEn": "2026-11-02T18:07:14Z",
+  "sha": "cafc7d03c3cbbdea58b6a1aa24dae1cbaf27ba33",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -7800,7 +7800,7 @@
           "exportada": false,
           "params": "retryAfter: number",
           "retorno": null,
-          "linea": 30
+          "linea": 31
         },
         {
           "nombre": "POST",
@@ -7808,12 +7808,12 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 37
+          "linea": 38
         }
       ],
       "tablas": [],
       "rutaApi": "/api/acceso/solicitar",
-      "hash": "0afa36f313b7"
+      "hash": "717013729b5d"
     },
     {
       "ruta": "apps/asegura-portal/app/api/acceso/verificar/route.ts",
@@ -12873,7 +12873,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "664593aeac7e"
+      "hash": "bf199c87b928"
     },
     {
       "ruta": "apps/asegura-portal/lib/autorizaciones.ts",
@@ -15188,6 +15188,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "3a291ff74b92"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/email-sintaxis.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "Sintaxis ENTREGABLE de un correo, más estricta que `destinoValido` del paquete. Motivo (auditoría 02/11/2026): 3 envíos de `/api/acceso/solicitar` acabaron en SMTP «Bad recipient address syntax». `destinoValido` deja pasar `a..b@x.es`, `.a@x.es`, `a.@x.es`, dominios con `_`/`!`/guion al borde o cara",
+      "exporta": [
+        "emailEntregable"
+      ],
+      "funciones": [
+        {
+          "nombre": "emailEntregable",
+          "kind": "function",
+          "exportada": true,
+          "params": "email: unknown",
+          "retorno": "boolean",
+          "linea": 12
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "69c17039a726"
     },
     {
       "ruta": "apps/asegura-portal/lib/encoger-imagen.ts",
@@ -25480,6 +25501,27 @@
       "hash": "d875cccf757c"
     },
     {
+      "ruta": "apps/asegura-portal/lib/vista-corredor-consumo.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "Consumo ATÓMICO del enlace de la vista de corredor (1 uso). Aparte de `vista-corredor.ts` (que importa Prisma) para poder probarlo sin BD. 🚨 `usadoEn: null` va EN el `where` del `updateMany`: con un `update` por id, dos aperturas simultáneas del mismo token leían ambas «válido» y ambas pasaban. Gan",
+      "exporta": [
+        "consumirEnlaceVista"
+      ],
+      "funciones": [
+        {
+          "nombre": "consumirEnlaceVista",
+          "kind": "function",
+          "exportada": true,
+          "params": "tx: TxVistaCorredor, id: string, ahora: Date = new Date()",
+          "retorno": "Promise<boolean>",
+          "linea": 17
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3d8aafcece45"
+    },
+    {
       "ruta": "apps/asegura-portal/lib/vista-corredor.ts",
       "ambito": "apps/asegura-portal",
       "resumen": "La «vista de corredor»: Alberto abre el portal COMO lo ve un cliente (08/09/2026). El enlace lo crea asegura; aquí se consume UNA vez y se monta la sesión. Reglas y constantes en `@central/module-seguros-portal/vista-corredor`. 🚨 Cómo se consigue «ver lo mismo» sin tocar ninguna lectura: la identid",
@@ -25495,7 +25537,7 @@
           "exportada": true,
           "params": "tokenCrudo: unknown",
           "retorno": "Promise<AperturaVista>",
-          "linea": 27
+          "linea": 28
         },
         {
           "nombre": "cerrarVistaCorredorDeSesion",
@@ -25503,7 +25545,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<void>",
-          "linea": 68,
+          "linea": 74,
           "resumen": "Al salir: si la sesión es la del corredor, se suelta su vínculo temporal. La ficha sale de la SESIÓN, no de un parámetro: nadie puede pedir por HTTP que se suelte el vínculo de otra. Best-effort — la "
         },
         {
@@ -25512,13 +25554,13 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<string | null>",
-          "linea": 85,
+          "linea": 91,
           "resumen": "Para la banda «Estás viendo el portal de …»: el nombre de la ficha que la sesión del corredor tiene abierta. `null` = sesión normal (no hay banda) o no se pudo leer. Igual que arriba, el id sale de la"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bb2bfe4c4ed6"
+      "hash": "5f8821dd8525"
     },
     {
       "ruta": "apps/asegura-portal/lib/vista-previa.ts",
@@ -33735,7 +33777,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 13,
+          "linea": 16,
           "resumen": "Baja de un correo de campaña (LSSI art. 21: baja sencilla y gratuita en cada comunicación comercial). `t` = `campana_envio.id`. Sin sesión, a propósito (está bajo `/api/publico`, PUBLIC en `middleware"
         },
         {
@@ -33744,7 +33786,15 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 22
+          "linea": 23
+        },
+        {
+          "nombre": "html",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuerpo: string, status: number",
+          "retorno": "NextResponse",
+          "linea": 36
         },
         {
           "nombre": "pagina",
@@ -33752,26 +33802,19 @@
           "exportada": false,
           "params": "mensaje: string, status: number",
           "retorno": "NextResponse",
-          "linea": 29
-        },
-        {
-          "nombre": "escaparHtml",
-          "kind": "function",
-          "exportada": false,
-          "params": "s: string",
-          "retorno": "string",
-          "linea": 37
+          "linea": 40
         }
       ],
       "tablas": [],
       "rutaApi": "/api/publico/campana/baja",
-      "hash": "d3cd4a604609"
+      "hash": "3562f0035683"
     },
     {
       "ruta": "apps/asegura/app/api/publico/recaptacion/baja/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
-        "GET"
+        "GET",
+        "POST"
       ],
       "funciones": [
         {
@@ -33780,8 +33823,24 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 11,
-          "resumen": "GET /api/publico/recaptacion/baja?t=<recaptacion_envios.id> — sin sesión, a propósito: lo abre el propio cliente desde el correo (LSSI art. 21, baja de un solo clic). Está en `PUBLIC` de `middleware.t"
+          "linea": 14,
+          "resumen": "/api/publico/recaptacion/baja?t=<recaptacion_envios.id> — sin sesión, a propósito: lo abre el propio cliente desde el correo (LSSI art. 21). Está en `PUBLIC` de `middleware.ts`. Responde HTML. · GET: "
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 21
+        },
+        {
+          "nombre": "html",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuerpo: string, status: number",
+          "retorno": "NextResponse",
+          "linea": 34
         },
         {
           "nombre": "pagina",
@@ -33789,20 +33848,12 @@
           "exportada": false,
           "params": "mensaje: string, status: number",
           "retorno": "NextResponse",
-          "linea": 21
-        },
-        {
-          "nombre": "escaparHtml",
-          "kind": "function",
-          "exportada": false,
-          "params": "s: string",
-          "retorno": "string",
-          "linea": 29
+          "linea": 38
         }
       ],
       "tablas": [],
       "rutaApi": "/api/publico/recaptacion/baja",
-      "hash": "ff49c67043de"
+      "hash": "0f2f87261564"
     },
     {
       "ruta": "apps/asegura/app/api/tarificador/codigo-sms/[trabajo]/route.ts",
@@ -52219,7 +52270,7 @@
         "prisma"
       ],
       "rutaApi": null,
-      "hash": "bb9177a6336a"
+      "hash": "ff06d8e0d269"
     },
     {
       "ruta": "apps/asegura/lib/generated/asegura-client/index.js",
@@ -52230,7 +52281,7 @@
         "prisma"
       ],
       "rutaApi": null,
-      "hash": "1f3349a9af92"
+      "hash": "c37d558c8a1e"
     },
     {
       "ruta": "apps/asegura/lib/generated/asegura-client/runtime/edge-esm.js",
@@ -55499,6 +55550,65 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "37a01e53371c"
+    },
+    {
+      "ruta": "apps/asegura/lib/pagina-baja.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Páginas HTML de las bajas públicas (campaña y recaptación). 🚨 La baja NO se ejecuta por GET (auditoría 02/11/2026): los escáneres de correo (antivirus, Safe Links, previsualizadores) abren todos los enlaces de un mensaje y daban de baja a la persona sin que lo pidiera. El GET solo muestra esta pági",
+      "exporta": [
+        "escaparHtml",
+        "paginaMensajeBaja",
+        "paginaConfirmarBaja",
+        "esConfirmacionDeFormulario"
+      ],
+      "funciones": [
+        {
+          "nombre": "escaparHtml",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 9
+        },
+        {
+          "nombre": "documento",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuerpo: string",
+          "retorno": "string",
+          "linea": 21
+        },
+        {
+          "nombre": "paginaMensajeBaja",
+          "kind": "function",
+          "exportada": true,
+          "params": "mensaje: string",
+          "retorno": "string",
+          "linea": 30,
+          "resumen": "Mensaje final (resultado)."
+        },
+        {
+          "nombre": "paginaConfirmarBaja",
+          "kind": "function",
+          "exportada": true,
+          "params": "accion: string, pregunta: string",
+          "retorno": "string",
+          "linea": 35,
+          "resumen": "Confirmación del GET: formulario POST que conserva el token en la URL."
+        },
+        {
+          "nombre": "esConfirmacionDeFormulario",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuerpo: string",
+          "retorno": "boolean",
+          "linea": 44,
+          "resumen": "¿El POST viene del botón de la página (HTML) y no del one-click de Gmail/Yahoo?"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "87d84b1a2ec1"
     },
     {
       "ruta": "apps/asegura/lib/palabras-nombre.ts",
@@ -84922,12 +85032,20 @@
       ],
       "funciones": [
         {
+          "nombre": "camareroDeSesion",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: ApiSession, pedido: unknown",
+          "retorno": "string | null",
+          "linea": 14
+        },
+        {
           "nombre": "POST",
           "kind": "function",
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 7
+          "linea": 20
         },
         {
           "nombre": "DELETE",
@@ -84935,12 +85053,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 21
+          "linea": 44
         }
       ],
       "tablas": [],
       "rutaApi": "/api/push/subscribe",
-      "hash": "478a13cf5dd7"
+      "hash": "3121db71a83c"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/qr/avisar/route.ts",
@@ -87322,6 +87440,26 @@
       "tablas": [],
       "rutaApi": "/api/super/tg-notify",
       "hash": "e6ae0d76e179"
+    },
+    {
+      "ruta": "apps/ia-rest/src/app/api/super/tg-send/route.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 14
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/super/tg-send",
+      "hash": "7a797e44548c"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/super/training-stats/route.ts",
@@ -92818,7 +92956,7 @@
           "exportada": false,
           "params": "{ session, C, SE, SN, SM }: { session: any; C: any; SE: string; SN: string; SM: string }",
           "retorno": null,
-          "linea": 2297,
+          "linea": 2299,
           "resumen": "─── BlogSuperTab ─────────────────────────────────────────────────────────────"
         }
       ],
@@ -92827,7 +92965,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "ff6701c269ed"
+      "hash": "81997c73a24e"
     },
     {
       "ruta": "apps/ia-rest/src/app/tapas-bar/page.tsx",
@@ -92972,7 +93110,7 @@
           "exportada": false,
           "params": "text: string",
           "retorno": "Propuesta[]",
-          "linea": 28,
+          "linea": 29,
           "resumen": "Parsea bloques ---PROPUESTA--- del texto del agente"
         },
         {
@@ -92981,7 +93119,7 @@
           "exportada": false,
           "params": "text: string",
           "retorno": "string",
-          "linea": 53,
+          "linea": 54,
           "resumen": "Quita los bloques ---PROPUESTA--- del texto visible"
         },
         {
@@ -92990,7 +93128,7 @@
           "exportada": false,
           "params": "text: string",
           "retorno": "string",
-          "linea": 57
+          "linea": 58
         },
         {
           "nombre": "AgenteArquitectoTab",
@@ -92998,12 +93136,12 @@
           "exportada": true,
           "params": "{ session }: Props",
           "retorno": null,
-          "linea": 87
+          "linea": 79
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "90efd647eefe"
+      "hash": "88114ab97dc1"
     },
     {
       "ruta": "apps/ia-rest/src/components/AgentesIATab.tsx",
@@ -96815,7 +96953,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "6c5b92d6aee7"
+      "hash": "54d58668ebff"
     },
     {
       "ruta": "apps/ia-rest/src/hooks/useAuth.ts",
@@ -97028,7 +97166,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "db211ccea048"
+      "hash": "9918efb1bc77"
     },
     {
       "ruta": "apps/ia-rest/src/hooks/useRealtime.ts",
@@ -99828,6 +99966,36 @@
       "hash": "f2ff7367028f"
     },
     {
+      "ruta": "apps/ia-rest/src/lib/render-md.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "Markdown mínimo → HTML para la salida del LLM (panel del agente arquitecto). 🚨 La salida del modelo es input NO confiable y se inyecta con dangerouslySetInnerHTML: se ESCAPA el HTML antes de aplicar los regex de markdown (auditoría 11/2026).",
+      "exporta": [
+        "escaparHtml",
+        "renderMd"
+      ],
+      "funciones": [
+        {
+          "nombre": "escaparHtml",
+          "kind": "function",
+          "exportada": true,
+          "params": "t: string",
+          "retorno": "string",
+          "linea": 6
+        },
+        {
+          "nombre": "renderMd",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: string, C: ColoresMd",
+          "retorno": "string",
+          "linea": 10
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7731e63cc9ea"
+    },
+    {
       "ruta": "apps/ia-rest/src/lib/reposicion-stock.ts",
       "ambito": "apps/ia-rest",
       "resumen": "Reposición de stock (lógica PURA, testeable con `node --test`). Sin red ni BD: la E/S (Supabase, Telegram) vive en el endpoint del cron.",
@@ -100642,6 +100810,129 @@
       "hash": "1c4be50c8b69"
     },
     {
+      "ruta": "apps/ia-rest/supabase/functions/_shared/auth-interna.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "Autorización de Edge Functions desplegadas con verify_jwt=false — fuente ÚNICA (02/11/2026). Con verify_jwt=false el gateway no comprueba nada: la función es una URL abierta. Este módulo da las dos puertas permitidas, ambas FAIL-CLOSED (sin la variable configurada no entra nadie) y con comparación e",
+      "exporta": [
+        "igualesTiempoConstante",
+        "clavesDeServicio",
+        "esLlamadaDeServicio",
+        "secretoValido",
+        "secretoEnValor",
+        "exigirServicio",
+        "exigirServicioOSecreto"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerDeno",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n",
+          "retorno": null,
+          "linea": 24
+        },
+        {
+          "nombre": "noVacia",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 26
+        },
+        {
+          "nombre": "igualesTiempoConstante",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: string, b: string",
+          "retorno": "boolean",
+          "linea": 33,
+          "resumen": "Comparación en tiempo constante (recorre siempre la longitud mayor)."
+        },
+        {
+          "nombre": "clavesDeServicio",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: LeerEnv = leerDeno",
+          "retorno": "string[]",
+          "linea": 43,
+          "resumen": "Claves de servicio válidas ahora mismo: todas las de SUPABASE_SECRET_KEYS + la legacy."
+        },
+        {
+          "nombre": "credencialesPresentadas",
+          "kind": "function",
+          "exportada": false,
+          "params": "h: Headers",
+          "retorno": "string[]",
+          "linea": 63,
+          "resumen": "Credenciales que trae la petición: `apikey` y el token de `Authorization: Bearer`."
+        },
+        {
+          "nombre": "coincideAlguna",
+          "kind": "function",
+          "exportada": false,
+          "params": "presentadas: string[], validas: string[]",
+          "retorno": "boolean",
+          "linea": 73
+        },
+        {
+          "nombre": "esLlamadaDeServicio",
+          "kind": "function",
+          "exportada": true,
+          "params": "h: Headers, env: LeerEnv = leerDeno",
+          "retorno": "boolean",
+          "linea": 81,
+          "resumen": "true si la petición trae la clave de servicio. Sin claves configuradas → false."
+        },
+        {
+          "nombre": "secretoValido",
+          "kind": "function",
+          "exportada": true,
+          "params": "h: Headers, nombreEnv: string, cabecera = \"x-internal-secret\", env: LeerEnv = leerDeno",
+          "retorno": "boolean",
+          "linea": 88,
+          "resumen": "true si `cabecera` coincide con la variable `nombreEnv`. Variable ausente/vacía → false."
+        },
+        {
+          "nombre": "secretoEnValor",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: string | null | undefined, nombreEnv: string, env: LeerEnv = leerDeno",
+          "retorno": "boolean",
+          "linea": 97,
+          "resumen": "true si `valor` (p. ej. un parámetro de query de una página que abre el navegador) coincide con la variable `nombreEnv`. Variable ausente/vacía → false (fail-closed)."
+        },
+        {
+          "nombre": "denegar",
+          "kind": "function",
+          "exportada": false,
+          "params": "extra: Record<string, string> = {}",
+          "retorno": "Response",
+          "linea": 106
+        },
+        {
+          "nombre": "exigirServicio",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, cabecerasExtra: Record<string, string> = {}, env: LeerEnv = leerDeno",
+          "retorno": "Response | null",
+          "linea": 111,
+          "resumen": "Solo clave de servicio. `null` = autorizado; si no, la Response a devolver."
+        },
+        {
+          "nombre": "exigirServicioOSecreto",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, nombreEnv: string, cabecera = \"x-internal-secret\", cabecerasExtra: Record<string, string> = {}, env: LeerEnv = leerDeno,",
+          "retorno": "Response | null",
+          "linea": 116,
+          "resumen": "Clave de servicio O secreto propio `nombreEnv` en `cabecera`. `null` = autorizado."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "afc9800a8078"
+    },
+    {
       "ruta": "apps/ia-rest/supabase/functions/_shared/clave-supabase.ts",
       "ambito": "apps/ia-rest",
       "resumen": "Claves de Supabase para Edge Functions — fuente ÚNICA del monorepo. Contexto: la `service_role` legacy (JWT) del proyecto compartido estuvo pública ~3 meses (06/05→12/08/2026) y hay que poder desactivarla. El botón «Disable JWT-based API keys» mata a la vez la `service_role` y la `anon` legacy, así ",
@@ -100750,7 +101041,7 @@
           "exportada": false,
           "params": "triggerTipos: string[], mesaCodigo: string | null, contexto: Record<string, unknown>",
           "retorno": "string",
-          "linea": 12
+          "linea": 15
         },
         {
           "nombre": "generarTituloPush",
@@ -100758,7 +101049,7 @@
           "exportada": false,
           "params": "triggerTipos: string[], mesaCodigo: string | null",
           "retorno": "string",
-          "linea": 73
+          "linea": 76
         },
         {
           "nombre": "minDesde",
@@ -100766,7 +101057,7 @@
           "exportada": false,
           "params": "ts: string | null",
           "retorno": "number",
-          "linea": 89
+          "linea": 92
         },
         {
           "nombre": "enHorario",
@@ -100774,7 +101065,7 @@
           "exportada": false,
           "params": "desde: string | null, hasta: string | null",
           "retorno": "boolean",
-          "linea": 94
+          "linea": 97
         },
         {
           "nombre": "getComandaIds",
@@ -100782,7 +101073,7 @@
           "exportada": false,
           "params": "mesaId: string",
           "retorno": "Promise<string[]>",
-          "linea": 104
+          "linea": 107
         },
         {
           "nombre": "yaAlertado",
@@ -100790,7 +101081,7 @@
           "exportada": false,
           "params": "reglaId: string, mesaId: string | null",
           "retorno": "Promise<boolean>",
-          "linea": 109
+          "linea": 112
         },
         {
           "nombre": "getDestinatarios",
@@ -100798,7 +101089,7 @@
           "exportada": false,
           "params": "regla: Record<string,unknown>, mesa: Record<string,unknown> | null",
           "retorno": "Promise<string[]>",
-          "linea": 117
+          "linea": 120
         },
         {
           "nombre": "evalCondMesa",
@@ -100806,7 +101097,7 @@
           "exportada": false,
           "params": "cond: Cond, mesa: Mesa",
           "retorno": "Promise<CondResult>",
-          "linea": 137
+          "linea": 140
         },
         {
           "nombre": "evalCondGlobal",
@@ -100814,7 +101105,7 @@
           "exportada": false,
           "params": "cond: Cond, rid: string",
           "retorno": "Promise<CondResult>",
-          "linea": 199
+          "linea": 202
         },
         {
           "nombre": "evaluarRegla",
@@ -100822,7 +101113,7 @@
           "exportada": false,
           "params": "regla: Regla, mesas: Mesa[]",
           "retorno": "Promise<Match[]>",
-          "linea": 227
+          "linea": 230
         },
         {
           "nombre": "enviarPush",
@@ -100830,14 +101121,14 @@
           "exportada": false,
           "params": "camarero_ids: string[], title: string, body: string, mensaje_voz: string",
           "retorno": null,
-          "linea": 254
+          "linea": 257
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "3b825d9c9cdc"
+      "hash": "cb7f7a851813"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/analizar-cv/index.ts",
@@ -101093,7 +101384,7 @@
           "exportada": false,
           "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
           "retorno": null,
-          "linea": 9
+          "linea": 13
         },
         {
           "nombre": "json",
@@ -101101,14 +101392,14 @@
           "exportada": false,
           "params": "data: unknown, status = 200",
           "retorno": "Response",
-          "linea": 161
+          "linea": 168
         }
       ],
       "tablas": [
         "jsr"
       ],
       "rutaApi": null,
-      "hash": "d3b21dee475f"
+      "hash": "20079f0c2190"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/cobro-stripe/index.ts",
@@ -101121,7 +101412,7 @@
           "exportada": false,
           "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
           "retorno": null,
-          "linea": 9
+          "linea": 13
         },
         {
           "nombre": "stripe",
@@ -101129,7 +101420,7 @@
           "exportada": false,
           "params": "method: string, path: string, params: URLSearchParams, secretKey: string, idempotencyKey?: string",
           "retorno": "Promise<Response>",
-          "linea": 185
+          "linea": 192
         },
         {
           "nombre": "json",
@@ -101137,14 +101428,14 @@
           "exportada": false,
           "params": "data: unknown, status = 200",
           "retorno": "Response",
-          "linea": 197
+          "linea": 204
         }
       ],
       "tablas": [
         "jsr"
       ],
       "rutaApi": null,
-      "hash": "8ef0d95a4292"
+      "hash": "6173de06587e"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/contact-lead/index.ts",
@@ -101307,7 +101598,7 @@
           "exportada": false,
           "params": "f: any",
           "retorno": "string",
-          "linea": 155,
+          "linea": 162,
           "resumen": "── Generar XML LROE (SOAP) para AEAT ─────────────────────────────────── Especificación: Orden HAC/1177/2024 + RD 1007/2023"
         },
         {
@@ -101316,7 +101607,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 221,
+          "linea": 228,
           "resumen": "Escapar caracteres especiales XML"
         },
         {
@@ -101325,14 +101616,14 @@
           "exportada": false,
           "params": "data: unknown, status = 200",
           "retorno": "Response",
-          "linea": 231
+          "linea": 238
         }
       ],
       "tablas": [
         "jsr"
       ],
       "rutaApi": null,
-      "hash": "d4087d5adc92"
+      "hash": "6520f31b14b3"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/eventos-entorno/index.ts",
@@ -101345,7 +101636,7 @@
           "exportada": false,
           "params": "aforo: number",
           "retorno": "number",
-          "linea": 13
+          "linea": 16
         },
         {
           "nombre": "enviarTelegram",
@@ -101353,14 +101644,14 @@
           "exportada": false,
           "params": "msg: string",
           "retorno": null,
-          "linea": 21
+          "linea": 24
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "c2542a64f084"
+      "hash": "17ab0b466492"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/ia-training-dashboard/index.ts",
@@ -101373,7 +101664,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 40
+          "linea": 43
         },
         {
           "nombre": "dashboardPage",
@@ -101381,14 +101672,14 @@
           "exportada": false,
           "params": "pin:string",
           "retorno": "string",
-          "linea": 44
+          "linea": 47
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "ae9a739989cb"
+      "hash": "9342e169f151"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/ig-video-gen/index.ts",
@@ -101447,7 +101738,7 @@
           "exportada": false,
           "params": "ts: string | null",
           "retorno": "number",
-          "linea": 22
+          "linea": 25
         },
         {
           "nombre": "yaAlertado",
@@ -101455,7 +101746,7 @@
           "exportada": false,
           "params": "restauranteId: string, tipo: string",
           "retorno": "Promise<boolean>",
-          "linea": 27
+          "linea": 30
         },
         {
           "nombre": "getOwnerIds",
@@ -101463,7 +101754,7 @@
           "exportada": false,
           "params": "restauranteId: string",
           "retorno": "Promise<string[]>",
-          "linea": 39
+          "linea": 42
         },
         {
           "nombre": "enviarPush",
@@ -101471,7 +101762,7 @@
           "exportada": false,
           "params": "camareroIds: string[], title: string, body: string",
           "retorno": null,
-          "linea": 49
+          "linea": 52
         },
         {
           "nombre": "registrarAlerta",
@@ -101479,14 +101770,14 @@
           "exportada": false,
           "params": "restauranteId: string, tipo: string, mensaje: string",
           "retorno": null,
-          "linea": 63
+          "linea": 66
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "0c0df322876b"
+      "hash": "21625699030e"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/kds-token-validate/index.ts",
@@ -101631,7 +101922,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "2ea8f2a49408"
+      "hash": "e72c9db8dbc8"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/owner-panel/index.ts",
@@ -101809,7 +102100,7 @@
           "exportada": false,
           "params": "d: unknown, s = 200",
           "retorno": null,
-          "linea": 15
+          "linea": 20
         },
         {
           "nombre": "generarVapidKeys",
@@ -101817,7 +102108,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 18,
+          "linea": 23,
           "resumen": "── Generación de claves VAPID (ECDSA P-256) ──────────────────────────────"
         },
         {
@@ -101826,7 +102117,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 32
+          "linea": 37
         },
         {
           "nombre": "vapidJWT",
@@ -101834,7 +102125,7 @@
           "exportada": false,
           "params": "audience: string, privateKeyB64: string",
           "retorno": "Promise<string>",
-          "linea": 42,
+          "linea": 47,
           "resumen": "── JWT VAPID ────────────────────────────────────────────────────"
         },
         {
@@ -101843,7 +102134,7 @@
           "exportada": false,
           "params": "sub: { endpoint: string; keys: { p256dh: string; auth: string } }, payload: { title: string; body: string; mensaje_voz?: string }, vapidKeys: { publicKey: string; privateKey: string }",
           "retorno": null,
-          "linea": 69,
+          "linea": 74,
           "resumen": "── Enviar una notificación push ──────────────────────────────────────"
         }
       ],
@@ -101851,7 +102142,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "7bb57c177113"
+      "hash": "fb8bbbbfc6b3"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-assistant/index.ts",
@@ -102056,14 +102347,14 @@
           "exportada": false,
           "params": "slug: string, body: unknown",
           "retorno": "Promise<",
-          "linea": 11
+          "linea": 15
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "c419d2c137ec"
+      "hash": "16b8a367df63"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/verifactu-sign/index.ts",
@@ -112861,6 +113152,47 @@
       "hash": "e80cd720279e"
     },
     {
+      "ruta": "apps/ialimp/lib/fetch-seguro.ts",
+      "ambito": "apps/ialimp",
+      "resumen": "fetch server-side con guarda anti-SSRF que REVALIDA cada salto de redirección. Antes (auditoría 11/2026) se validaba solo la URL inicial y `fetch` seguía las redirecciones por su cuenta: un host público podía responder 302 → http://169.254.169.254/… Sin dependencias de la app (solo node:*), para pod",
+      "exporta": [
+        "isPrivateIp",
+        "isSafePublicUrl",
+        "fetchSeguro"
+      ],
+      "funciones": [
+        {
+          "nombre": "isPrivateIp",
+          "kind": "function",
+          "exportada": true,
+          "params": "ip: string",
+          "retorno": "boolean",
+          "linea": 10,
+          "resumen": "La URL la configura un usuario/propietario → input no confiable. Exigimos http(s) y que el host NO resuelva a una IP interna (loopback / link-local / privada / metadata cloud)."
+        },
+        {
+          "nombre": "isSafePublicUrl",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: string",
+          "retorno": "Promise<boolean>",
+          "linea": 25
+        },
+        {
+          "nombre": "fetchSeguro",
+          "kind": "function",
+          "exportada": true,
+          "params": "url: string, init: RequestInit = {}, op: OpcionesFetchSeguro = {}",
+          "retorno": "Promise<Response>",
+          "linea": 62,
+          "resumen": "`fetch` con `redirect: 'manual'`: valida la URL inicial y CADA destino de redirección antes de pedirlo. Lanza `UrlNoPermitidaError` si algún salto no es válido, si se baja de https a http o si se supe"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d5085e88c706"
+    },
+    {
       "ruta": "apps/ialimp/lib/firma-limpiadora.ts",
       "ambito": "apps/ialimp",
       "resumen": "Firma avanzada con OTP (eIDAS art.26) de los documentos de la limpiadora. Espejo de apps/rrhh/lib/firma.ts: la orquestación owner-agnóstica vive en @central/module-rrhh; aquí se inyecta la persistencia de ialimp (tablas `*_limpiadora`), el Storage privado y el email.",
@@ -112936,7 +113268,7 @@
           "exportada": true,
           "params": "opts: { query: string max?: number }",
           "retorno": "Promise<",
-          "linea": 26,
+          "linea": 27,
           "resumen": "Búsqueda de texto en Places (New). Devuelve hasta `max` resultados (paginando)."
         },
         {
@@ -112945,7 +113277,7 @@
           "exportada": true,
           "params": "e: string",
           "retorno": "boolean",
-          "linea": 82,
+          "linea": 83,
           "resumen": "Rechaza emails que NO son de contacto de la empresa: imágenes, dominios de terceros (Google, CDNs, plantillas) y local-parts de relleno (\"email@ejemplo\")."
         },
         {
@@ -112954,7 +113286,7 @@
           "exportada": true,
           "params": "web: string",
           "retorno": "Promise<string | null>",
-          "linea": 97,
+          "linea": 98,
           "resumen": "Intenta extraer un email de contacto de la web (home + /contacto). Best-effort."
         },
         {
@@ -112963,7 +113295,7 @@
           "exportada": true,
           "params": "url: string",
           "retorno": "Promise<",
-          "linea": 131,
+          "linea": 132,
           "resumen": "Descarga una URL (un listado/directorio de empresas) y usa la IA de NVIDIA para extraer las empresas con sus datos de contacto. Gratis (sin Google Places). OJO: solo sirve para páginas servidas como H"
         },
         {
@@ -112972,7 +113304,7 @@
           "exportada": true,
           "params": "query: string, max: number",
           "retorno": "Promise<",
-          "linea": 187
+          "linea": 188
         },
         {
           "nombre": "apifyResults",
@@ -112980,12 +113312,12 @@
           "exportada": true,
           "params": "runId: string",
           "retorno": "Promise<",
-          "linea": 205
+          "linea": 206
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e1a9affd8a91"
+      "hash": "14f265903195"
     },
     {
       "ruta": "apps/ialimp/lib/ical-sync.ts",
@@ -112999,29 +113331,12 @@
       ],
       "funciones": [
         {
-          "nombre": "isPrivateIp",
-          "kind": "function",
-          "exportada": false,
-          "params": "ip: string",
-          "retorno": "boolean",
-          "linea": 16,
-          "resumen": "── Guarda anti-SSRF ──────────────────────────────────────────────────────────── La URL iCal la configura el propietario → input no confiable. Antes de hacer fetch server-side, exigimos http(s) y que "
-        },
-        {
-          "nombre": "isSafePublicUrl",
-          "kind": "function",
-          "exportada": false,
-          "params": "raw: string",
-          "retorno": "Promise<boolean>",
-          "linea": 30
-        },
-        {
           "nombre": "parseIcal",
           "kind": "function",
           "exportada": true,
           "params": "text: string",
           "retorno": "any[]",
-          "linea": 45,
+          "linea": 15,
           "resumen": "── iCal parser ───────────────────────────────────────────────────────────────"
         },
         {
@@ -113030,7 +113345,7 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "string",
-          "linea": 67
+          "linea": 37
         },
         {
           "nombre": "extractGuest",
@@ -113038,7 +113353,7 @@
           "exportada": true,
           "params": "summary: string, desc: string",
           "retorno": "string | null",
-          "linea": 73,
+          "linea": 43,
           "resumen": "── Extraer nombre huésped del SUMMARY/DESCRIPTION de Booking/Airbnb ─────────"
         },
         {
@@ -113047,7 +113362,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 92,
+          "linea": 62,
           "resumen": "Fecha de HOY en la zona horaria de España (la salida del huésped es lo que define la limpieza; comparamos contra el día local, no UTC)."
         },
         {
@@ -113056,7 +113371,7 @@
           "exportada": false,
           "params": "empresa: { nombre: string; email: string | null }, piso: string, guest: string | null, fecha: string,",
           "retorno": "Promise<boolean>",
-          "linea": 98,
+          "linea": 68,
           "resumen": "Correo a la empresa por una limpieza de ÚLTIMA HORA (salida hoy, piso aún sin limpiar). No crítico: si falla o no hay proveedor SMTP, no rompe el sync."
         },
         {
@@ -113065,7 +113380,7 @@
           "exportada": true,
           "params": "prop: any",
           "retorno": "Promise<",
-          "linea": 125,
+          "linea": 95,
           "resumen": "── Sync iCal de una propiedad ──────────────────────────────────────────────── prop debe traer: id, empresa_id, cliente_id, nombre, ical_urls, limpiadora_principal_id"
         }
       ],
@@ -113073,11 +113388,10 @@
         "alertas",
         "cleaning_sessions",
         "empresas",
-        "node",
         "set"
       ],
       "rutaApi": null,
-      "hash": "3247668fdcff"
+      "hash": "de668455c0ae"
     },
     {
       "ruta": "apps/ialimp/lib/impagos.ts",
@@ -141127,7 +141441,7 @@
           "exportada": false,
           "params": "id: string",
           "retorno": "Promise<boolean>",
-          "linea": 23,
+          "linea": 24,
           "resumen": "Anti-spam: como mucho 1 aviso de cada tipo cada ~día (bitácora `telegram_avisos_log`, mismo patrón que canario-lead). Best-effort: si la consulta falla se avisa igual (mejor duplicado que silencio)."
         },
         {
@@ -141136,7 +141450,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 32
+          "linea": 33
         },
         {
           "nombre": "avisosTelegramBanca",
@@ -141144,7 +141458,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<",
-          "linea": 35,
+          "linea": 36,
           "resumen": "Avisos Telegram de banca (frescura por cuenta + picos de gasto). Nunca rompe el cron."
         },
         {
@@ -141153,7 +141467,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 56
+          "linea": 57
         }
       ],
       "tablas": [
@@ -141161,7 +141475,7 @@
         "telegram_avisos_log"
       ],
       "rutaApi": "/api/cron/banca-alertas",
-      "hash": "42aa46fe5a6d"
+      "hash": "d9a1c6bd5a03"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/blog-asegura/route.ts",
@@ -141245,12 +141559,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 15
+          "linea": 16
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/briefing",
-      "hash": "810745abd555"
+      "hash": "8bf97c939b35"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/canario-lead/route.ts",
@@ -141358,7 +141672,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 37
+          "linea": 38
         }
       ],
       "tablas": [
@@ -141372,7 +141686,7 @@
         "set"
       ],
       "rutaApi": "/api/cron/cima-liq",
-      "hash": "1bb8cb43af31"
+      "hash": "b08d8f093818"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/cima-pull-respaldo/route.ts",
@@ -141388,7 +141702,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<string | null>",
-          "linea": 42,
+          "linea": 43,
           "resumen": "Lo que dejó la pasada anterior, para no repetir el mismo aviso dos veces al día."
         },
         {
@@ -141397,7 +141711,7 @@
           "exportada": false,
           "params": "dias: Record<string, number | null> | null | undefined,",
           "retorno": "Promise<string>",
-          "linea": 60,
+          "linea": 61,
           "resumen": "Alerta de CORTE DE SINIESTROS (SIN sin novedades > 7 días mientras POL/REC sí llegan). Va aquí porque este cron corre 3 veces al día y ya lee la ingesta. Como mucho UN aviso por día de Madrid: la marc"
         },
         {
@@ -141406,7 +141720,7 @@
           "exportada": false,
           "params": "entidades: EntradaCortePorCompania[] | null,",
           "retorno": "Promise<string>",
-          "linea": 92,
+          "linea": 93,
           "resumen": "Alerta de corte de SINIESTROS POR COMPAÑÍA (22/09/2026: Generali dejó de mandar SIN y el global, que mira el agregado, no lo vio). Una compañía con pólizas en vigor que alguna vez mandó SIN y lleva má"
         },
         {
@@ -141415,7 +141729,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 116
+          "linea": 117
         }
       ],
       "tablas": [
@@ -141423,7 +141737,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/cima-pull-respaldo",
-      "hash": "40dfd33a92db"
+      "hash": "022d77df38cb"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/cima-sincro/route.ts",
@@ -141439,40 +141753,15 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 23
+          "linea": 24
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/cima-sincro",
-      "hash": "610214291e22"
+      "hash": "4b40557b080b"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/concursos-avisos/route.ts",
-      "ambito": "apps/plataforma",
-      "exporta": [
-        "GET"
-      ],
-      "funciones": [
-        {
-          "nombre": "GET",
-          "kind": "function",
-          "exportada": true,
-          "params": "req: NextRequest",
-          "retorno": null,
-          "linea": 14
-        }
-      ],
-      "tablas": [
-        "concursos_perfil_empresa",
-        "concursos_radar_anuncios",
-        "cuentas",
-        "next"
-      ],
-      "rutaApi": "/api/cron/concursos-avisos",
-      "hash": "8acc20767d83"
-    },
-    {
-      "ruta": "apps/plataforma/app/api/cron/concursos-cierre/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
         "GET"
@@ -141488,12 +141777,37 @@
         }
       ],
       "tablas": [
+        "concursos_perfil_empresa",
+        "concursos_radar_anuncios",
+        "cuentas",
+        "next"
+      ],
+      "rutaApi": "/api/cron/concursos-avisos",
+      "hash": "b3e59951a9de"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cron/concursos-cierre/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 16
+        }
+      ],
+      "tablas": [
         "concursos_seguidos",
         "cuentas",
         "next"
       ],
       "rutaApi": "/api/cron/concursos-cierre",
-      "hash": "7e238c4871a7"
+      "hash": "06d76cbc0b27"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/concursos-ingesta/route.ts",
@@ -141553,7 +141867,7 @@
           "exportada": false,
           "params": "req: Request",
           "retorno": "boolean",
-          "linea": 12
+          "linea": 13
         },
         {
           "nombre": "GET",
@@ -141561,7 +141875,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 19
+          "linea": 20
         }
       ],
       "tablas": [
@@ -141569,7 +141883,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/contable-proactivo",
-      "hash": "000ade6ee05e"
+      "hash": "e59a9dfb877e"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/correduria-actividad/route.ts",
@@ -142131,14 +142445,14 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 16
+          "linea": 17
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/cron/facturas-conciliar-gmail",
-      "hash": "54298346452c"
+      "hash": "48f304459b20"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/facturas-resumen-semanal/route.ts",
@@ -142154,7 +142468,7 @@
           "exportada": false,
           "params": "req: Request",
           "retorno": "boolean",
-          "linea": 11
+          "linea": 12
         },
         {
           "nombre": "GET",
@@ -142162,7 +142476,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 18
+          "linea": 19
         }
       ],
       "tablas": [
@@ -142170,7 +142484,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/facturas-resumen-semanal",
-      "hash": "3c2de24637cb"
+      "hash": "fa1f104907e8"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/facturas-scan/route.ts",
@@ -142186,7 +142500,7 @@
           "exportada": false,
           "params": "req: Request",
           "retorno": "boolean",
-          "linea": 28
+          "linea": 29
         },
         {
           "nombre": "GET",
@@ -142194,7 +142508,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 35
+          "linea": 36
         }
       ],
       "tablas": [
@@ -142202,7 +142516,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/facturas-scan",
-      "hash": "7a567ac82699"
+      "hash": "aa5184727c9c"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/fiscal-avisos/route.ts",
@@ -148670,30 +148984,6 @@
       "tablas": [],
       "rutaApi": "/api/subastas/documentos",
       "hash": "5557790209cd"
-    },
-    {
-      "ruta": "apps/plataforma/app/api/subastas/fase3-debug/route.ts",
-      "ambito": "apps/plataforma",
-      "resumen": "── TEMPORAL (Fase 3 subastas, 29/07/2026) ────────────────────────────────── Puente de exploración: la sesión de Claude no puede salir a los hosts de las fuentes nuevas (allowlist del contenedor, solo se relee al arrancar), pero Vercel sí. Este endpoint baja una URL de una LISTA CERRADA de hosts ofi",
-      "exporta": [
-        "GET"
-      ],
-      "funciones": [
-        {
-          "nombre": "GET",
-          "kind": "function",
-          "exportada": true,
-          "params": "req: NextRequest",
-          "retorno": null,
-          "linea": 38
-        }
-      ],
-      "tablas": [
-        "next",
-        "subastas_debug_token"
-      ],
-      "rutaApi": "/api/subastas/fase3-debug",
-      "hash": "269acf739e89"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/mapa/route.ts",
@@ -206121,17 +206411,8 @@
           "exportada": false,
           "params": "pathname: string",
           "retorno": "boolean",
-          "linea": 75,
+          "linea": 73,
           "resumen": "Las páginas (y sus acciones de servidor) y la API de la correduría: solo con sesión de la correduría."
-        },
-        {
-          "nombre": "igualConstante",
-          "kind": "function",
-          "exportada": false,
-          "params": "dado: string | null, secreto: string",
-          "retorno": "boolean",
-          "linea": 83,
-          "resumen": "Igualdad de cadenas en tiempo constante, apta para el runtime EDGE (sin `node:crypto`): recorre siempre la longitud del secreto y acumula diferencias con XOR. `null`/vacío = no."
         },
         {
           "nombre": "middleware",
@@ -206139,12 +206420,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 92
+          "linea": 77
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "eb7abca916e3"
+      "hash": "962d2c02432f"
     },
     {
       "ruta": "apps/plataforma/scripts/backfill-gastos-titular.ts",
@@ -208496,7 +208777,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 10,
+          "linea": 11,
           "resumen": "Vercel Cron: 0 20 * * * (cada día a las 20:00 UTC ≈ 22:00 hora española) Detecta fichajes activos con más de HORAS_LIMITE horas sin fichar salida y avisa por Telegram."
         }
       ],
@@ -208505,7 +208786,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/cron/alerta-fichajes-abiertos",
-      "hash": "565afcda614e"
+      "hash": "42d87a2bc2f5"
     },
     {
       "ruta": "apps/rrhh/app/api/cron/alerta-jornada-maxima/route.ts",
@@ -208520,7 +208801,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 11,
+          "linea": 12,
           "resumen": "Vercel Cron: 30 20 * * * (cada día a las 20:30 UTC ≈ 22:30 hora española) Detecta empleados que han superado 9 h en la jornada de hoy o 40 h esta semana ISO."
         }
       ],
@@ -208529,7 +208810,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/cron/alerta-jornada-maxima",
-      "hash": "321c5d55a802"
+      "hash": "bd8f0d79476f"
     },
     {
       "ruta": "apps/rrhh/app/api/cron/nominas/route.ts",
@@ -208544,7 +208825,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 8
+          "linea": 9
         }
       ],
       "tablas": [
@@ -208552,7 +208833,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/cron/nominas",
-      "hash": "7cf01eaf757f"
+      "hash": "2a5a92ceef58"
     },
     {
       "ruta": "apps/rrhh/app/api/cron/recordatorio-fichaje/route.ts",
@@ -208567,7 +208848,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 8,
+          "linea": 9,
           "resumen": "Vercel Cron: 0 7 * * 1-5 (lunes a viernes a las 7:00 UTC ≈ 9:00 hora española) Envía una notificación push a los empleados que aún no han fichado hoy."
         }
       ],
@@ -208576,7 +208857,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/cron/recordatorio-fichaje",
-      "hash": "5cbb09922135"
+      "hash": "04844f5e3d97"
     },
     {
       "ruta": "apps/rrhh/app/api/cron/recordatorio-firmas/route.ts",
@@ -208586,25 +208867,17 @@
       ],
       "funciones": [
         {
-          "nombre": "digest",
-          "kind": "arrow",
-          "exportada": false,
-          "params": "s: string",
-          "retorno": null,
-          "linea": 14
-        },
-        {
           "nombre": "GET",
           "kind": "function",
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 16
+          "linea": 14
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/recordatorio-firmas",
-      "hash": "01dbef36ff0c"
+      "hash": "ec652fa3a6e2"
     },
     {
       "ruta": "apps/rrhh/app/api/e/acceso/completar/route.ts",
@@ -213552,7 +213825,6 @@
     {
       "ruta": "apps/rrhh/lib/operador.ts",
       "ambito": "apps/rrhh",
-      "resumen": "Autoriza el puerto de operador (god-panel → rrhh) por secreto compartido. Cerrado por defecto: si falta RRHH_OPERADOR_SECRET, no autoriza. Secreto PROPIO de iarrhh (no se reutiliza el OPERADOR_SHARED_SECRET de ia-rest).",
       "exporta": [
         "operadorAutorizado"
       ],
@@ -213563,13 +213835,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": "boolean",
-          "linea": 4,
+          "linea": 6,
           "resumen": "Autoriza el puerto de operador (god-panel → rrhh) por secreto compartido. Cerrado por defecto: si falta RRHH_OPERADOR_SECRET, no autoriza. Secreto PROPIO de iarrhh (no se reutiliza el OPERADOR_SHARED_"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0937f3bb525c"
+      "hash": "b6257739121d"
     },
     {
       "ruta": "apps/rrhh/lib/otp-fake.ts",
@@ -221128,7 +221400,6 @@
     {
       "ruta": "apps/transporte/lib/ingest-auth.ts",
       "ambito": "apps/transporte",
-      "resumen": "Clave de ingesta de posiciones (hardware/servidor GPS → API, server-to-server). Gatea ESCRITURA, así que NUNCA cae a un literal en producción (patrón guarda env || (prod ? throw : 'dev'), igual que el secreto de sesión). El device_id ya identifica el vehículo y su cuenta; esta clave solo evita escri",
       "exporta": [
         "claveDeIngesta",
         "ingestaAutorizada"
@@ -221140,7 +221411,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 6,
+          "linea": 8,
           "resumen": "Clave de ingesta de posiciones (hardware/servidor GPS → API, server-to-server). Gatea ESCRITURA, así que NUNCA cae a un literal en producción (patrón guarda env || (prod ? throw : 'dev'), igual que el"
         },
         {
@@ -221149,7 +221420,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": "string | null",
-          "linea": 14
+          "linea": 16
         },
         {
           "nombre": "ingestaAutorizada",
@@ -221157,12 +221428,12 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": "boolean",
-          "linea": 24
+          "linea": 26
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "29e2027ca064"
+      "hash": "08f2b0bcc69a"
     },
     {
       "ruta": "apps/transporte/lib/session.ts",
@@ -223376,6 +223647,38 @@
       "hash": "5b1c5e357a3d"
     },
     {
+      "ruta": "packages/core-identity/src/secreto-comparar.ts",
+      "ambito": "packages/core-identity",
+      "resumen": "Comparación de secretos de servicio (CRON_SECRET, tokens de operador, claves de ingesta). 🔒 Dos propiedades que `===` no tiene: · TIEMPO CONSTANTE respecto al secreto: el bucle recorre la longitud de lo RECIBIDO (la fija quien llama) y acumula diferencias con XOR; el secreto se lee con `i % esperad",
+      "exporta": [
+        "secretoCoincide",
+        "autorizacionBearerValida"
+      ],
+      "funciones": [
+        {
+          "nombre": "secretoCoincide",
+          "kind": "function",
+          "exportada": true,
+          "params": "recibido: string | null | undefined, esperado: string | null | undefined,",
+          "retorno": "boolean",
+          "linea": 14,
+          "resumen": "true solo si `esperado` existe, no está vacío y `recibido` es EXACTAMENTE igual."
+        },
+        {
+          "nombre": "autorizacionBearerValida",
+          "kind": "function",
+          "exportada": true,
+          "params": "fuente: ConCabeceras | { get(nombre: string): string | null } | string | null | undefined, nombreEnv: string, env: Record<string, string | undefined> = process.env,",
+          "retorno": "boolean",
+          "linea": 34,
+          "resumen": "true solo si la cabecera `Authorization` es `Bearer <valor de process.env[nombreEnv]>`. Acepta una Request/NextRequest, unos Headers o el valor de la cabecera ya extraído. Variable de entorno ausente "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "03b1809936a2"
+    },
+    {
       "ruta": "packages/core-identity/src/token.ts",
       "ambito": "packages/core-identity",
       "resumen": "Fábrica de tokens de sesión (jose/JWT HS256) compartida por la casa de marcas. Centraliza el patrón que hoy duplican ialimp y plataforma: firmar un JWT con un `jti` de revocación (sesión única por usuario) y verificarlo. Cada app define qué claims mete (userId/tenantId/role/email/type…) y con qué se",
@@ -224145,6 +224448,2787 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "2db356cc2684"
+    },
+    {
+      "ruta": "packages/module-cima/src/cef-matching.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "LOO-757 (épica CIMA LOO-515) — Matching PURO best-effort de un MOVIMIENTO de liquidación CEF contra el recibo y la póliza que lo originaron. A diferencia del SIN/REC (donde sin match = CUARENTENA porque la FK es NOT NULL), aquí el match es **best-effort y la FK es NULLABLE**: el registro financiero ",
+      "exporta": [
+        "buildReciboIndex",
+        "buildPolizaIndex",
+        "matchMovimientoRecibo",
+        "matchMovimientoPoliza"
+      ],
+      "funciones": [
+        {
+          "nombre": "normCodigoDgs",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 42,
+          "resumen": "Normaliza el código DGS (trim + uppercase). null/'' → null."
+        },
+        {
+          "nombre": "reciboKey",
+          "kind": "function",
+          "exportada": false,
+          "params": "idRecibo: string | null | undefined, dgs: string | null | undefined,",
+          "retorno": "string | null",
+          "linea": 48,
+          "resumen": "Clave de índice compuesta (idRecibo|dgs). null si falta cualquiera de las dos."
+        },
+        {
+          "nombre": "polizaKey",
+          "kind": "function",
+          "exportada": false,
+          "params": "numero: string | null | undefined, dgs: string | null | undefined,",
+          "retorno": "string | null",
+          "linea": 59,
+          "resumen": "Clave de índice compuesta (numeroPolizaNormalizado|dgs). null si falta cualquiera."
+        },
+        {
+          "nombre": "polizaKeySinCeros",
+          "kind": "function",
+          "exportada": false,
+          "params": "numero: string | null | undefined, dgs: string | null | undefined,",
+          "retorno": "string | null",
+          "linea": 74,
+          "resumen": "Clave de respaldo SIN ceros iniciales (`~sc|numero|dgs`), solo para entidades de `DGS_TOLERA_CEROS`. El prefijo `~sc|` no puede chocar con una clave exacta (`numero|dgs`: el número normalizado es alfa"
+        },
+        {
+          "nombre": "buildReciboIndex",
+          "kind": "function",
+          "exportada": true,
+          "params": "candidates: readonly ReciboCandidate[],",
+          "retorno": "Map<string, string>",
+          "linea": 89,
+          "resumen": "Índice recibo: clave `${idRecibo}|${dgs}` → `reciboId`. Si dos candidatos comparten clave (no debería: la uq de negocio lo impide), el último gana (irrelevante para el best-effort). Candidatos con cla"
+        },
+        {
+          "nombre": "buildPolizaIndex",
+          "kind": "function",
+          "exportada": true,
+          "params": "candidates: readonly CefPolizaCandidate[],",
+          "retorno": "Map<string, string | null>",
+          "linea": 105,
+          "resumen": "Índice póliza: clave `${numeroNormalizado}|${dgs}` → `polizaId`. Si dos pólizas comparten clave (numero+dgs ambiguo), NO se indexa (no colgar a ciegas, igual que el matcher único del REC). Candidatos "
+        },
+        {
+          "nombre": "matchMovimientoRecibo",
+          "kind": "function",
+          "exportada": true,
+          "params": "idReciboEiac: string | null, codigoEntidadDgs: string | null, index: Map<string, string>,",
+          "retorno": "string | null",
+          "linea": 139,
+          "resumen": "Resuelve el `reciboId` de un movimiento (best-effort). null si no hay match."
+        },
+        {
+          "nombre": "matchMovimientoPoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "idPolizaEntidad: string | null, codigoEntidadDgs: string | null, index: Map<string, string | null>,",
+          "retorno": "string | null",
+          "linea": 150,
+          "resumen": "Resuelve el `polizaId` de un movimiento (best-effort). null si no hay match/ambiguo."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "87ea2e85295c"
+    },
+    {
+      "ruta": "packages/module-cima/src/cima-extra-denegados.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "LISTA DE EXCLUSIÓN de `cimaExtra` (03/10/2026, Alberto: «todo campo que manda CIMA se guarda y se enseña, salvo una lista explícita de sensibles»). `cimaExtra` (ver `cima-extra.ts`) guarda EN CLARO, en un jsonb que pinta la ficha, toda hoja del EIAC que ningún extractor específico ha leído. Lo que e",
+      "exporta": [
+        "motivoExclusionCima"
+      ],
+      "funciones": [
+        {
+          "nombre": "motivoSegmento",
+          "kind": "function",
+          "exportada": false,
+          "params": "seg: string",
+          "retorno": "string | null",
+          "linea": 223
+        },
+        {
+          "nombre": "motivoExclusionCima",
+          "kind": "function",
+          "exportada": true,
+          "params": "ruta: string",
+          "retorno": "string | null",
+          "linea": 243,
+          "resumen": "PURA. ¿Por qué esta ruta EIAC no puede ir a `cimaExtra`? Devuelve el motivo legible (`«dato bancario»`, `«persona»`…) o `null` si se permite. Acepta rutas con o sin `ProcesosEIAC.`/`Objetos.` y con o "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "243601036d58"
+    },
+    {
+      "ruta": "packages/module-cima/src/cima-extra.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "«RESTO» DE CIMA — toda hoja del EIAC que ningún extractor específico ha leído se guarda en `cimaExtra` (03/10/2026, Alberto: «todo campo que manda CIMA se guarda y se enseña, salvo una lista explícita de sensibles»). CÓMO SE SABE QUÉ ESTÁ «CONSUMIDO» (por qué no una lista de prefijos a mano): el mis",
+      "exporta": [
+        "valorCimaExtra",
+        "esProxyDeRastreo",
+        "rastrearLecturas",
+        "sinCimaExtra",
+        "recogerCimaExtra",
+        "conCimaExtra",
+        "camposCimaExtra",
+        "hayCamposCimaExtra"
+      ],
+      "funciones": [
+        {
+          "nombre": "esObjeto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "v is Record<string, unknown>",
+          "linea": 45
+        },
+        {
+          "nombre": "valorCimaExtra",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "string | null",
+          "linea": 62,
+          "resumen": "PURA. Valor de hoja → texto guardable, o `null` si no aporta (vacío, fecha de relleno) o PARECE un dato de persona por su VALOR (DNI/NIE/CIF, IBAN, correo, teléfono) aunque venga bajo un campo de nomb"
+        },
+        {
+          "nombre": "esProxyDeRastreo",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "boolean",
+          "linea": 79,
+          "resumen": "¿Es `v` la vista instrumentada de una pasada de rastreo?"
+        },
+        {
+          "nombre": "rastrearLecturas",
+          "kind": "function",
+          "exportada": true,
+          "params": "item: unknown, fn: (item: unknown) => unknown",
+          "retorno": "Set<string> | null",
+          "linea": 88,
+          "resumen": "Ejecuta `fn(item)` sobre una vista instrumentada y devuelve las rutas (relativas al item, CON índices) cuyo valor leyó. La salida de `fn` se descarta. Si `fn` lanza, devuelve `null` (no se sabe qué co"
+        },
+        {
+          "nombre": "sinCimaExtra",
+          "kind": "function",
+          "exportada": true,
+          "params": "fn: () => T",
+          "retorno": "T",
+          "linea": 125,
+          "resumen": "Ejecuta `fn` con el colector APAGADO (sin clave `cimaExtra`). Para comparar en tests."
+        },
+        {
+          "nombre": "recogerCimaExtra",
+          "kind": "function",
+          "exportada": true,
+          "params": "item: unknown, raiz: string, consumidas: ReadonlySet<string>, opts: OpcionesCimaExtra = {},",
+          "retorno": "ResultadoCimaExtra",
+          "linea": 164,
+          "resumen": "PURA, nunca lanza. Recorre `item` y devuelve las hojas no consumidas, no denegadas y con valor. `raiz` = ruta canónica del item (`Poliza`, `Recibo`, …). Un fallo → `entradas: null` y NINGUNA hoja cont"
+        },
+        {
+          "nombre": "conCimaExtra",
+          "kind": "function",
+          "exportada": true,
+          "params": "item: unknown, raiz: string, mapear: (item: unknown) => T, opts: OpcionesCimaExtra = {},",
+          "retorno": "",
+          "linea": 232,
+          "resumen": "Ejecuta el mapper específico de UN item y le añade su `cimaExtra`. 1) pasada de rastreo (qué lee el mapper), 2) pasada real, 3) recolección. Dentro de otra pasada de rastreo (niveles anidados de CEF) "
+        },
+        {
+          "nombre": "camposCimaExtra",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ResultadoCimaExtra",
+          "retorno": "Record<string, unknown>",
+          "linea": 250,
+          "resumen": "Claves que se fusionan en el jsonb destino. `[]` = revisado, no vino nada. `entradas: null` (no se sabe) → `{}`: no se escribe la clave."
+        },
+        {
+          "nombre": "hayCamposCimaExtra",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ResultadoCimaExtra",
+          "retorno": "boolean",
+          "linea": 256,
+          "resumen": "¿Hay algo que fusionar? (`[]` sí cuenta: borra el resto viejo; `null` no)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "758700ced400"
+    },
+    {
+      "ruta": "packages/module-cima/src/cobertura-motivos.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "Monitor de cobertura CIMA (03/10/2026): «excluido a propósito» ≠ «sin leer». `medirCoberturaCampos` marca cada hoja NO leída que está en la lista de exclusión de `cimaExtra` con su motivo (`RutaCampo.excluido`: «persona», «bancario»…). Aquí ese motivo se guarda en `cima_cobertura_campos.excluido_mot",
+      "exporta": [
+        "motivosExclusion"
+      ],
+      "funciones": [
+        {
+          "nombre": "motivosExclusion",
+          "kind": "function",
+          "exportada": true,
+          "params": "rutas: readonly RutaCampo[],",
+          "retorno": "Array<",
+          "linea": 33,
+          "resumen": "PURA. Hojas NO leídas con motivo → `{ ruta, motivo }`; hojas LEÍDAS → `{ ruta, motivo: null }` (limpia un motivo viejo). Las no leídas sin motivo no salen."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c049dce3ede2"
+    },
+    {
+      "ruta": "packages/module-cima/src/codigo-entidad.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "EIAC `CodigoEntidad` — el código DGS de la aseguradora, en las DOS formas que conviven a partir del 16/11/2026 (entrada en producción de EIAC V07.1): - V06 (ficheros 6.0): objeto `<CodigoEntidad><CodigoInterno/><CodigoDGS>C0058</CodigoDGS></CodigoEntidad>`. - V07.1: texto simple `<CodigoEntidad>C000",
+      "exporta": [
+        "codigoDgsDe",
+        "codigoEntidadFormatoDesconocido"
+      ],
+      "funciones": [
+        {
+          "nombre": "esObjetoPlano",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "v is Record<string, unknown>",
+          "linea": 34
+        },
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: unknown",
+          "retorno": "string | null",
+          "linea": 39,
+          "resumen": "Igual que el `str()` de los mappers: texto recortado (o número → texto); vacío → null."
+        },
+        {
+          "nombre": "codigoDgsDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: unknown",
+          "retorno": "string | null",
+          "linea": 55,
+          "resumen": "- cualquier otra cosa (número, array, texto con otra forma, ausente) → null. Nunca inventa un código: ante la duda, null («no se sabe»)."
+        },
+        {
+          "nombre": "codigoDgsDeTexto",
+          "kind": "function",
+          "exportada": false,
+          "params": "valor: unknown",
+          "retorno": "string | null",
+          "linea": 64,
+          "resumen": "Forma V07.1 (texto): recortado y en mayúsculas solo si cumple `^[A-Z]\\d{4}$`."
+        },
+        {
+          "nombre": "codigoEntidadFormatoDesconocido",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: unknown",
+          "retorno": "boolean",
+          "linea": 77,
+          "resumen": "PURA. ¿Vino `CodigoEntidad` con un valor que NO sabemos leer? Distingue «formato desconocido» de «falta»: ausente, texto vacío u objeto V06 sin `CodigoDGS` son «falta» (false); un texto que no es `[A-"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "100d2e947ed9"
+    },
+    {
+      "ruta": "packages/module-cima/src/config.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "CIMA adapter (Java sidecar en Fly.io) — config consumida por el cliente HTTP. Variables de entorno (server-only, NUNCA `NEXT_PUBLIC_*`): CIMA_ADAPTER_URL — base del adapter (sin trailing slash) CIMA_ADAPTER_INTERNAL_TOKEN — secreto compartido (32+ chars, mismo INTERNAL_TOKEN del Fly secret) CIMA_ADA",
+      "exporta": [
+        "getCimaAdapterConfig",
+        "assertCimaAdapterCallable",
+        "isCimaAdapterConfigured"
+      ],
+      "funciones": [
+        {
+          "nombre": "envInt",
+          "kind": "function",
+          "exportada": false,
+          "params": "name: string, fallback: number",
+          "retorno": "number",
+          "linea": 21
+        },
+        {
+          "nombre": "getCimaAdapterConfig",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "CimaAdapterConfig",
+          "linea": 28
+        },
+        {
+          "nombre": "assertCimaAdapterCallable",
+          "kind": "function",
+          "exportada": true,
+          "params": "cfg: CimaAdapterConfig",
+          "retorno": "void",
+          "linea": 36
+        },
+        {
+          "nombre": "isCimaAdapterConfigured",
+          "kind": "function",
+          "exportada": true,
+          "params": "cfg: CimaAdapterConfig = getCimaAdapterConfig(),",
+          "retorno": "boolean",
+          "linea": 44
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "57b247dabc85"
+    },
+    {
+      "ruta": "packages/module-cima/src/crm-polizas-labels.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "Copia LITERAL de `src/lib/polizas/labels.ts` del CRM (repo `asegura`), solo la parte que consume `eiac-pol-mapper` (`CIMA_DGS_CARRIERS` + `nombreCarrierCima`). Portada tal cual para que el mapper produzca exactamente la misma salida. Unificar con el catálogo de compañías de `@central/module-seguros`",
+      "exporta": [
+        "nombreCarrierCima"
+      ],
+      "funciones": [
+        {
+          "nombre": "nombreCarrierCima",
+          "kind": "function",
+          "exportada": true,
+          "params": "codigoEntidadDgs: string | null | undefined,",
+          "retorno": "string | null",
+          "linea": 27,
+          "resumen": "Nombre de compania a partir del codigo DGS, o `null` si no esta mapeado."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8e46a2896fd0"
+    },
+    {
+      "ruta": "packages/module-cima/src/crm-provincia-por-cp.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "Copia LITERAL de `src/lib/geo/provincia-por-cp.ts` del CRM (repo `asegura`). NO se sustituye por `provinciaPorCp` de `@central/module-seguros` / `core-direccion` a propósito: esas devuelven «Illes Balears» para 07 y el CRM «Islas Baleares»; cambiarlo alteraría la provincia que la ingesta persiste. U",
+      "exporta": [
+        "provinciaPorCp"
+      ],
+      "funciones": [
+        {
+          "nombre": "provinciaPorCp",
+          "kind": "function",
+          "exportada": true,
+          "params": "cp: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 77,
+          "resumen": "Devuelve el nombre de la provincia para un CP español, o `null` si el CP no es válido (no numérico, longitud incorrecta, o prefijo fuera de 01–52). Tolerante a espacios alrededor; NO exige los 5 dígit"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a3e05567b61a"
+    },
+    {
+      "ruta": "packages/module-cima/src/eiac-cef-mapper.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "LOO-757 (épica CIMA LOO-515) — Mapper PURO de un EIAC CEF (cuenta de efectivo / liquidaciones, proceso 502) parseado a la forma intermedia `MappedCuentaEfectivo` que el pipeline de ingesta y el persist (`persist-cef.ts`) consumen. Espejo de `eiac-rec-mapper.ts`. CONTRATO DE ENTRADA — anclado a la es",
+      "exporta": [
+        "mapLiquidacionEstado",
+        "mapEiacCefAll"
+      ],
+      "funciones": [
+        {
+          "nombre": "str",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: unknown",
+          "retorno": "string | null",
+          "linea": 119,
+          "resumen": "--- Helper local (str): idéntico al privado del REC/SIN mapper. PURO, nunca throw. ---"
+        },
+        {
+          "nombre": "toInt",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: unknown",
+          "retorno": "number | null",
+          "linea": 127,
+          "resumen": "Parsea un entero del EIAC (string). null si no es un entero válido."
+        },
+        {
+          "nombre": "unwrapCuentas",
+          "kind": "function",
+          "exportada": false,
+          "params": "parsed: ParsedEiacCef,",
+          "retorno": "ParsedCuentaEfectivo | ParsedCuentaEfectivo[] | undefined",
+          "linea": 252,
+          "resumen": "Desenvuelve el wrapper ProcesosEIAC si está presente."
+        },
+        {
+          "nombre": "mapLiquidacionEstado",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "MappedLiquidacionEstado",
+          "linea": 280,
+          "resumen": "Mapea `EstadoLiquidacion` al enum `liquidacion_estado`. Dict best-effort (CONFIRMAR codes TIREA); default `pendiente` para no bloquear la ingesta por un código nuevo. Devuelve `conocido` (espejo de `m"
+        },
+        {
+          "nombre": "mapComision",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: ParsedCefComision | undefined",
+          "retorno": null,
+          "linea": 299,
+          "resumen": "Una comisión del recibo liquidado → forma compacta. null si viene vacía."
+        },
+        {
+          "nombre": "buildMovimientoExtra",
+          "kind": "function",
+          "exportada": false,
+          "params": "m: ParsedMovimientoLiquidacion | undefined,",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 312,
+          "resumen": "`datos_extra` del movimiento: comisión liquidada, ids del recibo y el bloque contable. SIN PII (IBAN/Titular del recibo embebido NO se leen)."
+        },
+        {
+          "nombre": "mapOneMovimiento",
+          "kind": "function",
+          "exportada": false,
+          "params": "m: ParsedMovimientoLiquidacion | undefined",
+          "retorno": "MappedLiquidacionMovimiento",
+          "linea": 419,
+          "resumen": "Movimiento + su resto → `liquidacion_movimientos.datos_extra.cimaExtra`."
+        },
+        {
+          "nombre": "mapOneMovimientoEspecifico",
+          "kind": "function",
+          "exportada": false,
+          "params": "m: ParsedMovimientoLiquidacion | undefined,",
+          "retorno": "MappedLiquidacionMovimiento",
+          "linea": 424,
+          "resumen": "Mapea UN movimiento de liquidación. PURA, nunca throw. SIN PII."
+        },
+        {
+          "nombre": "mapOneLiquidacion",
+          "kind": "function",
+          "exportada": false,
+          "params": "liq: ParsedLiquidacion | undefined",
+          "retorno": "",
+          "linea": 443,
+          "resumen": "Mapea UNA liquidación (con sus movimientos). PURA, nunca throw. SIN PII. Devuelve también si el `EstadoLiquidacion` fue desconocido pese a venir presente, para que `mapOneCuenta` lo agregue a `reviewR"
+        },
+        {
+          "nombre": "mapOneLiquidacionEspecifico",
+          "kind": "function",
+          "exportada": false,
+          "params": "liq: ParsedLiquidacion | undefined",
+          "retorno": "",
+          "linea": 463
+        },
+        {
+          "nombre": "mapOneCuenta",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuenta: ParsedCuentaEfectivo | undefined",
+          "retorno": "MappedCuentaEfectivo",
+          "linea": 494,
+          "resumen": "Cuenta + su resto → `cuentas` `datos_extra.cimaExtra` (liquidaciones: el suyo)."
+        },
+        {
+          "nombre": "mapOneCuentaEspecifico",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuenta: ParsedCuentaEfectivo | undefined,",
+          "retorno": "MappedCuentaEfectivo",
+          "linea": 504,
+          "resumen": "Mapea UNA cuenta de efectivo EIAC a `MappedCuentaEfectivo`. PURA, nunca throw."
+        },
+        {
+          "nombre": "mapEiacCefAll",
+          "kind": "function",
+          "exportada": true,
+          "params": "parsed: ParsedEiacCef",
+          "retorno": "MappedCuentaEfectivo[]",
+          "linea": 554,
+          "resumen": "Mapea TODAS las cuentas de efectivo de un EIAC CEF. Normalmente 1 por fichero, pero el adapter podría traer un array. Si el fichero no trae ninguna, devuelve `[]` (el pipeline lo registra sin perderlo"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c3c5d58af62e"
+    },
+    {
+      "ruta": "packages/module-cima/src/eiac-pol-mapper.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "LOO-522 (épica CIMA LOO-515) — Mapper PURO de un EIAC POL parseado a la forma intermedia `EiacPolMapped` que el pipeline de ingesta (PR-5/LOO-523) y el persist (PR-7/LOO-524) consumen. CONTRATO DE ENTRADA — anclado al catálogo `Intelligence/ecosystem/cima-eiac-fields.md` (derivado de los XMLs de hom",
+      "exporta": [
+        "mapSituacionPoliza",
+        "estadoPolizaDesdeEiac",
+        "asArray",
+        "toIsoDate",
+        "toDecimalString",
+        "classifyFraccionPago",
+        "classifyTipoSeguro",
+        "unrecognizedRiesgoBlocks",
+        "extractSituacionRiesgo",
+        "taparNumerosLargos",
+        "anioDeAntiguedad",
+        "extractInmuebleExtra",
+        "extractEmbarcacion",
+        "esOtroDatoPersonal",
+        "extractDatosPoliza",
+        "extractDatosEspecificos",
+        "extractVida",
+        "extractDecesos",
+        "describeRiesgoShape",
+        "franquiciaPrincipal",
+        "extractCoberturas",
+        "classifyClaseFigura",
+        "extractIntervinientes",
+        "extractCobro",
+        "extractContrato",
+        "textoSinVia",
+        "descripcionRiesgoSegura",
+        "extractRiesgos",
+        "extractTomadorContacto",
+        "primaAnualDesdeEiac",
+        "mapEiacPolAll",
+        "mapEiacPol"
+      ],
+      "funciones": [
+        {
+          "nombre": "mapSituacionPoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown,",
+          "retorno": "",
+          "linea": 76,
+          "resumen": "LOO-915 — `EIAC SituacionPoliza` → `polizas.estado`. Hasta este ticket `estado` NO se escribía NUNCA desde el pull: se guardaba `situacion` en crudo y `estado` se quedaba con su `DEFAULT 'activa'`. Re"
+        },
+        {
+          "nombre": "estadoPolizaDesdeEiac",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { estado: EstadoPolizaCima | null; situacionConocida: boolean; fechaVencimiento: string | null; hoy: string; situacion?: string | null; }",
+          "retorno": "EstadoPolizaCima | null",
+          "linea": 109,
+          "resumen": "LOO-915 / 26/09/2026 — `estado` a escribir en la póliza desde el EIAC. Código con estado propio (EV/AN) → el suyo. Sin estado propio y NO propuesta: código DESCONOCIDO o `ES` (En Suspenso) → si el pro"
+        },
+        {
+          "nombre": "asArray",
+          "kind": "function",
+          "exportada": true,
+          "params": "value: T | T[] | null | undefined",
+          "retorno": "T[]",
+          "linea": 372,
+          "resumen": "fast-xml-parser colapsa arrays de 1 elem a objeto; normaliza a array."
+        },
+        {
+          "nombre": "toIsoDate",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "string | null",
+          "linea": 378,
+          "resumen": "dateTime EIAC '2020-02-01T00:00:00' → 'YYYY-MM-DD'. null si vacío/inválido. NUNCA throw."
+        },
+        {
+          "nombre": "toIsoVencimiento",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: unknown",
+          "retorno": "string | null",
+          "linea": 395,
+          "resumen": "Vencimiento: además, `2000-01-01` es el relleno medido en Allianz (propuestas PR)."
+        },
+        {
+          "nombre": "str",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: unknown",
+          "retorno": "string | null",
+          "linea": 400
+        },
+        {
+          "nombre": "toDecimalString",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "string | null",
+          "linea": 412,
+          "resumen": "LOO-749 — Importe EIAC decimal (\"1000.0\" | number) → string normalizado \"1000.00\" o null. EIAC usa punto decimal (XML estándar), sin separador de miles. Negativo o no numérico → null (dato malo). PURA"
+        },
+        {
+          "nombre": "classifyFraccionPago",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown,",
+          "retorno": "\"anual\" | \"semestral\" | \"trimestral\" | \"mensual\" | null",
+          "linea": 425,
+          "resumen": "LOO-749 — EIAC §3.1 FraccionPago (AN/SE/TR/ME) → `fraccionamientoEnum`. null si ausente o desconocido (defensivo, no throw)."
+        },
+        {
+          "nombre": "unwrapObjetos",
+          "kind": "function",
+          "exportada": false,
+          "params": "parsed: ParsedEiacPol,",
+          "retorno": "",
+          "linea": 702,
+          "resumen": "Desenvuelve el wrapper ProcesosEIAC si está presente."
+        },
+        {
+          "nombre": "classifyTipoSeguro",
+          "kind": "function",
+          "exportada": true,
+          "params": "riesgo: ParsedRiesgo | undefined, ramoDgs?: string | null,",
+          "retorno": "EiacTipoSeguro | null",
+          "linea": 747,
+          "resumen": "Producto por presencia de bloque `<RiesgoXxx>`, NO por RamoDGS. Distingue moto de auto por `RiesgoAutos/Vehiculo/ClaseVehiculo` ('MO'=moto; resto=auto). LOO-807: comercio acepta `RiesgoComercio` Y `Ri"
+        },
+        {
+          "nombre": "unrecognizedRiesgoBlocks",
+          "kind": "function",
+          "exportada": true,
+          "params": "riesgo: ParsedRiesgo | undefined",
+          "retorno": "string[]",
+          "linea": 840,
+          "resumen": "LOO-806 — DIAGNÓSTICO: nombres de los bloques `<RiesgoXxx>` presentes en un riesgo que classifyTipoSeguro NO reconoce. Hace el gap `tipo_seguro_no_clasificable` auto- diagnosticable (qué ramo trae el "
+        },
+        {
+          "nombre": "extractSituacionRiesgo",
+          "kind": "function",
+          "exportada": true,
+          "params": "riesgo: ParsedRiesgo | undefined,",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 911,
+          "resumen": "Dirección del riesgo de un bloque `RiesgoHogar`/`RiesgoComercios`/ `RiesgoComunidades` → claves de `polizas.datos_especificos`. Las claves de salida NO se eligen aquí: son las que YA lee la ficha de `"
+        },
+        {
+          "nombre": "extractCapitales",
+          "kind": "function",
+          "exportada": false,
+          "params": "riesgo: ParsedRiesgo | undefined",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 969,
+          "resumen": "El desglose de `Riesgo.Capitales.Capital[]` → `datos_especificos.capitales`, la clave que `objetoAsegurado()`/`describirBien()` de central ya saben leer y formatear (`capitalAsegurado`/`detalles`). `C"
+        },
+        {
+          "nombre": "extractSuperficieYViviendas",
+          "kind": "function",
+          "exportada": false,
+          "params": "riesgo: ParsedRiesgo | undefined,",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 1018,
+          "resumen": "Superficie y nº de viviendas del inmueble (hogar/comunidades) → claves de `polizas.datos_especificos` que YA lee `objetoInmueble()` de `@central/module-seguros` (`metrosCuadrados`, `nViviendas`): no s"
+        },
+        {
+          "nombre": "strUtil",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: unknown",
+          "retorno": "string | null",
+          "linea": 1075,
+          "resumen": "`str` que además descarta el relleno de la compañía («SIN INFORMAR»…)."
+        },
+        {
+          "nombre": "extractAnimalRC",
+          "kind": "function",
+          "exportada": false,
+          "params": "riesgo: ParsedRiesgo | undefined",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 1080
+        },
+        {
+          "nombre": "taparNumerosLargos",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "string",
+          "linea": 1136,
+          "resumen": "Un texto libre de la compañía puede llevar una cuenta bancaria o un documento («Se ha modificado la cuenta bancaria: Antigua cuenta ES12 3456…»). Cualquier tirada de 8 o más dígitos (admitiendo espaci"
+        },
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: unknown",
+          "retorno": "string | null",
+          "linea": 1148
+        },
+        {
+          "nombre": "anioDeAntiguedad",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown, hoy: Date = new Date()",
+          "retorno": "number | null",
+          "linea": 1162,
+          "resumen": "`Antiguedad` del inmueble. El comentario de `extractSuperficieYViviendas` suponía «edad en años»; los ficheros reales dicen otra cosa: 1930, 1970, 1994, 2014… (AÑO) o `2018-02-01T00:00:00` (fecha). So"
+        },
+        {
+          "nombre": "listaProtecciones",
+          "kind": "function",
+          "exportada": false,
+          "params": "bloque: Record<string, unknown>",
+          "retorno": "Array<Record<string, string>>",
+          "linea": 1169
+        },
+        {
+          "nombre": "extractInmuebleExtra",
+          "kind": "function",
+          "exportada": true,
+          "params": "riesgo: ParsedRiesgo | undefined",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 1186,
+          "resumen": "Resto de la ficha del inmueble (hogar, comercio, comunidades)."
+        },
+        {
+          "nombre": "extractEmbarcacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "riesgo: ParsedRiesgo | undefined",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 1221,
+          "resumen": "La embarcación de `RiesgoEmbarcaciones` (Occident): una matrícula de barco no es PII."
+        },
+        {
+          "nombre": "sinAcentos",
+          "kind": "function",
+          "exportada": false,
+          "params": "t: string",
+          "retorno": "string",
+          "linea": 1259,
+          "resumen": "Sin acentos: «TELÉFONO» no casaría con /TELEF/ y se colaría. Y los `_` pasan a espacio: `\\b` no corta en el guion bajo, así que `NIF_PAGADOR` se colaba por `\\bNIF\\b` (medido 28/09/2026 en los recibos "
+        },
+        {
+          "nombre": "esOtroDatoPersonal",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string | null, descripcion: string | null, valor?: string | null,",
+          "retorno": "boolean",
+          "linea": 1271,
+          "resumen": "¿Es un dato de PERSONA (no se guarda)? Una sola regla para póliza y recibo. Mira la etiqueta Y el valor: una compañía puede mandar un DNI bajo un id inocente, y la etiqueta sola no lo pararía."
+        },
+        {
+          "nombre": "otrosDatos",
+          "kind": "function",
+          "exportada": false,
+          "params": "nodo: unknown",
+          "retorno": "Array<Record<string, string>>",
+          "linea": 1280
+        },
+        {
+          "nombre": "extractDatosPoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "poliza: ParsedPoliza | undefined, riesgos: ParsedRiesgo[] = [],",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 1307,
+          "resumen": "Lo que la compañía dice de la PÓLIZA (no del bien): anulación, póliza que sustituye, suplementos y «otros datos» (de la póliza y de sus riesgos). ⚠️ `anulacion` se fusiona con `jsonb ||` como el resto"
+        },
+        {
+          "nombre": "extractDatosEspecificos",
+          "kind": "function",
+          "exportada": true,
+          "params": "riesgo: ParsedRiesgo | undefined,",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 1408
+        },
+        {
+          "nombre": "personaAseguradaVida",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: unknown",
+          "retorno": "(FiguraCima &",
+          "linea": 1499,
+          "resumen": "La persona asegurada de vida/decesos (`tipo_personafisica`, sin envoltorio) → figura con papel `asegurado` + `fechaNacimiento`. EN CLARO: el persist la cifra (`cifrarPiiAnidadaCima`). Sexo, estado civ"
+        },
+        {
+          "nombre": "prestamoCima",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 1509,
+          "resumen": "`tipo_prestamo` (13.71) → préstamo vinculado. El `TitularPrestamo` (persona) NO se lee."
+        },
+        {
+          "nombre": "extractVida",
+          "kind": "function",
+          "exportada": true,
+          "params": "riesgo: ParsedRiesgo | undefined",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 1535,
+          "resumen": "`RiesgoVida` (EIAC V07.1, `tipo_riesgovida` 13.61) → `datos_especificos.vida`. Forma FIJA (cada clave siempre; `null` = no consta). Los CAPITALES de vida no están en este bloque: van en `DatosCobertur"
+        },
+        {
+          "nombre": "extractDecesos",
+          "kind": "function",
+          "exportada": true,
+          "params": "riesgo: ParsedRiesgo | undefined",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 1570,
+          "resumen": "`RiesgoDecesos` (EIAC V07.1, `tipo_riesgodecesos` 13.53) → `datos_especificos.decesos`. La norma solo trae Persona, IdAplicacion, IdEmpleado y Modalidad. Forma fija."
+        },
+        {
+          "nombre": "toBool",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: unknown",
+          "retorno": "boolean | null",
+          "linea": 1583,
+          "resumen": "`true`/`false`/`1`/`0` del EIAC → boolean; cualquier otra cosa → null."
+        },
+        {
+          "nombre": "extractVehiculoExtra",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: Record<string, unknown> | undefined,",
+          "retorno": "Record<string, unknown>",
+          "linea": 1598,
+          "resumen": "28/09/2026 — el resto del `Vehiculo` que CIMA manda y se tiraba (medido en los 36 POL: 17 vehículos, todos con Version/Potencia/Uso/Valor). Nada es PII: el bastidor identifica el COCHE, igual que la m"
+        },
+        {
+          "nombre": "describeRiesgoShape",
+          "kind": "function",
+          "exportada": true,
+          "params": "riesgo: ParsedRiesgo | undefined, bloque: | \"RiesgoHogar\" | \"RiesgoRC\" | \"RiesgoVida\" | \"RiesgoDecesos\" | \"RiesgoSalud\" | \"RiesgoComercio\" | \"RiesgoComercios\" // LOO-807 — plural de Occident (C0468) | \"RiesgoAccidentes\" // Occident (C0468),",
+          "retorno": "string[]",
+          "linea": 1637,
+          "resumen": "LOO-918 — instrumentación para el mapper de hogar (Slice 4 de LOO-887). Hoy `extractDatosEspecificos` solo lee `RiesgoAutos`; para hogar/RC/vida el contenido del bloque se descarta y `datos_especifico"
+        },
+        {
+          "nombre": "toInt",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: unknown",
+          "retorno": "number | null",
+          "linea": 1673,
+          "resumen": "EIAC int string (\"1\") → number o null. PURA, nunca throw."
+        },
+        {
+          "nombre": "copiaLeida",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, profundidad = 0",
+          "retorno": "unknown",
+          "linea": 1704,
+          "resumen": "Copia profunda LEYENDO cada hoja. No es por gusto: el medidor de cobertura (`field-coverage.ts`) cuenta como «leído» lo que el mapper accede por `get`, y antes `datosExtra[k] = v` guardaba la REFERENC"
+        },
+        {
+          "nombre": "franquiciaPrincipal",
+          "kind": "function",
+          "exportada": true,
+          "params": "datosFranquicias: unknown",
+          "retorno": "string | null",
+          "linea": 1719,
+          "resumen": "L2 (28/09/2026) — `poliza_coberturas.franquicia` NO se rellenaba nunca: el mapper buscaba `Cobertura.Franquicia` y el EIAC la manda en `DatosFranquicias.Franquicia[]` (ValorExacto / Porcentaje / Valor"
+        },
+        {
+          "nombre": "mapCobertura",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: ParsedCobertura",
+          "retorno": "MappedCobertura",
+          "linea": 1745,
+          "resumen": "Mapea UNA Cobertura del EIAC a `MappedCobertura`. PURA, nunca throw."
+        },
+        {
+          "nombre": "extractCoberturas",
+          "kind": "function",
+          "exportada": true,
+          "params": "riesgos: ParsedRiesgo[] | undefined,",
+          "retorno": "MappedCobertura[]",
+          "linea": 1776,
+          "resumen": "LOO-751 — aplana las coberturas de TODOS los riesgos de la póliza (Riesgo[]/DatosCoberturas/Cobertura[]). Cada Riesgo y cada Cobertura pueden ser objeto único o array (fast-xml-parser) → asArray en am"
+        },
+        {
+          "nombre": "contactoTelefono",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: ParsedDatosContacto | undefined",
+          "retorno": "string | null",
+          "linea": 1794,
+          "resumen": "Primer teléfono de un `DatosContacto` (EIAC: Telefonos/Telefono[]/Numero). Telefono colapsa a objeto o array (fast-xml-parser). PURA, nunca throw."
+        },
+        {
+          "nombre": "contactoEmail",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: ParsedDatosContacto | undefined",
+          "retorno": "string | null",
+          "linea": 1803,
+          "resumen": "Primer email de un `DatosContacto` (EIAC: Emails/Email[]/Direccion)."
+        },
+        {
+          "nombre": "personaNombre",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: ParsedPersonaFisica | undefined",
+          "retorno": "string | null",
+          "linea": 1812,
+          "resumen": "Nombre de pila (PersonaFisica/Nombre) o null."
+        },
+        {
+          "nombre": "personaApellidos",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: ParsedPersonaFisica | undefined",
+          "retorno": "string | null",
+          "linea": 1817,
+          "resumen": "Apellidos concatenados (Apellido1 + Apellido2) o null."
+        },
+        {
+          "nombre": "mapPersonaFisicaInterviniente",
+          "kind": "function",
+          "exportada": false,
+          "params": "pf: ParsedPersonaFisica | undefined, rol: EiacIntervinienteRol, opts: { fechaCarnet?: string | null; claseFiguraRaw?: string | null } = {},",
+          "retorno": "MappedInterviniente | null",
+          "linea": 1830,
+          "resumen": "LOO-752 — proyecta una PersonaFisica del EIAC a un `MappedInterviniente`. `rol`, `fechaCarnet` y `claseFiguraRaw` los aporta el caller (dependen del bloque). PII en CLARO (el cifrado Tier-1 lo hace el"
+        },
+        {
+          "nombre": "mapPersonaInterviniente",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: ParsedPersona | undefined, rol: EiacIntervinienteRol, opts: { fechaCarnet?: string | null; claseFiguraRaw?: string | null } = {},",
+          "retorno": "MappedInterviniente | null",
+          "linea": 1861,
+          "resumen": "sin apellidos ni fecha de nacimiento. PURA, nunca throw."
+        },
+        {
+          "nombre": "normalizeNif",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 1891,
+          "resumen": "LOO-752 — NIF/identificador normalizado (upper+trim) para comparar identidad. null si vacío. Usado para deduplicar el Asegurado que coincide con el Tomador (minimización Art.5.1.c: no duplicar la PII "
+        },
+        {
+          "nombre": "classifyClaseFigura",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "EiacIntervinienteRol",
+          "linea": 1901,
+          "resumen": "LOO-752 — clasifica `ClaseFigura` de OtrasFiguras a un rol del enum (best-effort, CONFIRMAR codes TIREA). BE/BN → beneficiario; PA → pagador (28/09/2026, rol propio: mig 0103); el resto → contacto gen"
+        },
+        {
+          "nombre": "extractIntervinientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "poliza: ParsedPoliza | undefined, riesgos: ParsedRiesgo[], tomadorNif?: string | null,",
+          "retorno": "MappedInterviniente[]",
+          "linea": 1929,
+          "resumen": "LOO-752 — extrae TODOS los intervinientes de una póliza: - `Asegurado[]` (nivel póliza) → rol `asegurado`. Si su NIF coincide con el del Tomador se guarda SIN contacto ni fecha de nacimiento (eso ya e"
+        },
+        {
+          "nombre": "beneficiariosDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "riesgo: ParsedRiesgo | undefined",
+          "retorno": "Record<string, unknown>[]",
+          "linea": 2024
+        },
+        {
+          "nombre": "personaDeBeneficiario",
+          "kind": "function",
+          "exportada": false,
+          "params": "ben: Record<string, unknown>",
+          "retorno": "ParsedPersona | null",
+          "linea": 2034,
+          "resumen": "La persona de un Beneficiario, si la trae (defensivo: el feed medido no la trae)."
+        },
+        {
+          "nombre": "normalizarIban",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: unknown",
+          "retorno": "string | null",
+          "linea": 2048,
+          "resumen": "IBAN normalizado (sin espacios, mayúsculas) o null."
+        },
+        {
+          "nombre": "extractCobro",
+          "kind": "function",
+          "exportada": true,
+          "params": "poliza: ParsedPoliza | undefined, tomadorNif: string | null,",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 2067,
+          "resumen": "Cobro: clase de gestión (CO compañía / ME mediador…), forma de pago (CC…), IBAN y BIC de domiciliación. 🚨 `iban` es PII financiera y sale EN CLARO de aquí (mapper puro): el persist la cifra con `encr"
+        },
+        {
+          "nombre": "listaDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "nodo: unknown, fn: (o: Record<string, unknown>) => Record<string, unknown> | null,",
+          "retorno": "Record<string, unknown>[]",
+          "linea": 2100,
+          "resumen": "Lista de objetos de un nodo EIAC repetible, cada uno proyectado por `fn`."
+        },
+        {
+          "nombre": "limpio",
+          "kind": "function",
+          "exportada": false,
+          "params": "pares: Record<string, unknown>",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 2112,
+          "resumen": "Objeto con solo las claves con valor (null/undefined fuera)."
+        },
+        {
+          "nombre": "extractContrato",
+          "kind": "function",
+          "exportada": true,
+          "params": "poliza: ParsedPoliza | undefined",
+          "retorno": "",
+          "linea": 2127,
+          "resumen": "Lo que la compañía dice del CONTRATO y no tenía sitio: duración y clase de póliza, mediador, producto (modalidad/ramo de la entidad), desglose de la prima, capital agregado, comisiones, comercializaci"
+        },
+        {
+          "nombre": "textoSinVia",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "string | null",
+          "linea": 2228,
+          "resumen": "`texto` (enmascara números largos) cortado en el primer tipo de vía (la dirección es Tier-1). Núcleo común de `descripcionRiesgoSegura` y de `OtrosRiesgos`. null si no queda nada."
+        },
+        {
+          "nombre": "descripcionRiesgoSegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ParsedRiesgo",
+          "retorno": "string | null",
+          "linea": 2247,
+          "resumen": "- todo pasa por `taparNumerosLargos`."
+        },
+        {
+          "nombre": "beneficiariosSinPersona",
+          "kind": "function",
+          "exportada": false,
+          "params": "r: ParsedRiesgo",
+          "retorno": "Record<string, unknown>[]",
+          "linea": 2259,
+          "resumen": "L1 — beneficiarios (sin persona) de un riesgo → `{orden, descripcion, prestamo}`."
+        },
+        {
+          "nombre": "extractRiesgos",
+          "kind": "function",
+          "exportada": true,
+          "params": "riesgos: ParsedRiesgo[]",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 2284,
+          "resumen": "L1 (28/09/2026) — TODOS los riesgos de la póliza. Hasta hoy `datos_especificos` salía de UN solo riesgo (el que clasificaba) y `extractEmbarcacion` tomaba el `[0]`: una póliza con dos inmuebles o dos "
+        },
+        {
+          "nombre": "recorta",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null, n: number",
+          "retorno": "string | null",
+          "linea": 2321
+        },
+        {
+          "nombre": "nombreProvincia",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: unknown, cp: string | null",
+          "retorno": "string | null",
+          "linea": 2326,
+          "resumen": "Código INE de provincia (1–2 dígitos) → nombre; el CP como respaldo; si no, crudo."
+        },
+        {
+          "nombre": "extractTomadorContacto",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: ParsedPersona | undefined",
+          "retorno": "MappedTomadorContacto | null",
+          "linea": 2336,
+          "resumen": "L14 (28/09/2026) — contacto del tomador → `clientes`. PII EN CLARO (la cifra el persist). `null` si el tomador no trae nada de esto."
+        },
+        {
+          "nombre": "primaAnualDesdeEiac",
+          "kind": "function",
+          "exportada": true,
+          "params": "poliza: ParsedPoliza | undefined",
+          "retorno": "",
+          "linea": 2394,
+          "resumen": "L10 (28/09/2026) — prima ANUAL desde el EIAC. 1. `ImportesDEC.*Anualizada` si viene: es la anual por definición. 2. Si no, `Importes.PrimaTotal/PrimaNeta` SOLO si el pago es anual o único (`AN`/`UN`):"
+        },
+        {
+          "nombre": "mapPersona",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: ParsedPersona | undefined",
+          "retorno": "MappedTomador | null",
+          "linea": 2421
+        },
+        {
+          "nombre": "mapEiacPolAll",
+          "kind": "function",
+          "exportada": true,
+          "params": "parsed: ParsedEiacPol",
+          "retorno": "EiacPolMapped[]",
+          "linea": 2456,
+          "resumen": "LOO-748 — Mapea TODAS las pólizas de un EIAC POL. Los ficheros de cartera (proceso 132) contienen N pólizas en `<Objetos><Poliza>` (array); antes se tomaba solo la `[0]` y se perdía el resto de la car"
+        },
+        {
+          "nombre": "mapEiacPol",
+          "kind": "function",
+          "exportada": true,
+          "params": "parsed: ParsedEiacPol",
+          "retorno": "EiacPolMapped",
+          "linea": 2466,
+          "resumen": "Backward-compat (DEPRECATED, LOO-748): mapea solo la PRIMERA póliza. Se mantiene para tests/callers legacy; el pipeline usa `mapEiacPolAll`."
+        },
+        {
+          "nombre": "mapOnePoliza",
+          "kind": "function",
+          "exportada": false,
+          "params": "poliza: ParsedPoliza | undefined",
+          "retorno": "EiacPolMapped",
+          "linea": 2476,
+          "resumen": "Mapea UNA póliza + su «resto» (`datos_especificos.cimaExtra`): toda hoja del EIAC que ningún extractor lee y no está en la lista de exclusión (`cima-extra.ts`). `cimaExtra: []` solo se escribe si ya h"
+        },
+        {
+          "nombre": "mapOnePolizaEspecifico",
+          "kind": "function",
+          "exportada": false,
+          "params": "poliza: ParsedPoliza | undefined",
+          "retorno": "EiacPolMapped",
+          "linea": 2488,
+          "resumen": "Mapea UNA póliza EIAC a `EiacPolMapped` (extractores específicos). PURA, nunca throw por datos."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6224a92a8e5f"
+    },
+    {
+      "ruta": "packages/module-cima/src/eiac-rec-mapper.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "LOO-753 (épica CIMA LOO-515) — Mapper PURO de un EIAC REC (recibo) parseado a la forma intermedia `EiacRecMapped` que el pipeline de ingesta y el persist (`persist-recibo.ts`) consumen. Espejo de `eiac-sin-mapper.ts`. CONTRATO DE ENTRADA — anclado a la estructura REAL del REC verificada contra prod ",
+      "exporta": [
+        "dec",
+        "mapReciboSituacion",
+        "mapMediador",
+        "mapEiacRecAll"
+      ],
+      "funciones": [
+        {
+          "nombre": "str",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: unknown",
+          "retorno": "string | null",
+          "linea": 106,
+          "resumen": "--- Helper local (str): idéntico al privado del SIN mapper. PURO, nunca throw. ---"
+        },
+        {
+          "nombre": "dec",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "string | null",
+          "linea": 115,
+          "resumen": "Decimal EIAC (`NNN.NN`, con signo opcional) para columnas `numeric`: un texto que no lo sea haría fallar el INSERT entero → null. PURO, nunca throw."
+        },
+        {
+          "nombre": "unwrapRecibos",
+          "kind": "function",
+          "exportada": false,
+          "params": "parsed: ParsedEiacRec,",
+          "retorno": "ParsedRecibo | ParsedRecibo[] | undefined",
+          "linea": 229,
+          "resumen": "Desenvuelve el wrapper ProcesosEIAC si está presente."
+        },
+        {
+          "nombre": "mapReciboSituacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "MappedReciboEstado",
+          "linea": 255,
+          "resumen": "Mapea `SituacionRecibo` al enum `recibo_estado`. Base: tabla oficial EIAC V07.1 §13.3.33 claves_situacionrecibo; default `pendiente` para no bloquear la ingesta por un código nuevo. Devuelve `conocido"
+        },
+        {
+          "nombre": "mapMediador",
+          "kind": "function",
+          "exportada": true,
+          "params": "dm: ParsedDatosMediador | undefined,",
+          "retorno": "",
+          "linea": 283,
+          "resumen": "`DatosMediador` → `{clase, codigoInterno, nombre}` o null si viene vacío. Es el propio corredor (o su auxiliar), no el cliente. Lo reusa el CEF mapper."
+        },
+        {
+          "nombre": "monedaNoEur",
+          "kind": "function",
+          "exportada": false,
+          "params": "dr: ParsedDatosRecibo | undefined",
+          "retorno": "string | null",
+          "linea": 297,
+          "resumen": "Moneda del recibo si NO es euro (null si EUR o ausente: ausente = euro, como siempre se ha leído). Un importe en otra divisa pintado como € es el «dato leído mal» de CLAUDE.md → el caller lo manda a r"
+        },
+        {
+          "nombre": "buildDatosExtra",
+          "kind": "function",
+          "exportada": false,
+          "params": "recibo: ParsedRecibo | undefined,",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 302
+        },
+        {
+          "nombre": "mapEiacRecAll",
+          "kind": "function",
+          "exportada": true,
+          "params": "parsed: ParsedEiacRec",
+          "retorno": "EiacRecMapped[]",
+          "linea": 408,
+          "resumen": "Mapea TODOS los recibos de un EIAC REC. Normalmente 1 por fichero, pero el adapter podría traer un array. Si el fichero no trae ninguno, devuelve un único `review` (faltan datos) para que el pipeline "
+        },
+        {
+          "nombre": "mapOneRecibo",
+          "kind": "function",
+          "exportada": false,
+          "params": "recibo: ParsedRecibo | undefined",
+          "retorno": "EiacRecMapped",
+          "linea": 415,
+          "resumen": "Mapea UN recibo + su «resto» → `poliza_recibos.datos_extra.cimaExtra` (ver `cima-extra.ts`)."
+        },
+        {
+          "nombre": "mapOneReciboEspecifico",
+          "kind": "function",
+          "exportada": false,
+          "params": "recibo: ParsedRecibo | undefined",
+          "retorno": "EiacRecMapped",
+          "linea": 424,
+          "resumen": "Mapea UN recibo EIAC a `EiacRecMapped` (extractores específicos). PURA, nunca throw por datos."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "21199be24b1b"
+    },
+    {
+      "ruta": "packages/module-cima/src/eiac-sin-mapper.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "LOO-750 (épica CIMA LOO-515) — Mapper PURO de un EIAC SIN (siniestro) parseado a la forma intermedia `EiacSinMapped` que el pipeline de ingesta y el persist (`persist-siniestro.ts`) consumen. Espejo de `eiac-pol-mapper.ts`. CONTRATO DE ENTRADA — anclado a la estructura REAL del SIN verificada contra",
+      "exporta": [
+        "classifyClaseFigura",
+        "mapSiniestroEstado",
+        "extractSituaciones",
+        "extractAcciones",
+        "extractPagos",
+        "extractExpedientes",
+        "extractRiesgo",
+        "parseReservaDesglose",
+        "extractAsistencias",
+        "mapEiacSinAll"
+      ],
+      "funciones": [
+        {
+          "nombre": "str",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: unknown",
+          "retorno": "string | null",
+          "linea": 363,
+          "resumen": "--- Helper local (str): idéntico al privado del POL mapper, re-declarado para no exportar uno nuevo desde el POL mapper. PURO, nunca throw. ---"
+        },
+        {
+          "nombre": "toCount",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: unknown",
+          "retorno": "number",
+          "linea": 371,
+          "resumen": "Entero EIAC no-negativo: parsea string/number → int ≥0; basura/negativo → 0."
+        },
+        {
+          "nombre": "toBool",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: unknown",
+          "retorno": "boolean | null",
+          "linea": 379,
+          "resumen": "Booleano EIAC: 'S'/'true'/'1' → true; 'N'/'false'/'0' → false; resto → null."
+        },
+        {
+          "nombre": "unwrapSiniestros",
+          "kind": "function",
+          "exportada": false,
+          "params": "parsed: ParsedEiacSin,",
+          "retorno": "ParsedSiniestro | ParsedSiniestro[] | undefined",
+          "linea": 634,
+          "resumen": "Desenvuelve el wrapper ProcesosEIAC si está presente."
+        },
+        {
+          "nombre": "classifyClaseFigura",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "FiguraKind | null",
+          "linea": 645,
+          "resumen": "Dict best-effort `ClaseFigura` (cód EIAC) → subtabla. SOLO \"AD\" verificado en las muestras prod; el resto es defensivo (CONFIRMAR codes TIREA). Desconocido → `null` (el caller lo trata como contrario "
+        },
+        {
+          "nombre": "mapSiniestroEstado",
+          "kind": "function",
+          "exportada": true,
+          "params": "situacion: unknown",
+          "retorno": "MappedEstado",
+          "linea": 687,
+          "resumen": "Mapea `SituacionSiniestro` (clave oficial `claves_situacionsiniestro`, Documentos Estándar EIAC V07.1 §13.3.81: AP Abierto · CE Cerrado · RA Reabierto · RC Rechazado) al enum `estado_siniestro`. 🚨 `P"
+        },
+        {
+          "nombre": "figuraNombre",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: ParsedFiguraPersona | undefined",
+          "retorno": "string | null",
+          "linea": 703,
+          "resumen": "PersonaJuridica: RazonSocial). null si no hay nada."
+        },
+        {
+          "nombre": "figuraTelefono",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: ParsedFiguraPersona | undefined",
+          "retorno": "string | null",
+          "linea": 719,
+          "resumen": "Teléfono de una persona. Ruta REAL del EIAC 6.0 (medida 28/09/2026 sobre los SIN de producción): `DatosContacto/Telefonos/Telefono[]/Numero` — el primero que traiga número. Hasta ese día solo se mirab"
+        },
+        {
+          "nombre": "mapFigura",
+          "kind": "function",
+          "exportada": false,
+          "params": "figura: ParsedFigura",
+          "retorno": "",
+          "linea": 730,
+          "resumen": "Mapea UNA Figura EIAC a `MappedFigura` clasificada. Desconocido → contrario genérico (el caller marca review). PURA, nunca throw."
+        },
+        {
+          "nombre": "tieneDetalleLesionado",
+          "kind": "function",
+          "exportada": false,
+          "params": "asegurado: ParsedAsegurado | undefined, contrarios: ParsedContrario[] = [],",
+          "retorno": "boolean",
+          "linea": 769,
+          "resumen": "¿Los lesionados del bloque `Asegurado/Lesionados` traen DETALLE de persona (Art.9 salud)? En las muestras prod solo viene `Numero` (conteo, NO es dato de salud identificable). Si hay un sub-objeto `Le"
+        },
+        {
+          "nombre": "extractDanos",
+          "kind": "function",
+          "exportada": false,
+          "params": "asegurado: ParsedAsegurado | undefined, contrarios: ParsedContrario[] = [],",
+          "retorno": "MappedDano[]",
+          "linea": 795,
+          "resumen": "Desglose de daños de TODOS los `ImplicadoDiversos` del asegurado (`DanosSiniestro/DanoSiniestro[]`). `ImplicadoDiversos` y `DanoSiniestro` pueden ser objeto único o array (fast-xml-parser) → `asArray`"
+        },
+        {
+          "nombre": "extractSituaciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "situaciones: ParsedSituaciones | undefined",
+          "retorno": "MappedSituacion[]",
+          "linea": 832,
+          "resumen": "Historial de situaciones. Sin código → se descarta (una fecha sola no dice nada). PURA."
+        },
+        {
+          "nombre": "extractAcciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "acciones: ParsedDatosSiniestro[\"AccionesSiniestro\"]",
+          "retorno": "MappedAccion[]",
+          "linea": 847,
+          "resumen": "Acciones de tramitación. Sin clase de acción → se descarta. PURA, nunca throw."
+        },
+        {
+          "nombre": "extractPagos",
+          "kind": "function",
+          "exportada": true,
+          "params": "pagos: ParsedDatosSiniestro[\"PagosSiniestro\"]",
+          "retorno": "MappedPago[]",
+          "linea": 872,
+          "resumen": "Pagos. Sin fecha NI importe → se descarta. Importes con `toDecimalString`, nunca `Number()`."
+        },
+        {
+          "nombre": "figuraNombrada",
+          "kind": "function",
+          "exportada": false,
+          "params": "clase: unknown, datos: ParsedDatosFigura | undefined,",
+          "retorno": "MappedFiguraNombrada | null",
+          "linea": 910,
+          "resumen": "Nombre de una figura con `DatosFigura` (acción, asistencia). PJ → razonSocial en claro; PF → nombre (el persist lo cifra). Sin clase ni nombre → null."
+        },
+        {
+          "nombre": "sumaLesionados",
+          "kind": "function",
+          "exportada": false,
+          "params": "bloques: unknown",
+          "retorno": "number | null",
+          "linea": 922,
+          "resumen": "Suma `Numero` de los bloques `Lesionados`; null si no vino ningún bloque con número."
+        },
+        {
+          "nombre": "mapContrario",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: ParsedContrario",
+          "retorno": "MappedFigura | null",
+          "linea": 941,
+          "resumen": "Un `Contrarios/Contrario` → contrario. Es el contrario REAL del EIAC 6.0: la compañía (`DatosPoliza/NombreEntidad` + `CodigoDGS`), su póliza (`IdPoliza`), la `Responsabilidad` y el contacto (`PersonaC"
+        },
+        {
+          "nombre": "coberturasDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: unknown",
+          "retorno": "ParsedCobertura[]",
+          "linea": 964,
+          "resumen": "Coberturas de un bloque (`Cobertura` puede ser objeto, array o envoltorio `{Cobertura}`)."
+        },
+        {
+          "nombre": "extractExpedientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "exps: ParsedDatosSiniestro[\"Expedientes\"]",
+          "retorno": "MappedExpediente[]",
+          "linea": 975,
+          "resumen": "Expedientes. Sin número ni clase → se descarta. Claves CRUDAS. PURA."
+        },
+        {
+          "nombre": "extractRiesgo",
+          "kind": "function",
+          "exportada": true,
+          "params": "riesgos: ParsedDatosSiniestro[\"RiesgosSiniestro\"], idRiesgoAsegurado: unknown,",
+          "retorno": "MappedRiesgo | null",
+          "linea": 1008,
+          "resumen": "El riesgo AFECTADO. `RiesgosSiniestro` trae todos los riesgos de la póliza (una flota trae un riesgo por vehículo); el del siniestro lo dice `Asegurado/IdRiesgo`. Sin `IdRiesgo` y con un solo riesgo →"
+        },
+        {
+          "nombre": "parseReservaDesglose",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "MappedReservaDesglose | null",
+          "linea": 1052,
+          "resumen": "«RESERVA POR COBERTURAS=16-400.00/43-78.00» → pares. Texto crudo siempre."
+        },
+        {
+          "nombre": "descripcionImplicados",
+          "kind": "function",
+          "exportada": false,
+          "params": "asegurado: ParsedAsegurado | undefined",
+          "retorno": "string | null",
+          "linea": 1067,
+          "resumen": "`ImplicadoDiversos/Descripcion` de todos los implicados, tapando números largos (cuentas, DNI, teléfonos) con el mismo `taparNumerosLargos` del mapper de pólizas."
+        },
+        {
+          "nombre": "extractVehiculo",
+          "kind": "function",
+          "exportada": false,
+          "params": "asegurado: ParsedAsegurado | undefined",
+          "retorno": "MappedVehiculo | null",
+          "linea": 1076,
+          "resumen": "Vehículo + conductor del asegurado (primer `ImplicadoAutos` con algo)."
+        },
+        {
+          "nombre": "extractVehiculoContrario",
+          "kind": "function",
+          "exportada": false,
+          "params": "otros: ParsedDatosSiniestro[\"OtrosDatos\"]",
+          "retorno": "MappedVehiculoContrario | null",
+          "linea": 1108,
+          "resumen": "`OtrosDatos/Dato` de Allianz → vehículo/conductor del contrario."
+        },
+        {
+          "nombre": "extractAsistencias",
+          "kind": "function",
+          "exportada": true,
+          "params": "asegurado: ParsedAsegurado | undefined",
+          "retorno": "MappedAsistencia[]",
+          "linea": 1125,
+          "resumen": "Asistencias del asegurado. Sin clase, nombre ni descripción → se descarta."
+        },
+        {
+          "nombre": "contarLesionados",
+          "kind": "function",
+          "exportada": false,
+          "params": "asegurado: ParsedAsegurado | undefined",
+          "retorno": "number",
+          "linea": 1141,
+          "resumen": "Suma el conteo `Numero` de lesionados declarado en los bloques `Asegurado/Lesionados` (M1, LOO-750 review). NO es PII (entero); preserva la señal de que hubo heridos aunque no venga el detalle de pers"
+        },
+        {
+          "nombre": "lastSituacion",
+          "kind": "function",
+          "exportada": false,
+          "params": "situaciones: ParsedSituaciones | undefined,",
+          "retorno": "unknown",
+          "linea": 1156,
+          "resumen": "Extrae el `SituacionSiniestro` de la situación MÁS RECIENTE (M4, LOO-750 review). El orden del XML NO es fiable: ordenamos por `NumeroOrden` (numérico) descendente y, en empate/ausencia, por `FechaSit"
+        },
+        {
+          "nombre": "mapEiacSinAll",
+          "kind": "function",
+          "exportada": true,
+          "params": "parsed: ParsedEiacSin, opts: OpcionesMapSin = {}",
+          "retorno": "EiacSinMapped[]",
+          "linea": 1188
+        },
+        {
+          "nombre": "mapOneSiniestro",
+          "kind": "function",
+          "exportada": false,
+          "params": "siniestro: ParsedSiniestro | undefined, contar: boolean",
+          "retorno": "EiacSinMapped",
+          "linea": 1200,
+          "resumen": "Mapea UN siniestro + su «resto» (`cimaExtra`, ver `cima-extra.ts`), que el persist guarda en su columna propia `siniestros.cima_extra` (0106; no en `riesgo_cima`, que es el riesgo afectado). Solo cuen"
+        },
+        {
+          "nombre": "mapOneSiniestroEspecifico",
+          "kind": "function",
+          "exportada": false,
+          "params": "siniestro: ParsedSiniestro | undefined",
+          "retorno": "EiacSinMapped",
+          "linea": 1212,
+          "resumen": "Mapea UN siniestro EIAC a `EiacSinMapped` (extractores específicos). PURA, nunca throw por datos."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1106a77d0a66"
+    },
+    {
+      "ruta": "packages/module-cima/src/fichero-resuelto.ts",
+      "ambito": "packages/module-cima",
+      "exporta": [
+        "ficheroTotalmenteResuelto"
+      ],
+      "funciones": [
+        {
+          "nombre": "ficheroTotalmenteResuelto",
+          "kind": "function",
+          "exportada": true,
+          "params": "outcome: Contadores",
+          "retorno": "boolean",
+          "linea": 26,
+          "resumen": "¿Quedó el fichero TOTALMENTE resuelto tras un reproceso? (la ruta de reprocesar-cuarentena sella `reprocesado_at` solo si sí). Exige, para CADA tipo de objeto (pólizas, siniestros, recibos, cuentas), "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2b6ce924b682"
+    },
+    {
+      "ruta": "packages/module-cima/src/field-coverage.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "COBERTURA DE CAMPOS EIAC — ¿qué nos manda CIMA y qué de eso leemos? Por qué existe (16/09/2026, hermano de la cuarentena de crudo `mig 0096`): la cuarentena sólo salta cuando hay INCIDENCIA (review/error). Si CIMA manda un campo que el mapper sencillamente NO LEE —sin error, sin review— el dato se p",
+      "exporta": [
+        "leerSinContar",
+        "aplanarRutas",
+        "normalizarRutaEiac",
+        "consolidarRutasCobertura",
+        "medirCoberturaCampos"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerSinContar",
+          "kind": "function",
+          "exportada": true,
+          "params": "obj: object, clave: string",
+          "retorno": "unknown",
+          "linea": 87,
+          "resumen": "Lee `obj[clave]` SIN que la medición de cobertura lo cuente como «leído». Para qué: hay lecturas que NO son aprovechar el dato, sino mirarle la forma — `describeRiesgoShape` del mapper POL lee el valo"
+        },
+        {
+          "nombre": "esObjeto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "v is Record<string, unknown>",
+          "linea": 141
+        },
+        {
+          "nombre": "aplanarRutas",
+          "kind": "function",
+          "exportada": true,
+          "params": "datos: unknown",
+          "retorno": "Aplanado",
+          "linea": 149,
+          "resumen": "PURA: aplana el árbol a rutas. Índices de array elididos; contenedores y hojas ambos presentes. Nunca lanza (un árbol basura devuelve lo que pueda)."
+        },
+        {
+          "nombre": "envolver",
+          "kind": "function",
+          "exportada": false,
+          "params": "valor: unknown, ruta: string, profundidad: number, accedidas: Set<string>, revocaciones: Array<() => void>,",
+          "retorno": "unknown",
+          "linea": 208,
+          "resumen": "Envuelve `datos` en Proxies revocables que anotan en `accedidas` la ruta de cada lectura de VALOR (trap `get`). `ownKeys` NO cuenta: `Object.keys(x)` mira los nombres, no los datos — y contarlo marcar"
+        },
+        {
+          "nombre": "normalizarRutaEiac",
+          "kind": "function",
+          "exportada": true,
+          "params": "ruta: string",
+          "retorno": "string | null",
+          "linea": 244,
+          "resumen": "28/09/2026 — el árbol llega CON o SIN el envoltorio `<ProcesosEIAC>` según quién lo convierta (el adaptador Java lo quita; el rescate manual `manual-xml.ts` lo conserva, y los mappers aceptan las dos "
+        },
+        {
+          "nombre": "consolidarRutasCobertura",
+          "kind": "function",
+          "exportada": true,
+          "params": "rutas: readonly RutaCampo[]",
+          "retorno": "RutaCampo[]",
+          "linea": 257,
+          "resumen": "03/10/2026 — CANÓNICA para ESCRIBIR: normaliza el prefijo `ProcesosEIAC.` de cada ruta y FUSIONA las que colisionan (`leido` = OR, contenedor gana sobre hoja), ordenado. Es la última barrera antes de "
+        },
+        {
+          "nombre": "medirCoberturaCampos",
+          "kind": "function",
+          "exportada": true,
+          "params": "datos: unknown, ejecutarMapper: (datos: unknown) => unknown,",
+          "retorno": "CoberturaCampos",
+          "linea": 283,
+          "resumen": "Mide la cobertura de campos de UN fichero: ejecuta `ejecutarMapper` sobre una vista instrumentada del árbol y cruza lo accedido con lo que el árbol trae. ⚠️ El resultado del mapper se DESCARTA: esta p"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6c0daa1a5c57"
+    },
+    {
+      "ruta": "packages/module-cima/src/figuras-cima-pii.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "Cifrado de las FIGURAS / TERCEROS de CIMA (04/10/2026). Ver `figuras-cima.ts`. Mismo criterio que el resto de PII Tier-1 del producto (`poliza_intervinientes`, `siniestro_contrarios`, `datos_especificos.direccion`): AES-256-GCM (`v1:…`) con `encryptFieldNullable`. Se cifran: `nombre`, `telefono`, `e",
+      "exporta": [
+        "cifrarFigura",
+        "cifrarFigurasCima",
+        "descifrarFigurasCima",
+        "cifrarPiiAnidadaCima",
+        "mismoTercero",
+        "fusionarCampos",
+        "fusionarTercerosCima"
+      ],
+      "funciones": [
+        {
+          "nombre": "cifra",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 29
+        },
+        {
+          "nombre": "descifra",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 35
+        },
+        {
+          "nombre": "esObjeto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "v is Record<string, unknown>",
+          "linea": 44
+        },
+        {
+          "nombre": "cifrarFigura",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: Record<string, unknown>",
+          "retorno": "Record<string, unknown>",
+          "linea": 53,
+          "resumen": "Una figura EN CLARO (salida del mapper) → forma PERSISTIBLE: PII cifrada, `documento` → `documentoCifrado`. Idempotente sobre lo ya cifrado (un `v1:` no se vuelve a cifrar). PURA salvo el cifrado."
+        },
+        {
+          "nombre": "cifrarFigurasCima",
+          "kind": "function",
+          "exportada": true,
+          "params": "lista: unknown",
+          "retorno": "Record<string, unknown>[]",
+          "linea": 77,
+          "resumen": "Lista de figuras → persistible. No-objetos fuera."
+        },
+        {
+          "nombre": "descifrarFigurasCima",
+          "kind": "function",
+          "exportada": true,
+          "params": "lista: unknown",
+          "retorno": "Record<string, unknown>[]",
+          "linea": 87,
+          "resumen": "LECTURA: descifra nombre, teléfono, email, matrícula, fecha de nacimiento y la dirección. `documentoCifrado` se deja CIFRADO a propósito: quien necesite el documento lo descifra aparte y con motivo (e"
+        },
+        {
+          "nombre": "cifrarPiiAnidadaCima",
+          "kind": "function",
+          "exportada": true,
+          "params": "datos: Record<string, unknown>",
+          "retorno": "Record<string, unknown>",
+          "linea": 105,
+          "resumen": "`datos_especificos` de un POL → cifra la PII ANIDADA que `encryptPolizaDatosEspecificos` (solo primer nivel: `iban`, `direccion`) no ve: `figuras[]`, `vida.persona`, `decesos.persona` y lo mismo dentr"
+        },
+        {
+          "nombre": "norm",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string",
+          "linea": 128,
+          "resumen": "Texto normalizado para comparar identidad (no se guarda así)."
+        },
+        {
+          "nombre": "mismoTercero",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: Record<string, unknown>, b: Record<string, unknown>",
+          "retorno": "boolean",
+          "linea": 141,
+          "resumen": "- sin ningún identificador → nunca la misma persona."
+        },
+        {
+          "nombre": "claveDomicilioDanos",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: Record<string, unknown>",
+          "retorno": "string | null",
+          "linea": 164,
+          "resumen": "Clave de identidad del `domicilioDanos` EN CLARO: cp + dirección normalizados. null si no hay dirección legible (falta, o sigue cifrada porque no se pudo descifrar: el IV aleatorio haría distintas dos"
+        },
+        {
+          "nombre": "fusionarCampos",
+          "kind": "function",
+          "exportada": true,
+          "params": "gana: Record<string, unknown>, otro: Record<string, unknown>",
+          "retorno": "Record<string, unknown>",
+          "linea": 176,
+          "resumen": "Fusión CAMPO A CAMPO de la misma persona: el valor no nulo de `gana` se queda; uno nulo NO borra lo que trae `otro`. También dentro de `domicilio`."
+        },
+        {
+          "nombre": "descifraOConserva",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "unknown",
+          "linea": 189,
+          "resumen": "Descifra si puede; si no (clave rotada, dato corrupto), deja el valor guardado tal cual."
+        },
+        {
+          "nombre": "terceroEnClaro",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: Record<string, unknown>",
+          "retorno": "Record<string, unknown>",
+          "linea": 199,
+          "resumen": "Un tercero guardado (cifrado) → en claro, con `documento` en vez de `documentoCifrado`."
+        },
+        {
+          "nombre": "fusionarTercerosCima",
+          "kind": "function",
+          "exportada": true,
+          "params": "guardado: unknown, entrantes: FiguraCima[] | undefined, ganaExistente: boolean,",
+          "retorno": "Record<string, unknown>[] | undefined",
+          "linea": 225,
+          "resumen": "`siniestros.cima_extra.terceros` tras aplicar un SIN. El SIN es un DELTA (EIAC §6.1.3): un tercero que el fichero no trae NO se borra. La misma persona (`mismoTercero`, comparada EN CLARO: el cifrado "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4c70db792498"
+    },
+    {
+      "ruta": "packages/module-cima/src/figuras-cima.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "FIGURAS y TERCEROS de CIMA con estructura (04/10/2026, decisión de Alberto). Qué se guarda de cada persona que trae el EIAC (póliza: tomador, asegurado, conductores, pagador, beneficiario…; siniestro: perjudicado, contrario, testigos…): el PAPEL, el nombre, el documento, el domicilio, el teléfono y ",
+      "exporta": [
+        "papelDeFiguraAccion",
+        "papelDeClaseFigura",
+        "papelDeClaseFiguraSiniestro",
+        "domicilioCima",
+        "figuraDePersona",
+        "documentoNormalizado",
+        "extractFigurasPoliza",
+        "extractTercerosSiniestro",
+        "quitarRepeticionesExactas"
+      ],
+      "funciones": [
+        {
+          "nombre": "papelDeFiguraAccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "string",
+          "linea": 123,
+          "resumen": "`claves_figuraaccion` → papel; fuera de tabla → `profesional` (el crudo queda en `claseFigura`)."
+        },
+        {
+          "nombre": "str",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: unknown",
+          "retorno": "string | null",
+          "linea": 131
+        },
+        {
+          "nombre": "asArray",
+          "kind": "function",
+          "exportada": false,
+          "params": "value: T | T[] | null | undefined",
+          "retorno": "T[]",
+          "linea": 138
+        },
+        {
+          "nombre": "obj",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 143
+        },
+        {
+          "nombre": "papelDeClaseFigura",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "string",
+          "linea": 151,
+          "resumen": "`claves_figura` → papel; código fuera de la tabla → `otro` (el crudo queda en `claseFigura`)."
+        },
+        {
+          "nombre": "papelDeClaseFiguraSiniestro",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "string",
+          "linea": 161,
+          "resumen": "Papel de una `ClaseFigura` en un SINIESTRO. Igual que `papelDeClaseFigura` salvo `AD`: en el SIN es el ADVERSO (el mapper lo enruta a contrarios, «verificado en prod»), no el «asegurado dependiente» d"
+        },
+        {
+          "nombre": "domicilioCima",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "DomicilioCima | null",
+          "linea": 166,
+          "resumen": "`tipo_domicilio` → `DomicilioCima`, o null si no trae nada."
+        },
+        {
+          "nombre": "primerTelefono",
+          "kind": "function",
+          "exportada": false,
+          "params": "contacto: Record<string, unknown> | null, persona: Record<string, unknown>",
+          "retorno": "string | null",
+          "linea": 181
+        },
+        {
+          "nombre": "primerEmail",
+          "kind": "function",
+          "exportada": false,
+          "params": "contacto: Record<string, unknown> | null",
+          "retorno": "string | null",
+          "linea": 191
+        },
+        {
+          "nombre": "figuraDePersona",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown, papel: string, opts: { claseFigura?: string | null; conNacimiento?: boolean } = {},",
+          "retorno": "FiguraCima | null",
+          "linea": 211,
+          "resumen": "Una persona del EIAC → `FiguraCima`. Acepta `tipo_persona` (con envoltorio `PersonaFisica`/`PersonaJuridica`) o una `tipo_personafisica` suelta (el `Conductor`, la `Persona` de vida/decesos). null si "
+        },
+        {
+          "nombre": "documentoNormalizado",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 254,
+          "resumen": "Documento normalizado para comparar identidad (no se guarda así)."
+        },
+        {
+          "nombre": "extractFigurasPoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "poliza: unknown",
+          "retorno": "FiguraCima[]",
+          "linea": 272,
+          "resumen": "- `Beneficiarios/Beneficiario[]/Persona` → `beneficiario` + orden y porcentaje. La `Persona` de vida/decesos va en `vida.persona`/`decesos.persona`, no aquí. El titular de la cuenta y el del préstamo "
+        },
+        {
+          "nombre": "extractTercerosSiniestro",
+          "kind": "function",
+          "exportada": true,
+          "params": "datosSiniestro: unknown",
+          "retorno": "FiguraCima[]",
+          "linea": 349,
+          "resumen": "`AccionesSiniestro/Accion/FigurasAccion/FiguraAccion` → perito, taller, abogado… (`claves_figuraaccion`); `PagosSiniestro/PagoSiniestro/ReceptoresPago/Figura` → `receptor_pago`. El IBAN del pago NO se"
+        },
+        {
+          "nombre": "claveExacta",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string",
+          "linea": 450,
+          "resumen": "Clave estable (claves ordenadas) de una figura en claro, para detectar copias exactas."
+        },
+        {
+          "nombre": "quitarRepeticionesExactas",
+          "kind": "function",
+          "exportada": true,
+          "params": "lista: FiguraCima[]",
+          "retorno": "FiguraCima[]",
+          "linea": 460,
+          "resumen": "Quita las figuras idénticas campo a campo (conserva la primera). Dos distintas nunca se funden."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "49de35f7527c"
+    },
+    {
+      "ruta": "packages/module-cima/src/ingest-flag.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "LOO-525 (épica CIMA LOO-515) — feature flag + modo de ejecución del cron de ingesta CIMA POL. **`CIMA_INGESTA_ENABLED` default OFF.** El cron `/api/crons/cima-pull` queda cableado y desplegado, pero NO escribe nada hasta los prerequisitos operativos: 1. Backfill `dni_lookup_hash` legacy ~100% (PR-6/",
+      "exporta": [
+        "isCimaIngestaEnabled",
+        "isCimaIngestaSinEnabled",
+        "isCimaIngestaRecEnabled",
+        "isCimaIngestaCefEnabled",
+        "decideCimaPullMode"
+      ],
+      "funciones": [
+        {
+          "nombre": "isCimaIngestaEnabled",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 17,
+          "resumen": "LOO-525 (épica CIMA LOO-515) — feature flag + modo de ejecución del cron de ingesta CIMA POL. **`CIMA_INGESTA_ENABLED` default OFF.** El cron `/api/crons/cima-pull` queda cableado y desplegado, pero N"
+        },
+        {
+          "nombre": "isCimaIngestaSinEnabled",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 32,
+          "resumen": "con ON, el pipeline mapea + matchea + persiste el siniestro. Gate adicional (no controlado aquí): el flag se respeta SOLO si además la ingesta POL está activa (las claves PII / adapter / correduría so"
+        },
+        {
+          "nombre": "isCimaIngestaRecEnabled",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 47,
+          "resumen": "LOO-753 — Flag PROPIO de la ingesta de recibos (REC), **default OFF** e INDEPENDIENTE de `CIMA_INGESTA_ENABLED` / `CIMA_INGESTA_SIN_ENABLED`. Con OFF, los ficheros REC siguen cayendo a `deferred` (com"
+        },
+        {
+          "nombre": "isCimaIngestaCefEnabled",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 64,
+          "resumen": "LOO-757 — Flag PROPIO de la ingesta de cuenta de efectivo / liquidaciones (CEF), **default OFF** e INDEPENDIENTE de `CIMA_INGESTA_ENABLED` / `CIMA_INGESTA_SIN_ENABLED` / `CIMA_INGESTA_REC_ENABLED`. Co"
+        },
+        {
+          "nombre": "decideCimaPullMode",
+          "kind": "function",
+          "exportada": true,
+          "params": "opts: { enabled: boolean; dryRunRequested: boolean; }",
+          "retorno": "CimaPullMode",
+          "linea": 86
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d0b77dc96056"
+    },
+    {
+      "ruta": "packages/module-cima/src/ingest-pipeline.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "LOO-523 (épica CIMA LOO-515) — Pipeline FSM PURO de ingesta CIMA POL (`runCimaPull`). Orquesta el procesamiento por-fichero del lote descargado del adapter. PURO con DI: NO importa db / fetch / node:crypto; los efectos (hash, lookup de cliente, persist transaccional, confirmarDescarga, ledger) se in",
+      "exporta": [
+        "isTransientConfirmReason",
+        "resolveConfirmedFicheroEstado",
+        "runCimaPull"
+      ],
+      "funciones": [
+        {
+          "nombre": "isTransientConfirmReason",
+          "kind": "function",
+          "exportada": true,
+          "params": "reason: string | undefined",
+          "retorno": "boolean",
+          "linea": 90,
+          "resumen": "LOO-759 — `reason` del ACK que representa un fallo TRANSITORIO (retriable), no un error de forma/contrato. El guard del FSM lo usa para no degradar un `confirmed` previo cuando el confirm falla por ca"
+        },
+        {
+          "nombre": "resolveConfirmedFicheroEstado",
+          "kind": "function",
+          "exportada": true,
+          "params": "ack: ConfirmAckResult, anyError: boolean, alreadyConfirmed: boolean,",
+          "retorno": "CimaFicheroFsmEstado",
+          "linea": 107,
+          "resumen": "LOO-759 — Deriva el estado del FICHERO tras el confirm, con GUARD anti-degrade. Regla base (sin cambios): ACK OK + sin errores parciales → `confirmed`; en cualquier otro caso → `persisted` (residuo a "
+        },
+        {
+          "nombre": "confirmarOOmitir",
+          "kind": "function",
+          "exportada": false,
+          "params": "deps: CimaPullDeps, opts: CimaPullOptions, nombre: string, codigoEntidad: string,",
+          "retorno": "Promise<ConfirmAckResult>",
+          "linea": 456,
+          "resumen": "Único punto de `confirmarDescarga` del pipeline. Con `sinConfirmarTirea` NO llama a TIREA y devuelve un ACK sintético OK (para que el FSM del ledger quede coherente)."
+        },
+        {
+          "nombre": "ackOkParaLedger",
+          "kind": "function",
+          "exportada": false,
+          "params": "ack: ConfirmAckResult",
+          "retorno": "boolean",
+          "linea": 467,
+          "resumen": "`ackOk` a escribir en el ledger: un ACK omitido no sella `confirmado_at`."
+        },
+        {
+          "nombre": "ledgerFrom",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: FicheroParseado, xmlHash: string | null, estado: CimaFicheroFsmEstado, errorDetalle: string | null = null,",
+          "retorno": "LedgerEntry",
+          "linea": 524,
+          "resumen": "Factory única de LedgerEntry desde un fichero del adapter (evita drift de campos)."
+        },
+        {
+          "nombre": "buildAuditEvent",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: FicheroParseado, eventName: CimaAuditEventName, stateTo: CimaFicheroFsmEstado, xmlHash: string | null, extra: Record<string, unknown> = {}, // LOO-748 — clave per-póliza para que N pólizas del mismo fichero (mismo // xmlHash) no colision",
+          "retorno": "CimaAuditEvent",
+          "linea": 549,
+          "resumen": "Factory única de CimaAuditEvent. `sourceEventId` determinístico: `${xmlHash}:${stateTo}` cuando hay hash, fallback `${nombreFichero}:${stateTo}` cuando no (ej. error sin rawXml o multi-entry sin parse"
+        },
+        {
+          "nombre": "mkOutcome",
+          "kind": "function",
+          "exportada": false,
+          "params": "nombreFichero: string, estado: CimaFicheroFsmEstado, xmlHash: string | null, reason: string, extra: Partial< Pick< FicheroOutcome, | \"polizaId\" | \"matchedBy\" | \"confirmed\" | \"polizasCount\" | \"polizasPersisted\" | \"polizaIds\" | \"siniestrosCou",
+          "retorno": "FicheroOutcome",
+          "linea": 579
+        },
+        {
+          "nombre": "copiaPreventivaDeCrudo",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: FicheroParseado, xmlHash: string, deps: CimaPullDeps, opts: CimaPullOptions,",
+          "retorno": "Promise<void>",
+          "linea": 641,
+          "resumen": "Copia PREVENTIVA del crudo, para TODO fichero procesado (no sólo los que fallan). El agujero que tapa: un campo que el mapper no lee no genera review ni error — el fichero sale «bien», se confirma, TI"
+        },
+        {
+          "nombre": "promoverCrudoAIncidencia",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: FicheroParseado, xmlHash: string, motivo: string, deps: CimaPullDeps,",
+          "retorno": "Promise<void>",
+          "linea": 686,
+          "resumen": "Promueve la fila de cuarentena a INCIDENCIA (motivo + rawXml + TTL 90d) antes de `confirm`. NO se captura el error a propósito: si esto falla, es preferible no confirmar —el fichero se queda en la col"
+        },
+        {
+          "nombre": "mapperDelTipo",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: FicheroParseado, deps: CimaPullDeps,",
+          "retorno": "((datos: unknown)",
+          "linea": 702,
+          "resumen": "Elige el mapper que el pipeline VA A USAR de verdad para este tipo de objeto (misma condición que el dispatch de `processFichero`). Si devuelve null, el fichero no se mapea → no hay cobertura que medi"
+        },
+        {
+          "nombre": "medirYRegistrarCobertura",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: FicheroParseado, deps: CimaPullDeps, opts: CimaPullOptions,",
+          "retorno": "Promise<void>",
+          "linea": 721,
+          "resumen": "Mide qué campos del árbol EIAC lee el mapper y los registra (sólo nombres de ruta + contadores, nunca valores). Observabilidad: no puede tumbar la ingesta, pero un fallo se ve por `log` en vez de pasa"
+        },
+        {
+          "nombre": "processPoliza",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: FicheroParseado, mapped: EiacPolMapped, xmlHash: string, idx: number, deps: CimaPullDeps, opts: CimaPullOptions,",
+          "retorno": "Promise<PolizaOutcome>",
+          "linea": 772,
+          "resumen": "LOO-748 — Procesa UNA póliza del fichero (pasos 5-10 del FSM: gating, resolve, match, persist). Los outcomes no-persist emiten audit event AUDIT-ONLY (`recordAuditEvent`) con `sourceEventId` per-póliz"
+        },
+        {
+          "nombre": "decidirAntiDuplicadoSeguro",
+          "kind": "function",
+          "exportada": false,
+          "params": "mapped: EiacPolMapped, resolvedClienteId: string | null, deps: CimaPullDeps,",
+          "retorno": "Promise<DecisionAntiDuplicado |",
+          "linea": 920,
+          "resumen": "Envuelve la búsqueda previa: un fallo de la consulta NO rompe la póliza ni el fichero. Sin dependencia → `null` (comportamiento anterior). Si la consulta falla → `posible_duplicado` con `candidatas` d"
+        },
+        {
+          "nombre": "processSiniestro",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: FicheroParseado, mapped: EiacSinMapped, xmlHash: string, idx: number, deps: CimaPullDeps, opts: CimaPullOptions,",
+          "retorno": "Promise<SiniestroOutcome>",
+          "linea": 952,
+          "resumen": "LOO-750 — Procesa UN siniestro del fichero SIN: gating del mapper (review_salud Art.9 / review) → matching de póliza (sin match = cuarentena D2) → persist. Los outcomes no-persist emiten audit event A"
+        },
+        {
+          "nombre": "processSiniestroFichero",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: FicheroParseado, xmlHash: string, codigoEntidad: string, deps: CimaPullDeps, opts: CimaPullOptions,",
+          "retorno": "Promise<FicheroOutcome>",
+          "linea": 1020,
+          "resumen": "LOO-750 — Procesa un fichero SIN (siniestros). Mapea N siniestros, matchea + persiste cada uno. ≥1 persiste → CONFIRM 1 vez (saca de la cola TIREA); 0 persisten → review/review_salud/error, NO confirm"
+        },
+        {
+          "nombre": "processRecibo",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: FicheroParseado, mapped: EiacRecMapped, xmlHash: string, idx: number, deps: CimaPullDeps, opts: CimaPullOptions,",
+          "retorno": "Promise<ReciboOutcome>",
+          "linea": 1183,
+          "resumen": "LOO-753 — Procesa UN recibo del fichero REC: gating del mapper (review) → matching de póliza (sin match = cuarentena D2) → persist (upsert estado vivo, con IBAN cifrado en la capa de persist). Espejo "
+        },
+        {
+          "nombre": "processReciboFichero",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: FicheroParseado, xmlHash: string, codigoEntidad: string, deps: CimaPullDeps, opts: CimaPullOptions,",
+          "retorno": "Promise<FicheroOutcome>",
+          "linea": 1244,
+          "resumen": "LOO-753 — Procesa un fichero REC (recibos). Mapea N recibos, matchea + persiste cada uno. ≥1 persiste → CONFIRM 1 vez (saca de la cola TIREA); 0 persisten → review/error, NO confirma (cuarentena human"
+        },
+        {
+          "nombre": "processCuenta",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: FicheroParseado, mapped: MappedCuentaEfectivo, xmlHash: string, idx: number, deps: CimaPullDeps, opts: CimaPullOptions,",
+          "retorno": "Promise<CuentaOutcome>",
+          "linea": 1398,
+          "resumen": "LOO-757 — Procesa UNA cuenta de efectivo del fichero CEF: construye los índices de match best-effort (recibo/póliza) → persist (upsert snapshot + delete-reinsert de liquidaciones/movimientos, FK nulla"
+        },
+        {
+          "nombre": "processCefFichero",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: FicheroParseado, xmlHash: string, codigoEntidad: string, deps: CimaPullDeps, opts: CimaPullOptions,",
+          "retorno": "Promise<FicheroOutcome>",
+          "linea": 1460,
+          "resumen": "LOO-757 — Procesa un fichero CEF (cuentas de efectivo / liquidaciones). Mapea N cuentas (normalmente 1), persiste cada una. ≥1 persiste → CONFIRM 1 vez (saca de la cola TIREA); 0 persisten → review/er"
+        },
+        {
+          "nombre": "processFichero",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: FicheroParseado, deps: CimaPullDeps, opts: CimaPullOptions, // LOO-748 fix P2 — set de xml_hash YA procesados en ESTA corrida (live dedup). El // snapshot `isDuplicateXmlHash` se precarga 1 vez y NO ve los ficheros de este lote; // dos f",
+          "retorno": "Promise<FicheroOutcome>",
+          "linea": 1600
+        },
+        {
+          "nombre": "runCimaPull",
+          "kind": "function",
+          "exportada": true,
+          "params": "ficheros: readonly FicheroParseado[], deps: CimaPullDeps, opts: CimaPullOptions,",
+          "retorno": "Promise<CimaPullResult>",
+          "linea": 1903,
+          "resumen": "Procesa el lote de ficheros del adapter. Una excepción en un fichero NO aborta el lote (se registra como `error` y se continúa). Devuelve outcomes + counts."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "15271d75c767"
+    },
+    {
+      "ruta": "packages/module-cima/src/manual-xml.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "Conversión XML → JSON de un fichero EIAC para el rescate MANUAL de una póliza (`POST /api/internal/cima/ingerir-manual`). Contexto (17/09/2026): la carga masiva 199 de Generali C0072 del 13/09 dejó `6E-G-475000053` (RiesgoComunidades) en `review` — el mapper de entonces no reconocía ese riesgo (arre",
+      "exporta": [
+        "parseEiacXml"
+      ],
+      "funciones": [
+        {
+          "nombre": "parseEiacXml",
+          "kind": "function",
+          "exportada": true,
+          "params": "rawXml: string",
+          "retorno": "unknown",
+          "linea": 51,
+          "resumen": "Convierte un XML EIAC crudo al árbol que espera `mapEiacPolAll`/`mapEiacPol`. `fast-xml-parser` es DELIBERADAMENTE laxo: un texto que no es XML, o un XML mal cerrado, no lanza — devuelve `{}` o un árb"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e73369b53093"
+    },
+    {
+      "ruta": "packages/module-cima/src/pii-sanitizer.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "LOO-555 — Sanitizer anti-PII para campos string libres que viajan al payload de `operational_events` (audit Art. 30 LOPD-GDD). Aplicar a `errorDetalle`, `reason`, mensaje de excepción, o cualquier string libre del pipeline CIMA ANTES de escribirlo al payload jsonb. Por qué: helpers de error (mensaje",
+      "exporta": [
+        "sanitizePiiES"
+      ],
+      "funciones": [
+        {
+          "nombre": "sanitizePiiES",
+          "kind": "function",
+          "exportada": true,
+          "params": "input: string | null | undefined, opts: SanitizeOptions = {}",
+          "retorno": "string",
+          "linea": 51,
+          "resumen": "Sustituye PII española por placeholders en un string libre. Aplica redact ANTES de truncar (orden importa: si trunca primero, PII al final se preserva inadvertidamente)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "79853c3c749e"
+    },
+    {
+      "ruta": "packages/module-cima/src/poliza-matching.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "LOO-496 — Estrategia de matching de pólizas legacy para la reconciliación CIMA. CIMA es la FUENTE de pólizas (ver auditoría LOO-492): cuando llega un fichero EIAC describiendo una póliza, hay que decidir si se da de alta una nueva o se actualiza una existente de la cartera legacy importada (LOO-420)",
+      "exporta": [
+        "isPlaceholderPolizaNumber",
+        "normalizeText",
+        "normalizePolizaNumber",
+        "isCimaRoutableCarrier",
+        "extractOccidentPolizaCore",
+        "numeroSinCerosIzquierda",
+        "esCarteraVivaFila",
+        "unicaCarteraViva",
+        "buildFallbackKey",
+        "normCodigoDgs",
+        "classifyPolizaForCima",
+        "matchIncomingCimaPoliza",
+        "numeroPolizaNorm",
+        "nombreCorrespondeADgs",
+        "decidirAntiDuplicado",
+        "esViolacionNumeroNorm"
+      ],
+      "funciones": [
+        {
+          "nombre": "isPlaceholderPolizaNumber",
+          "kind": "function",
+          "exportada": true,
+          "params": "alnum: string",
+          "retorno": "boolean",
+          "linea": 62,
+          "resumen": "LOO-911 — ¿el número es un placeholder tecleado a mano en vez de un número real? `JUNK_POLIZA_NUMBERS` + la longitud mínima solo cazan basura CORTA. En la cartera legacy hay placeholders largos que pa"
+        },
+        {
+          "nombre": "normalizeText",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: string | null | undefined",
+          "retorno": "string",
+          "linea": 75
+        },
+        {
+          "nombre": "normalizePolizaNumber",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 83,
+          "resumen": "Devuelve el número de póliza normalizado (lowercase, trimmed) si es utilizable para match primario, o `null` si es vacío / placeholder basura / demasiado corto."
+        },
+        {
+          "nombre": "isCimaRoutableCarrier",
+          "kind": "function",
+          "exportada": true,
+          "params": "aseguradora: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 98,
+          "resumen": "Una póliza es enrutable por CIMA solo si su aseguradora mapea a un carrier real."
+        },
+        {
+          "nombre": "extractOccidentPolizaCore",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 128,
+          "resumen": "LOO-973 — Occident/Catalana Occidente (C0468) numera algunas pólizas como `8-D.DDD.DDD-L` (prefijo \"8\", núcleo con puntos de miles, letra de control) o, en el import legacy de la cartera, variantes su"
+        },
+        {
+          "nombre": "numeroSinCerosIzquierda",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 144,
+          "resumen": "Número sin separadores ni ceros a la izquierda (`061089620` → `61089620`), o `null` si no es utilizable. Allianz (C0109) numera con un cero delante en CIMA y sin él en el número que devuelve la emisió"
+        },
+        {
+          "nombre": "esCarteraVivaFila",
+          "kind": "function",
+          "exportada": true,
+          "params": "importRef: string | null | undefined, eiacXmlHash: string | null | undefined,",
+          "retorno": "boolean",
+          "linea": 165,
+          "resumen": "Cartera viva = la fila la trajo o la ha tocado CIMA: `import_ref IS NULL` O `eiac_xml_hash IS NOT NULL`. Misma regla que `esCarteraViva()` de `@central/module-seguros` en central. OJO: NO es `import_r"
+        },
+        {
+          "nombre": "unicaCarteraViva",
+          "kind": "function",
+          "exportada": true,
+          "params": "hits: readonly T[],",
+          "retorno": "T | null",
+          "linea": 183,
+          "resumen": "Desempate de un match AMBIGUO (≥2 pólizas con el mismo número + DGS) por origen: si EXACTAMENTE UNA es cartera viva, esa gana. Con 0 o ≥2 vivas → `null` (sigue siendo ambiguo: cuarentena). Solo cuenta"
+        },
+        {
+          "nombre": "buildFallbackKey",
+          "kind": "function",
+          "exportada": true,
+          "params": "clienteId: string | null | undefined, aseguradora: string | null | undefined, fechaInicio: string | null | undefined,",
+          "retorno": "string | null",
+          "linea": 194,
+          "resumen": "Clave de fallback `cliente|aseguradora|fecha_inicio`. `null` si falta cualquiera de los tres componentes (sin clave estable no hay match por fallback)."
+        },
+        {
+          "nombre": "normCodigoDgs",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 207,
+          "resumen": "Normaliza el código DGS (trim + uppercase). null/'' → null. Espejo de recibo/siniestro-matching."
+        },
+        {
+          "nombre": "classifyPolizaForCima",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PolizaMatchInput",
+          "retorno": "PolizaClassification",
+          "linea": 235,
+          "resumen": "Clasifica una póliza legacy según cómo podrá reconciliarse contra ficheros CIMA. Sirve para \"marcar\" la cartera ANTES del sync (reporte/diagnóstico) y para que el pipeline de reconciliación decida la "
+        },
+        {
+          "nombre": "matchIncomingCimaPoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "incoming: IncomingCimaPoliza, candidates: readonly PolizaMatchInput[],",
+          "retorno": "MatchResult",
+          "linea": 325,
+          "resumen": "nunca debe pisar uno que ya lo tiene. Arreglo: los candidatos de fallback excluyen a los que YA tienen un `numeroPoliza` propio plausible."
+        },
+        {
+          "nombre": "numeroPolizaNorm",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 503,
+          "resumen": "Número de póliza normalizado para DEDUPLICAR: solo `[0-9a-z]` (sin espacios, guiones, puntos ni barras), o `null` si no identifica nada (comodín, < 5 caracteres, sin dígitos o un solo carácter repetid"
+        },
+        {
+          "nombre": "normNombreAseguradora",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: string | null | undefined",
+          "retorno": "string",
+          "linea": 529
+        },
+        {
+          "nombre": "nombreCorrespondeADgs",
+          "kind": "function",
+          "exportada": true,
+          "params": "aseguradora: string | null | undefined, dgs: string | null | undefined,",
+          "retorno": "boolean",
+          "linea": 534,
+          "resumen": "¿El nombre libre de la ficha corresponde a la compañía de ese DGS?"
+        },
+        {
+          "nombre": "decidirAntiDuplicado",
+          "kind": "function",
+          "exportada": true,
+          "params": "incoming: { clienteId: string | null; numeroPoliza: string | null; codigoEntidadDgs: string | null }, candidatas: readonly CandidataPorNumero[],",
+          "retorno": "DecisionAntiDuplicado",
+          "linea": 580,
+          "resumen": "adoptar la póliza de otro cliente no."
+        },
+        {
+          "nombre": "esViolacionNumeroNorm",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: unknown",
+          "retorno": "boolean",
+          "linea": 640,
+          "resumen": "¿Es este error el 23505 del índice único de la 0107? Estricto: exige el nombre del índice (postgres-js lo expone en `constraint_name`; Drizzle a veces envuelve el error del driver en `.cause`). Otro 2"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "907ac968b3f0"
+    },
+    {
+      "ruta": "packages/module-cima/src/pull-config.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "LOO-555 — Config tuneable del cron CIMA pull. Lee `process.env.CIMA_PULL_BATCH_SIZE` con clamp [1,50] y default 5. Hasta s206 el batch estaba hardcoded en `route.ts` (literal `= 5`), por lo que la env var añadida en el smoke s205 fue ignorada. Patrón seguro: - `Number()` (NO `parseInt`) → rechaza st",
+      "exporta": [
+        "getCimaPullBatchSize"
+      ],
+      "funciones": [
+        {
+          "nombre": "clampBatch",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: string | undefined | null",
+          "retorno": "number | null",
+          "linea": 23
+        },
+        {
+          "nombre": "getCimaPullBatchSize",
+          "kind": "function",
+          "exportada": true,
+          "params": "override?: string | null",
+          "retorno": "number",
+          "linea": 31
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "417c3c4abae8"
+    },
+    {
+      "ruta": "packages/module-cima/src/pull-puro.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "PORT central (fase 2): funciones PURAS extraídas LITERALMENTE del CRM (repo `asegura`): `classifyConfirmarDescargaAck` + `seguirFusionHastaSuperviviente` (de `pull-deps.ts`), `getIngestaCodigosEntidad` + `isCodigoEntidadAutorizado` + `splitNombreCompleto` (de `pull-persist.ts`) y `unwrapCimaWseEnvel",
+      "exporta": [
+        "unwrapCimaWseEnvelope",
+        "classifyConfirmarDescargaAck",
+        "seguirFusionHastaSuperviviente",
+        "getIngestaCodigosEntidad",
+        "isCodigoEntidadAutorizado",
+        "splitNombreCompleto"
+      ],
+      "funciones": [
+        {
+          "nombre": "unwrapCimaWseEnvelope",
+          "kind": "function",
+          "exportada": true,
+          "params": "json: unknown",
+          "retorno": "unknown",
+          "linea": 27,
+          "resumen": "Si la respuesta no tiene `parsed` (legacy adapter o error path), devolvemos el json tal cual — la validación Zod fallará downstream con `code: \"schema\"` y el caller lo gestionará igual que cualquier o"
+        },
+        {
+          "nombre": "classifyConfirmarDescargaAck",
+          "kind": "function",
+          "exportada": true,
+          "params": "res: ConfirmarDescargaHttpResponse,",
+          "retorno": "Promise<ConfirmAckResult>",
+          "linea": 62,
+          "resumen": "LOO-759 — Clasifica la respuesta HTTP de `confirmarDescarga` en un {@link ConfirmAckResult}, distinguiendo fallo TRANSITORIO (retriable) de error REAL de FORMA/contrato (parse). FUNCIÓN PURA (sin BD/r"
+        },
+        {
+          "nombre": "seguirFusionHastaSuperviviente",
+          "kind": "function",
+          "exportada": true,
+          "params": "absorbidaEn: string, cargar: (id: string) => Promise<NodoFusion | null>,",
+          "retorno": "Promise<string | null>",
+          "linea": 115,
+          "resumen": "26/09/2026 — sigue la cadena `merged_into_cliente_id` desde una ficha absorbida hasta su SUPERVIVIENTE. Caso: dos fichas de la misma persona con DNIs distintos, fusionadas a mano; la absorbida conserv"
+        },
+        {
+          "nombre": "getIngestaCodigosEntidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "ReadonlySet<string>",
+          "linea": 133,
+          "resumen": "Allowlist de códigos DGS de entidad autorizados (CSV env). Vacío = nada autorizado."
+        },
+        {
+          "nombre": "isCodigoEntidadAutorizado",
+          "kind": "function",
+          "exportada": true,
+          "params": "codigo: string | null | undefined, allow: ReadonlySet<string> = getIngestaCodigosEntidad(),",
+          "retorno": "boolean",
+          "linea": 143
+        },
+        {
+          "nombre": "splitNombreCompleto",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombreCompleto: string | null | undefined",
+          "retorno": "",
+          "linea": 152,
+          "resumen": "Parte `nombreCompleto` en nombre + apellidos (ambos NOT NULL en clientes)."
+        }
+      ],
+      "tablas": [
+        "corr"
+      ],
+      "rutaApi": null,
+      "hash": "a7c49bbef2b7"
+    },
+    {
+      "ruta": "packages/module-cima/src/quarantine-recovery.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "LOO-781 — Helper PURO (sin BD/red) para etiquetar un fichero EIAC en cuarentena según su recuperabilidad. Da la semántica de UI del panel de salud CIMA (`/salud-cima`) y del endpoint `/api/internal/cima/quarantine`. Reusa los criterios del modo RECONCILE definidos en `pull-deps.ts` (`computeReconcil",
+      "exporta": [
+        "esRecuperablePorReconcile",
+        "recuperabilidadTone"
+      ],
+      "funciones": [
+        {
+          "nombre": "esRecuperablePorReconcile",
+          "kind": "function",
+          "exportada": true,
+          "params": "row: FicheroCuarentenaRow,",
+          "retorno": "RecuperabilidadCuarentena",
+          "linea": 80,
+          "resumen": "PURO — clasifica un fichero en cuarentena por su recuperabilidad. Delega el criterio \"lo re-saca el reconcile\" a `computeReconcileExclusions` (única fuente de verdad del modo reconcile) en lugar de du"
+        },
+        {
+          "nombre": "recuperabilidadTone",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: RecuperabilidadCuarentena,",
+          "retorno": "\"success\" | \"warning\" | \"neutral\"",
+          "linea": 117,
+          "resumen": "Tono semántico del `StatusBadge` para cada etiqueta de recuperabilidad."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "07c5a945ac00"
+    },
+    {
+      "ruta": "packages/module-cima/src/recibo-matching.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "LOO-753 (épica CIMA LOO-515) — Matching PURO de un recibo EIAC REC contra la cartera de pólizas. Un recibo CIMA cuelga de una póliza (FK NOT NULL); hay que resolver `polizaId` ANTES de persistir. Espejo de `siniestro-matching.ts`. Decisión operador D2/D4 (LOCKED, heredada del SIN): el lookup es por ",
+      "exporta": [
+        "matchReciboPoliza",
+        "motivoSinMatchRecibo"
+      ],
+      "funciones": [
+        {
+          "nombre": "hitsSinCeros",
+          "kind": "function",
+          "exportada": false,
+          "params": "incoming: ReciboMatchInput, incDgs: string, candidates: readonly ReciboPolizaCandidate[],",
+          "retorno": "ReciboPolizaCandidate[] | null",
+          "linea": 51,
+          "resumen": "Candidatos de la misma entidad cuyo número, sin ceros iniciales, coincide."
+        },
+        {
+          "nombre": "normCodigoDgs",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 65,
+          "resumen": "Normaliza el código DGS (trim + uppercase). null/'' → null."
+        },
+        {
+          "nombre": "matchReciboPoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "incoming: ReciboMatchInput, candidates: readonly ReciboPolizaCandidate[],",
+          "retorno": "ReciboMatch | null",
+          "linea": 75,
+          "resumen": "Resuelve la póliza de un recibo EIAC contra los candidatos del tenant. Devuelve `{ polizaId, clienteId }` SOLO con match único e inequívoco; en cualquier otro caso (0 / ≥2 / clave incompleta) → `null`"
+        },
+        {
+          "nombre": "motivoSinMatchRecibo",
+          "kind": "function",
+          "exportada": true,
+          "params": "incoming: ReciboMatchInput, candidates: readonly ReciboPolizaCandidate[],",
+          "retorno": "\"clave_incompleta\" | \"poliza_ambigua\" | \"sin_poliza_en_cartera\"",
+          "linea": 135,
+          "resumen": "Por qué NO hubo match (solo tiene sentido si el matcher devolvió `null`). Antes las tres causas se registraban igual, como `sin_poliza_en_cartera`, y eso llevó a buscar en la compañía pólizas que esta"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ce95277ee16d"
+    },
+    {
+      "ruta": "packages/module-cima/src/reconcile-dedup.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "PORT central (fase 1): lógica PURA del dedup/reconcile del pull, extraída LITERAL de `pull-deps.ts` del CRM (líneas de `RECONCILE_TIPOS` a `computeDedupSets`). En el CRM viven dentro de `pull-deps.ts` (capa de BD); aquí se separan para que `quarantine-recovery.ts` no arrastre la BD. Cuando se porte ",
+      "exporta": [
+        "computeReconcileExclusions",
+        "computeDedupSets"
+      ],
+      "funciones": [
+        {
+          "nombre": "computeReconcileExclusions",
+          "kind": "function",
+          "exportada": true,
+          "params": "rows: readonly ReconcileLedgerRow[]",
+          "retorno": "",
+          "linea": 53,
+          "resumen": "LOO-760 — PURO (sin BD): de las filas del ledger, devuelve los nombres y hashes a EXCLUIR del dedup en modo reconcile → así esos ficheros NO se tratan como \"ya vistos\" y vuelven a entrar al pipeline p"
+        },
+        {
+          "nombre": "computeDedupSets",
+          "kind": "function",
+          "exportada": true,
+          "params": "rows: readonly DedupLedgerRow[], exclusions: { nombres: ReadonlySet<string>; hashes: ReadonlySet<string> },",
+          "retorno": "",
+          "linea": 109,
+          "resumen": "LOO-805 — PURO (sin BD): construye los 3 sets de deduplicación del pull a partir de las filas del ledger y de las exclusiones del reconcile. - `seenHashes` (dedup de CONTENIDO, lo lee `isDuplicateXmlH"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "59f951f7a7a1"
+    },
+    {
+      "ruta": "packages/module-cima/src/siniestro-matching.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "LOO-750 (épica CIMA LOO-515) — Matching PURO de un siniestro EIAC SIN contra la cartera de pólizas. Un siniestro CIMA cuelga de una póliza (FK NOT NULL); hay que resolver `polizaId` + `clienteId` ANTES de persistir. Decisión operador D2/D4 (LOCKED): el lookup es por `numero_poliza` normalizado (reus",
+      "exporta": [
+        "matchSiniestroPoliza",
+        "motivoSinMatchSiniestro"
+      ],
+      "funciones": [
+        {
+          "nombre": "normCodigoDgs",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 51,
+          "resumen": "Normaliza el código DGS (trim + uppercase). null/'' → null."
+        },
+        {
+          "nombre": "hitsSinCeros",
+          "kind": "function",
+          "exportada": false,
+          "params": "incoming: SiniestroMatchInput, incDgs: string, candidates: readonly SiniestroPolizaCandidate[],",
+          "retorno": "SiniestroPolizaCandidate[] | null",
+          "linea": 61,
+          "resumen": "Candidatos de la misma entidad cuyo número, sin ceros iniciales, coincide. Solo para entidades de `DGS_TOLERA_CEROS` (Allianz C0109: `061048939` vs `61048939`). null = no aplica (otra entidad o número"
+        },
+        {
+          "nombre": "matchSiniestroPoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "incoming: SiniestroMatchInput, candidates: readonly SiniestroPolizaCandidate[],",
+          "retorno": "SiniestroMatch | null",
+          "linea": 79,
+          "resumen": "Resuelve la póliza de un siniestro EIAC contra los candidatos del tenant. Devuelve `{ polizaId, clienteId }` SOLO con match único e inequívoco; en cualquier otro caso (0 / ≥2 / clave incompleta) → `nu"
+        },
+        {
+          "nombre": "motivoSinMatchSiniestro",
+          "kind": "function",
+          "exportada": true,
+          "params": "incoming: SiniestroMatchInput, candidates: readonly SiniestroPolizaCandidate[],",
+          "retorno": "\"clave_incompleta\" | \"poliza_ambigua\" | \"sin_poliza_en_cartera\"",
+          "linea": 139,
+          "resumen": "Por qué NO hubo match (solo tiene sentido si el matcher devolvió `null`). Antes las tres causas se registraban igual, como `sin_poliza_en_cartera`, y eso llevó a buscar en la compañía pólizas que esta"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9c5ac917d0a6"
+    },
+    {
+      "ruta": "packages/module-cima/src/wse-schemas.ts",
+      "ambito": "packages/module-cima",
+      "exporta": [
+        "isCimaSuccess",
+        "countFicherosSinZipEntryCount",
+        "parseRecibirFicherosResponse",
+        "parseRecibirFicheroResponse",
+        "parseConfirmarDescargaResponse"
+      ],
+      "funciones": [
+        {
+          "nombre": "isCimaSuccess",
+          "kind": "function",
+          "exportada": true,
+          "params": "codigoRespuesta: string | null | undefined,",
+          "retorno": "boolean",
+          "linea": 28,
+          "resumen": "True si la respuesta WSE indica éxito (codigoRespuesta === CIMA-200)."
+        },
+        {
+          "nombre": "countFicherosSinZipEntryCount",
+          "kind": "function",
+          "exportada": true,
+          "params": "rawJson: unknown",
+          "retorno": "",
+          "linea": 87,
+          "resumen": "LOO-557 cleanup — guard estricto pre-parse del cron `cima-pull`: cuenta los ficheros del envelope crudo SIN `zipEntryCount` (null/undefined). El adapter ≥v35 lo emite siempre; `missing>0` = regresión "
+        },
+        {
+          "nombre": "issueStrings",
+          "kind": "function",
+          "exportada": false,
+          "params": "error: z.ZodError",
+          "retorno": "string[]",
+          "linea": 163
+        },
+        {
+          "nombre": "safeParse",
+          "kind": "function",
+          "exportada": false,
+          "params": "schema: z.ZodType<T>, json: unknown",
+          "retorno": "WseParseResult<T>",
+          "linea": 167
+        },
+        {
+          "nombre": "parseRecibirFicherosResponse",
+          "kind": "function",
+          "exportada": true,
+          "params": "json: unknown,",
+          "retorno": "RecibirFicherosParseResult",
+          "linea": 201
+        },
+        {
+          "nombre": "parseRecibirFicheroResponse",
+          "kind": "function",
+          "exportada": true,
+          "params": "json: unknown,",
+          "retorno": "WseParseResult<RecibirFicheroResponse>",
+          "linea": 225
+        },
+        {
+          "nombre": "parseConfirmarDescargaResponse",
+          "kind": "function",
+          "exportada": true,
+          "params": "json: unknown,",
+          "retorno": "ConfirmarDescargaParseResult",
+          "linea": 241
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "67b6d7e3039f"
     },
     {
       "ruta": "packages/module-concursos/src/agent.ts",
@@ -244976,6 +248060,7 @@
         "saludIngesta",
         "detalleSalud",
         "decidirRespaldoPull",
+        "clasificarRespuestaPull",
         "firmaAvisoIngesta",
         "cambioDuplicadasEnFirma",
         "cambioAnulacionesEnFirma",
@@ -245093,12 +248178,21 @@
           "resumen": "¿Dispara el respaldo el pull de CIMA? Existe por la avería del 22/09/2026: el presupuesto de GitHub Actions de la cuenta se agotó (lo consume casi todo `central`), los jobs de `asegura` se quedaron si"
         },
         {
+          "nombre": "clasificarRespuestaPull",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, cuerpo: Record<string, unknown> | null | undefined,",
+          "retorno": "ResultadoRespuestaPull",
+          "linea": 1158,
+          "resumen": "Qué significa la respuesta del endpoint de pull del CRM para el respaldo. `ocupado` (02/11/2026): el CRM tiene un candado único entre escritores de la ingesta (asegura mig 0109, `ingesta-candado.ts`)."
+        },
+        {
           "nombre": "firmaAvisoIngesta",
           "kind": "function",
           "exportada": true,
           "params": "salud: SaludIngesta",
           "retorno": "string",
-          "linea": 1157,
+          "linea": 1180,
           "resumen": "Firma de lo que el vigía ha visto hoy, para no repetir el MISMO aviso cada mañana mientras la avería sigue abierta (el Telegram suena cuando algo CAMBIA; ver `decidirAvisoIngesta`). Vivía dentro de la"
         },
         {
@@ -245107,7 +248201,7 @@
           "exportada": true,
           "params": "previa: string | null, actual: string",
           "retorno": "boolean",
-          "linea": 1223,
+          "linea": 1246,
           "resumen": "¿Ha cambiado el tramo de pólizas duplicadas entre dos firmas (ya normalizadas)? Lo usa el cron para mandar el aviso INFORMATIVO cuando el resto está en `ok` (en `degradada`/`parcial` ya suena por el a"
         },
         {
@@ -245116,7 +248210,7 @@
           "exportada": true,
           "params": "previa: string | null, actual: string",
           "retorno": "boolean",
-          "linea": 1235,
+          "linea": 1258,
           "resumen": "¿Hay una señal de anulación NUEVA entre dos firmas ya normalizadas? Solo cuenta lo que aparece: las señales son ventanas deslizantes (48/72 h) y su caducidad no es un cambio. Una firma previa `null` s"
         },
         {
@@ -245125,7 +248219,7 @@
           "exportada": true,
           "params": "previa: string | null, actual: string",
           "retorno": "string | null",
-          "linea": 1247,
+          "linea": 1270,
           "resumen": "La firma previa con el tramo de anulaciones puesto al de hoy. Se usa para DECIDIR el aviso: un cambio solo en las señales de anulación (nuevas o caducadas) no es una avería nueva, no debe sonar como `"
         },
         {
@@ -245134,7 +248228,7 @@
           "exportada": true,
           "params": "firma: string | null",
           "retorno": "string | null",
-          "linea": 1274,
+          "linea": 1297,
           "resumen": "Lee una firma GUARDADA en el formato de hoy. Las anteriores al 23/09/2026 no traían el tramo del cron (cinco tramos en vez de seis): se leen como «el cron corría», que es lo que decía el vigía cuando "
         },
         {
@@ -245143,7 +248237,7 @@
           "exportada": true,
           "params": "e: { firmaAnterior: string | null firmaActual: string ultimoAvisoEn: Date | null /** Desde cuándo consta abierta esta misma avería. `null` = no se sabe. */ abiertaDesde?: Date | null hoy: Date diasRecordatorio?: number }",
           "retorno": "DecisionAviso",
-          "linea": 1302,
+          "linea": 1325,
           "resumen": "¿Hay que sonar hoy? - `primera` — no consta que se haya avisado nunca. Suena siempre: perder un aviso es peor que duplicarlo. - `cambio` — el estado ha cambiado (entró otro fichero, apareció otra huér"
         },
         {
@@ -245152,7 +248246,7 @@
           "exportada": false,
           "params": "g: { entidad: string; entidadNombre: string | null; clave: string | null },",
           "retorno": "string",
-          "linea": 1437,
+          "linea": 1460,
           "resumen": "Etiqueta de a quién se le pide: compañía + CLAVE DE MEDIADOR, nunca solo la compañía. Occident manda por tres claves y el atasco no está repartido igual: decir «Occident» manda a revisar una cartera q"
         },
         {
@@ -245161,7 +248255,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 1444
+          "linea": 1467
         },
         {
           "nombre": "agrupar",
@@ -245169,7 +248263,7 @@
           "exportada": false,
           "params": "filas: PolizaHuerfana[]",
           "retorno": "GrupoHuerfanas[]",
-          "linea": 1452
+          "linea": 1475
         },
         {
           "nombre": "repartirHuerfanas",
@@ -245177,7 +248271,7 @@
           "exportada": true,
           "params": "filas: PolizaHuerfana[] | null",
           "retorno": "RepartoHuerfanas | null",
-          "linea": 1510,
+          "linea": 1533,
           "resumen": "Reparte las huérfanas por lo que hay que HACER con cada una. 🚨 `null` entra, `null` sale: no haber podido listarlas no es «no hay ninguna». Un `[]` aquí significa «se miró y no hay», y la diferencia "
         },
         {
@@ -245186,7 +248280,7 @@
           "exportada": false,
           "params": "v: string",
           "retorno": "string",
-          "linea": 1527,
+          "linea": 1550,
           "resumen": "Los números vienen de un XML de la compañía: se escapan antes de ir a HTML."
         },
         {
@@ -245195,13 +248289,13 @@
           "exportada": true,
           "params": "r: RepartoHuerfanas | null, opciones: { tope?: number; donde?: string } = {},",
           "retorno": "string",
-          "linea": 1539,
+          "linea": 1562,
           "resumen": "El bloque del Telegram, en HTML. Cadena vacía cuando no hay nada que decir. Dice QUÉ HACER, no cuántas hay: «pídele a Occident el volcado de estas 12 pólizas de la clave M00171» y la lista detrás, par"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1350bdf3598e"
+      "hash": "fe28f36b1855"
     },
     {
       "ruta": "packages/module-seguros/src/intervinientes.ts",
@@ -264407,7 +267501,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5485,
-    "funciones": 21311
+    "archivos": 5520,
+    "funciones": 21597
   }
 }

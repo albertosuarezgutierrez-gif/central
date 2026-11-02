@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { autorizacionBearerValida } from '@central/core-identity'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { tgSend } from '@central/core-telegram'
@@ -8,8 +9,7 @@ const HORAS_LIMITE = 10
 // Vercel Cron: 0 20 * * * (cada día a las 20:00 UTC ≈ 22:00 hora española)
 // Detecta fichajes activos con más de HORAS_LIMITE horas sin fichar salida y avisa por Telegram.
 export async function GET(req: Request) {
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret || req.headers.get('authorization') !== `Bearer ${cronSecret}`) {
+  if (!autorizacionBearerValida(req, 'CRON_SECRET')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

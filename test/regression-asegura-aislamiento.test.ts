@@ -13,16 +13,15 @@
 //
 // Este guardián fija las dos mitades de la defensa:
 //   1. Que la lógica de ámbito distinga TRES estados y no invente un valor.
-//   2. Que nadie consulte el schema `seguros` sin pasar por esa lógica.
+//   2. Que ninguna consulta SQL sobre una tabla multi-tenant de `seguros` omita `correduria_id`
+//      (o el fichero use `correduriaUnica()`). Ver la sección 2.
 //
-// ⚠️ La parte estática (2) hoy no encuentra nada que revisar, porque todavía no
-// hay modelos: el schema `seguros` está vacío. Es un cepo puesto ANTES de que
-// llegue el dump, a propósito — cuando aterricen las 52 tablas, ya está armado.
+// Las 52+ tablas ya están en el schema: la parte estática (2) revisa el SQL crudo real.
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { resolverAmbito, exigirCorreduriaId } from '../apps/asegura/lib/tenant-ambito.ts'
 
@@ -66,7 +65,15 @@ test('exigirCorreduriaId LANZA salvo en «ok» — nunca devuelve un valor de re
   )
 })
 
-// ─── 2. Nadie toca `seguros` por su cuenta ───────────────────────────────────
+// ─── 2. Nadie lee una tabla multi-tenant de `seguros` sin acotarla ───────────
+//
+// La garantía REAL no es el import de `lib/tenant` (solo re-exporta Prisma): es una de
+// estas dos cosas, por consulta o por fichero:
+//   a) el SQL crudo filtra/escribe `correduria_id` (en la misma plantilla SQL), o
+//   b) el fichero usa `correduriaUnica()` de `lib/cartera.ts`, que LANZA si hay más de una
+//      correduría en la base (el ámbito deja de poder ser implícito).
+// Lo que se prohíbe es una sentencia sobre una tabla con `correduria_id` que no hace ni a)
+// ni b): con BYPASSRLS devolvería los datos de TODAS las corredurías sin ningún error.
 
 function ficherosDeAsegura(): string[] {
   const out = execFileSync('git', ['ls-files', 'apps/asegura'], { cwd: ROOT, encoding: 'utf8' })
@@ -74,33 +81,31 @@ function ficherosDeAsegura(): string[] {
     .split('\n')
     .filter(Boolean)
     .filter((f) => /\.(ts|tsx)$/.test(f))
-    .filter((f) => !f.endsWith('tenant.ts') && !f.endsWith('tenant-ambito.ts'))
-    // 🚨 `estado-migracion.ts` está exento, y el porqué CAMBIÓ el 01/09/2026:
-    // la exención se escribió cuando solo consultaba `information_schema`, pero
-    // desde entonces cuenta también `seguros.corredurias` — y el guardián lo
-    // cazó en CI (head 063f6596a) mientras el comentario seguía diciendo que
-    // «no toca datos de nadie». La razón REAL por la que sigue exento es otra:
-    // esa consulta existe justamente para AVERIGUAR si hay corredurías, así que
-    // no puede filtrar por una que todavía no se sabe si existe. Es un conteo
-    // global, sin PII y sin filas — el único punto del código donde el ámbito
-    // no aplica porque el ámbito es lo que se está resolviendo.
-    // Si algún día este fichero lee otra tabla de `seguros`, esta exención deja
-    // de valer: quítala y hazlo pasar por `lib/tenant`.
-    .filter((f) => !f.endsWith('estado-migracion.ts'))
+    .filter((f) => !f.endsWith('.test.ts'))
 }
 
-// SQL crudo que nombra el schema `seguros` (`from seguros.x`, `join seguros.y`…).
-const SQL_SEGUROS = /\bseguros\s*\.\s*[a-z_]/i
+/** Tablas de `seguros` con columna `correduria_id` (DDL en prisma/sql + modelos Prisma). */
+function tablasMultiTenant(): string[] {
+  const tablas = new Set<string>()
+  const dirSql = join(ROOT, 'apps/asegura/prisma/sql')
+  for (const f of readdirSync(dirSql).filter((x) => x.endsWith('.sql'))) {
+    const sql = readFileSync(join(dirSql, f), 'utf8')
+    for (const m of sql.matchAll(/create table (?:if not exists )?seguros\.(\w+)\s*\(([\s\S]*?)\n\)\s*;/gi)) {
+      if (m[2].includes('correduria_id')) tablas.add(m[1])
+    }
+  }
+  const prisma = readFileSync(join(ROOT, 'apps/asegura/prisma/asegura.prisma'), 'utf8')
+  for (const m of prisma.matchAll(/model\s+(\w+)\s*\{([\s\S]*?)\n\}/g)) {
+    if (!/correduria_id|correduriaId/.test(m[2])) continue
+    tablas.add(/@@map\("(\w+)"\)/.exec(m[2])?.[1] ?? m[1])
+  }
+  return [...tablas]
+}
 
 /**
- * Quita los COMENTARIOS antes de buscar SQL. Un comentario no consulta nada, y
- * documentar por qué no se cuentan clientes citando `seguros.clientes` marcaba
- * como infractor a un fichero PURO que no toca la base (pasó el 01/09/2026 con
- * `migracion-decision.ts`).
- *
- * Se quitan solo los bloques `/* *\/` y las líneas que EMPIEZAN por `//` o `*`:
- * cortar por un `//` a mitad de línea podría comerse SQL real escrito detrás de
- * una URL, y un cepo que deja pasar es peor que uno que molesta.
+ * Quita los COMENTARIOS antes de buscar SQL (un comentario no consulta nada). Solo bloques
+ * `/* *\/` y líneas que EMPIEZAN por `//` o `*`: cortar por un `//` a mitad de línea podría
+ * comerse SQL real escrito detrás de una URL, y un cepo que deja pasar es peor que uno que molesta.
  */
 function sinComentarios(src: string): string {
   return src
@@ -110,29 +115,88 @@ function sinComentarios(src: string): string {
     .join('\n')
 }
 
-test('ningún fichero consulta el schema «seguros» sin pasar por el ámbito de correduría', () => {
-  const infractores: string[] = []
+const USA_CORREDURIA_UNICA = /\bcorreduriaUnica\s*\(/
 
-  for (const f of ficherosDeAsegura()) {
-    const src = readFileSync(join(ROOT, f), 'utf8')
-    if (!SQL_SEGUROS.test(sinComentarios(src))) continue
-    // Si toca `seguros.*`, tiene que importar la puerta única.
-    // Se acepta con y sin extensión: `allowImportingTsExtensions` está en la
-    // tsconfig base y media casa importa como `./x.ts` (ver apps/plataforma).
-    // Sin esto, un fichero que SÍ cumple salía marcado como infractor, y el
-    // arreglo natural es rodear el guardián — justo lo que no queremos.
-    if (!/from ['"](\.\.?\/)*(lib\/)?tenant(\.ts)?['"]|@\/lib\/tenant/.test(src)) {
-      infractores.push(f)
-    }
+/**
+ * Nº de referencias a tablas multi-tenant cuya plantilla SQL (entre backticks) NO menciona
+ * `correduria_id`. Si el fichero usa `correduriaUnica()`, la garantía es del fichero: 0.
+ */
+function referenciasSinAmbito(src: string, tablas: string[]): number {
+  const limpio = sinComentarios(src)
+  if (USA_CORREDURIA_UNICA.test(limpio)) return 0
+  const ref = new RegExp(
+    `\\bseguros\\s*\\.\\s*(${[...tablas].sort((a, b) => b.length - a.length).join('|')})\\b`,
+    'gi',
+  )
+  let n = 0
+  for (const m of limpio.matchAll(ref)) {
+    const ini = limpio.lastIndexOf('`', m.index)
+    const fin = limpio.indexOf('`', m.index + m[0].length)
+    const trozo =
+      ini >= 0 && fin >= 0 ? limpio.slice(ini, fin) : limpio.slice(Math.max(0, m.index - 200), m.index + 800)
+    if (!trozo.includes('correduria_id')) n++
   }
+  return n
+}
 
+/**
+ * Ficheros con sentencias sobre tablas multi-tenant SIN `correduria_id` a propósito. Cada
+ * entrada lleva su motivo; un fichero nuevo aquí exige justificarlo en la revisión.
+ * Todas son sentencias por clave primaria/uuid de una fila que el propio fichero ya obtuvo
+ * acotada por correduría (UPDATE/DELETE por `id`, EXISTS/JOIN por FK de esa fila), o la
+ * correduría viaja en un parámetro de la misma función. Si un fichero deja de necesitar la
+ * excepción, el test de abajo exige quitarla (no se acumulan exenciones muertas).
+ */
+const SIN_FILTRO_A_PROPOSITO: Record<string, string> = {
+  'apps/asegura/lib/codeoscopic/consumo.ts':
+    'cerrar/descartar el consumo se hace por intento_id (uuid único del intento ya reservado con correduria_id)',
+  'apps/asegura/lib/tarificador-codigo-sms.ts':
+    'lee/actualiza por id de sesión/código ya resuelto desde una fila acotada por correduría',
+  'apps/asegura/lib/tarificador-emision.ts':
+    'transiciones de estado por id de trabajo ya cargado con correduria_id; los pasos cuelgan por trabajo_id',
+  'apps/asegura/lib/tarificador-explorador.ts':
+    'pasos de una exploración por exploracion_id ya acotada por correduría',
+  'apps/asegura/lib/tarificador-formador.ts':
+    'filas hijas por trabajo_id/ficha_id ya acotadas por correduría',
+  'apps/asegura/lib/tarificador-grabaciones.ts':
+    'pantallas de una grabación por grabacion_id; el fichero usa además correduria_id en las lecturas por tenant',
+  'apps/asegura/lib/tarificador-humo.ts': 'informe por id del trabajo de humo ya creado con correduria_id',
+  'apps/asegura/lib/tarificador-purga.ts':
+    'subconsultas EXISTS/UPDATE por id de trabajo o documento ya seleccionados con correduria_id en su misma pasada',
+  'apps/asegura/lib/tarificador-robustez.ts':
+    'UPDATE por id de trabajo en máquina de estados; el listado inicial sí filtra por correduria_id',
+  'apps/asegura/lib/tarificador.ts':
+    'UPDATE/lecturas por id de trabajo o paso ya acotados; las altas y listados filtran por correduria_id',
+}
+
+test('toda sentencia SQL sobre una tabla multi-tenant de «seguros» filtra correduria_id (o el fichero usa correduriaUnica)', () => {
+  const tablas = tablasMultiTenant()
+  assert.ok(tablas.length > 40, `se esperaban >40 tablas multi-tenant y salen ${tablas.length}: ¿cambió el DDL?`)
+  const infractores: string[] = []
+  for (const f of ficherosDeAsegura()) {
+    const n = referenciasSinAmbito(readFileSync(join(ROOT, f), 'utf8'), tablas)
+    if (n > 0 && !(f in SIN_FILTRO_A_PROPOSITO)) infractores.push(`${f} (${n} sentencia/s)`)
+  }
   assert.deepEqual(
     infractores,
     [],
-    `Estos ficheros consultan el schema «seguros» sin importar el ámbito de correduría ` +
-      `(lib/tenant.ts). Con BYPASSRLS eso devuelve los datos de TODAS las corredurías ` +
-      `sin dar ningún error:\n  - ${infractores.join('\n  - ')}`,
+    `Estos ficheros consultan una tabla de «seguros» con correduria_id SIN filtrarla ni usar ` +
+      `correduriaUnica(). Con BYPASSRLS eso devuelve los datos de TODAS las corredurías sin dar ` +
+      `ningún error. Filtra por correduria_id o, si es una operación por id de una fila ya acotada, ` +
+      `añádelo a SIN_FILTRO_A_PROPOSITO con su motivo:\n  - ${infractores.join('\n  - ')}`,
   )
+})
+
+test('la lista de excepciones no tiene entradas muertas', () => {
+  const tablas = tablasMultiTenant()
+  const muertas = Object.keys(SIN_FILTRO_A_PROPOSITO).filter((f) => {
+    try {
+      return referenciasSinAmbito(readFileSync(join(ROOT, f), 'utf8'), tablas) === 0
+    } catch {
+      return true
+    }
+  })
+  assert.deepEqual(muertas, [], `Quita de SIN_FILTRO_A_PROPOSITO (ya cumplen o no existen): ${muertas.join(', ')}`)
 })
 
 test('el resolvedor de ámbito no tiene una correduría por defecto', () => {
@@ -145,58 +209,38 @@ test('el resolvedor de ámbito no tiene una correduría por defecto', () => {
 })
 
 // ─── El cepo se prueba a sí mismo ────────────────────────────────────────────
-// Un guardián que nunca ha visto un infractor no se sabe si aprieta. Estos dos
-// casos fijan las dos mitades: que detecta el SQL de `seguros` y que reconoce el
-// import de la puerta única en las dos formas que usa la casa (con y sin `.ts`).
 
-const IMPORTA_TENANT = /from ['"](\.\.?\/)*(lib\/)?tenant(\.ts)?['"]|@\/lib\/tenant/
+const TABLAS = ['clientes', 'polizas']
 
-test('un comentario que NOMBRA el schema no convierte en infractor a un fichero puro', () => {
+test('un comentario que NOMBRA la tabla no convierte en infractor a un fichero puro', () => {
   const puro = [
     '/**',
-    ' * Se cuentan corredurías y no clientes: contar `seguros.clientes` sin filtro',
-    ' * sería contar los de TODAS las corredurías.',
+    ' * contar `seguros.clientes` sin filtro sería contar los de TODAS las corredurías.',
     ' */',
     '// también en línea: seguros.polizas',
     'export function decidir(n: number): boolean { return n > 0 }',
   ].join('\n')
-  assert.ok(SQL_SEGUROS.test(puro), 'el comentario SÍ menciona el schema')
-  assert.ok(!SQL_SEGUROS.test(sinComentarios(puro)), 'pero sin comentarios no queda SQL')
+  assert.equal(referenciasSinAmbito(puro, TABLAS), 0)
 })
 
-test('y el SQL de verdad sigue detectándose aunque haya comentarios alrededor', () => {
-  const infractor = [
-    '// Este fichero sí consulta la base.',
-    "const q = await prisma.$queryRaw`select count(*) from seguros.clientes`",
+test('SQL sin correduria_id se detecta; con filtro o con correduriaUnica() pasa', () => {
+  const sin = "const q = await prisma.$queryRaw`select * from seguros.clientes where id = ${id}::uuid`"
+  const con =
+    "const q = await prisma.$queryRaw`select * from seguros.clientes where correduria_id = ${c}::uuid and id = ${id}::uuid`"
+  const unica = "const c = await correduriaUnica()\n" + sin
+  assert.equal(referenciasSinAmbito(sin, TABLAS), 1)
+  assert.equal(referenciasSinAmbito(con, TABLAS), 0)
+  assert.equal(referenciasSinAmbito(unica, TABLAS), 0)
+})
+
+test('un fichero con una consulta filtrada y otra NO filtrada sigue marcado (se mira cada sentencia)', () => {
+  const mixto = [
+    'await db.$queryRaw`select 1 from seguros.clientes where correduria_id = ${c}::uuid`',
+    'await db.$queryRaw`select 1 from seguros.polizas where numero = ${n}`',
   ].join('\n')
-  assert.ok(SQL_SEGUROS.test(sinComentarios(infractor)), 'el SQL real no se puede escapar')
+  assert.equal(referenciasSinAmbito(mixto, TABLAS), 1)
 })
 
-test('el detector de SQL reconoce las formas reales de nombrar el schema', () => {
-  for (const src of [
-    'from seguros.polizas where 1=1',
-    'join seguros.codeoscopic_consumo c on ...',
-    'insert into seguros.clientes (a) values (1)',
-    'update  seguros . polizas set x = 1',
-  ]) {
-    assert.ok(SQL_SEGUROS.test(src), `debería detectar: ${src}`)
-  }
-})
-
-test('reconoce el import del ámbito con y sin extensión .ts, y solo ese', () => {
-  for (const bueno of [
-    "import { prisma } from './tenant'",
-    "import { prisma } from '../tenant.ts'",
-    "import { prisma } from '@/lib/tenant'",
-    "import { x } from '../../lib/tenant.ts'",
-  ]) {
-    assert.ok(IMPORTA_TENANT.test(bueno), `debería valer: ${bueno}`)
-  }
-  for (const malo of [
-    "import { prisma } from './db'",
-    "import { x } from './tenant-ambito.ts'", // NO es la puerta: no resuelve la sesión
-    "import { x } from './mi-tenant-falso'",
-  ]) {
-    assert.ok(!IMPORTA_TENANT.test(malo), `no debería valer: ${malo}`)
-  }
+test('una tabla que no es multi-tenant no obliga a filtrar', () => {
+  assert.equal(referenciasSinAmbito('db.$queryRaw`select * from seguros.corredurias`', TABLAS), 0)
 })

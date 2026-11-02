@@ -153,6 +153,7 @@ import {
   esEtiquetaVerificacionMatricula,
   esOpcionVaciaCatalogo,
   esOpcionOtrasVersionesGenerali,
+  listaVersionCambiadaGenerali,
   fechaGenerali,
   matriculaGenerali,
   mensajeAtascoCatalogo,
@@ -471,8 +472,12 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * «Historial Siniestral» (solo cambia la vista), se leen sus bloques NUEVOS y se rellenan los VACÍOS con regla (años asegurado, siniestros) con el riesgo o, sin
  * dato, la siniestralidad más favorable (aviso «supuesto» → precio estimado). Un obligatorio vacío sin regla (p. ej. una fecha) para con su nombre. Si la
  * pestaña no existe se anota y se sigue como antes; el atasco final trae el inventario (etiquetas, sin valores) de esa pestaña.
+ *
+ * 0.2.66 (02/11/2026): tras «Otras versiones ...» la lista no cambia (el portal solo marca «Versión» en error): espera 20 s comparando contenido y pulsa la fila espejo «Otras versiones ...» de la tabla.
+ * 0.2.65 (02/11/2026): el panel de «Versión» con columnas lista las opciones como `tr[data-label]` (no `li`): «Otras versiones ...» se localiza también ahí.
+ * 0.2.64 (02/11/2026): «Garantías y Resultados» no se vuelve a pulsar si ya se pulsó en el trabajo (el guard solo lo permite una vez); solo espera al bloque.
  */
-export const VERSION_GENERALI_AUTO = '0.2.63'
+export const VERSION_GENERALI_AUTO = '0.2.66'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -1231,6 +1236,9 @@ export async function elegirSumaAbogadoVisibleGenerali(page: Page, ctx: Contexto
   return null
 }
 
+/** v0.2.64: páginas donde ya se pulsó «Garantías y Resultados» en este trabajo (el guard no permite una segunda vez). */
+export const GARANTIAS_PULSADA_GENERALI = new WeakSet<Page>()
+
 /**
  * v0.2.63: antes de marcar forma de pago / envío / verificación / abogado, asegura estar en «Garantías y Resultados» (si el bloque de verificación no está a la
  * vista se pulsa la subpestaña por la puerta guardada que ya existe) y espera con reintento acotado a que aparezca. Si no aparece → `ErrorMapaIncompletoGenerali`
@@ -1238,7 +1246,11 @@ export async function elegirSumaAbogadoVisibleGenerali(page: Page, ctx: Contexto
  */
 export async function asegurarGarantiasYResultadosGenerali(page: Page, ctx: ContextoPortal, pausaMs = 700, intentos = 8): Promise<void> {
   if (await hayBloqueVisibleGenerali(page, SEL_BLOQUE_VERIFICACION_GENERALI)) return
-  if (ctx.pulsarSubpestanaGenerali) await ctx.pulsarSubpestanaGenerali(SUBPESTANA_PRECIO_GENERALI).catch((e) => { if (e instanceof Error && /Bloqueada/.test(e.constructor.name)) throw e })
+  // v0.2.64: el guard solo deja pulsar la subpestaña UNA vez por trabajo: si ya se pulsó, no se repite el clic (solo espera acotada al bloque).
+  if (ctx.pulsarSubpestanaGenerali && !GARANTIAS_PULSADA_GENERALI.has(page)) {
+    GARANTIAS_PULSADA_GENERALI.add(page)
+    await ctx.pulsarSubpestanaGenerali(SUBPESTANA_PRECIO_GENERALI).catch((e) => { if (e instanceof Error && /Bloqueada/.test(e.constructor.name)) throw e })
+  }
   for (let i = 0; i < intentos; i++) {
     if (await hayBloqueVisibleGenerali(page, SEL_BLOQUE_VERIFICACION_GENERALI)) return
     await page.waitForTimeout(pausaMs)
@@ -2233,6 +2245,18 @@ export async function elegirMarcaPrimeFaces(raiz: Raiz, menu: MenuPrimeFaces, v:
 }
 
 /**
+ * v0.2.65: `data-label` de TODAS las opciones del panel `#<base>_panel`. El panel de «Versión» con columnas (Versión | Puertas | Potencia; trabajo
+ * bf088ce8) pinta las opciones como `<tr class="ui-selectonemenu-item" data-label>` y no como `<li>`: solo con `li` no se veía ni «Otras versiones ...».
+ */
+export async function etiquetasPanelGenerali(raiz: Raiz, base: string): Promise<string[]> {
+  const b = base.replace(/"/g, '')
+  return raiz
+    .locator(`[id="${b}_panel"] li[data-label], [id="${b}_panel"] tr[data-label]`)
+    .evaluateAll((els) => els.map((el) => el.getAttribute('data-label') ?? ''))
+    .catch(() => [] as string[])
+}
+
+/**
  * Pone una opción ya decidida en un SelectOneMenu de PrimeFaces: abre por su disparador (puerta del guard), pulsa el `li` de `data-label`
  * exacto (puerta del guard) y, si el navegador agota el plazo, cae a `selectOption` en el select oculto + change. Comprueba que quedó puesta.
  */
@@ -2258,7 +2282,7 @@ async function ponerOpcionPrimeFaces(
     // v0.2.7: se abre pulsando el disparador propio de PrimeFaces (sin las opciones dentro), no el `div` que las contiene.
     await abrir(menu.base)
     // v0.2.16: el `li` se empareja con la opción normalizada («…» vs «...», espacios) y a la puerta va su `data-label` EXACTO.
-    const etiquetas = await raiz.locator(`[id="${menu.base}_panel"] li[data-label]`).evaluateAll((els) => els.map((el) => el.getAttribute('data-label') ?? '')).catch(() => [] as string[])
+    const etiquetas = await etiquetasPanelGenerali(raiz, menu.base)
     const etq = dataLabelDeOpcionGenerali(etiquetas, elegida.texto, repetidas)
     if (etq !== null) {
       await elegir(menu.base, etq)
@@ -2576,20 +2600,40 @@ async function elegirVersionDesplegableSelector(page: Page, selector: Raiz, camp
     if (!ctx.abrirDesplegableVersionGenerali || !ctx.elegirVersionListaGenerali) throw new ErrorMapaIncompletoGenerali('las puertas guardadas del desplegable de «Otras versiones ...» (disparador y `li`) en el contexto del runner', false)
     await ctx.pausaAccion()
     await ctx.abrirDesplegableVersionGenerali(campo.clave)
-    const etiquetas = await selector.locator(`[id="${campo.clave.replace(/"/g, '')}_panel"] li[data-label]`).evaluateAll((els) => els.map((el) => el.getAttribute('data-label') ?? '')).catch(() => [] as string[])
+    const etiquetas = await etiquetasPanelGenerali(selector, campo.clave)
     const etqOtras = dataLabelDeOpcionGenerali(etiquetas, opciones[d.indice]!.texto, true)
     if (etqOtras === null) throw new ErrorMapaIncompletoGenerali('el elemento «Otras versiones ...» del panel de «Versión» (no se localiza por su texto exacto); NO se pulsa «Confirmar»')
     await ctx.elegirVersionListaGenerali(campo.clave, etqOtras)
-    const previas = new Set(antes.map(normalizarCatalogo))
+    // v0.2.66 (trabajo f84801ce): tras la elección el portal marcó «Versión» en error y NO cambió nada (misma lista, sin diálogo): el desplegable no es lo que amplía.
+    // Se espera hasta 2× el plazo comparando el CONTENIDO; a media espera, si sigue igual, se pulsa la fila «Otras versiones ...» de la tabla espejo (puerta guardada).
+    const total = 2 * ESPERA_TRAS_OTROS_MS
     const ini = Date.now()
+    let filaProbada = false
+    let nota = ''
     for (;;) {
       await page.waitForTimeout(400)
       const ahora = await opcionesSelect(select).catch(() => [] as { valor: string; texto: string }[])
-      if (ahora.some((o) => !esOpcionVaciaCatalogo(o.texto) && !previas.has(normalizarCatalogo(o.texto)))) {
+      if (listaVersionCambiadaGenerali(antes, ahora.map((o) => o.texto))) {
         opciones = ahora
         break
       }
-      if (Date.now() - ini >= ESPERA_TRAS_OTROS_MS) throw new ErrorMapaIncompletoGenerali(`lo que hace el portal tras elegir «Otras versiones ...» en «Versión»: en ${Math.round(ESPERA_TRAS_OTROS_MS / 1000)} s no cambió la lista (${ahora.length} opciones); NO se pulsa «Confirmar»`)
+      if (!filaProbada && Date.now() - ini >= total / 2 && ctx.elegirFilaVersionGenerali) {
+        filaProbada = true
+        try {
+          await ctx.elegirFilaVersionGenerali(null, opciones[d.indice]!.texto.replace(/\s+/g, ' ').trim())
+          nota = 'se pulsó la fila «Otras versiones ...» de la tabla'
+        } catch (e) {
+          nota = `la fila «Otras versiones ...» de la tabla no se pudo pulsar (${(e instanceof Error ? e.message : String(e)).slice(0, 100)})`
+        }
+      }
+      if (Date.now() - ini >= total) {
+        const m = await leerModeloMostrado({ select, base: campo.clave }).catch(() => ({ label: '', input: '' }))
+        const enError = await select.evaluate((el, b) => document.getElementById(b)?.classList.contains('ui-state-error') ?? false, campo.clave).catch(() => false)
+        throw new ErrorMapaIncompletoGenerali(
+          `lo que hace el portal tras elegir «Otras versiones ...» en «Versión»: en ${Math.round(total / 1000)} s no cambió el contenido de la lista (${ahora.length} opciones; label=«${m.label.slice(0, 40)}», ` +
+            `«Versión» ${enError ? 'en error' : 'sin error'}${nota ? `; ${nota}` : ''}); NO se pulsa «Confirmar»`,
+        )
+      }
     }
     // Deja que el AJAX termine de repintar antes de leer la lista definitiva.
     await page.waitForTimeout(MIN_RECARGA_SELECTOR_MS)
@@ -4082,6 +4126,7 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   // v0.2.60 (trabajo af1fb857): antes de «Garantías y Resultados», la sección «Historial Siniestral» de Datos de Valoración (origen SINCO + antecedentes).
   const historial = await paso('formulario', () => completarHistorialSiniestralGenerali(page, ctx, ant.formulario, ant.claves, opciones.esperaHistorialMs))
   avisosDatosValoracion.push(...historial.avisos)
+  GARANTIAS_PULSADA_GENERALI.add(page)
   await paso('tarificar', () => ctx.pulsarSubpestanaGenerali!(SUBPESTANA_PRECIO_GENERALI))
   // v0.2.31: si el texto no da precio único, se lee la tabla «Modalidades de Seguro» (Recibo Anual de la modalidad marcada). Solo lee.
   const conModalidades = async (l: Awaited<ReturnType<typeof esperarPrecioGenerali>>, vigia?: VigiaBloqueoGenerali): Promise<Awaited<ReturnType<typeof esperarPrecioGenerali>>> => {
