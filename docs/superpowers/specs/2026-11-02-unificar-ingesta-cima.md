@@ -53,7 +53,7 @@ Los modelos de `seguros` están en **`asegura.prisma`**; `schema.prisma` solo ti
 - `liquidaciones`: `datos_extra`, `estado_liquidacion` (enum `liquidacion_estado`).
 
 **Enums que faltan en Prisma:** `cima_fichero_estado` (confirmed, deferred, error, pending, persisted, review, review_salud), `cef_origen`, `liquidacion_estado`.
-Fuera de alcance pero real: `portal_bien_tipo` en Prisma = {otro, vehiculo, vivienda} frente a la BD = {empresa, local, mascota, persona, vehiculo, vivienda}. Leer «mascota» con Prisma revienta, y escribir «otro» falla.
+Fuera de alcance pero real: `portal_bien_tipo` en Prisma = {otro, vehiculo, vivienda} frente a la BD = {empresa, local, mascota, persona, vehiculo, vivienda}. Leer «mascota» con Prisma revienta, y escribir «otro» falla. (CORREGIDO 02/11 en asegura.prisma + cepo regression-enums-seguros-bd)
 
 **Upserts sobre índices ÚNICOS PARCIALES** (`... WHERE id_* IS NOT NULL`, `NULLS NOT DISTINCT` en cobertura): Prisma `upsert` no puede apuntarlos. El CRM los usa con `onConflictDoUpdate({targetWhere})` y con merges SQL (`greatest(purgar_en)`, `coalesce(excluded, col)`, `jsonb_agg distinct on` en `persist-siniestro`). En Prisma todo eso sería `$executeRaw` escrito a mano, es decir, la reescritura completa de unas ~4.000 líneas (pull-persist, pull-deps, persist-*) con el mayor riesgo semántico.
 

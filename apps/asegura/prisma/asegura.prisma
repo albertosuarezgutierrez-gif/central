@@ -1161,7 +1161,10 @@ enum PortalCanalTipo {
 enum PortalBienTipo {
   vehiculo
   vivienda
-  otro
+  local
+  mascota
+  persona
+  empresa
 
   @@map("portal_bien_tipo")
 }
