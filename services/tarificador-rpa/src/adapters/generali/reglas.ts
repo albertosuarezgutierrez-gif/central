@@ -946,7 +946,7 @@ export function importeEspanolEur(texto: string): number | null {
 }
 
 export type LecturaPrecioGenerali =
-  | { tipo: 'unico'; eur: number; linea: string; avisos?: string[] }
+  | { tipo: 'unico'; eur: number; linea: string; avisos?: string[]; /** v0.2.69: TODAS las modalidades con importe de la tabla (solo si son 2 o más). */ modalidades?: { modalidad: string; eur: number; marcada: boolean }[] }
   | { tipo: 'ninguno' }
   | { tipo: 'varios'; candidatos: { eur: number; linea: string }[] }
 
@@ -1360,11 +1360,14 @@ export function leerModalidadesGenerali(filas: readonly FilaModalidadGenerali[],
     if (eur !== null) cands.push({ eur, modalidad: nombre(f), marcada: f.marcada, porFila: f.porFila === true })
   }
   if (cands.length === 0) return { tipo: 'ninguno' }
+  // v0.2.69 (Alberto: «todas las opciones posibles»): todas las modalidades con importe, sin repetir nombre+importe, para ofrecerlas como ofertas separadas.
+  const unicas = cands.filter((c, i) => cands.findIndex((o) => o.modalidad === c.modalidad && o.eur === c.eur) === i)
+  const modalidades = unicas.length > 1 ? { modalidades: unicas.map((c) => ({ modalidad: c.modalidad, eur: c.eur, marcada: c.marcada })) } : {}
   const marcadas = cands.filter((c) => c.marcada)
   if (marcadas.length > 0) {
     const eurs = [...new Set(marcadas.map((c) => c.eur))]
     if (eurs.length > 1) return { tipo: 'varios', candidatos: marcadas.map((c) => ({ eur: c.eur, linea: `${c.modalidad} Recibo Anual` })) }
-    return { tipo: 'unico', eur: marcadas[0]!.eur, linea: `${marcadas[0]!.modalidad} Recibo Anual`, ...(marcadas[0]!.porFila ? { avisos: [AVISO_POR_FILA_GENERALI] } : {}) }
+    return { tipo: 'unico', eur: marcadas[0]!.eur, linea: `${marcadas[0]!.modalidad} Recibo Anual`, ...(marcadas[0]!.porFila ? { avisos: [AVISO_POR_FILA_GENERALI] } : {}), ...modalidades }
   }
   const orden = [...cands].sort((a, b) => a.eur - b.eur)
   const el = orden[0]!
@@ -1372,7 +1375,7 @@ export function leerModalidadesGenerali(filas: readonly FilaModalidadGenerali[],
   const avisos = [`Modalidad no marcada en la tabla: se toma la más barata (${el.modalidad})`]
   if (el.porFila) avisos.push(AVISO_POR_FILA_GENERALI)
   if (otras.length > 0) avisos.push(`Otras modalidades: ${otras.map((c) => `${c.modalidad} ${formatoEurGenerali(c.eur)}`).join('; ')}`)
-  return { tipo: 'unico', eur: el.eur, linea: `${el.modalidad} Recibo Anual`, avisos }
+  return { tipo: 'unico', eur: el.eur, linea: `${el.modalidad} Recibo Anual`, avisos, ...modalidades }
 }
 
 /** Contenido crudo de una celda de importe, saneado: solo dígitos/separadores/€ (máx. 20); con letras «(texto)»; vacío «∅». PURA. */

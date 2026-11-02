@@ -32,7 +32,7 @@ async function conPagina<T>(html: string, fn: (page: Page) => Promise<T>): Promi
 }
 const ctxCon = (cuenta: { n: number }) => ({ pulsarSubpestanaGenerali: async () => { cuenta.n++ } }) as unknown as ContextoPortal
 
-test('v0.2.64 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.68'))
+test('v0.2.64 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.69'))
 
 test('bloque ya a la vista: no se pulsa la subpestaña', async () => {
   const c = { n: 0 }
@@ -44,7 +44,7 @@ test('ya pulsada en el trabajo y bloque ausente: error claro, sin segundo clic',
   const c = { n: 0 }
   await conPagina('<p>otra pantalla</p>', async (p) => {
     GARANTIAS_PULSADA_GENERALI.add(p)
-    await assert.rejects(asegurarGarantiasYResultadosGenerali(p, ctxCon(c), 10, 2), (e) => e instanceof ErrorMapaIncompletoGenerali && /Verificación del riesgo/.test(String(e.message)))
+    await assert.rejects(asegurarGarantiasYResultadosGenerali(p, ctxCon(c), 10, 2), (e) => e instanceof ErrorMapaIncompletoGenerali && /pestaña «Garantías y Resultados» \(no cargó/.test(String(e.message)))
   })
   assert.equal(c.n, 0)
 })
