@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 
+## (02/11/2026) Pendiente de despliegue: edge functions de ia-rest (PR #5391 abierto, NO mergear antes)
+- Hecho hoy: #5389 (enum portal_bien_tipo + CI Prisma), candado de ingesta CIMA en prod (tabla `seguros.ingesta_candado` creada; CRM `asegura` #894 mergeado), spec CIMA con añadidos (credenciales TIREA NO se tocan).
+- BLOQUEO: la herramienta MCP no fija valores de secretos de Edge Functions. Alberto elige vía PERMANENTE: añadir `SUPABASE_ACCESS_TOKEN` como secreto del entorno cloud → la PRÓXIMA sesión lo hace con `npx supabase secrets set`.
+- Orden obligatorio (si no, los crons alerta-ritmo/infra-monitor/eventos-entorno dan 401): 1) secretos EDGE_CRON_SECRET, TG_SEND_SECRET, IA_TRAINING_DASHBOARD_PIN (+INTERNAL_API_SECRET si falta) en Edge Functions; `edge_cron_secret` en el Vault (=EDGE_CRON_SECRET); TG_SEND_SECRET en Vercel ia-rest. 2) `migrations/20261102_crons_edge_secret.sql`. 3) desplegar las 12 funciones (+ `_shared/auth-interna.ts`). 4) verificar 200 en crons y 401 sin credencial. 5) mergear #5391.
+- Siguiente de CIMA: fase 2 (portar la ingesta como paquete, capa BD con Drizzle) según la spec.
+
 ## (02/11/2026) #5385 MERGEADO · arranca la unificación de la ingesta CIMA en central
 - Auditoría completa mergeada (#5385). CRM `asegura` (app.grupoasegura.com): sin uso humano (Alberto: «Manuel no usa nada»); solo vive la ingesta CIMA.
 - Decisión: NO mover el CRM entero; portar solo la ingesta (capa BD con Drizzle tal cual) y apagar el resto. Spec validada: `docs/superpowers/specs/2026-11-02-unificar-ingesta-cima.md` (+ `-fase0.md`).
