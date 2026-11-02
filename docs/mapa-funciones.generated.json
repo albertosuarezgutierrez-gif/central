@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-02T17:39:51Z",
-  "sha": "7fb6e93756bdbd9ca946fb32111e16f84ce5954f",
+  "generadoEn": "2026-11-02T17:50:10Z",
+  "sha": "3eb667edd2ec965bf1226c53072a2683f7f15e3a",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -52209,92 +52209,6 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "92614a88bf69"
-    },
-    {
-      "ruta": "apps/asegura/lib/generated/asegura-client/edge.js",
-      "ambito": "apps/asegura",
-      "exporta": [],
-      "funciones": [],
-      "tablas": [
-        "prisma"
-      ],
-      "rutaApi": null,
-      "hash": "ff06d8e0d269"
-    },
-    {
-      "ruta": "apps/asegura/lib/generated/asegura-client/index.js",
-      "ambito": "apps/asegura",
-      "exporta": [],
-      "funciones": [],
-      "tablas": [
-        "prisma"
-      ],
-      "rutaApi": null,
-      "hash": "c37d558c8a1e"
-    },
-    {
-      "ruta": "apps/asegura/lib/generated/asegura-client/runtime/edge-esm.js",
-      "ambito": "apps/asegura",
-      "exporta": [],
-      "funciones": [],
-      "tablas": [
-        "service",
-        "unpkg",
-        "user"
-      ],
-      "rutaApi": null,
-      "hash": "2f84e2744daf"
-    },
-    {
-      "ruta": "apps/asegura/lib/generated/asegura-client/runtime/edge.js",
-      "ambito": "apps/asegura",
-      "exporta": [],
-      "funciones": [],
-      "tablas": [
-        "service",
-        "unpkg",
-        "user"
-      ],
-      "rutaApi": null,
-      "hash": "df32d9d49f7b"
-    },
-    {
-      "ruta": "apps/asegura/lib/generated/asegura-client/runtime/library.js",
-      "ambito": "apps/asegura",
-      "exporta": [],
-      "funciones": [],
-      "tablas": [
-        "engine",
-        "service",
-        "unpkg",
-        "user"
-      ],
-      "rutaApi": null,
-      "hash": "28e72b0fd8cb"
-    },
-    {
-      "ruta": "apps/asegura/lib/generated/asegura-client/runtime/react-native.js",
-      "ambito": "apps/asegura",
-      "exporta": [],
-      "funciones": [],
-      "tablas": [
-        "engine",
-        "user"
-      ],
-      "rutaApi": null,
-      "hash": "85ef0058816a"
-    },
-    {
-      "ruta": "apps/asegura/lib/generated/asegura-client/runtime/wasm.js",
-      "ambito": "apps/asegura",
-      "exporta": [],
-      "funciones": [],
-      "tablas": [
-        "engine",
-        "user"
-      ],
-      "rutaApi": null,
-      "hash": "b6f3bca67b87"
     },
     {
       "ruta": "apps/asegura/lib/google-contactos-lead.ts",
@@ -267188,7 +267102,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5513,
+    "archivos": 5506,
     "funciones": 21572
   }
 }
