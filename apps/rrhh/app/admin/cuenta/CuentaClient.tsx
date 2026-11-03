@@ -144,7 +144,7 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
           <button type="submit" disabled={guardandoBrand}>{guardandoBrand ? 'Guardando…' : 'Guardar marca'}</button>
           {brandMsg && <p className="text-ok text-sm">{brandMsg}</p>}
         </form>
-        <p className="text-ink-3 mt-2 text-xs">Tu logo aparece en el Portal del Empleado de tus trabajadores junto a «con Grupo ASegura». La interfaz usa siempre el diseño de Grupo ASegura; el color solo se aplica a los documentos PDF que generas.</p>
+        <p className="text-ink-3 mt-2 text-xs">Tu logo y tu color son los del Portal del Empleado de tus trabajadores (cabecera, botones y avisos), con un discreto «con Grupo ASegura». El color también se aplica a los documentos PDF que generas.</p>
       </Card>
 
       <Card as="section" className="my-3 max-w-sm">

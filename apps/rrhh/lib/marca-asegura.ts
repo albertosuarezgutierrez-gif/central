@@ -1,6 +1,8 @@
 // Marca «Grupo ASegura» del Portal del Empleado. PURO (sin BD) → testeable.
 //
-// 26/10/2026 (decisión de Alberto): la marca es SIEMPRE Grupo ASegura, para todas las empresas. Se acabó el doble
+// 27/10/2026 («algo intermedio»): dentro de la app el logo y el color son los de la EMPRESA (lib/marca-empresa.ts) y Grupo ASegura
+// queda discreto («con Grupo ASegura» + pie). Fuera (portada, login) manda «Portal del Empleado».
+// 26/10/2026 (decisión de Alberto): la marca era SIEMPRE Grupo ASegura, para todas las empresas. Se acabó el doble
 // diseño (beige/teal/serif) y su gating por la env `RRHH_EMPRESAS_MARCA_ASEGURA`, por host y por `?m=`.
 // 🚨 Esa env YA NO SE LEE en ningún sitio: si sigue puesta en Vercel no hace nada ni rompe nada (se puede borrar).
 // El color de cada empresa tampoco pinta ya la interfaz: solo su logo ("[cliente] con Grupo ASegura").
@@ -10,6 +12,8 @@ import { MARCA_ASEGURA } from '@central/brand'
 /** Cobalto de la marca (viene del paquete; solo para themeColor, el color por defecto de los PDF y los correos). */
 export const COBALTO_ASEGURA = MARCA_ASEGURA.paleta.primario
 export const PIE_ASEGURA = 'Herramienta gratuita de Grupo ASegura'
+/** Página pública «Privacidad y seguridad» (sin sesión). */
+export const RUTA_PRIVACIDAD = '/privacidad-seguridad'
 export const LOGO_ASEGURA = '/brand/logotipo-asegura.svg'
 /** Portal del cliente de la correduría (producción). Sobrescribible con ASEGURA_PORTAL_URL. */
 export const PORTAL_ASEGURA_POR_DEFECTO = 'https://clientes.grupoasegura.es'
@@ -33,6 +37,7 @@ export const MANIFEST_PORTAL = '/manifest.json'
 /** Manifest anterior: se conserva porque las apps ya instaladas lo tienen guardado. Mismo contenido de marca. */
 export const MANIFEST_ASEGURA = '/manifest-asegura.json'
 export const ICONO_APPLE_ASEGURA = '/brand/icono-asegura-180.png'
-export const TITULO_ASEGURA = 'Grupo ASegura · Portal del empleado'
+/** Título neutro (27/10/2026): la app es «el portal de mi empresa»; Grupo ASegura queda en el pie. */
+export const TITULO_ASEGURA = 'Portal del Empleado'
 /** Entrada del empleado (start_url de la app instalada). */
 export const ENTRADA_ASEGURA = '/e/entrar'

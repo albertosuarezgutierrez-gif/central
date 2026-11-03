@@ -6,6 +6,7 @@ import MaterialEmpleado from '@/components/MaterialEmpleado'
 import ActivarPush from '@/components/ActivarPush'
 import { PieAsegura } from '@/components/MarcaAsegura'
 import CabeceraApp from '@/components/CabeceraApp'
+import { marcaCabecera } from '@/lib/marca-empresa'
 import AvisoSeguros from '@/components/AvisoSeguros'
 import Modal from '@/components/ui/Modal'
 import Boton from '@/components/ui/Boton'
@@ -81,9 +82,10 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
     setSubiendo(false)
   }
 
+  const marca = marcaCabecera({ nombre: branding?.nombre, logoUrl: branding?.logo_url, color: branding?.color_primario })
   return (
-    <main className="mx-auto max-w-[520px] lg:max-w-5xl">
-      <CabeceraApp perfil="empleado" logoUrl={branding?.logo_url} nombreEmpresa={branding?.nombre} urlSeguros={urlSeguros} />
+    <main className="mx-auto max-w-[520px] lg:max-w-5xl" style={marca.estilo}>
+      <CabeceraApp perfil="empleado" marca={marca} urlSeguros={urlSeguros} />
       <div className="p-4">
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-x-6 lg:grid-cols-[minmax(0,1fr)_360px]">

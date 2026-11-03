@@ -15,7 +15,7 @@ function fuentes(dir: string): { ruta: string; src: string }[] {
   })
 }
 
-describe('marca ÚNICA Grupo ASegura (26/10/2026)', () => {
+describe('marca: tokens de Grupo ASegura por defecto; la empresa solo tiñe vía lib/marca-empresa (27/10/2026)', () => {
   it('el cobalto sale de @central/brand, no se escribe a mano', () => {
     expect(COBALTO_ASEGURA).toBe(MARCA_ASEGURA.paleta.primario)
     expect(COBALTO_ASEGURA).toBe('#3364ee')
@@ -72,13 +72,13 @@ describe('URL de «Seguros» (regla legal: solo email y origen)', () => {
   })
 })
 
-describe('app instalable con identidad Grupo ASegura', () => {
+describe('app instalable con nombre neutro (27/10/2026: «Portal del Empleado»; Grupo ASegura en el pie)', () => {
   const pub = (f: string) => join(RAIZ, 'public', f)
   it('los dos manifest son de Grupo ASegura, cobalto, con iconos PNG existentes y start_url dentro del scope', () => {
     for (const f of ['manifest.json', 'manifest-asegura.json']) {
       const m = JSON.parse(readFileSync(pub(f), 'utf8'))
-      expect(m.name).toContain('Grupo ASegura')
-      expect(m.short_name).toBe('Grupo ASegura')
+      expect(m.name).toBe('Portal del Empleado')
+      expect(m.short_name).toBe('Empleado')
       expect(m.theme_color).toBe(COBALTO_ASEGURA)
       expect(m.start_url.startsWith('/e/entrar')).toBe(true)
       expect(m.scope).toBe('/')

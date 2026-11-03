@@ -1,18 +1,18 @@
 'use client'
 // Cabecera COMÚN de las dos ventanas (26/10/2026), la misma en /e (empleado) y en /admin (responsable):
-//   [logo de la empresa] con Grupo ASegura · [selector de empresa, solo si hay ≥2] · [Herramientas] [Seguros] [Salir]
+//   [logo y nombre de la empresa] + «con Grupo ASegura» pequeño · [selector de empresa, solo si hay ≥2] · [Herramientas] [Seguros] [Salir]
 // «Herramientas» es esta app (activa); «Seguros» lleva al portal de clientes con SOLO el correo (`urlPortalAsegura`):
 // los datos de RR.HH. nunca se usan comercialmente. Acceder a una herramienta no abre los seguros: es un enlace.
 import { useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { CoMarca } from '@/components/MarcaAsegura'
+import { MarcaEmpresa } from '@/components/MarcaAsegura'
+import type { MarcaCabecera } from '@/lib/marca-empresa'
 
 type Empresa = { id: string; nombre: string }
 
-export default function CabeceraApp({ perfil, logoUrl, nombreEmpresa, urlSeguros, empresas = [], empresaActualId }: {
+export default function CabeceraApp({ perfil, marca, urlSeguros, empresas = [], empresaActualId }: {
   perfil: 'empleado' | 'responsable'
-  logoUrl?: string | null
-  nombreEmpresa?: string | null
+  marca: MarcaCabecera
   urlSeguros: string
   empresas?: Empresa[]
   empresaActualId?: string
@@ -41,7 +41,7 @@ export default function CabeceraApp({ perfil, logoUrl, nombreEmpresa, urlSeguros
   return (
     <header className="border-b border-line bg-card">
       <div className="mx-auto flex w-full max-w-[1280px] flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3">
-        <CoMarca logoUrl={logoUrl} nombre={nombreEmpresa} alto={20} className="!flex-row !items-center !gap-3 min-w-0 max-w-full" />
+        <MarcaEmpresa marca={marca} />
 
         {empresas.length > 1 && (
           <label className="flex min-w-0 basis-full flex-col gap-1 text-xs text-ink-3 sm:basis-auto sm:flex-row sm:items-center sm:gap-2">

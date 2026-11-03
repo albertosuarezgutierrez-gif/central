@@ -1,7 +1,8 @@
 'use client'
 import { useState } from 'react'
-import { CoMarca, PieAsegura } from '@/components/MarcaAsegura'
+import { MarcaEmpresa, MarcaGenerica, PieAsegura } from '@/components/MarcaAsegura'
 import Boton from '@/components/ui/Boton'
+import { marcaCabecera } from '@/lib/marca-empresa'
 
 type Branding = { nombre: string; color_primario: string | null; logo_url: string | null }
 
@@ -18,11 +19,12 @@ export default function LoginEmpleado({ token, branding }: { token: string; bran
     else { if (j.necesita_pin) setNecesitaPin(true); setErr(j.error ?? 'Error') }
   }
 
-  // Co-marca: logo del cliente + «con Grupo ASegura».
+  // Se sabe la empresa por el token: su logo y color mandan; «con Grupo ASegura» pequeño. Sin logo/color, marca genérica.
+  const marca = marcaCabecera({ nombre: branding?.nombre, logoUrl: branding?.logo_url, color: branding?.color_primario })
   return (
-    <main className="flex min-h-screen flex-col items-center p-4">
+    <main className="flex min-h-screen flex-col items-center p-4" style={marca.estilo}>
       <div className="my-auto w-full max-w-sm rounded-card border border-line bg-card p-6 text-center sm:p-7">
-        <CoMarca logoUrl={branding?.logo_url} nombre={branding?.nombre} alto={26} />
+        {marca.modo === 'empresa' ? <MarcaEmpresa marca={marca} className="!items-center text-center" /> : <MarcaGenerica />}
         <h1 className="mt-4 text-xl">Acceso empleado</h1>
         <form onSubmit={entrar} className="mt-5 grid gap-2.5">
           {necesitaPin && <input placeholder="PIN" inputMode="numeric" value={pin} onChange={e => setPin(e.target.value)} />}
