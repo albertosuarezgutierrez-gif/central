@@ -14,7 +14,7 @@
 
 ## (03/11/2026) Fiscal · estudios de pisos y correduría (docs/fiscal/2026-11-*.md)
 - Pisos: calificación capital inmobiliario OK; Bustos capital mobiliario OK. Dúplex se queda 100% Alberto (decisión 03/11, descartado repartir con Pilar). ⚠️ RDL 29/2026: alquiler ≤30 noches pasa de exento a IVA 10% desde 01/12/2026 SI se convalida (votación prevista 12/11). Mobiliario >300€ (TV 1.749€) debería amortizarse al 10%, no gasto íntegro: decidir con asesoría. Supremo anuló el NRA (19/05/2026); sigue VFT andaluz.
-- Correduría: Alberto dice SIN retenciones y sin 130 (contradice la skill `perfil-fiscal`: 15% y modelo 190). Riesgos: 130 sin presentar, IVA de Anthropic/Vercel/Supabase sin autoliquidar (inversión del sujeto pasivo, 303/309 + ROI/349), gasolina y seguro del coche sin prueba de afectación (STS 1872/2024), Asisa ≤500€/persona. Motor deduce el TOTAL con IVA (correcto: actividades exentas).
+- Correduría: las compañías SÍ retienen (le pagan el neto; confirmado por Alberto 03/11) → coherente con la skill (15%, modelo 190) y exonera del 130 si ≥70% de ingresos lleva retención (10 años sin requerimientos). Falta cargar el importe de retenciones 2026 (solo 195€ de CIMA): restan de la cuota. Riesgos: IVA de Anthropic/Vercel/Supabase sin autoliquidar (inversión del sujeto pasivo, 303/309 + ROI/349), gasolina y seguro del coche sin prueba de afectación (STS 1872/2024), Asisa ≤500€/persona. Motor deduce el TOTAL con IVA (correcto: actividades exentas).
 - Fuentes oficiales (BOE/AEAT) no accesibles desde la sesión: todo a validar con Asecon.
 
 ## (03/11/2026) Fiscal · doble conteo P&L pisos + auditoría contable
