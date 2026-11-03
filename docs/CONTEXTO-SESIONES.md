@@ -12,6 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 
+## (03/11/2026) Fiscal · doble conteo P&L pisos + auditoría contable
+- `lib/sivra/pl-mensual.ts`: los cargos de tarjeta con `factura_ref='(sivra:)gasto:<uuid>'` cuyo gasto existe ya no suman (helper `cargos-ya-facturados.ts` + test). 8 pares enlazados en BD (TV 1.749€, Amazon 247,92€ y 6 de Socorro); rollback en scratchpad. El conciliador que debe escribir el enlace al casar es `lib/conciliacion.ts` (`sivra:gasto:`).
+- Póliza 061145138 (659,43€) descartada: era de un cliente (Rafael), no gasto. Correduría: 0 supermercados reales; 3 Asisa mal etiquetados → `seguro_salud`; 14 sin subcategoría clasificados; APROMES 72€ = cuota de la correduría; gasolina 300€ se queda en correduría por decisión de Alberto (riesgo: confirmar con asesoría).
+- Auditoría: cuentas paradas (Pilar ···0302 desde 28/09, Kutxabank Pilar y N26 desde jul, BBVA ···2620 jun); ~770 movimientos con destino sin confirmar; 186 gastos sin Drive; 97 sin negocio; 19 con `titular_pendiente`; agosto con muy pocas reservas (¿faltan datos?); retenciones/pagos fraccionados null en el panel; Pilar: el motor proyecta sus ingresos desde un único mes (mayo, posible prestación exenta).
+
 ## (03/11/2026) Fiscal · carpeta Drive «Amazon deducible» revisada
 - 13 facturas (304,01€), 12 emitidas a **Punto y Coma Gestión (B90446683)**. Por decisión de Alberto, 5 consumibles registrados como gasto de **Socorro** (33,37€: cafetera, fundas, pilas, Abenula) con `titular_pendiente='receptor_no_titular'`, conciliados con su cargo y renombrados en Drive; el motor fiscal los cuenta. El resto (bebé/personal) sigue `personal`.
 - «Fregasuelos» = Roborock QV 35A, pedido 171-3879962-4037146 (01/08, 247,92€): confirmado por Alberto, registrado en Socorro (`menaje`, conciliado, mov. `213db534…`), SIN factura (solo confirmación de pedido; `factura_ref` NULL). Se envió a Costa Ballena (Rota), pero Alberto confirma (03/11) que está en Socorro: se queda como gasto del piso.

@@ -3,6 +3,7 @@ import { elegirMesFacturado, repartirPagoSiqueBrilla } from './reparto-siquebril
 import { casarFacturaConPago } from './factura-limpieza'
 import { pesoLavanderia } from './lavanderia-peso'
 import { facturasParaImportes } from './factura-limpieza-lectura'
+import { sumarCargosSinFactura, type CargoPiso } from './cargos-ya-facturados'
 
 // Pisos que comparten lavandería (Giraldillo y la incluida en la factura de Si que Brilla).
 // Confirmado por Alberto el 25/08/2026 que el Dúplex TAMBIÉN entra en el reparto — sustituye
@@ -155,8 +156,15 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
     // SOLO cuentas tipo 'tarjeta': los recibos de la corriente (luz/agua/IBI de Kutxa,
     // que también llevan propiedad_id para lo fiscal) ya entran por factura en `gastos`
     // y sumarlos aquí los contaba DOBLE en el P&L del piso (hallazgo 17/08/2026).
-    prisma.$queryRaw<Array<{ propiedad_id: string; importe: number }>>`
-      SELECT m.propiedad_id, COALESCE(SUM(ABS(m.importe)), 0)::float AS importe
+    // Un cargo con `factura_ref = 'gasto:<uuid>'` cuyo gasto existe ya cuenta por `gastos`
+    // (doble conteo del televisor, 03/11/2026): `sumarCargosSinFactura` lo descarta.
+    prisma.$queryRaw<CargoPiso[]>`
+      SELECT m.propiedad_id, ABS(m.importe)::float AS importe, m.factura_ref,
+        (m.factura_ref ~* '^(sivra:)?gasto:[0-9a-f-]{36}$' AND EXISTS (
+          SELECT 1 FROM gastos g
+          WHERE g.id::text = lower(regexp_replace(m.factura_ref, '^(sivra:)?gasto:', '', 'i'))
+            AND g.propiedad NOT IN ('prop_multi_apartamentos', 'prop_personal', '')
+        )) AS gasto_existe
       FROM v_movimientos_activos m
       JOIN cuentas_bancarias cb ON cb.id = m.cuenta_bancaria_id AND cb.tipo = 'tarjeta'
       WHERE m.fecha_operacion >= ${start} AND m.fecha_operacion < ${end}
@@ -164,7 +172,6 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
         AND m.propiedad_id IS NOT NULL
         AND m.destino_confirmado = true
         AND m.importe < 0
-      GROUP BY m.propiedad_id
     `,
 
     // El Giraldillo en banco, aún no en movimiento_reparto
@@ -241,9 +248,9 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
   }
 
   // Gastos de tarjeta con piso asignado explícitamente → otros
-  for (const row of movPropAsignados) {
-    if (!mGastos.has(row.propiedad_id)) mGastos.set(row.propiedad_id, emptyGastos())
-    mGastos.get(row.propiedad_id)!.otros += Number(row.importe)
+  for (const [pid, importe] of sumarCargosSinFactura(movPropAsignados)) {
+    if (!mGastos.has(pid)) mGastos.set(pid, emptyGastos())
+    mGastos.get(pid)!.otros += importe
   }
 
   // Añadir movimiento_reparto (ya repartido manualmente) → lavanderia
