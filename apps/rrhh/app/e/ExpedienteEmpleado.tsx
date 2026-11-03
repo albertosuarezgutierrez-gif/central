@@ -11,6 +11,7 @@ import AvisoSeguros from '@/components/AvisoSeguros'
 import Modal from '@/components/ui/Modal'
 import Boton from '@/components/ui/Boton'
 import Chip from '@/components/ui/Chip'
+import { saludoEmpleado } from '@/lib/saludo'
 
 type Carpeta = { id: string; etiqueta: string }
 type Doc = { id: string; carpeta: string; nombre: string; estado_firma: string; firmado_empresa_at: string | null; firmado_empresa_nombre: string | null; creada_at: string; url: string | null; resumen?: string | null }
@@ -18,9 +19,16 @@ type Aviso = { id: string; tipo: string; titulo: string; cuerpo: string | null; 
 type Avisos = { avisos: Aviso[]; sin_ver: number }
 type Branding = { nombre: string; color_primario: string | null; logo_url: string | null }
 
+// Mismo criterio que antes en los dos sitios donde sale «Firmar» (avisos y lista): solo cambia que ahora se nombra.
+const puedeFirmar = (d: { estado_firma: string; carpeta: string }) => d.estado_firma === 'pendiente' && d.carpeta !== 'datos_personales' && d.carpeta !== 'formacion'
+
+function IconoDoc() {
+  return <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8ZM14 2v6h6M8 13h8M8 17h5" /></svg>
+}
+
 const CONSENTIMIENTO = 'He leído el documento y lo firmo electrónicamente. Acepto que esta firma electrónica avanzada (Reglamento eIDAS, art. 26) queda vinculada a mi identidad y al contenido del documento, y tiene la misma validez que mi firma manuscrita.'
 
-export default function ExpedienteEmpleado({ visibles, subibles, inicial, branding, tieneFichaje, avisosIniciales, urlSeguros }: { urlSeguros: string; visibles: Carpeta[]; subibles: Carpeta[]; inicial: Doc[]; branding?: Branding; tieneFichaje?: boolean; avisosIniciales?: Avisos | null }) {
+export default function ExpedienteEmpleado({ visibles, subibles, inicial, branding, tieneFichaje, avisosIniciales, urlSeguros, nombreEmpleado }: { urlSeguros: string; nombreEmpleado?: string | null; visibles: Carpeta[]; subibles: Carpeta[]; inicial: Doc[]; branding?: Branding; tieneFichaje?: boolean; avisosIniciales?: Avisos | null }) {
   const [docs, setDocs] = useState<Doc[]>(inicial)
   const [avisos, setAvisos] = useState<Avisos | null>(avisosIniciales ?? null)
   const [verAvisos, setVerAvisos] = useState(false)
@@ -83,12 +91,26 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
   }
 
   const marca = marcaCabecera({ nombre: branding?.nombre, logoUrl: branding?.logo_url, color: branding?.color_primario })
+  const porFirmar = docs.filter(puedeFirmar).length
   return (
-    <main className="mx-auto max-w-[520px] lg:max-w-5xl" style={marca.estilo}>
+    <div className="min-h-screen" style={marca.estilo}>
       <CabeceraApp perfil="empleado" marca={marca} urlSeguros={urlSeguros} />
+    <main className="mx-auto max-w-[520px] lg:max-w-5xl">
       <div className="p-4">
 
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-x-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <section aria-labelledby="saludo" className="mb-1 mt-2 rounded-card border border-accent/20 bg-accent-soft px-4 py-4 sm:px-5">
+        <h1 id="saludo" className="text-2xl text-accent-ink">{saludoEmpleado(nombreEmpleado)}</h1>
+        <p className="mt-1 text-sm text-ink-2">
+          {branding?.nombre ? <>Tu portal en <strong className="font-semibold text-ink">{branding.nombre}</strong>: nóminas, documentos y vacaciones.</> : 'Tus nóminas, documentos y vacaciones, en un solo sitio.'}
+        </p>
+        {porFirmar > 0 && (
+          <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-card px-3 py-1 text-sm font-semibold text-accent-ink">
+            {porFirmar === 1 ? 'Tienes 1 documento por firmar' : `Tienes ${porFirmar} documentos por firmar`}
+          </p>
+        )}
+      </section>
+
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-x-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:grid-rows-[auto_1fr]">
       <div className="contents lg:col-start-1 lg:block">
       <AvisoSeguros />
       <p className="mb-2"><ActivarPush endpoint="/api/e/push/subscribe" /></p>
@@ -113,7 +135,7 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
                     <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ink-3">
                       <span>{new Date(a.creado_at).toLocaleDateString('es-ES')}</span>
                       {d?.url && <a href={d.url} target="_blank" rel="noreferrer" onClick={() => marcarVisto(d.id)} className="text-accent no-underline hover:underline">Abrir documento</a>}
-                      {d && d.estado_firma === 'pendiente' && d.carpeta !== 'datos_personales' && d.carpeta !== 'formacion' && (
+                      {d && puedeFirmar(d) && (
                         <Boton onClick={() => abrirFirma(d)} className="ml-auto">Firmar</Boton>
                       )}
                       {d && d.estado_firma === 'firmado' && <Chip tono="ok">Firmado</Chip>}
@@ -138,44 +160,62 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
 
       <div className="contents lg:col-start-1 lg:block">
       <section className="my-3 rounded-card border border-line bg-card p-4">
-        <h2 className="mb-2 text-base">Enviar un documento</h2>
-        <div className="flex flex-wrap items-center gap-2">
-          <select value={carpeta} onChange={e => setCarpeta(e.target.value)}>
-            {subibles.map(c => <option key={c.id} value={c.id}>{c.etiqueta}</option>)}
-          </select>
-          <input type="file" disabled={subiendo} onChange={e => { const f = e.target.files?.[0]; if (f) subir(f); e.currentTarget.value = '' }} />
+        <h2 className="text-base">Enviar un documento a RR.HH.</h2>
+        <p className="mt-0.5 text-xs text-ink-3">Por ejemplo, un parte médico o un cambio de cuenta bancaria. Solo lo ve RR.HH. de tu empresa.</p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,200px)_minmax(0,1fr)]">
+          <label className="grid gap-1 text-xs font-semibold text-ink-2">Tipo
+            <select value={carpeta} onChange={e => setCarpeta(e.target.value)} className="text-sm font-normal">
+              {subibles.map(c => <option key={c.id} value={c.id}>{c.etiqueta}</option>)}
+            </select>
+          </label>
+          <label className="grid gap-1 text-xs font-semibold text-ink-2">Archivo (PDF o foto)
+            <input type="file" disabled={subiendo} className="text-sm font-normal" onChange={e => { const f = e.target.files?.[0]; if (f) subir(f); e.currentTarget.value = '' }} />
+          </label>
         </div>
-        {subiendo && <p className="text-ink-3 text-sm">Subiendo…</p>}
-        {error && <p className="text-alert text-sm">{error}</p>}
+        {subiendo && <p role="status" className="mt-2 text-sm text-ink-3">Subiendo…</p>}
+        {error && <p role="alert" className="mt-2 text-sm text-alert">{error}</p>}
       </section>
 
       <section className="my-3 rounded-card border border-line bg-card p-4">
-        <h2 className="mb-2 text-base">Mis documentos</h2>
-        <ul className="grid gap-1.5">
+        <div className="flex items-baseline justify-between gap-2">
+          <h2 className="text-base">Mis documentos</h2>
+          {docs.length > 0 && <span className="text-xs text-ink-3">{docs.length === 1 ? '1 documento' : `${docs.length} documentos`}</span>}
+        </div>
+        {docs.length === 0 ? (
+          <div className="mt-3 flex flex-col items-center gap-2 rounded-[12px] border border-dashed border-line-2 px-4 py-6 text-center">
+            <span aria-hidden="true" className="grid h-10 w-10 place-items-center rounded-full bg-paper-2 text-ink-3"><IconoDoc /></span>
+            <p className="text-sm font-semibold text-ink">Aún no tienes documentos</p>
+            <p className="max-w-xs text-xs text-ink-3">Cuando RR.HH. te mande una nómina, un contrato o algo para firmar, aparecerá aquí y te avisaremos.</p>
+          </div>
+        ) : (
+        <ul className="mt-2 divide-y divide-line">
           {docs.map(d => (
-            <li key={d.id} className="flex flex-wrap items-center gap-x-2 text-sm">
-              {d.url
-                ? <a href={d.url} target="_blank" rel="noreferrer" onClick={() => marcarVisto(d.id)} className="text-accent no-underline hover:underline">{d.nombre}</a>
-                : <span>{d.nombre}</span>}
-              <span className="text-ink-3 text-xs">· {etiqueta(d.carpeta)}</span>
-              {d.estado_firma === 'pendiente_empresa' && (
-                <Chip tono="aviso">En espera de firma empresa</Chip>
+            <li key={d.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-3 first:pt-1 last:pb-0">
+              <span aria-hidden="true" className={`grid h-9 w-9 shrink-0 place-items-center rounded-[10px] ${puedeFirmar(d) ? 'bg-accent-soft text-accent' : 'bg-paper-2 text-ink-3'}`}><IconoDoc /></span>
+              <div className="min-w-0 flex-1">
+                {d.url
+                  ? <a href={d.url} target="_blank" rel="noreferrer" onClick={() => marcarVisto(d.id)} className="break-words text-sm font-semibold text-ink no-underline hover:text-accent hover:underline">{d.nombre}</a>
+                  : <span className="break-words text-sm font-semibold">{d.nombre}</span>}
+                <p className="text-xs text-ink-3">{etiqueta(d.carpeta)} · {new Date(d.creada_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+              </div>
+              {puedeFirmar(d) && (
+                <Boton onClick={() => abrirFirma(d)} className="shrink-0">Firmar</Boton>
               )}
-              {d.estado_firma === 'pendiente' && d.firmado_empresa_nombre && (
-                <Chip tono="ok">Firmado por empresa</Chip>
+              {(d.estado_firma === 'pendiente_empresa' || (d.estado_firma === 'pendiente' && d.firmado_empresa_nombre) || d.estado_firma === 'firmado') && (
+                <div className="flex w-full flex-wrap items-center gap-2 pl-12">
+                  {d.estado_firma === 'pendiente_empresa' && <Chip tono="aviso">En espera de firma empresa</Chip>}
+                  {d.estado_firma === 'pendiente' && d.firmado_empresa_nombre && <Chip tono="ok">Firmado por empresa</Chip>}
+                  {d.estado_firma === 'firmado' && <Chip tono="ok">Firmado por ambas partes</Chip>}
+                  {d.estado_firma === 'firmado' && (
+                    <a href={`/v/${d.id}`} target="_blank" rel="noreferrer" className="inline-flex min-h-[44px] items-center text-xs text-accent underline">Verificar firma</a>
+                  )}
+                </div>
               )}
-              {d.estado_firma === 'firmado' && <Chip tono="ok">Firmado por ambas partes</Chip>}
-              {d.estado_firma === 'firmado' && (
-                <a href={`/v/${d.id}`} target="_blank" rel="noreferrer" className="text-accent text-xs no-underline hover:underline">· Verificar</a>
-              )}
-              {d.estado_firma === 'pendiente' && d.carpeta !== 'datos_personales' && d.carpeta !== 'formacion' && (
-                <Boton onClick={() => abrirFirma(d)} className="ml-auto">Firmar</Boton>
-              )}
-              {d.resumen && <p className="w-full text-xs text-ink-3">{d.resumen}</p>}
+              {d.resumen && <p className="w-full pl-12 text-xs text-ink-3">{d.resumen}</p>}
             </li>
           ))}
-          {docs.length === 0 && <li className="text-ink-3 text-sm">Aún no tienes documentos</li>}
         </ul>
+        )}
       </section>
       </div>
       </div>
@@ -212,5 +252,6 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
       </div>
       <PieAsegura />
     </main>
+    </div>
   )
 }

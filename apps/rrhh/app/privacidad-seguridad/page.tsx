@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { PieAsegura, MarcaGenerica } from '@/components/MarcaAsegura'
+import { PieAsegura, MarcaGenerica, IconoCandado } from '@/components/MarcaAsegura'
 import Card from '@/components/ui/Card'
 import Boton from '@/components/ui/Boton'
 
@@ -26,17 +26,27 @@ const PUNTOS: { titulo: string; texto: string }[] = [
 export default function Page() {
   return (
     <main className="mx-auto w-full max-w-xl px-4 py-6">
-      <MarcaGenerica className="mb-4 !items-start" />
-      <h1 className="text-2xl">{TITULO}</h1>
-      <p className="mt-2 text-sm text-ink-2">Lo esencial sobre cómo se tratan tus datos en este portal.</p>
-      <div className="mt-4 grid gap-3">
-        {PUNTOS.map(p => (
-          <Card key={p.titulo} as="section">
-            <h2 className="text-base">{p.titulo}</h2>
-            <p className="mt-1 text-sm text-ink-2">{p.texto}</p>
-          </Card>
-        ))}
+      <MarcaGenerica className="mb-6" />
+      <div className="flex items-center gap-3">
+        <span aria-hidden="true" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-ok/15 text-ok"><IconoCandado tam={20} /></span>
+        <div className="min-w-0">
+          <h1 className="text-2xl">{TITULO}</h1>
+          <p className="text-sm text-ink-2">Lo esencial sobre cómo se tratan tus datos en este portal.</p>
+        </div>
       </div>
+      <ol className="mt-5 grid list-none gap-3 p-0">
+        {PUNTOS.map((p, i) => (
+          <li key={p.titulo}>
+            <Card as="section" className="flex gap-3">
+              <span aria-hidden="true" className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-paper-2 text-xs font-bold text-ink-2">{i + 1}</span>
+              <div className="min-w-0">
+                <h2 className="text-base">{p.titulo}</h2>
+                <p className="mt-1 text-sm text-ink-2">{p.texto}</p>
+              </div>
+            </Card>
+          </li>
+        ))}
+      </ol>
       <Boton href="/" variante="secundario" ancho className="mt-6">Volver al portal</Boton>
       <PieAsegura />
     </main>

@@ -8,13 +8,13 @@ export default function Home() {
     <main className="flex min-h-screen flex-col items-center p-4">
       <div className="my-auto w-full max-w-sm rounded-card border border-line bg-card p-6 text-center sm:p-7">
         <MarcaGenerica />
-        <h1 className="mt-4 text-xl">Elige cómo entrar</h1>
+        <h1 className="mt-5 text-xl">Elige cómo entrar</h1>
         <div className="mt-5 grid gap-3">
           <Boton href={ENTRADA_ASEGURA} ancho>Soy empleado</Boton>
-          <Boton href="/login" ancho>Soy responsable de la empresa</Boton>
+          <Boton href="/login" variante="secundario" ancho>Soy responsable de la empresa</Boton>
         </div>
       </div>
-      <div className="w-full"><PieAsegura /></div>
+      <div className="mt-auto w-full"><PieAsegura /></div>
     </main>
   )
 }
