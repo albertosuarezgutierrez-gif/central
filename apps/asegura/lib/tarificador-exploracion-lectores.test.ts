@@ -10,7 +10,8 @@ import { planEleccionVersion } from './tarificador-eleccion-reglas.ts'
 const APP = join(import.meta.dirname, '..')
 const leer = (r: string) => readFileSync(join(APP, r), 'utf8')
 // 15/10/2026: los lectores de tarificaciones excluyen también la prueba nocturna de humo (`not in ('exploracion', 'humo')`).
-const SIN_EXPLORACION = /coalesce\(to_jsonb\(t\)->>'modo', 'tarificar'\) (<> 'exploracion'|not in \('exploracion', 'humo'\))/
+// 03/11/2026: y el modo pilotado (`not in ('exploracion', 'humo', 'pilotaje')`).
+const SIN_EXPLORACION = /coalesce\(to_jsonb\(t\)->>'modo', 'tarificar'\) (<> 'exploracion'|not in \('exploracion', 'humo'(, 'pilotaje')?\))/
 
 /** Trozo de `fichero` desde `desde` hasta `hasta` (o el final). */
 function trozo(fichero: string, desde: string, hasta?: string): string {

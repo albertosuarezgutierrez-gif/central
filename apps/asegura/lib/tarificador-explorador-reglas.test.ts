@@ -75,7 +75,7 @@ test('modoParaWorker: exploracion SOLO a un worker que la declara; un modo desco
 test('modosReclamables: la cola solo lanza exploraciones con TARIFICADOR_EXPLORADOR_ACTIVO=1 exacto', () => {
   assert.deepEqual(modosReclamables({}), ['tarificar', 'emision'])
   assert.deepEqual(modosReclamables({ TARIFICADOR_EXPLORADOR_ACTIVO: 'true' }), ['tarificar', 'emision'])
-  assert.deepEqual(modosReclamables({ TARIFICADOR_EXPLORADOR_ACTIVO: '1' }), ['tarificar', 'emision', 'exploracion'])
+  assert.deepEqual(modosReclamables({ TARIFICADOR_EXPLORADOR_ACTIVO: '1' }), ['tarificar', 'emision', 'exploracion', 'pilotaje'])
 })
 
 test('lease de exploración: se renueva por pasos pero nunca más allá del tope de tiempo ACUMULADO + margen', () => {

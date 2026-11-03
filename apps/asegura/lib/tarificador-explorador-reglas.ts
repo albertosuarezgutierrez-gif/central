@@ -78,12 +78,14 @@ export function leerModosWorker(cabecera: string | null): string[] {
  * (`null`): una imagen anterior a la fase B trata todo lo que no es `emision` como `tarificar`, y una exploración
  * tarificada a ciegas con su riesgo sería un error. `exploracion` SOLO a un worker que la declara en su cabecera.
  */
-export function modoParaWorker(modo: string | null, modosWorker: readonly string[] = ['tarificar', 'emision']): 'tarificar' | 'emision' | 'exploracion' | 'humo' | null {
+export function modoParaWorker(modo: string | null, modosWorker: readonly string[] = ['tarificar', 'emision']): 'tarificar' | 'emision' | 'exploracion' | 'humo' | 'pilotaje' | null {
   if (modo === null || modo === 'tarificar') return 'tarificar'
   if (modo === 'emision') return 'emision'
   if (modo === 'exploracion' && modosWorker.includes('exploracion')) return 'exploracion'
   // PRUEBA DE HUMO (15/10/2026): solo a un worker que la declara (una imagen anterior la trataría como una tarificación sin riesgo).
   if (modo === 'humo' && modosWorker.includes('humo')) return 'humo'
+  // MODO PILOTADO (03/11/2026): solo a un worker que lo declara (una imagen anterior lo trataría como una tarificación sin riesgo).
+  if (modo === 'pilotaje' && modosWorker.includes('pilotaje')) return 'pilotaje'
   return null
 }
 
@@ -94,7 +96,8 @@ export function modoParaWorker(modo: string | null, modosWorker: readonly string
  */
 export function modosReclamables(env: Record<string, string | undefined>): string[] {
   // `humo` (15/10/2026) solo con `TARIFICADOR_HUMO_ACTIVO=1` (y la imagen con la prueba): apagado, un humo no gasta máquina ni hueco.
-  return [...(exploradorActivo(env) ? ['tarificar', 'emision', 'exploracion'] : ['tarificar', 'emision']), ...(humoActivo(env) ? ['humo'] : [])]
+  // `pilotaje` (03/11/2026) con el MISMO interruptor que el explorador: apagado, una sesión pilotada no gasta máquina ni hueco.
+  return [...(exploradorActivo(env) ? ['tarificar', 'emision', 'exploracion', 'pilotaje'] : ['tarificar', 'emision']), ...(humoActivo(env) ? ['humo'] : [])]
 }
 
 /** Margen para que el worker cierre y mande el resultado tras el tope de tiempo del explorador. */

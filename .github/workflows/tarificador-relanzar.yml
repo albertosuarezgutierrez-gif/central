@@ -13,6 +13,9 @@
 #   · accion=presupuesto → POST /api/operador/tarificador/presupuesto-rpa { oportunidadId, avisar:false } (01/11/2026):
 #     prepara A MANO el presupuesto (BORRADOR) de una oportunidad con las ofertas de los trabajos ya hechos. No avisa
 #     a nadie y no envía nada al cliente (TARIFICAR ≠ EMITIR).
+#   · accion=pilotar  → POST /api/operador/tarificador/pilotaje { entrada } (03/11/2026): UNA sesión del MODO PILOTADO (SINTÉTICA):
+#     login + entrada y luego el worker espera comandos pantalla a pantalla (seguros.tarificador_pilotaje_pasos; ver
+#     services/tarificador-rpa/scripts/pilotar.mjs). Mismos interruptores que explorar. Todo comando pasa por el guard.
 # Secreto de repo REQUERIDO: ASEGURA_OPERADOR_SECRET (el Bearer del puerto de operador de asegura; ningún otro workflow
 # lo usaba antes). Secreto/variable OPCIONAL: ASEGURA_URL (por defecto https://central-asegura.vercel.app).
 # Nunca se imprime el secreto ni el riesgo: solo el estado HTTP y un JSON FILTRADO a claves sin datos personales.
@@ -22,10 +25,10 @@ on:
   workflow_dispatch:
     inputs:
       accion:
-        description: 'relanzar (trabajo existente), probar (copia el riesgo del último trabajo del cliente), explorar (mapa del formulario, SINTÉTICO) o presupuesto (borrador de una oportunidad)'
+        description: 'relanzar (trabajo existente), probar (copia el riesgo del último trabajo del cliente), explorar (mapa del formulario, SINTÉTICO), presupuesto (borrador de una oportunidad) o pilotar (sesión pilotada, SINTÉTICA)'
         required: true
         type: choice
-        options: [relanzar, probar, explorar, presupuesto]
+        options: [relanzar, probar, explorar, presupuesto, pilotar]
         default: relanzar
       trabajo_id:
         description: 'accion=relanzar: uuid del trabajo (atascado)'
@@ -52,7 +55,7 @@ on:
         required: false
         default: ''
       entrada:
-        description: 'accion=explorar: clave de la lista cerrada compania:seccion:producto (ej. allianz:autos:movilidad_personal)'
+        description: 'accion=explorar o pilotar: clave de la lista cerrada compania:seccion:producto (ej. pelayo:presupuestos:auto)'
         required: false
         default: ''
 
@@ -93,7 +96,7 @@ jobs:
             relanzar)
               [[ "$TRABAJO_ID" =~ $uuid ]] || { echo "::error::trabajo_id no es un uuid"; exit 1; }
               [ -z "$IMAGEN" ] || { echo "::error::imagen solo vale con accion=probar"; exit 1; } ;;
-            explorar)
+            explorar|pilotar)
               # Lista cerrada en asegura (esEntradaExploracion): aquí solo la forma. Sintética: sin cliente ni riesgo.
               [[ "$ENTRADA" =~ ^[a-z_]+:[a-z_]+:[a-z_]+$ ]] || { echo "::error::entrada no válida (compania:seccion:producto)"; exit 1; }
               [ -z "$IMAGEN" ] || { echo "::error::imagen solo vale con accion=probar"; exit 1; } ;;
@@ -107,7 +110,7 @@ jobs:
               if [ -n "$IMAGEN" ] && ! [[ "$IMAGEN" =~ $imagen_rama ]]; then
                 echo "::error::imagen no válida: registry.fly.io/asegura-tarificador:rama-<sha7> (nunca main-*)"; exit 1
               fi ;;
-            *) echo "::error::accion tiene que ser relanzar, probar, explorar o presupuesto"; exit 1 ;;
+            *) echo "::error::accion tiene que ser relanzar, probar, explorar, presupuesto o pilotar"; exit 1 ;;
           esac
           case "$ASEGURA_URL" in https://*) ;; *) echo "::error::ASEGURA_URL tiene que ser https"; exit 1 ;; esac
 
@@ -120,6 +123,9 @@ jobs:
           elif [ "$ACCION" = "presupuesto" ]; then
             ruta="presupuesto-rpa"
             cuerpo=$(jq -cn --arg o "$OPORTUNIDAD_ID" '{oportunidadId: $o, avisar: false}')
+          elif [ "$ACCION" = "pilotar" ]; then
+            ruta="pilotaje"
+            cuerpo=$(jq -cn --arg e "$ENTRADA" '{entrada: $e}')
           elif [ "$ACCION" = "explorar" ]; then
             ruta="exploracion"
             cuerpo=$(jq -cn --arg e "$ENTRADA" '{entrada: $e}')

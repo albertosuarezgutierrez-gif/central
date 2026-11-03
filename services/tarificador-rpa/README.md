@@ -66,6 +66,31 @@ modalidadPedida? })` en `PUNTOS_ENGANCHE` (tras_login · tras_rellenar · tras_c
 un aviso bloqueante lanza `ErrorTarificador('portal')` con la explicación legible. Rutas: `/api/tarificador/formador/*`.
 Tests: `npm test` (sin navegador). SQL: `apps/asegura/prisma/sql/2026-10-06b_tarificador_formador.sql`.
 
+## Modo pilotado (`src/pilotaje.ts`, 03/11/2026)
+Para mapear un portal rápido: una sesión SINTÉTICA (`modo = 'pilotaje'`) hace login + la entrada cerrada del explorador y, por
+pantalla, publica inventario saneado + captura PNG y espera un comando. Todo comando pasa por el validador del explorador y por
+`pulsar()` de guard.ts (TARIFICAR ≠ EMITIR); un rechazo queda en `resultado` y no se ejecuta. Topes: 60 comandos, 30 min, 10 min
+sin comando. SQL: `apps/asegura/prisma/sql/2026-11-03c_tarificador_pilotaje.sql`. Abrir: Actions «Tarificador RPA · relanzar» con
+`accion=pilotar` + `entrada`, o `node scripts/pilotar.mjs abrir <entrada>` (necesita `ASEGURA_OPERADOR_SECRET`).
+
+Por SQL (schema `seguros`, MCP Supabase del proyecto central), `<S>` = trabajoId:
+```sql
+-- pantalla que espera comando (inventario saneado y redactado; refs en inventario->'marcos'->i->'elementos'->j->>'ref')
+select n, estado, url, captura_ruta, inventario from seguros.tarificador_pilotaje_pasos
+ where sesion_id = '<S>' order by n desc limit 1;
+-- dar el comando (solo cuaja mientras esa fila está 'esperando'; el worker lo recoge en ≤2 s)
+update seguros.tarificador_pilotaje_pasos set comando = '{"accion":"pulsar","ref":"m0e12"}'::jsonb, comando_at = now()
+ where sesion_id = '<S>' and n = <N> and estado = 'esperando';
+--   otros: {"accion":"rellenar","ref":"m0e3","valor":"Ibiza 1.0"} · {"accion":"rellenar","ref":"m0e4","dato":"vivienda.codigoPostal"}
+--          {"accion":"seleccionar","ref":"m0e5","valor":"Particular"} · {"accion":"esperar","ms":3000} · {"accion":"volver"} · {"accion":"fin"}
+-- qué pasó (el resultado del comando de N llega con la pantalla N+1, o con el cierre)
+select n, estado, comando, resultado from seguros.tarificador_pilotaje_pasos where sesion_id = '<S>' order by n;
+select motivo_fin, cerrada_at from seguros.tarificador_pilotaje_sesiones where sesion_id = '<S>';
+```
+La URL firmada (10 min) de la captura NO sale por SQL: `node scripts/pilotar.mjs ver <S>` o
+`GET /api/operador/tarificador/pilotaje/<S>?limite=1` (`capturaUrl`). Requiere `SUPABASE_SERVICE_ROLE_KEY` + `NEXT_PUBLIC_SUPABASE_URL`
+en `central-asegura`; sin ellas, `captura_ruta` queda NULL y el resto funciona.
+
 ## Envs del orquestador (Vercel `central-asegura`, solo nombres)
 Formador: `TARIFICADOR_FORMADOR_ACTIVO` (=`1`; apagado por defecto) · `TARIFICADOR_FORMADOR_MAX_LLAMADAS` (tope de
 llamadas a la IA por trabajo; 12 por defecto) · la IA va por la pasarela (`AI_GATEWAY_URL` / `AI_GATEWAY_SECRET`, ya existentes).
