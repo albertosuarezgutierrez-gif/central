@@ -10,9 +10,12 @@
  *    - Acceso: Cualquier persona (Anyone)
  * 4. Copia la URL → Vercel env (sivra): DRIVE_SCRIPT_URL=<url>
  *
+ * Año: se usa el de `fecha` (o el actual). 2026 → ROOT_FOLDER_ID; otros años →
+ * subcarpeta AAAA bajo PARENT_FOLDER_ID, creada si no existe.
+ *
  * API (POST JSON con campo "action"):
  *  - upload  { fileBase64|base64Data, fileName, mimeType, fecha? } → { ok, fileId, url, carpeta, nombre }
- *  - list    {}                                       → { ok, files:[{id,nombre,mime}] }  (PDFs en RAÍZ, sin archivar)
+ *  - list    {}                                       → { ok, files:[{id,nombre,mime}] }  (PDFs en la raíz del año actual, sin archivar)
  *  - get     { fileId }                               → { ok, fileBase64, mimeType, nombre }
  *  - archive { fileId, fecha }                        → { ok, carpeta }  (mueve a AÑO/MES)
  */
@@ -30,6 +33,12 @@
 // nuevo con Giraldillo/ParkingLibre 01/08; avisos en la papelera Drive
 // `_DUPLICADOS_BORRAR`). Repuntado a la raíz de negocio.
 const ROOT_FOLDER_ID = "1M7PwjU3MSJ7zb83rhlXzTx1O2RlTad3O";
+
+// Carpeta padre "FACTURAS Apartamentos" (docs/DRIVE-ESTRUCTURA.md). Cada año vive en
+// una subcarpeta "AAAA" de esta. 2026 YA existe y es ROOT_FOLDER_ID (se usa tal cual,
+// no se crea otra); 2027 en adelante se busca o crea bajo el padre.
+const PARENT_FOLDER_ID = "10fj31nrvi4b4Q7X-PDKdxhkGunRPlWNo";
+const ANIO_ROOT_FIJO = 2026;
 
 const MONTH_NAMES = [
   "Enero","Febrero","Marzo","Abril","Mayo","Junio",
@@ -85,7 +94,7 @@ function doUpload_(data) {
 
 // ── LIST (PDFs en la raíz, aún sin archivar por año/mes) ─────────────────────────
 function doList_() {
-  const root = DriveApp.getFolderById(ROOT_FOLDER_ID);
+  const root = carpetaAnio_(new Date().getFullYear());
   const it = root.getFiles();
   const files = [];
   while (it.hasNext()) {
@@ -130,16 +139,18 @@ function nombreCarpetaMes_(d) {
   return mesNum + "-" + MONTH_NAMES[mesIdx] + "-" + anio;
 }
 
+// Carpeta del año: 2026 = ROOT_FOLDER_ID (la actual); otro año = PARENT/AAAA (se crea si falta).
+function carpetaAnio_(anio) {
+  if (anio === ANIO_ROOT_FIJO) return DriveApp.getFolderById(ROOT_FOLDER_ID);
+  return getOrCreateSubfolder_(DriveApp.getFolderById(PARENT_FOLDER_ID), String(anio));
+}
+
+// Año de la fecha de la factura; sin fecha válida, el año actual.
 function carpetaDestino_(fecha) {
-  // ROOT_FOLDER_ID YA es la carpeta del año 2026 (no hace falta subcarpeta de año).
-  let target = DriveApp.getFolderById(ROOT_FOLDER_ID);
-  if (fecha) {
-    const d = new Date(fecha);
-    if (!isNaN(d.getTime())) {
-      target = getOrCreateSubfolder_(target, nombreCarpetaMes_(d));
-    }
-  }
-  return target;
+  const d = fecha ? new Date(fecha) : null;
+  const valida = d && !isNaN(d.getTime());
+  const carpetaAnio = carpetaAnio_(valida ? d.getFullYear() : new Date().getFullYear());
+  return valida ? getOrCreateSubfolder_(carpetaAnio, nombreCarpetaMes_(d)) : carpetaAnio;
 }
 
 function getOrCreateSubfolder_(parent, name) {
