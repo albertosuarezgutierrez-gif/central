@@ -66,6 +66,10 @@ Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; ti
 original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados revisado/falta_roto/devuelto + bloque en ficha. `rrhh.material_empleado`
 (0028, aplicada). Pendiente fase 2: revisión periódica mensual.
 
+## (03/11/2026) Correduría · cuadre de comisiones por compañía + Drive reorganizado
+- Comisiones 2026 en BBVA (neto) ≈ 6.239 €: Occident 2.193, Mapfre 1.268, Generali 987, Allianz 705, Asisa 409 (`M1454`, 45,15 €/mes), Caser 351 (`-FRA-COMIS-` 12,66 €/mes + `PD005 SALDO`), Pelayo, Reale, Aegon, AXA. Asisa/Caser/Pelayo/Aegon/AXA NO están en CIMA → el cuadre `/correduria?s=comisiones` no los ve; para renta el bruto ≥ banco. `finanzas.ts` ya nombra M1454=Asisa y PD005=Caser.
+- Drive: estructura `02 · CONTABILIDAD/Contabilidad/2026/{Pisos/<piso>/{Facturas gastos,Booking,…},Correduría,Personal,Pilar}`; payouts Socorro renombrados `2026-MM_Booking_resumen-pago_HouseSevillana.pdf`; 71 sueltos a `_revisar`, 29 a `_PARA_BORRAR (revisar Alberto)`. Deshacer: listado `drive-antes.md` (scratchpad de la sesión). Pendiente: script Drive con año 2026 fijo (parametrizar antes del 01/01/2027).
+
 ## (03/11/2026) Captación · parado el mailing en frío de ia-rest/ialimp; foco 100% correduría
 - Quitados 9 crons de outreach de `apps/ia-rest/vercel.json` (se dejan crm-recordatorios y pipeline-comercial: solo Telegram a Alberto).
 - BD: 2 campañas ialimp pausadas, 10 envíos pendientes → `omitido`; 277 borradores de `iarest.leads` borrados (los 142 enviados intactos).
