@@ -269,6 +269,70 @@ export function comprobarBoton(descripciones: readonly (string | null | undefine
 }
 
 /**
+ * Letras que se hacen pasar por latinas (cirílico/griego) → su latina. NFKC no las une. Solo minúsculas (tras `toLowerCase`).
+ */
+const CONFUSABLES: Readonly<Record<string, string>> = Object.freeze({
+  а: 'a', в: 'b', е: 'e', ё: 'e', к: 'k', м: 'm', н: 'h', о: 'o', р: 'p', с: 'c', т: 't', у: 'y', х: 'x', і: 'i', ї: 'i', ј: 'j', ѕ: 's', ԁ: 'd', ӏ: 'l',
+  α: 'a', β: 'b', ε: 'e', η: 'n', ι: 'i', κ: 'k', ν: 'v', ο: 'o', ρ: 'p', τ: 't', υ: 'u', χ: 'x', ω: 'w',
+})
+const RE_CONFUSABLES = new RegExp(`[${Object.keys(CONFUSABLES).join('')}]`, 'gu')
+/** Invisibles y de formato: `\p{Cf}` (U+00AD, U+200B-U+200F, U+2060-U+2064, U+FEFF, U+180E…), rellenos Hangul y U+034F. */
+const RE_INVISIBLES = /[\p{Cf}͏ᅟᅠㅤﾠ]/gu
+
+/**
+ * Normalización FUERTE de un rótulo (revisión adversarial 03/11/2026): decodifica `%xx`, NFKC (ancho completo → ASCII), minúsculas,
+ * sin diacríticos (ñ → n), sin invisibles/formato, confundibles → latinas, `_` → espacio, espacios colapsados. Pura.
+ */
+export function normalizarFuerte(x: string | null | undefined): string {
+  return decodificarUrlTolerante(String(x ?? ''))
+    .normalize('NFKC')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(RE_INVISIBLES, '')
+    .replace(RE_CONFUSABLES, (ch) => CONFUSABLES[ch] ?? ch)
+    .replace(/[_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/**
+ * ACCIÓN FINAL en el RÓTULO de un control (texto, aria-label, title, value), ES + EN, palabra entera sobre `normalizarFuerte`
+ * (revisión adversarial 03/11/2026: `pulsar()` dejaba pasar «Confirmar», «Finalizar», «Comprar», «Submit»…). «Continuar», «Siguiente»,
+ * «Calcular», «Comprobar», «Buscar» no casan. `RE_ROTULO_ACCION_FINAL_COMPACTO`: lo inequívoco, sobre la forma sin espacios ni signos.
+ */
+export const RE_ROTULO_ACCION_FINAL = new RegExp(
+  '\\b(?:' + [
+    'confirm\\w*', 'finaliz\\w*', 'terminar', 'complet(?:ar|e)', 'compr(?:ar|a)', 'adquiri\\w*', 'adquisicion', 'suscrib\\w*', 'suscripcion\\w*',
+    'registrar(?:se)?', 'activar', 'aprobar', 'validar', 'realizar (?:el )?pedido', 'abonar', 'presentar', 'cursar', 'efectuar', 'tramitar', 'ok', 'hecho',
+    'submit\\w*', 'buy', 'purchase\\w*', 'finish\\w*', 'complete\\w*', 'apply', 'place (?:the )?order', 'subscribe\\w*', 'register\\w*', 'activate\\w*',
+    'approve\\w*', 'validate\\w*', 'done', 'proceed', 'pay(?: now)?', 'checkout', 'check out',
+  ].join('|') + ')\\b',
+)
+const RE_ROTULO_ACCION_FINAL_COMPACTO = /confirm|finaliz|submit|purchase|checkout|suscrib|adquiri|tramitar/
+
+/** ¿El rótulo nombra una acción final (ver `RE_ROTULO_ACCION_FINAL`)? `permitirConfirmarExacto`: el texto ENTERO «Confirmar» no cuenta. Pura. */
+export function rotuloNombraAccionFinal(texto: string | null | undefined, opciones: { permitirConfirmarExacto?: boolean } = {}): boolean {
+  if (typeof texto !== 'string' || texto.trim() === '') return false
+  const p = normalizarFuerte(texto)
+  if (opciones.permitirConfirmarExacto === true && p.replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, '') === 'confirmar') return false
+  if (RE_ROTULO_ACCION_FINAL.test(p)) return true
+  return RE_ROTULO_ACCION_FINAL_COMPACTO.test(p.replace(/[^a-z0-9]+/g, ''))
+}
+
+/**
+ * Lanza si algún RÓTULO de la descripción (posiciones 0-3 de `descripcion()` del worker: texto, aria-label, title, value) nombra una
+ * acción final. Solo los rótulos: ids, href y manejadores los sigue mirando `comprobarBoton`. Pura.
+ */
+export function comprobarRotulosAccionFinal(descripciones: readonly (string | null | undefined)[], opciones: { permitirConfirmarExacto?: boolean } = {}): void {
+  // El mensaje NO lleva el rótulo (un aria-label/title puede traer datos): solo QUÉ posición casó.
+  const posiciones = ['texto', 'aria-label', 'title', 'value']
+  descripciones.slice(0, 4).forEach((d, i) => {
+    if (rotuloNombraAccionFinal(d, opciones)) throw new EmisionBloqueadaError('boton', `rótulo de acción final (${posiciones[i]})`)
+  })
+}
+
+/**
  * «ACCESO A NSE» DE MAPFRE WMEDIADORES (28/10/2026, patinete «MásPatín»). La página intermedia de la tarjeta «Patinetes» solo
  * tiene el enlace «Acceso a NSE», cuyo href es `javascript:abrirAplicacion('inicio.jsp', 'NUEVO SISTEMA DE EMISI%C3%93N');`: ABRE
  * la aplicación «Nuevo Sistema de Emisión» (donde se tarifica), no emite nada. Excepción ESTRECHA: solo deja fuera de

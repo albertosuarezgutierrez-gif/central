@@ -15,7 +15,8 @@ import {
   type ControlNavegacion,
   type InventarioDom,
 } from '@central/module-tarificacion'
-import { ErrorFronteraEmision, instalarGuardEmision, motivoNoNavegacionLibreVivo, pulsarNavegacionLibre, topeNavegacionLibre, type GuardEmision } from '../src/guard.ts'
+import { rotuloNombraAccionFinal } from '@central/module-tarificacion'
+import { ErrorFronteraEmision, instalarGuardEmision, MAX_PULSACIONES_NAVEGACION_TOTAL, motivoNoNavegacionLibreVivo, pulsar, pulsarNavegacionLibre, topeNavegacionLibre, type GuardEmision } from '../src/guard.ts'
 import { casaBloqueoNavegacion } from '../src/vocabulario.ts'
 
 const PELAYO = 'https://mediadores.pelayo.com'
@@ -210,8 +211,10 @@ test('vivo pasa · «Siguiente» (enlace)', async () => {
   const r = await intentar(URL_P, `<a id="x" href="#" onclick="${marca}">Siguiente</a>`, { tag: 'a', texto: 'Siguiente', onclick: marca })
   assert.deepEqual([r.error, r.n], [null, 1])
 })
+// Manejador por addEventListener (invisible para la regla): una pestaña SIN onclick con acción es navegación permitida.
+const oyente = (sel: string) => `<script>document.querySelectorAll('${sel}').forEach(function (e) { e.addEventListener('click', function () { var o = document.getElementById('out'); o.textContent = (+o.textContent || 0) + 1 }) })</script>`
 test('vivo pasa · pestaña role=tab', async () => {
-  const r = await intentar(URL_P, `<span role="tab" id="x" onclick="${marca}">Coberturas</span>`, { tag: 'span', role: 'tab', texto: 'Coberturas' })
+  const r = await intentar(URL_P, `<span role="tab" id="x">Coberturas</span>${oyente('#x')}`, { tag: 'span', role: 'tab', texto: 'Coberturas' })
   assert.deepEqual([r.error, r.n], [null, 1])
 })
 test('vivo · la 3.ª pulsación del mismo control pasa', async () => {
@@ -248,3 +251,127 @@ test('vivo bloquea · campo IBAN visible = frontera de emisión (no se pulsa)', 
   const r = await intentar(URL_P, `<label>IBAN <input name="iban"></label><a class="card" id="x" onclick="${marca}">AUTOS</a>`, CARD)
   assert.deepEqual([r.error instanceof ErrorFronteraEmision, r.n], [true, 0])
 })
+
+// ───────────────── revisión adversarial (03/11/2026): lista BLANCA por tipo, normalización fuerte, tope global ─────────────────
+
+// (1) Lista negra fail-open: verbos de acción final como BOTÓN (lista blanca) y como ENLACE con href del mismo origen (lista negra reforzada).
+const FINALES = ['Finalizar', 'Terminar', 'Completar', 'Comprar', 'Adquirir', 'Suscribir', 'Registrar', 'Activar', 'Aprobar', 'Validar', 'Realizar pedido', 'Abonar', 'Presentar', 'Cursar', 'Efectuar', 'Ok', 'Hecho', 'Submit', 'Buy', 'Finish', 'Complete', 'Sign', 'Apply', 'Place order']
+for (const f of FINALES) {
+  bloquea(`(1) botón «${f}»`, { tag: 'button', texto: f })
+  bloquea(`(1) enlace mismo origen «${f}»`, { tag: 'a', texto: f, hrefRuta: '/portalmediador-paso-2/' })
+  test(`(1) vocabulario del worker · «${f}» bloquea en navegación`, () => assert.notEqual(casaBloqueoNavegacion(f), null))
+}
+for (const f of ['Continuar', 'Siguiente', 'Calcular', 'Buscar', 'Anterior', 'Ver precio', 'Coberturas', 'Comprobar']) {
+  test(`(1) vocabulario · «${f}» no bloquea`, () => assert.equal(casaBloqueoNavegacion(f), null))
+}
+
+// (2) Unicode: ancho completo, invisibles, guion blando, letras separadas, cirílico. Como ENLACE (lo que decide es el bloqueo).
+const ENLACE = (texto: string) => ({ tag: 'a', texto, hrefRuta: '/portalmediador-paso-2/' })
+bloquea('(2) «Ｅｍｉｔｉｒ» (ancho completo)', ENLACE('Ｅｍｉｔｉｒ'))
+bloquea('(2) «Emi\\u200btir» (espacio de ancho cero)', ENLACE('Emi​tir'))
+bloquea('(2) «Conf\\u00adirmar» (guion blando)', ENLACE('Conf­irmar'))
+bloquea('(2) «e m i t i r» (letras separadas)', ENLACE('e m i t i r'))
+bloquea('(2) «E-M-I-T-I-R»', ENLACE('E-M-I-T-I-R'))
+bloquea('(2) «\\u0415mitir» (E cirílica)', ENLACE('Еmitir'))
+bloquea('(2) «C\\u2060ontratar» (word joiner)', ENLACE('C⁠ontratar'))
+test('(2) vivo puro · «Ｃｏｎｆｉｒｍａｒ» bloquea en el worker', () => assert.notEqual(motivoNoNavegacionLibreVivo({ tag: 'a', texto: 'Ｃｏｎｆｉｒｍａｒ', hrefLiteral: '/x/', hrefAbsoluto: `${PELAYO}/x/` }, URL_P), null))
+test('(2) vivo puro · «f i n a l i z a r» bloquea en el worker', () => assert.notEqual(motivoNoNavegacionLibreVivo({ tag: 'a', texto: 'f i n a l i z a r', hrefLiteral: '/x/', hrefAbsoluto: `${PELAYO}/x/` }, URL_P), null))
+
+// (3) Acción opaca: un manejador con un rótulo que no es EXACTAMENTE un neutro.
+bloquea('(3) enlace «Ir al resumen» con onclick go(7)', { tag: 'a', texto: 'Ir al resumen', onclick: 'go(7)' })
+bloquea('(3) botón «Resumen» con onclick go(7)', { tag: 'button', texto: 'Resumen', onclick: 'go(7)' })
+bloquea('(3) enlace «Resumen» sin href (manejador invisible)', { tag: 'a', texto: 'Resumen' })
+bloquea('(3) pestaña «Resumen» con onclick go(7)', { tag: 'li', role: 'tab', texto: 'Resumen', onclick: 'go(7)' })
+bloquea('(3) tarjeta «Ver más» (no es un ramo)', { tag: 'a', clase: 'card', texto: 'Ver más' })
+
+// (4) href javascript: (el absoluto se saltaba la comprobación) y esquemas que no navegan.
+bloquea('(4) href javascript:go(7) «Resumen»', { tag: 'a', texto: 'Resumen', hrefLiteral: 'javascript:go(7)', hrefAbsoluto: 'javascript:go(7)' })
+bloquea('(4) href javascript:emitir() «Siguiente»', { tag: 'a', texto: 'Siguiente', hrefLiteral: 'javascript:emitir()', hrefAbsoluto: 'javascript:emitir()' })
+bloquea('(4) href data:', { tag: 'a', texto: 'Resumen', hrefLiteral: 'data:text/html,x' })
+bloquea('(4) inventario: ruta de otro esquema (null…)', { tag: 'a', texto: 'Resumen', hrefRuta: 'nullx' })
+bloquea('(4) enlace con target=_blank', { tag: 'a', texto: 'Presupuestos', hrefLiteral: '/p/', hrefAbsoluto: `${PELAYO}/p/`, target: '_blank' })
+bloquea('(4) enlace con download', { tag: 'a', texto: 'Presupuestos', hrefLiteral: '/p/', hrefAbsoluto: `${PELAYO}/p/`, descarga: true })
+
+// (5) Submit y role=button con rótulo no neutro.
+bloquea('(5) input submit «Paso 2» a ruta neutra', { tag: 'input', type: 'submit', value: 'Paso 2', accionFormulario: `${PELAYO}/portalmediador-paso-2/` })
+bloquea('(5) div role=button «Datos»', { tag: 'div', role: 'button', texto: 'Datos' })
+bloquea('(5) span role=button «Coberturas»', { tag: 'span', role: 'button', texto: 'Coberturas' })
+bloquea('(5) submit «Siguiente» con aria-label no neutro', { tag: 'button', texto: 'Siguiente', ariaLabel: 'Ir al paso 3', enviaFormulario: true, accionFormulario: `${PELAYO}/portalmediador-paso-2/` })
+
+// Lo que tiene que seguir pasando.
+test('pasa · tarjeta «HOGAR» `a.card` sin href', () => assert.equal(ok({ tag: 'a', clase: 'card', texto: 'HOGAR' }), true))
+test('pasa · tarjeta «AUTOS» `a.card` con onclick (ramo de la lista cerrada)', () => assert.equal(ok({ tag: 'a', clase: 'card', texto: 'AUTOS', onclick: 'go(7)' }), true))
+test('pasa · enlace del menú con href del mismo origen', () => assert.equal(ok({ tag: 'a', role: 'link', texto: 'Presupuestos', hrefRuta: '/portalmediador-presupuestos/' }), true))
+test('pasa · enlace vivo con href absoluto del mismo origen', () => assert.equal(ok({ tag: 'a', texto: 'Presupuestos', hrefLiteral: '/portalmediador-presupuestos/', hrefAbsoluto: `${PELAYO}/portalmediador-presupuestos/` }), true))
+test('pasa · menú «Contratación» dropdown-toggle vivo (href="#", aria-haspopup)', () => assert.equal(ok({ tag: 'a', clase: 'nav-link dropdown-toggle', texto: 'Contratación', hrefLiteral: '#', ariaHaspopup: 'true' }), true))
+for (const t of ['Siguiente', 'Buscar', 'Calcular', 'Ver precio', 'Continuar ›']) {
+  test(`pasa · botón «${t}»`, () => assert.equal(ok({ tag: 'button', texto: t }), true))
+}
+test('pasa · input submit «Siguiente» a ruta del mismo origen', () => assert.equal(ok({ tag: 'input', type: 'submit', value: 'Siguiente', enviaFormulario: true, accionFormulario: `${PELAYO}/portalmediador-paso-2/` }), true))
+test('pasa · botón «Siguiente» con onclick sin término prohibido (riesgo residual aceptado: rótulo neutro exacto)', () => assert.equal(ok({ tag: 'button', texto: 'Siguiente', onclick: 'go(7)' }), true))
+
+bloqueaVivo('(4) enlace «Resumen» del inventario con href y vivo javascript:go(7)', `<a id="x" href="javascript:go(7)">Resumen</a>`, { tag: 'a', texto: 'Resumen', hrefRuta: '/portalmediador-paso-2/' })
+bloqueaVivo('(4) enlace con target=_blank vivo', `<a id="x" href="/portalmediador-paso-2/" target="_blank" onclick="${marca}">Presupuestos</a>`, { tag: 'a', texto: 'Presupuestos', hrefRuta: '/portalmediador-paso-2/' })
+bloqueaVivo('(5) div role=button «Datos» vivo', `<div role="button" id="x" onclick="${marca}">Datos</div>`, { tag: 'div', role: 'button', texto: 'Datos' })
+
+// (6) Tope GLOBAL por trabajo: 14 controles distintos × 3 pulsaciones = 42 intentos → la 41.ª se bloquea.
+test('(6) vivo · tope global: la pulsación 41 (de cualquier control) se bloquea', async () => {
+  const ids = Array.from({ length: 14 }, (_, i) => `s${i}`)
+  const { context, page, guard } = await portal(URL_P, `${ids.map((id) => `<button type="button" id="${id}" class="b">Siguiente</button>`).join('')}${oyente('.b')}`)
+  let hechas = 0
+  let error: unknown = null
+  try {
+    for (const id of ids) {
+      const i = inv(URL_P, { tag: 'button', type: 'button', texto: 'Siguiente', id })
+      for (let n = 0; n < 3; n++) {
+        await pulsarNavegacionLibre(page.locator(`#${id}`), guard, { entrada: E_PELAYO, el: i.marcos[0].elementos[0], marco: i.marcos[0] })
+        hechas++
+      }
+    }
+  } catch (e) {
+    error = e
+  }
+  const n = await pulsadas(page)
+  await context.close()
+  assert.deepEqual([MAX_PULSACIONES_NAVEGACION_TOTAL, hechas, n, error !== null], [40, 40, 40, true])
+})
+
+// ───────────────── `pulsar()` genérico: bloquea por sí solo un rótulo de acción final (sin el validador) ─────────────────
+
+test('puro · rotuloNombraAccionFinal: «Confirmar», «Ｃｏｎｆｉｒｍａｒ», «c o n f i r m a r», «Submit» sí; «Siguiente», «Comprobar», «Calcular» no', () => {
+  assert.deepEqual(
+    ['Confirmar', 'Ｃｏｎｆｉｒｍａｒ', 'c o n f i r m a r', 'Conf­irmar', 'Submit', 'Finalizar', 'Place order', 'Siguiente', 'Comprobar', 'Calcular', 'Continuar'].map((x) => rotuloNombraAccionFinal(x)),
+    [true, true, true, true, true, true, true, false, false, false, false],
+  )
+})
+async function pulsarGenerico(cuerpo: string): Promise<{ error: unknown; n: number }> {
+  const { context, page, guard } = await portal(URL_P, `${cuerpo}${oyente('#x')}`)
+  let error: unknown = null
+  try {
+    await pulsar(page.locator('#x'), guard)
+  } catch (e) {
+    error = e
+  }
+  const n = await pulsadas(page)
+  await context.close()
+  return { error, n }
+}
+for (const [nombre, html] of [
+  ['«Confirmar» genérico (no Generali)', '<button type="button" id="x">Confirmar</button>'],
+  ['«Ｃｏｎｆｉｒｍａｒ» ancho completo', '<button type="button" id="x">Ｃｏｎｆｉｒｍａｒ</button>'],
+  ['«Finalizar»', '<button type="button" id="x">Finalizar</button>'],
+  ['input value «Submit»', '<input type="button" id="x" value="Submit">'],
+  ['aria-label «Comprar»', '<button type="button" id="x" aria-label="Comprar">›</button>'],
+] as const) {
+  test(`pulsar() bloquea · ${nombre}`, async () => {
+    const r = await pulsarGenerico(html)
+    assert.deepEqual([r.error !== null, r.n], [true, 0])
+  })
+}
+for (const t of ['Siguiente', 'Calcular', 'Comprobar']) {
+  test(`pulsar() pasa · «${t}»`, async () => {
+    const r = await pulsarGenerico(`<button type="button" id="x">${t}</button>`)
+    assert.deepEqual([r.error, r.n], [null, 1])
+  })
+}
+bloqueaVivo('(3) enlace href="#" «Resumen» con manejador invisible (el inventario lo ve como enlace; vivo, no)', `<a id="x" href="#">Resumen</a>${oyente('#x')}`, { tag: 'a', texto: 'Resumen', hrefRuta: '/portalmediador-nuevo-presupuesto/' })

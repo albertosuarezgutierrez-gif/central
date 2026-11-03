@@ -63,6 +63,7 @@ const DESCARGA = o('allianz+mapfre+generali', '26/10/2026', 'descarga del proyec
 const DESCARGA_BLOQUEO = o('allianz+mapfre+generali', '26/10/2026', 'lista negra del rótulo de descarga')
 const GUARD_OCULTO = o('allianz+mapfre+generali', '26/10/2026', 'lista negra de atributos internos (id, name, href, manejadores)')
 const NAV_LIBRE = o('comun', '03/11/2026', 'navegación libre del explorador: lo que nunca se pulsa como navegación (Alberto)')
+const NAV_ADV = o('comun', '03/11/2026', 'navegación libre: verbos de acción final que la revisión adversarial coló (Finalizar, Comprar, Submit…)')
 
 // ───────────────────────── CONCEPTOS ─────────────────────────
 
@@ -304,6 +305,16 @@ export const BLOQUEO = congelarProfundo({
     t('alta', NAV_LIBRE, { plural: true }), t('guardar', NAV_LIBRE), t('archivar', NAV_LIBRE), t('condicion', NAV_LIBRE, { prefijo: true }),
     t('salir', NAV_LIBRE), t('cerrar sesion', NAV_LIBRE), t('desconect', NAV_LIBRE, { prefijo: true }), t('logout', NAV_LIBRE), t('log out', NAV_LIBRE), t('logoff', NAV_LIBRE),
     t('sign out', NAV_LIBRE), t('checkout', NAV_LIBRE), t('payment', NAV_LIBRE),
+    // 0.3.36 (revisión adversarial 03/11/2026): verbos de acción FINAL en ES y EN que la lista negra dejaba pasar. «Continuar»,
+    // «Siguiente», «Calcular», «Buscar» no casan (cepo en navegacion-libre-v0336.test.ts).
+    t('finaliz', NAV_ADV, { prefijo: true }), t('terminar', NAV_ADV), t('completar', NAV_ADV), t('comprar', NAV_ADV), t('compra', NAV_ADV, { plural: true }),
+    t('adquiri', NAV_ADV, { prefijo: true }), t('adquisicion', NAV_ADV), t('suscrib', NAV_ADV, { prefijo: true }), t('suscripcion', NAV_ADV),
+    t('registrar', NAV_ADV), t('activar', NAV_ADV), t('aprobar', NAV_ADV), t('validar', NAV_ADV), t('realizar pedido', NAV_ADV), t('pedido', NAV_ADV, { plural: true }),
+    t('abonar', NAV_ADV), t('presentar', NAV_ADV), t('cursar', NAV_ADV), t('efectuar', NAV_ADV), t('ok', NAV_ADV), t('hecho', NAV_ADV),
+    t('submit', NAV_ADV, { prefijo: true }), t('buy', NAV_ADV), t('purchase', NAV_ADV, { prefijo: true }), t('finish', NAV_ADV, { prefijo: true }),
+    t('complete', NAV_ADV, { prefijo: true }), t('sign', NAV_ADV, { prefijo: true }), t('apply', NAV_ADV), t('place order', NAV_ADV), t('order', NAV_ADV),
+    t('subscribe', NAV_ADV, { prefijo: true }), t('register', NAV_ADV, { prefijo: true }), t('activate', NAV_ADV, { prefijo: true }), t('approve', NAV_ADV, { prefijo: true }),
+    t('validate', NAV_ADV, { prefijo: true }), t('done', NAV_ADV), t('accept', NAV_ADV, { prefijo: true }), t('proceed', NAV_ADV), t('pay', NAV_ADV), t('save', NAV_ADV),
   ],
   /** Texto de emisión visible en la página o en un diálogo (Generali). Palabra entera, sobre texto sin tildes y en minúsculas. */
   emision_pagina: [

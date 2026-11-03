@@ -188,8 +188,9 @@ describe('0.3.4 · entradas de menú avanzables (Mapfre NSE)', () => {
     expect(av(refs[1]).ok).toBe(true)
     expect(av(refs[2]).ok).toBe(true)
     expect(JSON.stringify(av(refs[3]))).toMatch(/boton_de_emision/)
-    // 0.3.36 (Alberto, 03/11/2026): un <a> sin href ni onclick (tarjeta) con rótulo neutro entra por la NAVEGACIÓN LIBRE.
-    expect(av(refs[4]).ok).toBe(true)
+    // 0.3.36 tras la revisión adversarial: la navegación libre es LISTA BLANCA por tipo; un <a> sin href ni onclick (manejador invisible)
+    // solo pasa si es tarjeta de RAMO o su rótulo es EXACTAMENTE un neutro («Sin nada» no lo es).
+    expect(JSON.stringify(av(refs[4]))).toMatch(/no es un botón/)
     expect(JSON.stringify(av(refs[5]))).toMatch(/aceptar_no_autorizado/)
   })
 })
@@ -212,7 +213,8 @@ describe('0.3.4b · enlaces avanzables SOLO donde la entrada lo declara y dentro
     expect(av('allianz:autos:movilidad_personal', marcoDe(URL_DRVP00, [{ tag: 'a', role: 'link', hrefRuta: '/drvp00/SEAServlet', texto: 'Datos' }])).ok).toBe(true)
     expect(av('mapfre:automoviles:patinetes', marcoDe(NSE, [{ tag: 'a', role: 'link', hrefRuta: '/PortalMediadores/x.jsp', texto: 'Otra' }])).ok).toBe(true)
     expect(JSON.stringify(av('mapfre:automoviles:patinetes', marcoDe(NSE, [{ tag: 'a', role: 'link', hrefRuta: 'https://otro.example.test/EVT21_NSE_FWEB/x.jsp', texto: 'Otra' }])))).toMatch(/no es un botón/)
-    expect(av('mapfre:automoviles:patinetes', marcoDe('https://wmediadores.mapfre.com/PortalMediadores_fe-web/', [{ tag: 'a', onclick: 'x()', texto: 'Fuera' }])).ok).toBe(true)
+    // Lista blanca por tipo: un onclick opaco con un rótulo que no es un neutro exacto, no.
+    expect(JSON.stringify(av('mapfre:automoviles:patinetes', marcoDe('https://wmediadores.mapfre.com/PortalMediadores_fe-web/', [{ tag: 'a', onclick: 'x()', texto: 'Fuera' }])))).toMatch(/no es un botón/)
   })
   it('la ruta del href entra en la capa pura: /contratar.do → boton_de_emision', () => {
     expect(JSON.stringify(av('mapfre:automoviles:patinetes', marcoDe(NSE, [{ tag: 'a', role: 'link', hrefRuta: '/EVT21_NSE_FWEB/contratar.do', texto: 'Seguir' }])))).toMatch(/boton_de_emision/)

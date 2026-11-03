@@ -485,6 +485,11 @@ export type ContextoBucle = {
   compania: string
   ramo: string
   entrada: string
+  /**
+   * SOLO LECTURA forzada para ESTE bucle (además de `entradaSoloLectura` de la entrada). Solo puede ENDURECER: `true` vuelca la primera
+   * pantalla y para sin ejecutar el lote; ausente, manda la entrada. Nunca levanta la solo lectura de una entrada que la declare.
+   */
+  soloLectura?: true
   conDatosReales: boolean
   riesgo: unknown
   env: Record<string, string | undefined>
@@ -623,7 +628,7 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
       pasos++
       if (r.estado === 'perdido') throw new Parar('perdido')
       // 0.3.28: entrada de SOLO LECTURA (Pelayo): la pantalla ya está en asegura (el inventario de este paso); el lote NO se ejecuta.
-      if (entradaSoloLectura(k.entrada)) {
+      if (entradaSoloLectura(k.entrada) || k.soloLectura === true) {
         k.log('exploracion_solo_lectura', { n: pasos })
         throw new Parar('tope')
       }

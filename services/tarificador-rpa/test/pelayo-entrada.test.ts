@@ -292,9 +292,9 @@ function contexto(page: Page, guard: GuardEmision, entrada: string, ramo: string
 const PAGINA_FORM = `<!doctype html><html><head><meta charset="utf-8"></head><body><form><h2>Datos del riesgo</h2>
   <input type="checkbox" id="garaje" name="garaje"><label for="garaje">Garaje</label></form></body></html>`
 
-test('bucle: entrada de SOLO LECTURA → manda UN inventario y para con `tope` SIN ejecutar el lote (la casilla sigue sin marcar)', async () => {
-  assert.equal(entradaSoloLectura('pelayo:presupuestos:auto'), true)
-  assert.equal(entradaSoloLectura('pelayo:presupuestos:hogar'), true)
+test('bucle: SOLO LECTURA (forzada en el contexto) → manda UN inventario y para con `tope` SIN ejecutar el lote (la casilla sigue sin marcar)', async () => {
+  // 0.3.36: las entradas de Pelayo ya son explorables; el mecanismo se prueba con la solo lectura FORZADA del contexto del bucle.
+  assert.equal(entradaSoloLectura('pelayo:presupuestos:auto'), false)
   assert.equal(entradaSoloLectura('fidelidade:particulares:vivienda'), false)
   const context = await browser.newContext()
   try {
@@ -304,11 +304,11 @@ test('bucle: entrada de SOLO LECTURA → manda UN inventario y para con `tope` S
     await page.route(`${ORIGEN}/**`, (r) => r.fulfill({ contentType: 'text/html; charset=utf-8', body: PAGINA_FORM }))
     await page.goto(`${ORIGEN}/portalmediador-presupuestos/nuevo`)
     let inventarios = 0
-    const fin = await bucleExploracion(page, contexto(page, guard, 'pelayo:presupuestos:auto', 'auto', 'pelayo', (inv, n) => {
+    const fin = await bucleExploracion(page, { ...contexto(page, guard, 'pelayo:presupuestos:auto', 'auto', 'pelayo', (inv, n) => {
       inventarios++
       const ref = inv.marcos.flatMap((m) => m.elementos).find((e) => e.id === 'garaje')!.ref!
       return { version: 1, pantalla: { nombre: 'Datos', tipo: 'formulario' }, acciones: n === 1 ? [{ accion: 'marcar', ref }] : [{ accion: 'parar', motivo: 'ambiguo' }], mapeo: [], motivo: null }
-    }))
+    }), soloLectura: true })
     assert.equal(fin.motivo, 'tope', JSON.stringify(fin))
     assert.equal(inventarios, 1)
     assert.equal(fin.acciones, 0)

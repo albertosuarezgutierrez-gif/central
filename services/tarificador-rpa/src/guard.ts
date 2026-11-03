@@ -93,6 +93,8 @@ import {
   type MarcoInventario,
   type PantallaGuardado,
   ORIGEN_FIDELIDADE_MEDIADORES,
+  compactoNavegacion,
+  comprobarRotulosAccionFinal,
   navegacionLibre,
   navegacionLibreInventario,
   neutralizarDomicilioDireccion,
@@ -860,9 +862,13 @@ export async function pulsar(boton: Locator, guard: GuardEmision): Promise<void>
   const desc = await descripcion(boton)
   // 0.3.19: la subcadena exacta del onclick de UN control exacto de la entrada (Mapfre NSE), antes de mirar nada (ver `neutralizarOnclicksEntrada`).
   comprobarBoton(conRutasTolerables(guard, await conOnclickNeutralizado(guard, boton, desc)))
+  // Revisión adversarial (03/11/2026): el guard bloquea POR SÍ SOLO (sin depender del validador del explorador) un RÓTULO de acción
+  // final en ES/EN con normalización fuerte: «Confirmar», «Finalizar», «Comprar», «Submit»… Las puertas estrechas por compañía
+  // (Confirmar de Generali, Aceptar por fase…) no pasan por aquí y siguen exigiendo su texto exacto.
   // Generali (26/10/2026): un «Confirmar» de www.generali.es NUNCA por la vía genérica; solo por sus puertas acotadas
-  // (`pulsarConfirmarVehiculoGenerali`, `pulsarConfirmarDatosPersonasGenerali`).
+  // (`pulsarConfirmarVehiculoGenerali`, `pulsarConfirmarDatosPersonasGenerali`). Va antes para que el motivo diga cuál es su puerta.
   if (confirmarDeGenerali(desc, await boton.evaluate(() => location.href).catch(() => ''))) throw new EmisionBloqueadaError('boton', 'Confirmar (Generali: solo por su puerta del guard)')
+  comprobarRotulosAccionFinal(desc)
   await boton.click()
   guard.comprobar()
 }
@@ -881,6 +887,7 @@ export async function redispararCambioMarcado(control: Locator, guard: GuardEmis
   await exigirSinCuentaBancaria(control.page())
   const desc = await descripcion(control)
   comprobarBoton(conRutasTolerables(guard, await conOnclickNeutralizado(guard, control, desc)))
+  comprobarRotulosAccionFinal(desc)
   // Revisión de seguridad (30/10/2026): `input`/`change` BURBUJEAN y `descripcion` solo ve onclick/ng-click/href (3 ancestros). Aquí se leen
   // `onchange`/`oninput` del radio y de TODOS sus ancestros (atravesando shadow hosts) y del <form> (también el de `form=`); cualquiera con acción
   // final LANZA, y un <form> con onchange/oninput/onsubmit LANZA siempre. El mensaje nunca lleva el texto del manejador (podría tener datos).
@@ -3751,8 +3758,16 @@ export function topeNavegacionLibre(entrada: string): number {
   return (entrada === ENTRADA_FIDELIDADE_VIVIENDA ? TOPES_AVANCES_POR_REGLA['fidelidade:vivienda'] : undefined) ?? MAX_PULSACIONES_NAVEGACION_POR_CONTROL
 }
 
+/**
+ * Tope GLOBAL de pulsaciones por navegación libre en un trabajo (revisión adversarial 03/11/2026): el tope por control no frena un
+ * recorrido por N controles distintos. La 41.ª pulsación (cualquier control) se bloquea.
+ */
+export const MAX_PULSACIONES_NAVEGACION_TOTAL = 40
+
 /** Pulsaciones de navegación libre por control y trabajo (clave: documento + tag + id + name + rótulo normalizados). */
 const PULSACIONES_NAVEGACION = new WeakMap<GuardEmision, Map<string, number>>()
+/** Pulsaciones de navegación libre de un trabajo, de cualquier control. */
+const PULSACIONES_NAVEGACION_TOTAL = new WeakMap<GuardEmision, number>()
 
 /** Clave ESTABLE de un control para el tope anti-bucle (sin query de la URL: el cache-buster no lo convierte en otro control). Pura. */
 export function claveControlNavegacion(c: ControlNavegacion, urlDocumento: string): string {
@@ -3785,6 +3800,10 @@ export function motivoNoNavegacionLibreVivo(c: ControlNavegacion, urlDocumento: 
     if (r.exentoMenu && SUSTANTIVOS_MENU_NAVEGACION.includes(n)) continue
     const b = casaBloqueoNavegacion(n, TERMINOS_BLOQUEO_SOLO_GUARD)
     if (b) return `rotulo_bloqueado (${b.grupo})`
+    // La forma COMPACTA (sin espacios ni signos): «e m i t i r», «E-M-I-T-I-R».
+    const k = compactoNavegacion(neutralizarDomicilioDireccion(planoNavegacion(v)))
+    const bk = k !== '' ? casaBloqueoNavegacion(k, TERMINOS_BLOQUEO_SOLO_GUARD) : null
+    if (bk) return `rotulo_bloqueado (${bk.grupo})`
   }
   for (const d of [c.id, c.name, c.clase, c.onclick, c.hrefLiteral, c.hrefAbsoluto, c.accionFormulario, ...(c.ancestros ?? [])]) {
     if (typeof d !== 'string' || d === '') continue
@@ -3812,6 +3831,7 @@ async function controlNavegacionVivo(boton: Locator): Promise<{ c: ControlNavega
         }
       } else if (fa) accion = fa
       const href = tag === 'a' ? h.getAttribute('href') : null
+      const destino = tag === 'a' ? h.getAttribute('target') : envia ? (h.getAttribute('formtarget') ?? form.getAttribute('target')) : null
       let hrefAbs: string | null = null
       if (href !== null && href.trim() !== '' && !/^\s*(#|javascript:)/i.test(href)) {
         try {
@@ -3849,6 +3869,8 @@ async function controlNavegacionVivo(boton: Locator): Promise<{ c: ControlNavega
           enviaFormulario: envia,
           ariaHaspopup: h.getAttribute('aria-haspopup'),
           ariaExpanded: h.getAttribute('aria-expanded'),
+          target: destino,
+          descarga: tag === 'a' && h.hasAttribute('download'),
           ancestros: anc,
         },
       }
@@ -3865,7 +3887,8 @@ async function controlNavegacionVivo(boton: Locator): Promise<{ c: ControlNavega
  *   4. la regla VIVA (`motivoNoNavegacionLibreVivo`: módulo + vocabulario del worker; href a otro origen, salida, formulario o pantalla
  *      de contratación/pago → no) y `comprobarBoton` sobre su descripción completa, menos SOLO el rótulo exacto del sustantivo de un
  *      desplegable de menú si el módulo lo eximió (todo lo demás de emisión, igual que siempre);
- *   5. el tope anti-bucle por control (`topeNavegacionLibre`: 3; 6 en la simulación de Vivienda de Fidelidade).
+ *   5. el tope anti-bucle por control (`topeNavegacionLibre`: 3; 6 en la simulación de Vivienda de Fidelidade) y el GLOBAL por trabajo
+ *      (`MAX_PULSACIONES_NAVEGACION_TOTAL`: 40, cualquier control).
  * Solo entonces pulsa UNA vez. Sin ventana de red: la navegación y los POST que provoque pasan por el guard de contexto de siempre.
  */
 export async function pulsarNavegacionLibre(boton: Locator, guard: GuardEmision, aut: { entrada: string; el: ElementoInventario; marco: MarcoInventario }): Promise<void> {
@@ -3885,13 +3908,17 @@ export async function pulsarNavegacionLibre(boton: Locator, guard: GuardEmision,
   const desc = await descripcion(boton)
   // Posiciones 0-3 de `descripcion` (texto, aria-label, title, value): las ÚNICAS que la excepción del menú puede quitar, y solo el sustantivo exacto.
   comprobarBoton(conRutasTolerables(guard, desc.map((d, i) => (exento && i <= 3 && SUSTANTIVOS_MENU_NAVEGACION.includes(rotuloSinAdornos(d)) ? null : d))))
+  comprobarRotulosAccionFinal(desc)
   const tope = topeNavegacionLibre(aut.entrada)
   const cuenta = PULSACIONES_NAVEGACION.get(guard) ?? new Map<string, number>()
   const clave = claveControlNavegacion(vivo.c, vivo.url)
   const usadas = cuenta.get(clave) ?? 0
   if (usadas >= tope) throw new EmisionBloqueadaError('fase', `navegación libre: el mismo control ya se pulsó ${usadas} veces en este trabajo (tope ${tope})`)
+  const total = PULSACIONES_NAVEGACION_TOTAL.get(guard) ?? 0
+  if (total >= MAX_PULSACIONES_NAVEGACION_TOTAL) throw new EmisionBloqueadaError('fase', `navegación libre: ${total} pulsaciones en este trabajo (tope global ${MAX_PULSACIONES_NAVEGACION_TOTAL})`)
   cuenta.set(clave, usadas + 1)
   PULSACIONES_NAVEGACION.set(guard, cuenta)
+  PULSACIONES_NAVEGACION_TOTAL.set(guard, total + 1)
   await boton.click()
   guard.comprobar()
 }
@@ -3982,6 +4009,7 @@ export async function pulsarExploracionAutorizada(
     comprobarBoton(desc)
   }
   comprobarBoton(desc, { permitirAceptar: true })
+  comprobarRotulosAccionFinal(desc)
   const destino = await boton.evaluate((el) => {
     const d = el.ownerDocument
     const f = el.closest('form') ?? (d.forms.length === 1 ? d.forms[0] : null)
