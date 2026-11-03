@@ -108,6 +108,25 @@ Decisiones de Alberto sobre clasificación de gastos por negocio. Guardianas del
 - **Trading FTMO/retos bróker** → personal, NO deducible
 - **Comisiones correduría:** bruto en renta (con retención 15% de compañía), no neto bancario
 
+## Aprendido 03/11/2026 (criterios fiscales para automatizar)
+
+- **IVA:** correduría (art. 20.1.16) y alquiler turístico sin servicios hoteleros son actividades EXENTAS → el IVA soportado
+  no se recupera: gasto por el TOTAL con IVA. Proveedores extranjeros sin IVA (Anthropic, Vercel, Supabase…): posible
+  autoliquidación (inversión del sujeto pasivo) → señalar para que la valide la asesoría.
+- **Comisiones Booking:** facturas de Booking.com B.V. con IVA 21 % español (no inversión del sujeto pasivo; Booking descuenta el
+  IVA de la liquidación). El motor (`apps/plataforma/lib/base-fiscal-devengo*.ts`) ya deduce la comisión como bruto−neto de
+  `incomes` con IVA incluido: las facturas son JUSTIFICANTE, no se suman otra vez. Cuadrar total mensual vs comisión implícita.
+- **Correduría:** las compañías pagan neto y retienen (modelo 190) → exento de modelo 130 si ≥70 % de ingresos con retención.
+  Las retenciones se restan de la CUOTA: capturar los certificados de retenciones de cada compañía.
+- **Mobiliario/electrodomésticos >300 € en pisos** (capital inmobiliario): amortización 10 %/año en vez de gasto íntegro —
+  PENDIENTE de decisión con la asesoría. Mientras tanto rige la regla de amortización de arriba (nunca de oficio; ej. el
+  televisor de Socorro es gasto íntegro por decisión de Alberto); consumibles pequeños = gasto del año.
+- **Compras Amazon de los pisos** facturadas a Punto y Coma Gestión (B90446683): se registran en el piso con
+  `titular_pendiente='receptor_no_titular'`; Alberto debe pedirlas a su NIF.
+- **Tarjeta Kutxabank ···0300 = crédito** (sus liquidaciones en la cuenta = `traspaso_interno`). Cuentas de Pilar sin sincronizar
+  desde jun/sep: pedir extractos.
+- Documentos de CLIENTES de la correduría no son gastos de Alberto (descartar con motivo).
+
 ## Índice de `references/` — lee SOLO lo que necesite la tarea
 - **`references/entidades-y-propiedades.md`** — quién tributa qué: entidades (Alberto/Pilar/SL dormida),
   Pilar autónoma (cómo cargar sus ingresos vía `movimientos_bancarios`, landmine `conyuge_*`, base

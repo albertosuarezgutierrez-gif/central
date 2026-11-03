@@ -70,6 +70,26 @@ Flujo: Paso 0 (salud+backlog) → 1/1-bis (candidatos Gmail + subidas manuales D
 - **Auto-informe OBLIGATORIO** en `docs/AGENTES-BITACORA.md` en TODA sesión que archive,
   concilie o etiquete algo — aunque sea ad-hoc o quede a medias.
 
+## Aprendido 03/11/2026 — Booking, Amazon y enlace gasto↔banco
+
+- **Booking.com Invoice** (3/mes, una por alojamiento; el cuerpo no trae cifras): etiquetar `Claude/Adjuntos` → el Apps Script
+  copia el PDF a Drive en 10-20 min → leer PDF (agente `lector-correo`). Emisor Booking.com B.V. (NL805734958B01) a Alberto
+  (28823484E), IVA 21 % sobre comisión + cargo por pagos (no inversión del sujeto pasivo). ID→piso: 2888928 = Villasís/Dúplex;
+  4340072 = Socorro 24/House Sevillana; 4771238 = Bustos Tavera 22 (Busto Reform + Luxury Busto). Registrar con su piso y
+  cuadrar el total mensual contra bruto−neto de `incomes`; si no cuadra, avisar. Son JUSTIFICANTE: el motor fiscal ya deduce
+  esa comisión, no se suman otra vez. Airbnb: aún sin facturas localizadas.
+- **Carpeta Drive «Amazon deducible»** (facturas a Punto y Coma Gestión B90446683 por compras de pisos): registrar en el piso
+  con `titular_pendiente='receptor_no_titular'`, conciliar con el cargo de tarjeta, renombrar
+  `AAAA-MM-DD_Amazon_<importe>_<Piso>.pdf`. Alberto debe pedirlas a su NIF.
+- **Enlace al casar:** `movimientos_bancarios.factura_ref='gasto:<uuid>'` + `conciliado=true`, solo con par inequívoco (mismo
+  piso, importe exacto, ±40 días); el P&L de pisos deduplica (`lib/sivra/cargos-ya-facturados.ts`). Tarjeta Kutxabank ···0300 =
+  crédito (liquidaciones = `traspaso_interno`).
+- **Descartar** documentos de clientes de la correduría (p. ej. pólizas): `descartado_at` + motivo, no son gasto.
+- **Fiscal:** actividades exentas (correduría, alquiler turístico sin servicios hoteleros) → IVA soportado = gasto por el total;
+  extranjero sin IVA → señalar posible autoliquidación a la asesoría; certificados de retenciones de compañías → capturar.
+  Mobiliario >300 € en pisos: posible amortización 10 %/año, pendiente de decisión (no marcar `amortizable`, ver `perfil-fiscal`).
+- Escrituras en BD solo con OK de Alberto; nunca correos a terceros.
+
 ## Índice de references/ — lee SOLO el archivo que necesite la tarea
 
 - **`references/01-extraccion-y-salud.md`** — Herramientas MCP, cadena de vías para leer PDFs
