@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-03T13:52:38Z",
-  "sha": "4f7517e90f0ce4e0ff051225c9b8ff8531dbb369",
+  "generadoEn": "2026-11-03T15:06:38Z",
+  "sha": "d5df9a9ca2b1640de0212dfdf32d660ca94488a6",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -142781,7 +142781,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/cron/sivra-extras-impago",
-      "hash": "14391abb7ea2"
+      "hash": "160d7acef452"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-avisos/route.ts",
@@ -169376,23 +169376,155 @@
       "hash": "4b789e9e9d00"
     },
     {
+      "ruta": "apps/plataforma/lib/correo/agoda-enrutar.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/correo/agoda-enrutar.ts — mensaje de huésped de Agoda (correo individual) → agente de huéspedes. Mismo agente, misma política de envío (auto / botón de Telegram) que Booking: lo ÚNICO distinto es el transporte de salida, que responde al correo de Agoda (`agoda-hilo.ts` + `enviar.ts`). Best-effor",
+      "exporta": [
+        "resolverReservaAgoda",
+        "enrutarMensajeAgoda"
+      ],
+      "funciones": [
+        {
+          "nombre": "resolverReservaAgoda",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: AvisoMensajesAgoda",
+          "retorno": "Promise<string | null>",
+          "linea": 18
+        },
+        {
+          "nombre": "enrutarMensajeAgoda",
+          "kind": "function",
+          "exportada": true,
+          "params": "correo: CorreoNuevo, a: AvisoMensajesAgoda",
+          "retorno": "Promise<ResultadoEnrutadoAgoda>",
+          "linea": 30
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6f51593b197f"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correo/agoda-hilo.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/correo/agoda-hilo.ts — hilo de correo de Agoda por reserva: registro, búsqueda y ENVÍO. Es el transporte de salida de los mensajes de huésped de Agoda (03/11/2026): el agente de huéspedes decide y redacta como siempre; si la reserva tiene un hilo de correo VIVO aquí, la respuesta sale respondien",
+      "exporta": [
+        "registrarHiloAgoda",
+        "hiloAgodaDe",
+        "responderCorreoAgoda"
+      ],
+      "funciones": [
+        {
+          "nombre": "registrarHiloAgoda",
+          "kind": "function",
+          "exportada": true,
+          "params": "bookingId: string, h: HiloAgoda & { huesped?: string | null; reservaAgoda?: string | null }",
+          "retorno": "Promise<ResultadoRegistroHilo>",
+          "linea": 23,
+          "resumen": "Registra (o refresca) el hilo de correo de la reserva. Si ya hay uno con OTRO destino (`responder_a`), NO lo pisa: un correo no puede desviar en silencio las respuestas de esa reserva a otro alias. De"
+        },
+        {
+          "nombre": "hiloAgodaDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "bookingId: string",
+          "retorno": "Promise<HiloAgoda | null>",
+          "linea": 44,
+          "resumen": "Hilo VIVO de la reserva (o null). El destino se muestra en la propuesta de Telegram."
+        },
+        {
+          "nombre": "responderCorreoAgoda",
+          "kind": "function",
+          "exportada": true,
+          "params": "hilo: HiloAgoda, cuerpo: string",
+          "retorno": "Promise<ResultadoCorreoAgoda>",
+          "linea": 61,
+          "resumen": "Responde al correo de Agoda. Nunca lanza: devuelve el motivo si no se pudo enviar."
+        }
+      ],
+      "tablas": [
+        "agoda_hilos_correo",
+        "set"
+      ],
+      "rutaApi": null,
+      "hash": "1341bf32d11b"
+    },
+    {
       "ruta": "apps/plataforma/lib/correo/agoda-mensajes.ts",
       "ambito": "apps/plataforma",
-      "resumen": "lib/correo/agoda-mensajes.ts — parser PURO del aviso «New messages from your guests» de Agoda. POR QUÉ EXISTE (medido el 31/08/2026 contra Smoobu, 8 reservas de Agoda del histórico): el canal de Agoda es de UNA SOLA DIRECCIÓN. Smoobu ENTREGA nuestros mensajes al huésped por el alias `…@agoda-messagi",
+      "resumen": "lib/correo/agoda-mensajes.ts — parser PURO de los avisos de mensaje de huésped de Agoda. DOS FORMATOS (los dos se reconocen): A. DIGEST antiguo (`…@agoda.com`, «New messages from your guests»): una dirección, sin respuesta posible por correo; el huésped se contesta en el extranet YCS. (Medido 31/08/",
       "exporta": [
+        "esMensajeIndividualAgoda",
         "esAvisoMensajesAgoda",
+        "fechasDeAsunto",
+        "propiedadPorNombreAgoda",
+        "mensajeNuevoIndividual",
         "parsearAvisoMensajesAgoda",
         "textoAvisoAgoda"
       ],
       "funciones": [
+        {
+          "nombre": "esMensajeIndividualAgoda",
+          "kind": "function",
+          "exportada": true,
+          "params": "correo: { from: string; subject: string }",
+          "retorno": "boolean",
+          "linea": 66,
+          "resumen": "Correo individual (formato B): remitente de mensajería + asunto de mensaje de huésped."
+        },
         {
           "nombre": "esAvisoMensajesAgoda",
           "kind": "function",
           "exportada": true,
           "params": "correo: { from: string; subject: string }",
           "retorno": "boolean",
-          "linea": 56,
-          "resumen": "¿Es este correo el aviso de mensajes de huésped de Agoda? Exige remitente Agoda + su asunto."
+          "linea": 71,
+          "resumen": "¿Es este correo un aviso de mensaje de huésped de Agoda (digest antiguo o correo individual)?"
+        },
+        {
+          "nombre": "iso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "y: number, m: number, d: number",
+          "retorno": null,
+          "linea": 79
+        },
+        {
+          "nombre": "fechasDeAsunto",
+          "kind": "function",
+          "exportada": true,
+          "params": "asunto: string",
+          "retorno": "",
+          "linea": 82,
+          "resumen": "«(Nov 3-5, 2026)», «(Nov 30-Dec 2, 2026)», «(Dec 30, 2026-Jan 2, 2027)» → fechas ISO. PURO."
+        },
+        {
+          "nombre": "propiedadPorNombreAgoda",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre: string | null",
+          "retorno": "string | null",
+          "linea": 101,
+          "resumen": "Piso (nombre que usa Agoda en el saludo) → slug prop_*. Solo lo confirmado; lo demás, null."
+        },
+        {
+          "nombre": "sinTabla",
+          "kind": "function",
+          "exportada": false,
+          "params": "t: string",
+          "retorno": "string",
+          "linea": 115,
+          "resumen": "Quita el marco de tabla `| … |` y junta las líneas."
+        },
+        {
+          "nombre": "mensajeNuevoIndividual",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuerpo: string",
+          "retorno": "string | null",
+          "linea": 124,
+          "resumen": "Del cuerpo del correo individual saca el mensaje NUEVO del huésped: lo que va tras «ID de reserva» y antes de «Replying to this email». Si trae traducción automática se queda con el ORIGINAL (es lo qu"
         },
         {
           "nombre": "parsearAvisoMensajesAgoda",
@@ -169400,8 +169532,16 @@
           "exportada": true,
           "params": "correo: { from: string; subject: string; body: string },",
           "retorno": "AvisoMensajesAgoda | null",
-          "linea": 63,
+          "linea": 138,
           "resumen": "Extrae lo aprovechable del aviso. Devuelve null si el correo no es de este tipo."
+        },
+        {
+          "nombre": "parsearIndividual",
+          "kind": "function",
+          "exportada": false,
+          "params": "correo: { subject: string }, cuerpo: string",
+          "retorno": "AvisoMensajesAgoda",
+          "linea": 174
         },
         {
           "nombre": "textoAvisoAgoda",
@@ -169409,13 +169549,119 @@
           "exportada": true,
           "params": "a: AvisoMensajesAgoda, nombrePiso?: string",
           "retorno": "string",
-          "linea": 96,
-          "resumen": "Texto del aviso de Telegram. Dice qué se sabe, qué no, y POR DÓNDE se contesta."
+          "linea": 197,
+          "resumen": "Texto del aviso de Telegram del DIGEST (formato A). Dice qué se sabe, qué no, y POR DÓNDE se contesta."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0ef2a736da27"
+      "hash": "c1d2a6159273"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correo/agoda-respuesta.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/correo/agoda-respuesta.ts — PURO: cómo se responde a un correo de huésped de Agoda. Responder al correo de `…@agoda-messaging.com` le llega al huésped (03/11/2026). Aquí solo se arman las cabeceras de la respuesta (misma conversación: In-Reply-To/References, «Re: …», To = Reply-To del aviso o, s",
+      "exporta": [
+        "destinoAgodaValido",
+        "asuntoRespuesta",
+        "opcionesRespuestaAgoda",
+        "destinoDeRespuesta",
+        "elegirReservaAgoda",
+        "agenteSeEncarga",
+        "autenticadoPorAgoda",
+        "decidirRegistroHilo"
+      ],
+      "funciones": [
+        {
+          "nombre": "destinoAgodaValido",
+          "kind": "function",
+          "exportada": true,
+          "params": "dir: string",
+          "retorno": "boolean",
+          "linea": 27,
+          "resumen": "Solo se responde a una dirección de Agoda (agoda.com / agoda-messaging.com): nunca a un destino inventado."
+        },
+        {
+          "nombre": "asuntoRespuesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "asunto: string",
+          "retorno": "string",
+          "linea": 32
+        },
+        {
+          "nombre": "opcionesRespuestaAgoda",
+          "kind": "function",
+          "exportada": true,
+          "params": "hilo: HiloAgoda, cuerpo: string, from: string",
+          "retorno": "OpcionesRespuestaAgoda | null",
+          "linea": 38,
+          "resumen": "Opciones de nodemailer para responder al hilo, o `null` si el hilo no sirve (sin Message-ID / destino no Agoda)."
+        },
+        {
+          "nombre": "destinoDeRespuesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "replyTo: string | undefined, from: string",
+          "retorno": "string | null",
+          "linea": 54,
+          "resumen": "Destino de la respuesta: Reply-To del aviso si es de Agoda; si no, su remitente; si tampoco, null."
+        },
+        {
+          "nombre": "norm",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "t: string",
+          "retorno": null,
+          "linea": 59
+        },
+        {
+          "nombre": "elegirReservaAgoda",
+          "kind": "function",
+          "exportada": true,
+          "params": "reservas: readonly { id?: unknown; arrival?: string; departure?: string; 'guest-name'?: string; channel?: { name?: string } | null }[], a: { huesped: string | null; llegada: string | null; salida: string | null },",
+          "retorno": "string | null",
+          "linea": 66,
+          "resumen": "Entre las reservas de Smoobu, la que corresponde al aviso por NOMBRE + FECHAS (cuando el nº de reserva de Agoda no casa): misma llegada y salida y todas las palabras del huésped en el nombre de la res"
+        },
+        {
+          "nombre": "agenteSeEncarga",
+          "kind": "function",
+          "exportada": true,
+          "params": "accion: string",
+          "retorno": "boolean",
+          "linea": 95
+        },
+        {
+          "nombre": "dominioAgoda",
+          "kind": "function",
+          "exportada": false,
+          "params": "valor: string | undefined",
+          "retorno": "boolean",
+          "linea": 101
+        },
+        {
+          "nombre": "autenticadoPorAgoda",
+          "kind": "function",
+          "exportada": true,
+          "params": "authResults: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 113,
+          "resumen": "¿El correo viene AUTENTICADO por Agoda? Se lee la cabecera `Authentication-Results` MÁS ALTA (la que añade el servidor que lo recibe, Gmail: un remitente falso puede meter las suyas, pero siempre por "
+        },
+        {
+          "nombre": "decidirRegistroHilo",
+          "kind": "function",
+          "exportada": true,
+          "params": "existenteResponderA: string | null | undefined, nuevoResponderA: string",
+          "retorno": "'registrar' | 'conflicto'",
+          "linea": 130,
+          "resumen": "Registro del hilo de una reserva: si ya hay uno con OTRO destino, no se pisa en silencio (un correo podría desviar las respuestas de esa reserva a otro alias). Mismo destino o sin hilo → se registra."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a37c13d30847"
     },
     {
       "ruta": "apps/plataforma/lib/correo/clasificador.ts",
@@ -169496,7 +169742,7 @@
         "falsificado"
       ],
       "rutaApi": null,
-      "hash": "8f7a6f9fbdf0"
+      "hash": "7c9f52189317"
     },
     {
       "ruta": "apps/plataforma/lib/correo/contacto-sugerido-consulta.ts",
@@ -170375,6 +170621,7 @@
       "resumen": "lib/correo/imap.ts — Lector IMAP incremental para el triaje de correo. Extiende el patrón de lib/agente-facturas/gmail.ts (imapflow + mailparser, credenciales GMAIL_USER / GMAIL_APP_PASSWORD) pero para TODO lo nuevo de INBOX, no solo facturas, y con capacidad de ETIQUETAR (X-GM-LABELS vía messageCop",
       "exporta": [
         "correoExcluidoSinDescargar",
+        "autenticacionDe",
         "destinatariosDe",
         "referenciasDe",
         "abrirTriaje",
@@ -170387,8 +170634,17 @@
           "exportada": true,
           "params": "s: { uid: number; uidValidity: number; from: string; fromRaw: string; subject: string; messageId: string | null; fecha: Date | null; labels: string[] }",
           "retorno": "CorreoNuevo",
-          "linea": 69,
+          "linea": 76,
           "resumen": "Correo EXCLUIDO por seguridad ya en el SOBRE (TIREA, tickets de Codeoscopic, asunto de credenciales del sector): no se descarga el mensaje (ni cuerpo ni adjuntos). Solo lo justo para que el triaje lo "
+        },
+        {
+          "nombre": "autenticacionDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "lineas: readonly { key: string; line: string }[] | undefined",
+          "retorno": "string | undefined",
+          "linea": 102,
+          "resumen": "Puro: valor de la PRIMERA cabecera `Authentication-Results` (la más alta = la del servidor que recibió el correo; las que trae el remitente quedan por debajo y no se miran). `undefined` si no hay ning"
         },
         {
           "nombre": "destinatariosDe",
@@ -170396,7 +170652,7 @@
           "exportada": true,
           "params": "lineas: readonly { key: string; line: string }[] | undefined",
           "retorno": "string[]",
-          "linea": 92,
+          "linea": 110,
           "resumen": "Puro: direcciones de destino a partir de las líneas de cabecera crudas (`parsed.headerLines`)."
         },
         {
@@ -170405,7 +170661,7 @@
           "exportada": true,
           "params": "inReplyTo: unknown, references: unknown",
           "retorno": "string[]",
-          "linea": 103,
+          "linea": 121,
           "resumen": "Puro: los Message-ID de In-Reply-To/References (mailparser da string o string[])."
         },
         {
@@ -170414,7 +170670,7 @@
           "exportada": false,
           "params": "from: string, adjuntos: { contentType?: string; filename?: string; content?: Buffer; size?: number }[] | undefined",
           "retorno": "Buffer[] | undefined",
-          "linea": 120
+          "linea": 138
         },
         {
           "nombre": "nuevoCliente",
@@ -170422,7 +170678,7 @@
           "exportada": false,
           "params": "",
           "retorno": "ImapFlow",
-          "linea": 130
+          "linea": 148
         },
         {
           "nombre": "abrirTriaje",
@@ -170430,7 +170686,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<SesionTriaje>",
-          "linea": 153
+          "linea": 171
         },
         {
           "nombre": "leerHiloCompleto",
@@ -170438,13 +170694,13 @@
           "exportada": true,
           "params": "messageIds: readonly string[]",
           "retorno": "Promise<MensajeHilo[] | null>",
-          "linea": 272,
+          "linea": 293,
           "resumen": "Todos los correos de los hilos de Gmail a los que pertenece alguno de esos Message-ID, buscados en «Todos los mensajes» (`\\All`, se llame «All Mail» o «Todos»): lo que un filtro etiquetó o archivó sin"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5bdfbebe19ac"
+      "hash": "16555b3892d9"
     },
     {
       "ruta": "apps/plataforma/lib/correo/keywords.ts",
@@ -172881,7 +173137,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dbceb85f51fe"
+      "hash": "8468b3b1ec9d"
     },
     {
       "ruta": "apps/plataforma/lib/correo/pdf-filas.ts",
@@ -173076,7 +173332,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fa54bb0fffc7"
+      "hash": "3a445bf622c4"
     },
     {
       "ruta": "apps/plataforma/lib/correo/smoobu-notificacion.ts",
@@ -173173,7 +173429,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 48,
+          "linea": 49,
           "resumen": "Modo sombra por DEFECTO en el arranque: clasifica y anota en BD pero NO etiqueta/archiva/avisa. Es la red de seguridad de la mejora 1 — mientras Alberto valida los primeros digests, el agente no toca "
         },
         {
@@ -173182,7 +173438,7 @@
           "exportada": false,
           "params": "labels: string[]",
           "retorno": "boolean",
-          "linea": 50
+          "linea": 51
         },
         {
           "nombre": "fmtFecha",
@@ -173190,7 +173446,7 @@
           "exportada": false,
           "params": "d: Date | null",
           "retorno": "string",
-          "linea": 56
+          "linea": 57
         },
         {
           "nombre": "mensajeAviso",
@@ -173198,7 +173454,7 @@
           "exportada": false,
           "params": "o: { categoria: string; remitente: string; asunto: string; resumen: string accion: string | null; fechaLimite: Date | null; cautela: boolean }",
           "retorno": "string",
-          "linea": 62,
+          "linea": 63,
           "resumen": "Construye el aviso inmediato de Telegram (remitente + resumen + acción/fecha + por qué importa)."
         },
         {
@@ -173207,7 +173463,7 @@
           "exportada": false,
           "params": "categoria: string",
           "retorno": "string",
-          "linea": 79
+          "linea": 80
         },
         {
           "nombre": "pasadaTriaje",
@@ -173215,7 +173471,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Record<string, number>>",
-          "linea": 94
+          "linea": 95
         },
         {
           "nombre": "digestTriaje",
@@ -173223,7 +173479,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 481,
+          "linea": 496,
           "resumen": "Digest diario: recuento por categoría de las últimas 24 h + lista corta de lo relevante no avisado."
         },
         {
@@ -173232,7 +173488,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 521,
+          "linea": 536,
           "resumen": "Resumen semanal de valor (mejora 6): señal de \"esto te está ahorrando trabajo\" + detector de deriva."
         },
         {
@@ -173241,7 +173497,7 @@
           "exportada": false,
           "params": "correo: CorreoNuevo",
           "retorno": "Promise<string | null>",
-          "linea": 544,
+          "linea": 559,
           "resumen": "Solo el texto de los PDF del correo (para el lector de eventos, que separa cuerpo y adjuntos). `null` = no hay o no se leen."
         },
         {
@@ -173250,7 +173506,7 @@
           "exportada": false,
           "params": "correo: CorreoNuevo, textoPdf: string | null",
           "retorno": "string",
-          "linea": 555,
+          "linea": 570,
           "resumen": "Cuerpo del correo + el texto por filas de sus PDF (Allianz manda la tabla de devueltos/anuladas en un PDF). Un PDF que no se puede leer no aporta nada, y entonces el lector cuenta el aviso como NO leí"
         }
       ],
@@ -173260,7 +173516,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "847494c89c9c"
+      "hash": "5b81b8c72ef6"
     },
     {
       "ruta": "apps/plataforma/lib/correo/uid-atascado.ts",
@@ -189462,9 +189718,9 @@
           "nombre": "enviarAlHuespedDetallado",
           "kind": "function",
           "exportada": true,
-          "params": "reservationId: string, messageBody: string, subject = '',",
+          "params": "reservationId: string, messageBody: string, subject = '', opts: { smoobuSolo?: boolean } = {},",
           "retorno": "Promise<ResultadoEnvio>",
-          "linea": 14,
+          "linea": 15,
           "resumen": "solo se incluye `subject` si se pasa explícitamente (algunos canales de email lo aprovechan)."
         },
         {
@@ -189473,16 +189729,16 @@
           "exportada": false,
           "params": "bookingId: string, cuerpo: string, asunto: string",
           "retorno": "Promise<void>",
-          "linea": 47,
+          "linea": 65,
           "resumen": "Todo lo que sale hacia el huésped pasa por aquí, así que aquí se anota (28/09/2026). Smoobu devuelve nuestros mensajes en el hilo SIN marca de emisor, y sin este registro el agente tomaba por pregunta"
         },
         {
           "nombre": "enviarAlHuesped",
           "kind": "function",
           "exportada": true,
-          "params": "reservationId: string, messageBody: string, subject = ''",
+          "params": "reservationId: string, messageBody: string, subject = '', opts: { smoobuSolo?: boolean } = {}",
           "retorno": "Promise<boolean>",
-          "linea": 57,
+          "linea": 75,
           "resumen": "Envoltura booleana para los llamadores automáticos (crons, guardias) que solo reintentan."
         }
       ],
@@ -189490,7 +189746,7 @@
         "mensajes_enviados"
       ],
       "rutaApi": null,
-      "hash": "d0d039152bd8"
+      "hash": "8023ddf20f32"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/equipaje.ts",
@@ -190411,7 +190667,7 @@
           "nombre": "procesarMensajeHuesped",
           "kind": "function",
           "exportada": true,
-          "params": "bookingId: string, opts: { pregunta?: string; msgId?: string } = {},",
+          "params": "bookingId: string, opts: { pregunta?: string; msgId?: string; fecha?: Date } = {},",
           "retorno": "Promise<",
           "linea": 31,
           "resumen": "Idempotencia por id del mensaje. El llamador (sondeo/webhook) puede pasar la pregunta y el msgId directos del hilo de Smoobu — necesario porque /api/threads no trae `sent_by_owner` y /api/reservations"
@@ -190422,7 +190678,7 @@
         "mensajes_pendientes_tg"
       ],
       "rutaApi": null,
-      "hash": "60b4cbe037f5"
+      "hash": "3e3af4d6acba"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/parking.ts",
@@ -191096,7 +191352,7 @@
           "exportada": false,
           "params": "urgente: boolean",
           "retorno": null,
-          "linea": 18
+          "linea": 19
         },
         {
           "nombre": "traducirEs",
@@ -191104,7 +191360,7 @@
           "exportada": false,
           "params": "txt: string",
           "retorno": "Promise<string>",
-          "linea": 21,
+          "linea": 22,
           "resumen": "Traduce al español de España (para que Alberto entienda de un vistazo). Best-effort: si falla, ''."
         },
         {
@@ -191113,7 +191369,7 @@
           "exportada": false,
           "params": "lang: string",
           "retorno": "string",
-          "linea": 32,
+          "linea": 33,
           "resumen": "El borrador salió en ESPAÑOL con un huésped que escribe en otro idioma. Pedir su «traducción al español» devuelve el mismo texto y `traduccionUtil` la descarta → la línea 🔁 decía «no he podido traduc"
         },
         {
@@ -191122,7 +191378,7 @@
           "exportada": true,
           "params": "ctx: Contexto, pregunta: string, dec: Decision",
           "retorno": "Promise<void>",
-          "linea": 42,
+          "linea": 43,
           "resumen": "Copia INFORMATIVA (sin botones) de una respuesta que el agente ya envió SOLO (categoría graduada). Alberto NO tiene que hacer nada: es solo para que vea lo que se está mandando en automático. El mensa"
         },
         {
@@ -191131,7 +191387,7 @@
           "exportada": false,
           "params": "f: string",
           "retorno": "string",
-          "linea": 71,
+          "linea": 72,
           "resumen": "Fecha YYYY-MM-DD → DD/MM/YYYY (deja igual cualquier otro formato)."
         },
         {
@@ -191140,7 +191396,7 @@
           "exportada": true,
           "params": "ctx: Contexto, pregunta: string, dec: Decision",
           "retorno": "Promise<void>",
-          "linea": 77,
+          "linea": 78,
           "resumen": "Propone el borrador por Telegram con botones y guarda el estado pendiente (liga el booking)."
         },
         {
@@ -191149,7 +191405,7 @@
           "exportada": true,
           "params": "pend: { booking_id: string; idioma: string | null }, borrador: string, opts: { borradorEs?: string } = {},",
           "retorno": "Promise<void>",
-          "linea": 163,
+          "linea": 168,
           "resumen": "Re-propone un borrador tras ✏️ Modificar / 🔧 Retocar: muestra el texto FINAL que se va a enviar (en el idioma del huésped + 🔁 español para verificar) con los botones, y deja el pendiente listo para "
         },
         {
@@ -191158,7 +191414,7 @@
           "exportada": true,
           "params": "messageId: number | null, texto: string",
           "retorno": "Promise<void>",
-          "linea": 190
+          "linea": 195
         },
         {
           "nombre": "confirmarRespondidoFuera",
@@ -191166,7 +191422,7 @@
           "exportada": true,
           "params": "messageId: number | null",
           "retorno": "Promise<void>",
-          "linea": 194
+          "linea": 199
         },
         {
           "nombre": "confirmarEsMio",
@@ -191174,7 +191430,7 @@
           "exportada": true,
           "params": "messageId: number | null",
           "retorno": "Promise<void>",
-          "linea": 198
+          "linea": 203
         },
         {
           "nombre": "confirmarDescartado",
@@ -191182,7 +191438,7 @@
           "exportada": true,
           "params": "messageId: number | null",
           "retorno": "Promise<void>",
-          "linea": 202
+          "linea": 207
         },
         {
           "nombre": "cargarReservasPropiedad",
@@ -191190,7 +191446,7 @@
           "exportada": true,
           "params": "propertyId: string",
           "retorno": "Promise<ReservaHorario[] | null>",
-          "linea": 218,
+          "linea": 223,
           "resumen": "Reservas del MISMO piso, deduplicadas por `reservationId` y SIN las de `reservas_canceladas`. `null` = no se pudo leer (≠ `[]` = no hay ninguna): el semáforo no puede ser verde con un null."
         },
         {
@@ -191199,7 +191455,7 @@
           "exportada": false,
           "params": "bookingId: string",
           "retorno": "Promise<ReservaIncome | null>",
-          "linea": 237
+          "linea": 242
         },
         {
           "nombre": "hoyMadrid",
@@ -191207,7 +191463,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 249
+          "linea": 254
         },
         {
           "nombre": "evaluarReserva",
@@ -191215,7 +191471,7 @@
           "exportada": false,
           "params": "bookingId: string, propertyId: string, pet: PeticionHorario, pregunta: string, fechas: { checkIn: string | null; checkOut: string | null }",
           "retorno": null,
-          "linea": 251
+          "linea": 256
         },
         {
           "nombre": "proponerCambioHorario",
@@ -191223,7 +191479,7 @@
           "exportada": false,
           "params": "ctx: Contexto, pregunta: string, dec: Decision, pet: PeticionHorario",
           "retorno": "Promise<void>",
-          "linea": 258
+          "linea": 263
         },
         {
           "nombre": "aceptarCambioHorario",
@@ -191231,7 +191487,7 @@
           "exportada": true,
           "params": "pend: PendCambio, hora: string",
           "retorno": "Promise<ResultadoAceptacion>",
-          "linea": 322,
+          "linea": 327,
           "resumen": "✅ Sí / 🕐 Sí, hasta HH: vuelve a mirar el calendario (puede haber entrado una reserva desde que se propuso), manda el mensaje al huésped en SU idioma y crea la tarea en /invitado/limpieza. Si el calen"
         },
         {
@@ -191240,7 +191496,7 @@
           "exportada": true,
           "params": "pend: { borrador: string | null; idioma: string | null }",
           "retorno": "boolean",
-          "linea": 360,
+          "linea": 365,
           "resumen": "Texto del «no»: debe estar en el idioma del huésped (si el borrador salió en español, no se manda)."
         }
       ],
@@ -191251,7 +191507,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "0fed4cfbd3ef"
+      "hash": "984e77dd8b6f"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/alertas-autoresolucion.ts",
@@ -195156,7 +195412,7 @@
         "sivra_codigos_acceso"
       ],
       "rutaApi": null,
-      "hash": "dfb81d559344"
+      "hash": "da60f55227fb"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/mensajes-prog/plantillas.ts",
@@ -270520,7 +270776,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5565,
-    "funciones": 21855
+    "archivos": 5568,
+    "funciones": 21878
   }
 }
