@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 
+## (03/11/2026) Fiscal · tarjeta Kutxabank 0300 importada + catastro Socorro cerrado
+- Tarjeta Kutxabank 4662…0300 es de CRÉDITO: 246 movimientos nuevos (01/04–03/11), liquidaciones mensuales = `traspaso_interno`; Amazon → personal; ~50 sin clasificar. El aviso Telegram ya pide su extracto si se para (`fiscal-alertas.ts`).
+- Valor catastral Socorro 150.549,25€ el piso entero (#5417): renta 2025 y motor correctos. Fly.io 6,68€ → correduría (factura a nombre de Manuel: pedirla a su NIF).
+- Pendiente: `lib/sivra/pl-mensual.ts:139-168` cuenta dos veces gastos con factura en `gastos` Y cargo de tarjeta con piso (p.ej. TV 1.749€): falta enlace gasto↔movimiento. Extractos de Pilar, póliza 061145138, acciones antes del 31/12, asesoría.
 ## (03/11/2026) PR #5412 MERGEADO · facturas de plataforma: «✅ Pagar» hace pago REAL
 - «✅ Pagar» de la alerta 🧾 lanza pago real (PIS Enable Banking o SEPA), no marca pagada. Ahora no se ofrece si la factura ya casa con un cargo (fail-closed). Sin pago para Si Que Brilla (se paga a mano; alerta de verificación: limpiezas por piso × LIMPIEZA_TARIFAS vs salidas, lavandería por huésped-noche ±15 %, sin histórico → «sin referencia»). Tarjeta (Fly/Vercel: débito Kutxabank en cuenta corriente, detectado por concepto): casa al importar extracto o PSD2, ±8 % divisa con cambio aproximado; aviso «sin cargo» solo lunes.
 - Un cargo cierra una sola factura (`conciliar-par.ts` marca el movimiento `factura_ref='fp:<id>'`); doble pulsación bloqueada con estado `pago_iniciando`.
