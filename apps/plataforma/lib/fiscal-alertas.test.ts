@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import type { AvisosDatos, Periodo, PropiedadFiscal } from './base-fiscal-devengo.ts'
 import { parametrosIrpf, type EntradaSimulador } from './simulador-irpf.ts'
 import {
-  CUENTAS_CUBIERTAS_POR, avisoCuentas, avisoDiciembre, avisoFacturasMeses, avisoUmbral, construirAlertas, decidirEnvios, hashTexto, mejorPalanca,
+  avisoCuentas, avisoDiciembre, avisoFacturasMeses, avisoUmbral, construirAlertas, decidirEnvios, hashTexto, mejorPalanca,
 } from './fiscal-alertas.ts'
 
 const PROPS: PropiedadFiscal[] = [{ id: 'prop_a', nombre: 'A', bloque: 'capital_inmobiliario', titulares: [{ titular: 'alberto', porcentaje: 100 }] }]
@@ -63,11 +63,9 @@ test('cuentas: BBVA y Pilar piden extracto; las demás, reconectar; sin movimien
   assert.match(t, /Cuenta Pilar: sin movimientos registrados, envía el extracto/)
   assert.match(t, /Kutxabank: .+reconecta/)
 })
-test('cuentas: la tarjeta Kutxabank (débito de la cuenta de pisos) NO avisa', () => {
-  assert.ok(CUENTAS_CUBIERTAS_POR.length > 0)
-  assert.equal(avisoCuentas(cuentas(['Tarjeta Kutxabank', '2026-08-01', 90]), 2026), null)
-  assert.match(avisoCuentas(cuentas(['Tarjeta Kutxabank', '2026-08-01', 90], ['BBVA correduría', null, null]), 2026)!.texto, /BBVA correduría/)
-  assert.doesNotMatch(avisoCuentas(cuentas(['Tarjeta Kutxabank', '2026-08-01', 90], ['BBVA correduría', null, null]), 2026)!.texto, /Tarjeta/)
+test('cuentas: la tarjeta Kutxabank es de CRÉDITO (feed manual): avisa pidiendo el extracto', () => {
+  const x = avisoCuentas(cuentas(['Tarjeta Kutxabank', '2026-09-20', 44]), 2026)!.texto
+  assert.match(x, /Tarjeta Kutxabank: .+\(hace 44 días\), envía el extracto para importarlo/)
 })
 
 // ── 3. Meses sin factura ────────────────────────────────────────────────────────────────────

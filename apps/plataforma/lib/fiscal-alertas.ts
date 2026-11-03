@@ -76,18 +76,14 @@ export function avisoUmbral(e: EntradaSimulador, compras: CompraPrevista[], anio
 export const soloCerrados = (meses: string[], hoy: string) => meses.filter(m => m < hoy.slice(0, 7))
 
 /**
- * Cuentas cuyos cargos ya salen en otra cuenta que sí sincroniza → no se avisa por ellas (Alberto, 31/10/2026:
- * la «tarjeta Kutxabank» es de DÉBITO de la cuenta Kutxabank de pisos). Único sitio: añadir aquí si hay más.
+ * BBVA (Dúplex y correduría), las de Pilar y la tarjeta de CRÉDITO Kutxabank (4662032019750300) no sincronizan:
+ * se pide el extracto; el resto, reconectar. La cuenta Kutxabank solo trae la liquidación mensual de la tarjeta
+ * (`traspaso_interno`), el detalle de compras vive en la cuenta de la tarjeta: si se para, hay que avisar.
  */
-export const CUENTAS_CUBIERTAS_POR: { cuenta: RegExp; madre: string }[] = [
-  { cuenta: /tarjeta.*kutxa|kutxa.*tarjeta/i, madre: 'Kutxabank (pisos)' },
-]
-export const estaCubierta = (nombre: string) => CUENTAS_CUBIERTAS_POR.some(c => c.cuenta.test(nombre))
-/** BBVA (Dúplex y correduría) y las de Pilar no sincronizan: se pide el extracto; el resto, reconectar. */
-export const esPorExtracto = (nombre: string) => /bbva|pilar/i.test(nombre)
+export const esPorExtracto = (nombre: string) => /bbva|pilar|tarjeta.*kutxa|kutxa.*tarjeta/i.test(nombre)
 
 export function avisoCuentas(a: AvisosDatos, anio: number): Alerta | null {
-  const pendientes = a.cuentasSinActualizar.filter(c => !estaCubierta(c.nombre))
+  const pendientes = a.cuentasSinActualizar
   if (!pendientes.length) return null
   const filas = pendientes.map(c => {
     const accion = esPorExtracto(c.nombre) ? 'envía el extracto para importarlo' : 'reconecta'
