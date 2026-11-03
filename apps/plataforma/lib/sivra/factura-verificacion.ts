@@ -10,6 +10,7 @@
 // para que `node --test` lo corra tal cual (como `factura-cuadre.ts`).
 import { eur } from '../dinero.ts'
 import { IVA_LIMPIEZA } from './reparto-siquebrilla.ts'
+import { MEDIADOR } from '@central/module-seguros/mediador'
 
 /** NIF de Si Que Brilla SL (skill facturas-correo, patrón SIQUE). La identidad manda sobre el nombre. */
 export const NIF_SQB = 'B22992523'
@@ -32,8 +33,15 @@ function normalizaNif(s?: string | null): string {
  * ¿Es Si Que Brilla? Por NIF si se conoce (un NIF distinto es OTRA empresa aunque se llame parecido);
  * sin NIF, por la clave del nombre (todo el nombre en letras, no una palabra suelta).
  */
-export function esProveedorSqb(p: { nif?: string | null; proveedor?: string | null }): boolean {
-  const nif = normalizaNif(p.nif)
+export function esProveedorSqb(
+  p: { nif?: string | null; proveedor?: string | null },
+  nifsTitulares: readonly (string | null | undefined)[] = [],
+): boolean {
+  let nif = normalizaNif(p.nif)
+  // Un NIF que es del propio titular (Alberto u otro titular conocido) es el RECEPTOR leído por error,
+  // no la identidad del proveedor: se ignora y se decide por nombre.
+  const propios = new Set([MEDIADOR.identidad.nif, ...nifsTitulares].map(normalizaNif).filter(Boolean))
+  if (nif && propios.has(nif)) nif = ''
   if (nif) return nif === NIF_SQB
   const clave = (p.proveedor ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z]/g, '').toUpperCase()
   return clave.startsWith('SIQUEBRILLA')

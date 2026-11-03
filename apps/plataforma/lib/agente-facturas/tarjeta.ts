@@ -98,15 +98,26 @@ export function planificarAvisoTarjeta(facturas: FacturaTarjeta[], hoy: string, 
 const MAX_LINEAS = 8
 
 /** Texto HTML del aviso (el proveedor lo escapa quien llama). Vacío si no hay nada que decir. */
-export function textoAvisoTarjeta(p: PlanAvisoTarjeta, escapar: (s: string) => string = (s) => s): string {
+export function textoAvisoTarjeta(p: PlanAvisoTarjeta, escapar: (s: string) => string = (s) => s, cuenta?: string | null): string {
   if (p.sinCargo.length === 0) return ''
+  const deCuenta = cuenta ? ` (cuenta ${escapar(cuenta)})` : ''
   const lineas = p.sinCargo.slice(0, MAX_LINEAS).map((f) => {
     const imp = f.divisa && f.divisa.toUpperCase() !== 'EUR' ? `${f.importe.toFixed(2).replace('.', ',')} ${f.divisa.toUpperCase()}` : eur(f.importe)
     return `• ${escapar(f.proveedor)} · ${imp} · factura del ${f.fecha_factura}`
   })
   if (p.sinCargo.length > MAX_LINEAS) lineas.push(`<i>... y ${p.sinCargo.length - MAX_LINEAS} más</i>`)
-  return `💳 <b>${p.sinCargo.length}</b> factura(s) de tarjeta sin cargo casado tras ${DIAS_AVISO_TARJETA} días:\n${lineas.join('\n')}\n`
+  return `💳 <b>${p.sinCargo.length}</b> factura(s) de tarjeta${deCuenta} sin cargo casado tras ${DIAS_AVISO_TARJETA} días:\n${lineas.join('\n')}\n`
     + `Puede que simplemente falte subir el extracto de la tarjeta (los feeds automáticos están parados): no es un impago confirmado.`
+}
+
+/**
+ * El aviso de «sin cargo» no guarda estado (sin migración): para no repetirlo cada día con el mismo
+ * conjunto de facturas, solo sale los LUNES (`hoy` = YYYY-MM-DD).
+ */
+export function tocaAvisoTarjetaSemanal(hoy: string): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(hoy)
+  if (!m) return false
+  return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])).getUTCDay() === 1
 }
 
 // ── Cableado en el flujo de pago (puro; lo usa pagos.ts) ──

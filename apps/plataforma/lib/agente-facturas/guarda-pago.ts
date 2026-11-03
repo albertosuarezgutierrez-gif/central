@@ -25,3 +25,9 @@ export function fechaCorta(iso: string | null | undefined): string | null {
 export function textoYaPagada(fecha: string | null): string {
   return fecha ? `ya pagada · conciliada con el cargo del ${fecha}` : 'ya pagada · conciliada con el extracto bancario'
 }
+
+/** Estados desde los que `aprobarPago` acepta iniciar un pago (una sola lista: la usan la guarda y el paso atómico a `aprobada`). */
+export const ESTADOS_PAGABLES = ['nueva', 'pendiente_revision', 'aprobada'] as const
+
+export const ERROR_SQB_A_MANO = 'Si Que Brilla se paga a mano por transferencia; no se inicia pago.'
+export const ERROR_PAGO_EN_CURSO = 'Este pago ya está en curso (o la factura cambió de estado). No se inicia otro.'

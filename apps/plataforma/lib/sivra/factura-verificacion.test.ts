@@ -206,3 +206,13 @@ test('pagos.ts: notificarFactura desvía a SQB antes de los botones de Pagar', (
   const fnSqb = src.slice(j, src.indexOf('\n}\n', j))
   assert.doesNotMatch(fnSqb, /pago_aprobar/)
 })
+
+// ── NIF del propio titular leído como proveedor ──────────────────────────────────
+test('esProveedorSqb: NIF de Alberto (receptor leído por error) se ignora y decide el nombre → SQB', () =>
+  assert.equal(esProveedorSqb({ nif: '28823484E', proveedor: 'Si Que Brilla SL' }), true))
+test('esProveedorSqb: NIF de Alberto + otro proveedor → no es SQB', () =>
+  assert.equal(esProveedorSqb({ nif: '28823484-E', proveedor: 'Endesa' }), false))
+test('esProveedorSqb: NIF de un titular conocido se ignora y decide el nombre', () =>
+  assert.equal(esProveedorSqb({ nif: 'B12345678', proveedor: 'Si Que Brilla' }, ['b12345678']), true))
+test('esProveedorSqb: NIF de otra empresa que NO es titular sigue mandando sobre el nombre', () =>
+  assert.equal(esProveedorSqb({ nif: 'B12345678', proveedor: 'Si Que Brilla' }), false))

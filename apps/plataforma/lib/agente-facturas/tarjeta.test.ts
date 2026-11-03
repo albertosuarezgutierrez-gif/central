@@ -1,5 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { clasificarTarjeta, clasificarCargo, tarjetaDeRaw, divisaEfectiva, planificarAvisoTarjeta, textoAvisoTarjeta, type FacturaTarjeta } from './tarjeta.ts'
 import { asignarCargos, ratioTarjeta, enVentanaCargo, toleranciaFactura } from './casar-cargos.ts'
 import { sumaDias } from './domiciliados.ts'
@@ -109,4 +110,40 @@ test('cableado: pagarTodo salta las de tarjeta=true y conserva false/null/ausent
 })
 test('cableado: mapa vacío (lectura fallida) → no salta ninguna', () => {
   assert.equal(sinFacturasTarjeta([{ proveedor: 'A' }], new Map()).length, 1)
+})
+
+// ── Aviso semanal sin estado + nombre de cuenta ──────────────────────────────────
+import { tocaAvisoTarjetaSemanal, textoAvisoTarjeta as textoAviso } from './tarjeta.ts'
+test('tocaAvisoTarjetaSemanal: lunes sí', () => assert.equal(tocaAvisoTarjetaSemanal('2026-11-02'), true))
+test('tocaAvisoTarjetaSemanal: martes no', () => assert.equal(tocaAvisoTarjetaSemanal('2026-11-03'), false))
+test('tocaAvisoTarjetaSemanal: fecha ilegible no', () => assert.equal(tocaAvisoTarjetaSemanal('xx'), false))
+test('textoAvisoTarjeta: incluye el nombre de la cuenta', () => {
+  const t = textoAviso({ sinCargo: [{ id: '1', proveedor: 'X', importe: 5, divisa: null, cambio: null, fecha_factura: '2026-10-01' } as never], enPlazo: [] }, (s) => s, 'Mi cuenta')
+  assert.match(t, /cuenta Mi cuenta/)
+})
+
+const leer = (f: string) => readFileSync(new URL(f, import.meta.url), 'utf8')
+const tc = leer('./tarjeta-cargos.ts')
+const cuerpoDe = (src: string, marca: string) => { const i = src.indexOf(marca); assert.ok(i >= 0, marca); return src.slice(i, src.indexOf('\n}\n', i)) }
+test('tarjeta-cargos: avisar concilia ANTES de avisar', () => {
+  const c = cuerpoDe(tc, 'export async function avisarTarjetaSinCargo')
+  assert.ok(c.indexOf('conciliarFacturasTarjeta(cuentaId)') >= 0)
+  assert.ok(c.indexOf('conciliarFacturasTarjeta(cuentaId)') < c.indexOf('avisaTarjetaSinCargo('))
+})
+test('tarjeta-cargos: avisar solo toca los lunes', () => assert.match(cuerpoDe(tc, 'export async function avisarTarjetaSinCargo'), /tocaAvisoTarjetaSemanal\(hoy\)/))
+test('tarjeta-cargos: cierra la factura con su cargo (atómico)', () => assert.match(cuerpoDe(tc, 'export async function conciliarFacturasTarjeta'), /cerrarFacturaConCargo\(/))
+test('tarjeta-cargos: la casación excluye cargos ya conciliados', () => assert.match(cuerpoDe(tc, 'export async function conciliarFacturasTarjeta'), /mb\.conciliado IS NOT TRUE/))
+test('tarjeta-cargos: quita botones del 🧾 viejo', () => assert.match(cuerpoDe(tc, 'export async function conciliarFacturasTarjeta'), /actualizarMensajeTg\(/))
+const scan = leer('../../app/api/sivra/expenses/agent/scan/route.ts')
+test('scan: excluye cuentas [seed-demo]', () => assert.match(scan, /nombre NOT ILIKE '%\[seed-demo\]%'/))
+test('scan: pasa el nombre de la cuenta al aviso', () => assert.match(scan, /avisarTarjetaSinCargo\(c\.id, .*c\.nombre\)/))
+const cp = leer('./conciliar-par.ts')
+test('conciliar-par: marca el movimiento solo si conciliado IS NOT TRUE y con factura_ref fp:', () => {
+  assert.match(cp, /WHERE id = \$\{par\.movimiento_id\}::uuid AND conciliado IS NOT TRUE/)
+  assert.match(cp, /'fp:' \+ par\.factura_id/)
+})
+test('conciliar-par: movimiento sin filas → no cierra factura; todo en transacción', () => {
+  assert.match(cp, /prisma\.\$transaction/)
+  assert.match(cp, /mov\.length === 0\) throw new SinCambio/)
+  assert.ok(cp.indexOf('UPDATE movimientos_bancarios') < cp.indexOf('UPDATE facturas_proveedor'))
 })

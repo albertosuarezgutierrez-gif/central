@@ -8,13 +8,14 @@ import { Prisma } from '@prisma/client'
 import { escapeHtml } from '@central/core-telegram'
 import { asignarCargos, ratioTarjeta, enVentanaCargo, VENTANA_CARGO_ANTES, VENTANA_CARGO_DESPUES } from './casar-cargos'
 import { claveProveedor, claveUtil, clavesDeTitulares, CLAVES_GENERICAS } from './forma-pago'
-import { clasificarTarjeta, tarjetaDeRaw, RE_CONCEPTO_TARJETA, RE_CONCEPTO_OTRO, divisaEfectiva, planificarAvisoTarjeta, textoAvisoTarjeta, type FacturaTarjeta } from './tarjeta'
+import { clasificarTarjeta, tarjetaDeRaw, RE_CONCEPTO_TARJETA, RE_CONCEPTO_OTRO, divisaEfectiva, planificarAvisoTarjeta, textoAvisoTarjeta, tocaAvisoTarjetaSemanal, type FacturaTarjeta } from './tarjeta'
 import { cargarTitulares } from './titulares'
 import { avisaTarjetaSinCargo } from './avisos'
+import { cerrarFacturaConCargo, actualizarMensajeTg } from './conciliar-par'
 
-const ESTADOS_ABIERTOS = ['nueva', 'pendiente_revision', 'aprobada', 'pago_iniciado']
+const ESTADOS_ABIERTOS = ['nueva', 'pendiente_revision', 'aprobada', 'pago_iniciando', 'pago_iniciado']
 
-interface FilaFactura { id: string; proveedor: string; importe: number; divisa: string | null; cambio: number | null; fecha_factura: string }
+interface FilaFactura { id: string; proveedor: string; importe: number; divisa: string | null; cambio: number | null; fecha_factura: string; telegram_msg_id: number | null }
 
 /** Forma de pago «tarjeta» (true/false/null) por proveedor, desde la factura leída + historial de cargos. Un fallo = null. */
 export async function proveedoresTarjeta(cuentaId: string, proveedores: string[]): Promise<Map<string, boolean | null>> {
@@ -60,7 +61,8 @@ export async function facturasTarjetaPendientes(cuentaId: string): Promise<FilaF
     SELECT f.id::text AS id, f.proveedor, f.importe::float AS importe,
            to_jsonb(f)->>'divisa' AS divisa,
            NULLIF(to_jsonb(f)->>'tipo_cambio', '')::float AS cambio,
-           COALESCE(f.fecha_factura, f.created_at::date)::text AS fecha_factura
+           COALESCE(f.fecha_factura, f.created_at::date)::text AS fecha_factura,
+           f.telegram_msg_id
     FROM facturas_proveedor f
     WHERE f.cuenta_id = ${cuentaId}::uuid AND f.estado = ANY(${ESTADOS_ABIERTOS}) AND f.importe > 0`)
   const formas = await proveedoresTarjeta(cuentaId, filas.map((f) => f.proveedor))
@@ -94,20 +96,30 @@ export async function conciliarFacturasTarjeta(cuentaId: string): Promise<number
       if (r) cands.push({ factura_id: f.id, movimiento_id: m.id, dist: Math.abs(m.dias), ratio: r.ratio, tolerancia: r.tolerancia })
     }
   }
-  const ids = asignarCargos(cands).map((p) => p.factura_id)
-  if (ids.length === 0) return 0
-  const res = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
-    UPDATE facturas_proveedor f SET estado = 'pagada', pago_confirmado_at = NOW()
-    WHERE f.cuenta_id = ${cuentaId}::uuid AND f.id = ANY(${ids}::uuid[]) AND f.estado = ANY(${ESTADOS_ABIERTOS})
-    RETURNING f.id::text`)
-  return res.length
+  const pares = asignarCargos(cands)
+  if (pares.length === 0) return 0
+  const msgPorFactura = new Map(facturas.map((f) => [f.id, f.telegram_msg_id]))
+  let n = 0
+  for (const par of pares) {
+    // Atómico con el movimiento: un cargo no cierra dos facturas.
+    if (!(await cerrarFacturaConCargo(cuentaId, par, ESTADOS_ABIERTOS))) continue
+    n++
+    await actualizarMensajeTg(msgPorFactura.get(par.factura_id) ?? null, `✅ Pago conciliado con el cargo de la tarjeta.`)
+  }
+  return n
 }
 
-/** Aviso de facturas de tarjeta sin cargo a los 10 días (para el cron del agente). Devuelve cuántas avisó. */
-export async function avisarTarjetaSinCargo(cuentaId: string, hoy = new Date().toISOString().slice(0, 10)): Promise<number> {
+/**
+ * Aviso de facturas de tarjeta sin cargo a los 10 días (para el cron del agente). Devuelve cuántas avisó.
+ * Antes de avisar CONCILIA (los cargos de la débito entran por PSD2, no solo al importar extracto) y
+ * solo avisa los lunes (sin estado de avisos en BD, es lo que evita repetir el mismo aviso cada día).
+ */
+export async function avisarTarjetaSinCargo(cuentaId: string, hoy = new Date().toISOString().slice(0, 10), nombreCuenta?: string | null): Promise<number> {
+  await conciliarFacturasTarjeta(cuentaId)
+  if (!tocaAvisoTarjetaSemanal(hoy)) return 0
   const pendientes = await facturasTarjetaPendientes(cuentaId)
   const plan = planificarAvisoTarjeta(pendientes as FacturaTarjeta[], hoy)
-  const texto = textoAvisoTarjeta(plan, escapeHtml)
+  const texto = textoAvisoTarjeta(plan, escapeHtml, nombreCuenta)
   if (!texto) return 0
   await avisaTarjetaSinCargo(texto)
   return plan.sinCargo.length

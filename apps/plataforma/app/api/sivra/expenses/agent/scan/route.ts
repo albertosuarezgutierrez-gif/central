@@ -144,8 +144,9 @@ export async function GET(req: NextRequest) {
     const dom = await domiciliadosSinCargo(now.toISOString().slice(0, 10))
     await avisaDomiciliadosSinCargo(dom.avisos, dom.sinCobertura, dom.cuentasParadas)
     // Facturas de tarjeta sin cargo a los 10 días (por cuenta; un fallo no corta el resumen).
-    const cuentasTarjeta = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`SELECT id::text AS id FROM cuentas`).catch(() => [])
-    for (const c of cuentasTarjeta) await avisarTarjetaSinCargo(c.id).catch((e) => console.error('[scan] tarjeta sin cargo:', e))
+    // Sin cuentas de prueba `[seed-demo]` (igual que el cron `facturas-scan`). Concilia y avisa solo los lunes.
+    const cuentasTarjeta = await prisma.$queryRaw<{ id: string; nombre: string }[]>(Prisma.sql`SELECT id::text AS id, nombre FROM cuentas WHERE nombre NOT ILIKE '%[seed-demo]%'`).catch(() => [])
+    for (const c of cuentasTarjeta) await avisarTarjetaSinCargo(c.id, now.toISOString().slice(0, 10), c.nombre).catch((e) => console.error('[scan] tarjeta sin cargo:', e))
     await resumen({ fuente: 'diario', ...stats })
   } catch (e) {
     console.error('[scan] avisos error:', e)

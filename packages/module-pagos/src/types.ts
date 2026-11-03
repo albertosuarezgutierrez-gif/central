@@ -5,6 +5,7 @@ export type EstadoFactura =
   | 'nueva'
   | 'pendiente_revision'
   | 'aprobada'
+  | 'pago_iniciando'
   | 'pago_iniciado'
   | 'pagada'
   | 'rechazada'

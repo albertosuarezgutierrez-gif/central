@@ -24,8 +24,9 @@ import { clasificarFormaPago, claveProveedor, claveUtil, clavesDeTitulares, CLAV
 import { asignarCargos, toleranciaFactura } from './casar-cargos'
 import { normalizarDivisa } from './divisa'
 import { coberturaPorCuenta } from './anomalias'
-import { decidirGuardaPago, fechaCorta, textoYaPagada } from './guarda-pago'
+import { decidirGuardaPago, fechaCorta, textoYaPagada, ESTADOS_PAGABLES, ERROR_SQB_A_MANO, ERROR_PAGO_EN_CURSO } from './guarda-pago'
 import { proveedoresTarjeta } from './tarjeta-cargos'
+import { cerrarFacturaConCargo, actualizarMensajeTg } from './conciliar-par'
 import { notaTarjeta, pagableAMano, sinFacturasTarjeta } from './tarjeta'
 import { botonesVerificacionSqb, esProveedorSqb, mensajeVerificacionSqb } from '@/lib/sivra/factura-verificacion'
 import { verificarSqbGuardada } from '@/lib/sivra/factura-verificacion-db'
@@ -424,8 +425,10 @@ export async function aprobarPago(
   )
   const factura = rows[0]
   if (!factura) return { ok: false, error: 'Factura no encontrada' }
+  // 🚨 Si Que Brilla se paga SIEMPRE a mano: cubre `pagarTodo` y callbacks `pago_aprobar` antiguos.
+  if (esProveedorSqb({ proveedor: factura.proveedor })) return { ok: false, error: ERROR_SQB_A_MANO }
   // 🚨 Guarda anti doble pago: ya pagada, o ya hay un cargo que casa → no se inicia nada. Fail-closed.
-  const pagable = ['nueva', 'pendiente_revision', 'aprobada'].includes(factura.estado)
+  const pagable = (ESTADOS_PAGABLES as readonly string[]).includes(factura.estado)
   let casado: boolean | null = null
   let fechaCargo: string | null = null
   if (pagable) {
@@ -448,7 +451,13 @@ export async function aprobarPago(
     return { ok: false, error: 'No pude comprobar el banco para descartar que ya esté pagada. No se ha iniciado el pago; inténtalo de nuevo en unos minutos.' }
   }
 
-  await prisma.$executeRaw(Prisma.sql`UPDATE facturas_proveedor SET estado = 'aprobada' WHERE id = ${facturaId}::uuid`)
+  // 🚨 Paso atómico (carrera de dos clics/callbacks): solo uno obtiene la fila; el otro NO inicia pago ni SEPA.
+  const reclamada = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
+    UPDATE facturas_proveedor SET estado = 'pago_iniciando'
+    WHERE id = ${facturaId}::uuid AND cuenta_id = ${cuentaId}::uuid
+      AND estado = ANY(${[...ESTADOS_PAGABLES]}) AND estado <> 'pago_iniciando' AND pago_id IS NULL
+    RETURNING id::text`)
+  if (reclamada.length === 0) return { ok: false, error: ERROR_PAGO_EN_CURSO }
 
   if (disponiblePis() && factura.iban_proveedor) {
     const redirectUrl = `${baseUrl()}/api/banca/pago/callback?facturaId=${facturaId}`
@@ -469,6 +478,8 @@ export async function aprobarPago(
       await actualizarMensajeTg(factura.telegram_msg_id, `✅ Pago iniciado — autoriza en tu banco:\n${pago.auth_url}`)
       return { ok: true, auth_url: pago.auth_url }
     } catch (e: any) {
+      // Falló al iniciar: se libera el reclamo para poder reintentar.
+      await prisma.$executeRaw(Prisma.sql`UPDATE facturas_proveedor SET estado = 'aprobada' WHERE id = ${facturaId}::uuid AND estado = 'pago_iniciando'`).catch(() => 0)
       return { ok: false, error: e.message }
     }
   }
@@ -591,7 +602,7 @@ async function casarFacturasConBanco(cuentaId: string) {
                translate(f.proveedor, 'áéíóúÁÉÍÓÚñÑ', 'aeiouAEIOUnN'), '[^A-Za-z ]', '', 'g')), ' ', 1)) AS clave
       FROM facturas_proveedor f
       WHERE f.cuenta_id = ${cuentaId}::uuid
-        AND f.estado IN ('nueva', 'pendiente_revision', 'aprobada', 'pago_iniciado')
+        AND f.estado IN ('nueva', 'pendiente_revision', 'aprobada', 'pago_iniciando', 'pago_iniciado')
         AND f.importe > 0
     )
     SELECT fp.id::text AS factura_id, fp.telegram_msg_id, mb.id::text AS movimiento_id,
@@ -622,25 +633,19 @@ async function casarFacturasConBanco(cuentaId: string) {
   return { pares, msgPorFactura, fechaPorMov }
 }
 
-async function marcarConciliadas(cuentaId: string, ids: string[], msgPorFactura: Map<string, number | null>): Promise<number> {
-  if (ids.length === 0) return 0
-  const conciliadas = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
-    UPDATE facturas_proveedor f
-    SET estado = 'pagada', pago_confirmado_at = NOW()
-    WHERE f.cuenta_id = ${cuentaId}::uuid
-      AND f.id = ANY(${ids}::uuid[])
-      AND f.estado IN ('nueva', 'pendiente_revision', 'aprobada', 'pago_iniciado')
-    RETURNING f.id::text
-  `)
-  for (const row of conciliadas) {
-    await actualizarMensajeTg(msgPorFactura.get(row.id) ?? null, `✅ Pago conciliado con el extracto bancario.`)
+async function marcarConciliadas(cuentaId: string, pares: { factura_id: string; movimiento_id: string }[], msgPorFactura: Map<string, number | null>): Promise<number> {
+  let n = 0
+  for (const par of pares) {
+    if (!(await cerrarFacturaConCargo(cuentaId, par, ['nueva', 'pendiente_revision', 'aprobada', 'pago_iniciando', 'pago_iniciado']))) continue
+    n++
+    await actualizarMensajeTg(msgPorFactura.get(par.factura_id) ?? null, `✅ Pago conciliado con el extracto bancario.`)
   }
-  return conciliadas.length
+  return n
 }
 
 export async function conciliarConBanco(cuentaId: string): Promise<number> {
   const { pares, msgPorFactura } = await casarFacturasConBanco(cuentaId)
-  return marcarConciliadas(cuentaId, pares.map(p => p.factura_id), msgPorFactura)
+  return marcarConciliadas(cuentaId, pares, msgPorFactura)
 }
 
 /**
@@ -651,7 +656,7 @@ export async function conciliarFactura(cuentaId: string, facturaId: string): Pro
   const { pares, msgPorFactura, fechaPorMov } = await casarFacturasConBanco(cuentaId)
   const par = pares.find(p => p.factura_id === facturaId)
   if (!par) return { casa: false, fecha: null }
-  await marcarConciliadas(cuentaId, [facturaId], msgPorFactura)
+  await marcarConciliadas(cuentaId, [par], msgPorFactura)
   return { casa: true, fecha: fechaCorta(fechaPorMov.get(par.movimiento_id)) }
 }
 
@@ -744,10 +749,12 @@ export async function resumenSemanal(cuentaId: string): Promise<boolean> {
 
   const formas = await formasPago(cuentaId, rows.map(r => r.proveedor))
   const facturas: FacturaResumen[] = rows.map(r => ({ ...r, forma: formas.get(r.proveedor) ?? 'desconocida' }))
+  // SQB se paga a mano y `aprobarPago` la rechaza: fuera de las que se ofrecen como «por pagar por transferencia».
+  const paraPlan = facturas.filter(f => !esProveedorSqb({ proveedor: f.proveedor }))
   const hoy = new Date().toISOString().slice(0, 10)
   const cuentas = await coberturaPorCuenta(hoy, cuentaId, true).catch(() => null)
   const hayCobertura = (f: string) => hayCoberturaTotal(cuentas, f)
-  const plan = planificarAviso(facturas, hoy, hayCobertura)
+  const plan = planificarAviso(paraPlan, hoy, hayCobertura)
   if (!hayAviso(plan)) return false
 
   // Botones de pago SOLO si hay transferencias; nunca para lo que se cobra solo.
@@ -827,9 +834,3 @@ async function proponerVinculoReserva(
 
 // ── Helpers internos ──────────────────────────────────────────────────────────
 
-async function actualizarMensajeTg(msgId: number | null, texto: string): Promise<void> {
-  if (!msgId) return
-  try {
-    await tgEditMessage(msgId, texto)
-  } catch { /* Telegram no crítico */ }
-}
