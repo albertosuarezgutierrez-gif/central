@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { interpretarCampana, pasosEmbudo, porcentaje, textoNumero, textoPorcentaje, estadoPersona, personasDelPaso, fechaDelPaso, type EmbudoCampana, type PersonaCampana } from './campana-presentacion.ts'
+import { CAMPANAS_CORREO, campanaDeParametro, interpretarCampana, pasosEmbudo, porcentaje, textoNumero, textoPorcentaje, estadoPersona, personasDelPaso, fechaDelPaso, type EmbudoCampana, type PersonaCampana } from './campana-presentacion.ts'
 
 const emb = (o: Partial<EmbudoCampana> = {}): EmbudoCampana => ({
   enviados: 200, fallidos: 0, entregados: 190, abiertos: 95, clics: 19, visitas: 10, registrados: 5, rebotados: 2, bajas: 1, ...o,
@@ -89,4 +89,13 @@ test('fechaDelPaso: la propia; si falta, la del paso posterior marcada como dedu
   assert.deepEqual(fechaDelPaso(p, 'clics'), { iso: '2026-10-16T10:00:00Z', inferido: false })
   assert.deepEqual(fechaDelPaso(p, 'abiertos'), { iso: '2026-10-16T10:00:00Z', inferido: true })
   assert.equal(fechaDelPaso(per('e', 'enviado'), 'abiertos'), null)
+})
+
+test('campanaDeParametro: por defecto la de leads; la del aviso de vencimiento se acepta; texto libre no', () => {
+  assert.equal(campanaDeParametro(null), 'presentacion_app')
+  assert.equal(campanaDeParametro(''), 'presentacion_app')
+  assert.equal(campanaDeParametro('aviso_venc_app'), 'aviso_venc_app')
+  assert.equal(campanaDeParametro('presentacion_app'), 'presentacion_app')
+  assert.equal(campanaDeParametro('otra; drop'), null)
+  assert.deepEqual(CAMPANAS_CORREO.map((c) => c.id), ['presentacion_app', 'aviso_venc_app'])
 })

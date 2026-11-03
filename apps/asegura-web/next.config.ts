@@ -3,7 +3,7 @@ import type { NextConfig } from 'next'
 const nextConfig: NextConfig = {
   // `@central/brand` y `@central/module-seguros` son fuente TS pura (sin build):
   // Next tiene que compilarlas.
-  transpilePackages: ['@central/brand', '@central/module-seguros'],
+  transpilePackages: ['@central/brand', '@central/core-consent', '@central/module-seguros'],
 
   // 🚨 URLs del sitio ANTERIOR que Google sigue sirviendo, y que desde que este
   // proyecto tomó el apex (05/09/2026) devolvían un 404. Medido en Search

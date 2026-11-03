@@ -1,4 +1,17 @@
 import type { NextRequest } from 'next/server'
+import { timingSafeEqual } from 'node:crypto'
+
+/**
+ * Comparación de secretos en TIEMPO CONSTANTE (02/11/2026). `===` corta en el primer carácter
+ * distinto y filtra por tiempo cuánto del secreto casa. Vacío o ausente ⇒ nunca casa.
+ */
+export function igualSeguro(a: string | null | undefined, b: string | null | undefined): boolean {
+  if (typeof a !== 'string' || typeof b !== 'string' || !b) return false
+  const x = Buffer.from(a)
+  const y = Buffer.from(b)
+  if (x.length !== y.length) return false
+  return timingSafeEqual(x, y)
+}
 
 /**
  * Decisión PURA de si una llamada de cron está autorizada. Separada del `NextRequest` para poder
@@ -25,14 +38,16 @@ export function autorizaCron(p: {
   produccion: boolean
 }): boolean {
   if (!p.secret) return !p.produccion
-  return p.bearer === p.secret || p.qs === p.secret
+  return igualSeguro(p.bearer, p.secret) || igualSeguro(p.qs, p.secret)
 }
 
 function enProduccion(): boolean {
   return process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production'
 }
 
-export function isCronAuthorized(req: NextRequest): boolean {
+// `soloCabecera`: no acepta `?secret=` (se filtra en logs de acceso / Referer). Úsalo en las rutas
+// que solo llaman Vercel Cron o el dispatcher, que siempre mandan `Authorization: Bearer`.
+export function isCronAuthorized(req: NextRequest, opts: { soloCabecera?: boolean } = {}): boolean {
   const secret = process.env.CRON_SECRET
   const produccion = enProduccion()
   if (!secret) {
@@ -44,7 +59,7 @@ export function isCronAuthorized(req: NextRequest): boolean {
   return autorizaCron({
     secret,
     bearer: req.headers.get('authorization')?.replace(/^Bearer\s+/i, ''),
-    qs: new URL(req.url).searchParams.get('secret'),
+    qs: opts.soloCabecera ? null : new URL(req.url).searchParams.get('secret'),
     produccion,
   })
 }
@@ -59,7 +74,7 @@ export function isAlertaTokenAuthorized(req: NextRequest): boolean {
   const token = process.env.ALERTA_TOKEN
   if (!token) return false
   const bearer = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
-  return bearer === token
+  return igualSeguro(bearer, token)
 }
 
 // Autorización para endpoints pensados para RUTINAS: acepta el token de bajo privilegio

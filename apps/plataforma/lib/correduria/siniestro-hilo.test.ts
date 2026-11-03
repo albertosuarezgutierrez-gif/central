@@ -1,0 +1,173 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { autorDeModo, citasNoEncontradas, combinacionValida, cuentaSustituidos, cuerpoCaja, mensajesVisibles, modoDeMensaje, puedeEditar, estadoPlazo, leerEsperando, leerHilo, leerMensajes, leerPlazos, motivoFallo, plegarTexto, textoDias } from './siniestro-hilo.ts'
+
+test('mensajes null ≠ []', () => {
+  assert.equal(leerMensajes(null), null)
+  assert.deepEqual(leerMensajes([]), [])
+  assert.deepEqual(leerMensajes([{ id: 'x', autor: 'raro', tipo: 'nota', texto: 'a' }]), [])
+})
+test('leerHilo tolera error y campos ausentes', () => {
+  assert.equal(leerHilo({ estado: 'error' }), null)
+  const h = leerHilo({ poliza: { id: 'p' } })!
+  assert.equal(h.mensajes, null)
+  assert.equal(h.diasEsperandoCompania, null)
+  assert.deepEqual(h.poliza?.documentos, [])
+})
+test('plazo sin fecha base nunca es 0', () => {
+  const e = estadoPlazo({ clave: 'a', etiqueta: 'A', fecha: null, diasRestantes: null, baseLegal: null, verificado: true, nota: null })
+  assert.equal(e.texto, 'falta la fecha base')
+  assert.equal(e.tono, 'neutral')
+})
+test('plazo rojo <15 y aviso si no verificado', () => {
+  const p = { clave: 'a', etiqueta: 'A', fecha: '2026-11-01', diasRestantes: 14, baseLegal: null, verificado: false, nota: null }
+  assert.equal(estadoPlazo(p).tono, 'malo')
+  assert.match(estadoPlazo(p).aviso ?? '', /pendiente de verificar/)
+  assert.deepEqual({ ...estadoPlazo({ ...p, diasRestantes: 15, verificado: true }) }, { ...estadoPlazo({ ...p, diasRestantes: 15, verificado: true }), ...{ tono: 'neutral', aviso: null } })
+  assert.equal(estadoPlazo({ ...p, diasRestantes: -2 }).texto, 'vencido hace 2 días')
+})
+test('plegado', () => {
+  assert.equal(plegarTexto('corto', false).plegado, false)
+  const largo = 'x'.repeat(700)
+  assert.equal(plegarTexto(largo, false).plegado, true)
+  assert.equal(plegarTexto(largo, true).visible.length, 700)
+})
+test('días y esperando', () => {
+  assert.equal(textoDias(1), '1 día')
+  assert.equal(textoDias(null), 'sin fecha base')
+  assert.equal(leerEsperando({}), null)
+  assert.deepEqual(leerEsperando([{ siniestroId: 'a', dias: 3 }, { siniestroId: 'b', dias: 20 }, { dias: 1 }])!.map(x => x.siniestroId), ['b', 'a'])
+})
+test('caja', () => {
+  assert.deepEqual(cuerpoCaja('interna', ' hola ', null), { autor: 'interna', tipo: 'nota', texto: 'hola' })
+  assert.deepEqual({ ...cuerpoCaja('enviado', 'x', 'd1') }, { ...cuerpoCaja('enviado', 'x', 'd1'), ...{ autor: 'corredor', tipo: 'enviado', documentoId: 'd1' } })
+})
+
+test('mensaje ilegible: texto null pero visible; sin texto y legible se descarta', () => {
+  const base = { id: 'm', autor: 'compania', tipo: 'comentario', creadoAt: null }
+  const [m] = leerMensajes([{ ...base, texto: null, textoIlegible: true }])!
+  assert.equal(m.textoIlegible, true)
+  assert.equal(m.texto, null)
+  assert.deepEqual(leerMensajes([{ ...base, texto: null, textoIlegible: false }]), [])
+})
+test('plazo: base_legal (snake) y nota', () => {
+  const [p] = leerPlazos([{ clave: 'respuesta_sac', etiqueta: 'SAC', fecha: null, diasRestantes: null, base_legal: 'Orden ECO/734/2004', verificado: false, nota: 'falta la fecha' }])!
+  assert.equal(p.baseLegal, 'Orden ECO/734/2004')
+  assert.equal(p.nota, 'falta la fecha')
+})
+test('leerHilo: solo estado ok; sin_migracion y errores no son hilo', () => {
+  assert.equal(leerHilo({ estado: 'sin_migracion' }), null)
+  assert.notEqual(leerHilo({ estado: 'ok', mensajes: [], plazos: [] }), null)
+  assert.equal(motivoFallo(503, { estado: 'sin_migracion' }), 'El hilo aún no está activado en la base de datos')
+  assert.equal(motivoFallo(403, { motivo: 'otra' }), 'otra')
+  assert.equal(motivoFallo(500, null), 'error 500')
+})
+test('esperando: un objeto de error nunca es lista vacía', () => {
+  assert.equal(leerEsperando({ estado: 'error' }), null)
+  assert.deepEqual(leerEsperando([]), [])
+})
+test('combinaciones y reclamación SAC solo con enviado', () => {
+  assert.equal(combinacionValida('compania', 'enviado'), false)
+  assert.equal(combinacionValida('corredor', 'enviado'), true)
+  assert.equal(combinacionValida('corredor', 'rehuse'), false)
+  assert.equal(combinacionValida('compania', 'rehuse'), true)
+  assert.equal(cuerpoCaja('rehuse', 'x', null).tipo, 'rehuse')
+  assert.equal(cuerpoCaja('enviado', 'x', null, true).reclamacionSac, true)
+  assert.equal('reclamacionSac' in cuerpoCaja('enviado', 'x', null, false), false)
+  assert.equal('reclamacionSac' in cuerpoCaja('interna', 'x', null, true), false)
+})
+test('citas no encontradas', () => {
+  assert.deepEqual(citasNoEncontradas({ citas: { noEncontradas: ['art 5'] } }), ['art 5'])
+  assert.deepEqual(citasNoEncontradas({ citas: { noEncontradas: [] } }), [])
+  assert.deepEqual(citasNoEncontradas(null), [])
+})
+
+const msg = (id: string, o: Record<string, unknown> = {}) =>
+  leerMensajes([{ id, autor: 'compania', tipo: 'comentario', texto: `t${id}`, ...o }])![0]
+
+test('leerMensaje lee sustituidoPor (null si falta)', () => {
+  assert.equal(msg('a').sustituidoPor, null)
+  assert.equal(msg('a', { sustituidoPor: 'b' }).sustituidoPor, 'b')
+})
+test('mensajesVisibles: por defecto solo vigentes con «editado»; con el conmutador, las sustituidas atenuables', () => {
+  const l = [msg('a', { sustituidoPor: 'a2' }), msg('b'), msg('a2', { meta: { sustituyeA: 'a' } })]
+  const v = mensajesVisibles(l, false)
+  assert.deepEqual(v.map(x => [x.mensaje.id, x.editado, x.sustituido]), [['b', false, false], ['a2', true, false]])
+  const t = mensajesVisibles(l, true)
+  assert.deepEqual(t.map(x => [x.mensaje.id, x.editado, x.sustituido]), [['a', false, true], ['b', false, false], ['a2', true, false]])
+  assert.equal(cuentaSustituidos(l), 1)
+})
+test('mensajesVisibles: sin sustituidoPor del servidor, deduce las sustituidas de meta.sustituyeA', () => {
+  const l = [msg('a'), msg('a2', { meta: { sustituyeA: 'a' } })]
+  assert.deepEqual(mensajesVisibles(l, false).map(x => x.mensaje.id), ['a2'])
+})
+test('puedeEditar: nunca IA, ni sustituidos, ni ilegibles, ni combinaciones que la caja no escribe', () => {
+  assert.equal(puedeEditar(msg('a')), true)
+  assert.equal(puedeEditar(msg('a', { autor: 'ia', tipo: 'borrador' })), false)
+  assert.equal(puedeEditar(msg('a', { sustituidoPor: 'b' })), false)
+  assert.equal(puedeEditar(msg('a', { texto: undefined, textoIlegible: true })), false)
+  assert.equal(puedeEditar(msg('a', { autor: 'corredor', tipo: 'comentario' })), false)
+  assert.equal(puedeEditar(msg('a', { autor: 'corredor', tipo: 'enviado' })), true)
+})
+test('modoDeMensaje y autorDeModo son coherentes; cuerpoCaja manda sustituyeA solo si se edita', () => {
+  assert.equal(modoDeMensaje({ autor: 'compania', tipo: 'rehuse' }), 'rehuse')
+  assert.equal(autorDeModo('rehuse'), 'compania')
+  assert.equal(autorDeModo('compania'), 'compania')
+  assert.equal(autorDeModo('enviado'), 'corredor')
+  assert.equal(autorDeModo('interna'), 'interna')
+  assert.equal('sustituyeA' in cuerpoCaja('compania', 'x', null), false)
+  assert.equal(cuerpoCaja('rehuse', ' x ', null, false, 'abc').sustituyeA, 'abc')
+  assert.equal(cuerpoCaja('rehuse', ' x ', null, false, 'abc').tipo, 'rehuse')
+})
+
+import { leerVeredicto, resaltarFragmento, leerPropuestaVolcado, trozosNuevos, ultimaFichaPerito, leerBusquedaPoliza, textoConfianza, hayPreRehuse, cuerpoValoracion, leerPartesPortal } from './siniestro-hilo.ts'
+
+test('veredicto: inválido o sin semáforo conocido = null; argumento sin texto se descarta', () => {
+  assert.equal(leerVeredicto(null), null)
+  assert.equal(leerVeredicto({ veredicto: null }), null)
+  assert.equal(leerVeredicto({ veredicto: { semaforo: 'verde' } }), null)
+  const v = leerVeredicto({ veredicto: { semaforo: 'faltan_datos', confianza: 0.5, preguntas: ['¿Fecha?', '', 3], argumentos: [{ texto: 'a', apoyo: 'ley', cita: 'art. 1', citaVerificada: false }, { apoyo: 'ley' }], derivar: 'otro' } })!
+  assert.deepEqual(v.preguntas, ['¿Fecha?'])
+  assert.equal(v.argumentos.length, 1)
+  assert.equal(v.argumentos[0].citaVerificada, false)
+  assert.equal(v.derivar, null)
+  assert.equal(v.resumen, null)
+  assert.equal(leerVeredicto({ veredicto: { semaforo: 'defendible', argumentos: [{ texto: 'x' }] } })!.argumentos[0].citaVerificada, null)
+})
+test('confianza: null no es 0', () => {
+  assert.equal(textoConfianza(null), 'sin confianza indicada')
+  assert.equal(textoConfianza(0.8), '80 %')
+  assert.equal(textoConfianza(65), '65 %')
+})
+test('resaltado ignora mayúsculas y acentos y conserva el texto', () => {
+  const t = resaltarFragmento('Quedan EXCLUIDOS los daños por Filtración.', 'filtracion excluidos')
+  assert.equal(t.map(x => x.texto).join(''), 'Quedan EXCLUIDOS los daños por Filtración.')
+  assert.deepEqual(t.filter(x => x.marca).map(x => x.texto), ['EXCLUIDOS', 'Filtración'])
+  assert.deepEqual(resaltarFragmento('abc', ''), [{ texto: 'abc', marca: false }])
+})
+test('volcado: propuesta, duplicados no cuentan, ficha del perito', () => {
+  assert.equal(leerPropuestaVolcado({ estado: 'ok' }), null)
+  const p = leerPropuestaVolcado({ estado: 'propuesta', duplicados: 1, fichaPerito: null, trozos: [
+    { emisor: 'Ana', rol: 'perito', fechaOriginal: '2026-10-01', texto: 'a', huella: 'h1', tipo: 'rehuse', duplicado: false, fichaPerito: { importeCubierto: 100, importeNoCubierto: null } },
+    { texto: 'b', huella: 'h2', tipo: 'comentario', duplicado: true },
+    { texto: '', huella: 'h3' },
+  ] })!
+  assert.equal(p.trozos.length, 2)
+  assert.equal(trozosNuevos(p), 1)
+  assert.equal(p.trozos[0].fichaPerito?.importeNoCubierto, null)
+})
+test('ficha del perito: la más reciente; ausencia = null', () => {
+  const m = (id: string, meta: Record<string, unknown> | null) => ({ id, autor: 'compania' as const, tipo: 'comentario' as const, texto: 'x', textoIlegible: false, documentoId: null, creadoPor: null, creadoAt: null, meta, sustituidoPor: null })
+  assert.equal(ultimaFichaPerito(null), null)
+  assert.equal(ultimaFichaPerito([m('a', null)]), null)
+  assert.equal(ultimaFichaPerito([m('a', { fichaPerito: { importeCubierto: 1 } }), m('b', { fichaPerito: { importeCubierto: 2 } })])!.importeCubierto, 2)
+})
+test('búsqueda en póliza: documentos 0 ≠ sin fragmentos; preRehuse; valoración; partes', () => {
+  assert.equal(leerBusquedaPoliza({ estado: 'ok', documentos: 0, fragmentos: [] })!.documentos, 0)
+  assert.equal(leerBusquedaPoliza({ estado: 'error' }), null)
+  assert.equal(hayPreRehuse({ preRehuse: true }), true)
+  assert.equal(hayPreRehuse(null), false)
+  assert.deepEqual(cuerpoValoracion('s', 'm', 'mal', ' '), { siniestroId: 's', valoracion: { mensajeId: 'm', voto: 'mal' } })
+  assert.equal(leerPartesPortal(undefined), null)
+  assert.deepEqual(leerPartesPortal([]), [])
+})

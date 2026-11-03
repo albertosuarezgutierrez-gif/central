@@ -1,5 +1,6 @@
 // Cepos del EXPLORADOR IA (13/10/2026). Fixtures SINTÉTICAS: ningún dato personal real (NIF, correo y teléfono inventados).
 import { describe, it, expect } from 'vitest'
+import { comprobarBoton, cuerpoLlevaAccionFinal } from './guard-emision.ts'
 import {
   ACCIONES_EXPLORADOR,
   DESCRIPCION_MOTIVOS_PARAR,
@@ -38,6 +39,7 @@ import {
   esGuardadoEnDialogoAutorizado,
   casaGuardadoEnDialogo,
   ENTRADAS_EXPLORACION,
+  esEntradaExploracion,
   normalizarEnteroPortal,
   relocalizarElemento,
   leerIncidenciasEjecucion,
@@ -295,6 +297,81 @@ describe('validarRespuestaExplorador', () => {
     if (r.ok) expect(r.respuesta.acciones).toHaveLength(4)
   })
 
+  // Real 28/10/2026 (Allianz patinete): la IA devolvió [rellenar…, parar] y el validador tiró TODO el lote (y el paso quedó en
+  // «ambiguo» con la pantalla sin explorar). Un `parar` detrás de rellenar/elegir/marcar se descarta: se hace lo anterior y en
+  // la pantalla siguiente la IA vuelve a decidir (si de verdad no hay salida, para SOLA).
+  describe('parar detrás de acciones de rellenado: se conserva lo anterior y se descarta el parar', () => {
+    it('[rellenar, parar] → solo el rellenar', () => {
+      const r = validarRespuestaExplorador(buena([
+        { accion: 'rellenar', ref: ref(inv, 'superficie'), dato: 'inmueble.superficie_m2' },
+        { accion: 'parar', motivo: 'ambiguo' },
+      ]), ctx(inv))
+      expect(r.ok).toBe(true)
+      if (r.ok) expect(r.respuesta.acciones.map((a) => a.accion)).toEqual(['rellenar'])
+    })
+    it('[rellenar, elegir, parar, rellenar] → las dos primeras; lo que va detrás del parar se ignora', () => {
+      const r = validarRespuestaExplorador(buena([
+        { accion: 'rellenar', ref: ref(inv, 'superficie'), dato: 'inmueble.superficie_m2' },
+        { accion: 'elegir', ref: ref(inv, 'tipoVivienda'), opcion: { valor: '1' } },
+        { accion: 'parar', motivo: 'dato_sensible_requerido' },
+        { accion: 'rellenar', ref: ref(inv, 'nifTomador'), dato: 'tomador.nif' },
+      ]), ctx(inv))
+      expect(r.ok).toBe(true)
+      if (r.ok) expect(r.respuesta.acciones.map((a) => a.accion)).toEqual(['rellenar', 'elegir'])
+    })
+    it('NO se tolera cuando hay un avanzar antes, el parar va primero, o es terminar', () => {
+      const avanzar = { accion: 'avanzar', ref: ref(inv, 'btnAceptarBasicos'), efectoEsperado: 'calcular', confianza: 'alta' }
+      expect(validarRespuestaExplorador(buena([avanzar, { accion: 'parar', motivo: 'ambiguo' }]), ctx(inv)).ok).toBe(false)
+      expect(validarRespuestaExplorador(buena([{ accion: 'parar', motivo: 'ambiguo' }, { accion: 'rellenar', ref: ref(inv, 'superficie'), dato: 'inmueble.superficie_m2' }]), ctx(inv)).ok).toBe(false)
+      expect(validarRespuestaExplorador(buena([{ accion: 'rellenar', ref: ref(inv, 'superficie'), dato: 'inmueble.superficie_m2' }, { accion: 'terminar', refsPrecio: [] }]), ctx(inv)).ok).toBe(false)
+    })
+    it('un rellenar INVÁLIDO antes del parar sigue invalidando el lote (la tolerancia no relaja la validación)', () => {
+      expect(validarRespuestaExplorador(buena([{ accion: 'rellenar', ref: ref(inv, 'superficie'), dato: 'dato.inventado' }, { accion: 'parar', motivo: 'ambiguo' }]), ctx(inv)).ok).toBe(false)
+    })
+    it('parar SOLA sigue valiendo', () => {
+      const r = validarRespuestaExplorador(buena([{ accion: 'parar', motivo: 'ambiguo' }]), ctx(inv))
+      expect(r.ok).toBe(true)
+    })
+  })
+
+  // Allianz ePAC (28/10/2026): los desplegables ndbx (`nx-dropdown`, role=combobox) no son <select>; se abren y se elige la opción
+  // de texto EXACTO (el mismo mecanismo que Comunidades/Hogar en el worker). Las opciones solo constan con el desplegable abierto.
+  describe('elegir sobre un nx-dropdown (ndbx)', () => {
+    const conNx = (opciones?: { valor: string | null; texto: string }[]) => inventario({
+      elementos: [
+        { tag: 'nx-dropdown', id: 'tipoDoc', role: 'combobox', etiqueta: 'Tipo de documento', ...(opciones ? { opciones } : {}) },
+        { tag: 'button', id: 'btnX', texto: 'Otra cosa' },
+      ],
+    })
+    const elegirNx = (inv: InventarioDom, valor: unknown, extra: Record<string, unknown> = {}) =>
+      buena([{ accion: 'elegir', ref: ref(inv, 'tipoDoc'), opcion: { valor, ...extra } }])
+    it('cerrado (sin opciones capturadas): vale un texto corto; el worker comprueba la opción EXACTA al abrir', () => {
+      const i = conNx()
+      expect(validarRespuestaExplorador(elegirNx(i, 'NIF'), ctx(i)).ok).toBe(true)
+    })
+    it('abierto (opciones capturadas): solo un texto EXACTO de esas opciones', () => {
+      const i = conNx([{ valor: null, texto: 'NIF' }, { valor: null, texto: 'NIE' }])
+      expect(validarRespuestaExplorador(elegirNx(i, 'NIE'), ctx(i)).ok).toBe(true)
+      expect(validarRespuestaExplorador(elegirNx(i, 'Pasaporte'), ctx(i)).ok).toBe(false)
+      expect(validarRespuestaExplorador(elegirNx(i, 'nie'), ctx(i)).ok).toBe(false)
+      expect(validarRespuestaExplorador(elegirNx(i, 'NI'), ctx(i)).ok).toBe(false)
+    })
+    it('forma: opcion.valor texto no vacío ≤80, sin otras claves; un NIF-like no cuela', () => {
+      const i = conNx()
+      for (const malo of [elegirNx(i, ''), elegirNx(i, 7), elegirNx(i, 'x'.repeat(81)), elegirNx(i, 'NIF', { extra: 1 }), elegirNx(i, '00000000T')]) {
+        expect(validarRespuestaExplorador(malo, ctx(i)).ok).toBe(false)
+      }
+    })
+    it('elegir sobre un botón o un input sigue rechazado (solo <select> y nx-dropdown)', () => {
+      const i = conNx()
+      expect(validarRespuestaExplorador(buena([{ accion: 'elegir', ref: ref(i, 'btnX'), opcion: { valor: 'NIF' } }]), ctx(i)).ok).toBe(false)
+    })
+    it('el saneado conserva las opciones de un nx-dropdown abierto (y las filtra como las de un select)', () => {
+      const i = conNx([{ valor: null, texto: 'NIF' }])
+      expect(i.marcos[0].elementos.find((e) => e.id === 'tipoDoc')!.opciones).toEqual([{ valor: null, texto: 'NIF' }])
+    })
+  })
+
   describe('con datos REALES: elegir/marcar solo sobre uso/régimen/tipo de vivienda con valor conocido', () => {
     const riesgo = { tomador: { nif: '00000000T', nombre: 'Ficticio' }, inmueble: { provincia: 'PROVINCIA PRUEBA' }, hogar: { uso: 'MainResidence', regimen: 'Owner', tipoVivienda: 'MiddleFloor' } }
     const invP = inventario({
@@ -357,13 +434,13 @@ describe('validarRespuestaExplorador', () => {
     ['acción fuera de lista', buena([{ accion: 'navegar', url: 'https://x.test' }])],
     ['ref inexistente', buena([{ accion: 'rellenar', ref: 'm9e9', dato: 'inmueble.superficie_m2' }])],
     ['opción que no está en el inventario', buena([{ accion: 'elegir', ref: 'm0e1', opcion: { valor: '99' } }])],
-    ['marcar un checkbox', buena([{ accion: 'marcar', ref: 'm0e9' }])],
-    ['marcar un radio de consentimiento', buena([{ accion: 'marcar', ref: 'm0e3' }])],
+    ['marcar un botón', buena([{ accion: 'marcar', ref: 'm0e6' }])],
+    ['marcar un campo de texto', buena([{ accion: 'marcar', ref: 'm0e8' }])],
     ['pulsar Emitir', buena([{ accion: 'avanzar', ref: 'm0e7', efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }])],
     ['«Aceptar» autorizado por texto pero que llama a validar_aceptar() (contrata)', buena([{ accion: 'avanzar', ref: 'm0e10', efectoEsperado: 'calcular', confianza: 'alta' }])],
     ['avanzar con confianza baja', buena([{ accion: 'avanzar', ref: 'm0e6', efectoEsperado: 'siguiente_pantalla', confianza: 'baja' }])],
     ['avanzar que no es el último', buena([{ accion: 'avanzar', ref: 'm0e6', efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }, { accion: 'rellenar', ref: 'm0e0', dato: 'inmueble.superficie_m2' }])],
-    ['parar acompañado', buena([{ accion: 'rellenar', ref: 'm0e0', dato: 'inmueble.superficie_m2' }, { accion: 'parar', motivo: 'ambiguo' }])],
+    ['parar acompañado (el parar va PRIMERO; detrás de un rellenar se tolera: ver «parar detrás de acciones de rellenado»)', buena([{ accion: 'parar', motivo: 'ambiguo' }, { accion: 'rellenar', ref: 'm0e0', dato: 'inmueble.superficie_m2' }])],
     ['motivo de parada inventado', buena([{ accion: 'parar', motivo: 'me apetece' }])],
     ['terminar sin importes en pantalla', buena([{ accion: 'terminar', refsPrecio: ['m0p0'] }])],
     ['mapeo a campo fuera del catálogo', buena([{ accion: 'parar', motivo: 'ambiguo' }], { mapeo: [{ ref: 'm0e0', campoCanonico: 'tomador.iban', confianza: 'alta' }] })],
@@ -548,7 +625,8 @@ describe('validarRespuestaExplorador', () => {
     })
 
     it('onclick recortado = bloqueante aunque el texto sea inocente', () => {
-      const i = inventario({ elementos: [{ tag: 'button', id: 'b1', texto: 'Siguiente', onclick: `irA('${'x'.repeat(120)}')` }] })
+      // 0.3.17: el onclick se evalúa entero hasta 8000 car.; más largo = recortado.
+      const i = inventario({ elementos: [{ tag: 'button', id: 'b1', texto: 'Siguiente', onclick: `irA('${'x'.repeat(8100)}')` }] })
       const r = avanzar(i, 'b1')
       expect(r.ok).toBe(false)
       if (!r.ok) expect(r.errores.join()).toMatch(/onclick_truncado/)
@@ -1168,5 +1246,86 @@ describe('orden del lote y lote cortado (14/10/2026, exploración 8d0676f9: año
       `ejecucion: rellenar ${r('nx-input-38')} «Año de construcción» (inmueble.anio_construccion): lote_cortado`,
       `ejecucion: avanzar ${r('siguiente')} «Siguiente»: lote_cortado`,
     ])
+  })
+})
+
+describe('Fidelidade · Vivienda (hogar), solo EXPLORACIÓN hasta el formulario (Alberto 28/10/2026)', () => {
+  const F = 'fidelidade:particulares:vivienda'
+  it('está en la lista cerrada, compañía/ramo correctos, sin avances de ningún tipo y no es del mediador', () => {
+    expect(esEntradaExploracion(F)).toBe(true)
+    const e = ENTRADAS_EXPLORACION[F]!
+    expect(e.compania).toBe('fidelidade')
+    expect(e.ramo).toBe('hogar')
+    expect(e.productoMenu).toBe('Fidelidade Vivienda')
+    expect([...e.avancesAutorizados]).toEqual([])
+    expect(e.avancesPorId ?? []).toEqual([])
+    expect(e.guardadosEnDialogo ?? []).toEqual([])
+    expect(e.tomadorMediador).toBeUndefined()
+  })
+  it('cumple la regex que valida la entrada en tarificador-relanzar.yml (compania:seccion:producto)', () => {
+    expect(F).toMatch(/^[a-z_]+:[a-z_]+:[a-z_]+$/)
+  })
+  it('NO hay entrada para EMPRESAS (Producto 4215 · Gama Comercio)', () => {
+    expect(Object.keys(ENTRADAS_EXPLORACION).filter((k) => k.startsWith('fidelidade:'))).toEqual([F])
+  })
+})
+
+describe('detectarParada 0.3.12: detalle con el nombre del patrón', () => {
+  it('título y campo de emisión llevan código de la lista cerrada, sin texto de la página', () => {
+    const t = detectarParada(inventario({ titulos: ['Resumen de contratación'] }))
+    expect(t?.motivo).toBe('cerca_de_emision')
+    expect(t?.detalle).toBe('titulo:resumen_contratacion')
+    expect(detectarParada(inventario({ titulos: ['Forma de pago'] }))?.detalle).toBe('titulo:forma_pago')
+    const c = detectarParada(inventario({ elementos: [{ tag: 'input', etiqueta: 'CVV' }] }))
+    expect(c?.detalle).toBe('campo:cvv')
+    for (const d of [t?.detalle, c?.detalle]) expect(DETALLES_FIN_EXPLORACION).toContain(d)
+    expect(JSON.stringify(t)).not.toContain('Resumen')
+  })
+})
+
+describe('detectarParada 0.3.13: «Contratación» (sección) no para; contratar/contrato/contratada sí', () => {
+  it('título «Contratación…» a secas NO es parada', () => {
+    for (const t of ['Contratación', 'Contratación de seguros de automóviles', 'Alta y contratación']) {
+      expect(detectarParada(inventario({ titulos: [t] }))).toBeNull()
+    }
+  })
+  it('«contratar», «contrato», «contratada/o» siguen parando con titulo:contrat', () => {
+    for (const t of ['Contratar el seguro', 'Contrato de seguro', 'Póliza contratada', 'Seguro contratado']) {
+      const p = detectarParada(inventario({ titulos: [t] }))
+      expect(p?.motivo, t).toBe('cerca_de_emision')
+      expect(p?.detalle, t).toBe('titulo:contrat')
+    }
+  })
+  it('«Resumen de contratación», emisión, firma y forma de pago siguen parando', () => {
+    expect(detectarParada(inventario({ titulos: ['Resumen de la contratación'] }))?.detalle).toBe('titulo:resumen_contratacion')
+    expect(detectarParada(inventario({ titulos: ['Emisión de la póliza'] }))?.detalle).toBe('titulo:emision')
+    expect(detectarParada(inventario({ titulos: ['Forma de pago'] }))?.detalle).toBe('titulo:forma_pago')
+  })
+  it('los topes de BOTÓN no cambian: Contratar/Emitir/Confirmar pago/Firmar siguen bloqueados', () => {
+    for (const b of ['Contratar', 'Emitir póliza', 'Confirmar pago', 'Firmar', 'Contratación' + ' y emitir']) {
+      expect(() => comprobarBoton([b]), b).toThrow()
+    }
+  })
+})
+
+describe('cuerpoLlevaAccionFinal 0.3.13 (destinos POST extra del avance)', () => {
+  it('cuerpo normal pasa; acción final o campo financiero se rechaza', () => {
+    expect(cuerpoLlevaAccionFinal('paso=2&nifTomador=12345678Z&esPropietario=S')).toBe(false)
+    for (const a of ['emitir', 'confirmar', 'firmar', 'contratar', 'pagar']) expect(cuerpoLlevaAccionFinal(`accion=${a}&x=1`), a).toBe(true)
+    expect(cuerpoLlevaAccionFinal('evento=validar_aceptar()')).toBe(true)
+    expect(cuerpoLlevaAccionFinal('iban=ES00&x=1')).toBe(true)
+  })
+  it('revisión: acción en clave que no es de acción, en el NOMBRE del botón o en multipart, también se rechaza', () => {
+    for (const c of ['op=emitir', '_eventId=contratar', 'tarea=EMITIR', 'paso=emision', 'btnEmitir=1', 'x=1&doFormalizar=', 'sub=Confirmar', 'modo=pago', 'boton=Grabar%20p%C3%B3liza']) {
+      expect(cuerpoLlevaAccionFinal(c, { permitirAceptar: true }), c).toBe(true)
+    }
+    const mp = '--b\r\nContent-Disposition: form-data; name="op"\r\n\r\nemitir\r\n--b--\r\n'
+    expect(cuerpoLlevaAccionFinal(mp)).toBe(true)
+    expect(cuerpoLlevaAccionFinal(mp.replace('emitir', '2'))).toBe(false)
+  })
+  it('revisión: datos del riesgo de Figuras Intervinientes no dan falso positivo', () => {
+    for (const c of ['paso=2&nifTomador=12345678Z&esPropietario=S', 'esContratante=S&pagador=S&domicilio=Calle%20Mayor%201&planta=baja', 'fechaFirma=&nombre=Pagola', 'action=aceptar']) {
+      expect(cuerpoLlevaAccionFinal(c, { permitirAceptar: true }), c).toBe(false)
+    }
   })
 })

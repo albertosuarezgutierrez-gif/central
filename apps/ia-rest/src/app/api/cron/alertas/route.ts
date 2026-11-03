@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { cronAutorizado } from '@/lib/cron-auth'
 import { createServerClient } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 function autorizado(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET
-  if (!secret) return true
-  const auth = req.headers.get('authorization')
-  return auth === `Bearer ${secret}`
+  return cronAutorizado(req)
 }
 
 function aplicaHorario(regla: ReglaActiva, ahora: Date): boolean {

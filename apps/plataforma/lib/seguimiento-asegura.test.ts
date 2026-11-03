@@ -288,7 +288,7 @@ test('ramoInicialValido: solo acepta ramos conocidos', () => {
 test('ramosConOfertas: comunidades sí, tarificables (auto…) no', async () => {
   const { RAMOS_PRESUPUESTO } = await import('./ficha-asegura.ts')
   const valores = ramosConOfertas(RAMOS_PRESUPUESTO).map((r) => r.valor)
-  assert.deepEqual([...valores].sort(), ['accidentes', 'caucion', 'ciberriesgos', 'comercio', 'comunidades', 'decenal', 'dyo', 'embarcaciones', 'empresas', 'flotas', 'impago_alquiler', 'mascotas', 'otros', 'rc_profesional', 'responsabilidad_civil', 'transporte_mercancias', 'viaje'])
+  assert.deepEqual([...valores].sort(), ['accidentes', 'caucion', 'ciberriesgos', 'comercio', 'comunidades', 'decenal', 'dyo', 'embarcaciones', 'empresas', 'flotas', 'impago_alquiler', 'mascotas', 'otros', 'patinete', 'rc_profesional', 'responsabilidad_civil', 'transporte_mercancias', 'viaje'])
   assert.ok(!valores.includes('auto' as never))
 })
 

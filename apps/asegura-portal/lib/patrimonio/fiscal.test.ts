@@ -67,3 +67,44 @@ test('CSV: ; y BOM, coma decimal, «sin dato» en vez de 0, aviso orientativo y 
   assert.ok(csv.includes(AVISO_ORIENTATIVO))
   assert.ok(csv.includes("'=SUMA(A1)"))
 })
+
+test('🚨 edificio sin división horizontal: sus unidades se agrupan bajo UNA referencia catastral con el total', () => {
+  const meta = [
+    { id: 'ed', alias: 'Busto Tavera 22', titular: 'Ana', edificioId: null, referenciaCatastral: '5731022TG3453B0001AK' },
+    { id: 'p1', alias: 'Piso 1', titular: 'Ana', edificioId: 'ed', referenciaCatastral: null },
+    { id: 'p2', alias: 'Piso 2', titular: 'Ana', edificioId: 'ed', referenciaCatastral: null },
+    { id: 'p3', alias: 'Piso 3', titular: 'Ana', edificioId: 'ed', referenciaCatastral: null },
+    { id: 'i1', alias: 'Piso Socorro', titular: 'Ana' },
+  ]
+  const r = res([
+    inm({ inmuebleId: 'ed', ingresos: 0, gastos: 5_000, gastosPorCategoria: { COMUNIDAD: 5_000 } }), // sin repartir
+    inm({ inmuebleId: 'p1', ingresos: 600_000, gastosPorCategoria: { IMPUESTOS: 60_000 }, seguros: 21_900 }),
+    inm({ inmuebleId: 'p2', ingresos: 500_000, gastosPorCategoria: { IMPUESTOS: 40_000 }, seguros: 14_600 }),
+    inm({ inmuebleId: 'p3', ingresos: 0 }),
+    inm({ inmuebleId: 'i1', ingresos: 100_000 }),
+  ])
+  const inf = informeFiscal(r, meta, P)
+  assert.deepEqual(inf.arrendados.map((i) => i.inmuebleId), ['i1'], 'las unidades NO salen sueltas')
+  assert.deepEqual(inf.sinIngresos, [])
+  assert.equal(inf.edificios.length, 1)
+  const e = inf.edificios[0]
+  assert.equal(e.referenciaCatastral, '5731022TG3453B0001AK')
+  assert.deepEqual(e.unidades.map((u) => u.inmuebleId), ['p1', 'p2'])
+  assert.deepEqual(e.unidadesSinIngresos, ['Piso 3'])
+  assert.equal(e.comunes?.totalDeducibleCent, 5_000)
+  assert.equal(e.ingresosCent, 1_100_000)
+  assert.equal(e.totalDeducibleCent, 60_000 + 21_900 + 40_000 + 14_600 + 5_000)
+  assert.equal(e.rendimientoAntesAmortizacionCent, 1_100_000 - e.totalDeducibleCent)
+  assert.equal(e.rendimientoNetoCent, null)
+  const csv = csvFiscal(inf)
+  assert.match(csv, /Busto Tavera 22 · Piso 1/)
+  assert.match(csv, /Busto Tavera 22 · Gastos comunes sin repartir/)
+  assert.match(csv, /Ingresos íntegros del edificio;Total del edificio;11000,00;RC 5731022TG3453B0001AK/)
+})
+
+test('edificio sin unidades arrendadas ni renta propia: va a «sin ingresos», no a un grupo vacío', () => {
+  const meta = [{ id: 'ed', alias: 'Edificio', titular: 'Ana', edificioId: null }, { id: 'p1', alias: 'Piso 1', titular: 'Ana', edificioId: 'ed' }]
+  const inf = informeFiscal(res([inm({ inmuebleId: 'ed', ingresos: 0 }), inm({ inmuebleId: 'p1', ingresos: 0 })]), meta, P)
+  assert.deepEqual(inf.edificios, [])
+  assert.deepEqual(inf.sinIngresos, ['Edificio'])
+})

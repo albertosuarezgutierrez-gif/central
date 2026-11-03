@@ -321,6 +321,8 @@ export const CAMPOS_PARTE_POR_RAMO: Readonly<Record<RamoSiniestro, readonly Camp
   impago_alquiler: PARTE_GENERICO,
   viaje: PARTE_GENERICO,
   caucion: PARTE_GENERICO,
+  // Patinete / VMP (28/10/2026): sin parte propio todavía.
+  patinete: PARTE_GENERICO,
   empresas: [
     ORIGEN_DANO,
     AVERIA_ACTIVA,

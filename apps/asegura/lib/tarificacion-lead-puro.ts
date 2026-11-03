@@ -13,10 +13,11 @@
 //     repregunta (F2). Un bot sin declaración (`null`) no es «no falta nada»: no se lanza.
 //   · el tope diario (env `ASEGURA_TARIF_AUTO_TOPE_DIARIO`: inválido → 20, máximo duro 100) por día de Madrid.
 // 🚨 TARIFICAR ≠ EMITIR. 🚨 Nada de valores en lo que sale de aquí hacia Telegram: claves, etiquetas y nombres de compañía.
-import { CARNETS_MOTO_PRECIO, contratoDatos, etiquetasDe, type CodigoConcreto } from '@central/module-seguros'
+import { CARNETS_MOTO_PRECIO, contratoDatos, estimarMesMatriculacion, etiquetasDe, type CodigoConcreto } from '@central/module-seguros'
 import { duermeEnGaraje, GARAJES_CONOCIDOS } from '@central/module-seguros/garajes'
-import { CAPACIDAD_ALLIANZ_COMUNIDADES, faltanParaTarificar, llegaAPrecio, obligatoriosPara, type Faltante } from '@central/module-tarificacion'
+import { CAPACIDAD_ALLIANZ_COMUNIDADES, MAX_COMPANIA_ANTERIOR, faltanParaTarificar, llegaAPrecio, obligatoriosPara, type Faltante } from '@central/module-tarificacion'
 import { RAMOS_TARIFICABLES_RPA, validarEntradaRamo } from './tarificador-reglas.ts'
+import { ultimosCincoDigitosPoliza } from './tarificador-compania-actual.ts'
 
 // ─── Tope diario ─────────────────────────────────────────────────────────────
 
@@ -70,6 +71,21 @@ export function ramoConBot(ramo: string): boolean {
 export type Supuesto = { campo: string; texto: string }
 
 /**
+ * Primera matriculación para el riesgo del bot (30/10/2026). La fecha REAL (ISO, no futura) manda SIEMPRE y va a `fecha`.
+ * Si falta y la matrícula es estimable por la serie nacional, el mes estimado va a `estimada` (campo APARTE que ya lee
+ * Generali; jamás se pinta como la real) y `supuesto` lo dice en la vista previa. No estimable → ambas ausentes (falta).
+ * No se guarda en BD: se calcula al leer. PURA.
+ */
+export function matriculacionParaRiesgo(
+  real: string, matricula: string, hoy: string,
+): { fecha?: string; estimada?: string; supuesto?: Supuesto } {
+  if (ISO.test(real) && real <= hoy) return { fecha: real }
+  const est = estimarMesMatriculacion(matricula, hoy)
+  if (est.mesAnio === null || est.mesAnio > hoy) return {}
+  return { estimada: est.mesAnio, supuesto: { campo: 'fechaMatriculacion', texto: 'fecha de matriculación estimada por la matrícula (mes aproximado, no es el dato real)' } }
+}
+
+/**
  * Marca/modelo/cilindrada de la moto leídos del texto libre del cliente contra el catálogo de motos (GET gratis de
  * Codeoscopic, los mismos nombres que elige la pantalla de moto para los bots). `ok` = un único candidato en cada paso;
  * `duda` = el cliente lo dijo pero no casa con certeza (→ repregunta concreta); `no_mirado` = el catálogo no se pudo leer
@@ -94,6 +110,18 @@ export type EntradaFormulario = {
    * Lo dicho en el correo manda; esto cubre lo que el cliente no repite (igual que `fichaNacimiento`).
    */
   fichaCarne?: string | null
+  /**
+   * De la FICHA: `clientes.codigo_postal` (columna en claro). Cubre el CP de circulación cuando el cliente no lo dijo ni consta
+   * en el bloque del riesgo; solo con 5 dígitos. `null`/ausente = no se sabe (nunca relleno).
+   */
+  fichaCodigoPostal?: string | null
+  /**
+   * De la PÓLIZA de auto/moto VIVA vinculada a la oportunidad (`info_riesgo.polizaId`): su compañía y desde cuándo está asegurado
+   * en ella (`fecha_efecto_inicial` o, si no, `fecha_inicio`, ISO). Es la «compañía anterior» de una tarificación nueva. `null`/ausente
+   * = no hay póliza viva vinculada o no se pudo leer (nunca relleno). `numero` (30/10/2026, «SINCO al tarificar»): su nº de póliza;
+   * al riesgo solo viajan sus 5 últimas cifras (`polizaAnteriorUltimos5`). Dato del cliente: nunca en supuestos, Telegram ni logs.
+   */
+  polizaActual?: { aseguradora: string | null; desde: string | null; numero?: string | null } | null
   /** `aaaa-mm-dd` de hoy (Madrid). */
   hoy: string
   /** Moto: la lectura del catálogo (`null` = el cliente no dio marca/modelo). */
@@ -122,6 +150,39 @@ const sinTildes = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLo
 const hay = (v: unknown) => v !== undefined && v !== null && !(typeof v === 'string' && v.trim() === '')
 /** Minúsculas, sin tildes, todo lo que no es letra o número → un espacio. */
 const tokens = (s: string) => ` ${sinTildes(s).replace(/[^a-z0-9ñ]+/g, ' ').replace(/(\d)([a-z])/g, '$1 $2').replace(/([a-z])(\d)/g, '$1 $2').trim()} `
+
+/** Nombre de compañía de la póliza → el que espera el bot: el canónico si se reconoce (misma lista que el texto libre); si no, el texto tal cual. `null` = vacío o demasiado largo. PURA. */
+/** Compañías cuyo bot TECLEA el nº de póliza anterior al tarificar (hoy Mapfre y Allianz). Occident, Generali y demás: no lo reciben. */
+export const COMPANIAS_TECLEAN_POLIZA_ANTERIOR: readonly string[] = Object.freeze(['mapfre', 'allianz'])
+
+/**
+ * El riesgo tal como viaja a UNA compañía: `polizaAnteriorUltimos5` (dato del cliente) solo si el bot de esa compañía lo teclea;
+ * para las demás se quita (mínimo necesario). No muta; sin la clave devuelve el mismo objeto. PURA.
+ */
+export function riesgoParaCompania<T>(compania: unknown, riesgo: T): T {
+  if (typeof riesgo !== 'object' || riesgo === null || Array.isArray(riesgo) || !('polizaAnteriorUltimos5' in riesgo)) return riesgo
+  const c = typeof compania === 'string' ? compania.trim().toLowerCase() : ''
+  if (COMPANIAS_TECLEAN_POLIZA_ANTERIOR.includes(c)) return riesgo
+  const { polizaAnteriorUltimos5: _quitada, ...resto } = riesgo as Record<string, unknown>
+  return resto as T
+}
+
+export function companiaCanonica(nombre: unknown): string | null {
+  const n = txt(nombre)
+  if (!n || n.length > MAX_COMPANIA_ANTERIOR) return null
+  const t = tokens(n)
+  const cias = COMPANIAS_TEXTO.filter(([re]) => re.test(t)).map(([, c]) => c)
+  return cias.length === 1 ? cias[0] : n
+}
+
+/** Años COMPLETOS entre `desde` (ISO) y `hoy` (ISO). `null` si alguna fecha no es válida o `desde` es futura. PURA. */
+export function aniosCompletos(desde: unknown, hoy: string): number | null {
+  const d = txt(desde)
+  if (!ISO.test(d) || !ISO.test(hoy) || d > hoy) return null
+  let a = Number(hoy.slice(0, 4)) - Number(d.slice(0, 4))
+  if (hoy.slice(5) < d.slice(5)) a -= 1
+  return a
+}
 
 /** «dónde duerme» en palabras del cliente → garaje del bot. `null` = no se entiende (no se traduce a ojo). PURA. */
 export function garajeDeTexto(v: unknown): { garajeNoche: boolean; tipoGaraje: 'calle' | 'colectivo' | 'individual' | null } | null {
@@ -408,7 +469,12 @@ export function formularioBotDesdeLead(e: EntradaFormulario): FormularioLead {
   const matricula = txt(v.matricula) || txt(b.matricula)
   if (matricula) riesgo.matricula = matricula
   const cp = txt(v.cpCirculacion) || txt(b.cpCirculacion)
+  const cpFicha = txt(e.fichaCodigoPostal)
   if (cp) riesgo.codigoPostal = cp
+  else if (/^\d{5}$/.test(cpFicha)) {
+    riesgo.codigoPostal = cpFicha
+    supuestos.push({ campo: 'cpCirculacion', texto: 'código postal de circulación: el de la ficha del cliente (se supone que el vehículo circula donde vive)' })
+  }
 
   const conductor: Record<string, unknown> = {}
   const nac = txt(v.fechaNacimiento) || (e.fichaNacimiento && ISO.test(e.fichaNacimiento) ? e.fichaNacimiento : '')
@@ -467,8 +533,30 @@ export function formularioBotDesdeLead(e: EntradaFormulario): FormularioLead {
     for (const d of dudas) concretas.add(d === 'compania' ? 'seguro_anterior_compania' : d === 'anios' ? 'seguro_anterior_anios' : 'seguro_anterior_siniestros')
   }
 
-  const fm = txt(b.fechaMatriculacion)
-  if (ISO.test(fm) && fm <= e.hoy) riesgo.fechaMatriculacion = fm
+  // Póliza viva vinculada: su compañía es la «compañía anterior» y su antigüedad en ella, un MÍNIMO de años asegurado. Solo si el
+  // cliente no declaró su seguro anterior (lo dicho en el correo manda) y solo con ≥ 1 año completo (menos no prueba nada).
+  const pa = e.polizaActual
+  if (pa && !hay(v.aseguradoAntes)) {
+    const cia = companiaCanonica(pa.aseguradora)
+    const anios = aniosCompletos(pa.desde, e.hoy)
+    if (cia && anios !== null && anios >= 1) {
+      riesgo.companiaAnterior = cia
+      riesgo.aniosAseguradoAnterior = anios
+      supuestos.push({ campo: 'aseguradoAntes', texto: 'compañía anterior y años asegurado (mínimo): los de la póliza de auto vigente del cliente' })
+    }
+  }
+  // Nº de póliza anterior (30/10/2026, «SINCO al tarificar»): con él la compañía consulta SINCO y el precio sale confirmado. Solo si el
+  // riesgo no lo trae ya, si la compañía anterior del riesgo ES la de esa póliza (si el cliente dijo otra, ese número no es el suyo) y no
+  // se declaró «0 años asegurado». Solo las 5 últimas cifras; el número entero no sale de aquí.
+  if (pa && !hay(riesgo.polizaAnteriorUltimos5) && riesgo.aniosAseguradoAnterior !== 0) {
+    const cia = companiaCanonica(pa.aseguradora)
+    const ultimos5 = ultimosCincoDigitosPoliza(pa.numero)
+    if (cia && riesgo.companiaAnterior === cia && ultimos5) riesgo.polizaAnteriorUltimos5 = ultimos5
+  }
+
+  const mat = matriculacionParaRiesgo(txt(b.fechaMatriculacion), matricula, e.hoy)
+  if (mat.fecha) riesgo.fechaMatriculacion = mat.fecha
+  if (mat.estimada && mat.supuesto) { riesgo.fechaMatriculacionEstimada = mat.estimada; supuestos.push(mat.supuesto) }
   const efecto = txt(v.fechaEfecto)
   if (ISO.test(efecto) && efecto > e.hoy) riesgo.fechaVencimiento = efecto
 

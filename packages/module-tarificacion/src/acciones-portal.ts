@@ -70,6 +70,10 @@ export const PATRONES_GUARDADO_GUARD: readonly RegExp[] = Object.freeze([
   /send[\s_+-]*action[\s_+-]*event\s*\(\s*['"]?\s*store/i,
   /proyecto[\s_+-]*ampliado/i,
   /^\s*menu4\s*$/i,
+  // Grabar (texto exacto) y Generali «Guardar Cálculo» (texto y handler `link('grabarCalcRap')`): guardan el cálculo; solo el guardado dedicado.
+  /^\s*grabar\s*$/i,
+  /guardar[\s_+-]*c[aá]lculo/i,
+  /grabar[\s_+-]*calc/i,
 ])
 
 const plano = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()

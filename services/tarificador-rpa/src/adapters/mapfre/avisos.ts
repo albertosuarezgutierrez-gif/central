@@ -9,7 +9,7 @@ import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
 import { pulsarEscapeAvisoModal } from '../../guard.ts'
 
-export const SEL_MODAL_ABIERTO = 'div[role=dialog].modal.in'
+export const SEL_MODAL_ABIERTO = 'div[role=dialog].modal.in, div[role=dialog][modal-window]'
 /** Texto/nombre accesible de los controles de cierre admitidos (exacto). */
 export const PATRON_CIERRE_AVISO = /^(×|x|cerrar|close|entendido|ok|continuar)$/i
 /** Si el modal habla de esto, NO se pulsa nada: puede ser un compromiso. */

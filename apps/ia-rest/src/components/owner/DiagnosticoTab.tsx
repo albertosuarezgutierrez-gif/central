@@ -7,6 +7,11 @@ import { C, SE, SN, SM, SC } from '@/lib/colors'
 import React, { useState, useEffect, useCallback } from 'react'
 import HealerWidget from '@/components/owner/HealerWidget'
 
+// Sesión FIRMADA del login: las rutas /api/owner/* ya no aceptan `x-ia-restaurante-id` sin CRON_SECRET.
+function sesionFirmada(): string {
+  try { return localStorage.getItem('ia_rest_session') ?? '' } catch { return '' }
+}
+
 /* ─── Tokens de diseño (idénticos a owner/page.tsx) ─── */
 
 /* ─── Tipos ─── */
@@ -106,7 +111,7 @@ export default function DiagnosticoTab({ restauranteId }: Props) {
   const cargar = useCallback(async () => {
     try {
       const res = await fetch('/api/owner/diagnostico', {
-        headers: { 'x-ia-restaurante-id': restauranteId },
+        headers: { 'x-ia-session': sesionFirmada() },
       })
       if (!res.ok) throw new Error(`Error ${res.status}`)
       const json = await res.json()

@@ -33,6 +33,7 @@ import RecotizarIgualmente from '@/components/RecotizarIgualmente'
 import { pedirCotizacion } from './acciones'
 import { pedirLimitesHogar, pedirPrecalificacionHogar } from './acciones-hogar'
 import { NotaVariante } from '../../../oportunidad/[id]/NotaVariante'
+import TarificarConBots from './TarificarConBots'
 import type { RangoCapital, RespuestaLimitesHogar } from '@/lib/retarificar-asegura'
 
 type Grupo = 'donde' | 'como' | 'protecciones' | 'capitales' | 'tomador' | 'cotizacion'
@@ -419,6 +420,14 @@ export default function RetarificadorHogar({
             El botón se enciende cuando no falte nada arriba. Corregir la ficha no cuesta nada.
           </p>
         )}
+
+        {/* Siempre las dos opciones (28/10/2026): Avant2 (arriba, 0,50€) o los bots de cada compañía (gratis). */}
+        <TarificarConBots
+          polizaId={polizaId}
+          deshabilitado={cotizando}
+          datos={{ ok: false, motivo: 'no_aplica' }}
+          aviso="Usa los datos de la póliza tal como están en su riesgo: lo corregido en esta pantalla no viaja (corrígelo en el riesgo)."
+        />
 
         {resultado.estado === 'faltan' && (
           <div style={{ marginTop: 12 }}>

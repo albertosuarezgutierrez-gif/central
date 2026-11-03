@@ -2488,3 +2488,17 @@ su matrícula autorrellenada). Lo que fallaba era todo lo que se veía ANTES de 
   colateral de reordenar una pantalla.
 - Cepos en `test/regression-portal-parte-desde-poliza.test.ts` (6, con **seis mutaciones vistas
   morder**) y en `canal-compania.test.ts` del módulo.
+
+
+## Edificio sin división horizontal (27/10/2026)
+inmueble `uso='edificio'` con UNIDADES (`inmueble_padre_id`, un nivel, FK compuesta con `titular_id`: nunca de otro titular). La unidad HEREDA la RC (`rcEfectiva()`, solo para enseñar/declarar; cruce de pólizas, Catastro y señales usan la propia). Gastos y primas del edificio se reparten por m²/% (`rentabilidadConEdificios`; sin dato no se reparte y se dice). 🚨 `prisma/sql/2026-10-27_portal_patrimonio_edificio_unidades.sql` se aplica ANTES de desplegar (editor SQL, no MCP): sin él, toda lectura de inmuebles da 42703. Cepo `regression-portal-patrimonio-edificio`.
+El reparto exige nivel Total (`alta_baja`). La importación Excel no conoce edificios.
+
+Enlace con el inquilino (P17, recortado del índice el 27/10/2026): borrador del correo en `docs/legal/2026-10-26-borrador-correo-inquilino.md`; el consentimiento comercial del inquilino es propio, versionado y no premarcado (sin él cero ofertas) y nada fuera del flujo lee sus tablas.
+
+
+## El inquilino PIDE precio (27/10/2026, punto 5 de docs/ESTUDIO-PATRIMONIO-MERCADO.md §7)
+- Botón en `/mi-alquiler/[contratoId]` (`PedirPrecioInquilino.tsx`) → `POST /api/inquilino/[contratoId]/pedir-precio` → `lib/inquilino/precio-inquilino.ts` (frontera `accesoParaContrato`, 404) → `lib/inquilino/precio-puente.ts` → asegura `/api/portal/patrimonio/inquilino-precio` (`lib/patrimonio-inquilino-precio-*.ts`).
+- asegura da de alta una ficha de lead NUEVA siempre (`forzar`: un móvil/correo puede ser del hogar del propietario; no se funde), `fuente='portal'`, oportunidad origen `portal:inquilino` (no casa con `portal:patrimonio` exacto ni con el prefijo de señales), `info_riesgo` sin inmueble/contrato/titular, tarea `llamada` de hoy, Telegram solo ids. Idempotente por identidad 120 días (carrera conocida: dos fichas, una oportunidad).
+- Petición (art. 6.1.b, medidas precontractuales) ≠ casilla «Quiero recibir otras ofertas de seguros de Grupo ASegura» (consentimiento propio del inquilino, mismo mecanismo `portal_patrimonio_inquilino_consentimiento`, versión `2026-10-27-borrador-2`; solo `ofertas === true` con la versión vigente; desmarcada no escribe; NO cruza el puente).
+- Retención de esas fichas: PENDIENTE (la purga RGPD de asegura solo anonimiza `fuente='web'`); la política (3 ter) lo dice. Privacidad `VERSION_TEXTOS_LEGALES` `2026-10-v3`.

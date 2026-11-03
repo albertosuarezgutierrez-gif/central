@@ -28,9 +28,9 @@ description: Auditoría diaria del monorepo central — reconcilia memoria + ski
 >   apps y tests pesados. Rápida y de bajo ruido. Es la red de seguridad del guardián de
 >   cierre (`persist-memoria.sh`): caza lo que las sesiones no anotaron a mano.
 > - **Profunda (`/auditoria-diaria --profunda`, semanal):** corre `auditoria-central`
->   ENTERA (typecheck de las 12 apps + tests + seguridad multi-tenant + infra por MCP).
+>   ENTERA (typecheck de las 13 apps + tests + seguridad multi-tenant + infra por MCP).
 >
-> ⚠️ **«Las 12 apps» no es una cifra para copiar: es `ls apps` cruzado con la matriz de
+> ⚠️ **«Las 13 apps» no es una cifra para copiar: es `ls apps` cruzado con la matriz de
 > `.github/workflows/tests.yml`.** Este doc decía «8» desde junio mientras nacían mariscos, asegura,
 > asegura-portal y housesevillana — y nadie las typechequeaba en la pasada semanal. Si `ls apps` y la
 > matriz difieren, es hallazgo 🔴 (una app fuera de la matriz no la mira nadie: `housesevillana`
@@ -102,10 +102,10 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
 2. **Auditoría según cadencia.**
    - **Modo ligero (por defecto):** invoca **`auditoria-central`** pero recorre solo los
      bloques baratos (integridad estructural: lockfile + radiografía + `transpilePackages`;
-     coherencia de docs; deps/código muerto rápidos). SALTA typecheck de las 12 apps y los
+     coherencia de docs; deps/código muerto rápidos). SALTA typecheck de las 13 apps y los
      tests pesados — esos son de la pasada semanal.
    - **Modo profundo (`--profunda` en el prompt):** recorre `auditoria-central` ENTERA
-     (integridad, typecheck de las 12 apps, tests, seguridad multi-tenant, deps, infra real
+     (integridad, typecheck de las 13 apps, tests, seguridad multi-tenant, deps, infra real
      por MCP, coherencia de docs). **Tramo de la correduría en la profunda (02/09/2026):**
      typecheck de `apps/asegura` con sus DOS schemas (`prisma generate && prisma generate
      --schema prisma/asegura.prisma`; con uno solo sale `TS2307` falso), tests de
@@ -468,11 +468,10 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
      `ialimp-maestro`, `plataforma-maestro`, `transporte-maestro`, `alquiler-maestro` — la
      lista real es `ls -d .claude/skills/*-maestro`, no esta línea), la skill de dominio
      `agente-correduria` (su `references/sector.md` acumula hechos del sector: contrástalos como
-     datos duros) y los **`apps/*/CLAUDE.md` de las 12 apps** (ia-rest tiene además `AGENTS.md`;
-     **`almacen` y `asegura-portal` NO tienen `CLAUDE.md`** — su contexto vive en `CLAUDE.md` raíz
-     y en `docs/superpowers/specs/2026-09-01-asegura-portal-clientes-empresas-design.md`; no lo
-     repitas como hallazgo cada noche, pero sí si un PR del rango les cambia el comportamiento y
-     nadie lo anota en ningún sitio): corrige cualquier afirmación que el código contradiga
+     datos duros) y los **`apps/*/CLAUDE.md` de las apps** (12 con CLAUDE.md: asegura-web no lo tiene; ia-rest tiene además `AGENTS.md`;
+     **solo `asegura-web` carece de `CLAUDE.md`** (almacen y asegura-portal ya lo tienen) — su contexto
+     vive en `CLAUDE.md` raíz y en sus guardianes; no lo repitas como hallazgo cada noche, pero sí si
+     un PR del rango les cambia el comportamiento y nadie lo anota en ningún sitio): corrige cualquier afirmación que el código contradiga
      (rutas, envs, tablas, reglas, estado). Si una skill y el código discrepan, **manda el código**.
      ⚠️ En `apps/asegura/CLAUDE.md` y `docs/TRASPASO-CORREDURIA.md` el dato que más envejece es
      **de dónde LEE el código** (`seguros.*` de central por defecto desde el 02/09/2026; el origen

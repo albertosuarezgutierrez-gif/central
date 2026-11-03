@@ -19,7 +19,7 @@ function avisosDe(status: number, json: unknown) {
 }
 
 const sol = (id: string): SolicitudPortal => ({
-  id, modulo: 'flota', moduloNombre: 'Flota', clienteId: `c-${id}`, cliente: `Cliente ${id}`, sinFicha: false,
+  id, modulo: 'flota', moduloNombre: 'Flota', clienteId: `c-${id}`, identidadId: null, creaProspecto: false, cliente: `Cliente ${id}`, sinFicha: false,
   solicitadoEn: '2026-10-25T10:00:00Z', puedeActivar: true, motivoNoActivar: null,
 })
 const lead = (o: Partial<LeadVista>): LeadVista => ({

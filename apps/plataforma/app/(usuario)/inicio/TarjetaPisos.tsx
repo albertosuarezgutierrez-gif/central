@@ -4,11 +4,11 @@ import { PROPS_CALENDARIO } from '@/lib/sivra/constantes'
 import { PORTAL_COLORS, PORTAL_LABELS } from '@/lib/portales'
 import { getPLMensual } from '@/lib/sivra/pl-mensual'
 import { computarPrevision } from '@/lib/sivra/prevision-pisos'
-import { paxDe } from '@/lib/sivra/limpieza-intranet'
 import { eur } from '@/lib/dinero'
-import { estimacionMes, sumarDias, ventanaCalendario, type Movimiento, type ReservaCal } from '@/lib/inicio-resumen'
+import { estimacionMes, ventanaCalendario, type Movimiento, type ReservaCal } from '@/lib/inicio-resumen'
 import { TablaScroll } from '@/components/ui'
 import CalendarioReservas from './CalendarioReservas'
+import { leerReservasPisos, filasCalendario } from '@/lib/inicio-pisos'
 import { Aviso, NoDisponible, Tarjeta, subTitulo } from './piezas'
 
 const DIAS = 14
@@ -43,20 +43,8 @@ function Cargando({ texto, alto }: { texto: string; alto: number }) {
 async function CalendarioPisos() {
   const hoy = hoyMadrid()
   const ids = PROPS_CALENDARIO.map(p => p.id)
-  const fin = sumarDias(hoy, DIAS)
-
-  const reservas = await prisma.$queryRaw<Array<{ propertyId: string; guestName: string | null; checkIn: Date | null; checkOut: Date | null; portal: string | null; adults: number | null; children: number | null; amount: number | null }>>`
-      SELECT "propertyId", "guestName", "checkIn", "checkOut", portal::text AS portal, adults, children, amount::float8 AS amount
-      FROM incomes
-      WHERE "propertyId" = ANY(${ids}::text[])
-        AND "checkIn" < ${new Date(`${fin}T00:00:00Z`)} AND "checkOut" >= ${new Date(`${hoy}T00:00:00Z`)}
-    `.catch(() => null)
-
-  const d = (x: Date | null) => (x ? new Date(x).toISOString().slice(0, 10) : null)
-  const res: ReservaCal[] = (reservas ?? []).flatMap(r => {
-    const i = d(r.checkIn); const o = d(r.checkOut)
-    return i && o ? [{ propertyId: r.propertyId, huesped: r.guestName, checkIn: i, checkOut: o, portal: r.portal, pax: paxDe(r.adults, r.children), importe: r.amount }] : []
-  })
+  const reservas = await leerReservasPisos(hoy, DIAS)
+  const res: ReservaCal[] = reservas ?? []
   const v = ventanaCalendario(res, ids, hoy, DIAS)
   const movs = [
     textoMov('entra', 'Hoy', v.entranHoy), textoMov('sale', 'Hoy', v.salenHoy),
@@ -82,8 +70,9 @@ async function CalendarioPisos() {
           </div>
 
           <CalendarioReservas
+            hoy={hoy}
             dias={v.dias}
-            filas={PROPS_CALENDARIO.map(p => ({ id: p.id, label: p.label, color: p.color, barras: v.barras.get(p.id) ?? [] }))}
+            filas={filasCalendario(v.barras)}
           />
           {portales.length > 0 && (
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 12, color: 'var(--muted)' }}>

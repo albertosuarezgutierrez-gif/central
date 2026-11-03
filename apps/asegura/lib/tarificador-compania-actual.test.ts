@@ -33,12 +33,13 @@ test('nombreCompaniaUtil: vacío, cajón y no-string → null', () => {
   for (const v of ['', '  ', 'Otro', 'n/a', null, 7, undefined]) assert.equal(nombreCompaniaUtil(v), null)
   assert.equal(nombreCompaniaUtil('  Aseguradora   Gamma '), 'Aseguradora Gamma')
 })
-test('aplicarCompaniaActual rellena solo si falta y solo Allianz/Mapfre auto', () => {
+test('aplicarCompaniaActual rellena solo si falta y solo Allianz/Mapfre/Generali auto', () => {
   const r = { ramo: 'auto', matricula: 'X' }
   assert.deepEqual(aplicarCompaniaActual('allianz', 'auto', r, 'Beta'), { ...r, companiaAnterior: 'Beta' })
   assert.equal(aplicarCompaniaActual('allianz', 'auto', r, null), r)
   assert.equal(aplicarCompaniaActual('allianz', 'moto', r, 'Beta'), r)
-  assert.equal(aplicarCompaniaActual('generali', 'auto', r, 'Beta'), r)
+  assert.deepEqual(aplicarCompaniaActual('generali', 'auto', r, 'Beta'), { ...r, companiaAnterior: 'Beta' })
+  assert.equal(aplicarCompaniaActual('occident', 'auto', r, 'Beta'), r)
   const conAnterior = { ...r, companiaAnterior: 'Ya' }
   assert.equal(aplicarCompaniaActual('allianz', 'auto', conAnterior, 'Beta'), conAnterior)
   const conActual = { ...r, companiaActual: 'Ya' }
@@ -110,14 +111,16 @@ test('Mapfre auto: sin compañía, riesgoParaEncolar rechaza 422; con la compañ
   assert.ok(!(!con.ok && /falta_compania_anterior/.test(con.motivo)), 'ya no se corta por la compañía anterior')
   void noLeer
 })
-test('necesitaCompaniaActual: solo Allianz/Mapfre auto sin compañía y sin «0 años asegurado» (sin seguro anterior)', () => {
+test('necesitaCompaniaActual: solo Allianz/Mapfre/Generali auto sin compañía y sin «0 años asegurado» (sin seguro anterior)', () => {
   const r = { ramo: 'auto', aniosAseguradoAnterior: 3 }
   assert.equal(necesitaCompaniaActual('mapfre', 'auto', r), true)
   assert.equal(necesitaCompaniaActual('allianz', 'auto', r), true)
   assert.equal(necesitaCompaniaActual('mapfre', 'auto', { ...r, aniosAseguradoAnterior: 0 }), false)
   assert.equal(necesitaCompaniaActual('mapfre', 'auto', { ...r, companiaAnterior: 'Ya' }), false)
   assert.equal(necesitaCompaniaActual('mapfre', 'moto', r), false)
-  assert.equal(necesitaCompaniaActual('generali', 'auto', r), false)
+  assert.equal(necesitaCompaniaActual('generali', 'auto', r), true)
+  assert.equal(necesitaCompaniaActual('generali', 'auto', { ...r, aniosAseguradoAnterior: 0 }), false)
+  assert.equal(necesitaCompaniaActual('occident', 'auto', r), false)
   assert.deepEqual(aplicarCompaniaActual('mapfre', 'auto', { ...r, aniosAseguradoAnterior: 0 }, 'Beta'), { ...r, aniosAseguradoAnterior: 0 })
 })
 test('FORMA DEL FUENTE: encolarTrabajo rellena la compañía anterior ANTES de riesgoParaEncolar (si se quita, este test falla)', () => {
@@ -125,4 +128,21 @@ test('FORMA DEL FUENTE: encolarTrabajo rellena la compañía anterior ANTES de r
   const fn = src.slice(src.indexOf('export async function encolarTrabajo'), src.indexOf('// ─── Reclamar y lanzar'))
   const rellena = fn.indexOf('aplicarCompaniaActual(')
   assert.ok(rellena > -1 && rellena < fn.indexOf('riesgoParaEncolar('), 'compañía aplicada antes de validar')
+})
+
+// 28/10/2026 (trabajo de Generali 0.2.45 en error_definitivo: «la ficha no trae la compañía anterior … «Compañía de procedencia»»). El cliente tenía UNA
+// póliza de auto en vigor (EIAC) y otra de volcado histórico; Generali estaba fuera de la lista y nunca recibía `companiaAnterior`.
+test('Generali auto («Compañía de procedencia»): «probar» y el encolado reciben la compañía de la ÚNICA póliza de auto en vigor', async () => {
+  const { companiaActualUnica } = await import('./tarificador-compania-actual.ts')
+  const { conCompaniaActualUnica } = await import('./tarificador-relanzar-reglas.ts')
+  const polizas = [
+    p({ aseguradora: 'Aseguradora Alfa', eiacXmlHash: 'h', estado: 'activa', fechaEfecto: '2026-09-29' }),
+    p({ aseguradora: 'Aseguradora Beta', importRef: 'volcado', estado: 'activa', fechaEfecto: '2019-10-11' }),
+  ]
+  const actual = companiaActualUnica(null, polizas)
+  assert.equal(actual, 'Aseguradora Alfa', 'el volcado histórico no cuenta como cartera en vigor')
+  const r = { ramo: 'auto', aniosAseguradoAnterior: 3 }
+  const out = conCompaniaActualUnica({ riesgo: r, bloqueos: [], repreguntar: [] }, 'generali', 'auto', actual)
+  assert.equal((out.riesgo as { companiaAnterior?: string }).companiaAnterior, 'Aseguradora Alfa')
+  assert.deepEqual(aplicarCompaniaActual('generali', 'auto', r, actual), { ...r, companiaAnterior: 'Aseguradora Alfa' })
 })

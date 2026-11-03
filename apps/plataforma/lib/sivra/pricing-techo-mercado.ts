@@ -58,6 +58,12 @@ export type TechoMercadoInput = {
   fijoNoche: number
   /** ajuste demanda/calidad del motor para ESTE día (el mismo que infla el objetivo) */
   dqFactor: number
+  /**
+   * Prima vie/sáb por ritmo propio de ESA fecha (`pricing-ritmo-finde.ts`). Escala el techo igual
+   * que escala el objetivo: si no, la prima subiría el objetivo y este techo se la quitaría en la
+   * misma pasada. Ausente/≤1 = sin efecto.
+   */
+  primaFinde?: number | null
 }
 
 export type TechoMercadoOpts = {
@@ -85,6 +91,7 @@ export function techoMercado(i: TechoMercadoInput, o: TechoMercadoOpts = {}): Te
 
   if (!(i.markup > 0) || !(i.dqFactor > 0)) return { techo: 0, origen: null }
   const fijo = Number(i.fijoNoche) > 0 ? Number(i.fijoNoche) : 0
+  const prima = Number(i.primaFinde) > 1 ? Number(i.primaFinde) : 1
 
   // Escalón 1: la propia fecha, medida con corpus fiable y muestra suficiente.
   if (
@@ -93,7 +100,7 @@ export function techoMercado(i: TechoMercadoInput, o: TechoMercadoOpts = {}): Te
     Number(i.medFechaGuest) > 0
   ) {
     return {
-      techo: baseDesdeGuestConFijo(Number(i.medFechaGuest) * i.dqFactor * ratioFecha, i.markup, fijo),
+      techo: baseDesdeGuestConFijo(Number(i.medFechaGuest) * i.dqFactor * ratioFecha * prima, i.markup, fijo),
       origen: "fecha",
     }
   }
@@ -106,7 +113,7 @@ export function techoMercado(i: TechoMercadoInput, o: TechoMercadoOpts = {}): Te
     Number(i.factorEvento) < inhibe
   ) {
     return {
-      techo: baseDesdeGuestConFijo(Number(i.medMesGuest) * i.dqFactor * ratioMes, i.markup, fijo),
+      techo: baseDesdeGuestConFijo(Number(i.medMesGuest) * i.dqFactor * ratioMes * prima, i.markup, fijo),
       origen: "mes",
     }
   }
@@ -150,4 +157,35 @@ export function acotarPorTecho(p: {
     acotado: objetivo < p.target,
     liberaCongelacion: p.old != null && p.old > p.techo,
   }
+}
+
+/**
+ * Suelo que los techos (mercado medido y ADR propio) NO pueden perforar al bajar (27/10/2026).
+ *
+ * POR QUÉ. `acotarPorTecho` solo volvía a subir hasta `min_price`, así que el suelo ESTACIONAL
+ * calculado unas líneas antes (FLOOR_SEASONAL × min_price) lo pisaba el techo: House Sevillana
+ * 24/11 y 08/12 a 300€ con suelos de 330/360, 9 noches de nov-dic bajo su suelo; Busto 16/02.
+ *
+ * EVENTOS. En una noche de evento el suelo estacional sube con el factor (hasta ×2 de min_price),
+ * pero ese recargo es una ESTIMACIÓN a ciegas; el techo de la fecha, en cambio, es la mediana
+ * MEDIDA de esa misma noche. Frente al techo solo se respeta el suelo de la TEMPORADA sin evento:
+ * el evento no puede mantener un precio por encima de lo que su propio mercado medido justifica,
+ * pero tampoco puede quedar por debajo de un día normal de ese mes.
+ *
+ * Devuelve max(min_price, min(suelo estacional, suelo de la temporada sin evento)). `null` en un
+ * suelo = no calculado (seasonal_floor_k=0 o sin min_price): manda lo que haya, nunca un 0.
+ */
+export function sueloFrenteTecho(p: {
+  minPrice: number | null
+  /** suelo estacional del día ya calculado (incluye el recargo de evento); null = no aplica */
+  sueloEstacional: number | null
+  /** el mismo suelo SIN evento (solo FLOOR_SEASONAL del mes); null = no aplica */
+  sueloTemporada: number | null
+}): number | null {
+  const est =
+    p.sueloEstacional != null && p.sueloTemporada != null
+      ? Math.min(p.sueloEstacional, p.sueloTemporada)
+      : (p.sueloEstacional ?? p.sueloTemporada)
+  if (p.minPrice == null) return est
+  return est == null ? p.minPrice : Math.max(p.minPrice, est)
 }

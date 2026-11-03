@@ -107,7 +107,7 @@ test('enlace (25/10/2026): TODO ramo, ficha nueva o existente (esta, a ciegas), 
   assert.deepEqual(ramoEnlaceDatos('hogar', nueva, MOVIL), { ramo: 'hogar', existente: false })
   assert.deepEqual(ramoEnlaceDatos('flota', nueva, MOVIL), { ramo: 'flotas', existente: false })
   assert.deepEqual(ramoEnlaceDatos('seguro-perro', nueva, MOVIL), { ramo: 'mascotas', existente: false })
-  assert.deepEqual(ramoEnlaceDatos('patinete-electrico', nueva, MOVIL), { ramo: 'otros', existente: false })
+  assert.deepEqual(ramoEnlaceDatos('patinete-electrico', nueva, MOVIL), { ramo: 'patinete', existente: false })
   // Ficha que ya existía: SÍ (venta cruzada), marcada para que asegura lo genere a ciegas.
   assert.deepEqual(ramoEnlaceDatos('hogar', { estado: 'existente', id: 'x', nombre: 'Ana' }, MOVIL), { ramo: 'hogar', existente: true })
   assert.equal(ramoEnlaceDatos('auto', { estado: 'no_registrado', motivo: 'red' }, MOVIL), null)
@@ -291,4 +291,13 @@ test('truncarIp: /24 y /48; basura → null', () => {
   assert.equal(truncarIp('999.1.1.1'), null)
   assert.equal(truncarIp('unknown'), null)
   assert.equal(truncarIp(null), null)
+})
+
+test('28/10/2026: el lead web «patinete-electrico» abre oportunidad de ramo PROPIO `patinete`, no «otros»', async () => {
+  const { RAMOS_OPORTUNIDAD } = await import('@central/module-seguros')
+  assert.equal(RAMO_OPORTUNIDAD_DE_LEAD['patinete-electrico'], 'patinete')
+  // Todo destino es un ramo de oportunidad real (el puerto rechaza el resto con 422).
+  for (const t of TIPOS_SEGURO_LEAD) assert.ok((RAMOS_OPORTUNIDAD as readonly string[]).includes(RAMO_OPORTUNIDAD_DE_LEAD[t]), t)
+  // Solo «otros» cae en «otros»: un ramo web con ramo propio que vuelva a degradarse se ve aquí.
+  assert.deepEqual(TIPOS_SEGURO_LEAD.filter((t) => RAMO_OPORTUNIDAD_DE_LEAD[t] === 'otros'), ['otros'])
 })

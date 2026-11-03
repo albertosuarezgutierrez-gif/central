@@ -182,6 +182,18 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Día 5 de cada mes a las 10:00',
   },
   {
+    id: 'finanzas.cierre-mes', categoria: 'finanzas',
+    titulo: 'Cierre contable mensual por piso',
+    que: 'Por piso: banco al día, cargos/facturas casados, reservas cobradas, limpieza, gastos fijos y duplicados. El día 15, si todo cuadra, botón ✅ Cerrar mes.',
+    cuando: 'Días 5 (pre-cierre) y 15 (cierre) de cada mes a las 09:17 (08:17 en invierno)',
+  },
+  {
+    id: 'finanzas.fiscal-avisos', categoria: 'finanzas',
+    titulo: 'Avisos fiscales',
+    que: 'Umbral de 60.000€ de base liquidable a 31/12, cuentas sin movimientos, meses cerrados sin factura y, en diciembre, acciones antes del 31/12.',
+    cuando: 'Lunes y días 5 y 15 a las 09:41 (08:41 en invierno), solo si hay algo nuevo',
+  },
+  {
     id: 'finanzas.suscripciones', categoria: 'finanzas',
     titulo: 'Revisión de suscripciones',
     que: 'Gastos recurrentes (≥3 de los últimos 4 meses) con coste mensual y anual: ¿sigue valiendo?',
@@ -259,6 +271,12 @@ export const AVISOS: AvisoTelegram[] = [
     id: 'facturas.domiciliados-sin-cargo', categoria: 'facturas',
     titulo: 'Domiciliaciones sin cargo en cuenta',
     que: 'Recibos cuyo cargo venció y no aparece en el banco.',
+    cuando: 'Todos los días a las 08:15',
+  },
+  {
+    id: 'facturas.tarjeta-sin-cargo', categoria: 'facturas',
+    titulo: 'Facturas de tarjeta sin cargo',
+    que: 'Facturas que se cobran con tarjeta y a los 10 días no tienen cargo en el banco.',
     cuando: 'Todos los días a las 08:15',
   },
   {
@@ -362,6 +380,12 @@ export const AVISOS: AvisoTelegram[] = [
   },
 
   // ── 🏘️ Pisos turísticos ───────────────────────────────────────────────────
+  {
+    id: 'pisos.idealista-casa', categoria: 'pisos',
+    titulo: 'Casa vacacional (Idealista)',
+    que: 'Anuncios nuevos de Idealista (vía correo) que encajan con tu perfil de casa vacacional.',
+    cuando: 'Al pulsar «Analizar correos» en Inversión (no hay cron)',
+  },
   {
     id: 'pisos.prevision', categoria: 'pisos',
     titulo: 'Previsión de ocupación floja',
@@ -493,6 +517,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Al escribir un huésped',
   },
   {
+    id: 'huespedes.factura-borrador', categoria: 'huespedes',
+    titulo: 'Factura de huésped para aprobar',
+    que: 'Un huésped ha rellenado sus datos fiscales: te llega el borrador con el PDF y el ✅ que la emite y se la envía.',
+    cuando: 'Al completar un huésped el formulario de factura',
+  },
+  {
     id: 'huespedes.conflicto', categoria: 'huespedes',
     titulo: 'Conflicto con un huésped',
     que: 'La conversación se ha torcido y conviene que entres tú.',
@@ -517,6 +547,12 @@ export const AVISOS: AvisoTelegram[] = [
     titulo: 'Subastas nuevas que encajan',
     que: 'Las subastas del día que pasan tu filtro, con su semáforo de cargas.',
     cuando: 'Todos los días a las 10:00',
+  },
+  {
+    id: 'subastas.casa-vacacional', categoria: 'subastas',
+    titulo: 'Casa vacacional (subastas)',
+    que: 'Subastas nuevas que encajan con tu perfil de casa vacacional (Aljarafe/Huelva, chalet, piscina o parcela).',
+    cuando: 'Todos los días a las 10:00 (solo si hay alguna nueva)',
   },
   {
     id: 'subastas.cierre', categoria: 'subastas',
@@ -611,6 +647,12 @@ export const AVISOS: AvisoTelegram[] = [
     titulo: 'Póliza sustituida que sigue viva (posible doble seguro)',
     que: 'Pólizas ya sustituidas por otra de otra compañía cuya vieja sigue en vigor (vencimiento o recibos posteriores al efecto de la nueva): hay que pedir su anulación.',
     cuando: 'Todos los días a las 06:35, junto al seguimiento de sustituciones, y solo si hay alguna',
+  },
+  {
+    id: 'correduria.siniestro-prerehuse', categoria: 'correduria',
+    titulo: 'Posible rehúse en un siniestro',
+    que: 'La compañía ha dejado en el hilo de un siniestro un mensaje que apunta a un rehúse inminente (volcado de la intranet o mensaje pegado). Lleva el número del siniestro y el enlace al expediente.',
+    cuando: 'Al instante, al guardar el mensaje y solo si el puerto detecta el posible rehúse',
   },
   {
     id: 'correduria.emision-retenida', categoria: 'correduria',

@@ -70,9 +70,29 @@ test('al alza sin bucket del mes: el prior sustituye al global plano', () => {
 })
 
 test('al alza con bucket del mes: el mercado fresco manda, el prior solo es red', () => {
-  // Índice alto (≥1,15) → red al 90%. Índice moderado → no toca nada.
+  // Índice alto (≥1,20, fin de la rampa) → red al 90%. Índice ≤1,10 → no toca nada.
   assert.equal(aplicarPrior({ target: 100, indice: { alza: 1.4, baja: 1 }, anclaGlobal: 100, floor: 80, hayBucketMes: true }), 126)
   assert.equal(aplicarPrior({ target: 100, indice: { alza: 1.1, baja: 1 }, anclaGlobal: 100, floor: 80, hayBucketMes: true }), 100)
+})
+
+test('con bucket del mes el suelo del prior es CONTINUO: no salta por una reserva (House dic, 27/10/2026)', () => {
+  // Caso real: ancla global ~411, objetivo ~368. El alza pasó de 1,145 a 1,193 al entrar UNA
+  // reserva. Con el escalón en 1,15 el precio iba de 368 a 441 (+20 %) de una pasada a otra.
+  const p = (alza: number) => aplicarPrior({ target: 368, indice: { alza, baja: 1 }, anclaGlobal: 411, floor: 80, hayBucketMes: true })
+  const salto = p(1.193) / p(1.145) - 1
+  assert.ok(salto < 0.15, `salto ${(salto * 100).toFixed(1)} % por un cambio de 0,048 del índice`)
+  // Continuidad: dos índices a 0,002 no separan el suelo más de un 3 % del ancla (la pendiente de
+  // la rampa da ~2 %); el escalón daba de 0 a ~100 % del ancla en el 1,15.
+  const suelo = (alza: number) => aplicarPrior({ target: 0, indice: { alza, baja: 1 }, anclaGlobal: 411, floor: 0, hayBucketMes: true })
+  for (const a of [1.1, 1.13, 1.149, 1.15, 1.17, 1.199]) {
+    const d = Math.abs(suelo(a + 0.002) - suelo(a))
+    assert.ok(d <= 411 * 0.03, `discontinuidad en alza ${a}: ${suelo(a)} → ${suelo(a + 0.002)}`)
+  }
+  // Extremos de la rampa: nada en 1,10, pleno (×0,9) desde 1,20; monótona en medio.
+  assert.equal(suelo(1.10), 0)
+  assert.equal(suelo(1.20), Math.round(411 * 1.2 * 0.9))
+  assert.equal(suelo(1.4), Math.round(411 * 1.4 * 0.9))
+  assert.ok(suelo(1.12) < suelo(1.15) && suelo(1.15) < suelo(1.18))
 })
 
 test('a la baja: corrige el objetivo en un mes flojo sin mercado medido', () => {

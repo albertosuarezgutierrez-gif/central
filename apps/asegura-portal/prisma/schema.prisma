@@ -200,6 +200,10 @@ model PortalBien {
   identidad    PortalIdentidad?        @relation(fields: [identidadId], references: [id], onDelete: Cascade)
   polizas      PortalPolizaDeclarada[]
   obligaciones PortalObligacion[]
+  /// Las etiquetas QR del vehículo (`portal_vehiculo_qr`, F1 27/10/2026). Una sola viva por bien.
+  qrsVehiculo     PortalVehiculoQr[]
+  /// La excepción de interruptores públicos de ESTE vehículo (0 o 1 fila).
+  publicoVehiculo PortalVehiculoPublico[]
 
   @@map("portal_bien")
   @@schema("seguros")
@@ -972,6 +976,7 @@ enum TipoSeguro {
   impago_alquiler
   viaje
   caucion
+  patinete
   otros
 
   @@map("tipo_seguro")
@@ -1442,6 +1447,50 @@ model PortalHojaQrPoliza {
   @@schema("seguros")
 }
 
+/// El QR de un VEHÍCULO (`seguros.portal_vehiculo_qr`, F1 27/10/2026; SQL
+/// `prisma/sql/2026-10-27_portal_vehiculo_qr.sql`). Una fila por etiqueta impresa;
+/// token HASHEADO; anular = UPDATE (el rol no tiene DELETE). La única lectura sin
+/// identidad es `vehiculoPorToken` (`lib/vehiculo-token.ts`).
+model PortalVehiculoQr {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bienId                String    @map("bien_id") @db.Uuid
+  tokenHash             String    @unique @map("token_hash")
+  creadoPorIdentidadId  String?   @map("creado_por_identidad_id") @db.Uuid
+  /// `dbgenerated`, NO `now()`: Prisma rellena `@default(now())` en el cliente y nombraría la columna en el
+  /// INSERT, que el GRANT no concede (42501). Lo pone Postgres.
+  creadoEn              DateTime  @default(dbgenerated("now()")) @map("creado_en") @db.Timestamptz(6)
+  ultimoUsoEn           DateTime? @map("ultimo_uso_en") @db.Timestamptz(6)
+  anuladoEn             DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPorIdentidadId String?   @map("anulado_por_identidad_id") @db.Uuid
+
+  bien PortalBien @relation(fields: [bienId], references: [id], onDelete: Cascade)
+
+  @@index([bienId, creadoEn])
+  @@map("portal_vehiculo_qr")
+  @@schema("seguros")
+}
+
+/// QUÉ ve quien escanea el QR de un vehículo (`seguros.portal_vehiculo_publico`).
+/// `bienId` null = DEFECTO del dueño; con `bienId` = excepción de ese vehículo.
+/// Dueño = persona (`duenoIdentidadId`) XOR empresa (`clienteId`), copiado del
+/// `portal_bien` en el servidor. Allow-list de salida: `vehiculo-publico.ts`.
+model PortalVehiculoPublico {
+  id                        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  duenoIdentidadId          String?  @map("dueno_identidad_id") @db.Uuid
+  clienteId                 String?  @map("cliente_id") @db.Uuid
+  bienId                    String?  @map("bien_id") @db.Uuid
+  datosCarretera            Boolean  @default(true) @map("datos_carretera")
+  estadoAlDia               Boolean  @default(true) @map("estado_al_dia")
+  recordatoriosPendientes   Boolean  @default(false) @map("recordatorios_pendientes")
+  actualizadoPorIdentidadId String?  @map("actualizado_por_identidad_id") @db.Uuid
+  actualizadoEn             DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  bien PortalBien? @relation(fields: [bienId], references: [id], onDelete: Cascade)
+
+  @@map("portal_vehiculo_publico")
+  @@schema("seguros")
+}
+
 /// El enlace de un solo uso con el que el CORREDOR abre el portal como lo ve un
 /// cliente (`seguros.portal_vista_corredor`). Lo crea asegura; aquí solo se lee
 /// y se sella `usadoEn`. Reglas en `@central/module-seguros-portal/vista-corredor`.
@@ -1688,6 +1737,15 @@ model PortalPatrimonioInmueble {
   /// 🚨 NULL = no lo ha dicho, que NO es «no tiene». Solo `si` ofrece revisar los seguros de la hipoteca (y solo si pulsa).
   /// ⚠️ Declarada ANTES de que exista en la BD = 42703 en toda lectura del modelo: el SQL va antes del despliegue.
   hipoteca                          String?
+  /// EDIFICIO sin división horizontal (27/10/2026, `prisma/sql/2026-10-27_portal_patrimonio_edificio_unidades.sql`): la UNIDAD
+  /// cuelga del edificio. NULL = inmueble suelto o el propio edificio. En la BD es FK COMPUESTA `(inmueble_padre_id, titular_id)`
+  /// (nunca de otro titular) + trigger de un nivel; aquí va como escalar a propósito (sin relación Prisma que la «simplifique»).
+  /// ⚠️ Declaradas ANTES de que existan en la BD = 42703 en toda lectura del modelo: el SQL va antes del despliegue.
+  inmueblePadreId                   String?   @map("inmueble_padre_id") @db.Uuid
+  /// Solo en un edificio: 'm2' | 'porcentaje'. NULL = sin elegir → no se reparte (y se dice).
+  repartoCriterio                   String?   @map("reparto_criterio")
+  /// Solo en una unidad: su % del reparto (0–100). NULL = no fijado.
+  repartoPorcentaje                 Decimal?  @map("reparto_porcentaje") @db.Decimal(5, 2)
 
   titular      PortalPatrimonioTitular             @relation(fields: [titularId], references: [id])
   comunidades  PortalPatrimonioInmuebleComunidad[]
@@ -1985,6 +2043,10 @@ model PortalPatrimonioImportacion {
   filasTotal           Int?      @map("filas_total")
   /// Recuento al confirmar (auditoría): creadas, yaExistian, repetidas, apartadas, porValidar.
   resultado            Json?
+  /// VOLCADO inicial (27/10/2026, `2026-10-27_portal_patrimonio_volcado.sql`): la IA propone la estructura (tipo NULL, CHECK).
+  /// Cada volcado = una lectura con IA del cupo mensual del titular.
+  /// ⚠️ Declarada ANTES de que exista en la BD = 42703 en toda lectura del modelo: el SQL va antes del despliegue.
+  volcado              Boolean   @default(dbgenerated("false"))
 
   titular PortalPatrimonioTitular           @relation(fields: [titularId], references: [id])
   filas   PortalPatrimonioImportacionFila[]
@@ -2150,3 +2212,21 @@ model PortalPatrimonioInmueblePoliza {
 
 /// Mensajes cliente ↔ corredor (ASegura OS §Q.7, 24/09/2026). Un hilo por póliza (NULL = general).
 /// El rol solo tiene SELECT, INSERT y UPDATE(leido_at): lo escrito no se edita ni se borra.
+
+/// RECOMENDACIÓN ENTRE PROPIETARIOS (27/10/2026, punto 9 del estudio). La identidad del invitado es su CORREO y aquí solo vive el
+/// HASH (`hashCanal`). El portal no envía nada: la persona comparte ella el texto. Registra quién recomendó a quién y cuándo (para el
+/// panel de conversión); la recompensa (cupo de IA «amplio» 90 días) se CALCULA desde `canjeadaEn`, no se guarda. Sin relaciones
+/// Prisma: el aislamiento lo da el código (`recomendadorIdentidadId` = la cookie). SQL `2026-10-27_portal_patrimonio_recomendacion.sql` SIN aplicar.
+model PortalPatrimonioRecomendacion {
+  id                      String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  recomendadorIdentidadId String    @map("recomendador_identidad_id") @db.Uuid
+  correoHash              String    @map("correo_hash")
+  creadoEn                DateTime  @default(dbgenerated("now()")) @map("creado_en") @db.Timestamptz(6)
+  caducaEn                DateTime  @map("caduca_en") @db.Timestamptz(6)
+  anuladoEn               DateTime? @map("anulado_en") @db.Timestamptz(6)
+  canjeadaPorIdentidadId  String?   @map("canjeada_por_identidad_id") @db.Uuid
+  canjeadaEn              DateTime? @map("canjeada_en") @db.Timestamptz(6)
+
+  @@map("portal_patrimonio_recomendacion")
+  @@schema("seguros")
+}

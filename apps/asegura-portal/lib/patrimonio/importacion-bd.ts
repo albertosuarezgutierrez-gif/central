@@ -110,10 +110,12 @@ export function puertosImportacion(identidadId: string): PuertosImportacion {
       const abierta = () =>
         prisma.portalPatrimonioImportacion.findFirst({
           where: { titularId, ficheroHash: hash, estado: { in: ABIERTAS } },
-          select: { id: true, identidadId: true },
+          select: { id: true, identidadId: true, volcado: true },
         })
       const previa = await abierta()
       // El mismo fichero ya está abierto: se devuelve ESA (idempotente). Si es de otra identidad, no se confirma que exista.
+      // Ese fichero está en un VOLCADO abierto (comparte el índice único titular + hash): conflicto, no «no existe».
+      if (previa?.volcado && previa.identidadId === identidadId) return { ok: false, motivo: 'fichero_ya_importado' }
       if (previa) return previa.identidadId === identidadId ? { ok: true, id: previa.id, nueva: false } : { ok: false }
       try {
         const id = await prisma.$transaction(async (tx) => {
@@ -147,6 +149,7 @@ export function puertosImportacion(identidadId: string): PuertosImportacion {
         // Carrera con otra subida del mismo fichero: gana el índice único.
         if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
           const p2 = await abierta()
+          if (p2?.volcado && p2.identidadId === identidadId) return { ok: false, motivo: 'fichero_ya_importado' }
           return p2 && p2.identidadId === identidadId ? { ok: true, id: p2.id, nueva: false } : { ok: false }
         }
         throw e

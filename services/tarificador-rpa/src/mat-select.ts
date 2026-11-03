@@ -147,3 +147,27 @@ export async function elegirOpcionMatSelect(select: Locator, valores: string | r
   }
   return { texto, origen }
 }
+
+/**
+ * v0.8.28 · Solo LEE las opciones de un `mat-select` (diagnóstico de huecos): lo abre con `pulsar` (guard), espera el panel, lee los textos de
+ * las opciones visibles y lo cierra con el telón. NUNCA elige. `null` si no está/ está deshabilitado/ es múltiple/ no hay panel. No lanza.
+ */
+export async function leerOpcionesMatSelect(select: Locator, o: Pick<OpcionesMatSelect, 'pulsar' | 'esperaMs'>): Promise<string[] | null> {
+  try {
+    const page = select.page()
+    if ((await select.locator('visible=true').count().catch(() => 0)) !== 1) return null
+    const [dis, multi, ctrl] = await select.evaluate((el) => [el.getAttribute('aria-disabled'), el.getAttribute('aria-multiselectable'), el.getAttribute('aria-controls') ?? el.getAttribute('aria-owns')] as const)
+    if (dis === 'true' || multi === 'true') return null
+    await o.pulsar(select)
+    const overlay = page.locator(SEL_OVERLAY)
+    const porId = ctrl ? page.locator(`[id="${ctrl.replace(/"/g, '')}"]`) : null
+    const ambito = porId && (await porId.count().catch(() => 0)) > 0 ? porId : overlay
+    await esperarPanel(page, ambito.locator(SEL_OPCIONES), o.esperaMs ?? 3_000)
+    const textos = (await ambito.locator(SEL_OPCIONES).locator('visible=true').allInnerTexts().catch(() => [] as string[])).map((t) => t.replace(/\s+/g, ' ').trim())
+    const telon = overlay.locator('.cdk-overlay-backdrop').locator('visible=true')
+    if ((await telon.count().catch(() => 0)) > 0) await o.pulsar(telon.first()).catch(() => undefined)
+    return textos
+  } catch {
+    return null
+  }
+}

@@ -9,9 +9,18 @@
 // de otra correduría. Lo vigila test/regression-asegura-aislamiento.test.ts.
 
 import { prisma } from '../tenant.ts'
-import { COSTE_COTIZACION_CENTS } from './config.ts'
-import { MOTIVO_LIMITES, MOTIVO_RERATE, MOTIVO_SUBMIT, type OperacionEmision } from './gasto-emision.ts'
-import type { Consumo } from './contador.ts'
+import { COSTE_COTIZACION_CENTS, type Topes } from './config.ts'
+import {
+  MOTIVO_LIMITES,
+  MOTIVO_RERATE,
+  MOTIVO_SUBMIT,
+  costeEmisionCents,
+  puedeGastarEmision,
+  topesEmision,
+  type OperacionEmision,
+} from './gasto-emision.ts'
+import { puedeCotizar, type Consumo } from './contador.ts'
+import { decidirTopeEuros } from './tope-euros.ts'
 import { esquema } from '../esquema-bd.ts'
 
 /** ¿Existe ya la columna `huella` (SQL 2026-10-08)? Vive aquí: solo este fichero nombra el libro. */
@@ -19,6 +28,10 @@ const hayHuella = () => esquema.existeColumna('codeoscopic_consumo', 'huella')
 import { decidirDuplicado, VENTANA_DUPLICADO_MIN, type FilaPrevia } from './huella.ts'
 
 export type Reserva = { intentoId: string; correduriaId: string }
+
+/** Cliente con el que se lee/escribe el libro: `prisma` o la `tx` de una transacción. */
+type Db = { $queryRaw: typeof prisma.$queryRaw; $executeRaw: typeof prisma.$executeRaw }
+type Env = Record<string, string | undefined>
 
 /**
  * Un presupuesto hecho en la WEB de Avant2 y traído a la intranet (29/09/2026, ruta
@@ -61,8 +74,8 @@ export async function anotarImportadaWeb(
  * `CLAUDE.md` marca como el más caro: la guarda que se pone verde porque la
  * consulta no devolvió nada.
  */
-export async function consumoActual(correduriaId: string): Promise<Consumo> {
-  const filas = await prisma.$queryRaw<
+export async function consumoActual(correduriaId: string, db: Db = prisma): Promise<Consumo> {
+  const filas = await db.$queryRaw<
     { dia_facturables: bigint; dia_en_vuelo: bigint; mes_facturables: bigint; mes_en_vuelo: bigint }[]
   >`
     with ventana as (
@@ -108,8 +121,8 @@ export async function reservar(input: {
   intentoId: string
   motivo: string
   solicitadoPor: string
-}): Promise<Reserva> {
-  await prisma.$executeRaw`
+}, db: Db = prisma): Promise<Reserva> {
+  await db.$executeRaw`
     insert into seguros.codeoscopic_consumo
       (correduria_id, intento_id, estado, motivo, solicitado_por, coste_cents)
     values
@@ -119,8 +132,70 @@ export async function reservar(input: {
   return { intentoId: input.intentoId, correduriaId: input.correduriaId }
 }
 
+/**
+ * 🔒 Candado de GASTO por correduría + re-cuenta del libro y del tope en euros, DENTRO de la
+ * transacción que va a reservar (02/11/2026).
+ *
+ * Por qué: `cotizar()` y `conLibroDeEmision()` comprueban los topes ANTES de reservar, en otra
+ * conexión y sin candado. N peticiones en paralelo leen el mismo gasto («69,50 €, cabe una»), las N
+ * pasan y las N reservan: el tope se rebasa justo en la ráfaga contra la que existe. El candado de
+ * la huella no lo evita (cuerpos distintos = huellas distintas). Aquí, bajo
+ * `pg_advisory_xact_lock(hashtext('cotizar:' || correduria))` —el MISMO para cotizar y emisión: es
+ * una sola bolsa de gasto en Avant2—, la segunda espera a que la primera confirme su INSERT y
+ * vuelve a contar ya con él dentro.
+ *
+ * Todo con la `tx` (nunca `prisma`): leer por otra conexión mientras se retiene el candado podría
+ * agotar el pool con todas las conexiones esperando al candado. NO atrapa errores (fail-closed).
+ * `null` = cabe; si no, el motivo del corte (`sin-libro` = no se pudo leer el gasto, nunca «0 €»).
+ */
+async function recontarBajoCandado(
+  tx: Db,
+  correduriaId: string,
+  q:
+    | { tipo: 'cotizar'; topes: Topes; env: Env }
+    | { tipo: 'emision'; operacion: OperacionEmision; topes: Topes; env: Env },
+  costeCents: number,
+): Promise<{ razon: 'tope' | 'sin-libro'; mensaje: string } | null> {
+  await tx.$executeRaw`select pg_advisory_xact_lock(hashtext('cotizar:' || ${correduriaId}::text))`
+  const veredicto =
+    q.tipo === 'cotizar'
+      ? puedeCotizar(await consumoActual(correduriaId, tx), q.topes)
+      : puedeGastarEmision(q.operacion, await consumoEmision(correduriaId, q.operacion, tx), q.topes, costeCents)
+  if (!veredicto.permitido) return { razon: 'tope', mensaje: veredicto.explicacion }
+  const gastadoCents = await gastadoMesCents(
+    correduriaId,
+    {
+      rerate: costeEmisionCents('rerate', q.env),
+      submit: costeEmisionCents('submit', q.env),
+      limites: costeEmisionCents('limites_hogar', q.env),
+    },
+    tx,
+  )
+  const amp = await tx.$queryRaw<{ ampliado: bigint }[]>`
+    select
+      (select coalesce(sum(e.importe_cents), 0)
+         from seguros.codeoscopic_tope_evento e
+        where e.correduria_id = ${correduriaId}::uuid
+          and e.tipo = 'ampliacion'
+          and e.mes = date_trunc('month', now() at time zone 'Europe/Madrid')::date)::bigint as ampliado`
+  const d = decidirTopeEuros({ gastadoCents, ampliadoCents: amp[0] ? Number(amp[0].ampliado) : null }, costeCents)
+  if (!d.permitido) return { razon: d.motivo === 'desconocido' ? 'sin-libro' : 'tope', mensaje: d.explicacion }
+  return null
+}
+
+/** El tope se re-comprobó bajo candado y ya no cabe: se lanza para que NO se llame al vendor. */
+export class TopeAlcanzadoBajoCandado extends Error {
+  readonly razon: 'tope' | 'sin-libro'
+  constructor(razon: 'tope' | 'sin-libro', mensaje: string) {
+    super(mensaje)
+    this.razon = razon
+    this.name = 'TopeAlcanzadoBajoCandado'
+  }
+}
+
 export type ReservaAntiDuplicado =
   | { resultado: 'reservada' }
+  | { resultado: 'tope'; razon: 'tope' | 'sin-libro'; mensaje: string }
   | { resultado: 'reutilizar'; intentoId: string; respuesta: unknown; cotizacionId: string }
   | { resultado: 'bloquear'; intentoId: string; estado: 'reservado' | 'facturable' }
 
@@ -137,15 +212,23 @@ export async function reservarSinDuplicado(input: {
   solicitadoPor: string
   huella: string
   forzar?: boolean
+  /** Topes de cotizar vigentes (los de `resolverConfig`): se re-cuentan bajo candado. */
+  topes: Topes
+  env?: Env
 }): Promise<ReservaAntiDuplicado> {
+  const env = input.env ?? process.env
   // Esquema sin migrar (columna `huella` aún no existe): se reserva como antes de #4458 — SIN huella ni
   // deduplicación, pero CON reserva en libro (los topes se siguen aplicando antes, en cotizar). Si la
   // comprobación falla se asume «no existe». Nunca relaja la reserva: solo omite la deduplicación.
   if (!(await hayHuella())) {
-    await reservar({ correduriaId: input.correduriaId, intentoId: input.intentoId, motivo: input.motivo, solicitadoPor: input.solicitadoPor })
-    return { resultado: 'reservada' }
+    return prisma.$transaction(async (tx): Promise<ReservaAntiDuplicado> => {
+      const corte = await recontarBajoCandado(tx, input.correduriaId, { tipo: 'cotizar', topes: input.topes, env }, COSTE_COTIZACION_CENTS)
+      if (corte) return { resultado: 'tope', ...corte }
+      await reservar({ correduriaId: input.correduriaId, intentoId: input.intentoId, motivo: input.motivo, solicitadoPor: input.solicitadoPor }, tx)
+      return { resultado: 'reservada' }
+    })
   }
-  return prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx): Promise<ReservaAntiDuplicado> => {
     await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${input.huella}))`
     const filas = await tx.$queryRaw<{ intento_id: string; estado: FilaPrevia['estado']; creado_at: Date }[]>`
       select intento_id::text as intento_id, estado, creado_at
@@ -172,6 +255,9 @@ export async function reservarSinDuplicado(input: {
       return { resultado: 'reutilizar', intentoId: d.intentoId, ...c }
     }
     if (d.accion === 'bloquear') return { resultado: 'bloquear', intentoId: d.intentoId, estado: d.estado }
+    // Orden de candados fijo (huella → correduría) en todos los caminos: sin ciclos, sin interbloqueo.
+    const corte = await recontarBajoCandado(tx, input.correduriaId, { tipo: 'cotizar', topes: input.topes, env }, COSTE_COTIZACION_CENTS)
+    if (corte) return { resultado: 'tope', ...corte }
     await tx.$executeRaw`
       insert into seguros.codeoscopic_consumo
         (correduria_id, intento_id, estado, motivo, solicitado_por, coste_cents, huella)
@@ -193,8 +279,9 @@ export async function reservarSinDuplicado(input: {
 export async function consumoEmision(
   correduriaId: string,
   operacion: OperacionEmision,
+  db: Db = prisma,
 ): Promise<Consumo> {
-  const filas = await prisma.$queryRaw<
+  const filas = await db.$queryRaw<
     { dia_facturables: bigint; dia_en_vuelo: bigint; mes_facturables: bigint; mes_en_vuelo: bigint }[]
   >`
     with ventana as (
@@ -243,14 +330,27 @@ export async function reservarEmision(input: {
   solicitadoPor: string
   costeCents: number
   projectId: string | null
+  env?: Env
 }): Promise<Reserva> {
-  await prisma.$executeRaw`
-    insert into seguros.codeoscopic_consumo
-      (correduria_id, intento_id, estado, motivo, solicitado_por, coste_cents, project_id_codeoscopic)
-    values
-      (${input.correduriaId}::uuid, ${input.intentoId}::uuid, 'reservado',
-       ${input.operacion}, ${input.solicitadoPor}, ${input.costeCents}, ${input.projectId})
-  `
+  const env = input.env ?? process.env
+  // Bajo el MISMO candado que cotizar (una sola bolsa en euros). Si ya no cabe, se LANZA: el
+  // llamante (`libro-emision.ts`) trata cualquier excepción de la reserva como «no se llama».
+  await prisma.$transaction(async (tx) => {
+    const corte = await recontarBajoCandado(
+      tx,
+      input.correduriaId,
+      { tipo: 'emision', operacion: input.operacion, topes: topesEmision(input.operacion, env), env },
+      input.costeCents,
+    )
+    if (corte) throw new TopeAlcanzadoBajoCandado(corte.razon, corte.mensaje)
+    await tx.$executeRaw`
+      insert into seguros.codeoscopic_consumo
+        (correduria_id, intento_id, estado, motivo, solicitado_por, coste_cents, project_id_codeoscopic)
+      values
+        (${input.correduriaId}::uuid, ${input.intentoId}::uuid, 'reservado',
+         ${input.operacion}, ${input.solicitadoPor}, ${input.costeCents}, ${input.projectId})
+    `
+  })
   return { intentoId: input.intentoId, correduriaId: input.correduriaId }
 }
 
@@ -324,8 +424,9 @@ export async function cerrarDescartado(
 export async function gastadoMesCents(
   correduriaId: string,
   costes: { rerate: number; submit: number; limites: number },
+  db: Db = prisma,
 ): Promise<number | null> {
-  const filas = await prisma.$queryRaw<{ gastado: bigint }[]>`
+  const filas = await db.$queryRaw<{ gastado: bigint }[]>`
     with mes as (
       select (date_trunc('month', now() at time zone 'Europe/Madrid') at time zone 'Europe/Madrid') as desde
     )

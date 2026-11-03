@@ -48,6 +48,18 @@ export function companiaActualDeCliente(competencia: unknown, polizas: readonly 
   return enVigor[0]?.nombre ?? null
 }
 
+/**
+ * Variante ESTRICTA para «probar» (riesgo reconstruido, sin nadie delante que lo revise): la compañía de la póliza de AUTO en vigor
+ * de la cartera SOLO si hay exactamente UNA (con nombre útil). Cero o varias → `null` (queda sin rellenar; nunca se elige entre dos).
+ * Si la oportunidad ya declara una compañía actual (`poliza_competencia.aseguradora`), esa manda. PURA.
+ */
+export function companiaActualUnica(competencia: unknown, polizas: readonly PolizaParaCompaniaActual[] | null): string | null {
+  const deOportunidad = esObj(competencia) ? nombreCompaniaUtil(competencia.aseguradora) : null
+  if (deOportunidad) return deOportunidad
+  const enVigor = (polizas ?? []).filter((p) => p.tipo === 'auto' && esCarteraEnVigor({ importRef: p.importRef, eiacXmlHash: p.eiacXmlHash, estado: p.estado, sustituidaAt: p.sustituidaAt }))
+  return enVigor.length === 1 ? nombreCompaniaUtil(enVigor[0]!.aseguradora) ?? nombreCompaniaUtil(enVigor[0]!.companiaDeclarada) : null
+}
+
 const vacio = (v: unknown): boolean => typeof v !== 'string' || v.trim() === ''
 
 /** Tope de `companiaAnterior` en el validador del formulario (`MAX_COMPANIA_ANTERIOR`): por encima, el validador da ERROR y tumba el trabajo. */
@@ -55,11 +67,14 @@ const MAX_COMPANIA_ANTERIOR = 80
 /** Caracteres que el validador rechaza en texto libre (copia de `CARACTERES_PROHIBIDOS` de module-tarificacion). */
 const CARACTERES_PROHIBIDOS = /[<>{}\[\]\\`$]|[\u0000-\u001f]/
 
-/** Compañías de auto cuyo bot pide la compañía anterior (Allianz Turismos, Mapfre NSEI). */
-const COMPANIAS_CON_COMPANIA_ANTERIOR = ['allianz', 'mapfre']
+/**
+ * Compañías de auto cuyo bot pide la compañía anterior (Allianz Turismos, Mapfre NSEI y, desde el 28/10/2026, Generali: «Compañía de procedencia»
+ * de «Datos de Valoración», obligatoria; sin ella el bot 0.2.45 para con «la ficha no trae la compañía anterior»).
+ */
+const COMPANIAS_CON_COMPANIA_ANTERIOR = ['allianz', 'mapfre', 'generali']
 
 /**
- * ¿Hay que buscar la compañía del cliente para este riesgo? Auto de Allianz/Mapfre sin `companiaAnterior` ni `companiaActual`, y
+ * ¿Hay que buscar la compañía del cliente para este riesgo? Auto de Allianz/Mapfre/Generali sin `companiaAnterior` ni `companiaActual`, y
  * sin la declaración «0 años asegurado» (sin seguro anterior: poner compañía cambiaría la procedencia). PURA; evita lecturas de BD.
  */
 export function necesitaCompaniaActual(compania: string, ramo: string, riesgo: unknown): boolean {

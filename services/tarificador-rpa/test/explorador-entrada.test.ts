@@ -9,7 +9,7 @@ import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import type { AddressInfo } from 'node:net'
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
-import { ENTRADAS_EXPLORACION } from '@central/module-tarificacion'
+import { ENTRADAS_EXPLORACION, esAvanceAutorizado } from '@central/module-tarificacion'
 import { instalarGuardEmision, pulsar, type GuardEmision } from '../src/guard.ts'
 import { abrirNuevaAlta, esperarMarcoApp, etiquetaProducto, NOMBRE_MARCO_APP, type PestanaEntradaAllianz } from '../src/adapters/allianz/entrada.ts'
 import { capturarInventarioExploracion } from '../src/inventario-dom.ts'
@@ -113,6 +113,21 @@ test('la entrada de Hogar es la de Comunidades con otro producto: Particulares +
   assert.equal(hogar.productoMenu, 'Allianz HOGAR')
   assert.equal(comunidades.pestana, hogar.pestana)
   assert.equal(comunidades.productoMenu, 'Comunidades')
+})
+
+test('la entrada de Movilidad Personal (patinete) es Autos + «Movilidad Personal», ramo patinete, tomador = mediador y UN solo avance (Aceptar de Datos Básicos)', () => {
+  const e = ENTRADAS_EXPLORACION['allianz:autos:movilidad_personal']
+  assert.equal(e.compania, 'allianz')
+  assert.equal(e.ramo, 'patinete')
+  assert.equal(e.pestana, 'Autos')
+  assert.equal(e.productoMenu, 'Movilidad Personal')
+  assert.equal(e.tomadorMediador, true)
+  assert.equal(e.avancesAutorizados.length, 1)
+  assert.ok(esAvanceAutorizado('allianz:autos:movilidad_personal', { tag: 'button', texto: 'Aceptar' } as never, { titulos: [], titulosPantalla: ['Datos Básicos – Figuras Intervinientes'] } as never), 'Aceptar de Datos Básicos')
+  assert.ok(!esAvanceAutorizado('allianz:autos:movilidad_personal', { tag: 'button', texto: 'Aceptar' } as never, { titulos: [], titulosPantalla: ['Tarificar'] } as never), 'Aceptar de Tarificar sigue bloqueado')
+  assert.ok(!esAvanceAutorizado('allianz:autos:movilidad_personal', { tag: 'button', texto: 'Siguiente' } as never, { titulos: [], titulosPantalla: ['Datos Básicos'] } as never), 'otro botón no')
+  assert.match('Movilidad Personal', etiquetaProducto(e.productoMenu))
+  assert.doesNotMatch('Movilidad Personal Plus', etiquetaProducto(e.productoMenu))
 })
 
 for (const [entrada, tile] of [['allianz:particulares:hogar', 'Allianz HOGAR'], ['allianz:particulares:comunidades', 'Comunidades']] as const) {

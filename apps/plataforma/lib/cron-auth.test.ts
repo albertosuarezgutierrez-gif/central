@@ -29,3 +29,9 @@ test('un bearer vacío nunca casa con un secreto definido', () => {
   assert.equal(autorizaCron({ secret: 's3cr3t', bearer: '', qs: null, produccion: true }), false)
   assert.equal(autorizaCron({ secret: 's3cr3t', bearer: '', qs: null, produccion: false }), false)
 })
+
+test('comparación en tiempo constante: longitudes distintas o «undefined» literal no casan', () => {
+  assert.equal(autorizaCron({ secret: 's3cr3t', bearer: 's3cr3', qs: null, produccion: true }), false)
+  assert.equal(autorizaCron({ secret: 's3cr3t', bearer: 'undefined', qs: null, produccion: true }), false)
+  assert.equal(autorizaCron({ secret: 's3cr3t', bearer: 's3cr3tX', qs: null, produccion: true }), false)
+})

@@ -142,7 +142,7 @@ export {
   polizasModificadasParaAviso, textoPolizaModificada, textoPushPolizaModificada,
 } from './poliza-cambios.ts'
 export type { CampoCambioPoliza, FotoPoliza, FilaFotoPoliza, FilaCambioPoliza, PolizaModificadaParaAviso } from './poliza-cambios.ts'
-export { debeAvisarPush, textoPushObligacion } from './push.ts'
+export { debeAvisarPush, textoPushObligacion, urlPushObligacion } from './push.ts'
 export {
   normalizarRecordatorio,
   siguienteOcurrencia,
@@ -409,6 +409,7 @@ export {
 export type { HechosMenu, HerramientasVisibles, ModoPuerta, PuertaPortal } from './menu-visible.ts'
 export {
   componerCalendario,
+  agruparPorMes,
   diasHastaDia,
   avisosDeFechaIncompletos,
   ORIGENES_CALENDARIO,
@@ -423,6 +424,7 @@ export type {
   EntradaCalendario,
   FuenteCalendario,
   CalendarioCompuesto,
+  GrupoCalendario,
 } from './calendario-unico.ts'
 export {
   ESTADOS_SINIESTRO,
@@ -637,7 +639,7 @@ export {
 } from './mejorar-precio.ts'
 export type { CanalPrecio, MomentoLlamada, PeticionPrecio, PrioridadPrecio } from './mejorar-precio.ts'
 export { HORAS_ENLACE_DIRECTO, destinoSeguro, estadoEnlace, generarTokenEnlace, hashTokenEnlace, tokenEnlaceValido, urlEnlaceDirecto, type EstadoEnlace } from './enlace-directo.ts'
-export { ETIQUETA_AVISO_CIMA, TIPOS_AVISO_CIMA, TIPO_AVISO_VENCIMIENTO_CARNET, TIPO_AVISO_VENCIMIENTO_ITV, TIPOS_AVISO_INTERRUPTOR, claveBase, esTipoAvisoCima, eventosDePolizas, eventosPolizasNuevas, eventosPolizasModificadas, planificarAvisos, textoPushCima, urlPushCima } from './avisos-cima.ts'
+export { ETIQUETA_AVISO_CIMA, TIPOS_AVISO_CIMA, TIPO_AVISO_VENCIMIENTO_CARNET, TIPO_AVISO_VENCIMIENTO_ITV, TIPOS_AVISO_INTERRUPTOR, claveBase, anclaRecibo, anclaSiniestro, urlFichaPoliza, esTipoAvisoCima, eventosDePolizas, eventosPolizasNuevas, eventosPolizasModificadas, planificarAvisos, textoPushCima, urlPushCima } from './avisos-cima.ts'
 // Fase B de avisos (13/10/2026): vencimiento de aportadas, subida de prima, vencimientos de pólizas autorizadas.
 export {
   DIAS_CAPTACION_APORTADA,
@@ -672,6 +674,8 @@ export type {
   TitularAutorizadoParaAviso,
   UmbralSubidaPrima,
 } from './avisos-ampliados.ts'
+export { tagPushCima, tagPushObligacion, accionesPushCima } from './push-aviso.ts'
+export type { AccionPush } from './push-aviso.ts'
 export type { EventoCima, PlanAvisos, PolizaParaAviso, TipoAvisoCima, TipoAvisoInterruptor } from './avisos-cima.ts'
 export { vistaCobertura, capitalDeCobertura, nombreCobertura, LIMITES_LEGALES, type CoberturaVista, type CapitalVista } from './cobertura-vista.ts'
 // Personas de la póliza y terceros del siniestro (CIMA, asegura#880): lista blanca de lo que ve el cliente.
@@ -733,6 +737,35 @@ export type {
   VencimientoFlota,
 } from './flota.ts'
 
+// QR del VEHÍCULO (27/10/2026, F1): vista pública por allow-list de salida + quién gestiona el vehículo.
+export {
+  CAMPOS_PROHIBIDOS_EN_VEHICULO_PUBLICO,
+  CLAVES_INTERRUPTORES,
+  INTERRUPTORES_DEFECTO,
+  SEMAFOROS,
+  TEXTO_INTERRUPTOR,
+  TEXTO_SEMAFORO,
+  TEXTO_TIPO_RECORDATORIO,
+  TIPOS_RECORDATORIO_VEHICULO,
+  interruptoresDelCuerpo,
+  interruptoresEfectivos,
+  semaforoItv,
+  semaforoSeguro,
+  vistaPublicaVehiculo,
+} from './vehiculo-publico.ts'
+export type {
+  EntradaVistaPublica,
+  InterruptoresPublicos,
+  PolizaParaSemaforo,
+  RecordatorioPublico,
+  Semaforo,
+  TelefonoPublico,
+  TipoRecordatorioVehiculo,
+  VistaPublicaVehiculo,
+} from './vehiculo-publico.ts'
+export { MAX_ETIQUETAS_LOTE, ambitoDeDefecto, candidatosDelLote, instanteDelLote, empresasGestionables, esUuid, resolverGestionVehiculo } from './vehiculo-acceso.ts'
+export type { AmbitoDueno, BienParaGestion, GestionVehiculo } from './vehiculo-acceso.ts'
+
 // Preferencias de avisos (13/10/2026): canal, antelación y «no molestar» de «Configuración».
 export {
   CANALES_AVISO,
@@ -769,6 +802,8 @@ export {
   CATALOGO_MODULOS,
   ESTADOS_MODULO,
   MODULOS_PORTAL,
+  ORIGENES_VINCULO,
+  ORIGEN_VINCULO_AUTORIZACION,
   TEXTO_ACTIVO_SIN_ACCESO_PATRIMONIO,
   TEXTO_SOLICITUD_MODULO,
   VERSION_CONDICIONES_MODULOS,
@@ -784,3 +819,5 @@ export type { AccionModulo, ContextoModulos, DisponibilidadModulo, EstadoModulo,
 export { FAMILIAS_SEGURO, NOMBRE_FAMILIA, familiaSeguro } from './familia-seguro.ts'
 export type { ClaseSeguro, FamiliaSeguro, SublineaPatrimonial } from './familia-seguro.ts'
 export * from './aviso-patrimonio.ts'
+export { MANUALES_MODULOS, manualDeModulo, modulosSinManual, rutaManual } from './manuales.ts'
+export type { ManualModulo } from './manuales.ts'

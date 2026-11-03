@@ -40,8 +40,9 @@
   el CÓDIGO). `canal_no_disponible` (503) ≠ «el envío falló» (502). `CLAUDE.md` propio.
 - **`apps/asegura-web`** — web pública (`grupoasegura.es` + `www`). **Sin BD a propósito**: el lead va a
   plataforma reenviando `x-forwarded-for`. Analítica fail-CLOSED (sin Cookiebot no se mide). Mediador y colores
-  de `module-seguros`/`@central/brand`, nunca a mano. `app.grupoasegura.com` es el CRM de Manuel (ingesta CIMA):
-  no se toca. Guardianes en `apps/asegura-web/lib/*.test.ts`.
+  de `module-seguros`/`@central/brand`, nunca a mano. `app.grupoasegura.com` es el CRM (repo `asegura`, ingesta CIMA):
+  sin uso humano; se MIGRA solo la ingesta a central por fases (spec `docs/superpowers/specs/2026-11-02-unificar-ingesta-cima.md`).
+  Hasta el corte no se apaga ni se borra su proyecto Vercel `asegura`. Guardianes en `apps/asegura-web/lib/*.test.ts`.
 
 ## Módulos compartidos (`packages/*`, TS puro, scope `@central/*`)
 `core-ai`, `core-fiscal`, `core-push` (Web Push), `core-storage`, `core-email`, `core-identity`
@@ -68,7 +69,9 @@ y los `module-*` de cada vertical.
 - **Mira los PRs ABIERTOS antes de empezar** algo no trivial (`list_pull_requests`). Mirarlos no es mergearlos.
 - **Un cepo no está terminado hasta verlo FALLAR:** rompe lo que protege, míralo en rojo, restaura. Un brazo por aserción.
 - **Comunicaciones salientes:** NUNCA correo/mensaje a terceros sin OK explícito de Alberto para ESE envío. Por defecto, borrador.
+  - Factura del huésped: cuando el huésped la pide por mensaje, el agente prepara el borrador con sus datos y lo manda a Alberto por Telegram con ✅ Enviar / ✏️ Modificar; nada sale sin su botón (29/10/2026).
 - **Datos de Alberto para formularios/borradores** (NIF, móvil, nombre): ya están en `MEDIADOR` de `packages/module-seguros/src/mediador.ts` (NIF `28823484E`, móvil 637 349 990). Úsalos; **no se los vuelvas a pedir**.
+- **Situación fiscal personal** (titularidad de pisos, hijos, familia numerosa, hipotecas, decisiones fiscales): ya está en la skill `perfil-fiscal` y en `fiscal_perfil`; léelos antes de preguntar y **no se los vuelvas a pedir**.
 - **Quién mira qué pantalla:** antes de dar por avisada a una persona, comprueba dónde trabaja. Vanesa (Sique Brilla)
   SOLO abre `/invitado/limpieza`; `sivra_ordenes_limpieza.tarea_id` NULL = no lo ve, y se dice.
 - **Dato que NO hay ≠ dato que NO se ha mirado:** en columnas de enriquecimiento, `null` = «no se sabe»; nunca
@@ -137,8 +140,8 @@ y los `module-*` de cada vertical.
 - 🚨 **Todo `apps/<app>/vercel.json` lleva `"ignoreCommand": "node ../../scripts/vercel-ignore-build.mjs apps/<app>"`**
   (sin ella cada push reconstruye TODAS las apps: incidente de ~600 US$). Todas salvo ialimp llevan `--sin-previews`.
 - **`[preview]`** fuerza una preview solo si va en el asunto del **último** commit del push **y** ese commit toca la app.
-  **Nunca en un commit de merge** (construye las once). `Building` en el comentario de Vercel es intermedio.
-- **`Ignored` no es gratis del todo:** cada push a una rama de PR crea 11 deployments contra un cupo de 450/h de
+  **Nunca en un commit de merge** (construye las 13). `Building` en el comentario de Vercel es intermedio.
+- **`Ignored` no es gratis del todo:** cada push a una rama de PR crea un deployment por app (13) contra un cupo de 450/h de
   cuenta. Verifica en local y empuja UNA vez.
 - **NUNCA** `apps/` en el `.vercelignore` de la raíz.
 - Las apps consumen `packages/*` por `file:`/`workspace:`; no acoples un paquete a una vertical.

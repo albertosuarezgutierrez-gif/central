@@ -2,12 +2,19 @@ import { redirect } from 'next/navigation'
 
 import { nombreDePila } from '@central/module-seguros'
 
+import { flotaParaInicio } from '@/lib/flota'
+import { flotaImpideTodoAlDia } from '@/lib/flota-inicio'
 import { resumenInicio } from '@/lib/inicio'
+import { pendientesDeTiParaInicio } from '@/lib/inicio-extra'
+import { patrimonioParaInicio } from '@/lib/patrimonio/gastos-bd'
+import { puertaDeSesion } from '@/lib/puertas-portal'
 import { getIdentidad } from '@/lib/session'
 
 import { HuecosProteccion } from '../boveda/HuecosProteccion'
 import { PaginaPortal } from '../../PaginaPortal'
 import { PendienteInicio } from './PendienteInicio'
+import { TarjetaFlota } from './TarjetaFlota'
+import { TarjetaPatrimonio } from './TarjetaPatrimonio'
 
 // Lee la cookie: nunca estática (si se cachease, todos verían el Inicio del primero).
 export const dynamic = 'force-dynamic'
@@ -28,6 +35,19 @@ export default async function InicioPage() {
   if (r === null) redirect('/')
 
   // El nombre sale de la IDENTIDAD; si duda, sin nombre (nunca «Hola, cliente»).
+  // «Mi patrimonio» (27/10/2026): solo con acceso a Patrimonio. `undefined` = sin patrimonio (no se pinta); `null` = no se pudo
+  // leer (se dice, no se afirma «0 pendientes»).
+  const conPatrimonio = await puertaDeSesion('patrimonio', 'lectura')
+  const conFlota = await puertaDeSesion('flota', 'lectura')
+  // Las tres lecturas EN PARALELO (cada una con su `.catch`: una caída NO tumba Inicio, queda en `null` = «no hemos podido
+  // comprobar»). `undefined` = esa tarjeta no se ofrece (sin patrimonio / sin flota ni nombramientos).
+  // «Pendiente de ti» (27/10/2026) = lo que antes pintaba la bóveda (firmas, presupuestos, contacto, patrimonio).
+  const [patrimonio, deTi, flota] = await Promise.all([
+    conPatrimonio ? patrimonioParaInicio(identidad.id).catch(() => null) : Promise.resolve(undefined),
+    pendientesDeTiParaInicio(identidad.id, conPatrimonio).catch(() => null),
+    conFlota ? flotaParaInicio(identidad.id).catch(() => null) : Promise.resolve(undefined),
+  ])
+
   const pila = nombreDePila(identidad.nombre)
 
   return (
@@ -39,8 +59,17 @@ export default async function InicioPage() {
     >
       <PendienteInicio
         pendiente={r.pendiente}
+        deTi={deTi}
         huecos={r.sugerencia ? <HuecosProteccion huecos={r.sugerencia.huecos} estado={r.sugerencia.estado} /> : null}
+        // Hay algo pendiente (o sin comprobar) en las tarjetas de patrimonio o de flota: el «Todo al día» sería falso.
+        tarjetasPendientes={(patrimonio !== undefined && (patrimonio === null || patrimonio.pendientes !== 0)) || flotaImpideTodoAlDia(flota)}
       />
+      {(patrimonio !== undefined || flota !== undefined) && (
+        <ul className="rejilla-portal">
+          {patrimonio !== undefined && <li><TarjetaPatrimonio resumen={patrimonio} /></li>}
+          {flota !== undefined && <li><TarjetaFlota entrada={flota} /></li>}
+        </ul>
+      )}
     </PaginaPortal>
   )
 }

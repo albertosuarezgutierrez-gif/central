@@ -36,6 +36,11 @@ export type HechosMenu = {
   puedeConceder: boolean | null
   /** Autorizaciones recibidas que esperan que las acepte. */
   porAceptar: number | null
+  /**
+   * 27/10/2026: accesos de PATRIMONIO (`patrimonio_gestion`/`patrimonio_total`) que le han dado y siguen VIGENTES. Se ven y se
+   * dejan («Renunciar») en «Contactos», así que con alguno la entrada se ofrece aunque no pueda conceder nada.
+   */
+  patrimonioRecibido: number | null
 }
 
 /** Hechos de «no sé nada»: todo se ofrece (el menú completo). */
@@ -46,6 +51,7 @@ export const HECHOS_DESCONOCIDOS: HechosMenu = {
   flota: null,
   puedeConceder: null,
   porAceptar: null,
+  patrimonioRecibido: null,
 }
 
 /** `true` si hay al menos uno > 0; `null` si ninguno es > 0 pero alguno no se pudo comprobar; `false` si todos son 0. */
@@ -103,12 +109,16 @@ export function herramientasVisibles(h: HechosMenu): HerramientasVisibles {
   return { patrimonio, flota, calendario, resumen, catalogo, alguna: patrimonio || flota || calendario || resumen || catalogo }
 }
 
-/** ¿Se ofrece «Contactos» en el menú? Si puede conceder, o si tiene algo por aceptar; lo dudoso se ofrece. */
+/**
+ * ¿Se ofrece «Contactos» en el menú? Si puede conceder, si tiene algo por aceptar o si le han dado acceso a un patrimonio (ahí lo
+ * ve y renuncia); lo dudoso se ofrece.
+ */
 export function contactosVisibles(h: HechosMenu): boolean {
   if (h.puedeConceder === true) return true
   if (h.porAceptar !== null && h.porAceptar > 0) return true
-  // Se oculta solo con las dos lecturas hechas y negativas.
-  return h.puedeConceder === null || h.porAceptar === null
+  if (h.patrimonioRecibido !== null && h.patrimonioRecibido > 0) return true
+  // Se oculta solo con las tres lecturas hechas y negativas.
+  return h.puedeConceder === null || h.porAceptar === null || h.patrimonioRecibido === null
 }
 
 /** ¿Hay que ofrecer el enlace a «Contactos» dentro de «Cuenta» porque el menú no lo trae? */
@@ -149,6 +159,7 @@ function sinDudas(h: HechosMenu): HechosMenu {
     flota: n(h.flota),
     puedeConceder: h.puedeConceder === true,
     porAceptar: n(h.porAceptar),
+    patrimonioRecibido: n(h.patrimonioRecibido),
   }
 }
 

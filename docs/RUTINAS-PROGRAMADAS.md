@@ -5,7 +5,14 @@
 > este doc es la fuente única de qué hay configurado, cuándo y con qué.
 >
 > El contenedor es efímero: una rutina NO puede leer las conversaciones de otras sesiones.
-> Reconcilia lo que quedó **commiteado** (memoria/skills/docs) contra el código e infra reales.
+> **Estado real a 02/11/2026** (contrastado con `list_triggers`; donde una ficha de abajo discrepe, manda esto):
+> - **Borradas hoy (02/11/2026):** «Seguimiento campaña portal» (6×/día desde septiembre), los one-shot muertos de
+>   PRs (#5274, #4896, #4809, #4545, #4394), «Tarificador: medir ambas vs dom», «Verificar 1ª pasada Google
+>   Contactos», `limit_wake` y `send_later` de agosto, e «Idealista radar» (§23).
+> - **buscador-ia (§11) ya corre** (lunes 07:00 Madrid). **agente-correduría (§21) está ACTIVA** (martes 07:30 Madrid).
+> - **vigia-infra (§22): sin trigger** (skill lista, nunca se creó). §8-ter y §20 son **históricas** (ya no existen).
+> - Fichas nuevas: §24 cima-guardia, §25 médico del bot tarificador, §26 SEO ASegura mensual, §27 SEO ASegura semanal.
+> - Reconcilia lo que quedó **commiteado** (memoria/skills/docs) contra el código e infra reales.
 
 ## Cómo llega el texto a `main` (léelo antes de tocar una rutina)
 La suposición original era que una rutina puede **empujar texto directo a `main`** (el "carril 1").
@@ -161,7 +168,11 @@ caza lo que las sesiones del día no anotaron a mano.
 | **Verificar** | El chat muestra el informe de compliance con la lista de ítems 🔴 pendientes. |
 | **Latido** | Cierra con `POST /api/internal/latido` (`rrhh_compliance`) desde el 02/09/2026 — `ok:true` = roadmap leído e informe con la lista de 🔴 pendientes generado. Sin `ALERTA_TOKEN` → 401 → rojo en `/operador/agentes` («sin ninguna señal registrada»): mudo, no roto. |
 
-### 23. Radar de Idealista por conector — *CREADA 27/09/2026, PAUSADA hasta que Alberto la complete en la UI*
+### 23. Radar de Idealista por conector — *HISTÓRICA: trigger BORRADO el 02/11/2026 (nunca llegó a correr)*
+> 🗑️ El conector `idealista` ya existe como MCP pero sus condiciones de uso prohíben monitorizar/recoger listados
+> en bloque, así que el radar diario de 12 núcleos no encaja. Se borró el trigger; la skill `idealista-radar` queda
+> solo como referencia. Lo que sigue es el texto original de la creación.
+
 > Trigger `trig_01HneHebAVaM6HoLzJ1DKhUS` («Idealista radar (diario)», `CRON_TZ=Europe/Madrid 51 7 * * *`,
 > sesión nueva por disparo). La skill `idealista-radar` existía desde el 24/09 pero **nadie la había
 > programado**: cero latidos `subastas_idealista` hasta la pasada manual del 27/09 (285 casas en 12
@@ -196,7 +207,7 @@ caza lo que las sesiones del día no anotaron a mano.
 | **🪞 Nuestro propio anuncio NO es comparable (14/08/2026)** | Booking devuelve nuestros pisos entre los resultados de la búsqueda («HOUSE SEVILLANA 6 habitaciones» en la ventana de aforo 12): escribirlo ancla el mercado al precio que el propio motor acaba de poner, y **`fuente='booking_mcp'` no protege** porque el precio es real y de la fecha correcta — lo que falla es de QUIÉN es. Raíl en `lib/sivra/mercado-propios.ts` (lista **curada**, no heurística) aplicado en `/api/sivra/mercado/ingest`, que devuelve `propios[]` en lugar de descartar en silencio; el parte del latido lo declara vía `detalleIngesta`. ⚠️ Un falso positivo aquí es peor que el fallo original: descartaría un comparable legítimo (hay competencia real en Calle Bustos Tavera, donde están dos de nuestros pisos) y adelgazaría el corpus de la fecha justo por debajo del umbral que descongela un evento. Se añade una entrada cuando se VE el anuncio propio en una respuesta real. Corpus histórico verificado limpio. |
 | **Pendiente (fase 2)** | Cuando haya ≥3 fechas por mes con `fuente='booking_mcp'` **en todo el horizonte de 365 días** (hoy solo ago→ene): retirar `mercado/sweep` de `CRON_JOBS`, neutralizar las filas `serper` de fechas lejanas y quitar su latido. **No antes**: en feb→jul el bucket todavía lo sostiene Serper. |
 
-### 8-ter. Vigilancia diaria pricing SIVRA — *TEMPORAL, activa desde el 09/08/2026*
+### 8-ter. Vigilancia diaria pricing SIVRA — *HISTÓRICA: el trigger ya no existe (comprobado 02/11/2026)*
 > Pedida por Alberto el 09/08/2026 tras poner los 4 pisos bajo el motor propio (PriceLabs de baja,
 > last-minute activado): «haz seguimiento que todo vaya ok varios días hasta que confirme que todo
 > ok — septiembre empieza temporada». **Se BORRA cuando Alberto confirme** (`delete_trigger`).
@@ -227,7 +238,7 @@ caza lo que las sesiones del día no anotaron a mano.
 | **Resultado** | Actualiza `docs/VIGIA-OSS.md` (versiones vistas + bitácora). Algo que merece ojo → **Telegram**; bump pequeño y seguro → **PR draft** `claude/github-vigia-<fecha>`. Sin novedades → sin ruido. |
 | **Latido** | Cierra con `POST /api/internal/latido` (`github_vigia`) desde el 02/09/2026 — `ok:true` = las tres patas recorridas y `docs/VIGIA-OSS.md` actualizado, aunque no haya novedades. Sin `ALERTA_TOKEN` → 401 → rojo en `/operador/agentes` («sin ninguna señal registrada»): mudo, no roto. |
 
-### 11. Buscador de IA (LLMs gratis) — *pendiente de trigger*
+### 11. Buscador de IA (LLMs gratis) — *ACTIVA (el trigger existe y corre; lunes 07:00 Madrid, comprobado 02/11/2026)*
 | | |
 |---|---|
 | **Cuándo** | Semanal, **lunes ~07:00 CEST** (después del pricing-agente de las 06:00) |
@@ -365,7 +376,7 @@ que hoy nadie detectaría, porque su modo de fallo no es un error ruidoso sino u
 | **Resultado** | Informe mensual por Telegram + `docs/PATRIMONIO-CFO.md` actualizado; PR draft solo si propone un agente nuevo. |
 | **Verificar** | Filas nuevas en `patrimonio_recomendaciones` + informe en el doc de estado. |
 
-### 22. Vigía de infraestructura y cuotas — *PENDIENTE DE CREAR EL TRIGGER (skill lista 21/09/2026)*
+### 22. Vigía de infraestructura y cuotas — *SIN TRIGGER (skill lista 21/09/2026; no existe ningún trigger `vigia-infra` a 02/11/2026)*
 | | |
 |---|---|
 | **Cuándo** | Mensual, **día 8**, ~04:00 CEST (el 5 lo ocupa `conectores-vigia`, el 15 `github-vigia`) |
@@ -380,7 +391,7 @@ el 21/09/2026 tras el tercer susto del mismo tipo (600 US$ de Build CPU en julio
 deployments/hora reventada el 04/09, y la BD en 644 MB sobre un tope de 500 con la cartera dentro):
 los tres eran medibles con una consulta y a ninguno lo cazó una alerta.
 
-### 20. Seguimiento — ¿dejó de oscilar el motor de precios? — *UN SOLO DISPARO, 03/09/2026*
+### 20. Seguimiento — ¿dejó de oscilar el motor de precios? — *HISTÓRICA: disparo único del 03/09/2026 ya consumido (el trigger ya no existe)*
 
 | | |
 |---|---|
@@ -393,11 +404,11 @@ los tres eran medibles con una consulta y a ninguno lo cazó una alerta.
 | **Resultado** | PR con el documento cerrado + entrada de memoria. **Si la muestra es corta o el resultado es ambiguo, NO cierra: re-arma el seguimiento** unos días más. Un «parece que va mejor» sobre pocos días es justo lo que este repo trata como fallo. |
 | **Verificar** | La tabla «Veredicto» de `docs/SEGUIMIENTO-ancla-pricing.md` rellenada con fecha y cifras. |
 
-### 21. Agente de la correduría (Grupo ASegura) — *PAUSADA (creada 01/09/2026)*
+### 21. Agente de la correduría (Grupo ASegura) — *ACTIVA (creada 01/09/2026; martes 07:30 Madrid, último OK 27/10/2026)*
 
 | | |
 |---|---|
-| **Estado** | 🔴 **Deshabilitada a petición de Alberto** («no quiero aviso hasta que esté todo configurado 100%»): sin `ALERTA_TOKEN` y con Fase 0 a medio armar, no debe correr. Reactivar en la UI de Rutinas (o `update_trigger enabled:true`, id `trig_01Jfo9Z7sApyxbEmoR6Dsuke`) cuando el setup esté completo. |
+| **Estado** | ✅ **ACTIVA a 02/11/2026** (la nota siguiente es el estado de la creación, histórico; hoy corre sin `ALERTA_TOKEN` en el prompt: el prompt dice «si no trae token no avises», así que sus informes van solo a la bitácora/PR). Antes: 🔴 **Deshabilitada a petición de Alberto** («no quiero aviso hasta que esté todo configurado 100%»): sin `ALERTA_TOKEN` y con Fase 0 a medio armar, no debe correr. Reactivar en la UI de Rutinas (o `update_trigger enabled:true`, id `trig_01Jfo9Z7sApyxbEmoR6Dsuke`) cuando el setup esté completo. |
 | **Cuándo** | Semanal, **martes 05:30 UTC** (`30 5 * * 2`). |
 | **Por qué existe** | Decisión de Alberto (01/09/2026): un agente que llegue a llevar la correduría «casi al 100%». Fase 0 = aprender el sector e informar; responder a clientes es fase futura con OK explícito. |
 | **Prompt** | Invoca la skill **`agente-correduria`** y sigue su ciclo semanal (cartera en vivo → vencimientos → novedades sector → aprendizaje acumulativo en `references/sector.md` → informe → bitácora). |
@@ -405,6 +416,40 @@ los tres eran medibles con una consulta y a ninguno lo cazó una alerta.
 | **Telegram** | 🔴 **PENDIENTE DE ALBERTO:** añadir en la UI de Rutinas la línea `Variables de sesión: ALERTA_TOKEN=…` al prompt (patrón de las demás rutinas). Mientras falte, el agente NO inventa el aviso: deja el informe solo en la bitácora y lo dice. |
 | **Qué NO hace** | Contactar clientes/leads/compañías/Codeoscopic (regla global: borradores). Tocar la infra de Manuel. Volcar PII de clientes a informes. |
 | **Verificar** | Entrada semanal en `docs/AGENTES-BITACORA.md` + crecimiento de `.claude/skills/agente-correduria/references/sector.md`. |
+
+### 24. cima-guardia — *ACTIVA (diaria 08:48 Madrid; creada antes de 11/2026, alta no documentada hasta el 02/11/2026)*
+
+| | |
+|---|---|
+| **Cuándo** | Diaria, **08:48 Madrid**. Último OK 02/11/2026. |
+| **Qué hace** | Vigila la ingesta de CIMA/EIAC (cola de ficheros en `review`/cuarentena, cadena Actions → CRM → adaptador → TIREA). Detalle de la cadena: skill `cima-ingesta`. Solapa con el bloque 2-quater (correduría/CIMA) de la auditoría diaria: cima-guardia lo mira con más profundidad. |
+| **Prompt / secretos** | Sin secretos en el prompt. |
+| **MCPs** | 4 adjuntos, de los que usa 1-2 (sobran Vercel y Supabase-trading: quitarlos). |
+| **Verificar** | Su entrada en la bitácora/PR del día; la cola CIMA (235 y creciendo el 02/11) sale en 🔴 en la auditoría. |
+
+### 25. Médico del bot tarificador — *ACTIVA (L-V 08:52 Madrid)*
+
+| | |
+|---|---|
+| **Cuándo** | Lunes a viernes, **08:52 Madrid**. Último OK 02/11/2026. |
+| **Qué hace** | Comprueba que el bot RPA del tarificador sigue sano; si no hay fallos responde «Sin fallos» en una línea. Trabajo del tarificador: `docs/TARIFICADOR-RPA.md`. |
+| **Prompt / secretos** | Acotado, sin secretos. Sin conectores relevantes. |
+
+### 26. SEO ASegura mensual (OpenSEO + GA4) — *ACTIVA (día 1, ~07:37)*
+
+| | |
+|---|---|
+| **Cuándo** | Día 1 de cada mes, ~07:37. Último OK 01/11/2026. |
+| **Qué hace** | Pasada profunda de SEO de `grupoasegura.es` con OpenSEO + GA4 + GSC (keywords, backlog, posiciones). Presupuesto explícito de **2.000 créditos** de OpenSEO. Skill: `seo-asegura`. |
+| **Frágil** | El prompt exige OpenSEO pero el trigger no lo lleva adjunto (`mcp_connections=[]`): funciona porque persiste una sesión previa que ya lo tiene. Documentar o adjuntarlo. |
+
+### 27. SEO ASegura semanal — *ACTIVA (lunes 08:00)*
+
+| | |
+|---|---|
+| **Cuándo** | Lunes 08:00. Último OK 02/11/2026. |
+| **Qué hace** | Pasada ligera semanal de SEO de Grupo ASegura contra el endpoint propio de plataforma (`seo-correduria/semana`, depende de GSC). Solapa con la mensual (§26). |
+| **Pendiente** | El prompt está duplicado y lleva el token en claro; reescribirlo en un párrafo con el token solo en el entorno, y valorar fusionarla con la mensual. El latido `seo_correduria` estaba parado por un 403 de GSC. |
 
 ---
 
@@ -459,15 +504,19 @@ una — no fiarse de esta lista.
 | Diaria 10:00 | Auditoría nocturna ligera (`0 8 * * *` UTC; movida el 27/08/2026, antes 04:00) |
 | Días 1 y 15, ~10:00 | Seguimiento quincenal del laboratorio de inversión |
 | Diaria 11:00 | Facturas correo (movida el 27/08/2026, antes 08:00) |
-| Diaria 10:30 | Mercado real por fecha (SIVRA / Booking) (movida el 27/08/2026, antes 05:30) |
-| Diaria 11:00 | Vigilancia diaria pricing SIVRA (*temporal*) |
-| Lunes 06:00 | Pricing agente SIVRA |
+| 2 veces/día (`30 8,13 * * *` UTC) | Mercado real por fecha (SIVRA / Booking) (comprobado 02/11/2026) |
+| Lunes 07:00 Madrid | Pricing agente SIVRA |
 | Miércoles 09:00 | Guardián PSD2 |
 | Viernes 17:00 | ialimp client health |
 | L-V 11:00 | Agente de prospección comercial (ialimp + ia-rest) |
 | Domingo 04:00 | Auditoría semanal profunda |
 | Domingo 07:30 | Agentes-entrenador (mejora de prompts) |
-| Lunes 07:00 | Buscador de IA |
+| Lunes 07:00 Madrid | Buscador de IA (activa) |
+| Martes 07:30 Madrid | Agente de la correduría (activa) |
+| Diaria 08:48 Madrid | cima-guardia (§24) |
+| L-V 08:52 Madrid | Médico del bot tarificador (§25) |
+| Lunes 08:00 | SEO ASegura semanal (§27) |
+| Día 1 del mes 07:37 | SEO ASegura mensual (§26) |
 | Día 1 del mes 07:00 | Vigilante fiscal IRPF |
 | Día 5 del mes 04:00 | Vigía de conectores MCP |
 | Día 1 del mes 07:00 | Revisión mensual del plan del dúplex de Villasís |

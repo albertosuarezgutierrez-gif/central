@@ -349,7 +349,7 @@ test('AVANCE DE PESTAÑA Moto (Alberto 13/10/2026): lista blanca EXACTA {td#dato
   assert.ok(ayuda![1].includes('valorCuerpo: /^[A-Za-z0-9_.:$-]{0,64}$/'), 'la ayuda admite «$» (PAGEID real `datosBasicos$datosBasicos`) y nada más allá de [A-Za-z0-9_.:$-]')
   assert.match(guard, /export function motivoAjaxRechazado\(/, 'el diagnóstico del AJAX rechazado existe')
   assert.match(guard, /\[motivo: \$\{motivo\}\]/, 'el mensaje del guard lleva el motivo del AJAX rechazado')
-  assert.match(readFileSync(join(SRV, 'src/adapters/allianz/auto.ts'), 'utf8'), /ramo === 'moto' \? '0\.7\.21' : '0\.6\.29'/, 'versión Allianz moto 0.7.21')
+  assert.match(readFileSync(join(SRV, 'src/adapters/allianz/auto.ts'), 'utf8'), /ramo === 'moto' \? '0\.7\.23' : '0\.6\.41'/, 'versión Allianz moto 0.7.23')
   // 20/10/2026 (trabajo real 6cd26c10, 0.7.11): Datos básicos de Moto rellena compañía/póliza/justificante del seguro anterior y la fecha de
   // adquisición, y los huecos de datos paran ANTES del login (nunca se inventa); el carné se comprueba contra los 18 años antes de abrir el portal.
   const autoMoto = sinComentarios(readFileSync(join(SRV, 'src/adapters/allianz/auto.ts'), 'utf8'))
@@ -423,7 +423,8 @@ test('Allianz HOGAR (14/10/2026; encendido por Alberto 21/10/2026): flag propio,
 
 test('Mapfre HOGAR (21/10/2026): flag APAGADO, registro solo bajo el flag y asegura solo lo abre con el interruptor (lista cerrada, sin Occident)', () => {
   const m = sinComentarios(readFileSync(join(SRV, 'src/adapters/mapfre/hogar.ts'), 'utf8'))
-  assert.match(m, /^export const MAPFRE_HOGAR_ACTIVO = false$/m, 'Mapfre Hogar nace APAGADO (lo enciende Alberto)')
+  // Apagado de nacimiento: literal `false` o, solo, el interruptor por env (sin env = false). Cualquier otra forma (`= true`, `|| true`, `!== 'false'`) falla.
+  assert.match(m, /^export const MAPFRE_HOGAR_ACTIVO = (?:false|process\.env\.MAPFRE_HOGAR_ACTIVO === 'true')$/m, 'Mapfre Hogar nace APAGADO (lo enciende Alberto)')
   assert.ok(!/pulsarExploracionAutorizada|avanzarPestanaAutorizada|pulsarGuardado|pulsarEmision|IMPRIMIR/.test(m), 'Mapfre Hogar no usa puertas de avance/guardado/emisión ni imprime')
   const idx = sinComentarios(readFileSync(join(SRV, 'src/adapters/index.ts'), 'utf8'))
   assert.match(idx, /^if \(MAPFRE_HOGAR_ACTIVO\) adaptadores\.registrar\(mapfreHogar\)$/m, 'mapfreHogar se registra SOLO con `if (MAPFRE_HOGAR_ACTIVO)`')
@@ -464,7 +465,8 @@ function infraccionesExplorador(explorador: string, guard: string, otros: Record
   if (iVal < 0 || iAct < 0 || iVal > iAct || !/if \(!v\.ok\) throw new Parar\('ambiguo'(?:, '[a-z_]+')?\)/.test(explorador)) out.push('el lote no se revalida contra el inventario propio antes de actuar')
   // 4. Paradas humanas (CAPTCHA, SMS/OTP) ANTES de cada inventario.
   const iBucle = explorador.indexOf('for (;;) {')
-  const iInv = explorador.indexOf('capturarInventarioExploracion(page)', iBucle)
+  // 0.3.21: la captura lleva argumentos (pistas no personales de opciones): se ancla en el prefijo de la llamada.
+  const iInv = explorador.indexOf('capturarInventarioExploracion(page', iBucle)
   for (const p of ['exigirSinCaptcha(page)', 'exigirSinVerificacion(page, k.compania)']) {
     const i = explorador.indexOf(p, iBucle)
     if (i < 0 || i > iInv) out.push(`falta ${p} antes del inventario`)
@@ -473,9 +475,13 @@ function infraccionesExplorador(explorador: string, guard: string, otros: Record
   const fn = guard.split(/^export async function /m).find((f) => f.startsWith('pulsarExploracionAutorizada'))
   if (!fn) out.push('falta pulsarExploracionAutorizada en guard.ts')
   else {
-    const abrir = fn.indexOf('abrir(hasta, [endpoint])')
+    const abrir = fn.indexOf('abrir(hasta, [endpoint, ...extras], ajaxAvance)')
     const clic = fn.indexOf('.click(')
-    for (const p of ['guard.comprobar()', 'guard.ventana.abierta()', "usados.has('exploracion')", 'esAvanceAutorizado(aut.entrada, aut.el, aut.marco)', 'bloqueoAvance(aut.entrada, aut.el, aut.marco) !== null', 'comprobarBoton(desc, { permitirAceptar: true })']) {
+    for (const p of ['guard.comprobar()', 'guard.ventana.abierta()', "usados.has('exploracion')", 'esAvanceAutorizado(aut.entrada, aut.el, aut.marco)', 'bloqueoAvance(aut.entrada, aut.el, aut.marco) !== null', 'comprobarBoton(desc, { permitirAceptar: true })',
+      // 0.3.18: avance SIN TEXTO (input submit de Fidelidade): su regla estrecha + el DOM VIVO + sin texto de acción final, todo ANTES de abrir.
+      'avanceSinTextoAutorizado(aut.entrada, aut.el, aut.marco)', 'causaNoEsAvanceSinTextoVivo(boton, sinTexto)', 'hayTextoAccionFinalVivo(page, sinTexto.textoAccionFinal)', 'vigilanciaVivaAvancePorId(page, sinTexto.nuncaConTitulo)',
+      // 0.3.18: «Aceptar» sin id con onclick exacto (ePAC eventoSiguienteDialog): sin otros manejadores ni form* VIVOS, antes de abrir.
+      'sinOtrosManejadoresVivo(boton)']) {
       const i = fn.indexOf(p)
       if (i < 0 || abrir < 0 || i > abrir || abrir > clic) out.push(`pulsarExploracionAutorizada: «${p}» tiene que ir ANTES de abrir la ventana y pulsar`)
     }
@@ -529,6 +535,17 @@ test('EXPLORADOR IA (worker): solo actúa por el guard, revalida, para en OTP/CA
   assert.notEqual(sinAut, guard)
   assert.notDeepEqual(infraccionesExplorador(explorador, sinAut, otros), [], 'guard sin autorización')
   assert.notDeepEqual(infraccionesExplorador(explorador, guard, { 'x.ts': 'await pulsarExploracionAutorizada(page, guard, b, a)' }), [], 'otro fichero la llama')
+  // 0.3.18: el avance sin texto sin su comprobación VIVA (o sin la vigilancia de texto final) = rojo.
+  for (const [nombre, de, a] of [
+    ['avance sin texto sin DOM vivo', "const causa = await causaNoEsAvanceSinTextoVivo(boton, sinTexto)", "const causa = null"],
+    ['avance sin texto sin texto de acción final', "if (await hayTextoAccionFinalVivo(page, sinTexto.textoAccionFinal))", "if (false)"],
+    ['avance sin texto sin vigilancia de precio/título', "const vivo = await vigilanciaVivaAvancePorId(page, sinTexto.nuncaConTitulo)", "const vivo = { precio: false, titulo: false }"],
+    ['avance sin id con onclick sin mirar manejadores vivos', "!(await sinOtrosManejadoresVivo(boton))", "false"],
+  ] as const) {
+    const sinVivo = guard.replace(de, a)
+    assert.notEqual(sinVivo, guard, `el cepo «${nombre}» no cambió nada`)
+    assert.notDeepEqual(infraccionesExplorador(explorador, sinVivo, otros), [], nombre)
+  }
   // Cepos del «Guardar» de modal (14/10/2026): cada brazo, en ROJO.
   const cambia = (src: string, de: string, a: string) => {
     const r = src.replace(de, a)

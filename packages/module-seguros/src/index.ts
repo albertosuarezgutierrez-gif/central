@@ -771,9 +771,16 @@ export {
   formatoMatricula,
   ordinalMatricula,
   fechaMatriculacionEstimada,
+  mesDeTramoMatricula,
   type FormatoMatricula,
   type MatriculacionEstimada,
 } from './matricula.ts'
+
+export {
+  estimarMesMatriculacion,
+  type EstimacionMesMatriculacion,
+  type MotivoNoEstimable,
+} from './fecha-matriculacion-estimada.ts'
 
 export {
   MEDIADOR,
@@ -1404,7 +1411,7 @@ export {
 } from './datos-capital-riesgo.ts'
 export type { AseguradoAdicional, CampoCapital, DatosCapitalRiesgo, RamoCapital, ValidacionCapital, ValorEdicionCapital } from './datos-capital-riesgo.ts'
 export {
-  AVISO_RIESGO_LIBRE, CAMPOS_LIBRE, CAMPOS_MASCOTA_LIBRE, ESPECIES_MASCOTA, camposLibreDelRamo, ESPEC_LIBRE, ETIQUETA_CAMPO_LIBRE, admiteDatosRiesgoLibre, aplicarEdicionLibre,
+  AVISO_RIESGO_LIBRE, CAMPOS_LIBRE, CAMPOS_MASCOTA_LIBRE, CAMPOS_PATINETE_LIBRE, ESPECIES_MASCOTA, camposLibreDelRamo, ESPEC_LIBRE, ETIQUETA_CAMPO_LIBRE, admiteDatosRiesgoLibre, aplicarEdicionLibre,
   datosRiesgoLibreVacios, faltanDatosRiesgoLibre, leerDatosRiesgoLibre, motivoNoConfirmableLibre, precargaLibreDePoliza,
   validarDatosRiesgoLibre,
 } from './datos-riesgo-libre.ts'
@@ -1481,7 +1488,7 @@ export {
 export type { RamoOferta, GrupoGarantia, TipoValorGarantia, GarantiaCanonica } from './coberturas-taxonomia.ts'
 export {
   compararOfertas, cifrasDeMatriz, UMBRAL_CONTINENTE_EUR_M2, VERSION_COMPARATIVA, FUENTES_OFERTA, CRITERIO_RANKING, estadoTriple,
-  textoHuellaComparativa,
+  textoHuellaComparativa, garantiasLeidasDeDocumento,
 } from './comparar-ofertas.ts'
 export type {
   OfertaNormalizada, ValorGarantia, ResultadoComparacion, FilaMatriz, CeldaMatriz, ResumenOferta, AlertaInfraseguro,
@@ -1687,3 +1694,112 @@ export {
   type PersonaPolizaLeida, type Procedencia, type ResultadoFusion, type RiesgoLeido, type RolPersonaPoliza, type ValorLeidoDocumento,
 } from './escaneo-poliza.ts'
 export { PAQUETES_AUTO, coberturasDePaquete, type PaqueteAuto, type CoberturaPaquete, type ValorCobertura, type FuenteCobertura, type TipoFuente, type CompaniaPaquetes } from './coberturas-paquetes-auto.ts'
+export {
+  AUTORES_MENSAJE_OPERADOR,
+  AUTORES_MENSAJE_SINIESTRO,
+  MOTIVO_RESULTADO_MAX,
+  RAMOS_SEGURO_DANOS,
+  RAMOS_SEGURO_PERSONAS,
+  RESULTADOS_SINIESTRO,
+  TEXTO_MENSAJE_SINIESTRO_MAX,
+  TIPOS_MENSAJE_SINIESTRO,
+  claseSeguroArt23,
+  diasEsperandoCompania,
+  plazosSiniestro,
+  validarCierreSiniestro,
+  validarMensajeSiniestro,
+  type AutorMensajeSiniestro,
+  type ClavePlazoSiniestro,
+  type MensajeParaPlazos,
+  type MensajeValidado,
+  type PlazoSiniestro,
+  type ResultadoCierreSiniestro,
+  type SiniestroParaPlazos,
+  type TipoMensajeSiniestro,
+} from './siniestro-plazos.ts'
+
+export {
+  avisoCitasNoEncontradas,
+  extraerCitas,
+  normalizarParaCita,
+  verificarCitas,
+  type VerificacionCitas,
+} from './siniestro-citas.ts'
+
+export {
+  CONOCIMIENTO_SINIESTROS,
+  CONOCIMIENTO_SINIESTROS_ESTADO,
+  CONOCIMIENTO_SINIESTROS_VERSION,
+} from './conocimiento-siniestros.ts'
+
+export {
+  encajarMeta,
+  extraerJson,
+  fichaCacheada,
+  hashTexto,
+  huellaDocumentos,
+  huellaHilo,
+  indiceCacheado,
+  metaGabinete,
+  textoVeredicto,
+  ultimoVeredicto,
+  validarFichaCaso,
+  validarIndicePoliza,
+  validarVeredicto,
+  verificarCitasIndice,
+  verificarCitasVeredicto,
+  FICHA_CASO_VERSION,
+  GABINETE_VERSION,
+  INDICE_POLIZA_VERSION,
+  MAX_EXCLUSIONES_INDICE,
+  MAX_GARANTIAS_INDICE,
+  type ApoyoArgumento,
+  type ArgumentoVeredicto,
+  type ExclusionIndice,
+  type FichaCaso,
+  type FichaCasoCacheada,
+  type GarantiaIndice,
+  type IndicePoliza,
+  type IndicePolizaCacheado,
+  type ResultadoVeredicto,
+  type SemaforoVeredicto,
+  type Veredicto,
+} from './siniestro-gabinete.ts'
+
+export {
+  diaMadridDeIso,
+  fechaOriginalDe,
+  hiloVigente,
+  instanteEfectivo,
+  mapaSustituidoPor,
+  sustituyeADe,
+  type MensajeConVersion,
+  type MensajeVigente,
+} from './siniestro-hilo-versiones.ts'
+
+export {
+  fichaInformePerito,
+  huellaMensaje,
+  importeEspanol,
+  rolDeEmisor,
+  trocearVolcadoIntranet,
+  type FichaInformePerito,
+  type RolEmisorVolcado,
+  type TrozoVolcado,
+} from './siniestro-volcado.ts'
+
+export { buscarEnTexto, plegar as plegarTexto, type FragmentoBusqueda } from './siniestro-buscar.ts'
+
+export {
+  CLAVES_META_PRIVADAS,
+  FACTOR_CIFRADO,
+  correccionesDeValoraciones,
+  desempaquetarMetaPrivado,
+  detectarPreRehuse,
+  empaquetarMetaPrivado,
+  esValoracion,
+  metaConPrivadoEnClaro,
+  tienePrivado,
+  validarValoracion,
+  type ValoracionAnalisis,
+} from './siniestro-privado.ts'

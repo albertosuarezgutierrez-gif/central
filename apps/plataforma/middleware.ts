@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { COOKIE_NAME, verifySessionToken } from './lib/auth'
 import { esRutaDeRutina } from './lib/rutas-rutina'
+import { secretoCoincide } from '@central/core-identity'
 
 // El área de OPERADOR (/admin) gestiona su propia auth (cookie plataforma_admin,
 // validada en los route handlers vía getAdmin) → se exime del gate de cuenta.
@@ -50,9 +51,6 @@ const PUBLIC = ['/login', '/api/auth', '/admin', '/api/admin', '/api/cron', '/ap
   // `STRIPE_WEBHOOK_SECRET_SIVRA` por `requireSecret`) y sin firma válida devuelve 400.
   '/api/sivra/extras/webhook',
   '/api/sivra/mercado/ingest', '/api/sivra/pricing/aplicar-propuesta',
-  // TEMPORAL Fase 3 subastas: puente de exploración de fuentes (auth por token
-  // en BD `subastas_debug_token`, hosts oficiales cerrados). Se retira al cerrar la fase.
-  '/api/subastas/fase3-debug',
   // Calendario de la landing de House Sevillana. SIN auth a propósito y de forma acotada:
   // publica solo qué noches están cogidas de una lista blanca de pisos, que es exactamente lo
   // que el motor de reservas de Smoobu ya le enseña a cualquiera que entre en él. No sale ni un
@@ -61,11 +59,20 @@ const PUBLIC = ['/login', '/api/auth', '/admin', '/api/admin', '/api/cron', '/ap
   // Desde el 02/09/2026 el prefijo cubre también `/api/publico/correduria/lead` (formulario de
   // la correduría): POST sin sesión, con honeypot + rate limit por IP en el handler; solo crea
   // un lead por el puerto de asegura y avisa a Alberto. No lee nada de la cartera.
-  '/api/publico']
+  '/api/publico',
+  // 🧾 Formulario PÚBLICO de datos fiscales del huésped (27/10/2026). Con barra final a propósito: no abre `/facturas*`.
+  // No amplía privilegio: la página solo responde con un token de 43 caracteres aleatorios vivo en
+  // `sivra_factura_solicitudes` y enseña piso y fechas; sus APIs van por `/api/publico/factura/<token>` con rate limit.
+  '/factura/']
 // 🚨 `/seguros` (landing vieja de la correduría, previa a `apps/asegura-web`) SALIÓ de esta
 // lista el 14/09/2026: la página se borró y el sitio 301 hacia grupoasegura.es vive en
 // `next.config.ts::redirects()`, que Next resuelve ANTES de que el middleware corra — dejarla
 // aquí habría sido una exención muerta para una ruta que ya no llega a este archivo.
+
+/** Las páginas (y sus acciones de servidor) y la API de la correduría: solo con sesión de la correduría. */
+function esRutaCorreduria(pathname: string): boolean {
+  return /^\/(api\/)?correduria(\/|$)/.test(pathname)
+}
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
@@ -98,11 +105,18 @@ export async function middleware(req: NextRequest) {
   // gate de sesión los redirige 307 → /login y el handler nunca corre (así murieron los crons
   // migrados bajo /api/sivra/*). Cada handler revalida el secreto (isCronAuthorized), de modo
   // que esto NO abre los endpoints de datos: el tráfico de navegador sin secreto sigue gateado.
+  //
+  // 🔒 (02/11/2026) Comparación en TIEMPO CONSTANTE y fail-closed (sin `CRON_SECRET` o vacío, no
+  // pasa nadie). Y la llave maestra NO abre `/correduria` ni `/api/correduria`: ninguna acción ni
+  // ruta de la correduría la usa (todas exigen sesión de la correduría), y una acción de servidor
+  // es un POST a la ruta de la PÁGINA: con `?secret=` se ejecutaba sin sesión. Cepo:
+  // `test/regression-correduria-acciones-guarda.test.ts`.
   const cronSecret = process.env.CRON_SECRET
-  if (cronSecret) {
-    const bearer = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
+  if (cronSecret && !esRutaCorreduria(pathname)) {
+    const bearer = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '') ?? null
+    // `?secret=` se MANTIENE: aún lo usan los lanzamientos manuales documentados (ver informe 02/11/2026).
     const qs = req.nextUrl.searchParams.get('secret')
-    if (bearer === cronSecret || qs === cronSecret) return NextResponse.next()
+    if (secretoCoincide(bearer, cronSecret) || secretoCoincide(qs, cronSecret)) return NextResponse.next()
   }
 
   // Rutinas de Claude Code: llegan con el token DEDICADO de bajo privilegio (`ALERTA_TOKEN`),
@@ -114,7 +128,7 @@ export async function middleware(req: NextRequest) {
   const alertaToken = process.env.ALERTA_TOKEN
   if (alertaToken && esRutaDeRutina(pathname)) {
     const bearer = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
-    if (bearer === alertaToken) return NextResponse.next()
+    if (secretoCoincide(bearer, alertaToken)) return NextResponse.next()
   }
 
   const token = req.cookies.get(COOKIE_NAME)?.value

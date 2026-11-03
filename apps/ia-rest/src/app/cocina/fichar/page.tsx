@@ -113,7 +113,7 @@ export default function CocinaFicharPage() {
 
       // Comprobar turno activo
       const rt = await fetch('/api/turnos/activo', {
-        headers: { 'x-ia-session': JSON.stringify({ id: ses.id, restaurante_id: ses.restaurante_id }) }
+        headers: { 'x-ia-session': JSON.stringify(ses) }
       })
       const dt = await rt.json()
       setTurnoActivo(dt.turno ?? null)
@@ -131,7 +131,7 @@ export default function CocinaFicharPage() {
     try {
       const r = await fetch('/api/turnos/fichar', {
         method: 'POST',
-        headers: { 'x-ia-session': JSON.stringify({ id: cocinero.id, restaurante_id: cocinero.restaurante_id }) },
+        headers: { 'x-ia-session': JSON.stringify(cocinero) },
       })
       const d = await r.json()
       if (d.ok) {
@@ -148,7 +148,7 @@ export default function CocinaFicharPage() {
     try {
       const r = await fetch('/api/turnos/fichar', {
         method: 'DELETE',
-        headers: { 'x-ia-session': JSON.stringify({ id: cocinero.id, restaurante_id: cocinero.restaurante_id }) },
+        headers: { 'x-ia-session': JSON.stringify(cocinero) },
       })
       const d = await r.json()
       if (d.ok) {

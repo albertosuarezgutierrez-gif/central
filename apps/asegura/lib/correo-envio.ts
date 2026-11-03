@@ -38,6 +38,11 @@ export type CorreoCliente = {
    * camino de Resend; por SMTP no hay equivalente y la idempotencia la pone quien llama.
    */
   idempotencia?: string
+  /**
+   * Remitente FIJO (ya con su nombre, `remitenteCorreo(...)`) en vez del de `ASEGURA_MAIL_FROM`. Lo usan los correos que
+   * por decisión de Alberto salen SIEMPRE de hola@grupoasegura.es (felicitación a ex-clientes, 30/10/2026).
+   */
+  remitente?: string
 }
 
 export type AdjuntoCorreo = { nombre: string; contenido: string | Buffer; tipo: string }
@@ -63,7 +68,7 @@ function contenidoBase64(a: AdjuntoCorreo): string {
 }
 
 export async function enviarCorreoSeguido(c: CorreoCliente, fetchImpl: typeof fetch = fetch): Promise<EnvioDetallado> {
-  const from = remitenteCorreo(process.env.ASEGURA_MAIL_FROM)
+  const from = c.remitente?.trim() || remitenteCorreo(process.env.ASEGURA_MAIL_FROM)
   const replyTo = process.env.ASEGURA_MAIL_REPLY_TO?.trim() || undefined
   const hilo = cabecerasHilo(c.enRespuestaA)
   // «Re:» solo si de verdad sale en el hilo: con un Message-ID sin forma sale como correo nuevo, con su asunto.

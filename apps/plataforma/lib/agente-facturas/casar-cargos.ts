@@ -46,3 +46,44 @@ export function asignarCargos(c: CandidatoCargo[]): { factura_id: string; movimi
   }
   return out
 }
+
+// ── Facturas que se cobran con TARJETA (Fly.io, Vercel…) ─────────────────────────────────────────
+// El feed PSD2 de la tarjeta está parado: el extracto se sube a mano. La casación es más estricta que
+// la genérica (ventana de fechas corta, tolerancia ±3 % sobre el importe CONVERTIDO) y se usa solo
+// para facturas ya clasificadas como «se cobra con tarjeta» (ver `tarjeta.ts`). No toca el
+// comportamiento de EUR de `toleranciaFactura`/`asignarCargos`.
+
+/** Banda sobre el importe convertido cuando el tipo de cambio es conocido (guardado en la factura). */
+export const TOLERANCIA_TARJETA = 0.03
+/**
+ * Banda cuando el cambio es APROXIMADO (no hay tipo guardado): el cargo de la tarjeta usa el cambio del
+ * día + comisión del emisor, que no conocemos. ±3 % sobre un cambio estimado daría falsos «sin casar»;
+ * se ensancha a ±8 % (el resto de guardas —clave de proveedor, ventana de 13 días, 1:1— acotan el riesgo).
+ */
+export const TOLERANCIA_TARJETA_CAMBIO_APROX = 0.08
+/** Cambio aproximado a EUR (1 unidad de divisa = X EUR). Observado: Vercel 106,76 USD → 95,44 € (0,894). */
+export const CAMBIO_APROX_A_EUR: Record<string, number> = { USD: 0.89, GBP: 1.15, CHF: 1.05 }
+/** Ventana de fecha del cargo respecto a la fecha de la factura: [−3, +10] días. */
+export const VENTANA_CARGO_ANTES = 3
+export const VENTANA_CARGO_DESPUES = 10
+
+export function enVentanaCargo(diasDesdeFactura: number): boolean {
+  return diasDesdeFactura >= -VENTANA_CARGO_ANTES && diasDesdeFactura <= VENTANA_CARGO_DESPUES
+}
+
+/**
+ * Ratio cargo/esperado y tolerancia para una factura de tarjeta. `divisa` null/vacía/EUR = EUR (la divisa
+ * desconocida de un proveedor en USD la resuelve quien llama con `divisaEfectiva`). Divisa extranjera sin
+ * cambio guardado ni aproximado → null (no se casa: no se inventa un cambio).
+ */
+export function ratioTarjeta(
+  importe: number, divisa: string | null | undefined, cargoAbs: number, cambio?: number | null,
+): { ratio: number; tolerancia: number } | null {
+  if (!(importe > 0)) return null
+  const d = (divisa ?? '').trim().toUpperCase()
+  if (!d || d === 'EUR' || d === '€') return { ratio: cargoAbs / importe, tolerancia: TOLERANCIA_EUR }
+  if (cambio && cambio > 0) return { ratio: cargoAbs / (importe * cambio), tolerancia: TOLERANCIA_TARJETA }
+  const aprox = CAMBIO_APROX_A_EUR[d]
+  if (!aprox) return null
+  return { ratio: cargoAbs / (importe * aprox), tolerancia: TOLERANCIA_TARJETA_CAMBIO_APROX }
+}

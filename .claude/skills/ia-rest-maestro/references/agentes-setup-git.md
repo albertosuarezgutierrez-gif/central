@@ -17,7 +17,7 @@
 ```
 app/api/cron/*            alertas · cobro-inactividad · feedback-visita ·
                           lead-onboarding · reservas-noshow · pipeline-comercial ·
-                          crm-recordatorios · eventos-entorno · briefing-semanal ·
+                          crm-recordatorios · briefing-semanal ·
                           prospeccion-leads · instagram · instagram-refresh ·
                           instagram-metricas · mantenimiento-espacios · completar-locales
 app/api/super/qa-agent/cron

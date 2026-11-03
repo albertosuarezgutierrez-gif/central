@@ -169,8 +169,12 @@ export const textoConfirmarAprobar = (r: Pick<ResumenExploracion, 'compania' | '
 export const OPCIONES_NUEVA = [
   { entrada: 'allianz:particulares:hogar', compania: 'Allianz', producto: 'Hogar' },
   { entrada: 'allianz:particulares:comunidades', compania: 'Allianz', producto: 'Comunidades (oráculo)' },
+  { entrada: 'allianz:autos:movilidad_personal', compania: 'Allianz', producto: 'Movilidad Personal (patinete)' },
+  { entrada: 'mapfre:automoviles:patinetes', compania: 'Mapfre', producto: 'Patinetes (MásPatín)' },
   { entrada: 'mapfre:nueva_produccion:auto', compania: 'Mapfre', producto: 'Auto' },
+  { entrada: 'mapfre:patrimoniales:hogar', compania: 'Mapfre', producto: 'Hogar' },
   { entrada: 'occident:productos:hogar', compania: 'Occident', producto: 'Hogar' },
+  { entrada: 'fidelidade:particulares:vivienda', compania: 'Fidelidade', producto: 'Vivienda (hogar)' },
 ] as const
 export const ENTRADA_POR_DEFECTO = 'allianz:particulares:hogar'
 

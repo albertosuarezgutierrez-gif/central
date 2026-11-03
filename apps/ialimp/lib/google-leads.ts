@@ -3,6 +3,7 @@
 // Places NO da email → si la empresa tiene web, intentamos extraerlo (best-effort).
 // Requiere GOOGLE_PLACES_API_KEY (clave de Google Cloud con facturación + "Places API (New)").
 import { aiComplete } from '@/lib/ai-client'
+import { fetchSeguro } from '@/lib/fetch-seguro'
 
 // Cabeceras de navegador real: muchas webs devuelven 403 a User-Agents "bot".
 const BROWSER_HEADERS = {
@@ -106,7 +107,7 @@ export async function extraerEmailDeWeb(web: string): Promise<string | null> {
     try {
       const ctrl = new AbortController()
       const t = setTimeout(() => ctrl.abort(), 5000)
-      const res = await fetch(url, { signal: ctrl.signal, headers: BROWSER_HEADERS })
+      const res = await fetchSeguro(url, { signal: ctrl.signal, headers: BROWSER_HEADERS })
       clearTimeout(t)
       if (!res.ok) continue
       const html = (await res.text()).slice(0, 500_000)
@@ -135,7 +136,7 @@ export async function analizarListadoWeb(url: string): Promise<{ leads: LeadWeb[
     if (!/^https?:$/.test(u.protocol)) return { leads: [], error: 'URL no válida' }
     const ctrl = new AbortController()
     const t = setTimeout(() => ctrl.abort(), 9000)
-    const res = await fetch(u.toString(), { signal: ctrl.signal, headers: BROWSER_HEADERS })
+    const res = await fetchSeguro(u.toString(), { signal: ctrl.signal, headers: BROWSER_HEADERS })
     clearTimeout(t)
     if (!res.ok) return { leads: [], error: `La web respondió ${res.status}` }
     html = await res.text()

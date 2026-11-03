@@ -24,17 +24,25 @@
 //    prohibidos en el validador, en `pulsar()` y en `pulsarGuardadoPresupuesto`). 🔑 Ningún valor de campo ni credencial va al log, a asegura ni a la IA.
 
 import { randomUUID } from 'node:crypto'
-import { chromium, type Browser, type Locator, type Page } from 'playwright'
+import { chromium, type Browser, type Frame, type Locator, type Page } from 'playwright'
 import {
   CLAVES_AUTOCOMPLETADO,
+  CLAVES_VALIDAN_AL_SALIR,
+  opcionTipoDocumento,
+  tipoDocumentoDe,
+  type TipoDocumento,
   EmisionBloqueadaError,
   ENTRADAS_EXPLORACION,
+  rutasAppTolerablesDe,
+  neutralizacionesOnclickDe,
   extraerReferenciaPresupuesto,
   detectarBucle,
   descripcionesElemento,
   detectarParada,
   MOTIVO_FRONTERA_CUENTA,
   senalCuentaBancaria,
+  fronteraEmisionPorCampos,
+  pareceDatoPersonalInventario,
   esAvanceAutorizado,
   esGuardadoEnDialogoAutorizado,
   esEntradaExploracion,
@@ -49,6 +57,13 @@ import {
   relocalizarElemento,
   redactarHtml,
   resolverDato,
+  claveOmitibleSinValor,
+  pistasOpcionesInventario,
+  textoRechazo,
+  entradaConTomadorMediador,
+  valoresSensiblesExploracion,
+  contieneValorSensible,
+  type RechazoAccion,
   secretosDelEntorno,
   topesExplorador,
   validarRespuestaExplorador,
@@ -70,7 +85,7 @@ import {
 import { cerrarExploracion, enviarResultado, pedirPaso, type Config, type CuerpoResultado, type CuerpoResultadoPresupuesto, type RespuestaPaso, type Trabajo } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
 import { ErrorTarificador, ErrorVerificacionHumana, clasificar } from './errores.ts'
-import { cerrarFaseEntrada, ErrorFronteraEmision, GuardadoConDialogoError, instalarGuardEmision, pulsar, pulsarEnlaceEntradaAutorizado, pulsarExploracionAutorizada, pulsarGuardadoDialogoAutorizado, pulsarGuardadoPresupuesto, type GuardEmision } from './guard.ts'
+import { cerrarFaseEntrada, ErrorFronteraEmision, exigirCampoNoBancario, GuardadoConDialogoError, cerrarDialogoTerminoEpac, controlOcultoDeEtiqueta, instalarGuardEmision, precioVistoEn, registrarPrecioVisto, pulsar, pulsarAccesoNseMapfre, pulsarMenuOfertaNseMapfre, pulsarEnlaceEntradaAutorizado, tolerarRutasApp, neutralizarOnclicksEntrada, pulsarExploracionAutorizada, pulsarGuardadoDialogoAutorizado, pulsarGuardadoPresupuesto, redispararCambioMarcado, type GuardEmision } from './guard.ts'
 import { esperarPdf } from './descarga-pdf.ts'
 import { capturarInventarioExploracion, type InventarioExploracion } from './inventario-dom.ts'
 import { modoVistaExplorador, vistaDelPaso } from './aprendizaje/vista-aria.ts'
@@ -79,15 +94,28 @@ import { exigirSinVerificacion } from './verificacion.ts'
 import { capturarEvidencia, type EvidenciaFallo } from './evidencia.ts'
 import { abrirNuevaAlta, esperarMarcoApp, login as loginEpac, type PestanaEntradaAllianz } from './adapters/allianz/intranet/index.ts'
 import { login as loginMapfre } from './adapters/mapfre/login.ts'
-import { abrirTarificacionRapidaAuto } from './adapters/mapfre/entrada.ts'
+import { abrirTarificacionPatineteMapfre, abrirTarificacionRapidaAuto } from './adapters/mapfre/entrada.ts'
+import { abrirTarificacionRapidaHogar } from './adapters/mapfre/hogar.ts'
 import { abrirTarificacionHogar, cabeceraPortalVisible, esperarPortalOSso as esperarPortalOSsoOccident, loginPaso1 as loginPaso1Occident, pulsarSeguro as pulsarSeguroOccident } from './adapters/occident/hogar.ts'
 import { esUrlSso as esUrlSsoOccident } from './adapters/occident/mapa.ts'
+import { abrirFormularioViviendaFidelidade, loginFidelidade } from './adapters/fidelidade/entrada.ts'
 import { loginAsistido, type CtxLoginAsistido } from './login-asistido.ts'
 import type { ContextoPortal } from './adaptador.ts'
 import type { Log } from './log.ts'
+import { esperarSinOverlayCarga, sondearOverlaysCarga } from './overlay-carga.ts'
 
-/** Versión del explorador del worker (va en `bot_version`). Súbela al tocar su navegación. */
-export const EXPLORADOR_VERSION = '0.3.1'
+/** Versión del explorador del worker (va en `bot_version`). Súbela al tocar su navegación. 0.3.27 (31/10/2026): Fidelidade Vivienda: el destino del avance casa la ruta EXACTA de la lista también con query cuyo ÚNICO parámetro es el cache-buster `_ts` de solo cifras (`esQuerySoloCacheBuster` de guard.ts); otra clave, `_ts` no numérico o repetido, u otra ruta siguen bloqueados y el cuerpo se inspecciona igual. 0.3.26 (31/10/2026): el bloqueo de red «ruta en la lista, pero con query» nombra también claves de framework con guion bajo delante (`_ts`, `__EVENTTARGET`) y de las ocultas solo su forma («?(cifras)», «?(vacía)», «?(otra)»; nunca valores ni longitud); solo diagnóstico, no abre nada (Fidelidade real 24fd7252, `ClientData.aspx` con query). 0.3.25 (30/10/2026): Fidelidade: `marcar` sobre un radio YA marcado, tras el clic por el guard, emite `input`+`change` sobre el mismo nodo (`redispararCambioMarcado` de guard.ts: el portal recalcula el avance en el `change`); Allianz ePAC drvp00: la ayuda contextual admite `pageId` con alfabeto cerrado propio (`RE_PAGEID_AYUDA_DRVP00`) y `codCia` corto, y el rechazo de forma nombra los símbolos ASCII (nunca letras ni cifras); inventario: mensajes de RichFaces (`.rich-messages-label`, `.rich-message-label`) en los avisos del portal (Mapfre NSE). 0.3.23 (30/10/2026): Mapfre NSE: `<form>:confirmarGuardado` (confirmar el guardado de los datos del objeto asegurado) no cuenta por su nombre en el cuerpo SOLO en el POST a `https://wmediadores.mapfre.com/EVT21_NSE_FWEB/app/emision/infObjetoAsegurado/infObjetoAsegurado*.jsf` y con valor ficha simple sin acción final (`esConfirmarGuardadoObjetoAsegurado`); el bloqueo de cuerpo lista TODOS los nombres con la clase de su valor (vacío/false/true/num/otro) y no se corta; antes de cada acción del explorador se espera (≤90 s) a que no haya un overlay de carga (`loading_overlay`/`AjaxWait`) visible tapando el control o la pantalla (Fidelidade), si sigue = error reintentable, nunca clic forzado; Allianz ePAC: «Nueva Alta» (`#link_new_policy`) se espera habilitado ≤90 s, con UNA recarga del home y otra espera; si sigue, error reintentable. 0.3.22 (29/10/2026): Allianz VMP «Figuras Intervinientes»: `elegir` acepta formas INEQUÍVOCAS de la opción (cadena = valor o texto exacto de UNA opción; `{ texto }`) resueltas contra el inventario (`normalizarOpcionElegir`), y la opción de `value=""` que el select ya tiene (conValor false, única sin valor, todas inventariadas) no se ejecuta; una opción redactada nunca se elige; Mapfre NSE `datosGenerales.jsf`: `<id>OpenedState` (estado de modal RichFaces, valor vacío/true/false, prefijo sin acción) no cuenta por su nombre en el cuerpo de la ruta tolerada (`esEstadoModalJsf`) y el bloqueo de cuerpo lista TODOS los nombres que casan (`textoDetalleCuerpo`, nunca valores); Fidelidade: la regla sin texto vale en una LISTA CERRADA de rutas exactas de la simulación (`Simualtion.aspx`, `ClientData.aspx`), el `action` del formulario tiene que ser una de ellas y sin query (si no, se para antes del clic) y todas entran como destinos con cuerpo estricto; el bloqueo de red dice si la ruta estaba en la lista y sobraba la query (solo nombres de clave). 0.3.21 (29/10/2026): Fidelidade «Simulación»: un lote [rellenar/marcar/elegir…, avanzar] cuyo avanzar (el ÚLTIMO) apunta a un control DESHABILITADO del mismo marco ejecuta lo anterior y OMITE el avanzar (`avanceDeshabilitadoAlFinal`; nunca se pulsa un deshabilitado); Allianz VMP: hasta 200 opciones por select (40 garantizadas + fondo común de 300 por inventario) y las que casan con una pista NO personal del catálogo (`pistasOpcionesInventario`: «Xiaomi») se conservan aunque queden más allá; Mapfre NSE: la exención del cuerpo en ruta tolerada cubre la fecha, hora y LUGAR de firma (`formDG:localidadFirma`, lista cerrada `RE_SEGMENTO_FECHA_FIRMA`; valor de lugar sin palabra de acción final ni cifras largas). 0.3.20 (29/10/2026): Fidelidade «Simulación»: el input submit «sin rótulo» lleva `value` VIVO; vale si cada rótulo vivo es EXACTAMENTE uno de la lista cerrada neutra (siguiente, avanzar, continuar, siguiente paso, calcular, simular) y no casa acción final (`rotuloNeutroSinTexto`); Mapfre NSE: `formDG:fechaFirmaInputDate` (fecha, valor vacío o fecha sin letras) no cuenta como «firm» en el cuerpo (`esCampoFechaDeAccion`); Allianz VMP: el `<select>` oculto de un bootstrap-select (marca/modelo) se inventaría con `selectpicker` (su botón sin texto no) y se elige con `selectOption` forzado tras comprobarlo vivo; un lote solo de rellenar sin efecto (clave omitible sin valor) no se ejecuta (con `parar` detrás, manda el parar). 0.3.19 (29/10/2026): Fidelidade Vivienda: el input submit sin rótulo de «Simulación» SÍ lleva onclick `OsAjax(arguments[0] || window.event,'<A>','<B>','','__OSVSTATE,',''); return false;` y avanza si casa esa forma CERRADA (A === B con `$`→`_`, B = name entero vivo, sin nombre de acción final, sin otros manejadores ni form*), con inspección ESTRICTA del cuerpo del POST al propio formulario; Mapfre NSE: el «Siguiente >>» de `formDG` (busquedaProductos) se mira sin la subcadena exacta `mostrarModalPanelConfirmarLimpiezaPolizaPorDias` de su oncomplete (origen, ruta, tag, id, name y texto exactos, vivo; el resto del onclick sigue pasando por emisión). 0.3.18 (29/10/2026): Fidelidade Vivienda: el `<input type=submit>` de «Simulación» SIN texto/value/aria-label (OutSystems, name `OPI_Theme_wt…$block$wtMainContent$…`, clase Button+Is_Default) avanza por regla estrecha (origen https://mediadores.fidelidade.es, ruta /OPI_ES_Vivienda/, único, sin onclick, sin texto de acción final ni datos bancarios ni precio), repetida VIVA en el DOM antes del clic; ePAC drvp00 «Selección de Municipio»: «Aceptar» sin id con onclick EXACTO `eventoSiguienteDialog()` (type=button, sin otros manejadores ni atributos form*, vivo) con la misma vigilancia que el «Aceptar» sin id; saneado del onclick: tiras contiguas de ≥7 cifras (ids JSF de Mapfre NSE) normalizadas a `#N#` en vez de redactar el onclick entero (NIF/IBAN/email/teléfono siguen redactando). 0.3.17 (29/10/2026): Fidelidade localiza la tarjeta 4216/Vivienda en todos los marcos y, si falla, describe sin PII lo que hay; ePAC drvp00: «Aceptar» único sin id ni onclick (Selección de Municipio) por texto exacto con la misma vigilancia; onclick hasta 8000 car. solo para la evaluación (`onclickCompleto`, la IA sigue viendo 200); el rechazo del validador describe el control (tag/type/name/clase/texto ≤40). 0.3.16 (29/10/2026): Fidelidade pulsa solo la HOJA exacta del menú (nunca el contenedor); onclick completo hasta 2000 car. en avances y radios/casillas (A4J «Siguiente >>» de Mapfre NSE; radio solo si su ajax/jsfcljs tiene como ORIGEN el propio control y no clica otro; onclick con dato personal = redactado = no se pulsa); el rechazo del validador dice acción, ref y causa; catálogo de patinete/VMP (matrícula omitible, CP, población, marca, modelo, uso, homologado); contacto no va a matrícula/CP/población. 0.3.15 (29/10/2026): el validador deja marcar radios y casillas de consentimiento/declaración (decisión de Alberto); una casilla ya marcada no se vuelve a pulsar. 0.3.14 (29/10/2026): elección determinista de «Oficina Virtual» repetida en Fidelidade; nombre de pantalla recortado, `motivo` ignorado fuera de parar, onclick hasta 200 car., avance ePAC con títulos recortados (guard vivo), errores con causa. 0.3.9 (28/10/2026): tipo de documento también si `_tipoDoc` es input+lista/JSF (pulsar guardado) y avisos modales de Mapfre tras abrir cada menú; portal de exploración de Fidelidade (Vivienda): login + OFICINA VIRTUAL › PROYECTO › Nuevo proyecto › tarjeta 4216 › «Simulación» por la puerta exacta del guard. 0.3.8 (28/10/2026): tipo de documento pareado (NIF/NIE/CIF) antes del documento; el guard nombra el parámetro del cuerpo que casa en la ruta tolerada. 0.3.7: diagnóstico si NSE vuelve a su portada tras «Oferta / Contratación»; inventario con mensaje de error de campos inválidos y avisos del portal. 0.3.6: NIF del tomador validado (blur + espera de red) antes de la acción siguiente; tolerancia NSE también en el menú «Oferta / Contratación» (índices sin desplazar) y no con texto de acción real. 0.3.5: ruta de app NSE `/EVT21_NSE_FWEB/app/emision/` tolerada SOLO en Mapfre patinete (decisión de Alberto). 0.3.4: diálogo «Atención» del término de ePAC cerrado por código («Cancelar»); «Oferta / Contratación» del menú NSE de Mapfre por su puerta; entradas de menú (<a>, menuitem/link) avanzables. 0.3.3: ventana NSE de Mapfre adoptada (sin `sin_salida` falso), destino del avance drvp00 = servlet del marco, ids con `$`. 0.3.2: «Acceso a NSE» de Mapfre Patinetes por su puerta exacta; radios ocultos de ePAC por su label; avance `#btnAceptar`+`eventoSiguiente()` de drvp00. */
+export const EXPLORADOR_VERSION = '0.3.27'
+
+/**
+ * Revisión 0.3.17: el log del worker (Fly) NO pasa por `redactarValoresInventario` (eso lo hace asegura antes de la IA y la BD), y el
+ * `control` del rechazo lleva el texto visible del control (≤40). Aquí se quitan los valores del riesgo/contacto del trabajo: si el
+ * control contiene alguno, o no se sabe qué quitar (`null` = datos reales sin riesgo legible), sale «control redactado». Pura.
+ */
+export function rechazosParaLog(rechazos: readonly RechazoAccion[], k: { conDatosReales: boolean; riesgo: unknown; env: Record<string, string | undefined>; entrada: string }): string[] {
+  const valores = valoresSensiblesExploracion({ conDatosReales: k.conDatosReales, riesgo: k.riesgo, env: k.env, tomadorMediador: !k.conDatosReales && entradaConTomadorMediador(k.entrada) })
+  return rechazos.map((r) => textoRechazo(r.control && (valores === null || contieneValorSensible(r.control, valores)) ? { ...r, control: 'control redactado' } : r))
+}
 
 const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 const azar = (min: number, max: number) => min + Math.random() * (max - min)
@@ -112,6 +140,10 @@ const MAX_BYTES_PDF_PRESUPUESTO = 9 * 1024 * 1024
 export type CtxEntrada = Pick<ContextoPortal, 'credenciales' | 'pausa' | 'pulsar' | 'exigirSinCaptcha' | 'log'> & {
   /** Enlace de menú autorizado de la compañía del trabajo (`pulsarEnlaceEntradaAutorizado`); solo en la ENTRADA. */
   pulsarEnlaceEntrada: (boton: Locator) => Promise<void>
+  /** «Acceso a NSE» de Mapfre Patinetes (`pulsarAccesoNseMapfre`); solo en la ENTRADA. */
+  pulsarAccesoNse?: (boton: Locator) => Promise<void>
+  /** «Oferta / Contratación» del menú NSE de Mapfre (`pulsarMenuOfertaNseMapfre`); solo en la ENTRADA. */
+  pulsarMenuNse?: (boton: Locator) => Promise<void>
   /**
    * LOGIN ASISTIDO (14/10/2026): SOLO si la compañía de la entrada está en `LOGIN_ASISTIDO` (hoy Occident). Lo que la fase
    * necesita además del contexto: la entrada, el guard (ventana de red del login) y el paso de login hacia asegura.
@@ -124,6 +156,16 @@ export type PortalExploracion = {
   credencial: string
   /** Devuelve la página donde sigue la exploración si la entrada abrió una PESTAÑA NUEVA; sin valor = la misma `page`. */
   entrar: (page: Page, ctx: CtxEntrada, e: EntradaExploracion) => Promise<Page | void>
+}
+
+/**
+ * Recorrido de entrada de Mapfre por ramo (31/10/2026). Lista CERRADA: un ramo sin recorrido LANZA (antes caía por defecto en
+ * Turismos y Motos y una entrada nueva habría explorado el formulario de otro ramo). Pura.
+ */
+export function destinoEntradaMapfre(ramo: string): 'auto' | 'patinete' | 'hogar' {
+  if (ramo === 'auto' || ramo === 'moto') return 'auto'
+  if (ramo === 'patinete' || ramo === 'hogar') return ramo
+  throw new ErrorTarificador('datos', `mapfre: sin recorrido de entrada de exploración para el ramo ${String(ramo).slice(0, 30)}`)
 }
 
 /** Lista CERRADA de portales con entrada de exploración. Otra compañía = sin portal = no se abre el navegador. */
@@ -145,16 +187,46 @@ export const PORTALES_EXPLORACION: Readonly<Record<string, PortalExploracion>> =
   // nueva). El contexto NO lleva `httpCredentials` (a propósito: el diálogo de auth básica se cancela con 401).
   mapfre: Object.freeze({
     credencial: 'MAPFRE_WMEDIADORES',
-    entrar: async (page: Page, ctx: CtxEntrada, _e: EntradaExploracion): Promise<Page> => {
+    entrar: async (page: Page, ctx: CtxEntrada, e: EntradaExploracion): Promise<Page> => {
       await loginMapfre(page, ctx)
       await exigirSinVerificacion(page, 'mapfre')
       await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
       await ctx.exigirSinCaptcha()
+      const destino = destinoEntradaMapfre(e.ramo)
+      // Hogar (31/10/2026): «Nueva producción» › «Patrimoniales» › «Tarificación y emisión rápida», en la MISMA pestaña (mapfre/hogar.ts).
+      if (destino === 'hogar') {
+        await abrirTarificacionRapidaHogar(page, ctx)
+        await exigirSinVerificacion(page, 'mapfre')
+        await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
+        await exigirSinCaptcha(page)
+        return page
+      }
+      // Patinetes (28/10/2026): tarjeta «Patinetes» › «Tarificación y Emisión» (MásPatín). Auto y moto: Turismos y Motos.
+      if (destino === 'patinete') {
+        const pat = await abrirTarificacionPatineteMapfre(page, ctx)
+        await exigirSinVerificacion(pat, 'mapfre')
+        await pat.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
+        await exigirSinCaptcha(pat)
+        return pat
+      }
       const nsei = await abrirTarificacionRapidaAuto(page, ctx)
       await exigirSinVerificacion(nsei, 'mapfre')
       await nsei.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
       await exigirSinCaptcha(nsei)
       return nsei
+    },
+  }),
+  // Fidelidade (28/10/2026): intranet de mediadores con usuario y contraseña (sin 2FA) → «OFICINA VIRTUAL › PROYECTO › Nuevo proyecto» →
+  // tarjeta «Producto 4216 · Fidelidade Vivienda» (nunca EMPRESAS) → «Simulación». Los clics de la ruta, SOLO por `pulsarEnlaceEntrada`
+  // (puerta exacta del guard). Devuelve la página del formulario (la misma, o la pestaña nueva si «Simulación» la abre).
+  fidelidade: Object.freeze({
+    credencial: 'FIDELIDADE_MEDIADORES',
+    entrar: async (page: Page, ctx: CtxEntrada, _e: EntradaExploracion): Promise<Page> => {
+      await loginFidelidade(page, ctx)
+      await exigirSinVerificacion(page, 'fidelidade')
+      await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
+      await ctx.exigirSinCaptcha()
+      return abrirFormularioViviendaFidelidade(page, ctx)
     },
   }),
   // Occident (14/10/2026): SSO → menú «Productos › Análisis de necesidades › Hogar › Tarificación» → ruta SPA de hogar, con el
@@ -223,6 +295,8 @@ export type FinBucle = {
   presupuesto?: PresupuestoWorker
   /** Qué comprobación del worker cortó (lista cerrada, sin valores): distingue los `ambiguo` entre sí. */
   detalle?: DetalleFinExploracion
+  /** 0.3.11: motivo legible del fin (p. ej. «frontera bancaria: campo «<etiqueta>»», ≤60). Solo ETIQUETA del campo, nunca su valor. */
+  nota?: string
   /** Incidencias de ejecución del ÚLTIMO lote aún sin contar a asegura (van en el cierre). Sin valores. */
   incidencias?: IncidenciaEjecucion[]
   /** Solo en los fallos de la ENTRADA cerrada (antes del primer paso): URL, captura y HTML ya redactados. */
@@ -345,10 +419,17 @@ export function valorParaControl(valor: string, el: ElementoInventario): string 
 }
 
 /** Del error que cortó la exploración a su motivo de fin. Nunca lanza. */
-export function finDeError(e: unknown): { motivo: MotivoFinExploracion; error: { tipo: TipoError; mensaje: string } | null; detalle?: DetalleFinExploracion } {
+/** 0.3.11: «frontera bancaria: campo «<etiqueta>»» (≤60). La etiqueta del control, nunca su valor. */
+export function notaFronteraBancaria(etiqueta: string): string | null {
+  // SOLO el nombre canónico de la lista cerrada (`CAMPOS_BANCARIOS`): el texto libre de la pantalla puede llevar un IBAN.
+  const campo = fronteraEmisionPorCampos([etiqueta]).campoBancario
+  return campo === null ? null : `frontera bancaria: campo «${campo}»`
+}
+
+export function finDeError(e: unknown): { motivo: MotivoFinExploracion; error: { tipo: TipoError; mensaje: string } | null; detalle?: DetalleFinExploracion; nota?: string } {
   if (e instanceof ErrorVerificacionHumana) return { motivo: 'otp', error: null }
   // Frontera de emisión (cuenta bancaria en pantalla): fin CORRECTO de la exploración, no un fallo del guard.
-  if (e instanceof ErrorFronteraEmision) return { motivo: 'cerca_de_emision', error: null, detalle: 'frontera_cuenta_bancaria' }
+  if (e instanceof ErrorFronteraEmision) return { motivo: 'cerca_de_emision', error: null, detalle: 'frontera_cuenta_bancaria', ...(notaFronteraBancaria(e.etiqueta) !== null ? { nota: notaFronteraBancaria(e.etiqueta)! } : {}) }
   if (e instanceof EmisionBloqueadaError) return { motivo: 'guard_emision', error: { tipo: 'emision', mensaje: e.message } }
   if (e instanceof ErrorTarificador && e.tipo === 'captcha') return { motivo: 'captcha', error: null }
   const c = clasificar(e)
@@ -409,12 +490,14 @@ export type ContextoBucle = {
   paginasDeEntrada?: readonly Page[]
   /** Espera del PDF tras cada guardado (por defecto `TOPE_PDF_GUARDADO_MS`). */
   topePdfMs?: number
+  /** 0.3.23: tope de la espera al overlay de carga antes de cada acción (por defecto `TOPE_OVERLAY_CARGA_MS`, 90 s). */
+  topeOverlayMs?: number
   /** Pantalla QUIETA (sin red en vuelo ni DOM cambiando) antes de inventariar y de tocar nada (`esperarEstable`). */
   estabilidad?: OpcionesEstabilidad
 }
 
 class Parar extends Error {
-  constructor(readonly motivo: MotivoFinExploracion | 'perdido', readonly detalle?: DetalleFinExploracion) {
+  constructor(readonly motivo: MotivoFinExploracion | 'perdido', readonly detalle?: DetalleFinExploracion, readonly nota?: string) {
     super(`parar:${motivo}`)
   }
 }
@@ -428,6 +511,8 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
   const inicio = ahora()
   const topes = topesExplorador(k.env)
   const modoVista = modoVistaExplorador(k.env)
+  // 0.3.21: textos de prueba NO personales del catálogo del ramo (marca/modelo del VMP…): sus opciones se conservan en el inventario.
+  const pistas = pistasOpcionesInventario(k.ramo)
   const red = new Set<string>()
   const efectos = new Set<EfectoPortal>()
   const huellas: string[] = []
@@ -453,9 +538,11 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
   }
   /** Incidencias del lote en curso: salen con el SIGUIENTE paso (o con el cierre). */
   let incidencias: IncidenciaEjecucion[] = []
-  const fin = (motivo: FinBucle['motivo'], error: FinBucle['error'] = null, detalle?: DetalleFinExploracion): FinBucle => ({
+  const avisosDiagnostico: string[] = []
+  const fin = (motivo: FinBucle['motivo'], error: FinBucle['error'] = null, detalle?: DetalleFinExploracion, nota?: string): FinBucle => ({
     motivo, error, redNoGet: [...red].slice(0, 50), efectos: efectos.size ? [...efectos] : ['ninguno_visto'], pasos, acciones,
     ...(detalle ? { detalle } : {}),
+    ...(nota ? { nota } : {}),
     ...(incidencias.length ? { incidencias: [...incidencias] } : {}),
     ...(presupuesto.guardado ? { presupuesto: { ...presupuesto } } : {}),
   })
@@ -468,16 +555,28 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
       // Una ventana nueva (popup) abierta DURANTE el bucle no se sigue en v1: hueco. Las de la entrada no cuentan.
       if (page.context().pages().some((p) => !deEntrada.has(p))) throw new Parar('sin_salida')
       await captura?.liberar()
+      // ePAC (28/10/2026): el diálogo «Atención» que propone alargar el término se cierra por CÓDIGO («Cancelar»/«×», nunca «Aceptar»).
+      if (ENTRADAS_EXPLORACION[k.entrada]?.cierraDialogoTermino && (await cerrarDialogoTerminoEpac(page, k.guard))) {
+        k.log('exploracion_dialogo_termino', { n: pasos + 1, estado: 'cerrado' })
+        await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => undefined)
+      }
       // Pantalla QUIETA antes de inventariar (14/10/2026, 8d0676f9: tras rellenar el número de la vía, la validación
       // asíncrona repintó la sección DESPUÉS de inventariar y el nodo del año quedó obsoleto).
       await asentar('inventario')
-      captura = await capturarInventarioExploracion(page)
+      captura = await capturarInventarioExploracion(page, undefined, undefined, undefined, pistas)
       if (!captura) throw new Error('no se pudo leer el inventario de la pantalla')
       const inv = captura.inventario
+      if (avisosDiagnostico.length > 0 && inv.marcos[0]) {
+        inv.marcos[0].avisosPortal = [...avisosDiagnostico.splice(0), ...(inv.marcos[0].avisosPortal ?? [])].slice(0, 5)
+      }
+      // PRECIO PEGAJOSO (revisión de seguridad 28/10/2026): un importe visto en cualquier marco cierra el avance por id para el resto del trabajo.
+      if (inv.marcos.some((m) => (m.importes?.length ?? 0) > 0)) registrarPrecioVisto(k.guard)
       const parada = detectarParada(inv)
       if (parada) {
         // La señal (p. ej. la ETIQUETA del campo de cuenta bancaria; nunca un valor) va al log local; al cierre, el código.
-        if (parada.detalle) k.log('exploracion_parada', { motivo: parada.motivo, detalle: parada.detalle, senal: parada.senal })
+        // Paradas por TÍTULO o CAMPO: su señal es texto de la página (puede llevar datos personales) → solo el código.
+        const senalSegura = parada.detalle?.startsWith('titulo:') || parada.detalle?.startsWith('campo:') ? {} : { senal: parada.senal }
+        if (parada.detalle) k.log('exploracion_parada', { motivo: parada.motivo, detalle: parada.detalle, ...senalSegura })
         throw new Parar(parada.motivo, parada.detalle)
       }
       const huella = huellaPantalla(inv)
@@ -505,7 +604,9 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
       pasos++
       if (r.estado === 'perdido') throw new Parar('perdido')
       // REVALIDACIÓN contra el inventario PROPIO (el que se mandó): lo que no valida aquí no toca el portal.
-      const v = validarRespuestaExplorador(r.respuesta, { inventario: inv, ramo: k.ramo, entrada: k.entrada, datosReales: k.conDatosReales ? { riesgo: k.riesgo } : null, presupuestoEnCurso: presupuesto.guardado })
+      const v = validarRespuestaExplorador(r.respuesta, { inventario: inv, ramo: k.ramo, entrada: k.entrada, datosReales: k.conDatosReales ? { riesgo: k.riesgo } : null, presupuestoEnCurso: presupuesto.guardado, precioVisto: precioVistoEn(k.guard) })
+      // 0.3.16: qué acción y qué ref rechazó el validador del worker, con su causa (sin valores).
+      if (!v.ok) k.log('exploracion_lote_no_valido', { n: pasos, rechazos: rechazosParaLog(v.rechazos ?? [], k) })
       if (!v.ok) throw new Parar('ambiguo', 'lote_no_valido')
       if (r.estado !== 'ok') {
         const p = v.respuesta.acciones[0]
@@ -545,7 +646,7 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
           const cuenta = senalCuentaBancaria(descripcionesElemento(el))
           if (cuenta === null) return
           k.log('exploracion_parada', { motivo: 'cerca_de_emision', detalle: 'frontera_cuenta_bancaria', senal: `${MOTIVO_FRONTERA_CUENTA} («${cuenta}»)` })
-          throw new Parar('cerca_de_emision', 'frontera_cuenta_bancaria')
+          throw new Parar('cerca_de_emision', 'frontera_cuenta_bancaria', notaFronteraBancaria(cuenta) ?? undefined)
         }
         exigirSinCuenta(hit.el)
         // Antes del PRIMER rellenar del lote: pantalla quieta (un repintado a medias dejaría el nodo a punto de caducar).
@@ -565,7 +666,7 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
         // entre el inventario y el lote): se re-inventaría UNA vez y se busca el MISMO control por su identidad.
         if (!loc && hechas === 0 && a.accion === 'rellenar') {
           // Solo en la MISMA pantalla que se validó (`huella` de este paso): si cambió, no se relocaliza (fail-closed).
-          const re = await relocalizar(page, hit.el, hit.marco, huella, k.esperaRepintadoMs ?? ESPERA_REPINTADO_MS, estabilidad, vigia)
+          const re = await relocalizar(page, hit.el, hit.marco, huella, k.esperaRepintadoMs ?? ESPERA_REPINTADO_MS, estabilidad, vigia, pistas)
           k.log('exploracion_relocalizacion', { n: pasos, ref: a.ref, estado: re ? 'ok' : 'no_encontrado' })
           if (re) {
             ({ loc, hit } = re)
@@ -573,7 +674,7 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
             try {
               exigirSinCuenta(hit.el)
             } catch (err) {
-              await loc.evaluate((n, at) => n.removeAttribute(at), ATRIBUTO_MARCA).catch(() => undefined)
+              await loc.evaluate((n, at) => n.removeAttribute(at), ATRIBUTO_MARCA, { timeout: TOPE_COMPROBACION_REF_MS }).catch(() => undefined)
               throw err
             }
           } else {
@@ -591,11 +692,44 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
           }
           throw new Parar('ambiguo', 'nodo_no_localizado')
         }
+        // 0.3.23 (Fidelidade real 30/10/2026): un overlay de carga (`Feedback_AjaxWait loading_overlay`) interceptaba el clic del radio
+        // durante los 30 s del timeout. Antes de CADA acción, se espera a que no haya uno visible que tape el control o la pantalla (tope
+        // 90 s); si sigue, error reintentable. Nunca `force`: el overlay no se salta.
+        // Reloj REAL (no `k.ahora`, que un test puede congelar): el tope tiene que llegar.
+        const locObjetivo = loc
+        const marcoNodo = nodo.marco
+        const esperado = await esperarSinOverlayCarga(a.accion, { sondear: () => sondearOverlaysCarga(locObjetivo, marcoNodo), dormir, ahora: Date.now, topeMs: k.topeOverlayMs })
+        if (esperado > 0) k.log('exploracion_overlay_carga', { n: pasos, ref: a.ref, accion: a.accion, esperaMs: esperado })
+        // 0.3.24 (Mapfre NSE real, a13b990c…): el portal repintó y el nodo marcado ya no está. Nada se tocó: se corta el lote, se re-inventaría
+        // la pantalla ACTUAL y decide quien toque (mapa o IA) con el inventario nuevo; antes se esperaban 30 s y acababa en error_portal.
+        if (await refDesaparecida(locObjetivo)) {
+          k.log('exploracion_ref_desaparecida', { n: pasos, ref: a.ref, accion: a.accion, momento: 'antes' })
+          acciones--
+          cortarLote(i, 'repintado')
+          break lote
+        }
+        // Revisión de seguridad 0.3.23: tras ESPERAR al overlay, el portal pudo repintar el control. `marcar`/`avanzar` se revalidan vivos
+        // en `k.pulsar` (guard); `rellenar`/`elegir` no pasan por ahí: se repite la frontera bancaria sobre el control VIVO. Mismo bloqueo.
+        if (esperado > 0 && (a.accion === 'rellenar' || a.accion === 'elegir')) {
+          try {
+            await exigirCampoNoBancario(locObjetivo)
+          } catch (err) {
+            if (!(err instanceof ErrorFronteraEmision)) throw err
+            k.log('exploracion_parada', { motivo: 'cerca_de_emision', detalle: 'frontera_cuenta_bancaria', senal: `${MOTIVO_FRONTERA_CUENTA} («${err.etiqueta}»)` })
+            throw new Parar('cerca_de_emision', 'frontera_cuenta_bancaria', notaFronteraBancaria(err.etiqueta) ?? undefined)
+          }
+        }
         let cortar: MotivoCorteLote | null = null
+        let desaparecida = false
         try {
           if (a.accion === 'rellenar') {
-            const d = resolverDato(a.dato, { ramo: k.ramo, conDatosReales: k.conDatosReales, riesgo: k.riesgo, env: k.env, hoy: (k.hoy ?? (() => new Date()))() })
+            const d = resolverDato(a.dato, { ramo: k.ramo, tomadorMediador: entradaConTomadorMediador(k.entrada), conDatosReales: k.conDatosReales, riesgo: k.riesgo, env: k.env, hoy: (k.hoy ?? (() => new Date()))() })
             if (!d.ok) {
+              // 0.3.16: sin datos reales, una clave omitible sin valor (matrícula de patinete) deja el campo vacío y el lote sigue.
+              if (!k.conDatosReales && claveOmitibleSinValor(k.ramo, a.dato)) {
+                k.log('exploracion_dato_omitido', { n: pasos, ref: a.ref, dato: a.dato })
+                continue
+              }
               const conValor = d.motivo === 'dato_no_disponible' && k.conDatosReales
                 ? await loc.inputValue({ timeout: 5_000 }).then((v) => v.trim() !== '').catch(() => false)
                 : false
@@ -606,6 +740,20 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
             await k.pausaAccion()
             // 🔑 El valor no se loguea ni sale del proceso: va directo al campo.
             const escrito = valorParaControl(d.valor, hit.el)
+            // 0.3.8 (real 28/10/2026 18:31, ePAC): el tipo de documento VA ANTES del número (vacío → «Número de identificación
+            // incorrecto»). Orden: tipo de documento → documento → salir del campo. Solo el TIPO (NIF/NIE/CIF) sale del valor.
+            if (CLAVES_VALIDAN_AL_SALIR.has(a.dato)) {
+              const tipo = tipoDocumentoDe(escrito)
+              if (tipo) {
+                const estado = await elegirTipoDocumentoPareado(nodo.marco, loc, tipo, k.pulsar)
+                // 0.3.10: sin opción/desplegable → diagnóstico estructural (tag/role/id/class, ≤15, sin valores) al log y a los avisos del inventario del paso siguiente.
+                const diag = estado === 'sin_opcion' || estado === 'sin_desplegable' ? await diagnosticoTipoDocumento(loc) : null
+                k.log('exploracion_tipo_documento', { n: pasos, ref: a.ref, tipo, estado, ...(diag ? { diagnostico: diag } : {}) })
+                if (diag) avisosDiagnostico.push(lineaDiagnosticoTipoDoc(estado, diag))
+                const cat = estado === 'sin_opcion' ? lineaCatalogoTipoDoc(await catalogoTipoDocumento(loc)) : null
+                if (cat) avisosDiagnostico.push(cat)
+              }
+            }
             await loc.fill(escrito, { timeout: 10_000 })
             hechas++
             const quedan = i < lote.length - 1
@@ -619,24 +767,66 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
             } else {
               const fijado = await fijarValor(loc, escrito)
               if (fijado !== 'ok') k.log('exploracion_valor', { n: pasos, ref: a.ref, estado: fijado })
+              // El portal valida este dato al SALIR del campo (NIF en ePAC): foco fuera y red quieta ANTES de la acción siguiente.
+              if (CLAVES_VALIDAN_AL_SALIR.has(a.dato)) {
+                await loc.blur({ timeout: 5_000 }).catch(() => undefined)
+                await dormir(k.esperaRepintadoMs ?? ESPERA_REPINTADO_MS)
+                await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined)
+              }
               // Ni con el reintento tecleando: queda como error del paso en asegura (ref + clave; nunca el valor).
               if (fijado === 'no_aplicado') incidencias.push({ accion: 'rellenar', ref: a.ref, dato: a.dato, causa: 'valor_no_aplicado' })
               if (quedan) {
                 // ¿Cambió la estructura al escribir? Solo importa si quedan acciones (si no, el bucle reinventaría igualmente).
-                const sonda = await capturarInventarioExploracion(page).catch(() => null)
+                const sonda = await capturarInventarioExploracion(page, undefined, undefined, undefined, pistas).catch(() => null)
                 const despues = sonda ? { huella: huellaPantalla(sonda.inventario), elementos: nElementos(sonda.inventario) } : null
                 await sonda?.liberar()
                 cortar = motivoCorteTrasRellenar(a.dato, antes, despues)
               }
             }
+          } else if (a.accion === 'elegir' && hit.el.tag === 'nx-dropdown') {
+            // Desplegable ndbx (Allianz ePAC): abrir y pulsar la opción de texto EXACTO, ambas por `k.pulsar` (guard). Si no está,
+            // no se pulsa ninguna opción: la lista queda ABIERTA y el lote se corta; el paso siguiente ve sus opciones.
+            await k.pausaAccion()
+            const r = await elegirNxDropdown(nodo.marco, loc, a.opcion.valor, k.pulsar)
+            if (r === 'no_encontrada') {
+              k.log('exploracion_nx_opcion', { n: pasos, ref: a.ref, estado: 'no_encontrada' })
+              acciones--
+              cortarLote(i, 'repintado')
+              break lote
+            }
+            hechas++
+          } else if (a.accion === 'elegir' && hit.el.tag === 'select' && hit.el.selectpicker === true) {
+            // 0.3.20 (Allianz VMP, marca/modelo): el <select> OCULTO de un bootstrap-select (comprobado VIVO en `localizar`). `selectOption`
+            // forzado (dispara input/change: bootstrap-select repinta su botón y el portal carga los modelos); su red pasa por el guard de
+            // siempre. Luego red quieta y, si quedan acciones, se corta el lote: la pantalla siguiente ve las opciones nuevas (modelo).
+            await k.pausaAccion()
+            const elegidas = await loc.selectOption({ value: a.opcion.valor }, { force: true, timeout: 10_000 })
+            if (elegidas.length !== 1 || elegidas[0] !== a.opcion.valor) throw new Parar('ambiguo', 'opcion_no_aplicada')
+            hechas++
+            await dormir(k.esperaRepintadoMs ?? ESPERA_REPINTADO_MS)
+            await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined)
+            cortar = i < lote.length - 1 ? 'repintado' : null
           } else if (a.accion === 'elegir') {
             await k.pausaAccion()
             const elegidas = await loc.selectOption({ value: a.opcion.valor }, { timeout: 10_000 })
             if (elegidas.length !== 1 || elegidas[0] !== a.opcion.valor) throw new Parar('ambiguo', 'opcion_no_aplicada')
             hechas++
           } else if (a.accion === 'marcar') {
-            await k.pulsar(loc)
+            // 0.3.15: una casilla ya marcada no se pulsa (desmarcaría); el radio sí (idempotente).
+            const esCasilla = ((hit.el.type ?? '').toLowerCase() === 'checkbox')
+            // 0.3.25 (Fidelidade real, 56b4b52c…): un radio YA marcado se vuelve a pulsar (por el guard) y, como el clic no cambia nada, el
+            // portal no recalcula (OutSystems habilita «Simulación» en el `change` del régimen): `redispararCambioMarcado` (guard.ts) sobre el MISMO nodo.
+            const yaMarcadoAntes = !esCasilla && (await loc.isChecked({ timeout: TOPE_COMPROBACION_REF_MS }).catch(() => false))
+            if (!(esCasilla && (await loc.isChecked({ timeout: 5_000 })))) await k.pulsar(loc)
             hechas++
+            if (yaMarcadoAntes) {
+              const r = await redispararCambioMarcado(loc, k.guard)
+              k.log('exploracion_marcar', { n: pasos, ref: a.ref, estado: r })
+              if (r === 'cambio') await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined)
+            }
+            // 0.3.24 (Fidelidade real, 2f0d9b15…): ¿quedó marcado? Si no, UN clic en su <label for> por el guard.
+            const estado = await asegurarMarcado(loc, nodo.marco, k.pulsar)
+            if (estado !== 'marcado') k.log('exploracion_marcar', { n: pasos, ref: a.ref, estado })
           } else {
             const alPedir = (q: { method(): string; url(): string }) => {
               if (q.method() === 'GET') return
@@ -684,8 +874,20 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
             k.guard.comprobar()
             huellaAntesDeAvanzar = huella
           }
+        } catch (e) {
+          // 0.3.24: un TIMEOUT de Playwright con el nodo marcado YA desaparecido = repintado durante la acción (no llegó a tocarlo): se
+          // re-inventaría. Nunca con una violación del guard, otro error o el guardado del presupuesto (su estado no se puede suponer).
+          const guardado = a.accion === 'avanzar' && a.efectoEsperado === 'guardar_presupuesto'
+          if (guardado || !esTimeoutPlaywright(e) || k.guard.violacion() || !(await refDesaparecida(loc))) throw e
+          desaparecida = true
         } finally {
-          await loc.evaluate((n, at) => n.removeAttribute(at), ATRIBUTO_MARCA).catch(() => undefined)
+          await loc.evaluate((n, at) => n.removeAttribute(at), ATRIBUTO_MARCA, { timeout: TOPE_COMPROBACION_REF_MS }).catch(() => undefined)
+        }
+        if (desaparecida) {
+          k.log('exploracion_ref_desaparecida', { n: pasos, ref: a.ref, accion: a.accion, momento: 'durante' })
+          acciones--
+          cortarLote(i, 'repintado')
+          break lote
         }
         if (cortar) {
           cortarLote(i + 1, cortar)
@@ -694,16 +896,69 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
       }
     }
   } catch (e) {
-    if (e instanceof Parar) return fin(e.motivo, null, e.detalle)
+    if (e instanceof Parar) return fin(e.motivo, null, e.detalle, e.nota)
     // Un diálogo al guardar (confirm/alert): el robot no confirma; se para con su detalle (no es un fallo del guard).
     if (e instanceof GuardadoConDialogoError && !k.guard.violacion()) return fin('ambiguo', null, 'guardado_con_dialogo')
     // Una violación del guard en segundo plano manda sobre el error con el que se cortó.
     const f = finDeError(k.guard.violacion() ?? e)
-    return fin(f.motivo, f.error, f.detalle)
+    return fin(f.motivo, f.error, f.detalle, f.nota)
   } finally {
     vigia.soltar()
     await captura?.liberar()
   }
+}
+
+/**
+ * 0.3.24 (Mapfre NSE real 30/10/2026, a13b990c…): tras un avance JSF la pantalla se repintó y el nodo marcado ya no existía: la
+ * primera `evaluate` sobre él (la descripción del guard en `pulsar`) esperó los 30 s del timeout y el trabajo acabó en `error_portal`.
+ * `true` = el nodo marcado ya NO está en su marco (`count()` no espera; un marco cerrado también es «ya no está»). Solo lectura.
+ */
+export async function refDesaparecida(loc: Locator): Promise<boolean> {
+  return (await loc.count().catch(() => 0)) === 0
+}
+
+/** ¿Es el `TimeoutError` de Playwright (por su nombre de clase)? Pura. */
+export function esTimeoutPlaywright(e: unknown): boolean {
+  return (e as { name?: unknown } | null)?.name === 'TimeoutError'
+}
+
+/** Tope de las comprobaciones cortas sobre un nodo marcado (existe / quitar la marca / estado de una casilla). */
+const TOPE_COMPROBACION_REF_MS = 2_000
+
+/** Resultado de {@link asegurarMarcado} (va al log, sin valores). */
+export type EstadoMarcado = 'marcado' | 'por_etiqueta' | 'sin_marcar' | 'sin_etiqueta' | 'desaparecido'
+
+/**
+ * 0.3.24 (Fidelidade real 30/10/2026, 2f0d9b15…): tras `marcar` un radio/casilla se comprueba VIVO que quedó marcado. Si no, UN clic en su
+ * `<label for>` (la ÚNICA etiqueta del control y con `for` = su id exacto, visible, del mismo marco) por `pulsar` = el guard de siempre (su
+ * descripción de una LABEL incluye id/name/value/onclick/onchange del control) y se vuelve a leer. Sin id, sin etiqueta, varias, la
+ * etiqueta que envuelve o el nodo ya no está: no se pulsa nada más. Nunca `force`.
+ */
+export async function asegurarMarcado(loc: Locator, marco: Frame, pulsarEtiqueta: (b: Locator) => Promise<void>): Promise<EstadoMarcado> {
+  const marcado = () => loc.isChecked({ timeout: TOPE_COMPROBACION_REF_MS }).catch(() => null)
+  if (await refDesaparecida(loc)) return 'desaparecido'
+  const antes = await marcado()
+  if (antes === true) return 'marcado'
+  if (antes === null) return 'desaparecido'
+  const marca = randomUUID().slice(0, 12)
+  const ok = await loc
+    .evaluate((n, [at, mc]) => {
+      const c = n as HTMLInputElement
+      const ls = c.labels
+      if (!c.id || !ls || ls.length !== 1 || ls[0].htmlFor !== c.id) return false
+      ls[0].setAttribute(at, mc)
+      return true
+    }, [ATRIBUTO_MARCA, marca] as const, { timeout: TOPE_COMPROBACION_REF_MS })
+    .catch(() => false)
+  if (!ok) return 'sin_etiqueta'
+  const etiqueta = marco.locator(`label[${ATRIBUTO_MARCA}="${marca}"]`)
+  try {
+    if ((await etiqueta.count().catch(() => 0)) !== 1 || !(await etiqueta.isVisible().catch(() => false))) return 'sin_etiqueta'
+    await pulsarEtiqueta(etiqueta)
+  } finally {
+    await etiqueta.evaluate((n, at) => n.removeAttribute(at), ATRIBUTO_MARCA, { timeout: TOPE_COMPROBACION_REF_MS }).catch(() => undefined)
+  }
+  return (await marcado()) === true ? 'por_etiqueta' : 'sin_marcar'
 }
 
 /** Texto visible de todos los marcos (acotado) → referencia del presupuesto, o `null`. El texto no sale de aquí. */
@@ -744,11 +999,11 @@ async function fijarValor(loc: Locator, valor: string): Promise<'ok' | 'reintent
  * Tras un repintado: espera a que el portal se asiente, RE-INVENTARÍA una vez y busca el mismo control por su identidad
  * (`relocalizarElemento`, pura) SOLO si la pantalla nueva tiene la huella validada del paso. Devuelve su Locator y su entrada del inventario NUEVO, o `null`. Nunca lanza; libera la captura.
  */
-async function relocalizar(page: Page, el: ElementoInventario, marco: MarcoInventario, huellaValidada: string, esperaMs: number, estabilidad: OpcionesEstabilidad, vigia: VigiaRed): Promise<{ loc: Locator; hit: { el: ElementoInventario; marco: MarcoInventario } } | null> {
+async function relocalizar(page: Page, el: ElementoInventario, marco: MarcoInventario, huellaValidada: string, esperaMs: number, estabilidad: OpcionesEstabilidad, vigia: VigiaRed, pistas: readonly string[] = []): Promise<{ loc: Locator; hit: { el: ElementoInventario; marco: MarcoInventario } } | null> {
   await dormir(esperaMs)
   // `networkidle` no sirve en una SPA (resuelve al instante tras la carga): se espera a la pantalla QUIETA de verdad.
   await esperarEstable(page, estabilidad, vigia)
-  const nueva = await capturarInventarioExploracion(page).catch(() => null)
+  const nueva = await capturarInventarioExploracion(page, undefined, undefined, undefined, pistas).catch(() => null)
   if (!nueva) return null
   try {
     const ref = relocalizarElemento(el, marco.url, nueva.inventario, huellaValidada)
@@ -772,18 +1027,51 @@ type NodoInv = InventarioExploracion['nodos'] extends Map<string, infer N> ? N :
 /** Cuánto se espera, tras traer el nodo a la vista, a que el portal lo pinte (NDBX perezoso, animaciones). */
 const ESPERA_VISIBLE_MS = 1_500
 
-/** Lee el nodo VIVO: `null` = desconectado; lanza si `evaluate` falla (lo traduce `localizar`). */
-const leerVivo = (nodo: NodoInv) => nodo.handle.evaluate((n) => {
-  const e = n as HTMLElement
-  if (!e.isConnected || typeof e.getAttribute !== 'function') return null
-  return { tag: e.tagName.toLowerCase(), id: e.id || null, name: e.getAttribute('name'), type: e.getAttribute('type'), texto: (e.innerText || e.textContent || '').replace(/\s+/g, ' ').trim() }
-})
+/**
+ * Lee el nodo VIVO: `null` = desconectado; lanza si `evaluate` falla (lo traduce `localizar`). Una `<label>` de un control de elección
+ * oculto se lee COMO ese control (`controlOcultoDeEtiqueta` de guard.ts, la MISMA resolución que el inventario): si cambió, no casa.
+ */
+const leerVivo = async (nodo: NodoInv): Promise<NodoVivo | null> => {
+  const vivo = await nodo.handle.evaluate((n) => {
+    const e = n as HTMLElement
+    if (!e.isConnected || typeof e.getAttribute !== 'function') return null
+    return { tag: e.tagName.toLowerCase(), id: e.id || null, name: e.getAttribute('name'), type: e.getAttribute('type'), texto: (e.innerText || e.textContent || '').replace(/\s+/g, ' ').trim() }
+  })
+  if (vivo?.tag !== 'label') return vivo
+  const ctl = await nodo.handle.evaluate(controlOcultoDeEtiqueta as (n: Node) => ReturnType<typeof controlOcultoDeEtiqueta>)
+  return ctl ? { tag: 'input', id: ctl.id, name: ctl.name, type: ctl.type, texto: vivo.texto } : vivo
+}
 
 /**
  * ¿Lo ve Playwright? Si no, lo TRAE a la vista (14/10/2026, b921b476: año y m² de Allianz Hogar, inventariados con etiqueta,
  * no pasaban `isVisible()`) y espera un poco a que se pinte. Nunca relaja la identidad: el llamante la vuelve a comprobar
  * sobre el MISMO handle. Nunca lanza.
  */
+/**
+ * 0.3.20: VIVO, ¿es el nodo el `<select>` OCULTO de un bootstrap-select? Select, oculto (display/visibility o caja ≤1 px), dentro de su
+ * `.bootstrap-select` (o justo antes de él, bootstrap-select 1.6) con EXACTAMENTE un `button.dropdown-toggle` visible. Solo lee; fallo = no.
+ * Función ANÓNIMA (tsx envuelve las con nombre en `__name`).
+ */
+async function esSelectpickerVivo(nodo: NodoInv): Promise<boolean> {
+  return nodo.handle
+    .evaluate((n) => {
+      const sel = n as HTMLSelectElement
+      if (sel.tagName !== 'SELECT') return false
+      const cs = getComputedStyle(sel)
+      const r = sel.getBoundingClientRect()
+      if (!(cs.display === 'none' || cs.visibility === 'hidden' || (r.width <= 1 && r.height <= 1))) return false
+      const c = (sel.parentElement && sel.parentElement.closest('.bootstrap-select')) || (sel.nextElementSibling && sel.nextElementSibling.classList.contains('bootstrap-select') ? sel.nextElementSibling : null)
+      if (!c) return false
+      const bs = Array.from(c.querySelectorAll('button.dropdown-toggle'))
+      if (bs.length !== 1) return false
+      const b = bs[0] as HTMLElement
+      const bcs = getComputedStyle(b)
+      const br = b.getBoundingClientRect()
+      return bcs.display !== 'none' && bcs.visibility !== 'hidden' && !(br.width === 0 && br.height === 0)
+    })
+    .catch(() => false)
+}
+
 async function visibleTrasTraer(nodo: NodoInv): Promise<boolean> {
   const visible = () => nodo.handle.isVisible().catch(() => false)
   if (await visible()) return true
@@ -796,6 +1084,167 @@ async function visibleTrasTraer(nodo: NodoInv): Promise<boolean> {
     await dormir(100)
   }
   return visible()
+}
+
+/**
+ * TIPO DE DOCUMENTO pareado con un campo de documento (0.3.8, ePAC «Figuras Intervinientes»): el campo `<x>_doc` tiene su desplegable
+ * `<x>_tipoDoc` (un `<select>`, normalmente OCULTO tras un botón sin texto). Elige la ÚNICA opción cuyo texto corresponde a `tipo`
+ * (`opcionTipoDocumento`) con `selectOption` (dispara `change`). Nunca toca otra cosa; si no hay desplegable u opción, no hace nada.
+ */
+export async function elegirTipoDocumentoPareado(marco: Frame, loc: Locator, tipo: TipoDocumento, pulsarGuardado?: (b: Locator) => Promise<void>): Promise<'elegido' | 'ya' | 'sin_desplegable' | 'sin_opcion'> {
+  const info = await loc.evaluate((el) => {
+    const id = (el as HTMLElement).id || ''
+    if (!/_doc$/.test(id)) return null
+    const base = id.slice(0, -'_doc'.length) + '_tipoDoc'
+    let selId = base
+    let s: Element | null = el.ownerDocument.getElementById(selId)
+    if (!s) {
+      if (!el.ownerDocument.getElementById(selId + '_label')) return null
+      // 0.3.10 (real 28/10/2026, Allianz patinete): existe `<base>_label` pero NO `<base>`. JSF/RichFaces suele dar al control un id
+      // derivado (`<base>_input`, `<base>Menu`, un combobox…): SOLO si hay EXACTAMENTE UN control (select/input/button/combobox) cuyo
+      // id empieza por la base del label (sin ser el propio label) se usa ese. 0 o >1: se queda con la etiqueta como disparador.
+      const prefijados = Array.from(el.ownerDocument.querySelectorAll('[id]')).filter((n) => {
+        const nid = n.id
+        if (nid === base || !nid.startsWith(base) || /_label$/.test(nid)) return false
+        if (!/^(?:_input|_focus|Menu|_menu|_list|_combobox)/.test(nid.slice(base.length))) return false
+        const t = n.tagName
+        return t === 'SELECT' || t === 'INPUT' || t === 'BUTTON' || n.getAttribute('role') === 'combobox'
+      })
+      if (prefijados.length !== 1) return { selId, base, widget: true as const, actual: '', opciones: [] }
+      s = prefijados[0]!
+      selId = s.id
+    }
+    if (s.tagName !== 'SELECT') return { selId, base, widget: true as const, actual: ((s as HTMLInputElement).value || s.textContent || '').replace(/\s+/g, ' ').trim(), opciones: [] }
+    const sel = s as HTMLSelectElement
+    return { selId, base, widget: false as const, actual: sel.value, opciones: Array.from(sel.options).slice(0, 40).map((o) => ({ valor: o.value, texto: (o.textContent || '').replace(/\s+/g, ' ').trim() })) }
+  }).catch(() => null)
+  if (!info) return 'sin_desplegable'
+  if (info.widget) return elegirTipoDocumentoWidget(marco, info.selId, info.actual, tipo, pulsarGuardado, info.base)
+  const valor = opcionTipoDocumento(tipo, info.opciones)
+  // 0.3.11 (real 28/10/2026, Allianz): el `<select>` existe pero sus opciones cargan al ABRIR: sin opciones (o sin coincidencia) se prueba el widget.
+  if ((info.opciones.length === 0 || valor === null) && pulsarGuardado) {
+    const r = await elegirTipoDocumentoWidget(marco, info.selId, info.actual, tipo, pulsarGuardado, info.base)
+    return r === 'elegido' || r === 'ya' ? r : 'sin_opcion'
+  }
+  if (valor === null) return 'sin_opcion'
+  if (info.actual === valor) return 'ya'
+  const sel = marco.locator(`[id="${info.selId.replace(/["\\]/g, '\\$&')}"]`)
+  if ((await sel.count().catch(() => 0)) !== 1) return 'sin_desplegable'
+  const r = await sel.selectOption({ value: valor }, { force: true, timeout: 5_000 }).catch(() => [] as string[])
+  return r.length === 1 && r[0] === valor ? 'elegido' : 'sin_opcion'
+}
+
+/**
+ * 0.3.10: DIAGNÓSTICO ESTRUCTURAL (sin valores) de un tipo de documento que no se pudo elegir. Parte del campo `<x>_doc` y mira la base
+ * `<x>_tipoDoc`: etiqueta, hermanos de la etiqueta y elementos cuyo id empieza por la base. Solo tag/role/id/class (máx. 15 elementos,
+ * ids/clases recortados). NUNCA `value`, texto ni atributos de datos. Nunca lanza. `null` si el campo no es un `_doc`.
+ */
+export type ElemDiagTipoDoc = { tag: string; role?: string; id?: string; clase?: string; rel: 'etiqueta' | 'hermano' | 'prefijo' }
+export async function diagnosticoTipoDocumento(loc: Locator): Promise<{ base: string; elementos: ElemDiagTipoDoc[] } | null> {
+  return loc.evaluate((el) => {
+    const id = (el as HTMLElement).id || ''
+    if (!/_doc$/.test(id)) return null
+    const base = id.slice(0, -'_doc'.length) + '_tipoDoc'
+    const doc = el.ownerDocument
+    // Sin funciones con nombre dentro del evaluate (tsx/esbuild inyecta `__name`, que no existe en la página).
+    const cand: { n: Element; rel: 'etiqueta' | 'hermano' | 'prefijo' }[] = []
+    const etiqueta = doc.getElementById(base + '_label')
+    if (etiqueta) {
+      cand.push({ n: etiqueta, rel: 'etiqueta' })
+      const padre = etiqueta.parentElement
+      if (padre) for (const h of Array.from(padre.children)) if (h !== etiqueta) cand.push({ n: h, rel: 'hermano' })
+    }
+    for (const n of Array.from(doc.querySelectorAll('[id]'))) if (n.id.startsWith(base)) cand.push({ n, rel: 'prefijo' })
+    const out: { tag: string; role?: string; id?: string; clase?: string; rel: 'etiqueta' | 'hermano' | 'prefijo' }[] = []
+    const vistos = new Set<Element>()
+    for (const { n, rel } of cand) {
+      if (out.length >= 15) break
+      if (vistos.has(n)) continue
+      vistos.add(n)
+      const o: { tag: string; role?: string; id?: string; clase?: string; rel: 'etiqueta' | 'hermano' | 'prefijo' } = { tag: n.tagName.toLowerCase(), rel }
+      const role = n.getAttribute('role')
+      if (role) o.role = role.slice(0, 30)
+      if (n.id) o.id = n.id.slice(0, 80)
+      const c = n.getAttribute('class')
+      if (c) o.clase = c.replace(/\s+/g, ' ').trim().slice(0, 60)
+      out.push(o)
+    }
+    return { base, elementos: out }
+  }).catch(() => null)
+}
+/**
+ * 0.3.11: CATÁLOGO del `<select>` `<x>_tipoDoc` (NIF/NIE/Pasaporte…): nº de opciones y sus textos (≤10, ≤30 car.), descartando cualquier texto
+ * que parezca un número de documento o una fecha. Pura sobre los textos; nunca lanza. `null` si no hay select.
+ */
+export function lineaCatalogoTipoDoc(textos: readonly string[] | null): string | null {
+  if (textos === null) return null
+  const parece = (t: string) => /\d{4,}/.test(t) || /\d{1,4}[/.-]\d{1,2}[/.-]\d{1,4}/.test(t) || /^[XYZxyz]?\d{5,}[A-Za-z]?$/.test(t.replace(/\s/g, ''))
+  const limpios = textos.map((t) => t.replace(/\s+/g, ' ').trim()).filter((t) => t !== '' && !parece(t) && !/\d/.test(t) && !pareceDatoPersonalInventario(t)).slice(0, 10).map((t) => t.slice(0, 30))
+  return `diag tipoDoc catálogo: ${textos.length} opciones${limpios.length ? ` [${limpios.join(' | ')}]` : ''}`.slice(0, 400)
+}
+export async function catalogoTipoDocumento(loc: Locator): Promise<string[] | null> {
+  return loc.evaluate((el) => {
+    const id = (el as HTMLElement).id || ''
+    if (!/_doc$/.test(id)) return null
+    const s = el.ownerDocument.getElementById(id.slice(0, -'_doc'.length) + '_tipoDoc')
+    if (!s || s.tagName !== 'SELECT') return null
+    return Array.from((s as HTMLSelectElement).options).slice(0, 40).map((o) => (o.textContent || '').replace(/\s+/g, ' ').trim())
+  }).catch(() => null)
+}
+/** Línea corta (≤160) para `avisosPortal` del inventario del paso siguiente (llega a la BD): estado + ids/tags, nunca valores. */
+export function lineaDiagnosticoTipoDoc(estado: string, d: { base: string; elementos: ElemDiagTipoDoc[] } | null): string {
+  const partes = (d?.elementos ?? []).map((e) => `${e.tag}${e.role ? `[${e.role}]` : ''}${e.id ? `#${e.id.replace(/^.*_tipoDoc/, '~')}` : ''}`)
+  return `diag tipoDoc ${estado}: ${partes.join(' ') || 'sin elementos'}`.slice(0, 160)
+}
+
+/**
+ * 0.3.9 (real 28/10/2026, Allianz patinete): `<x>_tipoDoc` NO es un `<select>` sino un `<input>` + lista (`role=listbox/option`) o una
+ * lista JSF `ul/li`. Se abre con el `pulsar` GUARDADO y se pulsa la ÚNICA opción visible que `opcionTipoDocumento` elige por su texto
+ * (NIF exacto, DNI…); luego espera a la red. 0 o >1 candidatas (o sin `pulsar`): `sin_opcion` y no se pulsa ninguna opción.
+ */
+async function elegirTipoDocumentoWidget(marco: Frame, selId: string, actual: string, tipo: TipoDocumento, pulsarGuardado?: (b: Locator) => Promise<void>, base: string = selId): Promise<'elegido' | 'ya' | 'sin_desplegable' | 'sin_opcion'> {
+  if (!pulsarGuardado) return 'sin_desplegable'
+  if (actual && opcionTipoDocumento(tipo, [{ valor: '0', texto: actual }]) !== null) return 'ya'
+  const esc = (t: string) => t.replace(/["\\]/g, '\\$&')
+  const visible = (q: string) => marco.locator(q).filter({ visible: true })
+  const ctl = visible(`[id="${esc(selId)}"]`)
+  const etiqueta = visible(`[id="${esc(selId)}_label"]`)
+  const disparador = (await ctl.count().catch(() => 0)) === 1 ? ctl : (await etiqueta.count().catch(() => 0)) === 1 ? etiqueta : null
+  if (!disparador) return 'sin_desplegable'
+  // Solo opciones ATADAS a este control: `ul[id^=selId] li`, `[id^=selId][role=listbox] > *` o la lista que nombra su `aria-controls`/`aria-owns`.
+  // Nunca una lista genérica del marco (un desplegable ajeno con «NIF» no se elige). Se abre SIEMPRE con el `pulsar` guardado.
+  const ids = await disparador.first().evaluate((n) => `${n.getAttribute('aria-controls') ?? ''} ${n.getAttribute('aria-owns') ?? ''}`.split(/\s+/).filter(Boolean).slice(0, 4)).catch(() => [] as string[])
+  // 0.3.10: también listas cuyo id empieza por la BASE del control (`<base>_lista`, `<base>_panel`…), siempre atadas a su id.
+  const propias = [`ul[id^="${esc(selId)}"] li`, `[id^="${esc(selId)}"][role="listbox"] > *`]
+  propias.push(`ul[id^="${esc(base)}"] li`, `[id^="${esc(base)}"][role="listbox"] > *`, `[id^="${esc(base)}"][role="listbox"] [role="option"]`, `div[id^="${esc(base)}"] li`)
+  for (const id of ids) propias.push(`[id="${esc(id)}"] > *`, `[id="${esc(id)}"] li`, `[id="${esc(id)}"] [role="option"]`)
+  const opciones = visible(propias.join(', '))
+  await pulsarGuardado(disparador.first())
+  await opciones.first().waitFor({ state: 'visible', timeout: 3_000 }).catch(() => undefined)
+  const textos = await opciones.evaluateAll((ns) => ns.slice(0, 40).map((n) => ((n as HTMLElement).innerText || n.textContent || '').replace(/\s+/g, ' ').trim())).catch(() => [] as string[])
+  const v = opcionTipoDocumento(tipo, textos.map((texto, i) => ({ valor: String(i), texto })))
+  if (v === null) return 'sin_opcion'
+  await pulsarGuardado(opciones.nth(Number(v)))
+  await marco.page().waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined)
+  return 'elegido'
+}
+
+/**
+ * `elegir` sobre un `nx-dropdown` (ndbx): mismo mecanismo que Comunidades/Hogar (abrir el desplegable y pulsar la opción de texto
+ * EXACTO, ambas por el `pulsar` guardado). Si ya está abierto NO se vuelve a pulsar (cerraría la lista). Exactamente UNA opción
+ * visible con ese texto; si no, `no_encontrada` y no se pulsa ninguna (la lista queda abierta para que el paso siguiente la vea).
+ */
+export async function elegirNxDropdown(marco: Frame, loc: Locator, texto: string, pulsarGuardado: (b: Locator) => Promise<void>): Promise<'ok' | 'no_encontrada'> {
+  const items = marco.locator('nx-dropdown-item, [role="option"]').filter({ visible: true })
+  if ((await loc.getAttribute('aria-expanded')) !== 'true') {
+    await pulsarGuardado(loc)
+    await items.first().waitFor({ state: 'visible', timeout: 3_000 }).catch(() => undefined)
+  }
+  const escapado = texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const exactas = items.filter({ hasText: new RegExp(`^\\s*${escapado}\\s*$`) })
+  if ((await exactas.count()) !== 1) return 'no_encontrada'
+  await pulsarGuardado(exactas.first())
+  return 'ok'
 }
 
 /**
@@ -815,7 +1264,10 @@ async function localizar(nodo: NodoInv, el: ElementoInventario): Promise<Localiz
   }
   const m = await comprobar()
   if (m) return { motivo: m }
-  if (!(await visibleTrasTraer(nodo))) {
+  // 0.3.20: el <select> OCULTO de un bootstrap-select (inventario `selectpicker`) no se ve por diseño: en su lugar se repite VIVO que sigue
+  // siendo eso (select oculto, en su `.bootstrap-select` con UN botón `dropdown-toggle` visible). Cualquier otro control, visible como siempre.
+  const ocultoSelectpicker = el.tag === 'select' && el.selectpicker === true
+  if (ocultoSelectpicker ? !(await esSelectpickerVivo(nodo)) : !(await visibleTrasTraer(nodo))) {
     const caja = await nodo.handle
       .evaluate((n) => {
         const e = n as HTMLElement
@@ -848,7 +1300,7 @@ export async function finDeEntrada(e: unknown, page: Page, redactar: (t: string)
   const f = finDeError(e)
   // La evidencia es un extra: si sanearla fallara, el fin conserva su motivo/error en vez de caer al catch genérico.
   const evidencia = await capturarEvidencia(page).then((ev) => sanearEvidencia(ev, redactar, secretosDelEntorno(env))).catch(() => undefined)
-  return { motivo: f.motivo, error: f.error, redNoGet: [], efectos: ['ninguno_visto'], pasos: 0, acciones: 0, ...(f.detalle ? { detalle: f.detalle } : {}), ...(evidencia ? { evidencia } : {}) }
+  return { motivo: f.motivo, error: f.error, redNoGet: [], efectos: ['ninguno_visto'], pasos: 0, acciones: 0, ...(f.detalle ? { detalle: f.detalle } : {}), ...(f.nota ? { nota: f.nota } : {}), ...(evidencia ? { evidencia } : {}) }
 }
 
 /**
@@ -880,7 +1332,9 @@ export async function entrarYExplorar(
     }
     cerrarFaseEntrada(d.guard)
     d.alEntrar?.()
-    return await bucleExploracion(pagina, { ...d.contextoBucle(pagina), paginasDeEntrada: pagina === page ? [page] : [page, pagina] })
+    // TODAS las páginas abiertas al cerrar la entrada son de la entrada (real 28/10/2026, Mapfre Patinetes: home → pestaña del
+    // enlace de la tarjeta → ventana de «Acceso a NSE»; la intermedia contaba como ventana nueva y el bucle paraba `sin_salida`).
+    return await bucleExploracion(pagina, { ...d.contextoBucle(pagina), paginasDeEntrada: [...new Set([page, pagina, ...pagina.context().pages()])] })
   } catch (err) {
     // Fallo de la ENTRADA cerrada (login, menús, producto): antes del primer paso. Con la evidencia del flujo real.
     return finDeEntrada(d.guard.violacion() ?? err, pagina, d.redactar, d.env)
@@ -964,6 +1418,12 @@ export async function ejecutarExploracion(p: EntradaEjecucion): Promise<number> 
     // Descargas ACEPTADAS (14/10/2026): el PDF del presupuesto guardado llega como descarga; solo lo lee `esperarPdf` en memoria.
     const context = await browser.newContext({ locale: 'es-ES', timezoneId: 'Europe/Madrid', acceptDownloads: true })
     const guard = await instalarGuardEmision(context)
+    // Rutas de aplicación tolerables de la entrada (Mapfre NSE `/app/emision/`, decisión de Alberto 28/10/2026); las demás, ninguna.
+    const tolerables = rutasAppTolerablesDe(exp.entrada)
+    if (tolerables.length > 0) tolerarRutasApp(guard, tolerables)
+    // 0.3.19: subcadena exacta del onclick de UN control exacto (Mapfre NSE «Siguiente >>»); las demás entradas, ninguna.
+    const neutras = neutralizacionesOnclickDe(exp.entrada)
+    if (neutras.length > 0) neutralizarOnclicksEntrada(guard, neutras)
     const page = await context.newPage()
     page.setDefaultTimeout(TOPE_PASO_MS)
     page.setDefaultNavigationTimeout(TOPE_PASO_MS)
@@ -981,6 +1441,14 @@ export async function ejecutarExploracion(p: EntradaEjecucion): Promise<number> 
       pulsarEnlaceEntrada: async (boton) => {
         await dormir(azar(300, 1_200))
         await pulsarEnlaceEntradaAutorizado(boton, guard, trabajo.compania)
+      },
+      pulsarAccesoNse: async (boton) => {
+        await dormir(azar(300, 1_200))
+        await pulsarAccesoNseMapfre(boton, guard, trabajo.compania)
+      },
+      pulsarMenuNse: async (boton) => {
+        await dormir(azar(300, 1_200))
+        await pulsarMenuOfertaNseMapfre(boton, guard, trabajo.compania)
       },
       // Login asistido SOLO para las compañías de la lista cerrada del módulo (asegura lo vuelve a comprobar por la entrada).
       ...(loginAsistidoDe(exp.entrada) ? { loginAsistido: { entrada: exp.entrada, guard, log, pedirPaso: (c) => pedirPaso(cfg, { trabajoId: trabajo.id, ...c, fase: 'login' }) } } : {}),
@@ -1016,13 +1484,13 @@ export async function ejecutarExploracion(p: EntradaEjecucion): Promise<number> 
     await (browser as Browser | null)?.close().catch(() => undefined)
   }
 
-  log('exploracion_fin', { motivo: finExp.motivo, ...(finExp.detalle ? { detalle: finExp.detalle } : {}), pasos: finExp.pasos, acciones: finExp.acciones, red: finExp.redNoGet.length, ...(finExp.error ? { tipo: finExp.error.tipo, mensaje: redactar(finExp.error.mensaje).slice(0, 300) } : {}) })
+  log('exploracion_fin', { motivo: finExp.motivo, ...(finExp.detalle ? { detalle: finExp.detalle } : {}), ...(finExp.nota ? { nota: finExp.nota } : {}), pasos: finExp.pasos, acciones: finExp.acciones, red: finExp.redNoGet.length, ...(finExp.error ? { tipo: finExp.error.tipo, mensaje: redactar(finExp.error.mensaje).slice(0, 300) } : {}) })
   if (finExp.motivo === 'perdido') {
     clearTimeout(respaldo)
     return 0
   }
   const stCierre = await cerrarExploracion(cfg, {
-    trabajoId: trabajo.id, motivoFin: finExp.motivo, ...(finExp.detalle ? { detalleFin: finExp.detalle } : {}), ...(finExp.incidencias?.length ? { incidencias: finExp.incidencias } : {}), redNoGet: finExp.redNoGet, efectosEnPortal: finExp.efectos,
+    trabajoId: trabajo.id, motivoFin: finExp.motivo, ...(finExp.detalle ? { detalleFin: finExp.detalle } : {}), ...(finExp.nota ? { notaFin: finExp.nota } : {}), ...(finExp.incidencias?.length ? { incidencias: finExp.incidencias } : {}), redNoGet: finExp.redNoGet, efectosEnPortal: finExp.efectos,
     presupuesto: presupuestoParaCierre(finExp.presupuesto ?? { guardado: false, referencia: null, pdf: null, pdfIntentado: false }),
   })
   log('exploracion_cierre', { status: stCierre })

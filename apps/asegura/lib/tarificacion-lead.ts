@@ -12,16 +12,21 @@
 // 🛡️ Todo SQL lleva `correduria_id` (puerta `lib/tenant`). 🚨 TARIFICAR ≠ EMITIR: nada de aquí habla con Codeoscopic.
 // Nada de valores personales en la respuesta ni en logs: compañías, claves y conteos.
 import { prisma } from './tenant'
-import { personaDeFicha } from './oportunidad-riesgo'
+import { personaDeFicha, leerRiesgo } from './oportunidad-riesgo'
 import { prismaAsegura } from './asegura-db'
-import { claveCompania, puedeAutomatizar } from '@central/module-tarificacion'
+import { decryptField } from '@central/module-seguros-pii'
+import { riesgoHogarDePolizas, referenciaCatastralDeHogarElegida, SUPUESTOS_HOGAR_DESDE_POLIZA, type FichaDomicilio, type FilaPolizaHogar, type RiesgoHogarDePoliza } from './tarificador-hogar-poliza'
+import { claveCompania, puedeAutomatizar, type CatalogosHogarLeidos } from '@central/module-tarificacion'
+import { resolverConfig } from './codeoscopic/config'
+import { catalogoHogar } from './codeoscopic/catalogos'
 import { encolarTrabajo, lanzarPendientes } from './tarificador'
 import { companiaAdmiteRamoRpa, rpaActivo, validarEntradaRamo } from './tarificador-reglas'
 import { pausaViva } from './tarificador-robustez'
+import { riesgoHogarDeRiesgoOportunidad, type FilaOportunidadProbar, type ReconstruccionRiesgo } from './tarificador-relanzar-reglas'
 import { conocidosDeFicha, elegirEnContrato, leerDatosContrato } from './correo-respuesta-lead-puro'
 import { datosVehiculoDeInfoRiesgo, claveDatosDeRamo, conocidosDeBloque, faltanObligatorios, referenciaCatastralValida, normalizarReferenciaCatastral, type CodigoConcreto } from '@central/module-seguros'
 import {
-  AMPLIACION_TOPE, TOPE_DIARIO_MAXIMO, carneDePersonaFicha, diaMadrid, esRamoBotLead, formularioBotDesdeLead, lecturaMoto, ramoConBot, topeDiario, valorarCompania,
+  AMPLIACION_TOPE, TOPE_DIARIO_MAXIMO, carneDePersonaFicha, diaMadrid, esRamoBotLead, formularioBotDesdeLead, lecturaMoto, ramoConBot, riesgoParaCompania, topeDiario, valorarCompania,
   type FormularioLead, type LecturaMoto, type RamoBotLead, type Supuesto, type ValoracionCompania,
 } from './tarificacion-lead-puro'
 
@@ -115,6 +120,14 @@ async function nacimientoFicha(correduriaId: string, clienteId: string): Promise
   } catch { return null }
 }
 
+/** `clientes.codigo_postal` de la ficha (columna en claro; la misma que precarga la pantalla). `null` = no consta o no se pudo leer. */
+async function codigoPostalFicha(correduriaId: string, clienteId: string): Promise<string | null> {
+  const f = await prisma.$queryRaw<{ codigo_postal: string | null }[]>`
+    select codigo_postal from seguros.clientes
+    where id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid and merged_into_cliente_id is null`
+  return f[0]?.codigo_postal?.trim() || null
+}
+
 /**
  * Fecha del carné del conductor en la FICHA (carné B en coche; en moto SOLO el de moto: A, A1 o A2), la MISMA que lee la pantalla de
  * la oportunidad (`personaDeFicha`). `null` = no consta o no se pudo leer (nunca un valor de relleno).
@@ -122,6 +135,65 @@ async function nacimientoFicha(correduriaId: string, clienteId: string): Promise
 async function carneFicha(correduriaId: string, clienteId: string, ramo: string): Promise<string | null> {
   const p = await personaDeFicha(correduriaId, clienteId, ramo === 'moto' ? 'moto' : 'auto').catch(() => null)
   return carneDePersonaFicha(p, ramo)
+}
+
+/**
+ * Compañía y antigüedad de la póliza del MISMO ramo, VIVA, vinculada a la oportunidad (`info_riesgo.polizaId`), del mismo cliente.
+ * Solo SELECT. `null` = sin póliza vinculada/viva o no se pudo leer (nunca relleno). `numero` (30/10/2026): `numero_poliza` (columna
+ * en claro, no cifrada); solo se usa para las 5 últimas cifras del riesgo. Dato del cliente: nunca a logs ni mensajes.
+ */
+async function polizaActualVinculada(correduriaId: string, clienteId: string, ramo: string, infoRiesgo: unknown): Promise<{ aseguradora: string | null; desde: string | null; numero: string | null } | null> {
+  const id = esObj(infoRiesgo) && typeof infoRiesgo.polizaId === 'string' && /^[0-9a-f-]{36}$/i.test(infoRiesgo.polizaId) ? infoRiesgo.polizaId : null
+  if (!id) return null
+  const f = await prisma.$queryRaw<{ aseguradora: string | null; desde: string | null; numero: string | null }[]>`
+    select p.aseguradora, to_char(coalesce(p.fecha_efecto_inicial, p.fecha_inicio), 'YYYY-MM-DD') as desde, p.numero_poliza as numero
+    from seguros.polizas p
+    where p.id = ${id}::uuid and p.cliente_id = ${clienteId}::uuid and p.correduria_id = ${correduriaId}::uuid
+      and p.tipo::text = ${ramo} and p.estado::text = 'activa' and p.merged_into_poliza_id is null`
+  return f[0] ?? null
+}
+
+/**
+ * 31/10/2026 · «probar» Generali auto: de la póliza VIVA del MISMO ramo vinculada a la oportunidad MÁS RECIENTE del cliente
+ * (`info_riesgo.polizaId`, mismo filtro que `polizaActualVinculada`), SOLO `marca`, `modelo` y `version` de su `datos_especificos`
+ * (la matrícula ni se lee). Solo SELECT. `null` = sin póliza vinculada/viva o la lectura falló (nunca relleno). Lo valida y traduce
+ * `conVehiculoDePoliza` (puro).
+ */
+export async function leerVehiculoPolizaVinculadaCliente(correduriaId: string, clienteId: string, ramo: string): Promise<unknown | null> {
+  try {
+    const [op] = await prisma.$queryRaw<{ info_riesgo: unknown }[]>`
+      select o.info_riesgo from seguros.oportunidades o
+      where o.correduria_id = ${correduriaId}::uuid and o.cliente_id = ${clienteId}::uuid and o.tipo::text = ${ramo}
+      order by o.created_at desc limit 1`
+    const info = op?.info_riesgo
+    const id = esObj(info) && typeof info.polizaId === 'string' && /^[0-9a-f-]{36}$/i.test(info.polizaId) ? info.polizaId : null
+    if (!id) return null
+    const f = await prisma.$queryRaw<{ v: unknown }[]>`
+      select jsonb_build_object('marca', p.datos_especificos->'marca', 'modelo', p.datos_especificos->'modelo', 'version', p.datos_especificos->'version') as v
+      from seguros.polizas p
+      where p.id = ${id}::uuid and p.cliente_id = ${clienteId}::uuid and p.correduria_id = ${correduriaId}::uuid
+        and p.tipo::text = ${ramo} and p.estado::text = 'activa' and p.merged_into_poliza_id is null
+        and jsonb_typeof(p.datos_especificos) = 'object'`
+    return f[0]?.v ?? null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 01/11/2026 · «probar» auto/moto: oportunidades del cliente en ese ramo (id, estado, cierre, alta) para vincular el trabajo a la
+ * ABIERTA más reciente (`elegirOportunidadAbiertaProbar`, puro). Solo SELECT. Fallo de lectura → [] (se encola sin vincular, como antes).
+ */
+export async function leerOportunidadesProbarCliente(correduriaId: string, clienteId: string, ramo: string): Promise<FilaOportunidadProbar[]> {
+  try {
+    return await prisma.$queryRaw<FilaOportunidadProbar[]>`
+      select o.id::text as id, o.estado::text as estado, o.cerrada_at as "cerradaAt", o.created_at as "createdAt"
+      from seguros.oportunidades o
+      where o.correduria_id = ${correduriaId}::uuid and o.cliente_id = ${clienteId}::uuid and o.tipo::text = ${ramo}
+      order by o.created_at desc limit 20`
+  } catch {
+    return []
+  }
 }
 
 type Interno = RevisionOportunidad & { formulario: FormularioLead | null }
@@ -157,6 +229,117 @@ async function catastroComunidad(valores: Record<string, unknown>): Promise<{ an
   return anio === null && cp === null ? null : { anioConstruccion: anio, codigoPostal: cp }
 }
 
+/**
+ * El formulario candidato del bot de UNA oportunidad de auto/moto/comunidades: contrato del lead (descifrado) + bloque del
+ * riesgo (`datosVehiculo`) + ficha (nacimiento y carné). Compartido por la revisión de leads y por «probar» (operador).
+ * `discrepancias` = datos del correo sin elegir: no hay formulario.
+ */
+async function formularioDeOportunidad(
+  correduriaId: string, clienteId: string, tipo: RamoBotLead, infoRiesgo: unknown, nac: string | null, dia: string,
+): Promise<{ estado: 'discrepancias'; pendientes: string[] } | { estado: 'ok'; formulario: FormularioLead }> {
+  const info = esObj(infoRiesgo) ? infoRiesgo : {}
+  // F3b: con discrepancias sin elegir el expediente no está completo: ni se evalúa ni se lanza nada.
+  const pendientes = Object.keys(leerDatosContrato(info.datosContrato).pendientes)
+  if (pendientes.length) return { estado: 'discrepancias', pendientes }
+  const { valores, ilegibles } = await descifrarContrato(info)
+  const ramo = tipo
+  const vehiculo = ramo === 'auto' || ramo === 'moto'
+  const formulario = formularioBotDesdeLead({
+    // Vehículo: el MISMO bloque que ve la oportunidad (con el fallback a las claves antiguas), no solo `datosVehiculo` a pelo.
+    ramo, valores, ilegibles, bloque: vehiculo ? { ...datosVehiculoDeInfoRiesgo(info) } : esObj(info.datosVehiculo) ? info.datosVehiculo : null, fichaNacimiento: nac, hoy: dia,
+    ...(vehiculo ? { fichaCarne: await carneFicha(correduriaId, clienteId, ramo), fichaCodigoPostal: await codigoPostalFicha(correduriaId, clienteId).catch(() => null), polizaActual: await polizaActualVinculada(correduriaId, clienteId, ramo, info).catch(() => null) } : {}),
+    ...(ramo === 'moto' ? { moto: await motoDelLead(valores.codigoVehiculo) } : {}),
+    ...(ramo === 'comunidades' ? { catastro: await catastroComunidad(valores).catch(() => null) } : {}),
+  })
+  return { estado: 'ok', formulario }
+}
+
+/**
+ * Riesgo para «probar» (operador) cuando el del último trabajo ya está purgado: se reconstruye de la oportunidad MÁS RECIENTE
+ * del cliente en ese ramo + su ficha, como el botón (formulario + «completar desde ficha»). Solo SELECT; no inventa nada
+ * (lo que falta lo dirá `validarEntradaRamo`). El riesgo NO sale de asegura.
+ */
+export async function riesgoDesdeOportunidadDelCliente(correduriaId: string, clienteId: string, ramo: string, ahora = new Date()): Promise<ReconstruccionRiesgo> {
+  if (ramo === 'hogar') return riesgoHogarDeOportunidadDelCliente(correduriaId, clienteId, ahora)
+  if (!esRamoBotLead(ramo)) return { riesgo: null, motivo: 'sin_formulario' }
+  const [op] = await prisma.$queryRaw<{ info_riesgo: unknown }[]>`
+    select o.info_riesgo from seguros.oportunidades o
+    where o.correduria_id = ${correduriaId}::uuid and o.cliente_id = ${clienteId}::uuid and o.tipo::text = ${ramo}
+    order by o.created_at desc limit 1`
+  if (!op) return { riesgo: null, motivo: 'sin_oportunidad' }
+  const nac = await nacimientoFicha(correduriaId, clienteId).catch(() => null)
+  const fo = await formularioDeOportunidad(correduriaId, clienteId, ramo, op.info_riesgo, nac, diaMadrid(ahora))
+  if (fo.estado === 'discrepancias') return { riesgo: null, motivo: 'discrepancias' }
+  return { riesgo: fo.formulario.riesgo, bloqueos: fo.formulario.bloqueos, repreguntar: fo.formulario.repreguntar }
+}
+
+/**
+ * 01/11/2026 · «probar» HOGAR sin oportunidad de hogar ni trabajo previo: el riesgo sale de la póliza de hogar EN VIGOR más reciente del
+ * cliente (`riesgoHogarDePolizas`, puro). Solo SELECT; la dirección `v1:` se abre en memoria y no sale de aquí. Un fallo de lectura
+ * se propaga (no se confunde con «no hay póliza»).
+ */
+export async function riesgoHogarDePolizasDelCliente(correduriaId: string, clienteId: string, ahora = new Date()): Promise<RiesgoHogarDePoliza> {
+  const f = await prisma.$queryRaw<{ id: string; desde: string | null; estado: string | null; import_ref: string | null; eiac_xml_hash: string | null; sustituida_at: Date | null; datos: unknown }[]>`
+    select p.id::text as id, to_char(coalesce(p.fecha_efecto_inicial, p.fecha_inicio), 'YYYY-MM-DD') as desde, p.estado::text as estado,
+           p.import_ref, p.eiac_xml_hash, p.sustituida_at, p.datos_especificos as datos
+    from seguros.polizas p
+    where p.correduria_id = ${correduriaId}::uuid and p.cliente_id = ${clienteId}::uuid and p.tipo::text = 'hogar' and p.merged_into_poliza_id is null`
+  const filas: FilaPolizaHogar[] = f.map((x) => ({ id: x.id, desde: x.desde, estado: x.estado, importRef: x.import_ref, eiacXmlHash: x.eiac_xml_hash, sustituidaAt: x.sustituida_at, datosEspecificos: x.datos }))
+  // Plan B del número de calle: ficha (domicilio descifrado en memoria; no sale de aquí) y, solo si la póliza trae referencia catastral, el Catastro.
+  const ficha = await domicilioFicha(correduriaId, clienteId).catch(() => null)
+  const primero = riesgoHogarDePolizas(filas, decryptField, ahora, SUPUESTOS_HOGAR_DESDE_POLIZA, { ficha })
+  if (!primero.supuestos.includes('numeroSinNumero')) return primero
+  const rc = referenciaCatastralDeHogarElegida(filas)
+  const numeroCatastro = rc ? await numeroDeCatastro(rc).catch(() => null) : null
+  return numeroCatastro ? riesgoHogarDePolizas(filas, decryptField, ahora, SUPUESTOS_HOGAR_DESDE_POLIZA, { ficha, numeroCatastro }) : primero
+}
+
+/** Domicilio de la ficha (dirección cifrada → en claro, solo en memoria) para el plan B del número. `null` = no consta o no se pudo abrir. */
+async function domicilioFicha(correduriaId: string, clienteId: string): Promise<FichaDomicilio | null> {
+  const f = await prisma.$queryRaw<{ direccion: string | null; codigo_postal: string | null }[]>`
+    select direccion, codigo_postal from seguros.clientes
+    where id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid and merged_into_cliente_id is null`
+  const r = f[0]
+  if (!r) return null
+  let direccion: string | null = null
+  if (r.direccion) { try { direccion = r.direccion.startsWith('v1:') ? decryptField(r.direccion) : r.direccion } catch { direccion = null } }
+  return { direccion, codigoPostal: r.codigo_postal?.trim() || null }
+}
+
+/** Número de portal que el Catastro da para una referencia de 20 (GET gratis, con tope). `null` = sin dato o sin respuesta. */
+async function numeroDeCatastro(ref: string): Promise<string | null> {
+  const { bajarCatastro } = await import('@central/core-catastro/http')
+  const { paramsDnploc } = await import('@central/core-catastro')
+  const d = await conTope(bajarCatastro(ref), null)
+  return d?.direccion ? paramsDnploc(d.direccion)?.numero ?? null : null
+}
+
+/** HOGAR (27/10/2026): ver `riesgoHogarDeRiesgoOportunidad` (puro, `tarificador-relanzar-reglas.ts`). */
+async function riesgoHogarDeOportunidadDelCliente(correduriaId: string, clienteId: string, ahora: Date): Promise<ReconstruccionRiesgo> {
+  const [op] = await prisma.$queryRaw<{ id: string }[]>`
+    select o.id::text as id from seguros.oportunidades o
+    where o.correduria_id = ${correduriaId}::uuid and o.cliente_id = ${clienteId}::uuid and o.tipo::text = 'hogar'
+    order by (o.info_riesgo->'datosVivienda') is not null desc, o.created_at desc limit 1`
+  if (!op) return { riesgo: null, motivo: 'sin_oportunidad' }
+  const riesgo = await leerRiesgo(correduriaId, op.id)
+  if (!riesgo) return { riesgo: null, motivo: 'sin_oportunidad' }
+  return riesgoHogarDeRiesgoOportunidad(riesgo, ahora, await catalogosHogarVivos())
+}
+
+/**
+ * Los tres catálogos de hogar que la pantalla de plataforma lee para traducir lo guardado (`useCatalogosHogar`: property-types,
+ * occupancy-types, uses). GET gratis. Uno que no se pueda leer queda fuera (`undefined`): no se inventa nada, solo valen los ids atestiguados.
+ */
+async function catalogosHogarVivos(): Promise<CatalogosHogarLeidos> {
+  const r = resolverConfig(process.env, { ignorarInterruptor: true })
+  if (r.estado !== 'lista') return {}
+  const leer = (n: 'property-types' | 'occupancy-types' | 'uses') => catalogoHogar(r.config, n).catch(() => undefined)
+  const [tipoVivienda, ocupacion, uso] = await Promise.all([leer('property-types'), leer('occupancy-types'), leer('uses')])
+  return {
+    ...(tipoVivienda ? { tipoVivienda } : {}), ...(ocupacion ? { ocupacion } : {}), ...(uso ? { uso } : {}),
+  }
+}
+
 async function revisarInterno(correduriaId: string, clienteId: string, oportunidadIds: string[], ahora: Date): Promise<{ ops: Interno[]; dia: string }> {
   const dia = diaMadrid(ahora)
   const filas = await prisma.$queryRaw<{ id: string; tipo: string; info_riesgo: unknown }[]>`
@@ -170,20 +353,10 @@ async function revisarInterno(correduriaId: string, clienteId: string, oportunid
     const cias = await companiasConBot(correduriaId, f.tipo)
     if (!cias.length) { ops.push({ ...base, estado: 'sin_bot' }); continue }
     if (!esRamoBotLead(f.tipo)) { ops.push({ ...base, estado: 'sin_formulario' }); continue }
-    const info = esObj(f.info_riesgo) ? f.info_riesgo : {}
-    // F3b: con discrepancias sin elegir el expediente no está completo: ni se evalúa ni se lanza nada.
-    const pendientes = Object.keys(leerDatosContrato(info.datosContrato).pendientes)
-    if (pendientes.length) { ops.push({ ...base, estado: 'discrepancias', pendientes }); continue }
-    const { valores, ilegibles } = await descifrarContrato(info)
+    const fo = await formularioDeOportunidad(correduriaId, clienteId, f.tipo, f.info_riesgo, nac, dia)
+    if (fo.estado === 'discrepancias') { ops.push({ ...base, estado: 'discrepancias', pendientes: fo.pendientes }); continue }
+    const formulario = fo.formulario
     const ramo: RamoBotLead = f.tipo
-    const vehiculo = ramo === 'auto' || ramo === 'moto'
-    const formulario = formularioBotDesdeLead({
-      // Vehículo: el MISMO bloque que ve la oportunidad (con el fallback a las claves antiguas), no solo `datosVehiculo` a pelo.
-      ramo, valores, ilegibles, bloque: vehiculo ? { ...datosVehiculoDeInfoRiesgo(info) } : esObj(info.datosVehiculo) ? info.datosVehiculo : null, fichaNacimiento: nac, hoy: dia,
-      ...(vehiculo ? { fichaCarne: await carneFicha(correduriaId, clienteId, ramo) } : {}),
-      ...(ramo === 'moto' ? { moto: await motoDelLead(valores.codigoVehiculo) } : {}),
-      ...(ramo === 'comunidades' ? { catastro: await catastroComunidad(valores).catch(() => null) } : {}),
-    })
     ops.push({
       ...base, estado: 'evaluada', formulario, supuestos: formulario.supuestos, noLeidos: formulario.noLeidos, concretas: formulario.concretas,
       companias: cias.map((c) => valorarCompania(c, ramo, formulario)),
@@ -225,7 +398,7 @@ export async function tarificarLead(
     for (const v of o.companias) {
       if (v.estado !== 'lista') continue
       const val = validarEntradaRamo(o.ramo, o.formulario.riesgo, v.compania)
-      if (val.ok) candidatos.push({ oportunidadId: o.id, ramo: o.ramo, compania: v.compania, riesgo: val.entrada.riesgo })
+      if (val.ok) candidatos.push({ oportunidadId: o.id, ramo: o.ramo, compania: v.compania, riesgo: riesgoParaCompania(v.compania, val.entrada.riesgo) })
     }
   }
   const entrada = (t: (typeof candidatos)[number], soloComprobarDuplicado = false) => ({

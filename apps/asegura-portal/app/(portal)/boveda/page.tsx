@@ -20,16 +20,9 @@ import { DECLARADA_ELIMINADA, DECLARADA_NO_ELIMINADA } from '@/lib/declaradas-el
 import { sincronizarObligacionesDeIdentidad } from '@/lib/obligaciones'
 import { hojasDeIdentidad, polizasElegibles } from '@/lib/hojas'
 import { leerMisDatos, reparosDeContacto } from '@/lib/mis-datos'
-import { peticionesPrecio } from '@/lib/mejorar-precio'
-import { datosParaContratar } from '@/lib/datos-emision'
-import { pendientesDeTi } from '@/lib/pendiente-de-ti'
 import { esFecha } from '@central/module-patrimonio'
 import { prellenadoDeUrl } from '@/lib/patrimonio/cubre-seguro'
 import { fechaMadrid } from '@/lib/patrimonio/dia-madrid'
-import { patrimonioParaPendientes } from '@/lib/patrimonio/pendiente-bd'
-import { itemsCompararPendientes } from '@/lib/patrimonio/ofertas'
-import { declaradaVigente as declaradaVigenteOferta } from '@central/module-patrimonio'
-import { presupuestosPendientesDeIdentidad } from '@/lib/presupuesto'
 import { anulacionesPendientes, polizasConBajaEnMarcha } from '@/lib/anulacion-firma'
 import { partesDeIdentidad, type PartePortal } from '@/lib/partes-siniestro'
 import { seguimientosDePartes } from '@/lib/parte-seguimiento'
@@ -38,7 +31,7 @@ import { getIdentidad } from '@/lib/session'
 import { cuentaDeTitular } from '@/lib/declaradas-de-titular'
 import { textoFiguraYaServida } from '@/lib/intervinientes'
 import Link from 'next/link'
-import { puedeOfrecerMejorarPrecio, puedeOfrecerSolicitarBaja, titularesQueOperan, vencimientosEnVentana } from '@/lib/vencimientos'
+import { puedeOfrecerMejorarPrecio, puedeOfrecerSolicitarBaja } from '@/lib/vencimientos'
 
 import { estadoCaptacion, PREFIJO_CAPTACION } from '@/lib/captacion-declarada'
 import { FilaDeclarada } from './FilaDeclarada'
@@ -83,9 +76,7 @@ import { MisCarnets } from './MisCarnets'
 import { MisDatos } from './MisDatos'
 import CambioCuenta from './CambioCuenta'
 import { TusDatos } from './TusDatos'
-import { TusVencimientos } from './TusVencimientos'
 import { FirmarAnulacion } from './FirmarAnulacion'
-import { PendienteDeTi } from './PendienteDeTi'
 import { EnlaceFlota } from './EnlaceFlota'
 
 export const dynamic = 'force-dynamic'
@@ -187,51 +178,14 @@ export default async function Boveda({
   // el 09/09/2026: no aportaba nada que la ficha de cada póliza no dijera ya),
   // pero se siguen sincronizando: es lo que lee la campana de avisos
   // (`/api/avisos`) para el chip «puedes actuar hasta…».
-  // «Ya lo pediste» de «Tus vencimientos»: una llamada al puente, y SOLO si
-  // algo suyo renueva en 60 días (si no, el bloque no se pinta). En paralelo
-  // con la sincronización para no sumar su espera a la página.
   const hoyMadrid = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
-  // La MISMA lista pinta el bloque: si se calculara dos veces y discreparan, el
-  // bloque saldría sin peticiones (`null`) y enseñaría el botón a quien ya pidió.
 
   // Anulaciones que el corredor ha preparado y esperan su firma (pieza 2-d-2).
   // `null` = no se pudo saber: no se pinta nada, pero tampoco se afirma que no haya.
   const firmasP = vista === 'seguros' ? anulacionesPendientes(identidad.id).catch(() => null) : Promise.resolve(null)
-  // Se calculan DESPUÉS de las firmas: una póliza con baja en marcha no «renueva» (decisión 05/10/2026), y
-  // la misma lista decide si se piden las peticiones (si se calcularan dos veces y discreparan, el bloque
-  // saldría sin peticiones (`null`) y enseñaría el botón a quien ya pidió). Encadenado para no sumar esperas.
-  const vencimientosP = firmasP.then((f) =>
-    vista === 'seguros'
-      ? vencimientosEnVentana(
-          // Solo fichas donde el vínculo OPERA: el enlace «Mejorar el precio» llevaría a un rechazo del servidor.
-          titularesQueOperan(cartera.propias).flatMap((t) => t.polizas),
-          hoyMadrid,
-          f === null ? undefined : polizasConBajaEnMarcha(f, { conConfirmadas: true }),
-        )
-      : [],
-  )
-  const peticionesP = vencimientosP.then((v) => (v.length > 0 ? peticionesPrecio(identidad.id) : null)).catch(() => null)
-
-  // «Pendiente de ti» (§Q.4): sus presupuestos vivos, y a los aceptados qué datos les faltan para
-  // contratar (puente). Encadenado para que corra en paralelo con firmas y peticiones. Un fallo del
-  // puente —o una respuesta que no es `ok`— queda en `null`: la lista dice «compruébalo», nunca «nada».
-  const presupuestosP =
-    vista === 'seguros'
-      ? presupuestosPendientesDeIdentidad(identidad.id).then((vivos) =>
-          vivos === null
-            ? null
-            : Promise.all(
-                vivos.map(async (p) => {
-                  if (!p.aceptado) return { ...p, faltan: null }
-                  const d = await datosParaContratar(identidad.id, p.id).catch(() => null)
-                  return { ...p, faltan: d?.estado === 'ok' ? d.faltanCliente : null }
-                }),
-              ),
-        )
-      : Promise.resolve(null)
 
   await sincronizarObligacionesDeIdentidad(identidad.id, cartera)
-  const [peticiones, firmas, presupuestosPend, vencimientos] = await Promise.all([peticionesP, firmasP, presupuestosP, vencimientosP])
+  const firmas = await firmasP
 
   // Pólizas donde YA hay una baja en marcha (por firmar, en revisión o firmada y sin cerrar): ahí no se ofrece «Solicitar baja».
   // `null` = no se pudo leer el puente: no se ofrece (el servidor también la rechazaría con 409), no se afirma que no haya.
@@ -240,48 +194,8 @@ export default async function Boveda({
     : polizasConBajaEnMarcha(firmas)
   const puedePedirBaja = !identidad.corredor
 
-  // Patrimonio (P13): `undefined` = sin patrimonio a la vista; `null` = no se pudo comprobar. Solo se lee para esta vista.
-  const patrimonioPendiente = vista === 'seguros' ? await patrimonioParaPendientes(identidad.id) : undefined
-
-  const pendientes =
-    vista === 'seguros'
-      ? pendientesDeTi(
-          {
-            // Solo las SUYAS: el recibo devuelto de una póliza que le dejan ver lo paga su titular.
-            recibosDevueltos: cartera.propias.flatMap((t) =>
-              t.polizas
-                .filter((p) => cuentaComoEnVigor(p) && (p.recibos?.devueltos ?? 0) > 0)
-                .map((p) => ({
-                  polizaId: p.id,
-                  etiqueta: [RAMO[p.ramo] ?? p.ramo, p.compania, p.bien.matricula ?? p.bien.cosa ?? p.bien.ubicacion]
-                    .filter(Boolean)
-                    .join(' · '),
-                  n: p.recibos?.devueltos ?? 0,
-                })),
-            ),
-            anulaciones: firmas === null ? null : firmas.anulaciones.length,
-            presupuestos: presupuestosPend,
-            contactoPorConfirmar:
-              contacto.estado === 'ok'
-                ? contacto.confirmacion !== 'vigente'
-                : contacto.estado === 'sin_ficha' || contacto.estado === 'varias_fichas'
-                  ? false
-                  : null,
-            patrimonio: patrimonioPendiente,
-            // Sus declaradas (de otra correduría) que vencen en ≤ 60 días: aviso informativo; la petición es el botón de la ficha.
-            declaradasPorVencer: itemsCompararPendientes(
-              declaradas.map((d) => ({
-                id: d.id,
-                vence: d.fechaVencimiento ? d.fechaVencimiento.toISOString().slice(0, 10) : null,
-                vigente: declaradaVigenteOferta(d, new Date()),
-                etiqueta: [d.ramo ? `de ${(RAMO[d.ramo] ?? d.ramo).toLowerCase()}` : '', d.compania ? `(${d.compania})` : ''].filter(Boolean).join(' '),
-              })),
-              hoyMadrid,
-            ),
-          },
-          (r) => (RAMO[r] ?? r).toLowerCase(),
-        )
-      : null
+  // Lo PENDIENTE (vencimientos, recibos devueltos, presupuestos, patrimonio…) vive en UN solo sitio: Inicio (27/10/2026).
+  // Aquí queda lo que se HACE en esta pantalla (firmar una baja, confirmar el contacto, añadir pólizas).
 
   // La casilla comercial (19/09/2026): su estado vigente es la ÚLTIMA fila de
   // `portal_consentimiento` de tipo `comercial`, y `null` = nunca preguntado.
@@ -520,6 +434,12 @@ export default async function Boveda({
         familias={familiasPresentes([...cartera.propias, ...cartera.autorizadas], declaradas)}
         familia={familia}
       />
+      {/* «Mis datos» cuelga de «Cuenta» (Más → Cuenta → Mis datos): la salida vuelve a ella, no a Seguros. */}
+      {vista === 'datos' && (
+        <p style={{ margin: '0 0 16px' }}>
+          <Link className="boton-tenue" style={{ minHeight: 44 }} href="/cuenta">← Volver a Cuenta</Link>
+        </p>
+      )}
 
       {vista === 'seguros' && (
         <>
@@ -534,22 +454,15 @@ export default async function Boveda({
               El alta va justo detrás, que es lo que pidió Alberto. */}
           {/* «Tu flota» (05/10/2026): solo pinta si lleva la flota de alguna sociedad. */}
           <EnlaceFlota identidadId={identidad.id} />
-          {pendientes && (
-            <PendienteDeTi
-              items={pendientes.items}
-              anulaciones={firmas?.anulaciones.length ?? 0}
-              sinComprobar={pendientes.sinComprobar}
-            />
-          )}
+          {/* Lo pendiente (vencimientos, recibos devueltos, presupuestos, patrimonio…) está en UN solo sitio: Inicio. */}
+          <p style={{ margin: '0 0 16px' }}>
+            <Link className="boton-tenue" style={{ minHeight: 44 }} href="/inicio">Ver lo pendiente en Inicio</Link>
+          </p>
 
           <AvisoContacto lectura={contacto} />
 
           {/* Lo único que el cliente TIENE que hacer y que tiene fecha: su firma. */}
           {firmas && <FirmarAnulacion anulaciones={firmas.anulaciones} firmadas={firmas.firmadas} enRevision={firmas.enRevision} consentimiento={firmas.consentimiento} corredor={Boolean(identidad.corredor)} />}
-
-          {/* «Tus vencimientos» (pieza 1-5): solo si algo SUYO renueva en 60
-              días; si no, no pinta nada y el alta sigue arriba. */}
-          <TusVencimientos vencimientos={vencimientos} peticiones={peticiones} />
 
           {/* 🚨 El alta va ARRIBA, no debajo de la lista (19/09/2026). Alberto:
               «Añade una póliza» tiene que ser lo primero que se vea. Hasta hoy

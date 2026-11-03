@@ -170,7 +170,11 @@ export function comprobarAritmetica(f: FacturaLeida): string[] {
   const err: string[] = []
   for (const l of f.lineas) {
     const esperado = r2(l.unidades * l.precio * (1 - l.dto / 100))
-    if (Math.abs(esperado - l.total) > TOL) {
+    // Lavandería: las unidades son kg REDONDEADOS (285,42 kg → «285 ud»), así que el total puede
+    // desviarse hasta medio precio; se acepta si redondeando total/precio salen las mismas unidades.
+    // Las líneas de limpieza siguen estrictas.
+    const lavOk = l.tipo === 'lavanderia' && l.precio > 0 && Math.round(l.total / l.precio) === l.unidades
+    if (!lavOk && Math.abs(esperado - l.total) > TOL) {
       err.push(`${l.descripcion}: ${l.unidades} × ${eur(l.precio)} = ${eur(esperado)}, la factura pone ${eur(l.total)}`)
     }
     if (Math.abs(l.ivaPct - IVA_LIMPIEZA * 100) > 0.001) {

@@ -1,3 +1,5 @@
+import { secretoCoincide } from '@central/core-identity'
+
 // Clave de ingesta de posiciones (hardware/servidor GPS → API, server-to-server). Gatea ESCRITURA,
 // así que NUNCA cae a un literal en producción (patrón guarda env || (prod ? throw : 'dev'), igual que
 // el secreto de sesión). El device_id ya identifica el vehículo y su cuenta; esta clave solo evita
@@ -23,5 +25,5 @@ export function claveDeIngesta(req: Request): string | null {
 
 export function ingestaAutorizada(req: Request): boolean {
   const k = claveDeIngesta(req)
-  return !!k && k === SECRET()
+  return secretoCoincide(k, SECRET())
 }

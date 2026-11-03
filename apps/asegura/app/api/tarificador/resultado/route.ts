@@ -5,6 +5,8 @@ import { avisoTraza, leerResultadoWorker } from '@/lib/tarificador-reglas'
 import { eleccionIaActiva } from '@/lib/tarificador-eleccion-reglas'
 import { intentarEleccionVersionIa } from '@/lib/tarificador-eleccion'
 import { presupuestoTrasTrabajoRpa } from '@/lib/presupuesto-rpa'
+import { cierrePuedeDispararPresupuesto } from '@/lib/presupuesto-rpa-reglas'
+import { intentarEleccionPorReferencia } from '@/lib/tarificador-vehiculo-referencia-bd'
 import { extraerCoberturasTrasTrabajo } from '@/lib/proyecto-auto'
 import { trasResultadoRpa } from '@/lib/tras-rpa'
 import { avisarFalloBotLead } from '@/lib/tarificacion-lead-fallo'
@@ -54,15 +56,30 @@ export async function POST(req: Request) {
     const r = await registrarResultado(l.r)
     if (r.estado === 'no_encontrado') return NextResponse.json(r, { status: 404 })
     if (r.estado === 'conflicto') return NextResponse.json(r, { status: 409 })
-    if (l.r.tipo === 'error' && l.r.error.opcionesVersion && r.estadoTrabajo === 'requiere_humano' && eleccionIaActiva(process.env)) {
+    // Parada por VERSIÓN (01/11/2026): 1º el vehículo de REFERENCIA de la oportunidad (asegura elige de la lista y relanza: sirve para
+    // cualquier bot); si no aplica, 2º la IA de elección (si está encendida). Un solo intento automático por trabajo. Si nada la resuelve,
+    // queda para una persona: aviso del lead y, si era el último abierto, el borrador del presupuesto con los `ok` de los demás.
+    const paradaVersion = l.r.tipo === 'error' && !!l.r.error.opcionesVersion && r.estadoTrabajo === 'requiere_humano'
+    if (paradaVersion) {
       const trabajoId = l.r.trabajoId
-      after(() => intentarEleccionVersionIa(trabajoId).then(() => undefined))
+      after(async () => {
+        if ((await intentarEleccionPorReferencia(trabajoId)).estado === 'aplicado') return
+        if (eleccionIaActiva(process.env) && (await intentarEleccionVersionIa(trabajoId))?.estado === 'aplicado') return
+        await avisarFalloBotLead(trabajoId)
+        await presupuestoTrasTrabajoRpa(trabajoId)
+      })
     }
     // F3b (19/10/2026): un bot lanzado desde el aviso de un LEAD que falla del todo → Telegram en el hilo del lead (y, si es un
-    // dato del cliente, botón de repregunta). Una versión ambigua con la IA de elección encendida aún puede relanzarse: no se avisa.
-    if (l.r.tipo === 'error' && esFalloTerminal(r.estadoTrabajo) && !(l.r.error.opcionesVersion && eleccionIaActiva(process.env))) {
+    // dato del cliente, botón de repregunta). Una parada por versión aún puede relanzarse sola: se avisa arriba solo si no.
+    if (l.r.tipo === 'error' && esFalloTerminal(r.estadoTrabajo) && !paradaVersion) {
       const trabajoId = l.r.trabajoId
       after(() => avisarFalloBotLead(trabajoId).then(() => undefined))
+    }
+    // 01/11/2026: un cierre SIN precio (error definitivo, humano…) también puede ser el último abierto de la oportunidad: el borrador del
+    // presupuesto se prepara con los `ok` de las demás (antes solo lo disparaba un `ok` y se quedaba esperando para siempre).
+    if (l.r.tipo === 'error' && !paradaVersion && cierrePuedeDispararPresupuesto(r.estadoTrabajo, null)) {
+      const trabajoId = l.r.trabajoId
+      after(() => presupuestoTrasTrabajoRpa(trabajoId).then(() => undefined))
     }
     if (l.r.tipo === 'ok' && r.estadoTrabajo === 'ok' && r.tarificacionId) {
       const trabajoId = l.r.trabajoId

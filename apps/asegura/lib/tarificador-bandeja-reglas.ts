@@ -20,6 +20,9 @@ export type FilaBandeja = {
   error: unknown
   oportunidad_id: string | null
   bot_version: string | null
+  /** 27/10/2026 (`to_jsonb`, opcionales: sin el SQL no vienen). Imagen de su última máquina / imagen de PRUEBA pedida. */
+  imagen_bot?: string | null
+  imagen_prueba?: string | null
   fecha: Date | string
 }
 
@@ -33,6 +36,10 @@ export type ItemBandeja = {
   fecha: string
   intentos: number
   botVersion: string | null
+  /** Imagen con la que se lanzó (la de prueba si la pidió `probar`). `null` = no se sabe (anterior al 27/10/2026 o sin lanzar). */
+  imagen: string | null
+  /** Se lanzó (o se lanzará) con una imagen de PRUEBA de rama, no la de producción. */
+  imagenPrueba: boolean
   oportunidadId: string | null
   puedeReintentar: boolean
   puedeCancelar: boolean
@@ -62,6 +69,8 @@ export function proyectarItemBandeja(f: FilaBandeja): ItemBandeja {
     fecha: iso(f.fecha),
     intentos: f.intentos,
     botVersion: f.bot_version,
+    imagen: f.imagen_bot ?? f.imagen_prueba ?? null,
+    imagenPrueba: typeof f.imagen_prueba === 'string' && f.imagen_prueba !== '',
     oportunidadId: f.oportunidad_id,
     puedeReintentar: decidirAccionBandeja('reintentar', f.estado, tipo).ok,
     puedeCancelar: decidirAccionBandeja('cancelar', f.estado, tipo).ok,

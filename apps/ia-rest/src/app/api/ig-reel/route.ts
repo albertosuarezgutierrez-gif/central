@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 import { NextRequest, NextResponse } from 'next/server'
+import { secretoCronValido } from '@/lib/cron-auth'
 import { pickMusicTrack } from '@/lib/instagram-music'
 import { pickAmbient } from '@/lib/instagram-reel-assets'
 
@@ -142,7 +143,7 @@ export async function warmAndCheckReel(url: string): Promise<'ok' | 'bad' | 'unk
 }
 
 export async function GET(req: NextRequest) {
-  if (req.headers.get('x-story-secret') !== process.env.CRON_SECRET)
+  if (!secretoCronValido(req.headers.get('x-story-secret')))
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const sp = req.nextUrl.searchParams
   const titulo = sp.get('titulo') || 'ia.rest'

@@ -140,7 +140,7 @@ test('v0.2.32 · tras el avance, hastaPrecioGenerali lee la pantalla de resultad
         return {}
       },
     } as unknown as ContextoPortal
-    const r = await hastaPrecioGenerali(page, coche(), [], ctx, { esperaPrecioMs: 300 })
+    const r = await hastaPrecioGenerali(page, coche(), [], ctx, { esperaGarantiasMs: 0, esperaPrecioMs: 300 })
     assert.equal(r.ofertas[0]!.primaAnualEur, 456.78)
     assert.equal(siguientes, 1)
     assert.equal(await page.evaluate(() => (window as unknown as { __emitido?: number }).__emitido ?? 0), 0)

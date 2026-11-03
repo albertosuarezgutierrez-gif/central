@@ -20,7 +20,8 @@ import { listarReservasVentana, runSync } from "@/lib/sivra/smoobu-sync"
 import {
   brechaCalibracion, recorridoPalancas, decidirRecorrido, fraccionNecesaria,
 } from "@/lib/sivra/pricing-calibracion"
-import { BAJADA_MAX } from "@/lib/sivra/prior-estacional"
+import { BAJADA_MAX, indicesPrior, type IndicePrior, type MesHistorico } from "@/lib/sivra/prior-estacional"
+import { normalizarEstado } from "@/lib/sivra/eventos-estado"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -334,18 +335,56 @@ export async function GET(req: NextRequest) {
       AND i.amount_gross > 0 AND i.nights > 0
   `)
   const reservasSinBruto = nuevasReservas.filter(r => !r.bruto_real).length
-  const reservasBajas = nuevasReservas
+  // Fechas «sensibles» para el p50 MEZCLADO: con evento activo (no descartado) o prior estacional > 1
+  // el mezclado se queda corto y una reserva barata ahí sí es mala (se alerta). Si alguna de las dos
+  // lecturas cae, NO se afirma «sin evento»: se alerta (conservador, como antes de este cambio).
+  const hayMezclada = nuevasReservas.some(r => !r.date_specific)
+  const eventoActivo = new Set<string>()
+  const priorPorPiso = new Map<string, IndicePrior[]>()
+  let lecturaSensibleCaida = false
+  if (hayMezclada) {
+    const evRows = await prisma.$queryRaw<{ rate_date: string; estado: string | null }[]>(Prisma.sql`
+      SELECT rate_date::text AS rate_date, estado FROM pricing_eventos_auto WHERE rate_date >= CURRENT_DATE
+    `).catch(() => { lecturaSensibleCaida = true; return [] })
+    for (const e of evRows) if (normalizarEstado(e.estado) !== 'descartado') eventoActivo.add(e.rate_date)
+    const priorRows = await prisma.$queryRaw<{ pid: string; m: number; adr: number; nights: number }[]>(Prisma.sql`
+      SELECT i."propertyId" AS pid, EXTRACT(MONTH FROM i."checkIn")::int AS m,
+             (SUM(i.amount_gross) / NULLIF(SUM(i.nights), 0))::float8 AS adr,
+             SUM(i.nights)::float8 AS nights
+      FROM incomes i
+      LEFT JOIN pricing_settings ps ON ps.property_id = i."propertyId"
+      WHERE i.nights > 0 AND i.amount_gross > 0 AND i."checkIn" >= CURRENT_DATE - INTERVAL '6 years'
+        AND (ps.historico_desde IS NULL OR i."checkIn"::date >= ps.historico_desde)
+      GROUP BY 1, 2
+    `).catch(() => { lecturaSensibleCaida = true; return [] })
+    const porPiso = new Map<string, MesHistorico[]>()
+    for (const row of priorRows) {
+      if (!porPiso.has(row.pid)) porPiso.set(row.pid, [])
+      porPiso.get(row.pid)!.push({ mes: Number(row.m), adr: Number(row.adr), nights: Number(row.nights) })
+    }
+    for (const [pid, rows] of porPiso) priorPorPiso.set(pid, indicesPrior(rows))
+  }
+  const fechaSensible = (pid: string, checkin: string): boolean => {
+    if (lecturaSensibleCaida || eventoActivo.has(checkin) || eventFactor(checkin) > 1) return true
+    const mes = Number(checkin.slice(5, 7))
+    return (priorPorPiso.get(pid)?.[mes - 1]?.alza ?? 1) > 1
+  }
+  const reservasEvaluadas = nuevasReservas
     .filter(r => r.bruto_real)
     .map(r => ({
       ...r,
       ev: decidirReservaBaja(
-        { adr: Number(r.adr), marketP50: Number(r.p50), comps: Number(r.comps) },
+        { adr: Number(r.adr), marketP50: Number(r.p50), comps: Number(r.comps), fechaEspecifica: r.date_specific === true,
+          fechaSensible: fechaSensible(r.property_id, r.checkin) },
         // El p50 por fecha exacta ya exige ≥8 comps (mismo bar que #4); al blended, que agrega muchas
         // fechas, le mantenemos el mínimo alto por defecto (25) para no fiarnos de una muestra floja.
         { minComps: r.date_specific ? 8 : 25 },
       ),
     }))
-    .filter(r => r.ev.alerta)
+  // Contra el p50 MEZCLADO del piso solo se alerta si la fecha es sensible (evento activo / prior > 1);
+  // en el resto se cuenta como informativo (ver decidirReservaBaja).
+  const reservasBajas = reservasEvaluadas.filter(r => r.ev.alerta)
+  const reservasBajasSinFecha = reservasEvaluadas.filter(r => r.ev.informativa).length
 
   // #6 €/plaza: precio VIVO más barato de cada piso repartido entre sus plazas. Solo se juzgan los
   // pisos grandes (el centinela descarta solo los pequeños: ver la nota de pricing-centinelas.ts).
@@ -1058,6 +1097,9 @@ export async function GET(req: NextRequest) {
     floor_hits: floorHits.length,
     sub_mercado: subHits.length,
     reservas_bajas: reservasBajas.length,
+    // Reservas que habrían saltado contra el p50 MEZCLADO del piso (la fecha no tenía comps propios):
+    // informativas, sin alerta. Ni «bien de precio» ni «mal»: no se sabe sin el mercado de la fecha.
+    reservas_bajas_sin_mercado_fecha: reservasBajasSinFecha,
     // Reservas de canales sin bruto real (Agoda/Expedia/Airbnb): NO evaluadas, no «bien de precio».
     reservas_sin_bruto: reservasSinBruto,
     por_plaza: plazaHits.length,

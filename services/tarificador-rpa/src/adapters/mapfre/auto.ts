@@ -1,4 +1,28 @@
 // Mapfre wmediadores · NSEI «Nueva Alta» AUTO y MOTO (13-14/10/2026).
+// v0.8.58 (03/11/2026, run real 457d81a4: 0 garantías y sin BASICar): el «diálogo desconocido» tras elegir la variante era TRANSITORIO (ya no estaba al leerlo) → el guard lo trata como recálculo si se cierra solo en ≤4 s (nada se pulsa en él); y una tarjeta que ya muestra su producto pero SIN importe se recalcula con «Calcular» en la recuperación del estado base (sin importes, «Generar Proyecto» no guardaba → sin PDF → sin garantías).
+// v0.8.57 (03/11/2026): tras un diálogo desconocido al elegir una variante BASICar se anota su título/texto/botones (≤200, sin PII) y la selección base se RECUPERA antes de «Generar Proyecto» (nunca peor que la 0.8.55).
+// v0.8.56 (03/11/2026, Alberto: «todas las opciones»): las variantes «BASICar» se tarifican ANTES de «Generar Proyecto» (después, Coberturas deja de mostrar los selectores: «selector ausente o no visible»); sin restauración verificada no se genera el proyecto.
+// v0.8.55 (02/11/2026, Alberto: «que el bot coja el que haya»): si la matrícula solo devuelve filas de OTRO modelo que la referencia, se tarifica la más parecida con aviso «Modelo distinto del de referencia» (supuesto); se retira la parada ErrorOtroModeloMapfre de la 0.8.53/54.
+// v0.8.54 (02/11/2026): la `eleccionVersion` ya puesta en el riesgo NO salta la comprobación de modelo: una fila de otro modelo que la referencia se descarta aunque la hayan elegido.
+// v0.8.53 (02/11/2026, Alberto: MISMO modelo en todas las compañías): la fila de la matrícula (una sola o elegida) de OTRO modelo que la referencia no humana-Mapfre NO se tarifica: se descarta y, sin otra fila, `ErrorEleccionVersion` (otro modelo, ambos nombres, sin matrícula).
+// v0.8.44 (01/11/2026, run real: «Generar Proyecto» → `locator.click: Timeout 30000ms`): tras el clic salen DOS diálogos apilados, el informativo «Operación consolidada
+//   correctamente … Aceptar» y el de alta de cliente (No/Sí); el primero tapaba el «No». Ahora (guard.ts) el informativo se cierra con «Aceptar» (rótulo entero, único botón) y el
+//   de alta se responde «No», en cualquier orden, con tope de 6 acciones y clics de 4 s. Nº de proyecto también por «Nº/N°/No. Proyecto: X». El icono `picture_as_pdf` (rótulo
+//   entero) es el botón del PDF del proyecto en Mapfre aunque el nº no se leyera. Los hard stops (emitir/contratar/firmar/pagar…) no se tocan.
+// v0.8.42 (01/11/2026, trabajo 89e0a420: nº leído pero coberturas vacías y sin aviso de alta): el diálogo REAL de alta lleva un icono («warning») delante y un pie
+//   («¡X! info_outlined X») y no casaba con el patrón estricto; además el nº se pintó ANTES que el diálogo y el bot dejó de vigilar. Ahora el patrón admite icono + pie
+//   inocuo (sin emitir/pagar/cobrar/firmar/cuenta…, ≤100 car.) y, con nº ya visto, se vigila 2,5 s más. Solo dos botones No/Sí; todo lo demás sigue parando.
+// v0.8.41 (01/11/2026, decisión explícita de Alberto): EXCEPCIÓN MÍNIMA en guard.ts — si tras «Generar Proyecto» sale EXACTAMENTE «¿Desea dar de alta al
+//   cliente en el [sistema] al contratar esta póliza?» con SOLO los botones «No»/«Sí», el bot pulsa «No» (`esDialogoAltaClienteMapfre` + `responderNoAltaClienteMapfre`)
+//   y sigue (proyecto → PDF → garantías). Aviso: «diálogo de alta de cliente respondido No». Cualquier otro diálogo con contrat/emit/pag/firm… sigue parando.
+// v0.8.40 (01/11/2026, DIAGNÓSTICO, el guard NO se toca): tras «Generar Proyecto» sale un diálogo con «contrat…» (botones Sí/No/Aceptar) y el bot para
+//   sin proyecto ni PDF. El aviso/motivo lleva ahora el texto ENTERO del diálogo (normalizado, sin NIF/teléfonos/cifras largas/nombres) y los rótulos de
+//   sus botones (`describirDialogoPeligroMapfre`), para que Alberto decida. Sigue sin pulsarse nada.
+// v0.8.39 (01/11/2026, AS-26-0042: las 14 garantías de las 2 opciones de Mapfre salían «No figura» — el bot solo guardaba el precio; Alberto: «hay que
+//   descargar el proyecto, que tiene toda la información»): las GARANTÍAS (+ límites y franquicias) de cada producto se leen del PDF del proyecto
+//   (texto del PDF descargado, `pdf-texto.ts`) y, si no hay PDF o no se lee, de la pantalla «Coberturas» (solo lectura, antes de «Generar Proyecto»).
+//   Van a `oferta.coberturas`/`franquicias` en el formato de Allianz (`garantias.ts`). Sin garantías por ninguna vía: aviso «coberturas no leídas»
+//   (asegura marca el borrador INCOMPLETO y avisa a Alberto; nunca «No figura» en una columna entera). No se pulsa nada nuevo.
 // v0.8.17 (25/10/2026, run real 0.8.16: en «Coberturas» se veía «Ir a generar proyecto» y NO se pulsó — el portal lo repite, uno por producto, y se exigía
 //   UNO solo): ahora se pulsa el único de `app-coberturas` o el primero visible y habilitado (también en la última vuelta de espera); en la vista/diálogo
 //   siguiente (escaneado también dentro de diálogos) se pulsa UNA vez «Generar Proyecto» o «Guardar proyecto» (texto entero, lista blanca estricta; nunca
@@ -43,7 +67,7 @@
 // «Continuar» 1 → 2 → 3 por `ctx.continuarMapfre` (guard.ts). Lo que depende de pantallas NO mapeadas (mat-select sin valor,
 // diálogo tras la búsqueda del tomador) es `ErrorMapaIncompleto` con `pideInventarioDom` = el runner adjunta el inventario de estructura.
 //
-// 🚨 SEGURIDAD. Este fichero NO pulsa nada (ni `.click`, ni `ctx.pulsar`): solo lee y rellena campos de texto, siempre
+// 🚨 SEGURIDAD. Este fichero NO pulsa nada (ni `.click`; v0.8.27: única excepción: `desplegarAcordeonGuardado`, por `ctx.pulsar`, solo sobre `mat-expansion-panel-header`): solo lee y rellena campos de texto, siempre
 // tras `comprobarCampo`. Los clics de la entrada van por `entrada.ts`; el del diálogo de vehículo, «Continuar» y «Generar Proyecto»
 // (v0.8.14), por guard.ts. No hay selectores para: «Contratar» (uno por producto, en la tarjeta de prima), el paso 6, «Ir a generar
 // proyecto», el «Aceptar» de
@@ -68,6 +92,44 @@
 //   Ahora presente = VISIBLE (`apareceEn`). Regla dura intacta: valor no por defecto + ausente → atasco.
 //   · Coberturas: espera robusta de las tarjetas de prima; se LEE y se PARA. «Ir a generar» / «Generar Proyecto» bloqueados
 //     en el guard común (guard-emision.ts) y nunca nombrados como acción aquí.
+// v0.8.38 (31/10/2026, trabajo real 7865539d con 0.8.37, mismo clic de 30 s): el volcado final ya era el caso de 0.8.37 (uno habilitado PLEGADO +
+// otro DESHABILITADO): el criterio se aplicaba justo tras «Continuar», con la licencia de «Figuras» aún DESHABILITADA (cargando) → null → `.first()`,
+// que Mapfre luego habilitaba y plegaba. `selectLicenciaHabilitada` ESPERA a ≥1 habilitado con estado estable (2 lecturas iguales); si no llega,
+// hueco claro con recuento. Sin clics nuevos.
+// v0.8.37 (31/10/2026, trabajo real 7865539d con 0.8.36): seguía el clic de 30 s en `datos-licencia mat-select`.first(): había OTRO `datos-licencia`
+// HABILITADO pero oculto (no solo deshabilitados) y 0.8.36 devolvía null. `selectLicenciaHabilitada` elige el único VISIBLE o el único en tarjeta
+// plegada (que despliega por su cabecera); ninguno visible y 0 o 2+ plegados → hueco claro. Ningún clic nuevo fuera de esa cabecera.
+// v0.8.36 (30/10/2026, trabajo real 76d731f3, cliente que Mapfre ya conoce): «Figuras» trae la tarjeta «Permiso Conducir» COMPLETA y PLEGADA y otro
+// `datos-licencia` deshabilitado; el clic en `datos-licencia mat-select`.first() esperaba 30 s a un control oculto. Ahora `selectLicenciaHabilitada`: el
+// ÚNICO habilitado y, si su tarjeta está plegada, se despliega por su cabecera (`desplegarAcordeonGuardado`, la misma puerta de v0.8.27).
+// v0.8.36 (30/10/2026, regla de Alberto «SINCO al tarificar»): si el bot teclea y relee el «Nº de Póliza» anterior del riesgo, cada oferta
+// lleva `polizaAnteriorTecleada: true` (solo la señal, nunca el valor). Con ella asegura marca el precio `firme` (Mapfre consulta SINCO).
+// v0.8.35 (28/10/2026, ejecución real con 0.8.34): la causa ya se veía: «picture_as_pdf» tapado por `cdk-overlay-backdrop` (un diálogo de Material
+// abierto que Escape no cierra). Ahora (guard.ts): si el control de descarga está DENTRO del diálogo, se pulsa ahí; si el diálogo es informativo (sin
+// campos, sin emitir/contratar/enviar/firmar/pagar y solo controles de cerrar: cruz, «Cerrar», «Aceptar», «OK»), se cierra con rótulo EXACTO y se
+// reintenta; si no, el aviso lleva su texto saneado y sus botones. Nada más del diálogo se pulsa.
+// v0.8.34 (27/10/2026, autotest real con 0.8.33): «PDF del proyecto no descargado: locator.click: Timeout 8000ms … [data-rpa-dl="41"]». El clic de
+// descarga (guard.ts `pulsarDescargaProyectoAuto`) no llegaba a darse (Playwright esperó 8 s a que fuese accionable: capa encima, re-pintado tras «Generar
+// Proyecto»…) y el aviso cortaba la traza a 120 caracteres sin la causa. Ahora: se trae a la vista, la causa sale de la traza (`causaClicNoPulsado`) y
+// `descargarProyectoAuto` reintenta UNA vez (Escape si la tapa una capa; re-escaneo con marcas nuevas). Sin `force` ni coordenadas.
+// v0.8.33 (27/10/2026, ejecución real 68c03964 con 0.8.32): la hipótesis de 0.8.32 era ERRÓNEA. El `mat-select[compania]` de «Datos básicos» es la ENTIDAD EMISORA de
+//   Mapfre (única opción real «MAPFRE ESPAÑA…»), no la compañía anterior: no se toca nunca (el flujo pasaba Datos básicos sin tocarlo hasta 0.8.31; se retira
+//   `companiaAnteriorEnDatosBasicos`). Con 0.8.31 ya se vio que no existe `app-historial-siniestralidad` y que procedencia/expuestos/siniestros están deshabilitados:
+//   en este flujo Mapfre NO pide la compañía anterior al mediador (la toma de su consulta de historial). Sin ningún control habilitado y visible para ella NO se
+//   atasca: se continúa y la oferta lleva el AVISO `AVISO_COMPANIA_ANTERIOR_NO_PEDIDA` (+ la siniestralidad leída). Con un control visible se rellena como siempre.
+// v0.8.32 (27/10/2026, ejecución real 8ef7a5dc con 0.8.31; diagnóstico de 0.8.30/31 por fin con el DÓNDE): (1) el único «Compañia» habilitado es
+//   `mat-select[compania]` de `app-datos-basicos` (paso 1), oculto por `.mat-horizontal-stepper-content` visibility:hidden en cuanto se pasa de paso: diferirlo a
+//   Coberturas (0.8.30/31) no podía funcionar. Ahora se elige en «Datos básicos» antes de «Continuar» (`companiaAnteriorEnDatosBasicos`: mismo helper
+//   `rellenarMatSelects` y casado de la capa común, nombre del riesgo, sin pulsaciones nuevas). (2) Procedencia / expuestos-años / siniestros son de
+//   `app-info-descuentos` (Coberturas), DESHABILITADOS tras un acordeón plegado: los fija Mapfre y solo se editan con «modificación manual» (no se toca). El bot
+//   no los escribe, los LEE tras las primas y deja un AVISO («Siniestralidad tomada por Mapfre; no modificada…»), sin atascar. Se RETIRAN los diferidos de
+//   0.8.30/31 (compañía y siniestros a Coberturas): ramas muertas. Un bloque que no aparezca en ninguna parte sigue siendo hueco + atasco con diagnóstico.
+// v0.8.30 (27/10/2026, captura del atasco con 0.8.29): «Figuras» (pestaña Tomador) NO pinta bloque de siniestralidad; el «Compañia» habilitado que veía el
+//   diagnóstico NO se ve (la selección exige visible) y no se decía por qué. La lista de 20 controles del atasco es el inventario genérico (corta antes).
+//   Ahora el diagnóstico dice visible/OCULTO, quién lo oculta y el componente que lo contiene. Sin cambio de comportamiento: sigue fail-closed.
+// v0.8.28 (27/10/2026): el respaldo por etiqueta de «Compañia» se leía UNA sola vez al salir de la espera (0 ms si el campo no es opcional): con el control
+//   aún sin pintar o deshabilitado daba null y el hueco decía «no aparece» aunque el diagnóstico, segundos después, lo veía habilitado. Ahora SONDEA
+//   (`selectCompaniaPorEtiqueta(raiz, pulsar, esperaMs)`) y el diagnóstico LEE las opciones al abrir el panel (por `pulsar` guardado, cierre por el telón).
 // v0.8.24 (26/10/2026, trabajo e886d7d9 con 0.8.23): «Figuras» de COCHE sin `app-historial-siniestralidad` (solo etiquetas «Compañia»,
 //   «Procedencia Siniestralidad», «Expuestos/Años», «Siniestros», «Bonus Malus»). 0.8.23 solo añadió el PDF tras «Generar Proyecto»:
 //   no toca Figuras → el portal pinta otra variante. La compañía anterior se busca por etiqueta «Compañia» (`selectCompaniaPorEtiqueta`:
@@ -116,7 +178,12 @@ import {
   supuestoConductorTomador,
   conAntecedentesFavorables,
   conDatosUsados,
+  conPolizaAnteriorTecleada,
   elegirVersionAutomaticamente,
+  elegirOpcionPorVehiculoReferencia,
+  vehiculoDivergeDeReferencia,
+  supuestoOtroModelo,
+  textoVehiculoReferencia,
   referenciaRiesgoVersion,
   USO_VEHICULO_POR_DEFECTO,
   vehiculoConfirmadoDesdeMapfre,
@@ -131,13 +198,27 @@ import {
 } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
-import { descargarProyectoAuto, ofertasConPdfProyecto } from '../../descarga-proyecto-auto.ts'
+import { descargarProyectoAuto, esperarSinCapaOverlay, ofertasConPdfProyecto } from '../../descarga-proyecto-auto.ts'
+import { filasDePdf, textoDePdf } from '../../pdf-texto.ts'
+import { coberturasDeLineas, coberturasPorProducto, diagnosticoGarantiasMapfre, estructuraPdfMapfre, ofertasConGarantiasMapfre, textoALineas, type CoberturasPorProducto } from './garantias.ts'
+import { CONCEPTOS_LECTURA, regexEtiquetaExacta } from '../../vocabulario.ts'
 import { comprobarCampo, ErrorEleccionVersion } from '../allianz/auto.ts'
 import { fechaEs } from '../allianz/intranet/index.ts'
 import { campoConRespaldo, claveCampo, registrarAtasco, type ContextoFormador } from '../../formador.ts'
 import { abrirTarificacionRapidaAuto } from './entrada.ts'
 import { login } from './login.ts'
-import { pasoActivoMapfre, SEL_CLUB_MAPFRE, SEL_FILAS_DIALOGO_PERSONAS } from '../../guard.ts'
+import { ErrorSelectorComercialAlteradoMapfre, pasoActivoMapfre, SEL_CLUB_MAPFRE, SEL_PRODUCTO_PRIMAS_MAPFRE, SEL_FILAS_DIALOGO_PERSONAS, limpiarMensajePortalDiagnosticoHasta } from '../../guard.ts'
+import {
+  avisoFechaEfectoSupuesta,
+  esRechazoFechaEfectoAnteriorMecanizacion,
+  esTextoControlesTecnicos,
+  extraerRechazoControlesTecnicos,
+  fechaEfectoTrasMecanizacion,
+  hoyEs,
+  mensajeRechazoControlesTecnicos,
+  SEL_DIALOGO_CONTROLES_TECNICOS,
+  SEL_OVERLAY_EXCLUIDO,
+} from '../../controles-tecnicos-mapfre.ts'
 import { ErrorOpcionSinResolver } from '../../mat-select.ts'
 
 /**
@@ -299,7 +380,8 @@ export type TarjetaProductoLeida = {
   textoTarjeta?: string
 }
 
-export type PrimaProductoMapfre = { producto: string; periodicidad: 'anual'; primaTotalEur: number; requiereVerificacionVehiculo: boolean }
+/** `variante` (v0.8.50): oferta de una variante comercial («BASICar …») elegida temporalmente en la tarjeta `tarjeta`; no es un producto base de Coberturas. */
+export type PrimaProductoMapfre = { producto: string; periodicidad: 'anual'; primaTotalEur: number; requiereVerificacionVehiculo: boolean; variante?: { tarjeta: string } }
 
 const limpiar = (s: string) => s.replace(/\s+/g, ' ').trim()
 
@@ -359,6 +441,48 @@ export async function leerPrimasMapfre(raiz: Pick<Frame, 'locator'>): Promise<Pr
   return primasDesdeTarjetas(await leerTarjetasPrima(raiz))
 }
 
+/**
+ * v0.8.39 · Garantías de la pantalla «Coberturas» de cada producto (respaldo si no hay PDF). Solo lectura: lee el texto de cada tarjeta
+ * (celdas separadas por tabulador) y, si la pantalla trae un cuadro común, lo reparte por el nombre exacto del producto. Nunca lanza hacia fuera
+ * (el llamador lo atrapa): sin texto legible → mapa vacío.
+ */
+export async function leerGarantiasPantallaMapfre(nsei: Pick<Frame, 'locator'>, productos: readonly string[]): Promise<CoberturasPorProducto> {
+  const tarjetas = await nsei.locator(SEL_PRIMAS.producto).evaluateAll((els) => els.map((e) => ({
+    producto: e.querySelector('mat-select .mat-select-value-text')?.textContent ?? '',
+    texto: ((e as HTMLElement).innerText ?? e.textContent ?? '').split('\n').map((l) => l.replace(/\s*\n\s*/g, ' ')).join('\n'),
+  })))
+  const salida: CoberturasPorProducto = new Map()
+  for (const t of tarjetas) {
+    const k = limpiar(t.producto).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+    const c = coberturasDeLineas(t.texto.split('\n'))
+    if (k && c.coberturas.length > 0 && !salida.has(k)) salida.set(k, c)
+  }
+  if (salida.size >= productos.length) return salida
+  const cuadro = nsei.locator('app-coberturas').first()
+  const textoCuadro = (await cuadro.count().catch(() => 0)) > 0 ? await cuadro.innerText({ timeout: 2_000 }).catch(() => '') : ''
+  for (const [k, v] of coberturasPorProducto(textoCuadro.split('\n'), productos)) if (!salida.has(k)) salida.set(k, v)
+  if (salida.size >= productos.length) return salida
+  // v0.8.43: paneles PLEGADOS de cada tarjeta (el `innerText` no ve lo oculto): se lee su `textContent` por filas (celdas con tabulador). Solo lectura: no se despliega nada.
+  const ocultas = await nsei.locator(SEL_PRIMAS.producto).evaluateAll((els) => els.map((e) => {
+    // Recorrido iterativo en orden de documento (sin funciones con nombre dentro: tsx les añade un ayudante que no existe en el navegador).
+    const lineas: string[] = []
+    const pila: Element[] = [e]
+    while (pila.length > 0) {
+      const n = pila.pop()!
+      if (n.tagName === 'TR') { lineas.push(Array.from(n.children).map((c) => (c.textContent ?? '').replace(/\s+/g, ' ').trim()).filter(Boolean).join('\t')); continue }
+      if (n.children.length === 0) { const t = (n.textContent ?? '').replace(/\s+/g, ' ').trim(); if (t) lineas.push(t); continue }
+      for (let i = n.children.length - 1; i >= 0; i--) pila.push(n.children[i]!)
+    }
+    return { producto: e.querySelector('mat-select .mat-select-value-text')?.textContent ?? '', lineas }
+  })).catch(() => [])
+  for (const t of ocultas) {
+    const k = limpiar(t.producto).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+    const c = coberturasDeLineas(t.lineas)
+    if (k && c.coberturas.length > 0 && !salida.has(k)) salida.set(k, c)
+  }
+  return salida
+}
+
 /** Tarjetas de producto tal cual (sin validar). Solo lectura. */
 async function leerTarjetasPrima(raiz: Pick<Frame, 'locator'>): Promise<TarjetaProductoLeida[]> {
   return raiz.locator(SEL_PRIMAS.producto).evaluateAll(
@@ -377,8 +501,354 @@ async function leerTarjetasPrima(raiz: Pick<Frame, 'locator'>): Promise<TarjetaP
   )
 }
 
+// ───────────────────────── v0.8.48 · diagnóstico «Productos vistos en Coberturas» ─────────────────────────
+// Caso real (Smart Fortwo): solo 2 ofertas (TERCEROS, TERCEROS AMPLIADO). `primasDesdeTarjetas` OMITE en silencio las tarjetas sin prima bloqueadas por
+// «controles técnicos» (TODO RIESGO salió así en la grabación del 15/10/2026), así que no se sabía si Mapfre no ofrecía todo riesgo o el bot no lo leía.
+// Este aviso lista TODAS las tarjetas de producto de la pantalla (nombre + estado + importe), aunque no se oferten, y nombra los controles que el bot NO abre.
+// Solo lectura, sin clics. Sin PII: solo nombres de producto (texto de un desplegable de catálogo), estados canónicos e importes; el motivo sale de una lista fija.
+
+/** v0.8.49: opciones del selector comercial de la tarjeta (solo nombres de catálogo) o el motivo por el que no se leyeron. */
+export type ComercialVistoMapfre = { opciones: readonly string[]; seleccionada: string | null } | { error: string }
+/** v0.8.50: resultado de elegir una variante comercial en esa tarjeta (solo nombres de catálogo, importes y un motivo canónico). */
+export type VarianteVistaMapfre = { opcion: string; estado: 'prima' | 'bloqueada' | 'no_leida'; prima: number | null; motivo?: string }
+export type ProductoVistoMapfre = { producto: string; prima: number | null; deshabilitado: boolean; texto: string; comercial?: ComercialVistoMapfre; variantes?: VarianteVistaMapfre[] }
+export type ControlesNoAbiertosMapfre = { verMas: number; pestanas: string[]; carrusel: boolean }
+
+/** Motivo canónico (nunca texto crudo del portal) de una tarjeta sin prima. */
+function motivoSinPrima(texto: string): string {
+  const t = limpiar(texto)
+  if (/controles\s+t[eé]cnicos|impiden\s+tarificar/i.test(t)) return 'controles técnicos'
+  if (/consultar|consulte/i.test(t)) return 'consultar'
+  if (/no\s+disponible|no\s+(?:se\s+)?puede\s+(?:tarificar|contratar)|no\s+tarificable/i.test(t)) return 'no disponible en el portal'
+  if (/\{\{/.test(t)) return 'prima sin calcular'
+  return 'sin motivo visible'
+}
+
+const nombreProductoSaneado = (s: string) => limpiar(s).replace(/[^\p{L}\s\-/()+.]/gu, '').slice(0, 60)
+
+/** Pura (v0.8.49): « [comercial: X (seleccionada) / Y]» o « [selector comercial no leído: motivo]»; vacío si no se intentó. Solo nombres de producto, saneados. */
+function textoComercialVisto(c: ComercialVistoMapfre | undefined): string {
+  if (!c) return ''
+  if ('error' in c) return ` [selector comercial no leído: ${limpiarMensajePortalDiagnosticoHasta(c.error, 80) || 'sin motivo'}]`
+  // OJO: `limpiarMensajePortalDiagnostico*` convertiría «TERCEROS BÁSICO» en «[nombre]» (2+ palabras en mayúsculas = posible nombre propio); aquí se usa
+  // `redactarDatosPersonales` (correos, NIF, teléfonos, 5+ cifras) + solo letras/cifras/signos de nombre de producto. El MOTIVO de un fallo sí va por limpiarMensajePortalDiagnosticoHasta.
+  const nombres = c.opciones.map((o) => ({ o, n: limpiar(redactarDatosPersonales(o)).replace(/[^\p{L}\p{N}\s\-/()+.]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 60) })).filter((x) => x.n !== '')
+  if (nombres.length === 0) return ' [selector comercial no leído: sin opciones]'
+  return ` [comercial: ${nombres.map((x) => `${x.n}${c.seleccionada !== null && x.o === c.seleccionada ? ' (seleccionada)' : ''}`).join(' / ')}]`
+}
+
+const nombreOpcionSaneado = (o: string) => limpiar(redactarDatosPersonales(o)).replace(/[^\p{L}\p{N}\s\-/()+.]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 60)
+
+/** Pura (v0.8.50): « [variantes: X (prima 1.234,00€) / Y (no disponible: controles técnicos)]»; vacío si no se probó ninguna. */
+function textoVariantesVistas(v: readonly VarianteVistaMapfre[] | undefined): string {
+  if (!v || v.length === 0) return ''
+  return ` [variantes: ${v.map((x) => `${nombreOpcionSaneado(x.opcion) || '(sin nombre)'} (${x.estado === 'prima' && x.prima !== null ? `prima ${eurTexto(x.prima)}` : x.estado === 'bloqueada' ? `no disponible: ${x.motivo ?? 'sin prima'}` : `no leída: ${limpiarMensajePortalDiagnosticoHasta(x.motivo ?? '', 80) || 'sin motivo'}`})`).join(' / ')}]`
+}
+
+/** Pura: «Productos vistos en Coberturas: NOMBRE (estado) · …» + controles de modalidades que el bot no abre. `notasVariantes` (v0.8.50): lo que pasó con las variantes comerciales. */
+export function avisoProductosVistosMapfre(productos: readonly ProductoVistoMapfre[], controles: ControlesNoAbiertosMapfre | null, notasVariantes: readonly string[] = []): string {
+  const lista = productos.length === 0
+    ? 'ninguna tarjeta de producto leída'
+    : productos.map((p) => {
+      const nombre = nombreProductoSaneado(p.producto) || '(sin nombre)'
+      const com = textoComercialVisto(p.comercial) + textoVariantesVistas(p.variantes)
+      if (p.prima !== null) return `${nombre} (${p.deshabilitado ? 'deshabilitado, ' : ''}prima ${eurTexto(p.prima)})${com}`
+      if (p.deshabilitado) return `${nombre} (deshabilitado: ${motivoSinPrima(p.texto)})${com}`
+      const motivo = motivoSinPrima(p.texto)
+      return (motivo === 'sin motivo visible' ? `${nombre} (sin prima)` : `${nombre} (no disponible: ${motivo})`) + com
+    }).join(' · ')
+  const extra: string[] = productos.some((p) => p.variantes !== undefined && p.variantes.length > 0)
+    ? ['se LEYERON las opciones del selector comercial y las variantes «BASICar» se eligieron TEMPORALMENTE (una tarjeta cada vez) solo para leer su prima']
+    : productos.some((p) => p.comercial !== undefined)
+      ? ['solo se LEYERON las opciones del selector comercial; ninguna se eligió ni se recalculó']
+      : ['cada tarjeta trae un selector de producto comercial cuyas opciones el bot no abre']
+  extra.push(...notasVariantes)
+  if (controles) {
+    if (controles.verMas > 0) extra.push(`${controles.verMas} control(es) tipo «ver más»/«más productos» sin pulsar`)
+    if (controles.pestanas.length > 0) extra.push(`pestañas de modalidad sin abrir: ${controles.pestanas.join(', ')}`)
+    if (controles.carrusel) extra.push('hay carrusel/paginación de productos sin recorrer')
+  }
+  return `Productos vistos en Coberturas: ${lista}. Controles no abiertos por el bot: ${extra.join('; ')}.`
+}
+
+const eurTexto = (n: number) => `${n.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')}€`
+
+/** Solo lectura: TODAS las tarjetas de producto de la pantalla (también sin prima/deshabilitadas) y los controles de modalidades. Sin clics. */
+export async function leerProductosVistosMapfre(nsei: Pick<Frame, 'locator'>, leerComercial?: (indice: number) => Promise<{ opciones: readonly string[]; seleccionada: string | null }>): Promise<{ productos: ProductoVistoMapfre[]; controles: ControlesNoAbiertosMapfre }> {
+  const tarjetas = await nsei.locator(SEL_PRIMAS.producto).evaluateAll(
+    (els, s) => els.map((e) => ({
+      producto: e.querySelector(s.desplegable)?.textContent ?? '',
+      textoPrima: e.querySelector(s.prima)?.textContent ?? '',
+      texto: e.textContent ?? '',
+      deshabilitado: e.matches('[disabled],[aria-disabled="true"],.disabled,.mat-disabled') || e.querySelector('.mat-select-disabled,[aria-disabled="true"]') !== null,
+    })),
+    { desplegable: 'mat-select .mat-select-value-text', prima: SEL_PRIMAS.prima },
+  )
+  const productos: ProductoVistoMapfre[] = tarjetas.map((t) => ({
+    producto: t.producto,
+    prima: importeDePrimaTotal(t.textoPrima) ?? importeDePrimaTotal(t.texto),
+    deshabilitado: t.deshabilitado,
+    texto: `${t.texto} ${t.textoPrima}`,
+  }))
+  // v0.8.49: opciones del selector comercial, UNA apertura por tarjeta (la función guardada abre, lee y cierra sin elegir). Fallo blando → motivo; alterado/guard → aborta.
+  if (leerComercial) {
+    for (let i = 0; i < productos.length; i++) {
+      try { productos[i]!.comercial = await leerComercial(i) } catch (e) {
+        if (e instanceof EmisionBloqueadaError || e instanceof ErrorSelectorComercialAlteradoMapfre) throw e
+        productos[i]!.comercial = { error: e instanceof Error ? e.message : 'error' }
+      }
+    }
+  }
+  const controles = await nsei.locator('app-primas, app-coberturas').evaluateAll((raices) => {
+    let verMas = 0
+    let carrusel = false
+    const pestanas: string[] = []
+    for (const r of raices) {
+      for (const b of Array.from(r.querySelectorAll('button, a, [role="button"]'))) {
+        if (/ver\s+m[aá]s|m[aá]s\s+(?:productos|modalidades|opciones)|otras\s+modalidades|mostrar\s+(?:m[aá]s|todos)/i.test((b.textContent ?? '').replace(/\s+/g, ' ').trim())) verMas++
+      }
+      for (const t of Array.from(r.querySelectorAll('[role="tab"], .mat-tab-label, mat-tab-header .mat-tab-label'))) {
+        const n = (t.textContent ?? '').replace(/\s+/g, ' ').replace(/[^\p{L}\s\-/()+.]/gu, '').trim().slice(0, 40)
+        if (n !== '' && !pestanas.includes(n)) pestanas.push(n)
+      }
+      if (r.querySelector('[class*="carousel" i], [class*="swiper" i], [class*="slick" i], mat-paginator')) carrusel = true
+    }
+    return { verMas, pestanas: pestanas.slice(0, 8), carrusel }
+  })
+  return { productos, controles }
+}
+
+// ───────────────────────── v0.8.50 · tarificar las variantes comerciales «BASICar …» ─────────────────────────
+// Alberto (02/11/2026) AUTORIZA elegir, en UNA tarjeta cada vez, una variante del selector de producto comercial para leer su prima. Una variante se elige por su texto EXACTO
+// de la lista cerrada leída de esa tarjeta (`ctx.elegirOpcionComercialMapfre`, guard.ts: nunca por índice, comprobarBoton, sin ventanas de red) y SE RESTAURA la selección original
+// de la tarjeta ANTES de seguir (y por tanto antes de «Generar Proyecto», que no se toca). Tope: 4 variantes y 120 s por trabajo. Cualquier anomalía (otra tarjeta cambia, diálogo
+// desconocido, recálculo que no acaba) aborta SOLO las variantes y se devuelve lo ya leído. Si la restauración no se pudo VERIFICAR, `restaurado` = false y el llamador NO genera el proyecto.
+// Las variantes sin prima (controles técnicos…) quedan anotadas en «Productos vistos». Solo se prueban las «BASICar …» no tarificadas ya; «TODO RIESGO» (sin BASICar) no se elige: su tarjeta sale bloqueada.
+
+export const MAX_VARIANTES_COMERCIALES_MAPFRE = 4
+const MAX_MS_VARIANTES_MAPFRE = 120_000
+const esVarianteBasicar = (o: string) => /^BASICar\b/i.test(limpiar(o))
+const claveProducto = (t: string) => limpiar(t).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+
+export type ResultadoVariantesMapfre = {
+  primas: PrimaProductoMapfre[]
+  garantias: CoberturasPorProducto
+  /** false = una tarjeta pudo quedar con una variante elegida (no se verificó la restauración). Desde 0.8.51 NO impide generar el proyecto (va antes); solo se avisa. */
+  restaurado: boolean
+  notas: string[]
+}
+
+/** v0.8.51: lectura (solo lectura) del producto mostrado y la caja de prima de cada tarjeta, para comprobar la restauración cuando la propia elección no la confirma. */
+export type TarjetaLeidaMapfre = { valor: string; prima: string }
+
+/** Pura (v0.8.51): importes de «PRIMA TOTAL» → «1.234,50€»; vacío si no hay. Solo importes y nombres de catálogo: sin PII. */
+const importeVisto = (t: string): string => { const n = importeDePrimaTotal(t); return n === null ? 'sin importe' : eurTexto(n) }
+
+/** v0.8.57: diálogo visible (solo lectura) tras elegir una variante: título, texto y rótulos de botones. */
+export type DialogoVistoMapfre = { titulo: string; texto: string; botones: string[] }
+/** v0.8.57: puertas para el diálogo inesperado. `leer` es de solo lectura; `cerrarControlesTecnicos` es la puerta ya autorizada del guard (única que existe: no hay otra para cerrar diálogos). */
+export type PuertasDialogoVarianteMapfre = { leer: (pagina: Page) => Promise<DialogoVistoMapfre[]>; cerrarControlesTecnicos?: (pagina: Page) => Promise<string> }
+export type TipoDialogoVarianteMapfre = 'controles_tecnicos' | 'verificacion_vehiculo' | 'informacion' | 'desconocido'
+
+const planoDialogo = (t: string) => t.normalize('NFD').replace(/\p{M}/gu, '').replace(/\s+/g, ' ').trim().toLowerCase()
+
+/** Pura (v0.8.57): clasifica un diálogo por su texto. Solo los tipos conocidos y seguros; el resto es «desconocido». */
+export function clasificarDialogoVarianteMapfre(d: DialogoVistoMapfre): TipoDialogoVarianteMapfre {
+  const t = planoDialogo(`${d.titulo} ${d.texto}`)
+  if (esTextoControlesTecnicos(`${d.titulo} ${d.texto}`)) return 'controles_tecnicos'
+  if (/verificacion (de|del) vehiculo|verifique el vehiculo|verificar (el )?vehiculo/.test(t)) return 'verificacion_vehiculo'
+  if (/^(informacion|aviso informativo|informativo)\b/.test(planoDialogo(d.titulo)) || /^informacion\b/.test(t)) return 'informacion'
+  return 'desconocido'
+}
+
+/** Pura (v0.8.57): aviso de diagnóstico del diálogo, sin PII y de ≤200 caracteres: título, texto y botones. */
+export function avisoDialogoVarianteMapfre(d: readonly DialogoVistoMapfre[]): string {
+  const una = (x: DialogoVistoMapfre) => `«${limpiarMensajePortalDiagnosticoHasta(x.titulo, 40) || 's/t'}» «${limpiarMensajePortalDiagnosticoHasta(x.texto, 70) || 's/texto'}» botones [${x.botones.slice(0, 4).map((b) => limpiarMensajePortalDiagnosticoHasta(b, 14)).join('|')}]`
+  const t = `diálogo tras elegir variante: ${d.slice(0, 2).map(una).join(' + ')}`
+  return t.length > 200 ? `${t.slice(0, 199)}…` : t
+}
+
+/** v0.8.57 (solo lectura): diálogos visibles ahora mismo. */
+export async function leerDialogosMapfre(nsei: Page): Promise<DialogoVistoMapfre[]> {
+  return nsei.locator('mat-dialog-container, [role="dialog"], [role="alertdialog"]').locator('visible=true').evaluateAll((els) => els.map((e) => {
+    const lim = (x: string | null | undefined) => (x ?? '').replace(/\s+/g, ' ').trim()
+    return {
+      titulo: lim(e.querySelector('h1, h2, h3, h4, .mat-dialog-title, .mat-mdc-dialog-title, [mat-dialog-title]')?.textContent),
+      texto: lim((e as HTMLElement).innerText || e.textContent),
+      botones: Array.from(e.querySelectorAll('button, [role="button"]')).map((b) => lim((b as HTMLElement).innerText || b.textContent)).filter((x) => x !== ''),
+    }
+  }))
+}
+
+/** Pura (v0.8.57): ¿las tarjetas releídas coinciden con las leídas al principio? `valores` = mismos productos; `primas` = además mismos importes. */
+function compararBaseMapfre(t: readonly TarjetaLeidaMapfre[], productos: readonly ProductoVistoMapfre[]): { valores: boolean; primas: boolean } {
+  if (t.length < productos.length) return { valores: false, primas: false }
+  let primas = true
+  for (let i = 0; i < productos.length; i++) {
+    const c = productos[i]!.comercial
+    if (c && !('error' in c) && c.seleccionada !== null && limpiar(t[i]!.valor) !== limpiar(c.seleccionada)) return { valores: false, primas: false }
+    const p = productos[i]!.prima
+    if (p !== null && importeDePrimaTotal(t[i]!.prima) !== p) primas = false
+  }
+  return { valores: true, primas }
+}
+
+export async function tarificarVariantesComercialesMapfre(
+  nsei: Page,
+  productos: ProductoVistoMapfre[],
+  primas: readonly PrimaProductoMapfre[],
+  elegir: (pagina: Page, indice: number, opcion: string, permitidas: readonly string[]) => Promise<{ valor: string; textoPrima: string; textoTarjeta: string; bloqueada: boolean; recalculo?: 'auto' | 'calcular' | 'ninguno'; otrasPrimas?: string[] }>,
+  ahora: () => number = Date.now,
+  releer?: (pagina: Page) => Promise<TarjetaLeidaMapfre[]>,
+  dialogos?: PuertasDialogoVarianteMapfre,
+): Promise<ResultadoVariantesMapfre> {
+  const salida: ResultadoVariantesMapfre = { primas: [], garantias: new Map(), restaurado: true, notas: [] }
+  const tarificadas = new Set(primas.map((p) => claveProducto(p.producto)))
+  // Anfitrionas posibles: tarjeta con selector leído, selección actual conocida y en la lista, prima legible y sin bloqueo.
+  const anfitrionas = productos.flatMap((p, i) => {
+    const c = p.comercial
+    if (!c || 'error' in c || c.seleccionada === null || !c.opciones.includes(c.seleccionada) || p.prima === null || p.deshabilitado) return []
+    return [{ i, p, opciones: c.opciones, original: c.seleccionada }]
+  })
+  const candidatas: string[] = []
+  for (const p of productos) {
+    const c = p.comercial
+    if (!c || 'error' in c) continue
+    for (const o of c.opciones) if (esVarianteBasicar(o) && !tarificadas.has(claveProducto(o)) && !candidatas.includes(o)) candidatas.push(o)
+  }
+  if (candidatas.length === 0) return salida
+  const sinProbar = candidatas.slice(MAX_VARIANTES_COMERCIALES_MAPFRE)
+  if (sinProbar.length > 0) salida.notas.push(`${sinProbar.length} variante(s) comercial(es) sin tarificar por el tope de ${MAX_VARIANTES_COMERCIALES_MAPFRE} por trabajo`)
+  const inicio = ahora()
+  const tocadas: typeof anfitrionas = []
+  for (const opcion of candidatas.slice(0, MAX_VARIANTES_COMERCIALES_MAPFRE)) {
+    if (ahora() - inicio > MAX_MS_VARIANTES_MAPFRE) { salida.notas.push('variantes comerciales restantes sin tarificar por el tiempo máximo'); break }
+    const base = claveProducto(opcion.replace(/^BASICar\s+/i, ''))
+    const candidatasHost = anfitrionas.filter((a) => a.opciones.includes(opcion))
+    const host = candidatasHost.find((a) => claveProducto(a.p.producto) === base) ?? candidatasHost[0]
+    if (!host) { salida.notas.push(`«${nombreOpcionSaneado(opcion)}»: ninguna tarjeta con prima la ofrece en su selector (no se probó)`); continue }
+    const registrar = (v: VarianteVistaMapfre) => { (host.p.variantes ??= []).push(v) }
+    let cambiada = false
+    let abortar = false
+    if (!tocadas.includes(host)) tocadas.push(host)
+    try {
+      const e = await elegir(nsei, host.i, opcion, host.opciones)
+      cambiada = true
+      const prima = importeDePrimaTotal(e.textoPrima) ?? importeDePrimaTotal(e.textoTarjeta)
+      if (e.valor !== opcion) throw new ErrorSelectorComercialAlteradoMapfre('la tarjeta no muestra la variante elegida')
+      if (e.otrasPrimas && e.otrasPrimas.length > 0) salida.notas.push(`«Calcular» cambió la prima de otras tarjetas al tarificar «${nombreOpcionSaneado(opcion)}» (${e.otrasPrimas.slice(0, 6).join('; ')}); las ofertas base se leyeron antes`)
+      if (e.recalculo === 'ninguno') registrar({ opcion, estado: 'no_leida', prima: null, motivo: 'sin recálculo: la prima no cambió y no hay botón Calcular' })
+      else if (e.bloqueada || prima === null) registrar({ opcion, estado: 'bloqueada', prima: null, motivo: motivoSinPrima(`${e.textoTarjeta} ${e.textoPrima}`) })
+      else if (!/\bANUAL\b/i.test(e.textoTarjeta)) registrar({ opcion, estado: 'no_leida', prima: null, motivo: 'periodicidad no confirmada como ANUAL' })
+      else {
+        registrar({ opcion, estado: 'prima', prima })
+        const base0 = primas.find((x) => claveProducto(x.producto) === claveProducto(host.p.producto))
+        salida.primas.push({ producto: nombreOpcionSaneado(opcion), periodicidad: 'anual', primaTotalEur: prima, requiereVerificacionVehiculo: base0?.requiereVerificacionVehiculo ?? false, variante: { tarjeta: host.p.producto } })
+        // Garantías de la pantalla con la variante elegida (solo lectura): sirven si la variante no está en el PDF del proyecto.
+        try { const g = await leerGarantiasPantallaMapfre(nsei, [opcion]); const k = claveProducto(opcion); const v = g.get(k); if (v && v.coberturas.length > 0) salida.garantias.set(k, v) } catch { /* sin garantías de pantalla: aviso de garantías no leídas */ }
+      }
+    } catch (e) {
+      if (e instanceof EmisionBloqueadaError) throw e
+      let cerrado = false
+      if (e instanceof ErrorSelectorComercialAlteradoMapfre && /di[aá]logo desconocido/i.test(e.message) && dialogos) {
+        // v0.8.57: se anota QUÉ diálogo es (sin PII). Solo «controles técnicos» tiene puerta autorizada para cerrarlo; cualquier otro aborta solo las variantes.
+        const ds = await dialogos.leer(nsei).catch(() => [] as DialogoVistoMapfre[])
+        if (ds.length > 0) salida.notas.push(avisoDialogoVarianteMapfre(ds))
+        else salida.notas.push('el diálogo tras elegir la variante ya no estaba al leerlo (transitorio)')
+        const tipo = ds.length === 1 ? clasificarDialogoVarianteMapfre(ds[0]!) : 'desconocido'
+        if (tipo === 'controles_tecnicos' && dialogos.cerrarControlesTecnicos) {
+          try { await dialogos.cerrarControlesTecnicos(nsei); cerrado = true } catch (e2) { if (e2 instanceof EmisionBloqueadaError) throw e2 }
+        } else if (ds.length > 0) salida.notas.push(`diálogo de tipo «${tipo.replace('_', ' ')}» sin botón autorizado para cerrarlo`)
+        if (cerrado) registrar({ opcion, estado: 'bloqueada', prima: null, motivo: 'controles técnicos' })
+      }
+      if (!cerrado) registrar({ opcion, estado: 'no_leida', prima: null, motivo: e instanceof Error ? e.message : 'error' })
+      if (e instanceof ErrorSelectorComercialAlteradoMapfre) { cambiada = true; if (!cerrado) { abortar = true; salida.notas.push('variantes comerciales ABORTADAS por una anomalía del portal; se devuelve lo ya leído') } }
+    }
+    if (cambiada) {
+      try {
+        const r = await elegir(nsei, host.i, host.original, host.opciones)
+        const primaR = importeDePrimaTotal(r.textoPrima)
+        if (!(r.valor === host.original && primaR !== null && primaR === host.p.prima)) {
+        // v0.8.51: la propia elección no confirma la restauración → se RELEE la pantalla y se comparan producto y prima (visto vs esperado). Nunca aborta el proyecto.
+        const detalle = `restauración de «${nombreOpcionSaneado(host.p.producto)}»: producto visto «${nombreOpcionSaneado(r.valor) || '(vacío)'}» vs esperado «${nombreOpcionSaneado(host.original)}»; prima vista ${importeVisto(r.textoPrima)} vs esperada ${host.p.prima !== null ? eurTexto(host.p.prima) : 'sin importe'}${r.recalculo === 'ninguno' ? '; sin recálculo' : ''}`
+        const ok = await relecturaCorrecta(nsei, productos, releer, salida.notas)
+        if (r.valor === host.original && ok) { salida.notas.push(`${detalle} (la relectura de las tarjetas confirma los productos originales)`) }
+        else { salida.restaurado = false; salida.notas.push(`${detalle}${ok ? '' : ' (relectura sin confirmar los productos originales)'}`); break }
+        }
+      } catch (e) {
+        if (e instanceof EmisionBloqueadaError) throw e
+        const ok = await relecturaCorrecta(nsei, productos, releer, salida.notas)
+        const motivo = e instanceof Error ? limpiarMensajePortalDiagnosticoHasta(e.message, 80) : 'error'
+        if (ok) salida.notas.push(`restauración de «${nombreOpcionSaneado(host.p.producto)}» sin confirmar por la elección (${motivo || 'error'}); la relectura confirma los productos originales`)
+        else { salida.restaurado = false; salida.notas.push(`no se pudo restaurar la tarjeta «${nombreOpcionSaneado(host.p.producto)}» (${motivo || 'error'})`); break }
+      }
+    }
+    if (abortar) break
+  }
+  // v0.8.57 · RECUPERACIÓN del estado base antes de «Generar Proyecto»: si alguna tarjeta quedó tocada y las tarjetas no muestran sus productos E importes originales,
+  // se vuelve a pedir el producto original por la puerta de elección (que pulsa «Calcular» si hace falta) y se relee. Nunca peor que la 0.8.55: con los productos originales a la vista se genera el proyecto aunque falte algún importe.
+  if (releer && tocadas.length > 0) {
+    const leer = async () => { try { return await releer(nsei) } catch { return null } }
+    let cmp = compararBaseMapfre((await leer()) ?? [], productos)
+    let reintentado = false
+    for (let intento = 0; intento < 2 && !(cmp.valores && cmp.primas); intento++) {
+      reintentado = true
+      // v0.8.58 (run real 457d81a4: TERCEROS y TERCEROS AMPLIADO «sin importe» → «Proyecto NO guardado: no hay primas a la vista» → 0 garantías): se repide el
+      // original de las tocadas Y de toda tarjeta con prima base cuyo importe no se ve; con el producto ya a la vista, la puerta solo recalcula («Calcular»).
+      const actuales = (await leer()) ?? []
+      const sinImporte = anfitrionas.filter((a) => !tocadas.includes(a) && importeDePrimaTotal(actuales[a.i]?.prima ?? '') !== a.p.prima)
+      for (const h of [...tocadas, ...sinImporte]) {
+        try { await elegir(nsei, h.i, h.original, h.opciones) } catch (e) { if (e instanceof EmisionBloqueadaError && !/tope/i.test(e.message)) throw e }
+      }
+      cmp = compararBaseMapfre((await leer()) ?? [], productos)
+    }
+    if (cmp.valores && cmp.primas) { if (!salida.restaurado || reintentado) salida.notas.push('estado base recuperado: productos e importes originales confirmados por relectura'); salida.restaurado = true }
+    else if (cmp.valores) { salida.notas.push('estado base recuperado en productos pero NO en importes (tarjetas sin importe o distinto); se genera el proyecto igualmente'); salida.restaurado = true }
+  }
+  if (!salida.restaurado) salida.notas.push('selección original NO verificada tras las variantes; el proyecto y las garantías de las ofertas base ya estaban a salvo')
+  return salida
+}
+
+/** v0.8.51: ¿las tarjetas muestran de nuevo su producto original? Relectura de solo lectura (`releer`); anota en `notas` las primas que difieren de las leídas al principio. */
+async function relecturaCorrecta(nsei: Page, productos: readonly ProductoVistoMapfre[], releer: ((pagina: Page) => Promise<TarjetaLeidaMapfre[]>) | undefined, notas: string[]): Promise<boolean> {
+  if (!releer) return false
+  let t: TarjetaLeidaMapfre[]
+  try { t = await releer(nsei) } catch { return false }
+  if (t.length < productos.length) return false
+  const difieren: string[] = []
+  for (let i = 0; i < productos.length; i++) {
+    const c = productos[i]!.comercial
+    if (c && !('error' in c) && c.seleccionada !== null && limpiar(t[i]!.valor) !== limpiar(c.seleccionada)) return false
+    const p = productos[i]!.prima
+    const vista = importeDePrimaTotal(t[i]!.prima)
+    if (p !== null && vista !== p) difieren.push(`${nombreProductoSaneado(productos[i]!.producto)}: ${vista === null ? 'sin importe' : eurTexto(vista)} (leída antes ${eurTexto(p)})`)
+  }
+  if (difieren.length > 0) notas.push(`primas de las tarjetas distintas tras restaurar: ${difieren.slice(0, 6).join('; ')}`)
+  return true
+}
+
+/** v0.8.51 (solo lectura): ¿Coberturas sigue a la vista con las mismas tarjetas y productos que se leyeron? Devuelve el motivo si no. */
+export async function coberturasAccesiblesMapfre(nsei: Page, productos: readonly ProductoVistoMapfre[]): Promise<string | null> {
+  const t = await leerTarjetasMapfre(nsei).catch(() => null)
+  if (!t) return 'no se pudieron leer las tarjetas'
+  if (t.length !== productos.length) return `hay ${t.length} tarjeta(s) y se leyeron ${productos.length}`
+  for (let i = 0; i < productos.length; i++) {
+    const c = productos[i]!.comercial
+    if (c && !('error' in c) && c.seleccionada !== null && limpiar(t[i]!.valor) !== limpiar(c.seleccionada)) return `la tarjeta ${i + 1} muestra otro producto que el leído`
+  }
+  return null
+}
+
+/** v0.8.51 (solo lectura): producto mostrado y caja de prima de cada tarjeta de Coberturas. */
+export async function leerTarjetasMapfre(nsei: Page): Promise<TarjetaLeidaMapfre[]> {
+  return nsei.locator(SEL_PRODUCTO_PRIMAS_MAPFRE).evaluateAll((els) => els.map((e) => ({
+    valor: ((e.querySelector('.mat-select-value-text, .mat-mdc-select-value-text')?.textContent) ?? '').replace(/\s+/g, ' ').trim(),
+    prima: ((e.querySelector('.caja-primas p strong')?.textContent) ?? '').replace(/\s+/g, ' ').trim(),
+  })))
+}
+
 /** Primas → ofertas normalizadas (una por producto). `vehiculo` es opcional: Mapfre no separa marca y modelo (ver `lecturaResumenVehiculo`). */
-export function ofertasDesdePrimasMapfre(primas: readonly PrimaProductoMapfre[], vehiculo: Vehiculo | null, supuestos: string | null = null, diagnostico: string | null = null): OfertaNormalizada[] {
+export function ofertasDesdePrimasMapfre(primas: readonly PrimaProductoMapfre[], vehiculo: Vehiculo | null, supuestos: string | null = null, diagnostico: string | null = null, avisosExtra: readonly string[] = []): OfertaNormalizada[] {
   return primas.map((p) => ({
     compania: 'mapfre',
     producto: `Auto · ${p.producto}`,
@@ -394,12 +864,15 @@ export function ofertasDesdePrimasMapfre(primas: readonly PrimaProductoMapfre[],
     desglose: null,
     avisos: [
       'PRIMA TOTAL anual de la tarjeta del producto; sin desglose neta/impuestos (el desglose está tras el botón «Desgloses», sin grabar).',
+      ...(p.variante ? [`Variante comercial de Mapfre («${nombreOpcionSaneado(p.producto)}»): se eligió TEMPORALMENTE en el selector de producto comercial de la tarjeta «${nombreOpcionSaneado(p.variante.tarjeta)}» solo para leer su prima y se restauró la selección original; NO es un producto base de «Coberturas» y no figura en el PDF/proyecto de Mapfre. Confirma sus condiciones en Mapfre antes de ofrecerla.`] : []),
       ...(p.requiereVerificacionVehiculo ? ['Mapfre exige la verificación del vehículo antes de contratar este producto.'] : []),
       ...(vehiculo ? [`Vehículo según el catálogo de Mapfre: ${vehiculo.marca} ${vehiculo.modelo} ${vehiculo.version}.`] : []),
       // v0.8.6: lo que el bot SUPUSO (la fila del vehículo), junto al precio, como en Allianz. Asegura lo deja pasar (`supuestosDeAvisos`).
       ...(supuestos ? [supuestos] : []),
       // v0.8.12: diagnóstico de SOLO LECTURA del formato del «Nº de Póliza» anterior (atributos, nunca el valor). No es un supuesto.
       ...(diagnostico ? [diagnostico] : []),
+      // v0.8.32: avisos de lo que fijó Mapfre y el bot no tocó (siniestralidad). No es un supuesto.
+      ...avisosExtra,
     ],
   }))
 }
@@ -448,7 +921,7 @@ export function etiquetaFilaVehiculo(f: FilaVehiculoDialogo): string {
 }
 
 /** Datos del riesgo con los que se elige la fila del diálogo cuando hay VARIAS (nunca la matrícula: esa la compara el guard). */
-export type CriterioFilaVehiculo = Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado' | 'seleccionVehiculo' | 'fechaMatriculacion'>
+export type CriterioFilaVehiculo = Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado' | 'seleccionVehiculo' | 'fechaMatriculacion'> & Partial<Pick<FormularioAuto, 'vehiculoReferencia'>>
 
 /**
  * Fila de «Selección de vehículo» por REGLA FIJA (grabación 15/10/2026; sin IA ni «la primera»). PURA. Una fila → 0. Varias →
@@ -504,8 +977,33 @@ export function opcionesFilasVehiculo(filas: readonly FilaVehiculoDialogo[]): Ca
  * filas, como en la 0.8.8. La elección de la bandeja se respeta exacta (`indiceFilaVehiculoMapfre`, antes que esto). PURA.
  */
 export function filaVehiculoPorEquivalencia(filas: readonly FilaVehiculoDialogo[], c: Partial<CriterioFilaVehiculo> | null | undefined): { indice: number; supuesto: string | null } {
+  // v0.8.53 (02/11/2026, Alberto: MISMO modelo en todas las compañías): con referencia que NO es la propia de Mapfre y aunque el riesgo ya traiga `eleccionVersion` (v0.8.54: la elección no salta el control),
+  // las filas de OTRO modelo (p. ej. FORFOUR ante FORTWO) se descartan ANTES de elegir, incluida la fila única. Sin ninguna del mismo modelo →
+  // `ErrorEleccionVersion` con ambos nombres (la persona elige la fila o corrige el vehículo). Nunca se tarifica a ciegas con lo de la matrícula.
+  const ref = c?.vehiculoReferencia
+  if (ref && ref.origen !== 'mapfre' && filas.length > 0) {
+    const mismas = filas.flatMap((f, i) => (vehiculoDivergeDeReferencia(ref, f.denominacion) ? [] : [i]))
+    if (mismas.length === 0) {
+      // v0.8.55 (02/11/2026, Alberto: «que el bot coja el que haya; si sale uno solo, uno solo»): ninguna fila del modelo de la referencia → se tarifica la más parecida con aviso.
+      const e = elegirOpcionPorVehiculoReferencia(filas.map((f) => etiquetaFilaVehiculo(f)), ref, { compania: 'Mapfre' })
+      // La elección humana (`eleccionVersion`) que casa con una fila manda sobre la similitud.
+      const casadaPorPersona = indiceFilaVehiculoMapfre(filas, c)
+      const indice = casadaPorPersona ?? (e.tipo === 'coincidencia' || e.tipo === 'aproximacion' ? e.indice : 0)
+      return { indice, supuesto: supuestoOtroModelo(etiquetaFilaVehiculo(filas[indice]!), textoVehiculoReferencia(ref), 'Mapfre', (e.tipo === 'aproximacion' || e.tipo === 'coincidencia') && !!e.combustibleDistinto) }
+    }
+    if (mismas.length < filas.length) {
+      const r = filaVehiculoPorEquivalencia(mismas.map((i) => filas[i]!), c)
+      return { indice: mismas[r.indice]!, supuesto: r.supuesto }
+    }
+  }
   const casada = indiceFilaVehiculoMapfre(filas, c)
   if (casada !== null) return { indice: casada, supuesto: null }
+  // v0.8.51 (02/11/2026, Alberto: MISMO modelo en todas las compañías): varias filas por matrícula y la referencia de la oportunidad (humana o la
+  // primera automática) existe → se elige por SIMILITUD con ella (modelo, CV, cc, acabado), no por equivalencia ciega; declarado como supuesto.
+  if (c?.vehiculoReferencia) {
+    const e = elegirOpcionPorVehiculoReferencia(filas.map((f) => etiquetaFilaVehiculo(f)), c.vehiculoReferencia)
+    if (e.tipo === 'coincidencia' || e.tipo === 'aproximacion') return { indice: e.indice, supuesto: e.supuesto }
+  }
   const r = elegirVersionAutomaticamente(
     filas.map((f) => {
       const v = vehiculoConfirmadoDesdeMapfre(f)
@@ -709,6 +1207,8 @@ const CP = /^\d{5}$/
 
 /** Espera activa antes de dar por ausente un desplegable opcional (uso/ámbito): el flujo los pinta a veces con retraso. */
 export const ESPERA_OPCIONAL_MS = 2_500
+/** v0.8.28 · Espera máxima del respaldo por etiqueta de «Compañia» (control sin pintar / aún deshabilitado). */
+export const ESPERA_COMPANIA_ETIQUETA_MS = 6_000
 
 /**
  * ¿Aparece `sel` VISIBLE dentro de `ms`? Sondeo cada 250 ms (espera activa); `ms` 0 = una sola mirada. Solo lectura.
@@ -883,20 +1383,21 @@ export async function esperarCampoAsentado(raiz: Pick<Frame, 'locator'>, campo: 
 /**
  * v0.8.3 · Etiquetas de los campos con `mat-error` VISIBLE (sin el «*», redactadas; nunca el valor ni el texto del error), en
  * orden y sin repetir. Para que un «Continuar» que no llega a su destino diga QUÉ campo rechaza el portal. Solo lectura.
+ * v0.8.47: se ignoran los `mat-error` de overlays/diálogos (el formulario vacío del diálogo «Controles técnicos» no es del paso).
  */
 export async function camposConErrorVisibles(raiz: Pick<Frame, 'locator'>): Promise<string[]> {
   const etiquetas = await raiz
     .locator('mat-error')
     .locator('visible=true')
-    .evaluateAll((els) =>
-      els.map((e) => {
+    .evaluateAll((els, excluido) =>
+      els.filter((e) => e.closest(excluido) === null).map((e) => {
         const ff = e.closest('mat-form-field')
         const l = ff?.querySelector('mat-label') ?? ff?.querySelector('label')
         const ctl = ff?.querySelector('input, textarea, mat-select')
         const t = (l?.textContent ?? '').replace(/\*/g, ' ').replace(/\s+/g, ' ').trim()
         return t !== '' ? t : (ctl?.getAttribute('formcontrolname') ?? ctl?.getAttribute('name') ?? '')
       }),
-    )
+    SEL_OVERLAY_EXCLUIDO)
     .catch(() => [] as string[])
   const vistas = new Set<string>()
   for (const t of etiquetas) {
@@ -931,7 +1432,7 @@ async function campoPorEtiquetaPortal(raiz: Pick<Frame, 'locator'>, sel: string,
  * tag, formcontrolname/name/id, deshabilitado, interruptor). Si `app-historial-siniestralidad` no existe, las etiquetas de la
  * pantalla que hablan de siniestralidad/compañía. Para que el hueco de «compañía anterior» en MOTO diga qué pinta el portal.
  */
-export async function describirBloqueHistorial(raiz: Pick<Frame, 'locator'>): Promise<string> {
+export async function describirBloqueHistorial(raiz: Pick<Frame, 'locator'>, leer?: LectorOpcionesMatSelect): Promise<string> {
   // Sin funciones con nombre dentro del `evaluate` (tsx/esbuild las envuelve en `__name`, que no existe en la página): el texto
   // crudo se limpia aquí, en Node.
   const crudo = await raiz
@@ -960,11 +1461,258 @@ export async function describirBloqueHistorial(raiz: Pick<Frame, 'locator'>): Pr
   const etiquetas = [...new Set(crudo.etiquetas.map(limpia).filter((t) => (crudo.bloque ? t !== '' : /siniestr|compañ|compan|anterior|bonus|proced|expuest/i.test(t))))].slice(0, 12)
   const controles = crudo.controles.slice(0, 20).map((c) => `${c.tag}${c.id ? `[${c.id.slice(0, 40)}]` : ''}${limpia(c.et) ? `«${limpia(c.et)}»` : ''}${c.off ? '(deshabilitado)' : ''}`)
   const et = etiquetas.length ? ` etiquetas: ${etiquetas.map((t) => `«${t}»`).join(', ')}` : ''
-  return crudo.bloque ? `el bloque app-historial-siniestralidad trae ${controles.length} controles (${controles.join('; ')});${et}` : `no existe app-historial-siniestralidad;${et || ' sin etiquetas de siniestralidad'}`
+  // v0.8.25: sin el bloque, qué CONTROL hay tras cada etiqueta de siniestralidad (tipo, formcontrolname, deshabilitado).
+  const porEtiqueta = crudo.bloque ? '' : `; controles por etiqueta: ${await describirControlesSiniestralidad(raiz, leer)}`
+  return crudo.bloque ? `el bloque app-historial-siniestralidad trae ${controles.length} controles (${controles.join('; ')});${et}` : `no existe app-historial-siniestralidad;${et || ' sin etiquetas de siniestralidad'}${porEtiqueta}`
+}
+
+/** v0.8.25 · Las cinco etiquetas de la variante de «Figuras» sin `app-historial-siniestralidad` (vistas el 26/10/2026; «Compañia» sale de `vocabulario.ts`). */
+const ETIQUETAS_SINIESTRALIDAD_FIGURAS = ['procedencia siniestralidad', 'expuestos/anos', 'siniestros', 'modificacion manual niveles bonus malus'] as const
+
+/** v0.8.29 · Un control hallado tras una etiqueta de siniestralidad. `idx` = posición entre TODOS los `mat-select` (−1 si no lo es); `cab` = cabecera del acordeón plegado que lo oculta (−1 si no). */
+export interface ControlSiniestralidad { et: string; tipo: string; id: string; off: boolean; padre: string; idx: number; visible: boolean; cab: number; /** v0.8.30 · quién lo oculta (`'' ` si se ve): etiqueta del primer ancestro con display/visibility/hidden/pestaña inactiva. Solo nombres de etiqueta y clase, nunca texto. */ oculto?: string; /** v0.8.30 · componentes (etiquetas con guion) que lo contienen, del más cercano al más lejano (máx. 5). */ ruta?: string; /** v0.8.32 · valor actual de los controles de siniestralidad que fija Mapfre (procedencia, expuestos, siniestros); nunca el de «Compañia». Lo escribe el portal, no es dato personal. */ valor?: string }
+
+/**
+ * v0.8.29 · ÚNICO localizador de los controles tras las etiquetas de siniestralidad («Compañia»…). Lo usan el DIAGNÓSTICO (`describirControlesSiniestralidad`)
+ * y la SELECCIÓN (`selectCompaniaPorEtiqueta`): así no pueden divergir (en producción el diagnóstico veía «compania» mat-select habilitado y la selección
+ * no, porque contaba como candidatos TODOS los mat-select del contenedor de la etiqueta y no solo el control que le corresponde). Solo lectura.
+ */
+export async function leerControlesSiniestralidad(raiz: Pick<Frame, 'locator'>): Promise<ControlSiniestralidad[] | null> {
+  return raiz
+    .locator('body')
+    .evaluate((body, args) => {
+      const reCompania = new RegExp(args.reCompania, 'i')
+      const salida: { et: string; tipo: string; id: string; off: boolean; padre: string; idx: number; visible: boolean; cab: number; oculto: string; ruta: string; valor: string }[] = []
+      // v0.8.26: `<label><mat-label>` anida dos etiquetas con el mismo texto → el mismo control salía dos veces. Se cuenta por NODO.
+      const vistos = new Set<Element>()
+      for (const e of Array.from(body.querySelectorAll('label, mat-label'))) {
+        const t = (e.textContent ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\*/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase()
+        const clave = reCompania.test(e.textContent ?? '') ? 'compania' : args.etiquetas.find((x) => t === x)
+        if (!clave || salida.length >= 12) continue
+        const ff = e.closest('mat-form-field') ?? e.parentElement
+        const c = ff ? ff.querySelector('mat-select, input, textarea, mat-checkbox, mat-slide-toggle') : null
+        if (c && vistos.has(c)) continue
+        if (c) vistos.add(c)
+        let p: Element | null = c ?? e
+        while (p && !/^app-/i.test(p.tagName)) p = p.parentElement
+        const nombrePadre = p ? p.tagName.toLowerCase() : 'sin-componente-app'
+        if (!c) { salida.push({ et: clave, tipo: 'sin-control', id: '', off: false, padre: nombrePadre, idx: -1, visible: false, cab: -1, oculto: '', ruta: '', valor: '' }); continue }
+        const tag = c.tagName.toLowerCase()
+        const tipoInput = (c.getAttribute('type') ?? '').toLowerCase()
+        const tipo = tag === 'input' ? (tipoInput === 'checkbox' ? 'checkbox' : c.getAttribute('aria-autocomplete') || c.hasAttribute('matautocomplete') || c.getAttribute('role') === 'combobox' ? 'mat-autocomplete' : 'input') : tag === 'mat-select' || tag === 'mat-checkbox' || tag === 'mat-slide-toggle' ? tag.replace('mat-checkbox', 'checkbox') : tag
+        const estilo = getComputedStyle(c)
+        const visible = c.getClientRects().length > 0 && estilo.visibility !== 'hidden' && estilo.display !== 'none'
+        const panel = c.closest('mat-expansion-panel')
+        const cabecera = panel !== null && !panel.classList.contains('mat-expanded') ? panel.querySelector('mat-expansion-panel-header') : null
+        // v0.8.30: por qué NO se ve (el diagnóstico solo decía «habilitado») y en qué componentes vive. Sin funciones con nombre (esbuild `__name`).
+        const rutaTags: string[] = []
+        let oculto = ''
+        for (let q: Element | null = c; q && q !== body.parentElement; q = q.parentElement) {
+          const tq = q.tagName.toLowerCase()
+          if (tq.includes('-') && rutaTags.length < 5 && !/^mat-(form-field|select|slide-toggle|checkbox)$/.test(tq)) rutaTags.push(tq)
+          if (oculto !== '') continue
+          const sq = getComputedStyle(q)
+          const clq = (q.getAttribute('class') ?? '').split(/\s+/).filter((x) => x !== '').slice(0, 2).join('.')
+          const nom = clq ? `${tq}.${clq}` : tq
+          const visPadre = q.parentElement ? getComputedStyle(q.parentElement).visibility : 'visible'
+          if (sq.display === 'none') oculto = `${nom} display:none`
+          else if (sq.visibility === 'hidden' && visPadre !== 'hidden') oculto = `${nom} visibility:hidden`
+          else if (q.hasAttribute('hidden')) oculto = `${nom} [hidden]`
+          else if (q.getAttribute('aria-hidden') === 'true') oculto = `${nom} aria-hidden`
+        }
+        const tab = c.closest('mat-tab-body')
+        if (tab && !/active/.test(tab.className)) oculto = `${oculto || 'mat-tab-body'} (pestaña inactiva)`
+        if (!visible && oculto === '') oculto = 'sin caja (tamaño 0)'
+        salida.push({
+          et: clave,
+          tipo,
+          id: c.getAttribute('formcontrolname') ?? c.getAttribute('name') ?? c.id ?? '',
+          off: (c as HTMLInputElement).disabled === true || c.getAttribute('aria-disabled') === 'true' || c.classList.contains('mat-select-disabled') || /disabled/.test(ff?.className ?? ''),
+          padre: nombrePadre,
+          idx: tag === 'mat-select' ? Array.from(body.querySelectorAll('mat-select')).indexOf(c) : -1,
+          visible,
+          cab: !visible && cabecera ? Array.from(body.querySelectorAll('mat-expansion-panel-header')).indexOf(cabecera) : -1,
+          oculto: visible ? '' : oculto,
+          ruta: rutaTags.join(' < '),
+          valor: clave === 'compania' ? '' : tag === 'input' || tag === 'textarea' ? String((c as HTMLInputElement).value ?? '') : tag === 'mat-select' ? (c.querySelector('.mat-select-value-text')?.textContent ?? '') : '',
+        })
+      }
+      return salida
+    }, { reCompania: PATRON_ETIQUETA_COMPANIA.source, etiquetas: [...ETIQUETAS_SINIESTRALIDAD_FIGURAS] })
+    .catch(() => null)
+}
+
+/**
+ * v0.8.32 · ¿Mapfre FIJA él mismo la siniestralidad? Sí cuando el control «Siniestros» del bloque (`app-info-descuentos`) está DESHABILITADO: lo calcula
+ * el portal a partir de la compañía/póliza anterior y solo se edita con «modificación manual» (que este bot nunca toca). Solo lectura. Sin control → false.
+ */
+export async function siniestralidadFijadaPorMapfre(raiz: Pick<Frame, 'locator'>): Promise<boolean> {
+  const todos = (await leerControlesSiniestralidad(raiz)) ?? []
+  return todos.some((c) => c.et === 'siniestros' && c.tipo !== 'sin-control' && c.off)
+}
+
+/** v0.8.32 · Lo que Mapfre puso en procedencia / expuestos-años / siniestros (`null` = no legible: tres estados, nunca 0). Solo lectura. */
+export async function leerSiniestralidadMapfre(raiz: Pick<Frame, 'locator'>): Promise<{ procedencia: string | null; expuestos: string | null; siniestros: string | null }> {
+  const todos = (await leerControlesSiniestralidad(raiz)) ?? []
+  const de = (et: string): string | null => {
+    const c = todos.find((x) => x.et === et && x.tipo !== 'sin-control')
+    const v = (c?.valor ?? '').replace(/[^\p{L}\d .,/-]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 40)
+    return c && v !== '' ? v : null
+  }
+  return { procedencia: de('procedencia siniestralidad'), expuestos: de('expuestos/anos'), siniestros: de('siniestros') }
+}
+
+/**
+ * v0.8.32 · AVISO del resultado cuando Mapfre fijó la siniestralidad (el bot no la escribe ni la modifica). Dice qué puso Mapfre y, si el riesgo declara
+ * otra cifra de siniestros, que el precio es el de Mapfre. PURA. Nunca datos personales (solo cifras y la procedencia que pinta el portal).
+ */
+export function avisoSiniestralidadMapfre(leida: { procedencia: string | null; expuestos: string | null; siniestros: string | null }, declarados: number | null): string {
+  const d = (v: string | null) => v ?? 'no legible'
+  const base = `Siniestralidad tomada por Mapfre; no modificada (procedencia: ${d(leida.procedencia)}; expuestos/años: ${d(leida.expuestos)}; siniestros: ${d(leida.siniestros)}).`
+  const m = leida.siniestros !== null && /^\d+$/.test(leida.siniestros) ? Number(leida.siniestros) : null
+  if (declarados !== null && m !== null && declarados !== m) return `${base} El riesgo declara ${declarados} siniestro(s) en 5 años y Mapfre usa ${m}: el precio es el de Mapfre.`
+  if (declarados !== null && declarados > 0 && m === null) return `${base} El riesgo declara ${declarados} siniestro(s) en 5 años y no se pudo comprobar la cifra de Mapfre.`
+  return base
+}
+
+/**
+ * v0.8.25 · Por cada etiqueta de siniestralidad («Compañia», «Procedencia Siniestralidad», «Expuestos/Años», «Siniestros», «Modificación Manual
+ * Niveles Bonus Malus»): tipo de control (mat-select/mat-autocomplete/input/checkbox), formcontrolname/name/id y si está deshabilitado. SOLO LEE,
+ * nunca valores ni opciones (el panel de un mat-select no está en el DOM cerrado y este adaptador no tiene lector de opciones sin elegir).
+ */
+export async function describirControlesSiniestralidad(raiz: Pick<Frame, 'locator'>, leer?: LectorOpcionesMatSelect): Promise<string> {
+  const crudo = await leerControlesSiniestralidad(raiz)
+  if (!crudo) return 'no se pudo leer'
+  if (crudo.length === 0) return 'ninguna de las etiquetas conocidas'
+  // v0.8.30: además de «habilitado», si NO se ve y por qué/dónde vive: «habilitado OCULTO por … (en app-x < app-y)» (lo visible se dice como siempre) (el 27/10/2026 el diagnóstico decía solo «habilitado» y la selección, que exige visible, no lo hallaba).
+  const limp = (t: string) => t.replace(/[^\p{L}\d_ .:()\[\]<-]/gu, '').slice(0, 80)
+  const lista = crudo.map((c) => `«${c.et}» ${c.tipo}${c.id ? `[${c.id.replace(/[^\w-]/g, '').slice(0, 30)}]` : ''} ${c.off ? 'deshabilitado' : 'habilitado'}${c.tipo === 'sin-control' || c.visible ? '' : ` OCULTO${c.oculto ? ` por ${limp(c.oculto)}` : ''}${c.ruta ? ` (en ${limp(c.ruta)})` : ''}`}`)
+  const companias = crudo.filter((c) => c.et === 'compania')
+  const distintos = companias.length > 1 ? `; «compania»: ${companias.length} nodos distintos (contenedores: ${companias.map((c) => c.padre).join(', ')})` : ''
+  const opciones = leer ? await leerOpcionesCompania(raiz, leer) : null
+  const ocultas = companias.filter((c) => !c.off && c.tipo === 'mat-select' && !c.visible)
+  const txtOpc = opciones === null ? (ocultas.length > 0 && ocultas.length === companias.filter((c) => !c.off && c.tipo === 'mat-select').length ? 'no leídas (el desplegable «Compañia» habilitado está OCULTO en esta pantalla: ver arriba por qué y en qué componente vive)' : leer ? 'no leídas (el lector no pudo abrir el panel o el desplegable «Compañia» no es único, visible y habilitado)' : 'no leídas (panel cerrado, sin lector de opciones)') : opciones.length ? `«compania»: ${opciones.map((o) => `«${o}»`).join(', ')}` : '«compania»: el panel no mostró opciones'
+  return `${lista.join('; ')}${distintos}; opciones de los desplegables: ${txtOpc}`
+}
+
+/** v0.8.28 · `ctx.leerOpcionesMatSelect` (runner → mat-select.ts, por el guard): abre el desplegable, lee sus opciones y lo cierra. NO elige. */
+export type LectorOpcionesMatSelect = (select: Locator) => Promise<string[] | null>
+
+/**
+ * v0.8.28 · Opciones (nombres de compañías, nunca datos personales) del ÚNICO mat-select «Compañia» habilitado y visible, leídas con el lector
+ * guardado del contexto: este fichero NO pulsa nada. `null` = no se pudo / no procede (varios, deshabilitado, oculto, sin lector). Nunca lanza.
+ */
+export async function leerOpcionesCompania(raiz: Pick<Frame, 'locator'>, leer: LectorOpcionesMatSelect): Promise<string[] | null> {
+  try {
+    const sel = await selectCompaniaPorEtiqueta(raiz, undefined, 0)
+    if (!sel) return null
+    const textos = await leer(sel)
+    return textos === null ? null : [...new Set(textos.map((t) => t.replace(/\s+/g, ' ').trim().slice(0, 60)).filter((t) => t !== ''))].slice(0, 40)
+  } catch {
+    return null
+  }
 }
 
 /** Etiqueta exacta «Compañia/Compañía» (con o sin asterisco): NO casa «Compañía anterior» de otros bloques ni textos largos. */
-const PATRON_ETIQUETA_COMPANIA = /^\s*compa(?:ñ|n)(?:í|i)a\s*\*?\s*$/i
+const PATRON_ETIQUETA_COMPANIA = regexEtiquetaExacta(CONCEPTOS_LECTURA.compania_anterior.grupos.etiqueta_exacta[0])
+
+/**
+ * v0.8.27 · ÚNICO clic de este fichero: despliega por `ctx.pulsar` (guardado) la CABECERA `mat-expansion-panel-header` del acordeón plegado que
+ * contiene el mat-select «Compañia». Nunca un botón ni un texto. El guardián de test/mapfre-auto.test.ts permite EXACTAMENTE esta llamada.
+ */
+export async function desplegarAcordeonGuardado(raiz: Pick<Frame, 'locator'>, pulsar: (boton: Locator) => Promise<void>, indiceCabecera: number): Promise<void> {
+  await pulsar(raiz.locator('mat-expansion-panel-header').nth(indiceCabecera))
+}
+
+const ESPERA_LICENCIA_DESPLEGADA_MS = 3_000
+/** v0.8.38: tope para que «Figuras» termine de cargar la licencia (habilitada y estable) tras «Continuar» del paso 2. */
+const ESPERA_LICENCIA_HABILITADA_MS = 12_000
+const SONDEO_LICENCIA_MS = 300
+
+/**
+ * v0.8.36 (30/10/2026, trabajo real 76d731f3 atascado: `locator.click` 30 s sobre `datos-licencia mat-select` «element is not visible»). Con un
+ * cliente que Mapfre ya conoce, «Figuras» pinta la tarjeta «Permiso Conducir» COMPLETA y PLEGADA (`mat-expansion-panel` sin `mat-expanded`, contenido
+ * con `visibility:hidden`) y hay un segundo `datos-licencia` (otra figura) DESHABILITADO. Devuelve el ÚNICO `datos-licencia mat-select` habilitado;
+ * si está oculto en una tarjeta plegada, la despliega por `desplegarAcordeonGuardado` (cabecera, guard) y espera a verlo. `null` = no hay
+ * exactamente uno habilitado (sigue el camino de siempre). Habilitado pero oculto sin poder desplegarlo → `ErrorMapaIncompleto` claro (no 30 s de clic).
+ * Solo lee el DOM (sin valores) salvo ese despliegue.
+ *
+ * v0.8.38 (31/10/2026, trabajo real 7865539d con 0.8.37, mismo clic de 30 s): el volcado del fallo traía el estado FINAL que 0.8.37 ya resolvía
+ * (uno habilitado en la tarjeta plegada + otro DESHABILITADO en «Contratación»); el criterio se aplicaba DEMASIADO PRONTO: justo tras «Continuar» del
+ * paso 2 la licencia de «Figuras» aún estaba DESHABILITADA (cargando) → 0 habilitados → null → `.first()`, que Mapfre habilitaba y PLEGABA después.
+ * Ahora se ESPERA (hasta `esperaHabilitadoMs`) a que haya ≥1 habilitado y a que su estado (posición, visible, tarjeta) se repita en dos lecturas
+ * seguidas. Hay `datos-licencia` pero NINGUNO habilitado al acabar la espera → `ErrorMapaIncompleto` con el recuento (nunca el `.first()` de 30 s).
+ * Ningún `datos-licencia` → null (camino de siempre: hueco «no aparece»). El mensaje de error lleva solo recuentos (sin PII).
+ */
+export async function selectLicenciaHabilitada(raiz: Pick<Frame, 'locator'>, pulsar?: (boton: Locator) => Promise<void>, formador?: ContextoFormador, esperaMs: number = ESPERA_LICENCIA_DESPLEGADA_MS, esperaHabilitadoMs: number = ESPERA_LICENCIA_HABILITADA_MS): Promise<Locator | null> {
+  // Sin funciones con nombre dentro de `evaluateAll` (tsx les mete `__name`, que no existe en la página).
+  const leerTodo = () =>
+    raiz.locator(SEL_LICENCIA.clasePermiso).evaluateAll((els) => {
+      const cabeceras = Array.from(document.querySelectorAll('mat-expansion-panel-header'))
+      const out: { idx: number; visible: boolean; cab: number }[] = []
+      els.forEach((el, idx) => {
+        if (el.classList.contains('mat-select-disabled') || el.getAttribute('aria-disabled') === 'true') return
+        const r = el.getBoundingClientRect()
+        const cs = getComputedStyle(el)
+        const panel = el.closest('mat-expansion-panel')
+        const cab = panel && !panel.classList.contains('mat-expanded') ? panel.querySelector(':scope > mat-expansion-panel-header') : null
+        out.push({ idx, visible: r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none', cab: cab ? cabeceras.indexOf(cab) : -1 })
+      })
+      return { total: els.length, hab: out }
+    }).catch(() => null)
+  const leer = async () => (await leerTodo())?.hab ?? null
+  const firma = (h: { idx: number; visible: boolean; cab: number }[]) => h.map((x) => `${x.idx}:${x.visible ? 1 : 0}:${x.cab}`).join('|')
+  const t0 = Date.now()
+  const finHab = t0 + Math.max(0, esperaHabilitadoMs)
+  let lectura = await leerTodo()
+  let previa: string | null = null
+  for (;;) {
+    // Sin lectura (el evaluate falló: no es una pantalla real) → camino de siempre al momento; no se espera a ciegas.
+    if (!lectura || !Array.isArray(lectura.hab)) return null
+    const f = lectura.hab.length > 0 ? firma(lectura.hab) : null
+    if (f !== null && f === previa) break
+    if (Date.now() >= finHab) break
+    previa = f
+    await new Promise((res) => setTimeout(res, SONDEO_LICENCIA_MS))
+    lectura = await leerTodo()
+  }
+  if (!lectura || !Array.isArray(lectura.hab) || lectura.total === 0) return null
+  if (lectura.hab.length === 0) {
+    formador?.log('mapfre_licencia_sin_habilitar', { total: lectura.total, ms: Date.now() - t0 })
+    throw new ErrorMapaIncompleto(`el desplegable «clase del permiso» (${SEL_LICENCIA.clasePermiso}): ${lectura.total} en la pantalla y NINGUNO habilitado tras ${Math.round((Date.now() - t0) / 1000)} s de espera; no se pulsa uno deshabilitado`, true)
+  }
+  const hab0 = lectura.hab
+  formador?.log('mapfre_licencia_estado', { total: lectura.total, habilitados: hab0.length, visibles: hab0.filter((h) => h.visible).length, plegados: hab0.filter((h) => !h.visible && h.cab >= 0).length, ms: Date.now() - t0 })
+  // v0.8.37 (31/10/2026, trabajo real 7865539d con 0.8.36: «Permiso Conducir» completa y PLEGADA y OTRO `datos-licencia` HABILITADO pero oculto,
+  // p. ej. en la pestaña «Conductores Ocasionales»): con 2+ habilitados 0.8.36 devolvía null y el `.first()` (oculto) esperaba 30 s. Ahora:
+  // exactamente UNO visible → ese (sin clic); ninguno visible y exactamente UNO en tarjeta plegada → se despliega esa; ninguno visible y 0 o 2+
+  // plegados → hueco claro (no se adivina). Varios VISIBLES → null (camino de siempre: el `.first()`, que es visible).
+  let elegido: { idx: number; visible: boolean; cab: number }
+  if (hab0.length === 1) elegido = hab0[0]!
+  else {
+    const visibles = hab0.filter((h) => h.visible)
+    const plegados = hab0.filter((h) => !h.visible && h.cab >= 0)
+    if (visibles.length > 1) return null
+    if (visibles.length === 1) elegido = visibles[0]!
+    else if (plegados.length === 1) elegido = plegados[0]!
+    else throw new ErrorMapaIncompleto(`el desplegable «clase del permiso» (${SEL_LICENCIA.clasePermiso}): ${hab0.length} habilitados y ninguno visible (${plegados.length} en tarjeta plegada); no se adivina cuál`, true)
+  }
+  const { idx, cab } = elegido
+  const visibleEn = (h: typeof hab0 | null) => h?.find((x) => x.idx === idx)?.visible === true
+  let hab: typeof hab0 | null = hab0
+  if (!elegido.visible && cab >= 0 && pulsar) {
+    await desplegarAcordeonGuardado(raiz, pulsar, cab).catch(() => undefined)
+    const fin = Date.now() + Math.max(0, esperaMs)
+    for (;;) {
+      hab = await leer()
+      if (visibleEn(hab) || Date.now() >= fin) break
+      await new Promise((res) => setTimeout(res, 200))
+    }
+    formador?.log('mapfre_licencia_desplegada', { visible: visibleEn(hab) })
+  }
+  if (!visibleEn(hab)) throw new ErrorMapaIncompleto(`el desplegable «clase del permiso» (${SEL_LICENCIA.clasePermiso}): está habilitado pero OCULTO${cab >= 0 ? ' en la tarjeta plegada «Permiso Conducir», que no se pudo desplegar' : ''}`, true)
+  return raiz.locator(SEL_LICENCIA.clasePermiso).nth(idx)
+}
 
 /**
  * v0.8.24 · Alternativa por etiqueta para el desplegable de compañía anterior cuando no existe el selector de
@@ -972,13 +1720,47 @@ const PATRON_ETIQUETA_COMPANIA = /^\s*compa(?:ñ|n)(?:í|i)a\s*\*?\s*$/i
  * si es único, visible y habilitado (los de `app-info-descuentos` los calcula el portal y vienen deshabilitados). Solo lectura. PURA en
  * cuanto a clics: no pulsa nada.
  */
-export async function selectCompaniaPorEtiqueta(raiz: Pick<Frame, 'locator'>): Promise<Locator | null> {
-  const campos = raiz.locator('mat-form-field').filter({ has: raiz.locator('mat-label, label').filter({ hasText: PATRON_ETIQUETA_COMPANIA }) }).locator('mat-select')
-  if ((await campos.count().catch(() => 0)) !== 1) return null
-  const uno = campos.first()
-  if (!(await uno.isVisible().catch(() => false))) return null
-  if ((await uno.getAttribute('aria-disabled').catch(() => null)) === 'true') return null
-  return uno
+export async function selectCompaniaPorEtiqueta(raiz: Pick<Frame, 'locator'>, pulsar?: (boton: Locator) => Promise<void>, esperaMs: number = 0): Promise<Locator | null> {
+  // v0.8.26: UN solo evaluate que recoge los NODOS mat-select tras la etiqueta «Compañia» y los deduplica por identidad (Set): un mismo
+  // mat-select alcanzable por dos caminos (label + mat-label anidados, form-fields anidados) cuenta UNO. Sin escribir en el DOM: se
+  // devuelve su posición entre todos los mat-select y se re-localiza con `nth`.
+  // v0.8.27: si el único mat-select está HABILITADO pero oculto porque su `mat-expansion-panel` está plegado (el contenido plegado va con
+  // `visibility:hidden`), se devuelve la posición de la cabecera del panel para desplegarlo con `pulsar` (guard) y volver a mirar.
+  // v0.8.29: MISMO localizador que el diagnóstico (`leerControlesSiniestralidad`): candidato = el control que corresponde a cada etiqueta «Compañia»
+  // (deduplicado por nodo) que es un `mat-select`. Los deshabilitados (p. ej. los de `app-info-descuentos`, calculados por el portal) no cuentan como
+  // ambigüedad: se elige el ÚNICO habilitado; si hay 2+ habilitados es ambiguo y no se adivina.
+  const leer = async () => {
+    const todos = await leerControlesSiniestralidad(raiz)
+    if (!todos) return null
+    const cands = todos.filter((c) => c.et === 'compania' && c.tipo === 'mat-select' && c.idx >= 0)
+    const hab = cands.filter((c) => !c.off)
+    if (hab.length === 1) return { n: 1, idx: hab[0].idx, ok: hab[0].visible, off: false, cab: hab[0].cab }
+    if (hab.length > 1) return { n: hab.length, idx: -1, ok: false, off: false, cab: -1 }
+    return { n: cands.length > 0 ? 1 : 0, idx: cands[0]?.idx ?? -1, ok: false, off: cands.length > 0, cab: -1 }
+  }
+  // v0.8.28: sondeo hasta `esperaMs` mientras el control aún no esté (n=0), esté deshabilitado o esté oculto sin acordeón que desplegar: la pantalla
+  // de «Figuras» termina de pintar después de que el stepper diga «listo». Más de un candidato (n>1) NO se espera: es ambiguo, no tardío.
+  const hasta = Date.now() + Math.max(0, esperaMs)
+  let r = await leer()
+  let desplegado = false
+  for (;;) {
+    if (r && r.n === 1 && !r.ok && !r.off && r.cab >= 0 && r.idx >= 0 && pulsar && !desplegado) {
+      desplegado = true
+      await desplegarAcordeonGuardado(raiz, pulsar, r.cab).catch(() => undefined)
+      const fin = Date.now() + 3_000
+      for (;;) {
+        r = await leer()
+        if (!r || r.ok || Date.now() >= fin) break
+        await new Promise((res) => setTimeout(res, 250))
+      }
+    }
+    const tardio = !r || r.n === 0 || (r.n === 1 && !r.ok)
+    if (!tardio || r?.ok || Date.now() >= hasta) break
+    await new Promise((res) => setTimeout(res, 250))
+    r = await leer()
+  }
+  if (!r || r.n !== 1 || !r.ok || r.idx < 0) return null
+  return raiz.locator('mat-select').nth(r.idx)
 }
 
 /**
@@ -986,16 +1768,20 @@ export async function selectCompaniaPorEtiqueta(raiz: Pick<Frame, 'locator'>): P
  * (`ctx.elegirMatSelect`, mat-select.ts): coincidencia clara → IA → `ErrorOpcionSinResolver` (hueco con la lista de opciones).
  * Sin el desplegable en la pantalla o sin la función guardada → `ErrorMapaIncompleto` con inventario. Devuelve lo elegido.
  */
-export async function rellenarMatSelects(raiz: Pick<Frame, 'locator'>, plan: PlanNsei, ctx: Pick<ContextoPortal, 'elegirMatSelect'>, respaldo: RespaldoCampos = SIN_RESPALDO, esperaOpcionalMs: number = ESPERA_OPCIONAL_MS): Promise<string[]> {
+export async function rellenarMatSelects(raiz: Pick<Frame, 'locator'>, plan: PlanNsei, ctx: Pick<ContextoPortal, 'elegirMatSelect'> & Partial<Pick<ContextoPortal, 'pulsar' | 'leerOpcionesMatSelect'>>, respaldo: RespaldoCampos = SIN_RESPALDO, esperaOpcionalMs: number = ESPERA_OPCIONAL_MS): Promise<string[]> {
   const hechos: string[] = []
   for (const op of plan.escribibles) {
     if (op.tipo !== 'mat-select') continue
     let sel = raiz.locator(op.sel).first()
-    let ausente = !(await apareceEn(raiz, op.sel, op.opcional ? esperaOpcionalMs : 0))
+    // v0.8.36 (trabajo 76d731f3): la clase del permiso es el ÚNICO `datos-licencia mat-select` HABILITADO (no el primero del DOM) y, si su
+    // tarjeta «Permiso Conducir» está plegada (cliente que Mapfre ya conoce: la tarjeta sale completa y cerrada), se despliega antes.
+    const licencia = op.sel === SEL_LICENCIA.clasePermiso ? await selectLicenciaHabilitada(raiz, ctx.pulsar, respaldo.formador) : null
+    if (licencia) sel = licencia
+    let ausente = licencia ? false : !(await apareceEn(raiz, op.sel, op.opcional ? esperaOpcionalMs : 0))
     // v0.8.24: sin `app-historial-siniestralidad` (trabajo e886d7d9: «Figuras» pinta «Compañia», «Procedencia Siniestralidad»…), la
     // compañía anterior se busca por su ETIQUETA. Solo si hay UN mat-select visible y habilitado; si no, sigue el hueco de siempre.
     if (ausente && op.sel === SEL_HISTORIAL.companiaAnterior) {
-      const porEtiqueta = await selectCompaniaPorEtiqueta(raiz)
+      const porEtiqueta = await selectCompaniaPorEtiqueta(raiz, ctx.pulsar, esperaOpcionalMs > 0 ? Math.max(esperaOpcionalMs, ESPERA_COMPANIA_ETIQUETA_MS) : 0)
       if (porEtiqueta) {
         sel = porEtiqueta
         ausente = false
@@ -1009,7 +1795,7 @@ export async function rellenarMatSelects(raiz: Pick<Frame, 'locator'>, plan: Pla
         continue
       }
       await registrarAtasco(respaldo.page, respaldo.formador, { clave: claveCampo(op.etiqueta), tipo: 'campo', etiqueta: op.etiqueta, descripcion: `Desplegable «${op.etiqueta}» del paso «${PASOS_NSEI.find((x) => x.id === op.paso)!.nombre}» de Mapfre NSEI: no aparece en la pantalla` }).catch(() => undefined)
-      const bloque = op.sel === SEL_HISTORIAL.companiaAnterior ? ` — ${redactarDatosPersonales(await describirBloqueHistorial(raiz))}` : ''
+      const bloque = op.sel === SEL_HISTORIAL.companiaAnterior ? ` — ${redactarDatosPersonales(await describirBloqueHistorial(raiz, ctx.leerOpcionesMatSelect))}` : ''
       throw new ErrorMapaIncompleto(`el desplegable «${op.etiqueta}» (${op.sel}; no aparece)${bloque}`, true)
     }
     if (!ctx.elegirMatSelect) throw new ErrorMapaIncompleto('la función guardada «elegir opción de mat-select» en el contexto del runner')
@@ -1058,11 +1844,81 @@ export async function sinOpcionalesAusentes(raiz: Pick<Frame, 'locator'>, plan: 
   return { escribibles: plan.escribibles, pendientes }
 }
 
-const continuar = (nsei: Page, ctx: Pick<ContextoPortal, 'continuarMapfre'> & { formador?: ContextoFormador }, paso: 'datosBasicos' | 'objetoAsegurado' | 'figuras') => {
+type CtxAvanceStepper = Pick<ContextoPortal, 'continuarMapfre'> & Partial<Pick<ContextoPortal, 'cerrarControlesTecnicosMapfre' | 'reintentarAvanceMapfre'>> & { formador?: ContextoFormador }
+
+/** Texto del diálogo «Controles técnicos» si está abierto (solo lectura); `null` si no hay o no se puede leer. */
+async function leerDialogoControlesTecnicos(nsei: Page): Promise<string | null> {
+  try {
+    const d = nsei.locator(SEL_DIALOGO_CONTROLES_TECNICOS).locator('visible=true')
+    if ((await d.count()) !== 1) return null
+    const t = await d.first().evaluate((e) => (e as HTMLElement).innerText ?? e.textContent ?? '')
+    return esTextoControlesTecnicos(t) ? t : null
+  } catch {
+    return null
+  }
+}
+
+/** Valor dd/mm/aaaa de UN solo input en el `mat-form-field` con esa etiqueta de «Datos básicos»; `null` si no hay exactamente uno. */
+async function inputPorEtiquetaDatosBasicos(nsei: Page, etiqueta: string): Promise<Locator | null> {
+  try {
+    const campos = nsei.locator('app-datos-basicos mat-form-field').filter({ hasText: patronEtiqueta(etiqueta) }).locator('input')
+    return (await campos.count()) === 1 ? campos.first() : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Código 232 (efecto anterior a la mecanización): lee «Fecha de efecto» y «Fecha de mecanización» de Datos básicos y, si ambas son
+ * legibles, fija efecto = max(efecto, mecanización, hoy). `null` = no se puede con seguridad (nada se escribe). `hoy` inyectable.
+ */
+export async function ajustarFechaEfectoTras232(nsei: Page, hoy: string = hoyEs()): Promise<string | null> {
+  const efecto = await inputPorEtiquetaDatosBasicos(nsei, 'Fecha de efecto')
+  const mecaniz = await inputPorEtiquetaDatosBasicos(nsei, 'Fecha de mecanización')
+  if (!efecto || !mecaniz) return null
+  const ajuste = fechaEfectoTrasMecanizacion(await efecto.inputValue().catch(() => null), await mecaniz.inputValue().catch(() => null), hoy)
+  if (!ajuste || !ajuste.cambia) return null
+  if (!(await esperarEditable(efecto))) return null
+  await efecto.fill(ajuste.fecha)
+  await efecto.blur().catch(() => undefined)
+  if (compararFechaEs(await efecto.inputValue().catch(() => ''), ajuste.fecha) !== 'ok') return null
+  return ajuste.fecha
+}
+
+/**
+ * v0.8.47 · Diálogo «Controles técnicos» tras «Continuar»: lo cierra («Cerrar», guard) y lanza un error de portal claro
+ * «Mapfre rechaza (Código NNN): …». Código 232 desde Datos básicos: UN reintento con la fecha de efecto ajustada (devuelve el
+ * aviso de supuesto). `null` = no hay tal diálogo.
+ */
+async function atenderControlesTecnicos(nsei: Page, ctx: CtxAvanceStepper, paso: 'datosBasicos' | 'objetoAsegurado' | 'figuras', hoy?: string): Promise<string | null> {
+  const bruto = await leerDialogoControlesTecnicos(nsei)
+  if (bruto === null) return null
+  const limpiar = (t: string) => limpiarMensajePortalDiagnosticoHasta(t, 200)
+  const rechazo = extraerRechazoControlesTecnicos(bruto, limpiar)!
+  if (!ctx.cerrarControlesTecnicosMapfre) throw new ErrorTarificador('portal', `${mensajeRechazoControlesTecnicos(rechazo)} (el robot no tiene la función guardada para cerrar el diálogo)`)
+  await ctx.cerrarControlesTecnicosMapfre(nsei)
+  if (paso !== 'datosBasicos' || !esRechazoFechaEfectoAnteriorMecanizacion(rechazo) || !ctx.reintentarAvanceMapfre) throw new ErrorTarificador('portal', mensajeRechazoControlesTecnicos(rechazo))
+  const fecha = await ajustarFechaEfectoTras232(nsei, hoy)
+  if (fecha === null) throw new ErrorTarificador('portal', `${mensajeRechazoControlesTecnicos(rechazo)} (no se pudo leer con seguridad la fecha de efecto/mecanización: candidato a reintento diferido)`)
+  await ctx.reintentarAvanceMapfre(nsei, paso).catch(async (e: unknown) => {
+    if (!(e instanceof ErrorTarificador) || !/la llegada a «/.test(e.message)) throw e
+    const segundo = await leerDialogoControlesTecnicos(nsei)
+    if (segundo === null) throw e
+    const r2 = extraerRechazoControlesTecnicos(segundo, limpiar)!
+    await ctx.cerrarControlesTecnicosMapfre!(nsei)
+    throw new ErrorTarificador('portal', `${mensajeRechazoControlesTecnicos(r2)} (tras ajustar la fecha de efecto)`)
+  })
+  return avisoFechaEfectoSupuesta(fecha)
+}
+
+const continuar = (nsei: Page, ctx: CtxAvanceStepper, paso: 'datosBasicos' | 'objetoAsegurado' | 'figuras'): Promise<string | null> => {
   if (!ctx.continuarMapfre) throw new ErrorMapaIncompleto('la función guardada «Continuar» de Mapfre en el contexto del runner')
   // v0.8.3: si no se llega al destino y el portal marca campos con `mat-error`, el hueco los NOMBRA (etiquetas, sin valores).
-  return ctx.continuarMapfre(nsei, paso).catch(async (e: unknown) => {
+  return ctx.continuarMapfre(nsei, paso).then(() => null as string | null, async (e: unknown): Promise<string | null> => {
     if (!(e instanceof ErrorTarificador) || !/la llegada a «/.test(e.message)) throw e
+    // v0.8.47: antes de nombrar campos con error, ¿es el diálogo «Controles técnicos»? (sus «Campo obligatorio» no son del paso)
+    const aviso = await atenderControlesTecnicos(nsei, ctx, paso)
+    if (aviso !== null) return aviso
     const conError = await camposConErrorVisibles(nsei)
     if (conError.length === 0) throw e
     const nombre = PASOS_NSEI.find((x) => x.id === paso)!.nombre
@@ -1291,7 +2147,7 @@ export async function altaTomadorNuevo(nsei: Page, f: FormularioAuto, ctx: Pick<
  * `tomador.documentoIdentidad`; sin él → `datos` sin tocar nada. El NIF solo va a su campo: nunca a logs, mensajes ni
  * resultado. Lo resuelto por el respaldo se confirma tras llegar al paso 2.
  */
-export async function pasoDatosBasicos(nsei: Page, f: FormularioAuto, ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirTomadorMapfre' | 'cerrarAvisoTomadorMapfre'>, esperaMs = ESPERA_REACCION_TOMADOR_MS): Promise<void> {
+export async function pasoDatosBasicos(nsei: Page, f: FormularioAuto, ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirTomadorMapfre' | 'cerrarAvisoTomadorMapfre'> & Partial<Pick<ContextoPortal, 'pulsar' | 'elegirMatSelect' | 'leerOpcionesMatSelect' | 'cerrarControlesTecnicosMapfre' | 'reintentarAvanceMapfre'>>, esperaMs = ESPERA_REACCION_TOMADOR_MS): Promise<string | null> {
   const nif = documentoTomadorDe(f)
   if (nif === null) throw new ErrorTarificador('datos', 'mapfre/auto: falta el NIF/CIF del tomador (Mapfre lo busca en el paso 1; asegura lo pone desde la ficha del cliente)')
   const r = await campoConRespaldo(nsei, SEL_TOMADOR.documento, { page: nsei, formador: ctx.formador, etiqueta: 'NIF/CIF', descripcion: 'Campo del documento (NIF/CIF) del TOMADOR en el paso 1 «Datos básicos» de Mapfre NSEI (no el del conductor)' })
@@ -1334,8 +2190,27 @@ export async function pasoDatosBasicos(nsei: Page, f: FormularioAuto, ctx: Pick<
   if (reaccion === 'indeterminado') await huecoTomador(nsei, ctx, 'NIF/CIF', 'la reacción de Mapfre al NIF/CIF del tomador (ni autorrelleno ni aviso de «no existe ningún registro» en la espera)')
   if (reaccion === 'nuevo') await altaTomadorNuevo(nsei, f, ctx)
   else await exigirSinCamposObligatorios(nsei, ctx, 'con el tomador autorrellenado por Mapfre')
-  await continuar(nsei, ctx, 'datosBasicos')
+  // v0.8.33: el «Compañia» de «Datos básicos» es la ENTIDAD EMISORA de Mapfre, no la compañía anterior: este paso nunca lo toca (pasaba sin tocarlo hasta 0.8.31).
+  const avisoFecha = await continuar(nsei, ctx, 'datosBasicos')
   await r.confirmar().catch(() => undefined)
+  return avisoFecha
+}
+
+/** v0.8.33 · AVISO que queda en la oferta cuando «Figuras»/«Coberturas» no traen ningún control de compañía anterior (la toma Mapfre de su consulta de historial). */
+export const AVISO_COMPANIA_ANTERIOR_NO_PEDIDA = 'Compañía anterior y siniestralidad no las pide Mapfre en esta pantalla: las toma de su consulta de historial; revísalo en la emisión.'
+
+/**
+ * v0.8.33 · Ejecución real 27/10/2026 (trabajo 68c03964 con 0.8.32): el `mat-select[compania]` de «Datos básicos» es la ENTIDAD EMISORA de Mapfre
+ * (única opción real «MAPFRE ESPAÑA…»), NO la compañía anterior: nunca se usa para ella. En este flujo Mapfre no pide la compañía anterior al mediador
+ * (no hay `app-historial-siniestralidad` y procedencia/expuestos/siniestros vienen deshabilitados). `true` = NO hay ningún control habilitado, visible
+ * y único para ella (ni el selector del historial ni uno por etiqueta): se continúa con un AVISO en vez de atascar. Si hay un control así, o 2+
+ * habilitados (ambiguo), devuelve `false` y rige lo de siempre (casado exacto y atasco si no casa). Solo lectura; los clics, por `pulsar` guardado.
+ */
+export async function companiaAnteriorSinControl(raiz: Pick<Frame, 'locator'>, pulsar?: (boton: Locator) => Promise<void>, esperaMs: number = ESPERA_OPCIONAL_MS): Promise<boolean> {
+  if (await apareceEn(raiz, SEL_HISTORIAL.companiaAnterior, esperaMs)) return false
+  if (await selectCompaniaPorEtiqueta(raiz, pulsar, esperaMs > 0 ? Math.max(esperaMs, ESPERA_COMPANIA_ETIQUETA_MS) : 0)) return false
+  const habilitados = ((await leerControlesSiniestralidad(raiz)) ?? []).filter((c) => c.et === 'compania' && c.tipo === 'mat-select' && !c.off)
+  return habilitados.length <= 1
 }
 
 // ───────────────────────── paso 3 (historial) y paso 4 (Coberturas): grabación 15/10/2026 ─────────────────────────
@@ -1415,11 +2290,20 @@ export async function diagnosticoPolizaAnterior(raiz: Pick<Frame, 'locator'>): P
  * el diagnóstico va en el mensaje (los errores no llevan avisos).
  */
 export async function historialAnterior(nsei: Page, f: FormularioAuto, formador: ContextoFormador | undefined): Promise<string | null> {
+  return (await historialAnteriorConPoliza(nsei, f, formador)).diagnostico
+}
+
+/**
+ * v0.8.36 (30/10/2026, «SINCO al tarificar»): lo mismo que `historialAnterior` y además si el bot TECLEÓ el nº de póliza anterior del
+ * riesgo y lo RELEYÓ igual (`polizaTecleada`). Con eso Mapfre consulta SINCO y el precio sale confirmado (la firmeza la decide asegura).
+ * Campo ya relleno por el portal, no editable o sin dato → `false` (no se sabe qué número usó: nunca se supone). El valor no sale.
+ */
+export async function historialAnteriorConPoliza(nsei: Page, f: FormularioAuto, formador: ContextoFormador | undefined): Promise<{ diagnostico: string | null; polizaTecleada: boolean }> {
   const anios = f.aniosAseguradoAnterior ?? 0
   const sw = await interruptorCompaniaAnterior(nsei)
   if (anios > 0 && sw === false) await huecoPaso(nsei, formador, 'compania anterior', 'Figuras', 'el interruptor «¿Tiene compañía anterior?» está apagado y el riesgo trae años en la compañía anterior')
   if (anios === 0 && sw === true) await huecoPaso(nsei, formador, 'compania anterior', 'Figuras', 'el interruptor «¿Tiene compañía anterior?» está encendido y el riesgo no trae compañía anterior')
-  if (anios === 0) return null
+  if (anios === 0) return { diagnostico: null, polizaTecleada: false }
   const diagnostico = await diagnosticoPolizaAnterior(nsei)
   if (diagnostico) formador?.log('mapfre_num_poliza_diagnostico', { diagnostico })
   const p = await estadoPolizaAnterior(nsei)
@@ -1437,14 +2321,14 @@ export async function historialAnterior(nsei: Page, f: FormularioAuto, formador:
       }
       if ((await campo.inputValue().catch(() => '')) !== ultimos5) throw new ErrorTarificador('datos', 'mapfre/auto: el portal no dejó fijado el nº de póliza de la compañía anterior (las 5 últimas cifras del riesgo no se mantuvieron)')
       formador?.log('mapfre_num_poliza_escrito', {})
-      return diagnostico
+      return { diagnostico, polizaTecleada: true }
     }
     formador?.log('mapfre_num_poliza_no_editable', {})
   }
   if (p.presente && p.vacio && p.obligatorio) {
     throw new ErrorTarificador('datos', `mapfre/auto: Mapfre exige el nº de póliza de la compañía anterior y el riesgo no lo trae (falta ese dato en el formulario de auto; no se inventa)${diagnostico ? `. ${diagnostico}` : ''}`)
   }
-  return diagnostico
+  return { diagnostico, polizaTecleada: false }
 }
 
 /**
@@ -1481,7 +2365,7 @@ export function ofertasConProyectoMapfre(ofertas: readonly OfertaNormalizada[], 
         ? `Se pulsó «Generar Proyecto» en Mapfre pero no se leyó el nº de proyecto (${r.motivo}): compruébalo en Mapfre.`
         : `Proyecto NO guardado en Mapfre: ${r.motivo}.`
   const ref = r.estado === 'generado' ? r.numero : null
-  return ofertas.map((o) => ({ ...o, referenciaPortal: ref ?? o.referenciaPortal, avisos: [...o.avisos, aviso] }))
+  return ofertas.map((o) => ({ ...o, referenciaPortal: ref ?? o.referenciaPortal, avisos: [...o.avisos, aviso, ...(r.estado === 'no_generado' ? [] : (r.avisos ?? []))] }))
 }
 const SEL_DIALOGO_OCUPADO = 'mat-dialog-container, [role="dialog"], [role="alertdialog"]'
 
@@ -1661,7 +2545,7 @@ export async function precioDesdeObjetoAsegurado(
   nsei: Page,
   form: FormularioAuto,
   vehiculo: VehiculoConfirmado,
-  ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirMatSelect' | 'cerrarClubMapfre'> & Partial<Pick<ContextoPortal, 'generarProyectoMapfre' | 'adjuntarPdf' | 'log' | 'buscarDescargaProyectoAuto' | 'pulsarDescargaProyectoAuto'>>,
+  ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirMatSelect' | 'cerrarClubMapfre'> & Partial<Pick<ContextoPortal, 'pulsar' | 'leerOpcionesComercialesMapfre' | 'elegirOpcionComercialMapfre' | 'generarProyectoMapfre' | 'cerrarControlesTecnicosMapfre' | 'adjuntarPdf' | 'log' | 'buscarDescargaProyectoAuto' | 'pulsarDescargaProyectoAuto'>>,
   esperaPrimasMs = ESPERA_PRIMAS_MS,
   supuestos: string | null = null,
 ): Promise<ResultadoAdaptador> {
@@ -1679,26 +2563,93 @@ export async function precioDesdeObjetoAsegurado(
   const sinHist = await planFigurasSinHistorial(nsei, f, plan, ctx.formador)
   const planFig = sinHist.plan
   await rellenarCamposTexto(nsei, planDelPaso(planFig, 'figuras', [SEL_HISTORIAL.siniestrosRc5]), respaldo)
-  await rellenarMatSelects(nsei, { escribibles: planDelPaso(planFig, 'figuras').escribibles.filter((o) => o.sel !== SEL_LICENCIA.clasePermiso), pendientes: [] }, ctx, respaldo)
-  const diagnosticoPoliza = sinHist.omitido ? null : await historialAnterior(nsei, f, ctx.formador)
+  // v0.8.33: si Mapfre no pinta ningún control de compañía anterior (la toma de su consulta de historial), no se atasca: se sigue con un AVISO en la oferta.
+  const tieneOpCompania = planDelPaso(planFig, 'figuras').escribibles.some((o) => o.sel === SEL_HISTORIAL.companiaAnterior)
+  const sinControlCompania = tieneOpCompania && (await companiaAnteriorSinControl(nsei, ctx.pulsar))
+  if (sinControlCompania) ctx.formador?.log('mapfre_compania_anterior_no_pedida', {})
+  await rellenarMatSelects(nsei, { escribibles: planDelPaso(planFig, 'figuras').escribibles.filter((o) => o.sel !== SEL_LICENCIA.clasePermiso && !(sinControlCompania && o.sel === SEL_HISTORIAL.companiaAnterior)), pendientes: [] }, ctx, respaldo)
+  const historial = sinHist.omitido ? { diagnostico: null, polizaTecleada: false } : await historialAnteriorConPoliza(nsei, f, ctx.formador)
+  const diagnosticoPoliza = historial.diagnostico
   // v0.8.4: los siniestros, AL FINAL del historial (como la grabación: compañía → nº de póliza → salir). Con 0 y el campo
   // deshabilitado (estado natural del portal) no se tocan; con >0 y deshabilitado → atasco + hueco (no hay forma grabada).
-  await rellenarCamposTexto(nsei, { escribibles: planDelPaso(planFig, 'figuras').escribibles.filter((o) => o.sel === SEL_HISTORIAL.siniestrosRc5), pendientes: [] }, respaldo)
+  // v0.8.32: sin `app-historial-siniestralidad` (no existe en esta variante) y con «Siniestros» de `app-info-descuentos` DESHABILITADO, la siniestralidad la
+  // FIJA Mapfre (solo se edita con «modificación manual», que no se toca): no se escribe, se lee en Coberturas y queda un AVISO en el resultado.
+  const opsSiniestros = planDelPaso(planFig, 'figuras').escribibles.filter((o) => o.sel === SEL_HISTORIAL.siniestrosRc5)
+  const fijaMapfre = opsSiniestros.length > 0 && !(await apareceEn(nsei, SEL_HISTORIAL.siniestrosRc5, 0)) && (await siniestralidadFijadaPorMapfre(nsei))
+  if (fijaMapfre) ctx.formador?.log('mapfre_siniestralidad_fijada_por_mapfre', {})
+  else await rellenarCamposTexto(nsei, { escribibles: opsSiniestros, pendientes: [] }, respaldo)
   exigirPasoCompleto(planFig, 'figuras')
   await continuar(nsei, ctx, 'figuras')
   const primas = await esperarPrimasMapfre(nsei, ctx, esperaPrimasMs)
+  // v0.8.48: diagnóstico de TODAS las tarjetas vistas (también las no ofertadas). Solo lectura; si falla, el aviso lo dice y el precio sigue.
+  let vistos: Awaited<ReturnType<typeof leerProductosVistosMapfre>> | null = null
+  let errorVistos = false
+  let variantes: ResultadoVariantesMapfre = { primas: [], garantias: new Map(), restaurado: true, notas: [] }
+  const leerCom = ctx.leerOpcionesComercialesMapfre
+  const elegirCom = ctx.elegirOpcionComercialMapfre
+  try {
+    vistos = await leerProductosVistosMapfre(nsei, leerCom ? (i) => leerCom(nsei, i) : undefined)
+  } catch (e) {
+    if (e instanceof EmisionBloqueadaError || e instanceof ErrorSelectorComercialAlteradoMapfre) throw e
+    errorVistos = true
+  }
+  // v0.8.51 · ORDEN: las variantes «BASICar» se prueban DESPUÉS de leer las primas, generar el proyecto, bajar el PDF y leer las garantías de las ofertas base, para que un fallo de
+  // variantes nunca cuente contra el proyecto ni las garantías (run real 49569458: una restauración sin verificar abortó el proyecto → TERCEROS sin garantías). Una violación del guard se relanza.
+  const probarVariantes = async (): Promise<void> => {
+    if (!vistos || !leerCom || !elegirCom) return
+    const v = vistos
+    try {
+      const inaccesible = await coberturasAccesiblesMapfre(nsei, v.productos)
+      if (inaccesible) { variantes = { primas: [], garantias: new Map(), restaurado: true, notas: [`variantes comerciales no probadas: «Coberturas» ya no está a la vista como se leyó (${inaccesible})`] }; return }
+      variantes = await tarificarVariantesComercialesMapfre(nsei, v.productos, primas, (pg, i, o, perm) => elegirCom(pg, i, o, perm), Date.now, leerTarjetasMapfre, { leer: leerDialogosMapfre, ...(ctx.cerrarControlesTecnicosMapfre ? { cerrarControlesTecnicos: (pg: Page) => ctx.cerrarControlesTecnicosMapfre!(pg) } : {}) })
+    } catch (e) {
+      if (e instanceof EmisionBloqueadaError) throw e
+      variantes = { primas: [], garantias: new Map(), restaurado: false, notas: [`variantes comerciales: error inesperado (${e instanceof Error ? limpiarMensajePortalDiagnosticoHasta(e.message, 80) : 'error'}); selección original NO verificada`] }
+    }
+  }
+  // La siniestralidad se lee ya (pantalla de Coberturas intacta), antes de cualquier clic posterior.
+  const avisoSiniestro = fijaMapfre ? avisoSiniestralidadMapfre(await leerSiniestralidadMapfre(nsei), Number.isInteger(form.siniestrosUltimos5Anios) ? form.siniestrosUltimos5Anios : null) : null
+  // v0.8.39: garantías de la pantalla «Coberturas» (solo lectura, ANTES de «Generar Proyecto»); sirven si el PDF no llega o no se lee.
+  let garantiasPantalla: CoberturasPorProducto = new Map()
+  try { garantiasPantalla = await leerGarantiasPantallaMapfre(nsei, primas.map((p) => p.producto)) } catch { /* sin garantias de pantalla: queda el PDF o el aviso */ }
   // 18/10/2026: lo que Mapfre USÓ, leído del portal: el CP de circulación del paso 2 y la fila de vehículo confirmada (Mapfre da
   // marca + modelo + versión en un solo texto). Localidad: NSEI no la pide para el riesgo → null.
   const cpPortal = await nsei.locator(SEL_OBJETO.cpCirculacion).first().inputValue({ timeout: 2_000 }).catch(() => null)
   const usados = { codigoPostal: cpPortal, localidad: null, vehiculo: { marca: null, modelo: null, version: null, denominacion: vehiculo?.denominacion ?? null } }
   // v0.8.14: «Generar Proyecto» DESPUÉS de leer (el precio ya está a salvo). Una violación del guard se relanza (fail-closed).
-  const proyecto: ResultadoProyecto = ctx.generarProyectoMapfre
+  // v0.8.51: ya NO se condiciona a las variantes (van después); un fallo al restaurar solo deja un aviso.
+  // v0.8.56: las variantes «BASICar» van AQUÍ (tras leer base y garantías de pantalla, antes del proyecto): tras «Generar Proyecto» los selectores ya no están visibles (run 62b16ad0 y siguientes).
+  await probarVariantes()
+  const proyecto: ResultadoProyecto = !variantes.restaurado
+    ? { estado: 'no_generado', motivo: 'no se generó el proyecto: no se pudo verificar la selección original de las tarjetas tras probar variantes comerciales' }
+    : ctx.generarProyectoMapfre
     ? await ctx.generarProyectoMapfre(nsei, (p) => completarFormularioProyectoMapfre(p, form, ctx))
     : { estado: 'no_generado', motivo: 'el runner no trae la puerta de «Generar Proyecto»' }
   ctx.formador?.log('mapfre_generar_proyecto', { estado: proyecto.estado })
   // v0.8.23: PDF del proyecto guardado (botón «Imprimir/Descargar proyecto»); si no llega, aviso y el precio/proyecto se devuelven igual.
-  const pdfProyecto = await descargarProyectoAuto(nsei, ctx, 'mapfre', 'proyecto-mapfre-auto.pdf', proyecto.estado === 'generado')
-  return { ofertas: ofertasConPdfProyecto(ofertasConProyectoMapfre(conDatosUsados(ofertasDesdePrimasMapfre(primas, null, supuestos, diagnosticoPoliza), usados), proyecto), pdfProyecto), vehiculoConfirmado: vehiculo }
+  // v0.8.39: se guardan los bytes del PDF para leer de él las garantías (el contrato de salida no cambia: `PdfRef` en `oferta.pdf`).
+  let bytesPdf: Uint8Array | null = null
+  const adjuntar = ctx.adjuntarPdf
+  const ctxPdf = { ...ctx, adjuntarPdf: adjuntar ? (nombre: string, contenido: Uint8Array) => { bytesPdf = contenido; return adjuntar(nombre, contenido) } : undefined }
+  // v0.8.43: con el diálogo de alta ya respondido, se espera a que desaparezca su capa (cdk-overlay-backdrop) antes de buscar «picture_as_pdf».
+  const capaLibre = await esperarSinCapaOverlay(nsei)
+  if (!capaLibre) ctx.log?.('mapfre: la capa cdk-overlay-backdrop sigue visible tras la espera; se intenta la descarga igualmente')
+  const pdfProyecto = await descargarProyectoAuto(nsei, ctxPdf, 'mapfre', 'proyecto-mapfre-auto.pdf', proyecto.estado === 'generado')
+  const nombresProductos = primas.map((p) => p.producto)
+  const nombresConVariantes = [...nombresProductos, ...variantes.primas.map((p) => p.producto)]
+  let garantiasPdf: CoberturasPorProducto = new Map()
+  let lineasPdf = 0
+  let lineasTextoPdf: string[] = []
+  try { if (bytesPdf) { const lineas = textoALineas(textoDePdf(Buffer.from(bytesPdf))).filter((l) => l.trim() !== ''); lineasPdf = lineas.length; lineasTextoPdf = lineas; garantiasPdf = coberturasPorProducto(lineas, nombresProductos, filasDePdf(Buffer.from(bytesPdf))) } } catch { /* PDF ilegible: queda la pantalla */ }
+  ctx.log?.(`mapfre: garantías ${garantiasPdf.size} producto(s) del PDF, ${garantiasPantalla.size} de la pantalla`)
+  // v0.8.51: variantes comerciales AL FINAL (proyecto, PDF y garantías base ya a salvo), en la misma pantalla de Coberturas si sigue a la vista.
+  for (const [k, v] of variantes.garantias) if (!garantiasPantalla.has(k)) garantiasPantalla.set(k, v)
+  const avisoVistos = vistos ? avisoProductosVistosMapfre(vistos.productos, vistos.controles, variantes.notas) : errorVistos ? 'Productos vistos en Coberturas: no se pudo leer la lista de tarjetas (diagnóstico no disponible).' : ''
+  const avisosExtra = [avisoVistos, ...(sinControlCompania ? [AVISO_COMPANIA_ANTERIOR_NO_PEDIDA] : []),...(avisoSiniestro ? [avisoSiniestro] : [])]
+  // v0.8.43: si algún producto queda sin garantías, el aviso dice POR QUÉ (PDF no bajado / sin texto / sin sección del producto / pantalla vacía).
+  const diagGarantias = diagnosticoGarantiasMapfre({ pdfBytes: bytesPdf ? (bytesPdf as Uint8Array).length : null, pdfLineas: lineasPdf, deLaPdf: garantiasPdf, deLaPantalla: garantiasPantalla, productos: nombresConVariantes, lineasPdf: lineasTextoPdf })
+  // v0.8.36: señal «nº de póliza anterior tecleado» en cada oferta (asegura decide la firmeza; el valor nunca viaja).
+  return { ofertas: conPolizaAnteriorTecleada(ofertasConPdfProyecto(ofertasConProyectoMapfre(ofertasConGarantiasMapfre(conDatosUsados(ofertasDesdePrimasMapfre([...primas, ...variantes.primas], null, supuestos, diagnosticoPoliza, avisosExtra), usados), garantiasPdf, garantiasPantalla, diagGarantias, lineasTextoPdf.length > 0 ? estructuraPdfMapfre(lineasTextoPdf, nombresProductos) : undefined), proyecto), pdfProyecto), historial.polizaTecleada), vehiculoConfirmado: vehiculo }
 }
 
 /**
@@ -1711,7 +2662,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.24',
+  version: '0.8.58',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada
@@ -1724,14 +2675,14 @@ export const mapfreAuto = {
     await login(page, ctx)
     await ctx.trasLogin()
     const nsei = await abrirTarificacionRapidaAuto(page, { pulsar: ctx.pulsar, pausa: ctx.pausa, pulsarEnlaceEntrada, formador: ctx.formador, credenciales: ctx.credenciales, log: ctx.log })
-    await pasoDatosBasicos(nsei, form, ctx)
+    const avisoFechaEfecto = await pasoDatosBasicos(nsei, form, ctx)
     const { vehiculo: vehiculoConfirmado, supuestoVersion } = await consultarVehiculoPorMatriculaConSupuesto(nsei, form.matricula, ctx, undefined, { page: nsei, formador: ctx.formador }, form)
     ctx.log('vehiculo confirmado')
     // 18/10/2026: los antecedentes SUPUESTOS (favorables) van detrás del supuesto del vehículo, en el mismo aviso.
     // Conductor = tomador sin `tomadorEsConductor` (solo pasa con la fecha de nacimiento de la ficha igual: `exigirConductorEsTomador`):
     // SUPUESTO declarado, no dato.
     const conductor = supuestoConductorTomador(form)
-    return precioDesdeObjetoAsegurado(nsei, form, vehiculoConfirmado, ctx, undefined, textoSupuestos([...(supuestoVersion ? [supuestoVersion] : []), ...(clasePermisoNsei(form).supuesto ? [SUPUESTO_CLASE_PERMISO_MOTO] : []), ...(conductor ? [conductor] : []), ...conAntecedentesFavorables(form).supuestos]))
+    return precioDesdeObjetoAsegurado(nsei, form, vehiculoConfirmado, ctx, undefined, textoSupuestos([...(avisoFechaEfecto ? [avisoFechaEfecto] : []), ...(supuestoVersion ? [supuestoVersion] : []), ...(clasePermisoNsei(form).supuesto ? [SUPUESTO_CLASE_PERMISO_MOTO] : []), ...(conductor ? [conductor] : []), ...conAntecedentesFavorables(form).supuestos]))
   },
 } as const
 

@@ -560,23 +560,28 @@ export const MAX_BYTES_HTML = 2 * 1024 * 1024
 
 export type ConfigFly = { token: string; app: string; imagen: string; apiUrl: string }
 
-export function configFly(env: Record<string, string | undefined>): { ok: true; cfg: ConfigFly } | { ok: false; faltan: string[] } {
+/**
+ * `imagenBd` (27/10/2026): imagen de producción leída de `seguros.tarificador_imagen` y YA validada (`elegirImagenProduccion`).
+ * Con ella, `TARIFICADOR_FLY_IMAGE` no hace falta (es el respaldo); sin ella, se exige como antes.
+ */
+export function configFly(env: Record<string, string | undefined>, imagenBd: string | null = null): { ok: true; cfg: ConfigFly } | { ok: false; faltan: string[] } {
   const leer = (k: string) => (env[k] ?? '').trim()
-  const faltan = ['FLY_API_TOKEN', 'TARIFICADOR_FLY_APP', 'TARIFICADOR_FLY_IMAGE', 'TARIFICADOR_API_URL'].filter((k) => !leer(k))
+  const deBd = (imagenBd ?? '').trim()
+  const faltan = ['FLY_API_TOKEN', 'TARIFICADOR_FLY_APP', ...(deBd ? [] : ['TARIFICADOR_FLY_IMAGE']), 'TARIFICADOR_API_URL'].filter((k) => !leer(k))
   if (faltan.length) return { ok: false, faltan }
   return {
     ok: true,
-    cfg: { token: leer('FLY_API_TOKEN'), app: leer('TARIFICADOR_FLY_APP'), imagen: leer('TARIFICADOR_FLY_IMAGE'), apiUrl: leer('TARIFICADOR_API_URL') },
+    cfg: { token: leer('FLY_API_TOKEN'), app: leer('TARIFICADOR_FLY_APP'), imagen: deBd || leer('TARIFICADOR_FLY_IMAGE'), apiUrl: leer('TARIFICADOR_API_URL') },
   }
 }
 
 /**
  * La petición a la API de Fly Machines que crea la máquina de UN trabajo. El `env` sale de la lista
- * blanca de `envDeMaquina` (JOB_ID + URL + `TARIFICADOR_EXPLORADOR_VISTA` si vale dom|aria|ambas, que recibe el llamador del env del servidor): ni DATABASE_URL, ni CODEOSCOPIC_*, ni el Bearer, ni
+ * blanca de `envDeMaquina` (JOB_ID + URL + `TARIFICADOR_EXPLORADOR_VISTA` si vale dom|aria|ambas, y `MAPFRE_HOGAR_ACTIVO` solo si es exactamente 'true'; los recibe el llamador del env del servidor): ni DATABASE_URL, ni CODEOSCOPIC_*, ni el Bearer, ni
  * credenciales de portal (esas son fly secrets de la app del worker).
  */
-export function peticionMaquina(cfg: ConfigFly, jobId: string, vistaExplorador?: string | null): { url: string; init: { method: 'POST'; headers: Record<string, string>; body: string } } {
-  const env = envDeMaquina({ jobId, apiUrl: cfg.apiUrl, vistaExplorador })
+export function peticionMaquina(cfg: ConfigFly, jobId: string, vistaExplorador?: string | null, mapfreHogarActivo?: string | null): { url: string; init: { method: 'POST'; headers: Record<string, string>; body: string } } {
+  const env = envDeMaquina({ jobId, apiUrl: cfg.apiUrl, vistaExplorador, mapfreHogarActivo })
   const body = {
     name: `tarificar-${jobId.slice(0, 8)}`,
     region: REGION_FLY,

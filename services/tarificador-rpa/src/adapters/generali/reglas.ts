@@ -15,6 +15,7 @@ import {
   type Combustible,
   type FormularioAuto,
 } from '@central/module-tarificacion'
+import { CONCEPTOS_LECTURA, regexPalabras, terminosDe, textosMayus, type Concepto } from '../../vocabulario.ts'
 
 /**
  * Código del MEDIADOR que se elige en la cascada de «Seleccionar mediador» (Alberto, 18/10/2026). Es el código de la
@@ -343,6 +344,52 @@ export function esOpcionOtrosModeloGenerali(texto: string): boolean {
   return !esOpcionVaciaCatalogo(texto) && normalizarCatalogo(texto).split(' ')[0] === OPCION_OTROS_MODELO_GENERALI
 }
 
+/** v0.2.62 · ¿Es la opción de cierre «Otras versiones ...» (o «Otros …») del desplegable «Versión»? PURA. */
+export function esOpcionOtrasVersionesGenerali(texto: string): boolean {
+  return !esOpcionVaciaCatalogo(texto) && ['OTRAS', 'OTROS'].includes(normalizarCatalogo(texto).split(' ')[0] ?? '')
+}
+
+/**
+ * v0.2.66 · ¿La lista de «Versión» CAMBIÓ de contenido tras «Otras versiones ...»? Compara el CONJUNTO de textos normalizados (no el nº de opciones: el portal puede
+ * recargar otras versiones con el mismo nº) e ignora el orden. Cambió = conjunto distinto Y queda alguna versión real (ni vacía ni «Otras…»). PURA.
+ */
+export function listaVersionCambiadaGenerali(antes: readonly string[], ahora: readonly string[]): boolean {
+  const firma = (l: readonly string[]) => [...new Set(l.map(normalizarCatalogo).filter((x) => x !== ''))].sort().join('\u0001')
+  if (firma(antes) === firma(ahora)) return false
+  return ahora.some((x) => !esOpcionVaciaCatalogo(x) && !esOpcionOtrasVersionesGenerali(x))
+}
+
+/** v0.2.67 · Lo que dice una fila del panel de «Versión» además del texto: puertas («5P») y año de la fecha de lanzamiento. `null` = no consta. */
+export type DetalleVersionGenerali = { puertas: number | null; anioLanzamiento: number | null }
+
+/**
+ * v0.2.67 · Puertas y año de lanzamiento de las celdas de una fila del panel de «Versión» (Versión | Puertas | F. lanzamiento; trabajo f84801ce).
+ * Solo celdas con la forma EXACTA («5P», «2014-10-01» o «01/10/2014»); la primera (el texto de la versión) no se mira. PURA.
+ */
+export function detalleFilaPanelVersionGenerali(celdas: readonly string[]): DetalleVersionGenerali {
+  let puertas: number | null = null
+  let anioLanzamiento: number | null = null
+  for (const c of celdas.slice(1)) {
+    const t = (c ?? '').replace(/\s+/g, ' ').trim()
+    const p = /^([2-9])\s*P(?:TAS?|UERTAS)?$/i.exec(t)
+    if (p && puertas === null) puertas = Number(p[1])
+    const f = /^((?:19|20)\d{2})-\d{2}-\d{2}$/.exec(t) ?? /^\d{1,2}\/\d{1,2}\/((?:19|20)\d{2})$/.exec(t)
+    if (f && anioLanzamiento === null) anioLanzamiento = Number(f[1])
+  }
+  return { puertas, anioLanzamiento }
+}
+
+/**
+ * v0.2.67 · Año máximo de lanzamiento compatible con el vehículo: el de 1ª matriculación (una versión lanzada después es imposible) y el año de la
+ * referencia + 1 (tolerancia de año-modelo). Sin ninguno → `null` (no se filtra nada). PURA.
+ */
+export function anioTopeLanzamientoGenerali(fechaMatriculacion: string | null | undefined, anioReferencia: number | null | undefined): number | null {
+  const m = typeof fechaMatriculacion === 'string' && /^(19|20)\d{2}-/.test(fechaMatriculacion) ? Number(fechaMatriculacion.slice(0, 4)) : null
+  const r = typeof anioReferencia === 'number' && Number.isInteger(anioReferencia) ? anioReferencia + 1 : null
+  if (m === null) return r
+  return r === null ? m : Math.min(m, r)
+}
+
 /**
  * La opción decidida está PUESTA en el `<select>` oculto cuando su valor Y el texto de la opción seleccionada son los de la elegida
  * (normalizados). Solo el valor no basta: si «Seleccione uno» y «Otros modelos ...» comparten valor, el valor «casa» sin elegir nada. PURA.
@@ -413,6 +460,32 @@ export function camposNuevosSelectorGenerali(antes: readonly string[], ahora: re
 /** «Etiqueta [tipo]: op1 | op2 …» de cada campo nuevo, para el hueco (con tope). PURA. */
 export function resumenCamposSelectorGenerali(campos: readonly CampoSelectorGenerali[], max = 1500): string {
   const t = campos.map((c) => `«${c.etiqueta || '(sin etiqueta)'}» [${c.tipo}]${c.opciones.length ? ` (${c.total}): ${c.opciones.join(' | ')}` : ''}`).join(' ; ')
+  return t.length > max ? `${t.slice(0, max - 1)}…` : t
+}
+
+// ───────────── v0.2.38: estado del selector ANTES de «Confirmar» (prueba real 27/10/2026 con 0.2.37: «Confirmar» sin validar y sin mensajes) ─────────────
+
+/** Un control visible del selector con su estado, SIN valores (solo etiquetas): `vacio` = sin elección/texto; `requerido` = marcado como obligatorio por el portal. */
+export type EstadoControlSelectorGenerali = { clave: string; etiqueta: string; tipo: string; vacio: boolean; requerido: boolean }
+export type EstadoSelectorGenerali = { controles: EstadoControlSelectorGenerali[]; filas: number; filasSeleccionadas: number }
+
+/**
+ * Lo que impide pulsar «Confirmar» con sentido: un grupo que el bot rellenó (combustible / potencia) que quedó SIN marcar (el AJAX de la versión
+ * lo repintó), el desplegable «Versión» vuelto a «Seleccione una», o una tabla de versiones sin fila seleccionada. `claves` = campos que el bot explicó.
+ * Devuelve las etiquetas (sin valores). Los demás vacíos solo van al diagnóstico. PURA.
+ */
+export function vaciosAntesDeConfirmarGenerali(estado: EstadoSelectorGenerali, claves: ReadonlySet<string>): string[] {
+  const out = estado.controles.filter((c) => c.vacio && claves.has(c.clave)).map((c) => `${c.etiqueta || '(sin etiqueta)'} [${c.tipo}]`)
+  if (estado.filas > 0 && estado.filasSeleccionadas === 0) out.push('fila de la tabla de versiones [sin seleccionar]')
+  return out
+}
+
+/** «vacíos/obligatorios: «X» [tipo] vacío·obligatorio …; versión: elegida|SIN elegir|no hay desplegable; tabla: n filas (m marcadas)». Solo etiquetas. PURA. */
+export function resumenEstadoSelectorGenerali(estado: EstadoSelectorGenerali, max = 700): string {
+  const lista = estado.controles.filter((c) => c.vacio || c.requerido).map((c) => `«${c.etiqueta || '(sin etiqueta)'}» [${c.tipo}] ${c.vacio ? 'vacío' : 'relleno'}${c.requerido ? '·obligatorio' : ''}`)
+  const ver = estado.controles.find((c) => c.tipo === 'desplegable' && /^versi[oó]n(es)?\s*:?\s*$/i.test(c.etiqueta.trim()))
+  const v = ver ? (ver.vacio ? 'SIN elegir' : 'elegida') : 'no hay desplegable'
+  const t = `campos vacíos/obligatorios: ${lista.length ? lista.join(' ; ') : '(ninguno)'}; versión: ${v}; tabla de versiones: ${estado.filas} filas (${estado.filasSeleccionadas} marcadas)`
   return t.length > max ? `${t.slice(0, max - 1)}…` : t
 }
 
@@ -535,6 +608,90 @@ export function potenciaExactaGenerali(
   if (!noLoSe) return { tipo: 'sin_exacta' }
   const que = cv === null ? 'la potencia del vehículo no consta en el riesgo' : `la potencia del riesgo (${Math.round(cv)} CV) no figura entre las opciones del selector de Generali`
   return { tipo: 'no_lo_se', texto: noLoSe, supuesto: `${que}: se marcó «${noLoSe}» (supuesto; revisar en la emisión)` }
+}
+
+/**
+ * v0.2.68 (02/11/2026, trabajo real con la 0.2.67): el grupo «potencia» puede salir DESPUÉS de elegir la versión. Con CV (referencia o riesgo): la
+ * opción exacta; si no está, la MÁS CERCANA (empate → la primera) con supuesto; sin CV: «No lo sé» con supuesto. `null` = no hay con qué decidir
+ * (sin CV y sin «No lo sé»). PURA.
+ */
+export function potenciaTardiaGenerali(opciones: readonly string[], cv: number | null): { texto: string; supuesto: string | null } | null {
+  const conCv = opciones.map((o) => ({ o, n: cvDePotenciaGenerali(o) })).filter((x): x is { o: string; n: number } => x.n !== null)
+  if (cv !== null && conCv.length > 0) {
+    const ex = potenciaExactaGenerali(opciones, cv)
+    if (ex.tipo === 'exacta') return { texto: ex.texto, supuesto: null }
+    let mejor = conCv[0]!
+    for (const x of conCv.slice(1)) if (Math.abs(x.n - cv) < Math.abs(mejor.n - cv)) mejor = x
+    return { texto: mejor.o, supuesto: `la potencia del vehículo (${Math.round(cv)} CV) no figura entre las opciones del selector de Generali: se marcó la más cercana «${mejor.o}» (supuesto; revisar en la emisión)` }
+  }
+  const noLoSe = opciones.find(esOpcionNoLoSeGenerali)
+  if (!noLoSe) return null
+  return { texto: noLoSe, supuesto: `la potencia del vehículo no consta en la referencia ni en el riesgo: se marcó «${noLoSe}» (supuesto; revisar en la emisión)` }
+}
+
+// ───────────── v0.2.36: combustible y potencia DEDUCIDOS del texto de la versión (hipótesis: sin ellos Generali no calcula) ─────────────
+
+/** Texto de la versión del riesgo (descripción de la selección o denominación confirmada), o `null`. PURA. */
+export function textoVersionRiesgoGenerali(form: FormVehiculoRiesgo): string | null {
+  return textoVersionRiesgo(form)
+}
+
+const RE_DIESEL_MOTOR = regexPalabras(terminosDe(CONCEPTOS_LECTURA.combustible_motor as Concepto, { grupos: ['diesel'] }), { mayus: true })
+const RE_GASOLINA_MOTOR = regexPalabras(terminosDe(CONCEPTOS_LECTURA.combustible_motor as Concepto, { grupos: ['gasolina'] }), { mayus: true })
+
+/** Combustible por las siglas de motor de la versión («2.9 CRDI 163 FULL» → diésel). Solo si UNA familia casa; mezcla o nada → `null`. PURA. */
+export function combustibleDeVersionGenerali(texto: string | null | undefined): Combustible | null {
+  const n = normalizarCatalogo(texto ?? '')
+  if (n === '') return null
+  const d = RE_DIESEL_MOTOR.test(n)
+  const g = RE_GASOLINA_MOTOR.test(n)
+  return d === g ? null : d ? 'diesel' : 'gasolina'
+}
+
+/**
+ * CV de la versión: «NNN CV» explícito (único), o exactamente UN entero de 40–700 suelto («2.9 CRDI 163 FULL» → 163; la cilindrada «2.9» y los
+ * decimales no cuentan). Dos o más candidatos, o ninguno → `null`. PURA.
+ */
+export function potenciaDeVersionGenerali(texto: string | null | undefined): number | null {
+  const n = normalizarCatalogo(texto ?? '')
+  if (n === '') return null
+  const explicitos = new Set([...n.matchAll(/(?<![0-9.])(\d{2,3})\s*CV\b/g)].map((m) => Number(m[1])))
+  if (explicitos.size > 0) {
+    const v = [...explicitos].filter((x) => x >= 40 && x <= 700)
+    return v.length === 1 && explicitos.size === 1 ? v[0]! : null
+  }
+  const sueltos = new Set([...n.matchAll(/(?<![0-9.])(\d{2,3})(?![0-9.])(?!\s*(?:CC|KG|KW|L|V|P)\b)/g)].map((m) => Number(m[1])).filter((x) => x >= 40 && x <= 700))
+  return sueltos.size === 1 ? [...sueltos][0]! : null
+}
+
+/** Aviso de supuesto cuando se rellenaron combustible y/o potencia a partir de la versión. PURA. */
+export function avisoDeducidoDeVersionGenerali(version: string, combustible: boolean, potencia: boolean): string {
+  const que = combustible && potencia ? 'combustible/potencia deducidos' : combustible ? 'combustible deducido' : 'potencia deducida'
+  return `${que} de la versión «${version.slice(0, 80)}» (supuesto; revisar en la emisión)`
+}
+
+/**
+ * Combustible deducido de la versión: SOLO si existe UNA opción del portal que casa exacta con el combustible deducido (no «No lo sé»).
+ * Si no, `null` (se mantiene la decisión de siempre). PURA.
+ */
+export function opcionCombustibleDeVersionGenerali(opciones: readonly string[], version: string | null): string | null {
+  const c = combustibleDeVersionGenerali(version)
+  if (!c) return null
+  const casan = opciones.filter((o) => !esOpcionNoLoSeGenerali(o) && normalizarCombustible(o) === c)
+  return casan.length === 1 ? casan[0]! : null
+}
+
+/** Potencia deducida de la versión: SOLO la opción «NNN CV» cuyo valor entero es EXACTAMENTE el deducido (nunca la parecida). `null` si no. PURA. */
+export function opcionPotenciaDeVersionGenerali(opciones: readonly string[], version: string | null): string | null {
+  const cv = potenciaDeVersionGenerali(version)
+  if (cv === null) return null
+  const r = potenciaExactaGenerali(opciones, cv)
+  return r.tipo === 'exacta' ? r.texto : null
+}
+
+/** ¿Se rellenaron combustible y potencia con datos (ninguno quedó en «No lo sé»)? Se mira en los avisos de supuesto. PURA. */
+export function combustiblePotenciaRellenosGenerali(avisos: readonly string[]): boolean {
+  return !avisos.some((a) => /«No lo sé»/.test(a) && /combustible|potencia/i.test(a))
 }
 
 /** Lo que se sabe del riesgo para elegir la versión del desplegable. `persona` = elección de la bandeja (manda). */
@@ -724,11 +881,13 @@ export function resumenPantallaGenerali(p: PantallaLeida, max = 1400): string {
  * de TEXTO vacío y único por etiqueta; lo demás se registra y no se toca.
  */
 export const ETIQUETAS_RIESGO_GENERALI = Object.freeze({
-  fechaNacimiento: ['FECHA DE NACIMIENTO', 'FECHA NACIMIENTO', 'F NACIMIENTO'],
-  fechaCarne: ['FECHA DE CARNE', 'FECHA CARNE', 'FECHA DE CARNET', 'FECHA CARNET', 'FECHA EXPEDICION CARNE', 'FECHA EXPEDICION CARNET', 'FECHA DE EXPEDICION DEL CARNE', 'FECHA DE EXPEDICION DEL CARNET', 'FECHA EXPEDICION PERMISO', 'FECHA DE EXPEDICION DEL PERMISO'],
-  codigoPostal: ['CODIGO POSTAL', 'C P', 'CP'],
-  aniosAsegurado: ['ANOS ASEGURADO', 'ANOS ASEGURADOS', 'ANOS DE ASEGURAMIENTO', 'ANOS ASEGURADO ANTERIOR', 'ANOS EN LA COMPANIA ANTERIOR'],
-  siniestros: ['SINIESTROS ULTIMOS 5 ANOS', 'N SINIESTROS ULTIMOS 5 ANOS', 'NUMERO DE SINIESTROS', 'SINIESTROS CON CULPA ULTIMOS 5 ANOS'],
+  // 26/10/2026: los sinónimos salen de `vocabulario.ts` (conceptos de lectura `fecha_nacimiento`, `fecha_carne`, `codigo_postal`, `anios_asegurado`,
+  // `siniestros_5_anios`): lo que se aprenda ahí vale para los demás bots. Aquí solo en MAYÚSCULAS, como las compara `claveEtiquetaRiesgoGenerali`.
+  fechaNacimiento: textosMayus(CONCEPTOS_LECTURA.fecha_nacimiento as Concepto, 'etiqueta_exacta'),
+  fechaCarne: textosMayus(CONCEPTOS_LECTURA.fecha_carne as Concepto, 'etiqueta_exacta'),
+  codigoPostal: textosMayus(CONCEPTOS_LECTURA.codigo_postal as Concepto, 'etiqueta_exacta'),
+  aniosAsegurado: textosMayus(CONCEPTOS_LECTURA.anios_asegurado as Concepto, 'etiqueta_exacta'),
+  siniestros: textosMayus(CONCEPTOS_LECTURA.siniestros_5_anios as Concepto, 'etiqueta_exacta'),
 } as const)
 export type ClaveRiesgoGenerali = keyof typeof ETIQUETAS_RIESGO_GENERALI
 
@@ -766,10 +925,13 @@ export function valorRiesgoGenerali(
 
 /** Importes en formato español (1.234,56 € · 1234,56€ · € 1.234,56 · 1.234 €), dentro de una línea. */
 const RE_IMPORTE_EN_LINEA = /(?:€\s*)?\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?\s*(?:€|eur(?:os)?\b)?|(?:€\s*)?\d+(?:,\d{1,2})\s*(?:€|eur(?:os)?\b)?|(?:€\s*)?\d+\s*(?:€|eur(?:os)?\b)|€\s*\d+/gi
-const RE_LINEA_PRECIO = /\b(PRIMA|PRIMAS|PRECIO|IMPORTE|TOTAL|A PAGAR|RECIBO|COSTE|CONTADO|ANUAL)\b/
-const RE_LINEA_TOTAL = /\bTOTAL\b/
+// 26/10/2026: los rótulos de precio salen de `vocabulario.ts` (conceptos de lectura `precio`, `precio_total`, `importe_ajeno`…), con su origen. El texto
+// de aquí está en MAYÚSCULAS sin tildes (`normalizarCatalogo`): `mayus` construye los mismos patrones que antes.
+const MAYUS = { mayus: true } as const
+const RE_LINEA_PRECIO = regexPalabras(terminosDe(CONCEPTOS_LECTURA.precio), MAYUS)
+const RE_LINEA_TOTAL = regexPalabras(terminosDe(CONCEPTOS_LECTURA.precio_total), MAYUS)
 /** Líneas con importes que NO son el precio (capitales, franquicias, valores del vehículo, límites). */
-const RE_LINEA_NO_PRECIO = /\b(FRANQUICIA|CAPITAL|SUMA ASEGURADA|LIMITE|VALOR|ACCESORIOS|INDEMNIZACION|KM|KILOMETROS)\b/
+const RE_LINEA_NO_PRECIO = regexPalabras(terminosDe(CONCEPTOS_LECTURA.importe_ajeno), MAYUS)
 /** Horquilla sensata de una prima anual de turismo: fuera de ella no se cree el número. */
 export const PRIMA_MIN_GENERALI_EUR = 30
 export const PRIMA_MAX_GENERALI_EUR = 20_000
@@ -784,7 +946,7 @@ export function importeEspanolEur(texto: string): number | null {
 }
 
 export type LecturaPrecioGenerali =
-  | { tipo: 'unico'; eur: number; linea: string; avisos?: string[] }
+  | { tipo: 'unico'; eur: number; linea: string; avisos?: string[]; /** v0.2.69: TODAS las modalidades con importe de la tabla (solo si son 2 o más). */ modalidades?: { modalidad: string; eur: number; marcada: boolean }[] }
   | { tipo: 'ninguno' }
   | { tipo: 'varios'; candidatos: { eur: number; linea: string }[] }
 
@@ -797,9 +959,9 @@ export function esPantallaGarantiasCapitalesGenerali(texto: string): boolean {
 /** v0.2.30: marca que `JS_IMPORTES_TABLA` pone delante de la etiqueta de una fila marcada/seleccionada. */
 export const MARCA_FILA_SELECCIONADA_GENERALI = '[SEL]'
 /** v0.2.30: etiquetas extra (solo en la pantalla de garantías): cuota. «Prima neta/total», «recibo», «anual», «a pagar» ya contaban. */
-const RE_LINEA_PRECIO_GARANTIAS = /\b(CUOTA|CUOTAS)\b/
+const RE_LINEA_PRECIO_GARANTIAS = regexPalabras(terminosDe(CONCEPTOS_LECTURA.precio_cuota), MAYUS)
 /** v0.2.30: línea de prima total anual (la que se elige si hay varias). */
-const RE_LINEA_TOTAL_ANUAL = /\b(TOTAL ANUAL|ANUAL TOTAL|PRIMA ANUAL|CUOTA ANUAL)\b/
+const RE_LINEA_TOTAL_ANUAL = regexPalabras(terminosDe(CONCEPTOS_LECTURA.precio_total_anual), MAYUS)
 
 /**
  * Lector TOLERANTE del precio en el texto visible de «Garantías y Resultados» (sin captura de esa pantalla, v0.2.0). Busca
@@ -926,6 +1088,175 @@ export function avisosObligatorioGenerali(texto: string): string[] {
   return [...vistos].slice(0, 8)
 }
 
+/**
+ * v0.2.42: estado del cálculo en el marco de «Valoración Riesgo» (`emiAutosGenB028.do`), SIN valores de campos: avisos del bloque `#areaErrores`
+ * de Genernet, campos marcados obligatorios («*») que siguen vacíos, botones/enlaces visibles y si el marco seguía cargando.
+ */
+export interface EstadoCalculoGenerali {
+  /** Textos de `#areaErrores li` (p. ej. «El paso anterior no tiene los datos completos», «No se puede calcular con datos incompletos»). */
+  avisos: string[]
+  /** Etiquetas de los campos obligatorios vacíos del marco a la vista (sin valores). */
+  obligatoriosVacios: string[]
+  /** `name` de los controles de esos obligatorios vacíos (sin valores): para saber cuáles son decisión de Alberto. */
+  nombresVacios?: string[]
+  /** Botones/enlaces visibles del marco (rótulos). */
+  botones: string[]
+  /** ¿Algún marco seguía cargando (`loading.html` visible o `document.readyState` ≠ complete)? null = no se pudo saber. */
+  cargando: boolean | null
+  /** v0.2.63: ¿había a la vista algún bloque de decisión de «Garantías y Resultados» (suma de abogado, verificación del riesgo, forma de pago)? undefined/null = no se sabe. */
+  bloquesVisibles?: boolean | null
+}
+
+/** v0.2.42: opciones de «Forma de pago a contratar» que el robot puede pedir (texto EXACTO del portal). */
+export const FORMAS_PAGO_GENERALI = ['Anual', 'Semestral', 'Trimestral'] as const
+
+/**
+ * v0.2.42 (decisión de Alberto, 27/10/2026): forma de pago a elegir. ANUAL por defecto; si el riesgo trae una explícita (`formaPago` o
+ * `fraccionamiento`), esa, si es exactamente anual/semestral/trimestral (sin mayúsculas/tildes); otra cosa → `error` (no se adivina). PURA.
+ */
+export function formaPagoPedidaGenerali(form: unknown): { etiqueta: (typeof FORMAS_PAGO_GENERALI)[number]; porDefecto: boolean } | { error: string } {
+  const f = (form ?? {}) as { formaPago?: unknown; fraccionamiento?: unknown }
+  const bruto = f.formaPago ?? f.fraccionamiento
+  if (bruto === null || bruto === undefined || String(bruto).trim() === '') return { etiqueta: 'Anual', porDefecto: true }
+  const t = String(bruto).normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase()
+  const e = FORMAS_PAGO_GENERALI.find((x) => x.toLowerCase() === t)
+  return e ? { etiqueta: e, porDefecto: false } : { error: `la forma de pago del riesgo «${String(bruto).slice(0, 30)}» no es ${FORMAS_PAGO_GENERALI.join('/')}` }
+}
+
+/** v0.2.42: índice de la opción cuyo texto es EXACTAMENTE `etiqueta` (solo se recortan espacios); -1 si no hay exactamente una. PURA. */
+export function opcionExactaGenerali(opciones: readonly string[], etiqueta: string): number {
+  const i = opciones.map((o) => String(o ?? '').replace(/\s+/g, ' ').trim()).flatMap((o, k) => (o === etiqueta ? [k] : []))
+  return i.length === 1 ? i[0]! : -1
+}
+
+/**
+ * v0.2.42 (decisión de Alberto): obligatorios de «Garantías y Resultados» que el robot NO decide (por el `name` del control): «Envío e-mail»
+ * (`opcEnvio`) y «Verificación del riesgo» (`verifRiesgo`). PURA.
+ */
+export function decisionesPendientesGenerali(nombres: readonly string[]): string[] {
+  const out: string[] = []
+  if (nombres.some((n) => /opcEnvio|opcenv/i.test(n))) out.push('Envío e-mail')
+  if (nombres.some((n) => /verifRiesgo|zvriep/i.test(n))) out.push('Verificación del riesgo')
+  if (nombres.some((n) => /ysuabo/i.test(n))) out.push('Suma libre elección de abogado')
+  return out
+}
+
+/** v0.2.63: aviso de la oferta cuando el bot elige la suma de libre elección de abogado (importe más alto ofrecido). Lleva «supuesto» → precio `estimado`. */
+export const AVISO_SUMA_ABOGADO_GENERALI = 'Supuesto: suma libre elección de abogado'
+
+/**
+ * v0.2.63 (trabajo 7f358ff2): `select#reg1063E_general_ysuabo` queda en «Seleccione una suma asegurada» y el portal no calcula. Elige la opción cuyo TEXTO
+ * es el importe MÁS ALTO (por texto, no por `value`: «1.000 €» > «750 €» > «500 €»). Sin opciones con importe, o con el máximo repetido → null (no se adivina). PURA.
+ */
+export function elegirSumaAbogadoGenerali(opciones: readonly string[]): { indice: number; importeEur: number; texto: string } | null {
+  const cand: { indice: number; importeEur: number; texto: string }[] = []
+  opciones.forEach((o, indice) => {
+    const texto = String(o ?? '').replace(/\s+/g, ' ').trim()
+    const m = /^(\d{1,3}(?:\.\d{3})+|\d+)(?:,\d{1,2})?\s*(?:€|eur(?:os)?)$/i.exec(texto)
+    if (!m) return
+    const importeEur = Number(m[1]!.replace(/\./g, ''))
+    if (Number.isFinite(importeEur) && importeEur > 0) cand.push({ indice, importeEur, texto })
+  })
+  if (cand.length === 0) return null
+  const max = Math.max(...cand.map((c) => c.importeEur))
+  const top = cand.filter((c) => c.importeEur === max)
+  return top.length === 1 ? top[0]! : null
+}
+
+/** v0.2.63: texto del aviso para la oferta, con el importe elegido en formato español (p. ej. «1.000 €»). PURA. */
+export function avisoSumaAbogadoGenerali(texto: string): string {
+  return `${AVISO_SUMA_ABOGADO_GENERALI} = ${texto.replace(/\s+/g, ' ').trim()} (la más alta ofrecida)`
+}
+
+/** v0.2.42: ¿los avisos del portal dicen que faltan datos («datos incompletos», «no tiene los datos completos»)? Entonces Generali NO calcula. PURA. */
+export function portalDatosIncompletosGenerali(avisos: readonly string[]): boolean {
+  return avisos.some((a) => /datos\s+incompletos|no\s+tiene\s+los\s+datos\s+completos|paso\s+anterior\s+no\s+tiene/i.test(a))
+}
+
+/**
+ * v0.2.70 (trabajo a42d9628): obligatorios de «Garantías y Resultados» que el bot rellena con un valor NEUTRO si (y solo si) están VACÍOS, antes de «Recalcular».
+ * Rótulo y `name` del HTML real (volcado redactado del mismo flujo). Cada uno deja su aviso «Supuesto: …» (precio `estimado`). «Prima máxima …» NO está:
+ * es de solo lectura (la calcula el portal) y nunca se toca.
+ */
+export type NeutroGarantiasGenerali = { name: string; rotulo: string; tipo: 'opciones' | 'texto'; valor: string; aviso: string }
+export const NEUTROS_GARANTIAS_GENERALI: readonly NeutroGarantiasGenerali[] = [
+  { name: 'reg1063E.general.zletdv', rotulo: '¿Quieres reparar los daños de tu vehículo en nuestros talleres Concertados?', tipo: 'opciones', valor: 'No', aviso: 'Supuesto: talleres concertados = No (cobertura estándar)' },
+  { name: 'reg1063E.general.zletdl', rotulo: '¿Quieres reparar los daños de las lunas de tu vehículo en talleres de reparación de Lunas concertados?', tipo: 'opciones', valor: 'No', aviso: 'Supuesto: lunas en talleres concertados = No (se mantiene la modalidad)' },
+  { name: 'reg1063E.general.zleabo', rotulo: '¿Deseas reducir la suma asegurada para libre elección de Abogado?', tipo: 'opciones', valor: 'No', aviso: 'Supuesto: reducir suma de abogado = No' },
+  { name: 'reg1063E.general.xrdcom', rotulo: 'Recargo o descuento comercial', tipo: 'texto', valor: '0', aviso: 'Supuesto: recargo o descuento comercial = 0 (sin recargo ni descuento)' },
+]
+
+/** Estado leído de UN campo de la tabla anterior (nunca su valor: solo si está vacío). */
+export type EstadoNeutroGarantiasGenerali = { rotulo: string; opciones: readonly { texto: string; marcada: boolean }[]; vacio: boolean; soloLectura: boolean }
+export type DecisionNeutroGarantiasGenerali = { accion: 'nada' } | { accion: 'marcar'; indice: number } | { accion: 'escribir'; valor: string } | { accion: 'error'; motivo: string }
+
+/** v0.2.70: qué hacer con un campo neutro. Ya puesto o de solo lectura → nada; rótulo distinto o sin la opción EXACTA → error que lo nombra (nada a ciegas). PURA. */
+export function decidirNeutroGarantiasGenerali(n: NeutroGarantiasGenerali, e: EstadoNeutroGarantiasGenerali): DecisionNeutroGarantiasGenerali {
+  const rot = String(e.rotulo ?? '').replace(/\s+/g, ' ').replace(/\*\s*$/, '').trim()
+  if (rot !== n.rotulo) return { accion: 'error', motivo: `el campo «${n.rotulo.slice(0, 110)}» (el bloque se rotula «${sanearFragmentoGenerali(rot).slice(0, 60)}»)` }
+  if (e.soloLectura) return { accion: 'nada' }
+  if (n.tipo === 'opciones') {
+    if (e.opciones.some((o) => o.marcada)) return { accion: 'nada' }
+    const i = opcionExactaGenerali(e.opciones.map((o) => o.texto), n.valor)
+    if (i < 0) return { accion: 'error', motivo: `la opción «${n.valor}» de «${n.rotulo.slice(0, 60)}» (opciones vistas: ${e.opciones.map((o) => `«${sanearFragmentoGenerali(o.texto).slice(0, 30)}»`).join(' · ') || '(ninguna)'})` }
+    return { accion: 'marcar', indice: i }
+  }
+  return e.vacio ? { accion: 'escribir', valor: n.valor } : { accion: 'nada' }
+}
+
+/**
+ * v0.2.70: diagnóstico tras «Recalcular» con el portal aún en «datos incompletos»: los obligatorios que siguen vacíos (solo rótulos, saneados, nunca valores).
+ * Sin ninguno detectado y con el aviso «El paso anterior…», dice que el hueco está en «Datos de Valoración». PURA.
+ */
+export function resumenTrasRecalcularGenerali(avisos: readonly string[], vaciosGarantias: readonly string[], vaciosValoracion: readonly string[] = []): string | null {
+  if (!portalDatosIncompletosGenerali(avisos)) return null
+  const s = (xs: readonly string[]) => [...new Set(xs.map((x) => sanearFragmentoGenerali(String(x ?? '').replace(/\*\s*$/, '')).trim().slice(0, 60)).filter(Boolean))].slice(0, 12)
+  const g = s(vaciosGarantias)
+  const v = s(vaciosValoracion)
+  const pasoAnterior = avisos.some((a) => /paso\s+anterior/i.test(a))
+  const partes = [`tras «Recalcular» el portal sigue con «datos incompletos»; obligatorios aún vacíos en «Garantías y Resultados»: ${g.length ? g.map((x) => `«${x}»`).join(' · ') : '(ninguno detectado)'}`]
+  if (v.length) partes.push(`en «Datos de Valoración»: ${v.map((x) => `«${x}»`).join(' · ')}`)
+  if (pasoAnterior) partes.push('el aviso «El paso anterior no tiene los datos completos» apunta a «Datos de Valoración», no a esta pestaña')
+  return partes.join('; ')
+}
+
+/** v0.2.42: etiquetas de los campos obligatorios VACÍOS de una pantalla leída (sin «*», saneadas, sin repetir, máx. 12). PURA. */
+export function obligatoriosVaciosGenerali(campos: readonly { etiqueta: string; obligatorio: boolean; valor: string }[]): string[] {
+  const out: string[] = []
+  for (const c of campos) {
+    // v0.2.44: un desplegable que sigue en «Seleccione…» está VACÍO (antes contaba como relleno).
+    if (!c.obligatorio || (c.valor !== 'vacío' && !/^seleccione\b/i.test(c.valor))) continue
+    const e = sanearFragmentoGenerali(String(c.etiqueta ?? '').replace(/\*\s*$/, '')).trim().slice(0, 60)
+    if (e && !out.includes(e)) out.push(e)
+    if (out.length >= 12) break
+  }
+  return out
+}
+
+/**
+ * v0.2.42: bloque del atasco con el estado del cálculo (va JUSTO tras «Recalcular», el runner corta a 2000). Avisos y etiquetas pasan por
+ * `sanearFragmentoGenerali`; nunca hay valores de campos. `vaciosValoracion` = obligatorios vacíos de «Datos de Valoración» al salir de ella. PURA.
+ */
+export function resumenEstadoCalculoGenerali(e: EstadoCalculoGenerali | null, vaciosValoracion: readonly string[], max = 600, avisosValoracion: readonly string[] = []): string {
+  const s = (x: string, n: number) => sanearFragmentoGenerali(x).trim().slice(0, n)
+  const avisos = [...new Set((e?.avisos ?? []).map((a) => s(a, 120)).filter(Boolean))].slice(0, 6)
+  const partes: string[] = []
+  partes.push(`Avisos del portal (areaErrores): ${avisos.length ? avisos.map((a) => `«${a}»`).join(' · ') : '(ninguno visible)'}`)
+  if (portalDatosIncompletosGenerali(avisos)) partes.push('el portal da los datos por INCOMPLETOS y no calcula hasta completarlos')
+  partes.push(`obligatorios vacíos en «Datos de Valoración»: ${vaciosValoracion.length ? vaciosValoracion.map((x) => s(x, 60)).join(' · ') : '(ninguno detectado)'}`)
+  // v0.2.44: avisos que el portal pintaba en «Datos de Valoración» al salir de ella (solo textos de la interfaz).
+  const avV = [...new Set(avisosValoracion.map((a) => s(a, 100)).filter(Boolean))].slice(0, 4)
+  if (avV.length) partes.push(`avisos en «Datos de Valoración»: ${avV.map((a) => `«${a}»`).join(' · ')}`)
+  const vacios = (e?.obligatoriosVacios ?? []).map((x) => s(x, 60)).filter(Boolean)
+  // v0.2.63: sin bloques de decisión a la vista (detector fuera de la pestaña) «ninguno» NO es una afirmación: se dice que no era evaluable.
+  const sinBloques = e?.bloquesVisibles === false
+  partes.push(`obligatorios vacíos en «Garantías y Resultados»: ${vacios.length ? vacios.join(' · ') : sinBloques ? '(no evaluable: bloques de «Garantías y Resultados» no visibles)' : '(ninguno detectado)'}`)
+  partes.push(`cargando: ${e?.cargando === true ? 'sí' : e?.cargando === false ? 'no' : '¿?'}`)
+  const botones = (e?.botones ?? []).map((x) => s(x, 30)).filter(Boolean)
+  partes.push(`botones/enlaces del marco: ${botones.length ? botones.join(' · ') : '(ninguno)'}`)
+  return `Estado del cálculo: ${partes.join('; ')}`.slice(0, max)
+}
+
 /** Quita lo que puede ser dato personal de un fragmento de texto (NIF/NIE/CIF, fechas, correos, teléfonos, matrículas, CP). PURA. */
 export function sanearFragmentoGenerali(t: string): string {
   return String(t ?? '')
@@ -987,7 +1318,8 @@ export function resumenVolcadoResultadosGenerali(v: readonly VolcadoMarcoResulta
 /** Lo que lee el navegador de un marco: cabeceras de las tablas visibles e importes con su etiqueta de fila/celda. */
 export type DiagnosticoImportesMarcoGenerali = { cabeceras: string[][]; importes: { etiqueta: string; importe: string }[] }
 /** Vocabulario de etiquetas de dinero/garantías que SÍ se enseñan; cualquier otra etiqueta (podría ser un nombre) sale como «(otra)». */
-const RE_VOCABULARIO_IMPORTE_GENERALI = /\b(PRIMA|PRIMAS|CUOTA|CUOTAS|RECIBO|RECIBOS|TOTAL|NETA|NETO|ANUAL|ANUALES|SEMESTRAL|TRIMESTRAL|MENSUAL|CONTADO|FRACCIONADO|PAGAR|IMPORTE|PRECIO|IMPUESTO|IMPUESTOS|RECARGO|RECARGOS|CONSORCIO|TASA|TASAS|DESCUENTO|BONIFICACION|BONUS|MALUS|COMISION|FRANQUICIA|CAPITAL|CAPITALES|GARANTIA|GARANTIAS|COBERTURA|COBERTURAS|MODALIDAD|OPCION|CONCEPTO|DESCRIPCION|TODO RIESGO|TERCEROS|AMPLIADO|BASICO|COMPLETO|LUNAS|ROTURA|ROBO|INCENDIO|ASISTENCIA|DEFENSA|OCUPANTES|ACCIDENTES|SEGURO|SEGUROS|COLISION|COLISIONES|AVERIAS)\b/
+// 26/10/2026: la lista blanca sale de `vocabulario.ts` (concepto de lectura `dinero_diagnostico`).
+const RE_VOCABULARIO_IMPORTE_GENERALI = regexPalabras(terminosDe(CONCEPTOS_LECTURA.dinero_diagnostico), { mayus: true })
 const RE_ETIQUETA_LIMPIA_GENERALI = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ .\/()%-]{1,40}$/
 
 /** Etiqueta saneada: solo letras, corta y del vocabulario de dinero/garantías; si no, «(otra)». PURA. */
@@ -1075,11 +1407,14 @@ export function leerModalidadesGenerali(filas: readonly FilaModalidadGenerali[],
     if (eur !== null) cands.push({ eur, modalidad: nombre(f), marcada: f.marcada, porFila: f.porFila === true })
   }
   if (cands.length === 0) return { tipo: 'ninguno' }
+  // v0.2.69 (Alberto: «todas las opciones posibles»): todas las modalidades con importe, sin repetir nombre+importe, para ofrecerlas como ofertas separadas.
+  const unicas = cands.filter((c, i) => cands.findIndex((o) => o.modalidad === c.modalidad && o.eur === c.eur) === i)
+  const modalidades = unicas.length > 1 ? { modalidades: unicas.map((c) => ({ modalidad: c.modalidad, eur: c.eur, marcada: c.marcada })) } : {}
   const marcadas = cands.filter((c) => c.marcada)
   if (marcadas.length > 0) {
     const eurs = [...new Set(marcadas.map((c) => c.eur))]
     if (eurs.length > 1) return { tipo: 'varios', candidatos: marcadas.map((c) => ({ eur: c.eur, linea: `${c.modalidad} Recibo Anual` })) }
-    return { tipo: 'unico', eur: marcadas[0]!.eur, linea: `${marcadas[0]!.modalidad} Recibo Anual`, ...(marcadas[0]!.porFila ? { avisos: [AVISO_POR_FILA_GENERALI] } : {}) }
+    return { tipo: 'unico', eur: marcadas[0]!.eur, linea: `${marcadas[0]!.modalidad} Recibo Anual`, ...(marcadas[0]!.porFila ? { avisos: [AVISO_POR_FILA_GENERALI] } : {}), ...modalidades }
   }
   const orden = [...cands].sort((a, b) => a.eur - b.eur)
   const el = orden[0]!
@@ -1087,7 +1422,7 @@ export function leerModalidadesGenerali(filas: readonly FilaModalidadGenerali[],
   const avisos = [`Modalidad no marcada en la tabla: se toma la más barata (${el.modalidad})`]
   if (el.porFila) avisos.push(AVISO_POR_FILA_GENERALI)
   if (otras.length > 0) avisos.push(`Otras modalidades: ${otras.map((c) => `${c.modalidad} ${formatoEurGenerali(c.eur)}`).join('; ')}`)
-  return { tipo: 'unico', eur: el.eur, linea: `${el.modalidad} Recibo Anual`, avisos }
+  return { tipo: 'unico', eur: el.eur, linea: `${el.modalidad} Recibo Anual`, avisos, ...modalidades }
 }
 
 /** Contenido crudo de una celda de importe, saneado: solo dígitos/separadores/€ (máx. 20); con letras «(texto)»; vacío «∅». PURA. */
@@ -1122,6 +1457,33 @@ export function resumenModalidadesGenerali(v: VolcadoModalidadesGenerali | null,
   // Si no cabe, se recortan primero los botones y después las filas.
   const rec = base.length >= max ? base : `${base}${bot}`
   return `${rec.slice(0, max - 1)}…`
+}
+
+/** v0.2.35: por marco, URL sin query, nº de tablas, cuántas contienen «Recibo Anual»/«Prima Anualidad» y la estructura saneada de la tabla de modalidades. */
+export type DiagnosticoModalidadesMarcoGenerali = {
+  url: string; tablas: number; conRecibo: number; estructura: string
+  /** v0.2.37: segunda tabla del marco (clase, filas del primer tbody, filas totales, celdas de las primeras filas, celdas con forma de importe). */
+  segunda?: { clase: string; filasTbody: number; filas: number; celdas: string; importes: number } | null
+  /** v0.2.37: nº de tr/tbody con id «gridmodseg» fuera del thead, y los primeros ids. */
+  gridFuera?: number; gridIds?: string
+}
+
+/** Resumen del diagnóstico ampliado de modalidades: «Marcos N: [i] ruta tablas=T recibo=R estructura: …». Saneado y truncado a `max`. PURA. */
+export function resumenDiagnosticoModalidadesGenerali(d: readonly DiagnosticoModalidadesMarcoGenerali[], max = 700): string {
+  const base = d.map((m, i) => {
+    const ruta = sanearFragmentoGenerali(String(m.url ?? '').split(/[?#;]/)[0]!.replace(/^https?:\/\/[^/]+/, '')).slice(-60)
+    const seg = m.segunda ? ` 2ª[${sanearFragmentoGenerali(m.segunda.clase).slice(0, 20) || 'sin-clase'} tbody=${m.segunda.filasTbody} filas=${m.segunda.filas} celdas=${sanearFragmentoGenerali(m.segunda.celdas).slice(0, 14)} imp=${m.segunda.importes}]` : ''
+    const grid = (m.gridFuera ?? 0) > 0 ? ` gridmodseg-fuera=${m.gridFuera}${m.gridIds ? `(${sanearFragmentoGenerali(m.gridIds).slice(0, 40)})` : ''}` : ''
+    return { cab: `[${i}] ${ruta || '/'} tablas=${m.tablas} con-Recibo/Prima=${m.conRecibo}${seg}${grid}`, est: m.estructura ? sanearFragmentoGenerali(m.estructura).slice(0, 600) : '' }
+  })
+  const armar = (tope: number): string => `Marcos (${d.length}): ${base.map((b) => b.cab + (b.est && tope > 0 ? ` estructura: ${b.est.slice(0, tope)}` : '')).join(' | ') || 'ninguno'}`
+  // v0.2.36: primero se recorta la ESTRUCTURA (lo menos importante); la lista de marcos con ruta y tablas va entera mientras quepa.
+  for (const tope of [600, 400, 250, 120, 0]) {
+    const t = armar(tope)
+    if (t.length <= max) return t
+  }
+  const t = armar(0)
+  return t.slice(0, Math.max(0, max - 1)) + '…'
 }
 
 // ───────────────────────── v0.2.28 · inventario de controles de navegación de TODOS los marcos ─────────────────────────
@@ -1478,4 +1840,656 @@ export function mensajesValidacionGenerali(textos: readonly string[], max = 6): 
     if (out.length >= max) break
   }
   return out
+}
+
+// ─── v0.2.45 (28/10/2026, trabajo dbbd7ab5 con 0.2.44): «Datos de Valoración» deja vacíos «Tipo de vehículo» y «Compañía de procedencia» ───
+// Las opciones reales de esos dos `<select>` no se han capturado nunca (los volcados son de «Garantías y Resultados»): se casan EN VIVO contra las
+// opciones del portal, solo por igualdad EXACTA (sin tildes, mayúsculas ni espacios de más). Sin opción exacta → el bot para nombrando el campo y las
+// opciones vistas; nunca elige otra clase de vehículo ni otra compañía.
+
+export const ETIQUETA_TIPO_VEHICULO_GENERALI = 'Tipo de vehículo'
+export const ETIQUETA_COMPANIA_PROCEDENCIA_GENERALI = 'Compañía de procedencia'
+/** Ramo auto = turismo: la ÚNICA opción admitida (normalizada). */
+export const OPCION_TIPO_VEHICULO_AUTO_GENERALI = 'Turismo'
+/** Rótulos EXACTOS (normalizados) de «sin seguro anterior» que se aceptan SOLO si la ficha dice 0 años asegurado. */
+export const OPCIONES_SIN_SEGURO_GENERALI: readonly string[] = Object.freeze(['sin seguro anterior', 'sin compania anterior', 'sin compania de procedencia', 'sin seguro previo', 'sin aseguramiento previo', 'no tenia seguro', 'no tenia seguro anterior'])
+
+/** Texto de opción normalizado (sin tildes, minúsculas, espacios colapsados, sin punto final). PURA. */
+export function normalizarOpcionGenerali(t: string | null | undefined): string {
+  return String(t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().replace(/\.$/, '').toLowerCase()
+}
+
+/** Índice de la ÚNICA opción cuyo texto normalizado es exactamente uno de `buscados`; -1 si ninguna o varias. PURA. */
+export function indiceOpcionNormalizadaGenerali(opciones: readonly string[], buscados: readonly string[]): number {
+  const b = buscados.map(normalizarOpcionGenerali)
+  const ix = opciones.map((o, i) => (b.includes(normalizarOpcionGenerali(o)) ? i : -1)).filter((i) => i >= 0)
+  return ix.length === 1 ? ix[0]! : -1
+}
+
+export type CompaniaProcedenciaPedida = { compania: string } | { sinSeguro: true } | { error: string }
+
+/**
+ * Qué poner en «Compañía de procedencia» según la FICHA (riesgo original, nunca el supuesto favorable): la compañía anterior/actual
+ * (`companiaAnterior` → `companiaActual`); sin ella y con 0 años asegurado como DATO → «sin seguro anterior»; si no, error que nombra el campo. PURA.
+ */
+export function companiaProcedenciaPedidaGenerali(compania: string | null, aniosAseguradoAnterior: unknown): CompaniaProcedenciaPedida {
+  if (compania && compania.trim() !== '') return { compania: compania.trim() }
+  if (aniosAseguradoAnterior === 0) return { sinSeguro: true }
+  return { error: `la ficha no trae la compañía anterior del vehículo (ni dice que no tuviera seguro): hace falta para «${ETIQUETA_COMPANIA_PROCEDENCIA_GENERALI}»` }
+}
+
+// ───────────────────────── 5 · selector de vehículos que tarda en pintarse (v0.2.46) ─────────────────────────
+
+/** Estado de carga de un marco, SIN contenido: ruta saneada, `document.readyState`, nº de controles y de caracteres del `body`. */
+export type MarcoCargaGenerali = { ruta: string; listo: string | null; controles: number | null; texto: number | null }
+
+/** Ruta sin query, sin fragmento y sin `;jsessionid=…` (nunca viaja la sesión en un mensaje). PURA. */
+export function rutaMarcoSaneadaGenerali(url: string): string {
+  if (/^(about|data|blob):/i.test(url)) return url.split(/[?#,]/)[0]!
+  return rutaSinQuery(url).replace(/;jsessionid=[^/?#]*/gi, '')
+}
+
+/** ¿Es el marco del «Selector de vehículos» (`mot_motorWeb/mvc/selVehiculo`)? PURA. */
+export function esMarcoSelectorVehiculoGenerali(url: string): boolean {
+  return /\/selVehiculo(?:[;/?#.]|$)/i.test(rutaMarcoSaneadaGenerali(url))
+}
+
+/**
+ * Prueba real 28/10/2026 (trabajo bf5707a8, 0.2.45): tras «Vehículo» el `mainFrame` YA estaba en `selVehiculo` pero seguía
+ * CARGANDO (solo `<head>`, sin `<body>`) a los 20 s. Eso no es una pantalla nueva: se espera más. Decide si se sigue
+ * esperando (hay un marco del selector a medio cargar) o no (no hay ninguno: es otra cosa y se para). PURA.
+ */
+export function selectorVehiculoCargandoGenerali(marcos: readonly MarcoCargaGenerali[]): boolean {
+  return marcos.some((m) => esMarcoSelectorVehiculoGenerali(m.ruta) && (m.listo !== 'complete' || !m.texto))
+}
+
+/** Mensaje (para `ErrorMapaIncompletoGenerali`) cuando el «Selector de vehículos» no se ve: inventario de marcos SIN valores. PURA. */
+export function motivoSelectorVehiculoNoVistoGenerali(marcos: readonly MarcoCargaGenerali[], segundos: number, botones: readonly string[]): string {
+  const selector = marcos.filter((m) => esMarcoSelectorVehiculoGenerali(m.ruta))
+  const n = (x: number | null) => (x === null ? '?' : String(x))
+  const inv = marcos
+    .filter((m) => !/^about:|vimeo\.com/i.test(m.ruta))
+    .map((m) => `${m.ruta || '(vacío)'} [${m.listo ?? '?'}; ${n(m.controles)} controles; ${n(m.texto)} caracteres]`)
+    .join(' | ')
+    .slice(0, 900)
+  const b = [...new Set(botones)].join(' · ').slice(0, 400) || '(ninguno)'
+  const que = selector.length === 0
+    ? `ningún marco abrió «selVehiculo» en ${segundos} s`
+    : selector.some((m) => m.listo !== 'complete' || !m.texto)
+      ? `el marco «selVehiculo» seguía CARGANDO (sin cuerpo pintado) tras ${segundos} s`
+      : `el marco «selVehiculo» cargó pero no muestra el texto «Selector de vehículos» tras ${segundos} s`
+  return `la pantalla «Selector de vehículos» tras pulsar «Vehículo» (captura 5): ${que}. Marcos: ${inv || '(ninguno)'}. Botones vistos: ${b}`
+}
+
+// ───────────────────────── «Datos personas»: bloqueo del refresco del NIF (v0.2.47) ─────────────────────────
+
+/** Control de «Datos personas» leído SIN valor: id sin prefijo, si está deshabilitado y su atributo `controlbloqueo` de Genernet. */
+export type ControlBloqueoGenerali = { id: string; deshabilitado: boolean; bloqueo: string | null }
+
+/**
+ * Prueba real 28/10/2026 (trabajo ec49068b, 0.2.46): al salir del NIF, su `onchange` (`TratarDependiente(… '/refreshSelPersonas.do')`) lanza
+ * un refresco y Genernet DESHABILITA todo el formulario marcando cada control con `controlbloqueo="1"` hasta que vuelve la respuesta (el volcado:
+ * NIF, tipo de persona, nombre, apellidos, sexo, fechas… todos `disabled` con `controlbloqueo="1"`). El bot leyó a los 1,5 s y vio
+ * «deshabilitado». Devuelve los controles que siguen BLOQUEADOS por ese refresco (deshabilitado + `controlbloqueo="1"`). PURA.
+ */
+export function bloqueadosDatosPersonasGenerali(controles: readonly ControlBloqueoGenerali[]): string[] {
+  return controles.filter((c) => c.deshabilitado && String(c.bloqueo ?? '').trim() === '1').map((c) => c.id)
+}
+
+/**
+ * Por qué falta un dato mínimo del tomador tras rellenar (nombre, primer apellido): el riesgo no lo trae (→ dato que pedir, nunca se
+ * inventa) o el riesgo sí lo trae y el campo no se pudo escribir (motivo de `omitidos`). PURA, sin valores.
+ */
+export function motivoFaltaDatoPersonaGenerali(etiqueta: string, campo: string, enRiesgo: boolean, omitidos: readonly string[]): string {
+  if (!enRiesgo) return `${etiqueta} (el riesgo no lo trae y el portal no lo puso; no se inventa)`
+  const motivo = omitidos.find((o) => o.startsWith(`${campo}:`))?.slice(campo.length + 1)
+  return `${etiqueta} (el riesgo lo trae pero el campo no se pudo escribir: ${motivo ?? 'sin motivo leído'})`
+}
+
+// ───────────────────────── «Compañía de procedencia»: nombre de la ficha → opción del desplegable (v0.2.48) ─────────────────────────
+
+/** Palabras que no identifican a una compañía (forma jurídica, «seguros», artículos). Se quitan para comparar la razón social. */
+const PALABRAS_VACIAS_COMPANIA = new Set(['S', 'A', 'SA', 'SAU', 'SL', 'SLU', 'DE', 'DEL', 'LA', 'EL', 'LOS', 'LAS', 'Y', 'E', 'CIA', 'COMPANIA', 'SEGUROS', 'SEGURO', 'REASEGUROS', 'REASEGURO', 'SOCIEDAD', 'ANONIMA', 'SUCURSAL', 'EN'])
+
+/** Palabras significativas de una razón social: MAYÚSCULAS, sin tildes ni puntuación, sin forma jurídica ni «seguros». PURA. */
+export function palabrasCompaniaGenerali(t: string | null | undefined): string[] {
+  return String(t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim().split(' ').filter((p) => p !== '' && !PALABRAS_VACIAS_COMPANIA.has(p))
+}
+
+/**
+ * Alias de las compañías habituales: cómo puede venir en la ficha (`claves`, ya en palabras significativas), la opción EXACTA que se espera en
+ * Genernet (si no está tal cual, se cae a la regla de razón social) y la `raiz` de su razón social. Única fuente.
+ */
+export const ALIAS_COMPANIAS_GENERALI: readonly { claves: readonly string[]; opcion: string; raiz: readonly string[] }[] = Object.freeze([
+  { claves: ['ALLIANZ'], opcion: 'ALLIANZ, COMPAÑIA DE SEGUROS Y REASEGURO', raiz: ['ALLIANZ'] },
+  { claves: ['MAPFRE', 'MAPFRE ESPANA'], opcion: 'MAPFRE ESPAÑA, COMPAÑIA DE SEGUROS Y REASEGUROS', raiz: ['MAPFRE'] },
+  { claves: ['AXA', 'AXA GENERALES'], opcion: 'AXA SEGUROS GENERALES, S.A. DE SEGUROS Y REASEGUROS', raiz: ['AXA'] },
+  { claves: ['GENERALI', 'GENERALI ESPANA'], opcion: 'GENERALI ESPAÑA, S.A. DE SEGUROS Y REASEGUROS', raiz: ['GENERALI'] },
+  { claves: ['REALE', 'REALE GENERALES'], opcion: 'REALE SEGUROS GENERALES, S.A.', raiz: ['REALE'] },
+  { claves: ['LIBERTY'], opcion: 'LIBERTY SEGUROS, COMPAÑIA DE SEGUROS Y REASEGUROS, S.A.', raiz: ['LIBERTY'] },
+  { claves: ['MUTUA MADRILENA', 'MUTUA MADRILENA AUTOMOVILISTA'], opcion: 'MUTUA MADRILEÑA AUTOMOVILISTA, SOCIEDAD DE SEGUROS A PRIMA FIJA', raiz: ['MUTUA', 'MADRILENA'] },
+  { claves: ['ZURICH'], opcion: 'ZURICH INSURANCE PLC, SUCURSAL EN ESPAÑA', raiz: ['ZURICH'] },
+  { claves: ['CATALANA OCCIDENTE', 'OCCIDENTE'], opcion: 'SEGUROS CATALANA OCCIDENTE, S.A. DE SEGUROS Y REASEGUROS', raiz: ['CATALANA', 'OCCIDENTE'] },
+  { claves: ['LINEA DIRECTA', 'LINEA DIRECTA ASEGURADORA'], opcion: 'LINEA DIRECTA ASEGURADORA, S.A. COMPAÑIA DE SEGUROS Y REASEGUROS', raiz: ['LINEA', 'DIRECTA'] },
+])
+
+export type OpcionCompaniaGenerali =
+  | { indice: number; via: 'exacta' | 'alias' | 'razon_social' | 'aproximada' }
+  | { error: 'ninguna' | 'varias' | 'generico'; candidatas: string[] }
+
+/**
+ * v0.2.57 · Desempate de la compañía de procedencia cuando varias opciones casan con la MISMA marca (trabajo af1fb857: «Mapfre» → AGROPECUARIA ·
+ * AUTOMOVILES · FAMILIAR · GUANARTEME · MUTUALIDAD). Por marca (primera palabra de la raíz) y ramo: `evitar` = prefijos de palabra que descartan la
+ * opción salvo que sea la única; `preferir` = niveles de prefijos de palabra, del más al menos adecuado. Ramo o marca sin entrada → sin desempate.
+ */
+export const PREFERENCIAS_PROCEDENCIA_GENERALI: Readonly<Record<string, Readonly<Record<string, { preferir: readonly (readonly string[])[]; evitar: readonly string[] }>>>> = Object.freeze({
+  MAPFRE: { auto: { preferir: [['AUTOMOVIL'], ['FAMILIAR']], evitar: ['AGROPECUARI', 'GUANARTEME'] } },
+  MUTUA: { auto: { preferir: [['AUTOMOVIL']], evitar: [] } },
+})
+
+/**
+ * Elige UNA de las `candidatas` (misma marca) según el ramo: 1) quita las `evitar` (solo se elige una evitable si ES la única candidata, y eso ya lo
+ * resuelve la razón social); 2) recorre los
+ * niveles `preferir` y toma el primero que deje EXACTAMENTE una; 3) si tras quitar quedó una sola, esa. Si no hay forma determinista → `null`. PURA.
+ */
+export function desempatarProcedenciaGenerali(marca: string, ramo: string, candidatas: readonly string[], tabla: typeof PREFERENCIAS_PROCEDENCIA_GENERALI = PREFERENCIAS_PROCEDENCIA_GENERALI): number | null {
+  const reg = tabla[marca]?.[ramo]
+  if (!reg || candidatas.length < 2) return null
+  const tiene = (c: string, pref: readonly string[]) => palabrasCompaniaGenerali(c).some((w) => pref.some((q) => w.startsWith(q)))
+  const vivas = candidatas.map((_, i) => i).filter((i) => !tiene(candidatas[i]!, reg.evitar))
+  for (const nivel of reg.preferir) {
+    const ok = vivas.filter((i) => tiene(candidatas[i]!, nivel))
+    if (ok.length === 1) return ok[0]!
+    if (ok.length > 1) return null
+  }
+  return vivas.length === 1 ? vivas[0]! : null
+}
+
+/**
+ * Prueba real 28/10/2026 (0.2.47): la ficha dice «Allianz» y Genernet ofrece «ALLIANZ, COMPAÑIA DE SEGUROS Y REASEGURO» (y también
+ * «ALIANZA ESPAÑOLA, S.A. DE SEGUROS, LA»). Orden: 1) texto EXACTO normalizado; 2) la opción EXACTA del alias de la compañía; 3) razón social:
+ * la ÚNICA opción cuyas primeras palabras significativas son, como palabras COMPLETAS, las del nombre de la ficha (o la raíz del alias)
+ * — «ALLIANZ» nunca casa «ALIANZA». 0 o >1 candidatas → error con las candidatas (el bot para; nunca a ciegas). PURA.
+ */
+export function opcionCompaniaProcedenciaGenerali(opciones: readonly string[], compania: string, ramo?: string): OpcionCompaniaGenerali {
+  const exacta = indiceOpcionNormalizadaGenerali(opciones, [compania])
+  if (exacta >= 0) return { indice: exacta, via: 'exacta' }
+  const ficha = palabrasCompaniaGenerali(compania)
+  if (ficha.length === 0) return { error: 'ninguna', candidatas: [] }
+  const alias = ALIAS_COMPANIAS_GENERALI.find((a) => a.claves.includes(ficha.join(' ')))
+  if (alias) {
+    // EXACTA: todas las palabras (solo se ignoran tildes, mayúsculas y puntuación).
+    const entera = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim()
+    const objetivo = entera(alias.opcion)
+    const ix = opciones.map((o, i) => (entera(o) === objetivo ? i : -1)).filter((i) => i >= 0)
+    if (ix.length === 1) return { indice: ix[0]!, via: 'alias' }
+  }
+  // Primero el nombre de la ficha tal cual; solo si no casa ninguna, la raíz del alias (más corta, más ambigua).
+  const porRaiz = (r: readonly string[]) => opciones.map((o, i) => { const p = palabrasCompaniaGenerali(o); return r.every((w, k) => p[k] === w) ? i : -1 }).filter((i) => i >= 0)
+  let ix = porRaiz(ficha)
+  if (ix.length === 0 && alias) ix = porRaiz(alias.raiz)
+  // Revisión 0.2.48: sin alias, UNA sola palabra («Mutua», «Mutual»…) es genérica: nunca se elige; se para con las candidatas.
+  if (!alias && ficha.length < 2) return { error: ix.length === 1 ? 'generico' : ix.length === 0 ? 'ninguna' : 'varias', candidatas: ix.map((i) => opciones[i]!) }
+  if (ix.length === 1) return { indice: ix[0]!, via: 'razon_social' }
+  // v0.2.57: varias de la misma marca → desempate determinista por ramo (solo si hay marca conocida); si no, el atasco de siempre.
+  if (ix.length > 1 && ramo) {
+    const marca = (alias?.raiz ?? ficha)[0] ?? ''
+    const e = desempatarProcedenciaGenerali(marca, ramo, ix.map((i) => opciones[i]!))
+    if (e !== null) return { indice: ix[e]!, via: 'aproximada' }
+  }
+  return { error: ix.length === 0 ? 'ninguna' : 'varias', candidatas: ix.map((i) => opciones[i]!) }
+}
+
+// ───────────────────────── «Datos de Valoración»: obligatorios de SOLO LECTURA vacíos (v0.2.49) ─────────────────────────
+
+/**
+ * Bloque de «Características del vehículo» leído SIN valores libres: rótulo, si es obligatorio, si es de solo lectura (`readonly`/`protegidoState`:
+ * lo pone el portal al elegir el vehículo), si está vacío y, SOLO para desplegables y radios (catálogo del portal), el texto de la opción puesta.
+ */
+export type BloqueVehiculoGenerali = { rotulo: string; obligatorio: boolean; protegido: boolean; vacio: boolean; opcion: string | null; visible: boolean }
+
+/** Rótulos de los obligatorios PROTEGIDOS y VACÍOS (el bot no puede teclearlos: los rellena el portal con el vehículo elegido). PURA. */
+export function vaciosProtegidosGenerali(bloques: readonly BloqueVehiculoGenerali[]): string[] {
+  return [...new Set(bloques.filter((b) => b.visible && b.obligatorio && b.protegido && b.vacio).map((b) => b.rotulo))]
+}
+
+/** Inventario compacto de «Características del vehículo» (sin valores libres: «con valor»/«VACÍO»; opción solo de catálogos). PURA. */
+export function resumenCaracteristicasVehiculoGenerali(bloques: readonly BloqueVehiculoGenerali[], max = 700): string {
+  const s = bloques
+    .filter((b) => b.visible && b.rotulo)
+    .map((b) => `${b.rotulo}${b.obligatorio ? '*' : ''}: ${b.opcion !== null ? `«${sanearFragmentoGenerali(b.opcion).slice(0, 40)}»` : b.vacio ? 'VACÍO' : 'con valor'}${b.protegido ? ' (solo lectura)' : ''}`)
+    .join(' · ')
+  return (s || '(sin bloques legibles)').slice(0, max)
+}
+
+// ───────────────────────── v0.2.50 · foto del selector antes de «Confirmar» (para «Tipo de vehículo» vacío) ─────────────────────────
+
+/**
+ * Prueba real 28/10/2026 (trabajo 3bbecab7, 0.2.49): tras el selector (`lnkVeh2`, «vehisphynx») el portal rellena Valor, Potencia, Plazas, C.C.,
+ * Puertas, Combustible y «Clase de vehículo», pero NO «Tipo de vehículo» (`caracVehiculo_wclasv`). El volcado no dice qué lo rellena (sin scripts,
+ * valores redactados y nunca se ha capturado el DOM del selector). Hipótesis principal: «Clase de vehículo» ↔ tarjeta «Tipo de Vehículo» (Turismo) y
+ * «Tipo de vehículo» ↔ «Subtipo de Vehículo» (Turismos), que el bot deja «como viene» sin pulsar. Esta foto (sin valores libres) va al atasco.
+ * `activos` = textos de lo que el selector pinta como marcado (clases/aria de PrimeFaces: catálogo, sin datos personales). PURA.
+ */
+export function resumenFotoSelectorGenerali(estado: EstadoSelectorGenerali, activos: readonly string[], max = 600): string {
+  const grupos = estado.controles
+    .filter((c) => c.tipo === 'grupo' || c.tipo === 'casilla' || c.tipo === 'desplegable' || c.tipo === 'select')
+    .map((c) => `${c.etiqueta || c.clave}=${c.vacio ? 'SIN marcar' : 'marcado'}${c.requerido ? '*' : ''}`)
+  const a = [...new Set(activos.map((x) => sanearFragmentoGenerali(x).slice(0, 40)).filter((x) => x !== ''))].slice(0, 15)
+  const t = `controles: ${grupos.length ? grupos.join(' · ') : '(ninguno)'}; marcados en pantalla: ${a.length ? a.map((x) => `«${x}»`).join(' · ') : '(ninguno)'}`
+  return t.length > max ? `${t.slice(0, max - 1)}…` : t
+}
+
+// ───────────────────────── v0.2.53 · mediciones DIAGNÓSTICAS de «Tipo de vehículo» (solo lectura) ─────────────────────────
+
+/** v0.2.53 · Opciones de TIPO y SUBTIPO que ofrece el selector y la marcada de cada una (catálogo). */
+export type OpcionesTipoSelectorGenerali = { tipos: readonly string[]; subtipos: readonly string[]; marcadoTipo: string | null; marcadoSubtipo: string | null }
+
+const listaCat = (xs: readonly string[]): string => `[${[...new Set(xs.map((x) => sanearFragmentoGenerali(x).slice(0, 40)).filter((x) => x !== ''))].slice(0, 12).join(' | ')}]`
+const marcadoCat = (x: string | null): string => (x ? `«${sanearFragmentoGenerali(x).slice(0, 40)}»` : 'ninguno')
+
+/** «tipos=[…] (marcado …); subtipos=[…] (marcado …)» del selector. PURA; catálogo saneado. */
+export function resumenOpcionesTipoSelectorGenerali(o: OpcionesTipoSelectorGenerali | null): string {
+  if (!o) return 'tipos=¿? ; subtipos=¿?'
+  return `tipos=${listaCat(o.tipos)} (marcado ${marcadoCat(o.marcadoTipo)}); subtipos=${listaCat(o.subtipos)} (marcado ${marcadoCat(o.marcadoSubtipo)})`
+}
+
+/** Estado de `nomiag` (campo gris del nombre del mediador): NUNCA el nombre, solo si tiene valor. PURA. */
+export function estadoNomiagGenerali(valor: string | null): 'con valor' | 'vacío' | 'sin campo' {
+  if (valor === null) return 'sin campo'
+  return valor.trim() === '' ? 'vacío' : 'con valor'
+}
+
+/**
+ * Mediciones diagnósticas acumuladas por página (todas opcionales: lo no medido sale «¿?»). `legado` y `fila` (30/10/2026, trabajo f8f473e6):
+ * estado del camino ANTIGUO de «Características del vehículo» y fila elegida en el selector (catálogo), ya resumidos por sus funciones puras.
+ */
+export type DiagTipoVehiculoGenerali = { nomiag?: string; trasSelector?: string; antesPersonas?: string; final?: string; subtipos?: string; legado?: string; fila?: string }
+
+/**
+ * 30/10/2026 (trabajo f8f473e6, 12.ª parada igual con el MISMO vehículo): HIPÓTESIS de catálogo cuando, al final, «Tipo de vehículo» (`wclasv`)
+ * sigue vacío y «Clase de vehículo» (`wclavh`) trae una clase que NO es «TURISMO» (p. ej. «TODO TERRENO»). Es una hipótesis, no un hecho:
+ * nunca se ha visto `wclasv` relleno con OTRO vehículo, así que no se descarta un fallo del bot. `final` = lectura de `leerClaseTipoGenerali`. PURA.
+ */
+export function hipotesisTipoVehiculoGenerali(final: string | undefined): string | null {
+  const m = /^vacío \(wclavh «([^»]+)»\)$/.exec(String(final ?? '').trim())
+  if (!m) return null
+  const clase = sanearFragmentoGenerali(m[1]!).trim().slice(0, 40)
+  if (!clase || normalizarCatalogo(clase) === 'TURISMO') return null
+  return `HIPÓTESIS (sin confirmar): «Tipo de vehículo» vacío con «Clase de vehículo» «${clase}» (no «TURISMO»): probable hueco del catálogo de Genernet para ESTE vehículo; contrastar a mano en Genernet o con otro vehículo`
+}
+
+/** Estado del camino ANTIGUO de «Características del vehículo» (ocultos con el selector nuevo `lnkVeh2`): textos de catálogo, nunca valores tecleados. */
+export type LegadoTipoGenerali = {
+  placa: { visible: boolean; marcada: string | null } | null
+  indique: { visible: boolean; elegida: string | null; opciones: readonly string[] } | null
+}
+
+/**
+ * «legado: Tipo de placa=«…» (oculto) · Indique Código=VACÍO (oculto; opciones: …)». `Indique Código` (`wvegen`) es OBLIGATORIO en el HTML y su
+ * `onchange` recarga el formulario (`reloadEmiAutosGenA.do`): si va vacío y oculto, el atasco lo dice. «Seleccione…» cuenta como VACÍO. PURA.
+ */
+export function resumenLegadoTipoGenerali(l: LegadoTipoGenerali | null | undefined): string {
+  if (!l) return 'legado=¿?'
+  const c = (t: string) => sanearFragmentoGenerali(t).trim().slice(0, 40)
+  const vis = (v: boolean) => (v ? 'a la vista' : 'oculto')
+  const placa = !l.placa ? 'Tipo de placa=sin campo' : `Tipo de placa=${l.placa.marcada ? `«${c(l.placa.marcada)}»` : 'SIN marcar'} (${vis(l.placa.visible)})`
+  let indique = 'Indique Código=sin campo'
+  if (l.indique) {
+    const e = l.indique.elegida && !/^SELECCION/.test(normalizarCatalogo(l.indique.elegida)) ? `«${c(l.indique.elegida)}»` : 'VACÍO'
+    const ops = l.indique.opciones.filter((o) => !/^SELECCION/.test(normalizarCatalogo(o))).map(c).filter(Boolean).slice(0, 6)
+    indique = `Indique Código=${e} (${vis(l.indique.visible)}; opciones: ${ops.length ? ops.join(' | ') : '(ninguna)'})`
+  }
+  return `legado: ${placa} · ${indique}`
+}
+
+/**
+ * «fila elegida=[Cab=celda | …]» de la tabla de versiones del selector justo antes de «Confirmar» (catálogo de Genernet: código, modelo, versión
+ * y las columnas que haya; una celda vacía sale «(vacía)»). Sin cabeceras o sin fila → «fila elegida=¿?». PURA; saneado.
+ */
+export function resumenFilaSelectorGenerali(cabeceras: readonly string[] | null | undefined, celdas: readonly string[] | null | undefined, max = 240): string {
+  if (!cabeceras?.length || !celdas?.length) return 'fila elegida=¿?'
+  const pares = celdas.slice(0, 10).map((v, i) => {
+    const cab = sanearFragmentoGenerali(cabeceras[i] ?? '').trim().slice(0, 20) || `col${i + 1}`
+    const val = sanearFragmentoGenerali(v ?? '').trim().slice(0, 50)
+    return `${cab}=${val || '(vacía)'}`
+  })
+  const t = `fila elegida=[${pares.join(' | ')}]`
+  return t.length > max ? `${t.slice(0, max - 1)}…` : t
+}
+
+/** Línea corta «diag: …» para el atasco de «Tipo de vehículo» vacío (precedida de la HIPÓTESIS de catálogo si aplica). PURA; solo catálogos y estados. */
+export function lineaDiagTipoVehiculoGenerali(d: DiagTipoVehiculoGenerali | undefined, max = 900): string {
+  const x = (s: string | undefined): string => (s === undefined ? '¿?' : sanearFragmentoGenerali(s).slice(0, 80))
+  const hip = hipotesisTipoVehiculoGenerali(d?.final)
+  const t = `${hip ? `${hip}. ` : ''}diag: nomiag=${d?.nomiag === 'con valor' || d?.nomiag === 'vacío' || d?.nomiag === 'sin campo' ? d.nomiag : '¿?'}; wclasv tras selector=${x(d?.trasSelector)}/antes personas=${x(d?.antesPersonas)}/final=${x(d?.final)}; ${d?.subtipos ? sanearFragmentoGenerali(d.subtipos).slice(0, 300) : 'subtipos=¿?'}; ${d?.legado ? sanearFragmentoGenerali(d.legado).slice(0, 220) : 'legado=¿?'}; ${d?.fila ? sanearFragmentoGenerali(d.fila).slice(0, 240) : 'fila elegida=¿?'}`
+  return t.length > max ? `${t.slice(0, max - 1)}…` : t
+}
+
+// ───────────────────────── v0.2.52 · fase de PRUEBAS acotada para «Tipo de vehículo» (`wclasv`) vacío ─────────────────────────
+
+/** Antigüedad del vehículo del riesgo para «Indique Código»: «nuevo» si se matriculó hace < 1 año; sin fecha → `null` (no se supone). PURA. */
+export function antiguedadVehiculoGenerali(fechaIso: string | null | undefined, hoy: Date): 'nuevo' | 'usado' | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(fechaIso ?? ''))
+  if (!m) return null
+  const f = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  const unAnio = Date.UTC(hoy.getUTCFullYear() - 1, hoy.getUTCMonth(), hoy.getUTCDate())
+  return f > unAnio ? 'nuevo' : 'usado'
+}
+
+/** Opción de «Indique Código» para la antigüedad: la ÚNICA «VEHICULOS NUEVOS/USADOS TURISMOS» (normalizada); -1 si no hay o hay varias. PURA. */
+export function opcionIndiqueCodigoGenerali(opciones: readonly string[], antiguedad: 'nuevo' | 'usado'): number {
+  return indiceOpcionNormalizadaGenerali(opciones, [antiguedad === 'nuevo' ? 'vehiculos nuevos turismos' : 'vehiculos usados turismos'])
+}
+
+/** Opción «ordinaria/nacional» de «Tipo de placa» (rótulo EXACTO normalizado); -1 si no existe (no se elige otra). PURA. */
+export function opcionPlacaOrdinariaGenerali(opciones: readonly string[]): number {
+  return indiceOpcionNormalizadaGenerali(opciones, ['ordinaria', 'nacional', 'placa ordinaria', 'placa nacional', 'matricula ordinaria', 'matricula nacional'])
+}
+
+/** Un intento de la fase de pruebas: qué se probó, si se hizo y si «Tipo de vehículo» pasó a tener valor (y cuál: un tipo/código del portal). */
+export type IntentoTipoVehiculoGenerali = { hipotesis: string; hecho: string; relleno: boolean; valor: string | null }
+
+/** Registro compacto de la fase de pruebas para el atasco (sin datos personales: el valor de `wclasv` es un tipo del portal). PURA. */
+export function resumenPruebasTipoVehiculoGenerali(intentos: readonly IntentoTipoVehiculoGenerali[], max = 700): string {
+  const t = intentos.length
+    ? intentos.map((i, n) => `${n + 1}) ${i.hipotesis}: ${i.hecho} → Tipo de vehículo ${i.relleno ? `SÍ («${sanearFragmentoGenerali(i.valor ?? '').slice(0, 40)}»)` : 'no'}`).join(' · ')
+    : '(ninguna)'
+  return t.length > max ? `${t.slice(0, max - 1)}…` : t
+}
+
+/**
+ * Pestañas de primer nivel del portal del corredor (captura 3 + prueba real 31e76085). El diagnóstico del humo SOLO dice cuáles de
+ * ESTAS están (en el DOM / visibles): nunca vuelca textos libres de la página (la cabecera lleva el nombre del usuario y del mediador).
+ */
+export const MENU_PRIMER_NIVEL_GENERALI = Object.freeze(['NEGOCIO', 'COMPAÑÍA', 'FORMACIÓN', 'NORMAS', 'CERRAR'] as const)
+
+/**
+ * v0.2.54 (humo 0.3.2, 31/10/2026, humo real 1f53b8c0): rótulo EXACTO de una pestaña del menú (texto entero, espacios aparte) SIN distinguir
+ * mayúsculas, el MISMO criterio que la puerta que sí entra en la tarificación (`unicoPorTextoGenerali` de guard.ts, flag `i`). El diag del humo
+ * vio en `CorredorPortal.po` «CERRAR» y ninguna otra pestaña en mayúsculas: el DOM lleva «Negocio»/«Compañía»… y es el CSS el que las pinta en
+ * mayúsculas. Sigue siendo texto entero: «NEGOCIO ONLINE» o «Mi negocio» no casan. PURA.
+ */
+export function patronPestanaMenuGenerali(pestana: string): RegExp {
+  return new RegExp(`^\\s*${pestana.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i')
+}
+
+/** Lo que el humo vio de un marco al buscar «NEGOCIO»:ruta saneada y, por pestaña conocida, cuántas hay en el DOM y cuántas visibles. */
+export type MarcoMenuGenerali = { url: string; pestanas: Readonly<Record<string, { dom: number; visibles: number }>> }
+
+/** Última parte de la ruta saneada (sin query ni jsessionid): basta para reconocer la pantalla y cabe en el aviso. PURA. */
+function finRutaGenerali(url: string): string {
+  const r = rutaMarcoSaneadaGenerali(url)
+  if (/^(about|data|blob):/i.test(r)) return r
+  const ult = r.replace(/\/+$/, '').split('/').pop() ?? ''
+  return ult && !/^https?:$/i.test(ult) ? ult : '/'
+}
+
+/**
+ * Línea «diag:» del fallo del menú en el humo (v0.3.1, 30/10/2026). Compacta (el aviso del humo se corta a 300) y sin datos
+ * personales: última parte de la ruta de la página y de cada marco, y SOLO el estado de las pestañas conocidas
+ * (`MENU_PRIMER_NIVEL_GENERALI`: «visible»/«oculta»; las ausentes no se nombran). ≤ `max` caracteres. PURA.
+ */
+export function diagMenuNegocioGenerali(urlPagina: string, marcos: readonly MarcoMenuGenerali[], max = 200): string {
+  const partes = marcos.slice(0, 6).map((m) => {
+    const vistas = MENU_PRIMER_NIVEL_GENERALI.map((p) => {
+      const c = m.pestanas[p]
+      return c && c.dom > 0 ? `${p} ${c.visibles > 0 ? 'visible' : 'oculta'}` : null
+    }).filter((x): x is string => x !== null)
+    return `${finRutaGenerali(m.url)}[${vistas.join(', ') || '-'}]`
+  })
+  const t = `diag: pág ${finRutaGenerali(urlPagina)}; ${marcos.length} marco(s): ${partes.join(' · ') || '-'}`
+  return t.length > max ? `${t.slice(0, max - 1)}…` : t
+}
+
+// ───────────── v0.2.55: desempate del catálogo con el vehículo de ORIGEN (Mapfre/Allianz) ─────────────
+
+/**
+ * Un vehículo de origen tal como llega en el formulario: `vehiculoConfirmado` (Mapfre: denominación + puertas/CV/cc) y
+ * `seleccionVehiculo` (catálogo separado que confirmó Allianz o vino de la póliza: marca/modelo/descripción/cc). Solo
+ * campos técnicos de catálogo: nada personal (la matrícula nunca está aquí).
+ */
+export type OrigenDesempateGenerali = { fuente: string; texto: string; puertas: number | null; cv: number | null; cc: number | null }
+
+/** Los orígenes del formulario (los que traen texto). Vacío = sin datos de origen. PURA. */
+export function origenesDesempateGenerali(form: Pick<FormularioAuto, 'seleccionVehiculo' | 'vehiculoConfirmado'>): OrigenDesempateGenerali[] {
+  const out: OrigenDesempateGenerali[] = []
+  const vc = form.vehiculoConfirmado
+  if (vc && typeof vc.denominacion === 'string' && vc.denominacion.trim() !== '') {
+    const fuente = vc.origen ? `${vc.origen.charAt(0).toUpperCase()}${vc.origen.slice(1)}` : 'vehículo confirmado'
+    out.push({ fuente, texto: vc.denominacion, puertas: vc.puertas ?? null, cv: vc.cv ?? null, cc: vc.cc ?? null })
+  }
+  const sv = form.seleccionVehiculo
+  if (sv && (sv.modelo?.trim() || sv.descripcion?.trim())) {
+    const texto = [sv.marca, sv.modelo, sv.descripcion].filter((x): x is string => typeof x === 'string' && x.trim() !== '').join(' ')
+    out.push({ fuente: 'Allianz/póliza', texto, puertas: null, cv: null, cc: sv.cilindradaCc ?? null })
+  }
+  return out
+}
+
+/** Carrocería canónica: sinónimos del catálogo → una sola palabra (las que no se nombran no cuentan como carrocería). */
+const CARROCERIA_GENERALI: Readonly<Record<string, string>> = Object.freeze({
+  COUPE: 'COUPE', CABRIO: 'CABRIO', CABRIOLET: 'CABRIO', DESCAPOTABLE: 'CABRIO', CONVERTIBLE: 'CABRIO',
+  FAMILIAR: 'FAMILIAR', SW: 'FAMILIAR', ESTATE: 'FAMILIAR', TOURER: 'FAMILIAR', BREAK: 'FAMILIAR', AVANT: 'FAMILIAR', KOMBI: 'FAMILIAR',
+})
+
+export type RasgosCatalogoGenerali = { tokens: Set<string>; carrocerias: Set<string>; puertas: number | null; cv: number | null; cc: number | null }
+
+/** Rasgos de un texto de catálogo: palabras (carrocería canónica, nº de puertas como «5P»), CV («75CV») y cc («1124CC»). PURA. */
+export function rasgosCatalogoGenerali(texto: string, extra: { puertas?: number | null; cv?: number | null; cc?: number | null } = {}): RasgosCatalogoGenerali {
+  const n = normalizarCatalogo(texto)
+  let puertas = extra.puertas ?? null
+  let cv = extra.cv ?? null
+  let cc = extra.cc ?? null
+  const mp = /\b([2-5])\s*(?:P|PTAS?|PUERTAS)\b/.exec(n)
+  if (mp && puertas === null) puertas = Number(mp[1])
+  const mcv = /\b(\d{2,3})\s*(?:CV|HP)\b/.exec(n)
+  if (mcv && cv === null) cv = Number(mcv[1])
+  const mcc = /\b(\d{3,4})\s*CC\b/.exec(n)
+  if (mcc && cc === null) cc = Number(mcc[1])
+  const limpio = n
+    .replace(/\b[2-5]\s*(?:P|PTAS?|PUERTAS)\b/g, ' ')
+    .replace(/\b\d{2,3}\s*(?:CV|HP)\b/g, ' ')
+    .replace(/\b\d{3,4}\s*CC\b/g, ' ')
+  const tokens = new Set<string>()
+  const carrocerias = new Set<string>()
+  for (const w of limpio.split(' ')) {
+    if (w === '') continue
+    const c = CARROCERIA_GENERALI[w]
+    if (c) {
+      carrocerias.add(c)
+      tokens.add(c)
+      continue
+    }
+    // Cifras sueltas fuera (año, kW, CV sin unidad: ambiguas); sí palabras con letras («FORFOUR») y cilindradas en litros («1.1»).
+    if (/[A-Z]/.test(w) || /^\d\.\d$/.test(w)) tokens.add(w)
+  }
+  const p = puertas !== null && puertas > 0 ? puertas : null
+  if (p !== null) tokens.add(`${p}P`)
+  return { tokens, carrocerias, puertas: p, cv, cc }
+}
+
+const cercaGenerali = (a: number, b: number, rel: number, abs: number) => Math.abs(a - b) <= Math.max(abs, Math.abs(b) * rel)
+
+export type DesempateOrigenGenerali =
+  | { tipo: 'unica'; indice: number; supuesto: string }
+  | { tipo: 'sin_datos' }
+  | { tipo: 'ninguna' }
+  | { tipo: 'varias'; indices: number[] }
+
+/** Supuesto declarado (lleva «supuesto»: la oferta queda `estimado` en la firmeza). */
+export function avisoDesempateOrigenGenerali(nivel: 'modelo' | 'version', opcion: string, fuentes: readonly string[]): string {
+  const que = nivel === 'modelo' ? 'modelo' : 'versión'
+  const elegida = nivel === 'modelo' ? 'elegido' : 'elegida'
+  return `${que} «${opcion.replace(/\s+/g, ' ').trim().slice(0, 60)}» ${elegida} por coincidencia con el vehículo de ${fuentes.join(' y ')} (supuesto; revisar en la emisión)`
+}
+
+/**
+ * v0.2.55 · Desempate del catálogo de Generali con el vehículo de ORIGEN (Mapfre/Allianz). Se llama SOLO cuando el bot iba a parar
+ * por `requiere_eleccion_version` (Generali no busca por matrícula). Regla, sobre textos normalizados (`normalizarCatalogo`):
+ *   1. Rasgos de cada opción: palabras + carrocería canónica (COUPE · CABRIO · FAMILIAR) + puertas («5P») + CV/cc si los trae.
+ *      Palabras DISTINTIVAS = las que no están en TODAS las opciones (lo común no desempata).
+ *   2. Una opción CONTRADICE un origen si ambos dicen carrocería y no coinciden, o puertas distintas, o CV/cc fuera de ±5 % (2 CV / 20 cc).
+ *   3. Un origen APOYA una opción si comparte alguna palabra distintiva y no la contradice. Si apoya a alguna, su conjunto son las apoyadas;
+ *      si no apoya a ninguna (su texto no habla de este nivel), solo descarta las contradichas.
+ *   4. Resultado = intersección de los conjuntos de todos los orígenes, y la elegida tiene que estar apoyada por al menos uno.
+ *      Exactamente UNA → `unica` con su supuesto; 0 (p. ej. Mapfre y Allianz discrepan) → `ninguna`; >1 → `varias`. Sin orígenes → `sin_datos`.
+ * `indice` es la posición en `opciones` (las vacías y «Otros…» nunca se eligen). Nunca «la más parecida». PURA.
+ */
+export function desempatarPorOrigenGenerali(opciones: readonly string[], origenes: readonly OrigenDesempateGenerali[], nivel: 'modelo' | 'version' = 'version'): DesempateOrigenGenerali {
+  const conTexto = origenes.filter((o) => normalizarCatalogo(o.texto) !== '')
+  if (conTexto.length === 0) return { tipo: 'sin_datos' }
+  const cand = opciones
+    .map((o, i) => ({ i, o, r: rasgosCatalogoGenerali(o) }))
+    .filter((x) => !esOpcionVaciaCatalogo(x.o) && !esOpcionOtrosModeloGenerali(x.o))
+  if (cand.length === 0) return { tipo: 'ninguna' }
+  const comunes = new Set([...cand[0]!.r.tokens].filter((t) => cand.every((c) => c.r.tokens.has(t))))
+  const distintivas = (r: RasgosCatalogoGenerali) => [...r.tokens].filter((t) => !comunes.has(t))
+  let enJuego = new Set(cand.map((c) => c.i))
+  const apoyos = new Map<number, string[]>()
+  for (const o of conTexto) {
+    const ro = rasgosCatalogoGenerali(o.texto, { puertas: o.puertas, cv: o.cv, cc: o.cc })
+    const contradice = (r: RasgosCatalogoGenerali) =>
+      (r.carrocerias.size > 0 && ro.carrocerias.size > 0 && ![...r.carrocerias].some((c) => ro.carrocerias.has(c))) ||
+      (r.puertas !== null && ro.puertas !== null && r.puertas !== ro.puertas) ||
+      (r.cv !== null && ro.cv !== null && !cercaGenerali(r.cv, ro.cv, 0.05, 2)) ||
+      (r.cc !== null && ro.cc !== null && !cercaGenerali(r.cc, ro.cc, 0.05, 20))
+    const compatibles = cand.filter((c) => !contradice(c.r))
+    const apoya = compatibles.filter((c) => distintivas(c.r).some((t) => ro.tokens.has(t)))
+    const conjunto = new Set((apoya.length > 0 ? apoya : compatibles).map((c) => c.i))
+    for (const c of apoya) apoyos.set(c.i, [...(apoyos.get(c.i) ?? []), o.fuente])
+    enJuego = new Set([...enJuego].filter((i) => conjunto.has(i)))
+  }
+  const finales = [...enJuego].filter((i) => apoyos.has(i))
+  if (finales.length === 1) return { tipo: 'unica', indice: finales[0]!, supuesto: avisoDesempateOrigenGenerali(nivel, opciones[finales[0]!]!, [...new Set(apoyos.get(finales[0]!)!)]) }
+  return finales.length === 0 ? { tipo: 'ninguna' } : { tipo: 'varias', indices: finales }
+}
+
+// ───────────────────────── v0.2.58 · «Historial Siniestral» (trabajo af1fb857) ─────────────────────────
+// El trabajo llegó a «Garantías y Resultados», pulsó «Recalcular» y el portal dijo «El paso anterior no tiene los datos completos» / «No se puede calcular
+// con datos incompletos» con «Datos de Valoración» y «Garantías y Resultados» SIN obligatorios vacíos: queda la pestaña «Historial Siniestral», que el bot
+// nunca abría. Aquí, la parte PURA: qué dato del riesgo corresponde a cada campo vacío de esa pestaña.
+
+/** v0.2.60: «Historial Siniestral» es una SECCIÓN de «Datos de Valoración» (campos `reg1063A.histSiniestral.*`), no una subpestaña. ¿Es un bloque suyo? (por el `name`). PURA. */
+export function esBloqueHistorialGenerali(b: { name: string }): boolean {
+  return /histsiniestral/i.test(String(b?.name ?? ''))
+}
+
+/** v0.2.60: ¿es el desplegable «Origen del historial siniestral» (`…histSiniestral.yhsori`)? Por `name` o por rótulo. PURA. */
+export function esCampoOrigenHistorialGenerali(b: { name: string; etiqueta: string }): boolean {
+  return /(^|\.)yhsori$/i.test(String(b?.name ?? '')) || /^origen del historial/.test(normalizarOpcionGenerali(b?.etiqueta))
+}
+
+/**
+ * v0.2.60: opción de «Origen del historial siniestral» según la ficha, elegida por el TEXTO de la opción (tolerante a mayúsculas y tildes), nunca por índice.
+ * Póliza anterior como DATO (años asegurado > 0 y no supuesto) → «Consulta al fichero SINCO»; si no → «Simulación fichero SINCO» (supuesto → estimado).
+ * Sin una única opción que case → `sinRegla`. PURA.
+ */
+export function planOrigenHistorialGenerali(
+  opciones: readonly string[],
+  f: { aniosAseguradoAnterior: number },
+  clavesSupuestas: readonly string[],
+): { tipo: 'elegir'; indice: number; supuesto: boolean } | { tipo: 'sinRegla' } {
+  const conPoliza = !clavesSupuestas.includes('aniosAseguradoAnterior') && Number.isInteger(f.aniosAseguradoAnterior) && f.aniosAseguradoAnterior > 0
+  const quiero = conPoliza ? 'consulta' : 'simulacion'
+  const ix = opciones.map((o, i) => { const n = normalizarOpcionGenerali(o); return n.includes('sinco') && n.includes(quiero) ? i : -1 }).filter((i) => i >= 0)
+  return ix.length === 1 ? { tipo: 'elegir', indice: ix[0]!, supuesto: !conPoliza } : { tipo: 'sinRegla' }
+}
+
+export type BloqueHistorialGenerali = { etiqueta: string; tipo: 'select' | 'texto' | 'opciones'; name: string; opciones: string[]; vacio: boolean; obligatorio: boolean }
+export type ClaveHistorialGenerali = 'aniosAseguradoAnterior' | 'siniestrosUltimos5Anios'
+export type AntecedentesHistorialGenerali = { aniosAseguradoAnterior: number; siniestrosUltimos5Anios: number }
+
+/**
+ * Valor del riesgo para un campo de «Historial Siniestral» según su rótulo. «años sin siniestros» solo si el riesgo no tiene siniestros (= años asegurado);
+ * rótulos de fechas, importes o desconocidos → `null` (no se inventa: el atasco nombra el campo). PURA.
+ */
+export function valorHistorialSiniestralGenerali(etiqueta: string, f: AntecedentesHistorialGenerali): { valor: string; clave: ClaveHistorialGenerali } | null {
+  const e = String(etiqueta ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
+  if (e === '' || /fecha|importe|euro|prima|cuant|bonus|bonific|porcentaje|%|origen/.test(e)) return null
+  if (/anos? sin siniestr/.test(e)) return f.siniestrosUltimos5Anios === 0 ? { valor: String(f.aniosAseguradoAnterior), clave: 'aniosAseguradoAnterior' } : null
+  if (/siniestr/.test(e)) return { valor: String(f.siniestrosUltimos5Anios), clave: 'siniestrosUltimos5Anios' }
+  if (/\banos?\b/.test(e) && /asegurad|antigued|seguro|compan/.test(e)) return { valor: String(f.aniosAseguradoAnterior), clave: 'aniosAseguradoAnterior' }
+  return null
+}
+
+/**
+ * Qué hacer con los bloques leídos de «Historial Siniestral»: rellenar los VACÍOS con regla (obligatorios o no: un dato que el riesgo trae no sobra) y listar los
+ * obligatorios vacíos SIN regla o que el bot no sabe teclear (grupos de opciones, desplegable sin la opción exacta), para que el atasco los nombre. PURA.
+ */
+export function planHistorialSiniestralGenerali(bloques: readonly BloqueHistorialGenerali[], f: AntecedentesHistorialGenerali, clavesSupuestas: readonly string[]): {
+  acciones: { bloque: BloqueHistorialGenerali; valor: string; clave: ClaveHistorialGenerali; supuesto: boolean }[]
+  sinRegla: string[]
+} {
+  const acciones: { bloque: BloqueHistorialGenerali; valor: string; clave: ClaveHistorialGenerali; supuesto: boolean }[] = []
+  const sinRegla: string[] = []
+  const nombre = (b: BloqueHistorialGenerali) => sanearFragmentoGenerali(b.etiqueta).slice(0, 60)
+  for (const b of bloques) {
+    if (!b.vacio) continue
+    if (esCampoOrigenHistorialGenerali(b)) continue // se resuelve antes (su cambio refresca la sección)
+    const v = b.tipo === 'opciones' ? null : valorHistorialSiniestralGenerali(b.etiqueta, f)
+    const opcionOk = v && b.tipo === 'select' ? indiceOpcionNormalizadaGenerali(b.opciones, [v.valor]) >= 0 : true
+    if (v && opcionOk) acciones.push({ bloque: b, valor: v.valor, clave: v.clave, supuesto: clavesSupuestas.includes(v.clave) })
+    else if (b.obligatorio && !sinRegla.includes(nombre(b))) sinRegla.push(nombre(b))
+  }
+  return { acciones, sinRegla }
+}
+
+// ─── v0.2.71 (03/11/2026, trabajo 1a88445a con 0.2.70): el portal sigue en «datos incompletos» con «Garantías y Resultados» sin obligatorios vacíos ───
+// Avisos: «Paso con datos incompletos» · «El paso anterior no tiene los datos completos» · «No se puede calcular con datos incompletos». El hueco está en un
+// PASO ANTERIOR de la barra de pasos (`#secundario li`, `pedirPaso(...)`): antes del único «Recalcular» se va a él, se rellenan sus obligatorios vacíos con
+// un valor neutro (cada uno «Supuesto: …») y se vuelve. Lo que no tiene valor neutro seguro hace que el atasco nombre paso + campo.
+
+/** Un paso de la barra de pasos de «Valoración Riesgo» (solo texto y estado; nunca valores). */
+export type PasoBarraGenerali = { texto: string; actual: boolean; marcado: boolean }
+
+/** v0.2.71: ¿algún aviso del portal dice que un PASO tiene datos incompletos («Paso con datos incompletos», «El paso anterior no tiene…»)? PURA. */
+export function avisoPasoIncompletoGenerali(avisos: readonly string[]): boolean {
+  return avisos.some((a) => /paso\s+con\s+datos\s+incompletos|paso\s+anterior\s+no\s+tiene/i.test(String(a ?? '')))
+}
+
+/**
+ * v0.2.71: a qué paso ir. Primero uno MARCADO por el portal (clase de error/incompleto) que no sea el actual; si no, con el aviso de paso incompleto, el paso
+ * inmediatamente ANTERIOR al actual. Sin aviso, sin paso actual o sin anterior → null (no se navega a ciegas). PURA.
+ */
+export function destinoPasoIncompletoGenerali(pasos: readonly PasoBarraGenerali[], avisos: readonly string[]): string | null {
+  const limpio = (t: string) => String(t ?? '').replace(/\s+/g, ' ').trim()
+  const marcado = pasos.find((p) => p.marcado && !p.actual && limpio(p.texto))
+  if (marcado) return limpio(marcado.texto)
+  if (!avisoPasoIncompletoGenerali(avisos)) return null
+  const i = pasos.findIndex((p) => p.actual)
+  if (i <= 0) return null
+  return limpio(pasos[i - 1]!.texto) || null
+}
+
+/** Qué hacer con un obligatorio vacío del paso incompleto. */
+export type DecisionNeutroPasoGenerali = { accion: 'marcar' | 'elegir'; indice: number; valor: string } | { accion: 'sinRegla'; motivo: string }
+
+/**
+ * v0.2.71: valor neutro de un obligatorio VACÍO del paso incompleto. Grupo de opciones → «No» EXACTO (como los neutros de 0.2.70); desplegable → la única
+ * opción real (sin «Seleccione…»/vacía); texto libre → no se inventa. Cualquier otro caso → `sinRegla` con el motivo (el atasco nombra paso + campo). PURA.
+ */
+export function decidirNeutroPasoGenerali(tipo: 'select' | 'texto' | 'opciones', opciones: readonly string[]): DecisionNeutroPasoGenerali {
+  const ops = opciones.map((o) => String(o ?? '').replace(/\s+/g, ' ').trim())
+  if (tipo === 'opciones') {
+    const i = opcionExactaGenerali(ops, 'No')
+    return i >= 0 ? { accion: 'marcar', indice: i, valor: 'No' } : { accion: 'sinRegla', motivo: `sin opción «No» exacta (${ops.map((o) => `«${sanearFragmentoGenerali(o).slice(0, 25)}»`).join(' · ') || 'sin opciones'})` }
+  }
+  if (tipo === 'select') {
+    const reales = ops.flatMap((o, k) => (o === '' || /^seleccione/i.test(o) ? [] : [k]))
+    if (reales.length === 1) return { accion: 'elegir', indice: reales[0]!, valor: ops[reales[0]!]! }
+    return { accion: 'sinRegla', motivo: reales.length === 0 ? 'desplegable sin opciones' : `desplegable con ${reales.length} opciones; no se elige a ciegas` }
+  }
+  return { accion: 'sinRegla', motivo: 'texto libre; no se inventa' }
+}
+
+/** v0.2.71: aviso «Supuesto» (precio `estimado`) de un obligatorio del paso incompleto puesto en valor neutro. Solo rótulos, saneados. PURA. */
+export function avisoNeutroPasoGenerali(paso: string, rotulo: string, valor: string): string {
+  return `Supuesto: «${sanearFragmentoGenerali(paso).slice(0, 40)}» · ${sanearFragmentoGenerali(rotulo).slice(0, 60)} = ${sanearFragmentoGenerali(valor).slice(0, 40)} (valor neutro; el portal daba el paso por incompleto)`
+}
+
+/** v0.2.71: texto del atasco cuando el paso incompleto tiene obligatorios que el bot no puede rellenar: nombra el PASO y cada CAMPO (sin valores). PURA. */
+export function errorPasoIncompletoGenerali(paso: string, faltan: readonly string[]): string {
+  const xs = [...new Set(faltan.map((x) => sanearFragmentoGenerali(String(x ?? '')).trim().slice(0, 90)).filter(Boolean))].slice(0, 10)
+  return `el paso «${sanearFragmentoGenerali(paso).slice(0, 40)}» marcado con datos incompletos («Paso con datos incompletos» / «El paso anterior no tiene los datos completos») tiene obligatorios vacíos sin valor neutro seguro: ${xs.length ? xs.join(' · ') : '(ninguno legible)'}. No se pulsa «Recalcular»`
 }

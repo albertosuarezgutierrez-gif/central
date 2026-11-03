@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-10-26T17:36:31Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-03T07:41:34Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 45 packages · 23 capacidades · 44 skills · 1825 rutas API.
+**Resumen:** 13 apps · 45 packages · 23 capacidades · 44 skills · 1875 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -20,13 +20,13 @@
 ### asegura
 - **Módulos que usa:** core-ai, core-catastro, core-direccion, core-email, core-firma, core-identity, core-telegram, core-vehiculos, module-patrimonio, module-seguros, module-seguros-pii, module-seguros-portal, module-tarificacion
 - **Capacidades:** QR / portal cliente
-- **Tablas (143):** de, if, seguros._volcado_control, seguros.acuerdo_comisiones, seguros.acuerdo_objetivos, seguros.acuerdos_compania, seguros.anulacion, seguros.aprobacion, seguros.auditoria, seguros.aviso_web, seguros.backfill_dni_plan, seguros.bien_documentos, seguros.bienes_asegurables, seguros.borradores_presupuesto, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.cambio_cuenta_solicitud, seguros.campana_envio, seguros.carta_mediador, seguros.cartera_foto, seguros.channel_inbound_messages, seguros.cima_decisiones, seguros.cima_ficheros, seguros.claves_mediador, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_mote, seguros.cliente_relaciones…
-- **Rutas API:** 288
+- **Tablas (145):** de, if, seguros._volcado_control, seguros.acuerdo_comisiones, seguros.acuerdo_objetivos, seguros.acuerdos_compania, seguros.anulacion, seguros.aprobacion, seguros.auditoria, seguros.aviso_web, seguros.backfill_dni_plan, seguros.bien_documentos, seguros.bienes_asegurables, seguros.borradores_presupuesto, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.cambio_cuenta_solicitud, seguros.campana_envio, seguros.carta_mediador, seguros.cartera_foto, seguros.channel_inbound_messages, seguros.cima_decisiones, seguros.cima_ficheros, seguros.claves_mediador, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_mote, seguros.cliente_relaciones…
+- **Rutas API:** 298
 ### asegura-portal
 - **Módulos que usa:** core-ai, core-catastro, core-direccion, core-email, core-identity, core-push, core-telegram, module-documental, module-patrimonio, module-seguros, module-seguros-pii, module-seguros-portal, module-tarificacion
-- **Capacidades:** Facturación / VeriFactu, Escáner / OCR, Notificaciones (push)
-- **Tablas (53):** seguros.cliente_relaciones_permiso_volcado, seguros.portal_acceso, seguros.portal_autorizacion, seguros.portal_autorizacion_uso, seguros.portal_aviso_cima, seguros.portal_aviso_leido, seguros.portal_aviso_silenciado, seguros.portal_bien, seguros.portal_canal, seguros.portal_codigo, seguros.portal_consentimiento, seguros.portal_hoja_qr, seguros.portal_hoja_qr_poliza, seguros.portal_identidad, seguros.portal_invitacion, seguros.portal_invitacion_enlace, seguros.portal_invitacion_enlace_uso, seguros.portal_mensaje, seguros.portal_modulo, seguros.portal_obligacion, seguros.portal_parte_siniestro, seguros.portal_patrimonio_aviso_inquilino, seguros.portal_patrimonio_comunidad, seguros.portal_patrimonio_contrato, seguros.portal_patrimonio_contrato_inquilino, seguros.portal_patrimonio_derrama, seguros.portal_patrimonio_documento, seguros.portal_patrimonio_enlace_inquilino, seguros.portal_patrimonio_gasto, seguros.portal_patrimonio_importacion…
-- **Rutas API:** 117
+- **Capacidades:** QR / portal cliente, Facturación / VeriFactu, Escáner / OCR, Notificaciones (push)
+- **Tablas (56):** seguros.cliente_relaciones_permiso_volcado, seguros.portal_acceso, seguros.portal_autorizacion, seguros.portal_autorizacion_uso, seguros.portal_aviso_cima, seguros.portal_aviso_leido, seguros.portal_aviso_silenciado, seguros.portal_bien, seguros.portal_canal, seguros.portal_codigo, seguros.portal_consentimiento, seguros.portal_hoja_qr, seguros.portal_hoja_qr_poliza, seguros.portal_identidad, seguros.portal_invitacion, seguros.portal_invitacion_enlace, seguros.portal_invitacion_enlace_uso, seguros.portal_mensaje, seguros.portal_modulo, seguros.portal_obligacion, seguros.portal_parte_siniestro, seguros.portal_patrimonio_aviso_inquilino, seguros.portal_patrimonio_comunidad, seguros.portal_patrimonio_contrato, seguros.portal_patrimonio_contrato_inquilino, seguros.portal_patrimonio_derrama, seguros.portal_patrimonio_documento, seguros.portal_patrimonio_enlace_inquilino, seguros.portal_patrimonio_gasto, seguros.portal_patrimonio_importacion…
+- **Rutas API:** 136
 ### asegura-web
 - **Módulos que usa:** core-consent, module-seguros, module-seguros-portal
 - **Capacidades:** —
@@ -41,7 +41,7 @@
 - **Módulos que usa:** core-ai, core-catastro, core-consent, core-direccion, core-fiscal, core-payments, core-push, core-receipts, module-asn, module-contabilidad, module-crm, module-feedback, module-flota, module-horario, module-materiales, module-organizador-trabajo, module-presupuestos, module-proveedores, module-trazabilidad
 - **Capacidades:** TPV / comanda, KDS (cocina), Eventos / catering / BEO, Reservas, QR / portal cliente, Feedback / propinas, Agenda / auto-asignación, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Contabilidad, Facturación / VeriFactu, Hardware bridge, Escáner / OCR, Notificaciones (push), Asistente / copiloto IA
 - **Tablas (83):** arqueos_caja_empleado, avisos_operador, beo_eventos, camareros, clientes_fiscales, cobro_config, comanda_items, comandas, config_horario, config_tienda, contract_acceptances, documentos_escaneados, facturas_cliente, feedback_visita, formularios_demo_recibidos, iarest.checklist_ejecuciones, iarest.checklist_plantillas, iarest.produccion_tareas, iarest.produccion_tiempos_estandar, iarest.recibos_digitales, incidencias_sistema, inventario_menaje, inventario_menaje_evento, leads, leads_eventos, leads_unsubscribes, leads_web_tracking, manual_voz_novedades, marchar_log, marketing_consentimientos…
-- **Rutas API:** 496
+- **Rutas API:** 495
 ### ialimp
 - **Módulos que usa:** core-ai, core-catastro, core-direccion, core-email, core-firma, core-fiscal, core-identity, core-payments, core-push, core-receipts, core-storage, module-contabilidad, module-crm, module-documental, module-materiales, module-proveedores, module-rrhh
 - **Capacidades:** Equipo limpiadoras, Agenda / auto-asignación, CRM / leads / cotizador, RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Contabilidad, Facturación / VeriFactu, Escáner / OCR, Informes, Notificaciones (push), Asistente / copiloto IA
@@ -53,20 +53,20 @@
 - **Tablas (2):** mariscos_envasados, mariscos_partidas
 - **Rutas API:** 4
 ### plataforma _(matriz)_
-- **Módulos que usa:** core-ai, core-catastro, core-consent, core-direccion, core-email, core-identity, core-payments, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-seguros, module-seguros-portal, module-ses, module-subastas, module-tarificacion, module-trading
+- **Módulos que usa:** core-ai, core-catastro, core-consent, core-direccion, core-email, core-fiscal, core-identity, core-payments, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-seguros, module-seguros-portal, module-ses, module-subastas, module-tarificacion, module-trading
 - **Capacidades:** QR / portal cliente, Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
-- **Tablas (154):** agente_latidos, agente_reparaciones, agente_salud, agente_veredicto, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comisiones_cobertura, comisiones_devengo, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, consentimiento_registro, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_asistente_accion, correduria_asistente_correccion…
-- **Rutas API:** 503
+- **Tablas (162):** agente_latidos, agente_reparaciones, agente_salud, agente_veredicto, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cierres_mes, cima_liquidaciones, comisiones_cobertura, comisiones_devengo, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, consentimiento_registro, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_asistente_accion…
+- **Rutas API:** 527
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Informes, Notificaciones (push), Asistente / copiloto IA
 - **Tablas (17):** rrhh.acceso_otps, rrhh.avisos, rrhh.avisos_admin, rrhh.contratos_laborales, rrhh.documentos, rrhh.empleados, rrhh.empresas, rrhh.firma_otps, rrhh.firmas, rrhh.incidencias_mes, rrhh.incidencias_ubicacion, rrhh.material_empleado, rrhh.mensajes, rrhh.nominas, rrhh.push_subscriptions, rrhh.solicitudes, rrhh.usuarios_rrhh
 - **Rutas API:** 84
 ### sivra
-- **Módulos que usa:** core-ai, core-email, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
+- **Módulos que usa:** core-ai, core-email, core-identity, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
 - **Capacidades:** Eventos / catering / BEO, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, Marketing (blog/IG/SEO), Almacén / stock / ASN, Proveedores / compras, Asistente / copiloto IA
 - **Tablas (1):** gastos_fijos
-- **Rutas API:** 93
+- **Rutas API:** 91
 ### transporte
 - **Módulos que usa:** core-catastro, core-direccion, core-identity, module-flota, module-geo, module-transporte
 - **Capacidades:** —
@@ -93,10 +93,10 @@
   - Lo usan: asegura, ialimp, rrhh
   - Depende de: —
 - **core-fiscal** (core) → `@central/core-fiscal`
-  - Lo usan: ia-rest, ialimp
+  - Lo usan: ia-rest, ialimp, plataforma
   - Depende de: —
 - **core-identity** (core) → `@central/core-identity`
-  - Lo usan: almacen, alquiler, asegura, asegura-portal, ialimp, mariscos, plataforma, rrhh, transporte
+  - Lo usan: almacen, alquiler, asegura, asegura-portal, ialimp, mariscos, plataforma, rrhh, sivra, transporte
   - Depende de: module-seguros, module-seguros-portal
 - **core-payments** (core) → `@central/core-payments`
   - Lo usan: ia-rest, ialimp, plataforma
@@ -116,9 +116,6 @@
 - **core-vehiculos** (core) → `@central/core-vehiculos`
   - Lo usan: asegura
   - Depende de: —
-- **module-agenda** (module) → `@central/module-agenda`
-  - Lo usan: —
-  - Depende de: —
 - **module-alquiler** (module) → `@central/module-alquiler`
   - Lo usan: alquiler
   - Depende de: module-intercompany, module-materiales
@@ -128,6 +125,9 @@
 - **module-chat** (module) → `@central/module-chat`
   - Lo usan: rrhh
   - Depende de: —
+- **module-cima** (module) → `@central/module-cima`
+  - Lo usan: —
+  - Depende de: core-identity, module-seguros, module-seguros-pii
 - **module-concursos** (module) → `@central/module-concursos`
   - Lo usan: plataforma
   - Depende de: —
@@ -232,7 +232,7 @@
 - **ia-rest-maestro** — >
 - **ialimp-client-health** — >-
 - **ialimp-maestro** — >
-- **idealista-radar** — Rutina PROGRAMADA diaria que busca CASAS de 3+ dormitorios cerca de la playa (costa de Huelva a diario; Asturias, Cantabria y Cádiz por turnos) con el conector de Idealista y las mete en el corpus `mercado_comparables` (radar de subastas/chollos/lente 🌊). Sustituye a las alertas de correo de Idealista (Fotocasa sigue por correo). Úsala al disparo diario o si Alberto pide "mira Idealista en la costa". Sin secretos.
+- **idealista-radar** — Referencia de zonas de playa y del corredor A-49 para buscar casas en idealista. RUTINA DESACTIVADA el 28/10/2026 (condiciones de uso del conector). Sin rutina ni escritura en mercado_comparables. Úsala solo si Alberto pide ver anuncios concretos de idealista en el chat, o para guardar búsquedas con alerta. El perfil casa vacacional (avisos Telegram de idealista y subastas) vive en module-subastas. Sin secretos.
 - **inversion-inmueble** — Analiza si comprar UN inmueble concreto renta como piso turístico (VUT). Mide el mercado real por fecha y aforo con el conector de Booking, resuelve la puerta legal (licencia + Registro Único), llama al motor de underwriting de plataforma y devuelve veredicto con los dos escenarios —entero y segregado—. Úsala cuando Alberto pase un anuncio ("¿me interesa esto?", "hazme el estudio de este piso", "¿cuánto rentaría?"). NO decide compras. Sin secretos - solo nombres de variable.
 - **marca-cliente** — Alta/intake de la identidad corporativa de un cliente/tenant y aplicación 100% a su app — convierte su marca real (logo, web, fotos) en un objeto `Marca` de `@central/brand` y lo enchufa dejando la UI IDÉNTICA a su marca. Úsala con cliente nuevo, rebrand, o si Alberto pide "adáptalo a la imagen corporativa de X". Complementa `adobe-diseno` y Adobe Fonts.
 - **mercado-booking** — >-
@@ -261,7 +261,7 @@
 - ⚠️ **KDS (cocina)**: en ia-rest; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, ialimp, mariscos, rrhh, sivra, transporte.
 - ⚠️ **Eventos / catering / BEO**: en almacen, ia-rest, sivra; falta en alquiler, asegura, asegura-portal, asegura-web, housesevillana, ialimp, mariscos, rrhh, transporte.
 - ⚠️ **Reservas**: en ia-rest; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, ialimp, mariscos, rrhh, sivra, transporte.
-- ⚠️ **QR / portal cliente**: en asegura, ia-rest; falta en almacen, alquiler, asegura-portal, asegura-web, housesevillana, ialimp, mariscos, rrhh, sivra, transporte.
+- ⚠️ **QR / portal cliente**: en asegura, asegura-portal, ia-rest; falta en almacen, alquiler, asegura-web, housesevillana, ialimp, mariscos, rrhh, sivra, transporte.
 - ⚠️ **Feedback / propinas**: en ia-rest; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, ialimp, mariscos, rrhh, sivra, transporte.
 - ⚠️ **Equipo limpiadoras**: en ialimp, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, ia-rest, mariscos, rrhh, transporte.
 - ⚠️ **Agenda / auto-asignación**: en ia-rest, ialimp, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, rrhh, transporte.
@@ -281,14 +281,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (29/09/2026) (29/09/2026) Buscador de la correduría: la matrícula de las OPORTUNIDADES no se buscaba.
-- (29/09/2026) (29/09/2026) Documento REPETIDO en una ficha no abría oportunidad.
-- (29/09/2026) (29/09/2026) Asistente /seguros AUTÓNOMO — fase 2 (auditoría + «que haga el trabajo por mí»).
-- (29/09/2026) (29/09/2026) Asistente /seguros AUTÓNOMO — fase 1 (decisión de Alberto: «tiene que hacerme todo el trabajo», emitir con botón).
-- (29/09/2026) (29/09/2026) Asistente /seguros: «no he llegado a una respuesta» con un lead dictado por WhatsApp.
-- (19/09/2026) 💸 Huésped de House (5-7/02/2027, 9-10 pax): «la web sale más cara que Booking» — diagnóstico, sin tocar código
-- (17/09/2026) 🩹 16 pólizas duplicadas en la cartera CIMA de Occident/Mapfre/Allianz, y por qué
-- (17/09/2026) 🔓 Causa real de los 500 del Submit (proyecto [nº de proyecto retirado]): un `product.options` que nunca se mandaba
-- (15/09/2026) Matrícula→vehículo para la correduría: `@central/core-vehiculos` creado, proveedor APIVehículo
-- (14/09/2026) 🛡️ Resuelto el bloqueo de Sentinel sobre `ALERTA_TOKEN`
+- (03/11/2026) 03/11/2026) Fiscal · tarjeta Kutxabank 0300 importada + catastro Socorro cerrado
+- (03/11/2026) 03/11/2026) PR #5412 MERGEADO · facturas de plataforma: «✅ Pagar» hace pago REAL
+- (02/11/2026) 02/11/2026) Auditoría lote 2 (rama `claude/auditoria-lote2`, PR por abrir)
+- (02/11/2026) 02/11/2026) PR #5396 MERGEADO · `@central/module-cima` fase 2 (lógica pura)
+- (02/11/2026) 02/11/2026) #5385 MERGEADO · arranca la unificación de la ingesta CIMA en central
+- (02/11/2026) 02/11/2026) Auditoría completa (12 agentes) + arreglos — docs/AUDITORIA-2026-11.md
+- (02/11/2026) 02/11/2026) Ingresos 2026 pisos: neto real fijado · PENDIENTE cuadre Smoobu
+- (02/11/2026) 02/11/2026) Control 2026 pisos: expenses retirada · métrica «Gastos mes» sivra
+- (01/11/2026) 01/11/2026) Factura Sique Brilla octubre · cuadre por correo: lavandería redondeada
+- (01/11/2026) 01/11/2026) Tarificador RPA · vehículo de referencia y presupuestos (#5321, #5326, #5332, #5337)
 

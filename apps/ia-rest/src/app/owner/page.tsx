@@ -8233,7 +8233,7 @@ export default function OwnerPage() {
     try {
       const r = await fetch('/api/auth/seleccionar-restaurante', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' },
         body: JSON.stringify({ cuenta_id: session.cuenta_id, restaurante_id }),
       })
       const d = await r.json()

@@ -173,6 +173,7 @@ export default async function ResumenPage({
                           <td>
                             {f.etiqueta}
                             <br /><span className="suave">{f.compania} · {f.ramo}</span>
+                            <br /><Link className="solo-pantalla" style={{ display: 'inline-block', minHeight: 44, paddingBlock: 10 }} href={`/boveda/poliza/${encodeURIComponent(f.id)}`}>Ver la póliza</Link>
                           </td>
                           <td className="num">
                             {f.estado === 'dato' && <>{eur(f.pagado)}<br /><span className="suave">{f.recibosCobrados} recibo{f.recibosCobrados === 1 ? '' : 's'}</span></>}
@@ -233,7 +234,10 @@ export default async function ResumenPage({
                         {g.siniestros.lista.map((s) => (
                           <tr key={s.id}>
                             <td>{fechaEs(s.fechaHora)}</td>
-                            <td>{s.etiqueta}</td>
+                            <td>
+                              {s.etiqueta}
+                              <br /><Link className="solo-pantalla" style={{ display: 'inline-block', minHeight: 44, paddingBlock: 10 }} href={`/boveda/poliza/${encodeURIComponent(s.polizaId)}`}>Ver la póliza</Link>
+                            </td>
                             <td className="num">{s.indemnizacion === null ? <span className="suave">No informada</span> : eur(s.indemnizacion)}</td>
                           </tr>
                         ))}
@@ -266,7 +270,13 @@ export default async function ResumenPage({
                   <table className="resumen-tabla" aria-label="Primas anuales que declaraste, por seguro">
                     <tbody>
                       {a.filas.map((f) => (
-                        <tr key={f.id}><td>{f.etiqueta}</td><td className="num">{eur(f.prima)}</td></tr>
+                        <tr key={f.id}>
+                          <td>
+                            {f.etiqueta}
+                            <br /><Link className="solo-pantalla" style={{ display: 'inline-block', minHeight: 44, paddingBlock: 10 }} href={`/boveda/anadida/${encodeURIComponent(f.id)}`}>Ver la póliza</Link>
+                          </td>
+                          <td className="num">{eur(f.prima)}</td>
+                        </tr>
                       ))}
                     </tbody>
                   </table>

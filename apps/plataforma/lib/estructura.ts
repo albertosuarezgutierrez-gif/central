@@ -76,7 +76,6 @@ export const MODULOS: ModuloInfo[] = [
   { id: 'core-identity', tipo: 'core', desc: 'Contrato de sesión/inquilino (puertos & adaptadores).' },
   { id: 'module-contabilidad', tipo: 'module', desc: 'Dominio: IVA, PyG, tesorería, rentabilidad, recurrentes (lógica pura).' },
   { id: 'module-concursos', tipo: 'module', desc: 'Dominio: agente de concursos públicos / licitaciones LCSP (lógica pura).' },
-  { id: 'module-agenda', tipo: 'module', desc: 'Dominio: disponibilidad y reserva de un recurso (sala, vehículo, kit, persona) con solapes.' },
   { id: 'module-crm', tipo: 'module', desc: 'Dominio: pipeline comercial genérico (oportunidades/leads) anclado a un Encargo.' },
   { id: 'module-presupuestos', tipo: 'module', desc: 'Dominio: líneas, costes, descuentos y cálculo de margen/rentabilidad.' },
   { id: 'module-proveedores', tipo: 'module', desc: 'Dominio: catálogo de proveedores + servicios con comisiones.' },

@@ -40,7 +40,12 @@ import { requireSecret } from '@central/core-identity'
 import { PREFIJO_CLP, decidirBotonClp, idDeEdicion } from '@/lib/correo/lead-correduria-peticion'
 import { guardarEdicionClp, resolverBotonClp } from '@/lib/correo/lead-correduria-pendiente'
 import { PREFIJO_CSG, decidirBotonCsg } from '@/lib/correo/contacto-sugerido'
+import { PREFIJO_FEX, decidirBotonFex, decidirFexEnAsegura, lineaTrasPulsarFex } from '@/lib/felicitaciones-exclientes-asegura'
 import { resolverBotonCsg } from '@/lib/correo/contacto-sugerido-pendiente'
+import { PREFIJO_FACTURA_HUESPED, decidirBotonFactura } from '@/lib/sivra/facturas/telegram'
+import { resolverBotonFactura } from '@/lib/sivra/facturas/telegram-acciones'
+import { PREFIJO_CIERRE_MES, interpretarCallbackCierre, hoyMadrid, nombreUnidad, etiquetaMes } from '@/lib/cierre-mes'
+import { cerrarMes, cuentaDeLosPisos } from '@/lib/cierre-mes-db'
 import { ENV_FIRMA_AUTORIZACION } from '@central/module-tarificacion'
 
 export const dynamic = 'force-dynamic'
@@ -363,7 +368,7 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
         if (result.ok && result.auth_url) {
           await tgSend(`🔐 Autoriza el pago en tu banco:\n${result.auth_url}`)
         } else if (!result.ok) {
-          await tgSend(`❌ Error al iniciar el pago: ${result.error}`)
+          await tgSend(result.yaPagada ? `✅ ${result.error}` : `❌ Error al iniciar el pago: ${result.error}`)
         }
         return NextResponse.json({ ok: true })
       }
@@ -1013,6 +1018,28 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
       return NextResponse.json({ ok: true })
     }
 
+    // ── 🎂 Felicitación a EX-CLIENTE de Grupo ASegura: ✅ enviar / ❌ descartar (fex_ok / fex_no, 30/10/2026) ──
+    // Sale a un TERCERO: solo la PERSONA autorizada (from.id = TELEGRAM_CHAT_ID). Se contesta YA y asegura (que reclama
+    // la fila `pendiente_ok` antes de mandar y re-comprueba puerta, día, email y baja) va en after(). Doble clic = un correo.
+    if (prefix === PREFIJO_FEX) {
+      const d = decidirBotonFex(cb, action, args, process.env.TELEGRAM_CHAT_ID)
+      if (!d.ok) {
+        await tgAnswerCallback(cb.id, d.toast)
+        return NextResponse.json({ ok: true })
+      }
+      await tgAnswerCallback(cb.id, d.decision === 'ok' ? '⏳ Enviando la felicitación…' : 'Descartando…')
+      const original = escapeHtml(cb.message?.text ?? '')
+      const mensajeId: number | undefined = cb.message?.message_id
+      if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n⏳ <i>Pulsado…</i>`).catch(() => {})
+      after(async () => {
+        const estado = await decidirFexEnAsegura({ decision: d.decision, clienteId: d.clienteId, anio: d.anio })
+        const linea = lineaTrasPulsarFex(d.decision, estado)
+        if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${linea}`).catch(() => {})
+        else await tgSend(linea).catch(() => {})
+      })
+      return NextResponse.json({ ok: true })
+    }
+
     // ── Posible contacto nuevo de aseguradora: ✅ añadir al Directorio / 🚫 ignorar (csg_ok / csg_no; csg_u = ↩️ deshacer el alta automática, 19/10/2026) ──
     // Solo la PERSONA autorizada (from.id = TELEGRAM_CHAT_ID); el id corto apunta a `correduria_pendiente_tg`, un solo uso.
     if (prefix === PREFIJO_CSG) {
@@ -1030,6 +1057,62 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
         const r = await resolverBotonCsg(d, hoy).catch(() => ({ linea: '⚠️ <i>No sé si se ha hecho (fallo interno): mira el Directorio antes de repetir.</i>', botones: undefined }))
         if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${r.linea}`, r.botones ? { botones: r.botones } : {}).catch(() => {})
         else await tgSend(r.linea).catch(() => {})
+      })
+      return NextResponse.json({ ok: true })
+    }
+
+    // ── 🧾 Factura a HUÉSPED: ✅ emitir y enviar / ✏️ corregir / 🔁 reintentar envío (fhu_emi / fhu_cor / fhu_env) ──
+    // Crea un documento fiscal y sale a un TERCERO: solo la PERSONA autorizada (from.id = TELEGRAM_CHAT_ID). Emitir es
+    // idempotente (FOR UPDATE + estado en BD): dos pulsaciones = un número y un correo. Se contesta YA y se trabaja en after().
+    if (prefix === PREFIJO_FACTURA_HUESPED) {
+      const d = decidirBotonFactura(cb, action, args, process.env.TELEGRAM_CHAT_ID)
+      if (!d.ok) {
+        await tgAnswerCallback(cb.id, d.toast)
+        return NextResponse.json({ ok: true })
+      }
+      await tgAnswerCallback(cb.id, d.accion === 'emi' ? '⏳ Emitiendo…' : d.accion === 'env' ? '⏳ Reintentando el envío…' : '✏️ Corregir')
+      const original = escapeHtml(cb.message?.text ?? '')
+      const mensajeId: number | undefined = cb.message?.message_id
+      if (mensajeId && d.accion !== 'cor') await tgEditMessage(mensajeId, `${original}\n\n⏳ <i>Pulsado…</i>`).catch(() => {})
+      after(async () => {
+        const r = await resolverBotonFactura(d, mensajeId ?? null).catch((e) => {
+          console.error('[tg] factura huésped:', e instanceof Error ? e.message : e)
+          return { linea: '⚠️ <i>No sé si se ha emitido (fallo interno): mira /sivra/facturas antes de repetir.</i>', botones: undefined }
+        })
+        if (mensajeId && d.accion !== 'cor') await tgEditMessage(mensajeId, `${original}\n\n${r.linea}`, r.botones ? { botones: r.botones } : {}).catch(() => {})
+        else await tgSend(r.linea).catch(() => {})
+      })
+      return NextResponse.json({ ok: true })
+    }
+
+    // ── 📒 Cierre de mes: ✅ Cerrar mes (cmes_cerrar:<AAAA-MM>) ──
+    // Bloquea las escrituras de gastos de ese mes: solo la PERSONA autorizada. Se RECALCULA al pulsar y solo
+    // cierra si todas las unidades siguen cuadrando. Idempotente (UPDATE … WHERE estado <> 'cerrado').
+    if (prefix === PREFIJO_CIERRE_MES) {
+      if (String(cb.from?.id ?? '') !== String(process.env.TELEGRAM_CHAT_ID ?? '')) {
+        await tgAnswerCallback(cb.id, 'No autorizado')
+        return NextResponse.json({ ok: true })
+      }
+      const dec = interpretarCallbackCierre(action, args)
+      if (!dec) { await tgAnswerCallback(cb.id, 'Botón no válido'); return NextResponse.json({ ok: true }) }
+      await tgAnswerCallback(cb.id, '⏳ Comprobando y cerrando…')
+      const original = escapeHtml(cb.message?.text ?? '')
+      const mensajeId: number | undefined = cb.message?.message_id
+      after(async () => {
+        let linea: string
+        try {
+          const cuentaId = await cuentaDeLosPisos()
+          if (!cuentaId) throw new Error('sin cuenta única de los pisos')
+          const r = await cerrarMes(cuentaId, dec.mes, hoyMadrid(), 'telegram')
+          linea = r.noCuadran.length
+            ? `⚠️ <i>No se cierra: ya no cuadra ${escapeHtml(r.noCuadran.map(nombreUnidad).join(', '))}.</i>`
+            : `🔒 <b>${escapeHtml(etiquetaMes(dec.mes))} cerrado</b>${r.cerradas.length ? `: ${escapeHtml(r.cerradas.map(nombreUnidad).join(', '))}` : ' (ya lo estaba)'}.`
+        } catch (e) {
+          console.error('[tg] cierre de mes:', e instanceof Error ? e.message : e)
+          linea = '⚠️ <i>No sé si se ha cerrado (fallo interno): no repitas sin mirar cierres_mes.</i>'
+        }
+        if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${linea}`).catch(() => {})
+        else await tgSend(linea).catch(() => {})
       })
       return NextResponse.json({ ok: true })
     }

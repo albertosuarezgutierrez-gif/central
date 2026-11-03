@@ -5,6 +5,9 @@ import { puede } from '@central/module-patrimonio'
 
 import { eur } from '@/lib/dinero'
 import { contratosDelInmueble } from '@/lib/patrimonio/contratos-bd'
+import { gastosDeTitular } from '@/lib/patrimonio/gastos-bd'
+import type { TitularGastos } from '@/lib/patrimonio/gastos-api'
+import { titularDeInmueble } from '@/lib/patrimonio/gastos-vista'
 import { inmuebleAutorizado } from '@/lib/patrimonio/inmuebles-bd'
 import { obligacionesDeInmueble, type ObligacionesDeInmueble } from '@/lib/patrimonio/obligaciones-api'
 import { puertosObligaciones } from '@/lib/patrimonio/obligaciones-bd'
@@ -15,10 +18,12 @@ import { puertaDeSesion } from '@/lib/puertas-portal'
 import { getIdentidad } from '@/lib/session'
 
 import { Documentos } from './Documentos'
+import { GastosDeEstePiso } from './GastosDeEstePiso'
 import { HipotecaInmueble } from './HipotecaInmueble'
 import { NuevoContrato } from './NuevoContrato'
 import { ObligacionesPropias } from './ObligacionesPropias'
 import { SegurosInmueble } from './SegurosInmueble'
+import { UnidadesEdificio } from './UnidadesEdificio'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,7 +44,7 @@ export default async function InmueblePage({ params }: { params: Promise<{ id: s
   if (ficha === null) notFound()
   const i = ficha.inmueble
   // Archivado: los contratos vivos no se listan (sus páginas dan 404) y no se ofrece ninguna alta.
-  const [contratos, seguros, recordatorios] = await Promise.all([
+  const [contratos, seguros, recordatorios, gastos] = await Promise.all([
     ficha.archivado ? Promise.resolve([]) : contratosDelInmueble(identidad.id, i.id),
     // Un fallo leyendo los seguros no tumba la ficha: la sección dice «no hemos podido comprobarlo».
     segurosDeInmueble(puertosSegurosInmueble(identidad.id), i.id).catch((e: unknown): SegurosDeInmueble | null | 'error' => {
@@ -51,14 +56,25 @@ export default async function InmueblePage({ params }: { params: Promise<{ id: s
       console.error('[patrimonio/inmueble] obligaciones:', e instanceof Error ? e.message : e)
       return 'error'
     }),
+    // Gastos de ESTE piso (mismos accesos que /patrimonio/gastos). Un fallo no tumba la ficha ni se pinta como «sin gastos».
+    ficha.archivado
+      ? Promise.resolve(null)
+      : gastosDeTitular(identidad.id, ficha.clienteId)
+          .then((t): TitularGastos | null | 'error' => (t === null ? null : titularDeInmueble(t, i.id)))
+          .catch((e: unknown): TitularGastos | null | 'error' => {
+            console.error('[patrimonio/inmueble] gastos:', e instanceof Error ? e.message : e)
+            return 'error'
+          }),
   ])
   const fechaEs = (f: string) => f.split('-').reverse().join('/')
 
   const filas: [string, string][] = [
     ['Titular', ficha.titularNombre || noConsta],
+    ...(ficha.edificio ? [['Edificio', ficha.edificio.alias] as [string, string]] : []),
     ['Uso', ETIQUETA_USO[i.uso]],
     ['Dirección', i.direccion === null ? noConsta : ficha.calleSinValidar ? `${i.direccion} (calle por validar: no casa con el callejero del Catastro)` : i.direccion],
-    ['Referencia catastral', i.referenciaCatastral ?? noConsta],
+    // Unidad de un edificio sin división horizontal: la RC es la del edificio (una sola), salvo que la unidad tenga una propia.
+    ['Referencia catastral', ficha.referenciaCatastralEfectiva === null ? noConsta : i.referenciaCatastral === null && ficha.edificio ? `${ficha.referenciaCatastralEfectiva} (la del edificio)` : ficha.referenciaCatastralEfectiva],
     ['Superficie', i.superficieM2 === null ? noConsta : `${i.superficieM2.toLocaleString('es-ES')} m²`],
     ['Año de construcción', i.anioConstruccion === null ? noConsta : String(i.anioConstruccion)],
     ['En comunidad de propietarios', triestado(i.enComunidad)],
@@ -85,6 +101,22 @@ export default async function InmueblePage({ params }: { params: Promise<{ id: s
           ))}
         </dl>
       </section>
+      {ficha.edificio && (
+        <p style={{ margin: '0 0 12px' }}>
+          <Link href={`/patrimonio/inmueble/${ficha.edificio.id}`} style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44, overflowWrap: 'anywhere' }}>
+            Es una unidad de «{ficha.edificio.alias}»: ver el edificio
+          </Link>
+        </p>
+      )}
+      {i.uso === 'edificio' && (
+        <section className="seccion" aria-labelledby="unidades-edificio">
+          <h2 id="unidades-edificio">Unidades</h2>
+          <UnidadesEdificio edificioId={i.id} unidades={ficha.unidades} criterio={i.repartoCriterio ?? null} puedeEditar={!ficha.archivado && puede(ficha.nivel, 'alta_baja')} />
+          <p style={{ margin: '12px 0 0' }}>
+            <Link href="/patrimonio/rentabilidad" style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>Rentabilidad del edificio y de cada unidad</Link>
+          </p>
+        </section>
+      )}
       <section className="seccion" aria-labelledby="seguros-inmueble">
         <h2 id="seguros-inmueble">Seguros</h2>
         {seguros === 'error' || seguros === null ? (
@@ -97,6 +129,19 @@ export default async function InmueblePage({ params }: { params: Promise<{ id: s
         <section className="seccion" aria-labelledby="hipoteca-inmueble">
           <h2 id="hipoteca-inmueble">Hipoteca</h2>
           <HipotecaInmueble inmuebleId={i.id} inicial={ficha.hipoteca} />
+        </section>
+      )}
+      {!ficha.archivado && (
+        <section className="seccion" aria-labelledby="gastos-inmueble">
+          <h2 id="gastos-inmueble">Gastos de este piso</h2>
+          <p className="suave" style={{ marginTop: 0, fontSize: 14 }}>
+            Gastos fijos, comunidad y derramas de este piso. Todos los gastos del titular están en <Link href="/patrimonio/gastos">Gastos</Link>.
+          </p>
+          {gastos === 'error' || gastos === null ? (
+            <p className="aviso-linea" role="status">Ahora no hemos podido comprobar los gastos de este piso. Vuelve a intentarlo en un rato.</p>
+          ) : (
+            <GastosDeEstePiso titular={gastos} inmuebleId={i.id} alias={i.alias} />
+          )}
         </section>
       )}
       <section className="seccion" aria-labelledby="recordatorios-inmueble">

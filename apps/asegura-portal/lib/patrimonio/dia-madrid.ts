@@ -27,3 +27,12 @@ export function inicioDiaMadrid(ahora: Date): Date {
   t = medianocheComoUtc - desfaseMin(new Date(t)) * 60_000
   return new Date(t)
 }
+
+/** El instante (UTC) en que empezó el MES de Madrid de `ahora`: las 00:00 locales del día 1 (cupo mensual de IA). */
+export function inicioMesMadrid(ahora: Date): Date {
+  const [y, m] = fechaMadrid(ahora).split('-').map(Number)
+  const medianocheComoUtc = Date.UTC(y, m - 1, 1)
+  let t = medianocheComoUtc - desfaseMin(new Date(medianocheComoUtc)) * 60_000
+  t = medianocheComoUtc - desfaseMin(new Date(t)) * 60_000
+  return new Date(t)
+}

@@ -7,14 +7,17 @@
 //    guardan con `canal = 'rpa'`, sin `project_id_codeoscopic` ni libro de gasto: ningún camino de
 //    Avant2 puede casarlos (CHECK `tarificacion_fuera_de_avant2`).
 
+import { riesgoConTomadorMediador } from './tarificador-explorador-mediador'
 import { cierraCabeceraTrasFallo, estadoFalloExploracion, exploradoValido, modoParaWorker, modosReclamables } from './tarificador-explorador-reglas'
 import { createHash } from 'node:crypto'
 import {
   MAX_INTENTOS,
   claveCompania,
+  entradaConTomadorMediador,
   estadoTrasError,
   estadoTrasErrorEmision,
   franquiciaGeneral,
+  ofertasConFirmezaRpa,
   puedeAutomatizar,
   riesgoSinDatosPersonales,
   sanearRecorrido,
@@ -28,12 +31,16 @@ import {
   type TipoError,
 } from '@central/module-tarificacion'
 import { decryptField } from '@central/module-seguros-pii'
-import { aplicarCompaniaActual, aplicarPolizaAnteriorUltimos5, companiaActualDeCliente, necesitaCompaniaActual, type PolizaParaCompaniaActual } from './tarificador-compania-actual'
+import { aplicarCompaniaActual, aplicarPolizaAnteriorUltimos5, companiaActualDeCliente, companiaActualUnica, necesitaCompaniaActual, type PolizaParaCompaniaActual } from './tarificador-compania-actual'
 import { aplicarFichaTomador, fichaTomadorAutoDeFicha, necesitaFichaTomador, type FilaFichaTomadorAuto } from './tarificador-ficha-tomador'
 import { prisma } from './tenant'
+import { esRamoVehiculo, ofertasConSupuestoReferencia, referenciaDeResultadoOrigen, riesgoConReferencia, usadoDeResultado } from './tarificador-vehiculo-referencia'
+import { anotarVehiculoUsado, guardarReferenciaOportunidad, leerReferenciaOportunidad } from './tarificador-vehiculo-referencia-bd'
 import { aplicarSexoDeFicha, necesitaSexoDeFicha } from './tarificador-sexo-ficha'
 import { sobreCoberturasRpa } from './presupuesto-rpa-reglas'
-import { hayBotVersion, hayPasos } from './esquema-bd'
+import { hayBotVersion, hayImagenTrabajo, hayPasos } from './esquema-bd'
+import { leerFilaImagen } from './tarificador-imagen'
+import { elegirImagenProduccion, imagenParaTrabajo } from './tarificador-imagen-reglas'
 import { caducarEmisiones } from './tarificador-emision'
 import { MENSAJE_EMISION_INCIERTA, autorizacionSinResolver } from './tarificador-emision-reglas'
 import { memoriaTrasExito } from './tarificador-eleccion-reglas'
@@ -122,6 +129,12 @@ export type EntradaEncolar = {
    * pulsación que solo trae duplicados dice «ya en marcha» sin reservar cupo (ni toparse con el tope).
    */
   soloComprobarDuplicado?: boolean
+  /**
+   * Imagen de PRUEBA (27/10/2026, solo `probar`): `rama-*` YA validada y con el interruptor comprobado por la ruta. Se guarda en
+   * `imagen_prueba` del trabajo NUEVO en el mismo INSERT (nunca hay un instante en que se lance con la de producción). Con un
+   * duplicado vivo → 409 (ese trabajo va con otra imagen). Exige la columna (`hayImagenTrabajo`).
+   */
+  imagenPrueba?: string | null
 }
 
 export type ResultadoEncolar =
@@ -233,8 +246,18 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
         and coalesce(to_jsonb(t)->>'modo', 'tarificar') not in ('exploracion', 'humo')
       order by t.created_at`
     const vivo = previos.find((p) => bloqueaDuplicado({ estado: p.estado, leaseHasta: p.lease_hasta, intentos: p.intentos, modo: p.modo, terminadoAt: p.terminado_at, conPrecio: p.con_precio, actualizadoAt: p.actualizado_at }, p.ahora, MAX_INTENTOS))
+    if (vivo && e.imagenPrueba) return { estado: 'rechazado' as const, status: 409, motivo: `duplicado_imagen_prueba: ya hay un trabajo igual (${vivo.id}, ${vivo.estado}); la imagen de prueba solo va en un trabajo nuevo` }
     if (vivo) return { estado: 'encolado' as const, trabajoId: vivo.id, duplicado: true, estadoPrevio: vivo.estado, mensaje: mensajeDuplicado(vivo.estado) }
     if (e.soloComprobarDuplicado) return { estado: 'rechazado' as const, status: 409, motivo: 'no_duplicado' }
+    if (e.imagenPrueba) {
+      const conPrueba = await tx.$queryRaw<{ id: string }[]>`
+        insert into seguros.tarificacion_trabajos
+          (correduria_id, oportunidad_id, cliente_id, poliza_id, compania, ramo, riesgo, solicitado_por, imagen_prueba)
+        values (${e.correduriaId}::uuid, ${e.oportunidadId}::uuid, ${cid}::uuid, ${polizaId}::uuid,
+                ${compania}, ${e.ramo}, ${riesgoJson}::jsonb, ${e.solicitadoPor}, ${e.imagenPrueba})
+        returning id::text as id`
+      return { estado: 'encolado' as const, trabajoId: conPrueba[0].id, duplicado: false }
+    }
     const filas = await tx.$queryRaw<{ id: string }[]>`
       insert into seguros.tarificacion_trabajos
         (correduria_id, oportunidad_id, cliente_id, poliza_id, compania, ramo, riesgo, solicitado_por)
@@ -301,8 +324,16 @@ async function leerDniFicha(correduriaId: string, clienteId: string): Promise<st
   return filas[0]?.dni ?? null
 }
 
+/** Como `leerCompaniaActualCliente` pero ESTRICTA (`companiaActualUnica`): solo con exactamente una póliza de auto en vigor. Para «probar». */
+export async function leerCompaniaActualUnicaCliente(correduriaId: string, clienteId: string): Promise<string | null> {
+  return leerCompaniaActualCliente(correduriaId, clienteId, null, companiaActualUnica)
+}
+
 /** Compañía con la que está asegurado hoy el cliente (columnas NO personales). `null` = no se sabe o la lectura falló. */
-async function leerCompaniaActualCliente(correduriaId: string, clienteId: string | null, oportunidadId: string | null): Promise<string | null> {
+async function leerCompaniaActualCliente(
+  correduriaId: string, clienteId: string | null, oportunidadId: string | null,
+  decidir: (competencia: unknown, polizas: readonly PolizaParaCompaniaActual[] | null) => string | null = companiaActualDeCliente,
+): Promise<string | null> {
   try {
     const comp = oportunidadId
       ? await prisma.$queryRaw<{ pc: unknown }[]>`
@@ -316,17 +347,17 @@ async function leerCompaniaActualCliente(correduriaId: string, clienteId: string
           where cliente_id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid and merged_into_poliza_id is null`
       : []
     const ps: PolizaParaCompaniaActual[] = polizas.map((p) => ({ tipo: p.tipo, aseguradora: p.aseguradora, companiaDeclarada: p.compania_declarada, estado: p.estado, importRef: p.import_ref, eiacXmlHash: p.eiac_xml_hash, sustituidaAt: p.sustituida_at, fechaEfecto: p.fecha_efecto }))
-    return companiaActualDeCliente(comp[0]?.pc ?? null, ps)
+    return decidir(comp[0]?.pc ?? null, ps)
   } catch {
     return null
   }
 }
 
 /** Número de la póliza actual declarado en la oportunidad (SOLO esa clave, de ESTA correduría). Dato sensible: nunca se registra. `null` = no hay o la lectura falló. */
-async function leerNumeroPolizaActual(correduriaId: string, oportunidadId: string | null): Promise<string | null> {
+async function leerNumeroPolizaActual(correduriaId: string, oportunidadId: string | null, db: Db = prisma): Promise<string | null> {
   if (!oportunidadId) return null
   try {
-    const f = await prisma.$queryRaw<{ n: string | null }[]>`
+    const f = await db.$queryRaw<{ n: string | null }[]>`
       select poliza_competencia->'historialDeclarado'->>'numeroPoliza' as n from seguros.oportunidades where id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid`
     return f[0]?.n ?? null
   } catch {
@@ -336,7 +367,8 @@ async function leerNumeroPolizaActual(correduriaId: string, oportunidadId: strin
 
 // ─── Reclamar y lanzar ───────────────────────────────────────────────────────
 
-type Reclamado = { id: string; intentos: number }
+/** `imagen_prueba` (27/10/2026): imagen de rama pedida por `probar` solo para este trabajo (`null` = la de producción). */
+type Reclamado = { id: string; intentos: number; imagen_prueba: string | null }
 
 /**
  * Reclama el pendiente más antiguo de (correduría, compañía) si hay hueco bajo `max_concurrencia`
@@ -401,7 +433,7 @@ export async function reclamarSiguiente(correduriaId: string, compania: string, 
         order by w.created_at
         for update of w skip locked
         limit 1)
-      returning t.id::text as id, t.intentos`
+      returning t.id::text as id, t.intentos, to_jsonb(t)->>'imagen_prueba' as imagen_prueba`
     return { trabajo: filas[0] ?? null, maquinasVencidas }
   }, { timeout: 15000, maxWait: 10000 })
 }
@@ -419,19 +451,39 @@ export type ResumenLanzar = { lanzados: string[]; fallidos: { id: string; motivo
 export async function lanzarPendientes(correduriaId: string, compania: string, deps: DepsLanzador = depsReales()): Promise<ResumenLanzar> {
   const r: ResumenLanzar = { lanzados: [], fallidos: [] }
   if (!rpaActivo(deps.env)) return { ...r, omitido: 'rpa_apagado' }
-  const c = configFly(deps.env)
+  // IMAGEN (27/10/2026): la fila `produccion` de `seguros.tarificador_imagen` manda; la env `TARIFICADOR_FLY_IMAGE` es el respaldo
+  // (sin tabla, sin fila, lectura fallida o valor que no casa con `REGEX_IMAGEN_BOT`). Ver tarificador-imagen-reglas.ts.
+  const filaImagen = await leerFilaImagen()
+  const produccion = elegirImagenProduccion(filaImagen?.imagen ?? null, deps.env)
+  if (produccion.aviso) console.error(`[tarificador-imagen] ${produccion.aviso}`)
+  const c = configFly(deps.env, produccion.origen === 'bd' ? produccion.imagen : null)
   if (!c.ok) return { ...r, omitido: `fly_sin_configurar: ${c.faltan.join(', ')}` }
+  const conImagenTrabajo = await hayImagenTrabajo()
   for (let vuelta = 0; vuelta < 5; vuelta++) {
     const { trabajo: t, maquinasVencidas } = await reclamarSiguiente(correduriaId, compania, modosReclamables(deps.env))
     // Una máquina de lease vencido puede seguir viva con la credencial: se destruye ANTES de lanzar otra.
     for (const m of maquinasVencidas) await destruirMaquina(c.cfg, m, deps.fetch)
     if (!t) break
-    const res = await crearMaquina(c.cfg, t.id, deps.fetch)
+    // Imagen de PRUEBA (rama-*, pedida por `probar`): solo para ESTE trabajo y con el interruptor encendido AHORA; si no vale,
+    // el trabajo falla con el motivo (nunca se cae a producción en silencio: la prueba mediría otra cosa).
+    const im = imagenParaTrabajo({ imagenPrueba: t.imagen_prueba ?? null, permitirPrueba: filaImagen?.permitirPrueba === true, produccion: c.cfg.imagen })
+    if (!im.ok) {
+      await marcarFallo(prisma, t.id, t.intentos, { tipo: 'datos', mensaje: im.motivo, url: null }, null)
+      r.fallidos.push({ id: t.id, motivo: im.motivo })
+      continue
+    }
+    const res = await crearMaquina({ ...c.cfg, imagen: im.imagen }, t.id, deps.fetch)
     if (res.ok) {
-      await prisma.$executeRaw`
-        update seguros.tarificacion_trabajos set fly_machine_id = ${res.machineId}, updated_at = now()
-        where id = ${t.id}::uuid and estado = 'en_curso'`
-      console.info(`[tarificador] máquina lanzada: trabajo ${t.id} imagen ${c.cfg.imagen}`) // vuelta atrás: ver MANUAL-NUEVO-BOT.md
+      if (conImagenTrabajo) {
+        await prisma.$executeRaw`
+          update seguros.tarificacion_trabajos set fly_machine_id = ${res.machineId}, imagen_bot = ${im.imagen}, updated_at = now()
+          where id = ${t.id}::uuid and estado = 'en_curso'`
+      } else {
+        await prisma.$executeRaw`
+          update seguros.tarificacion_trabajos set fly_machine_id = ${res.machineId}, updated_at = now()
+          where id = ${t.id}::uuid and estado = 'en_curso'`
+      }
+      console.info(`[tarificador] máquina lanzada: trabajo ${t.id} imagen ${im.imagen}${im.prueba ? ' (PRUEBA)' : ` (${produccion.origen ?? 'env'})`}`) // vuelta atrás: ver MANUAL-NUEVO-BOT.md
       r.lanzados.push(t.id)
     } else {
       await marcarFallo(prisma, t.id, t.intentos, { tipo: 'infra', mensaje: `fly: ${res.motivo}`, url: null }, null)
@@ -443,7 +495,7 @@ export async function lanzarPendientes(correduriaId: string, compania: string, d
 
 async function crearMaquina(cfg: ConfigFly, jobId: string, f: typeof fetch): Promise<{ ok: true; machineId: string } | { ok: false; motivo: string }> {
   try {
-    const p = peticionMaquina(cfg, jobId, process.env.TARIFICADOR_EXPLORADOR_VISTA)
+    const p = peticionMaquina(cfg, jobId, process.env.TARIFICADOR_EXPLORADOR_VISTA, process.env.MAPFRE_HOGAR_ACTIVO)
     const res = await f(p.url, { ...p.init, signal: AbortSignal.timeout(20_000) })
     const texto = await res.text()
     if (!res.ok) return { ok: false, motivo: `HTTP ${res.status}: ${texto.slice(0, 300)}` }
@@ -542,13 +594,21 @@ export async function trabajoParaWorker(id: string, modosWorker: readonly string
     const conPoliza = aplicarPolizaAnteriorUltimos5(f.compania, f.ramo, riesgo, await leerNumeroPolizaActual(f.correduria_id, f.oportunidad_id))
     riesgo = conPoliza
   }
+  // VEHÍCULO DE REFERENCIA (01/11/2026): el de la oportunidad que MANDA (humano > Mapfre > póliza > Allianz), solo en la respuesta (nunca
+  // en BD). El bot lo usa si iba a parar por versión. Fallo de lectura = sin él (el bot hace lo de siempre).
+  if (modo !== 'exploracion' && modo !== 'humo' && f.oportunidad_id && esRamoVehiculo(f.ramo)) {
+    riesgo = riesgoConReferencia(riesgo, f.ramo, await leerReferenciaOportunidad(prisma, f.correduria_id, f.oportunidad_id))
+  }
   const base = { id: f.id, compania: f.compania, ramo: f.ramo, riesgo, leaseHasta: f.lease_hasta.toISOString(), modo }
   if (modo !== 'exploracion') return base
   const x = await prisma.$queryRaw<{ entrada: string }[]>`
     select e.entrada from seguros.tarificador_exploraciones e
     join seguros.tarificacion_trabajos t on t.id = e.trabajo_id and t.correduria_id = e.correduria_id
     where e.trabajo_id = ${id}::uuid and e.cerrada_at is null`
-  return x[0] ? { ...base, exploracion: { entrada: x[0].entrada, conDatosReales: f.con_cliente } } : null
+  if (!x[0]) return null
+  // Tomador = MEDIADOR (patinete, 28/10/2026): sus datos van SOLO en la respuesta al worker (como el NIF de arriba), nunca en BD.
+  const conMediador = entradaConTomadorMediador(x[0].entrada) && !f.con_cliente
+  return { ...base, ...(conMediador ? { riesgo: riesgoConTomadorMediador(riesgo) } : {}), exploracion: { entrada: x[0].entrada, conDatosReales: f.con_cliente } }
 }
 
 // ─── Resultado ───────────────────────────────────────────────────────────────
@@ -578,6 +638,16 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
   // Esquema opcional (SQL de 08/10/2026 puede no estar aplicado): se omite `bot_version` / la traza si no existen.
   const conBot = await hayBotVersion()
   type Interno = { res: ResultadoRegistro; traza: { t: FilaTrabajo; captura: 'con_captura' | null } | null }
+  let referenciaOk: { correduriaId: string; oportunidadId: string; compania: string; ref: ReturnType<typeof referenciaDeResultadoOrigen>; usado: ReturnType<typeof usadoDeResultado> } | null = null
+  // Nº de póliza actual de Allianz auto (SINCO al tarificar): se lee ANTES de abrir la transacción y sin `tx`, para que un fallo de esta
+  // lectura (ya capturado dentro) no pueda abortar la transacción del resultado. compañía/ramo/oportunidad del trabajo no cambian.
+  let numeroPolizaActual: string | null = null
+  if (r.tipo === 'ok') {
+    const previo = await prisma.$queryRaw<{ correduria_id: string; oportunidad_id: string | null; compania: string; ramo: string }[]>`
+      select correduria_id::text as correduria_id, oportunidad_id::text as oportunidad_id, compania, ramo from seguros.tarificacion_trabajos where id = ${r.trabajoId}::uuid`.catch(() => [])
+    const p = previo[0]
+    if (p && p.compania === 'allianz' && p.ramo === 'auto') numeroPolizaActual = await leerNumeroPolizaActual(p.correduria_id, p.oportunidad_id)
+  }
   const interno: Interno = await prisma.$transaction(async (tx) => {
     const filas = await tx.$queryRaw<(FilaTrabajo & { modo: string | null })[]>`
       select w.id::text as id, w.correduria_id::text as correduria_id, w.cliente_id::text as cliente_id,
@@ -667,7 +737,7 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
     for (const p of r.pdfs) {
       docs.push(await guardarAdjunto(tx, t, { nombre: p.nombre, mime: 'application/pdf', contenido: p.contenido, notas: `Oferta de ${t.compania} (${t.ramo}) obtenida por el tarificador RPA` }))
     }
-    const tarificacionId = await guardarTarificacionRpa(tx, t, r.ofertas, docs)
+    const tarificacionId = await guardarTarificacionRpa(tx, t, r.ofertas, docs, numeroPolizaActual)
     if (conBot) {
       await tx.$executeRaw`
         update seguros.tarificacion_trabajos
@@ -690,6 +760,8 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
         set riesgo = riesgo || ${JSON.stringify(vehiculoParaRiesgoOrigen(t.compania, r.vehiculo))}::jsonb
         where id = ${t.id}::uuid and correduria_id = ${t.correduria_id}::uuid and jsonb_typeof(riesgo) = 'object'`
       if (t.oportunidad_id) await inyectarVehiculoEnEspera(tx, t.correduria_id, t.oportunidad_id, r.vehiculo)
+      // VEHÍCULO DE REFERENCIA (01/11/2026): se guarda en la oportunidad DESPUÉS del commit (accesorio: nunca tumba el resultado).
+      if (t.oportunidad_id) referenciaOk = { correduriaId: t.correduria_id, oportunidadId: t.oportunidad_id, compania: t.compania, ref: referenciaDeResultadoOrigen(t.compania, t.ramo, r.vehiculo), usado: usadoDeResultado(t.compania, t.ramo, r.vehiculo) }
     }
     // PURGA (13/10/2026): DESPUÉS de guardar la tarificación y los PDF (lo último que lee el riesgo dentro de la
     // transacción) y en el MISMO commit. El aprendizaje de versión de abajo usa la copia en memoria (`t`), no la fila.
@@ -697,6 +769,11 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
     await purgarRiesgoTrabajos(tx, [t.id])
     return { res: { estado: 'registrado' as const, estadoTrabajo: 'ok', tarificacionId }, traza: { t, captura: null } }
   })
+  // (Asignada dentro del callback de la transacción: el `as` evita que TS la estreche a `null`.)
+  const refOk = referenciaOk as { correduriaId: string; oportunidadId: string; compania: string; ref: ReturnType<typeof referenciaDeResultadoOrigen>; usado: ReturnType<typeof usadoDeResultado> } | null
+  if (refOk?.ref) await guardarReferenciaOportunidad(refOk.correduriaId, refOk.oportunidadId, refOk.ref)
+  // Con qué vehículo tarificó esta compañía → si difiere del canónico, `retarificar` lo marca (regla: mismo modelo para todas).
+  if (refOk?.usado) await anotarVehiculoUsado(refOk.correduriaId, refOk.oportunidadId, refOk.compania, refOk.usado)
   // APRENDER (13/10/2026): un `ok` con tarificación que llevaba una versión AUTOMÁTICA (IA o memoria) la confirma en
   // `seguros.tarificador_elecciones`. Fuera de la transacción y sin lanzar: el resultado jamás depende de la memoria.
   if (interno.res.estado === 'registrado' && interno.res.estadoTrabajo === 'ok' && interno.res.tarificacionId && interno.traza) {
@@ -726,7 +803,7 @@ export function notasPresupuestoExplorado(compania: string, ramo: string, refere
   return `Presupuesto de ${compania} (${ramo}) guardado por el explorador del tarificador RPA${referencia ? ` · referencia del portal: ${referencia}` : ' · referencia: no se vio'}`
 }
 
-async function guardarTarificacionRpa(tx: Db, t: FilaTrabajo, ofertas: OfertaNormalizada[], docs: string[]): Promise<string> {
+async function guardarTarificacionRpa(tx: Db, t: FilaTrabajo, ofertas: OfertaNormalizada[], docs: string[], numeroPolizaActual: string | null): Promise<string> {
   const rg = t.riesgo
   // La columna `ramo` del trabajo manda: si el JSON del riesgo dice otra cosa, no se guarda nada con columnas equivocadas.
   if (rg.ramo !== t.ramo) throw new Error(`tarificador: el riesgo (${String(rg.ramo)}) no casa con el ramo del trabajo (${t.ramo})`)
@@ -739,7 +816,16 @@ async function guardarTarificacionRpa(tx: Db, t: FilaTrabajo, ofertas: OfertaNor
         // Hogar (19/10/2026): la vivienda del formulario. `null` = no consta (nunca 0).
         ? { fechaEfecto: null, codigoPostal: rg.inmueble.codigoPostal, m2: rg.inmueble.superficieM2, anioConstruccion: rg.inmueble.anioConstruccion, capitalContinente: rg.hogar.capitalContinenteEur, capitalContenido: rg.hogar.capitalContenidoEur }
         : { fechaEfecto: null, codigoPostal: rg.codigoPostal, m2: null, anioConstruccion: null, capitalContinente: null, capitalContenido: null }
-  const conDocs = ofertas.map((o) => ({ ...o, documentoId: o.pdf ? (docs[o.pdf.indice] ?? null) : null }))
+  // SINCO al tarificar (30/10/2026, regla de Alberto): precio `firme` solo con compañía ≠ Occident + auto + nº de póliza anterior en el
+  // riesgo ENTREGADO + el bot confirmó que lo tecleó. Allianz auto recibe los 5 dígitos solo en la entrega (nunca en BD): se reconstruye
+  // igual que en la entrega. El número no sale de aquí (solo su forma decide). La señal solo se guarda en ofertas `firme`.
+  const riesgoEntregado = t.compania === 'allianz' && t.ramo === 'auto'
+    ? aplicarPolizaAnteriorUltimos5(t.compania, t.ramo, rg, numeroPolizaActual)
+    : rg
+  // Versión elegida por el VEHÍCULO DE REFERENCIA (01/11/2026, marca `eleccionVersionReferencia` del riesgo): su supuesto va a los avisos
+  // de cada oferta ANTES de la firmeza → `estimado` aunque el bot recibiera la elección como explícita.
+  const conFirmeza = ofertasConFirmezaRpa(t.compania, t.ramo, riesgoEntregado, ofertasConSupuestoReferencia(ofertas, rg))
+  const conDocs = conFirmeza.map(({ oferta: o }) => ({ ...o, documentoId: o.pdf ? (docs[o.pdf.indice] ?? null) : null }))
   // ADITIVO (07/10/2026): el PDF del proyecto de la compañía (`seguros.documentos`), sin columna nueva: va en el
   // jsonb `respuesta`. `null` = el worker no lo obtuvo (el motivo va en los `avisos` de la oferta).
   const proyectoDocumentoId = conDocs.find((o) => o.documentoId)?.documentoId ?? null
@@ -763,11 +849,11 @@ async function guardarTarificacionRpa(tx: Db, t: FilaTrabajo, ofertas: OfertaNor
   const id = filas[0]?.id
   if (!id) throw new Error('tarificacion_rpa_sin_id')
   const leidasAt = new Date().toISOString()
-  for (const o of ofertas) {
+  for (const { oferta: o, firmeza } of conFirmeza) {
     // `frecuencia_pago` NO se escribe: es vocabulario de Avant2 (`paymentFrequency`); el fraccionamiento
     // del portal viaja en `respuesta.ofertas[]`. Mezclar vocabularios en una columna es inventar dato.
-    // Un precio de portal es una OFERTA de la compañía, no un precio cerrado: `estimado` hasta que el
-    // corredor lo revise (y nunca ReRate: no hay proyecto de Avant2 que re-tarificar).
+    // Un precio de portal es una OFERTA de la compañía: `estimado` salvo la regla SINCO de arriba (`firme`)
+    // (y nunca ReRate: no hay proyecto de Avant2 que re-tarificar).
     // COBERTURAS (18/10/2026): el sobre que entiende `coberturasDeSobre()`; sin ninguna legible → NULL (no consta,
     // jamás `vacias` = «no cubre nada»). Los avisos (supuestos incluidos) siguen en `avisos`, como aviso y no como dato.
     const sobre = sobreCoberturasRpa(o.coberturas, leidasAt)
@@ -777,7 +863,7 @@ async function guardarTarificacionRpa(tx: Db, t: FilaTrabajo, ofertas: OfertaNor
         firmeza, requiere_rerate, referencia_vendor, avisos, coberturas
       ) values (
         ${id}::uuid, ${o.compania}, ${o.producto}, null, null, ${o.primaAnualEur}::numeric, ${franquiciaGeneral(o)}::numeric,
-        'estimado', false, ${o.referenciaPortal}, ${JSON.stringify(o.avisos)}::jsonb, ${sobre ? JSON.stringify(sobre) : null}::jsonb
+        ${firmeza}, false, ${o.referenciaPortal}, ${JSON.stringify(o.avisos)}::jsonb, ${sobre ? JSON.stringify(sobre) : null}::jsonb
       )`
   }
   return id
@@ -1063,6 +1149,23 @@ async function leerOrigenesVehiculo(db: Db, correduriaId: string, oportunidadId:
     order by t.terminado_at desc nulls last
     limit 10`
   return filas.map((f) => ({ compania: f.compania, ramo: f.ramo, riesgo: f.riesgo, terminadoAt: f.terminado_at }))
+}
+
+/** Los últimos `ok` de Allianz/Mapfre AUTO del CLIENTE (de ESTA correduría), para «probar» Generali sin oportunidad. Fallo de lectura = sin origen. */
+export async function leerOrigenesVehiculoCliente(correduriaId: string, clienteId: string): Promise<FilaOrigen[]> {
+  try {
+    const filas = await prisma.$queryRaw<{ compania: string; ramo: string; riesgo: unknown; terminado_at: Date | null }[]>`
+      select t.compania, t.ramo, t.riesgo, t.terminado_at
+      from seguros.tarificacion_trabajos t
+      where t.correduria_id = ${correduriaId}::uuid and t.cliente_id = ${clienteId}::uuid
+        and t.estado = 'ok' and t.ramo = 'auto' and t.compania = any(${[...ORIGENES_VEHICULO_ENCADENADO]}::text[])
+        and coalesce(to_jsonb(t)->>'modo', 'tarificar') in ('tarificar', 'identificar')
+      order by t.terminado_at desc nulls last
+      limit 10`
+    return filas.map((f) => ({ compania: f.compania, ramo: f.ramo, riesgo: f.riesgo, terminadoAt: f.terminado_at }))
+  } catch {
+    return []
+  }
 }
 
 /** Inyecta `v` en los trabajos `pendiente` en espera de la oportunidad (de ESTA correduría). Devuelve cuántos. */

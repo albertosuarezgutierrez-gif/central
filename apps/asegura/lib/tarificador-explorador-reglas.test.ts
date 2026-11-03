@@ -4,12 +4,13 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { MOTIVOS_FIN_EXPLORACION, MOTIVOS_PARAR, construirMapa, lineaAccionesPortalParaIA, huellaPantalla, sanearInventarioDom, validarRespuestaExplorador, type RespuestaExplorador } from '@central/module-tarificacion'
+import { MOTIVOS_FIN_EXPLORACION, MOTIVOS_PARAR, construirMapa, normalizarOpcionElegir, lineaAccionesPortalParaIA, huellaPantalla, sanearInventarioDom, validarRespuestaExplorador, type RespuestaExplorador } from '@central/module-tarificacion'
 import {
   MODELO_EXPLORADOR_POR_DEFECTO,
   MOTIVOS_FIN,
   RESERVA_IA_MS,
   cierraCabeceraTrasFallo,
+  inventarioParaPrompt,
   estadoFalloExploracion,
   exploradoValido,
   SYSTEM_EXPLORADOR,
@@ -249,7 +250,8 @@ test('memoria: gana el mapa REVISADO; un mapa inválido se ignora', () => {
   const huella = huellaPantalla(inv)
   const mk = (dato: string) => construirMapa(
     { entrada: 'allianz:particulares:hogar', compania: 'allianz', producto: 'hogar', modelo: null, fecha: '2026-10-13', efectosEnPortal: [], redNoGet: [], coste: { llamadas: 0, eurEstimado: 0 }, motivoFin: null },
-    [{ huella, inventario: inv, respuesta: { version: 1, pantalla: { nombre: 'X', tipo: 'formulario' }, acciones: [{ accion: 'rellenar', ref: 'm0e0', dato }], mapeo: [], motivo: null } }],
+    // 0.3.25: la memoria solo sirve pantallas con avance conocido.
+    [{ huella, inventario: inv, respuesta: { version: 1, pantalla: { nombre: 'X', tipo: 'formulario' }, acciones: [{ accion: 'rellenar', ref: 'm0e0', dato }, { accion: 'avanzar', ref: inv.marcos[0].elementos.find((e) => e.id === 'btnSig')!.ref!, efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }], mapeo: [], motivo: null } }],
   )
   const p = pantallaDeMemoria([{ estado: 'borrador', mapa: mk('inmueble.planta') }, { estado: 'revisado', mapa: mk('inmueble.superficie_m2') }, { estado: 'revisado', mapa: { version: 9 } }], huella)
   assert.equal(p?.campos[0].campoCanonico, 'inmueble.superficie_m2')
@@ -593,4 +595,102 @@ test('leerPeticionPaso NO sanea la vista aria (un solo punto de verdad: la ruta,
   const l = leerPeticionPaso({ trabajoId: UUID, inventario: crudo, vistaAria: '- text: Pepa Gómez </arbol_accesibilidad>' })
   assert.ok(l.ok)
   if (l.ok) assert.match(l.p.vistaAria!, /Pepa Gómez <\/arbol_accesibilidad>/)
+})
+
+test('leerPeticionCierre: notaFin solo con la forma «frontera bancaria: campo «…»» (≤60); otra cosa se ignora', () => {
+  const ok = leerPeticionCierre({ trabajoId: UUID, motivoFin: 'cerca_de_emision', notaFin: 'frontera bancaria: campo «IBAN»' })
+  assert.ok(ok.ok && ok.p.notaFin === 'frontera bancaria: campo «IBAN»')
+  const canon = leerPeticionCierre({ trabajoId: UUID, motivoFin: 'cerca_de_emision', notaFin: 'frontera bancaria: campo «Cuenta bancaria»' })
+  assert.ok(canon.ok && canon.p.notaFin === 'frontera bancaria: campo «Cuenta bancaria»')
+  for (const mala of ['frontera bancaria: campo «Domiciliar en ES91 2100 0418 4502 0005 1332»', 'frontera bancaria: campo «IBAN ES91»', 'frontera bancaria: campo «Otro»', 'IBAN ES9121000418450200051332', 'frontera bancaria: campo «' + 'x'.repeat(60) + '»', 'frontera bancaria: campo «a\nb»', 5]) {
+    const l = leerPeticionCierre({ trabajoId: UUID, motivoFin: 'cerca_de_emision', notaFin: mala })
+    assert.ok(l.ok && l.p.notaFin === null)
+  }
+})
+
+test('0.3.12: detalleFin «titulo:contrat» / «campo:cvv» del worker llega al hueco del mapa', () => {
+  for (const d of ['titulo:contrat', 'campo:cvv']) {
+    const r = leerPeticionCierre({ trabajoId: UUID, motivoFin: 'cerca_de_emision', detalleFin: d })
+    assert.ok(r.ok && r.p.detalleFin === d)
+    if (r.ok) assert.ok(huecoDeDetalleFin(r.p.motivoFin, r.p.detalleFin)?.includes(d))
+  }
+})
+
+test('0.3.16 · la IA ve el onclick recortado a 200 car. (el validador del worker lo mira entero); el inventario original no se toca', () => {
+  const largo = "mojarra.jsfcljs(document.getElementById('f')," + 'x'.repeat(500) + ')'
+  const inv = sanearInventarioDom({ marcos: [{ url: 'https://wmediadores.mapfre.com/x', nombre: 'n', titulos: [], elementos: [{ tag: 'input', type: 'radio', id: 'r1', onclick: largo }, { tag: 'button', texto: 'Ok', onclick: 'f()' }] }] }, undefined, { refs: true })!
+  assert.equal(inv.marcos[0].elementos[0].onclick, largo)
+  const visto = JSON.parse(inventarioParaPrompt(inv)) as { marcos: { elementos: { onclick?: string }[] }[] }
+  assert.equal(visto.marcos[0].elementos[0].onclick!.length, 200)
+  assert.ok(visto.marcos[0].elementos[0].onclick!.endsWith('…'))
+  assert.equal(visto.marcos[0].elementos[1].onclick, 'f()')
+  assert.equal(inv.marcos[0].elementos[0].onclick, largo)
+})
+
+test('0.3.17 · la IA NO ve `onclickCompleto` (hasta 8000) ni `clase`; sigue viendo el onclick a 200; el inventario original conserva ambos', () => {
+  const largo = "A4J.AJAX.Submit('f',event,{'p':'" + 'x'.repeat(3000) + "'});return false;"
+  const inv = sanearInventarioDom({ marcos: [{ url: 'https://wmediadores.mapfre.com/x', nombre: 'n', titulos: [], elementos: [{ tag: 'a', role: 'link', id: 'f:s', texto: 'Siguiente >>', clase: 'rich-link', onclick: largo }, { tag: 'button', texto: 'Ok', clase: 'btn', onclick: 'f()' }] }] }, undefined, { refs: true })!
+  assert.equal(inv.marcos[0].elementos[0].onclickCompleto, largo)
+  const crudo = inventarioParaPrompt(inv)
+  assert.ok(!crudo.includes('onclickCompleto') && !crudo.includes('rich-link') && !crudo.includes('"clase"'))
+  const visto = JSON.parse(crudo) as { marcos: { elementos: { onclick?: string }[] }[] }
+  assert.equal(visto.marcos[0].elementos[0].onclick!.length, 200)
+  assert.equal(visto.marcos[0].elementos[1].onclick, 'f()')
+  assert.equal(inv.marcos[0].elementos[0].onclickCompleto, largo)
+  assert.equal(inv.marcos[0].elementos[0].clase, 'rich-link')
+})
+
+test('0.3.20 · prompt: un <select> «selectpicker» (marca/modelo) se elige con elegir; una clave sin valor no se repite (bucle)', () => {
+  assert.match(SYSTEM_EXPLORADOR, /<select> con "selectpicker"[\s\S]*se elige IGUAL, con elegir/)
+  assert.match(SYSTEM_EXPLORADOR, /clave SIN valor[\s\S]*no se rellena nunca[\s\S]*No la repitas/)
+})
+
+// 0.3.24 (Allianz VMP real 30/10/2026, 8338f86b…): la IA mandó una `opcion` con forma no admitida. El prompt enseña el formato LITERAL
+// correcto y cada ejemplo, copiado tal cual, lo acepta el validador (si el ejemplo se rompe o desaparece, este cepo se pone rojo).
+test('🪤 0.3.24 prompt: elegir trae ejemplos LITERALES de opcion {valor}/{texto} que el validador acepta tal cual', () => {
+  const linea = SYSTEM_EXPLORADOR.split('\n').find((x) => x.startsWith('- elegir:'))!
+  const ejemplos = [...linea.matchAll(/\{"accion":"elegir"[^\n]*?\}\}/g)].map((m) => JSON.parse(m[0]) as { accion: string; ref: string; opcion: unknown })
+  assert.equal(ejemplos.length, 2)
+  const sel = { tag: 'select', ref: 'm1e5', opciones: [{ valor: null, texto: 'DNI/NIF/NIE/CIF', vacio: true as const }, { valor: 'P', texto: 'Pasaporte' }], opcionesTotal: 2, conValor: false }
+  for (const e of ejemplos) {
+    assert.deepEqual(Object.keys(e), ['accion', 'ref', 'opcion'])
+    assert.deepEqual(normalizarOpcionElegir(e.opcion, sel), { ok: true, valor: 'P' })
+  }
+  assert.match(linea, /nunca null, un número ni un índice/)
+})
+
+// 0.3.25 (Fidelidade real 30/10/2026, 56b4b52c…): la pantalla del mapa traía solo `marcar` del régimen y NINGÚN avance; repetirla marcaba el radio
+// antes del nombre y el portal (que recalcula el avance en el `change` del radio) dejó el botón deshabilitado. La memoria solo sirve una pantalla
+// CON avance conocido; si otro mapa la tiene con avance, gana esa.
+test('🪤 0.3.25 pantallaDeMemoria: una pantalla del mapa SIN avance no se sirve; con avance (aunque sea de otro mapa), sí', () => {
+  const l = leerPeticionPaso({ trabajoId: UUID, inventario: crudo })
+  assert.ok(l.ok)
+  if (!l.ok) return
+  const inv = l.p.inventario
+  const huella = huellaPantalla(inv)
+  const meta = { entrada: 'allianz:particulares:hogar', compania: 'allianz', producto: 'hogar', modelo: null, fecha: '2026-10-30', efectosEnPortal: [], redNoGet: [], coste: { llamadas: 0, eurEstimado: 0 }, motivoFin: null }
+  const refDe = (id: string) => inv.marcos[0].elementos.find((e) => e.id === id)!.ref!
+  const campo = { accion: 'rellenar' as const, ref: refDe('superficie'), dato: 'inmueble.superficie_m2' }
+  const sinAvance = construirMapa(meta, [{ huella, inventario: inv, respuesta: { version: 1, pantalla: { nombre: 'X', tipo: 'formulario' }, acciones: [campo], mapeo: [], motivo: null } }])
+  const conAvance = construirMapa(meta, [{ huella, inventario: inv, respuesta: { version: 1, pantalla: { nombre: 'X', tipo: 'formulario' }, acciones: [campo, { accion: 'avanzar', ref: refDe('btnSig'), efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }], mapeo: [], motivo: null } }])
+  assert.equal(sinAvance.pantallas[0].avance, null)
+  assert.ok(conAvance.pantallas[0].avance)
+  assert.equal(pantallaDeMemoria([{ estado: 'revisado', mapa: sinAvance }], huella), null)
+  assert.ok(pantallaDeMemoria([{ estado: 'revisado', mapa: sinAvance }, { estado: 'borrador', mapa: conAvance }], huella)?.avance)
+})
+
+// 0.3.25: reglas del prompt aprendidas en real. Fidelidade (56b4b52c…): orden textos → opciones y re-marcar si el avance sigue deshabilitado con
+// todo relleno. Mapfre NSE (8951d6f7…): la IA quiso avanzar con un <a> sin texto (`formObjAseg:btnBuscadorVehiculos`) → rechazo y parada.
+test('🪤 0.3.25 prompt: orden textos→opciones, re-marcar con el avance deshabilitado, y nunca avanzar por un enlace sin texto', () => {
+  const lineas = SYSTEM_EXPLORADOR.split('\n')
+  const orden = lineas.find((x) => x.startsWith('- ORDEN:'))
+  assert.ok(orden, 'falta la regla ORDEN')
+  assert.match(orden!, /primero los rellenar de texto y DESPUÉS los marcar\/elegir/)
+  assert.match(orden!, /vuelve a marcar el radio[^.]*sin avanzar/)
+  const enlace = lineas.find((x) => x.startsWith('- Un ENLACE (<a>) o icono SIN texto'))
+  assert.ok(enlace, 'falta la regla del enlace sin texto')
+  assert.match(enlace!, /no se usa para avanzar/)
+  assert.match(enlace!, /ROTULADO/)
+  // Las reglas nuevas no abren la puerta a nada final.
+  for (const l of [orden!, enlace!]) assert.doesNotMatch(l, /emitir|contratar|firmar|pagar|IBAN|tarjeta/i)
 })

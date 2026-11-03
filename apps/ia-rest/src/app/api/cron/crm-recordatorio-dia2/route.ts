@@ -1,4 +1,5 @@
 import { createServerClient } from '@/lib/supabase'
+import { cronAutorizado } from '@/lib/cron-auth'
 import { NextRequest, NextResponse } from 'next/server'
 import jwt from 'jsonwebtoken'
 import { tgAlert } from '@/lib/telegram'
@@ -8,7 +9,7 @@ export async function GET(req: NextRequest) {
   const { Resend } = await import('resend')
   const resend = new Resend(process.env.RESEND_API_KEY)
 
-  if (req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!cronAutorizado(req)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
 

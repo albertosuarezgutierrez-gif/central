@@ -17,7 +17,7 @@ import { textoOpcionesComparadas, type FilaMatriz, type OfertaNormalizada, type 
 import { eur } from './dinero.ts'
 import { LOGOS, LOGOTIPO, NUNITO_400, NUNITO_700, QUICKSAND_700 } from './presupuesto-pdf-recursos.ts'
 import { claveLogo, fechaCorta, hex, paraFuente, partir, recortar, textosReferencia } from './presupuesto-pdf-base.ts'
-import { cabecerasColumnas, NO_FIGURA, pintarAnalisis, pintarCuadroComparativo, pintarLlamadaAccion, textoPrimaOferta, type EstudioPdf, type LienzoPdf } from './presupuesto-pdf-cuadro.ts'
+import { cabecerasColumnas, EstudioIncompletoError, NO_FIGURA, pintarAnalisis, pintarCuadroComparativo, pintarLlamadaAccion, textoPrimaOferta, type EstudioPdf, type LienzoPdf } from './presupuesto-pdf-cuadro.ts'
 
 // Lo que se movió al cuadro común (21/10/2026) se re-exporta: los consumidores y tests lo siguen importando de aquí.
 export { filasParaColumnas, leerEstudio, NO_FIGURA, repartirColumnas, textoCelda, textoFuenteCuadro, textoPrimaOferta, cabecerasColumnas } from './presupuesto-pdf-cuadro.ts'
@@ -156,6 +156,8 @@ type Fuentes = { titulo: PDFFont; normal: PDFFont; negrita: PDFFont }
 
 export async function pdfEstudioOfertas(d: DatosPdfOfertas): Promise<Uint8Array> {
   const { comparacion: cmp, narrativa, recomendadaId, actualId } = d.estudio
+  // 01/11/2026: borrador marcado incompleto (`estudio.rpa.incompleto`: sin garantías o garantías dudosas) → no se pinta como comparativa válida.
+  if (d.estudio.incompletas?.length) throw new EstudioIncompletoError(d.estudio.incompletas)
   const pdf = await PDFDocument.create()
   pdf.registerFontkit(fontkit)
   const f: Fuentes = {

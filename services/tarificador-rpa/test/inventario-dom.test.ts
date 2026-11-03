@@ -73,7 +73,8 @@ test('todos los marcos; sin values de campos ni párrafos libres; select con opc
   assert.deepEqual(por('doc'), { tag: 'input', id: 'doc', formControlName: 'documento', etiqueta: 'Documento', requerido: true })
   assert.deepEqual(por('obs'), { tag: 'textarea', id: 'obs', ariaLabel: 'Observaciones' })
   const marca = por('marca')!
-  assert.equal(marca.opciones!.length, 40)
+  // 0.3.21: tope por select 200 (40 garantizadas + fondo común): las 51 salen enteras.
+  assert.equal(marca.opciones!.length, 51)
   assert.deepEqual(marca.opciones![1], { valor: 'M0', texto: 'Marca 0' })
   assert.equal(marca.opcionesTotal, 51)
   assert.equal(app.elementos.find((e) => e.role === 'tab')?.texto, 'Datos del vehículo')

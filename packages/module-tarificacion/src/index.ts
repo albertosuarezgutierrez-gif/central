@@ -35,7 +35,7 @@ export {
   type EstadoTrabajo,
   type TipoError,
 } from './estados.ts'
-export { PATRON_EMISION, PATRON_ACEPTAR, TEXTOS_BLOQUEADOS_ALTA, PATRON_GENERAR_PROYECTO_MAPFRE, EmisionBloqueadaError, pareceEmision, parametrosParecenEmision, decodificarUrlTolerante, comprobarUrl, comprobarBoton, esTextoBotonProhibido, type OpcionesGuard } from './guard-emision.ts'
+export { PATRON_EMISION, PATRON_ACEPTAR, TEXTOS_BLOQUEADOS_ALTA, PATRON_GENERAR_PROYECTO_MAPFRE, EmisionBloqueadaError, pareceEmision, parametrosParecenEmision, cuerpoLlevaAccionFinal, decodificarUrlTolerante, comprobarUrl, comprobarBoton, esTextoBotonProhibido, esLanzadorAplicacionNseMapfre, TEXTO_ACCESO_NSE_MAPFRE, neutralizarRutaTolerable, cuerpoToleradoConAccionReal, detalleCuerpoToleradoConAccionReal, textoDetalleCuerpo, esEstadoModalJsf, esConfirmarGuardadoObjetoAsegurado, claseValorDiagnostico, MAX_DETALLE_CUERPO_MENSAJE, type ClaseValorDiagnostico, type HalladoCuerpo, esCampoFechaDeAccion, esCampoDatoDeFirma, RE_SEGMENTO_FECHA_FIRMA, tipoDocumentoDe, opcionTipoDocumento, type TipoDocumento, RE_ACCION_REAL_TRAS_PREFIJO, type RutaTolerable, type OpcionesGuard } from './guard-emision.ts'
 export {
   ACCIONES_PORTAL,
   PATRONES_GUARDADO_GUARD,
@@ -70,6 +70,7 @@ export { variablesProhibidas, ENV_MAQUINA_PERMITIDAS, envDeMaquina, nombresCrede
 export { importeEs, importePuntoDecimal } from './importes.ts'
 export { validarRiesgoComunidad, type ValidacionRiesgo } from './riesgo.ts'
 export { validarOfertas, datosUsadosDe, conDatosUsados, franquiciaGeneral, garantiasComoRegistro, type ValidacionOfertas, type ValorGarantiaCompatible } from './ofertas.ts'
+export { COMPANIAS_SIN_SINCO_AL_TARIFICAR, companiaConfirmaConSinco, avisoEsSupuesto, conPolizaAnteriorTecleada, firmezaOfertaRpaGuardada, firmezaPrecioRpa, ofertaLlevaSupuestos, ofertasConFirmezaRpa, riesgoTraePolizaAnterior, type FirmezaPrecioRpa } from './firmeza-rpa.ts'
 export { claveCompania, crearRegistro, type RegistroAdaptadores } from './registro.ts'
 export {
   MARCA_DATO_PERSONAL,
@@ -168,10 +169,16 @@ export {
   type ValidacionFormularioHogarSinTomador,
 } from './formulario-hogar.ts'
 
+// Constructor del riesgo de HOGAR para los bots (movido de plataforma el 27/10/2026; lo usan «pedir precio» y «Probar» de asegura).
+export {
+  formularioBotHogar, datosViviendaParaBot, eleccionesInicialesHogar,
+  type CampoDeFichaHogar, type CatalogosHogarLeidos, type DatosViviendaBot, type EleccionesHogar, type EntradaBotHogar, type FormularioBotHogar, type RiesgoParaBotsHogar,
+} from './hogar-bot-formulario.ts'
+
 // Ayudas puras de la oportunidad de HOGAR (20/10/2026): capital sugerido, infraseguro, discrepancias Catastro, antigüedad, bots por uso.
 export {
   COSTE_RECONSTRUCCION_EUR_M2, REGLAS_USO_COMPANIA, UMBRAL_INFRASEGURO, TOLERANCIA_M2, ANTIGUEDAD_PREGUNTAR_REFORMAS, USOS_FILTRO_BOTS,
-  aceptaUso, avisoInfraseguro, capitalContinenteSugerido, discrepanciasCatastro, filtrarBotsPorUso, preguntasPorAntiguedad, zonaCostePorProvincia,
+  aceptaUso, avisoInfraseguro, capitalContenidoEstimado, capitalContinenteEstimado, capitalContinenteSugerido, CONTENIDO_MINIMO_EUR, CONTENIDO_SOBRE_CONTINENTE, discrepanciasCatastro, filtrarBotsPorUso, preguntasPorAntiguedad, zonaCostePorProvincia,
   type AceptaUso, type AvisoInfraseguro, type CapitalSugerido, type DiscrepanciaCatastro, type FiltroBotsPorUso, type PreguntasAntiguedad, type UsoFiltroBots, type ZonaCoste,
 } from './hogar-asesor.ts'
 
@@ -263,6 +270,7 @@ export {
   normalizarGrabador,
   clasificarBoton,
   redactarUrl,
+  redactarTextoGrabacion,
   esCampoSensible,
   redactarHtmlGrabacion,
   separarMarcosGrabacion,
@@ -286,6 +294,10 @@ export {
   type PantallaSeparada,
 } from './grabador.ts'
 export { VERSION_GRABADOR, FUENTE_GRABADOR, FUENTE_GRABADOR_AUTO, configGrabador, AVISO_MARCO_NO_LEGIBLE, codigoBookmarklet, urlBookmarklet, codigoBookmarkletManual, urlBookmarkletManual, type ConfigGrabador } from './grabador-bookmarklet.ts'
+// Marcos ilegibles (filtro de vídeo/mapas/ocultos…, aviso único no bloqueante) y extensión de Chrome para marcos de otro origen (30/10/2026).
+export { MARCOS_IGNORADOS, MIN_LADO_MARCO_PX, DOMINIOS_PORTALES_GRABADOR, FUENTE_MARCOS, MARCA_MARCO_SIN_LEER, MARCA_MARCO_EXTENSION, motivoMarcoIrrelevante, textoAvisoMarcos, componerMarcos, hostPermitidoGrabador, type MarcoVisto, type Ilegible, type CapturaMarco, type ConfigMarcos } from './grabador-marcos.ts'
+export { VERSION_EXTENSION_GRABADOR, CARPETA_EXTENSION_GRABADOR, AVISO_MARCO_EXTENSION, FUENTE_CONTENIDO, FUENTE_FONDO, configExtension, matchesExtension, manifestExtension, fuenteGrabadorExtension, archivosExtension, zipExtension, type ConfigExtension } from './grabador-extension.ts'
+export { zipSinComprimir, crc32Zip } from './zip-simple.ts'
 
 // Recomendador explicable y control de calidad previo a enseñar/enviar (08/10/2026).
 export {
@@ -457,6 +469,29 @@ export {
   type CandidataConDatos,
   type ResolucionPorVehiculoConfirmado,
 } from './vehiculo-confirmado.ts'
+// Vehículo de REFERENCIA de la oportunidad (01/11/2026): uno para todas las compañías, por prioridad de origen; elección por similitud.
+export {
+  ORIGENES_VEHICULO_REFERENCIA,
+  NOMBRE_ORIGEN_VEHICULO_REFERENCIA,
+  CLAVES_VEHICULO_REFERENCIA,
+  validarVehiculoReferencia,
+  prioridadOrigenVehiculo,
+  vehiculoReferenciaEfectivo,
+  vehiculoReferenciaDesdeConfirmado,
+  vehiculoReferenciaDesdeSeleccion,
+  textoVehiculoReferencia,
+  supuestoVehiculoReferencia,
+  supuestoOtroModelo,
+  supuestoGeneracionPosterior,
+  elegirOpcionPorVehiculoReferencia,
+  vehiculoDivergeDeReferencia,
+  type VehiculoUsado,
+  type OrigenVehiculoReferencia,
+  type VehiculoReferencia,
+  type ValidacionVehiculoReferencia,
+  type OpcionCatalogo,
+  type EleccionPorReferencia,
+} from './vehiculo-referencia.ts'
 // Población de un CP con varias localidades (13/10/2026): la elige el riesgo (exacta) o una persona; nunca la IA.
 export {
   PREFIJO_ELECCION_POBLACION,
@@ -561,11 +596,25 @@ export {
   MAX_BYTES_INVENTARIO_DOM,
   MAX_MARCOS_INVENTARIO,
   MAX_OPCIONES_INVENTARIO,
+  MAX_OPCIONES_GARANTIZADAS_SELECT,
+  MAX_OPCIONES_EXTRA_INVENTARIO,
+  MAX_OPCIONES_PISTA_SELECT,
+  MAX_OPCIONES_CRUDAS_SELECT,
+  opcionCasaConPista,
   MAX_TEXTO_INVENTARIO,
+  MAX_ONCLICK_CASILLA,
+  MAX_ONCLICK_INVENTARIO,
+  MAX_ONCLICK_EVALUACION,
+  MAX_ONCLICK_COMPLETO_TOTAL,
+  conOnclickCompleto,
+  ONCLICK_REDACTADO,
+  MARCA_TIRA_CIFRAS_ONCLICK,
+  onclickSinTirasCifras,
   MAX_TITULOS_MARCO,
   MAX_IMPORTES_MARCO,
   leerImporteEur,
   redactarValoresInventario,
+  CLAVES_ELEMENTO_TEXTO,
   valoresSensiblesDeRiesgo,
   contieneValorSensible,
   normalizarParaRedactar,
@@ -588,6 +637,12 @@ export {
   ENV_EXPLORADOR_TELEFONO,
   catalogoDe,
   catalogoParaIA,
+  claveOmitibleSinValor,
+  claveIncompatibleConCampo,
+  onclickEnviaFormulario,
+  textoRechazo,
+  describirControlRechazado,
+  type RechazoAccion,
   CLAVES_VALOR_VISIBLE_IA,
   valorVisibleIA,
   resolverDato,
@@ -616,6 +671,7 @@ export {
   type MotivoCorteLote,
   type DiagnosticoIncidencia,
   CLAVES_AUTOCOMPLETADO,
+  CLAVES_VALIDAN_AL_SALIR,
   ACCIONES_INCIDENCIA_SIN_DATO,
   rellenarRepinta,
   ordenarLote,
@@ -632,8 +688,28 @@ export {
   descripcionesElemento,
   esAceptarDivAutorizado,
   esAvanceAutorizado,
+  avancePorIdAutorizado,
+  avanceSinTextoAutorizado,
+  motivoNoAvanceSinTexto,
+  RE_TEXTO_ACCION_FINAL_SIN_TEXTO,
+  RE_NAME_ACCION_FINAL_SIN_TEXTO,
+  ORIGEN_FIDELIDADE_MEDIADORES,
+  type AvanceSinTexto,
+  RE_ONCLICK_OSAJAX_SIN_TEXTO,
+  onclickCasaFormaSinTexto,
+  neutralizacionesOnclickDe,
+  onclickNeutralizado,
+  type NeutralizacionOnclick,
+  type ControlNeutralizable,
+  rutaCasaAvancePorId,
+  unicoPorTexto,
+  esEnlaceAvanzable,
+  rutasAppTolerablesDe,
+  onclickNormalizado,
+  rutaDeMarco,
   bloqueoAvance,
   guardadosEnDialogoDe,
+  entradaConTomadorMediador,
   casaGuardadoEnDialogo,
   esGuardadoEnDialogoAutorizado,
   MAX_GUARDADOS_DIALOGO,
@@ -666,7 +742,18 @@ export {
   normalizarRedNoGet,
   validarMapa,
   planDesdeMapa,
+  // 0.3.20: rótulo vivo neutro del avance sin texto (Fidelidade) y desplegable bootstrap-select (Allianz VMP).
+  ROTULOS_AVANCE_NEUTROS_SIN_TEXTO,
+  rotuloNeutroSinTexto,
+  esAccionSinEfecto,
+  // 0.3.21: pistas no personales para conservar opciones de un select (Allianz VMP) y avance deshabilitado al final del lote (Fidelidade).
+  pistasOpcionesInventario,
+  avanceDeshabilitadoAlFinal,
+  // 0.3.22: formas inequívocas de la opción de `elegir` (cadena, { texto }) resueltas contra el inventario (Allianz VMP).
+  normalizarOpcionElegir,
+  type OpcionElegirNormalizada,
   type AvanceAutorizado,
+  type AvancePorId,
   type EntradaExploracion,
   type FuenteDato,
   type TipoDato,
@@ -781,6 +868,7 @@ export {
   UMBRAL_CORTE_BOT,
   TIPOS_ERROR_CORTE,
   debeCortarBot,
+  cuentaComoFalloBot,
   credencialesRechazadas,
   motivoCorte,
   MAX_CANDIDATOS_ATASCO,

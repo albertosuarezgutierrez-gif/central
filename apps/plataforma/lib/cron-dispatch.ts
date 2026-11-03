@@ -70,6 +70,11 @@ export const CRON_JOBS: CronJob[] = [
   { path: '/api/cron/agentes-latido', schedule: '45 7 * * *' },
   { path: '/api/cron/paper-tracker', schedule: '0 10 * * 1' },
   { path: '/api/cron/resumen-mensual', schedule: '0 8 5 * *' },
+  // 📒 Cierre contable MENSUAL por piso (lib/cierre-mes.ts): día 5 = pre-cierre, día 15 = cierre (con botón
+  // ✅ Cerrar mes si todo cuadra), siempre del mes ANTERIOR. 07:17 UTC (minuto con jitter). Un solo Telegram.
+  { path: '/api/cron/cierre-mes', schedule: '17 7 5,15 * *' },
+  // 🧾 Avisos fiscales a Alberto (lib/fiscal-alertas.ts): lunes Y días 5 y 15 (dom OR dow, como cron estándar). 07:41 UTC.
+  { path: '/api/cron/fiscal-avisos', schedule: '41 7 5,15 * 1' },
   { path: '/api/cron/facturas-conciliar-gmail', schedule: '30 6 * * *' },
   { path: '/api/cron/contable-proactivo', schedule: '0 9 * * 1' },
   { path: '/api/cron/concursos-ingesta', schedule: '30 */6 * * *' },
@@ -266,6 +271,9 @@ export const CRON_JOBS: CronJob[] = [
   { path: '/api/cron/ia-director-refresh', schedule: '0 5 * * 1' },
   // Saldo de OpenRouter con previsión de días + tope mensual por app (pieza 1-6, 23/09/2026).
   { path: '/api/cron/ia-saldo', schedule: '10 6 * * *' },
+  // Alertas de idealista (Gmail `inmobiliaria`) → inmuebles_busqueda + Telegram «🏡 Idealista». 13:17 UTC,
+  // fuera de 06-09 Pacific. Salta correos ya analizados (ids en inversion_config).
+  { path: '/api/cron/idealista-correos', schedule: '17 13 * * *' },
 ]
 
 // Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta

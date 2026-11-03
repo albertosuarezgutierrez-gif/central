@@ -1,4 +1,4 @@
--- ⏳ SIN APLICAR (26/10/2026). Se aplica solo con OK de Alberto y en el MISMO paso que el despliegue de asegura-portal que la usa
+-- ✅ APLICADA en producción el 25/10/2026 (schema_migrations 20261025192812); los permisos de prisma_seguros los recortó después 2026-10-27_portal_patrimonio_revocar_heredados.sql.
 --    (regla del portal). 🚨 GRANT antes que schema: `schema.prisma` ya declara estos modelos con EXACTAMENTE las columnas que aquí
 --    se conceden en SELECT (cepo `test/regression-portal-patrimonio-sql.test.ts`). Sin esta DDL, cualquier consulta a esos modelos
 --    cae con 42P01 / 42501.
@@ -161,7 +161,8 @@ REVOKE ALL ON seguros.portal_patrimonio_recibo_compartido FROM crm_seguros;
 -- `prisma_seguros` (apps/asegura) recibe DML por los privilegios por defecto del schema: el consentimiento es APPEND-ONLY
 -- también para él.
 REVOKE UPDATE, DELETE ON seguros.portal_patrimonio_inquilino_consentimiento FROM prisma_seguros;
-GRANT SELECT, INSERT ON seguros.portal_patrimonio_inquilino_consentimiento TO prisma_seguros;
+-- NO reejecutar: el 27/10 se revocó (ver 2026-10-27_portal_patrimonio_revocar_heredados.sql).
+-- GRANT SELECT, INSERT ON seguros.portal_patrimonio_inquilino_consentimiento TO prisma_seguros;
 
 COMMIT;
 

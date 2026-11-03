@@ -9,6 +9,7 @@
 // que no casa con el callejero (o que se escribió porque el callejero no respondía) se guarda como TEXTO y marca
 // `porValidar`: no se inventa un `via`/`numero` que nadie ha validado.
 import { partirCalle, viaSigueVigente } from '@central/core-catastro'
+import { MAX_UNIDADES_EDIFICIO, esCriterioReparto, type CriterioReparto } from '@central/module-patrimonio'
 
 import { componerDireccionNormalizada, cpValido } from './direccion-cp.ts'
 
@@ -29,6 +30,10 @@ export type DatosAltaInmueble = {
   porValidar: boolean
   /** Tri-estado: `null` = «no lo sé», nunca `false` por defecto. */
   enComunidad: boolean | null
+  /** Solo `uso: 'edificio'`: nombres de las unidades que se crean con él (vacío = se añaden luego desde su ficha). */
+  unidades: string[]
+  /** Solo `uso: 'edificio'`: criterio de reparto de sus gastos. `null` = sin elegir (no se reparte). */
+  repartoCriterio: CriterioReparto | null
 }
 
 export type ResultadoAlta = { ok: true; datos: DatosAltaInmueble } | { ok: false; campo: string }
@@ -77,6 +82,25 @@ export function validarAltaInmueble(cuerpo: unknown): ResultadoAlta {
     enComunidad = b.enComunidad
   }
 
+  // Edificio sin división horizontal (27/10/2026): las unidades nacen con él, con nombres editables.
+  const unidades: string[] = []
+  let repartoCriterio: CriterioReparto | null = null
+  if (b.unidades !== undefined && b.unidades !== null) {
+    if (!Array.isArray(b.unidades) || b.unidades.length > MAX_UNIDADES_EDIFICIO) return { ok: false, campo: 'unidades' }
+    if (b.unidades.length > 0 && uso !== 'edificio') return { ok: false, campo: 'unidades' }
+    const vistos = new Set<string>()
+    for (const u of b.unidades) {
+      const nombre = texto(u, 1, 80)
+      if (!nombre || vistos.has(nombre.toLocaleLowerCase('es'))) return { ok: false, campo: 'unidades' }
+      vistos.add(nombre.toLocaleLowerCase('es'))
+      unidades.push(nombre)
+    }
+  }
+  if (b.repartoCriterio !== undefined && b.repartoCriterio !== null && b.repartoCriterio !== '') {
+    if (uso !== 'edificio' || !esCriterioReparto(b.repartoCriterio)) return { ok: false, campo: 'repartoCriterio' }
+    repartoCriterio = b.repartoCriterio
+  }
+
   const v = b.viaOficial as { tipo?: unknown; nombre?: unknown } | null | undefined
   const via =
     v && typeof v.tipo === 'string' && typeof v.nombre === 'string' && v.nombre.trim() !== ''
@@ -101,6 +125,8 @@ export function validarAltaInmueble(cuerpo: unknown): ResultadoAlta {
       direccionNormalizada: componerDireccionNormalizada({ direccion, cp, municipio, provincia }),
       porValidar: !oficial,
       enComunidad,
+      unidades,
+      repartoCriterio,
     },
   }
 }

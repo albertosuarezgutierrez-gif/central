@@ -84,6 +84,7 @@ const NAV_PISOS = [
   { href: '/sivra/expenses', icon: CreditCard, label: 'Gastos' },
   { href: '/sivra/gastos-fijos', icon: ClipboardList, label: 'Gastos fijos' },
   { href: '/sivra/facturas-control', icon: FileText, label: 'Facturas' },
+  { href: '/sivra/facturas', icon: Receipt, label: 'Facturas a huéspedes' },
   { href: '/sivra/fiscal', icon: ChartPie, label: 'Fiscal IRPF' },
   { href: '/sivra/mercado', icon: ChartColumn, label: 'Competencia' },
   { href: '/sivra/pricing', icon: FlaskConical, label: 'Pricing Lab' },

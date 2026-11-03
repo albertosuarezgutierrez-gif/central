@@ -1,7 +1,9 @@
 // Guardián del ENLACE CON EL INQUILINO (P17, 26/10/2026). `node --test` (gate en CI vía `pnpm test:guardia`).
 //
 // Lo que sostiene (cada cosa tiene su brazo, y un brazo sintético que demuestra que el detector muerde):
-//   1. El token NO abre sesión y el portal NO envía nada: ni cookie, ni canal de correo, ni `fetch` saliente en el flujo.
+//   1. El token NO abre sesión y el portal NO envía nada a la persona ni a terceros: ni cookie ni canal de salida (correo,
+//      Telegram, WhatsApp). El único `fetch` del flujo es el puente interno a asegura de «Pedir precio» (27/10/2026,
+//      `lib/inquilino/precio-puente.ts`, cepo `regression-portal-inquilino-precio`), que no escribe al inquilino ni a terceros.
 //   2. El token se guarda HASHEADO y el SQL no borra, no revoca de menos al CRM y no deja reescribir el consentimiento.
 //   3. AISLAMIENTO: el lado del inquilino no usa `accesosPatrimonio`, parte de los accesos de la identidad de la COOKIE y no toca
 //      ninguna tabla de gastos/rentabilidad/PII/otros titulares.

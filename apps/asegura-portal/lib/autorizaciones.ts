@@ -46,6 +46,7 @@ import {
   type TituloRepresentacion,
 } from '@central/module-seguros-portal'
 import { permiteAutorizar, SIN_VINCULO, WHERE_CARTERA_VIVA } from '@central/module-seguros'
+import { ALCANCES_PATRIMONIO } from '@central/module-patrimonio'
 
 import { prisma } from './db'
 import { empresasDeFichas } from './representacion'
@@ -552,6 +553,9 @@ export async function autorizacionesDeIdentidad(identidadId: string): Promise<Au
         // 🚨 El jefe de flota (`flota`, 05/10/2026) NO es un acceso a «tus seguros»: se nombra,
         // acepta y retira en `/flota`. Aquí se pintaría con un alcance que esta pantalla no conoce.
         alcance: { not: ALCANCE_FLOTA },
+        // 🚨 Tampoco el PATRIMONIO (27/10/2026): no es un acceso a «tus seguros» y esta lista lo pintaría con un alcance que no
+        // conoce (y ofrecería «ampliar» sobre él). Se da, se lista y se quita en el bloque «Patrimonio» (`/api/patrimonio/autorizaciones`).
+        NOT: { alcance: { in: [...ALCANCES_PATRIMONIO] } },
         OR: [
           { otorganteClienteId: { in: misIds } },
           { autorizadoClienteId: { in: recibidorIds } },
@@ -1156,6 +1160,10 @@ export async function ampliarAcceso(datos: {
   })
   if (base === null) {
     return { ok: false, error: 'ficha_no_tuya', mensaje: 'No hemos encontrado ese acceso entre los que has dado.' }
+  }
+  // Solo se amplía un acceso a los SEGUROS: uno de patrimonio o de flota no se convierte en gestión/total de la bóveda.
+  if (!esAlcance(base.alcance)) {
+    return { ok: false, error: 'datos_invalidos', mensaje: 'Ese acceso no se amplía desde aquí.' }
   }
   const mio = vinculos.find((v) => v.clienteId === base.otorganteClienteId)
   if (!mio || !nivelPuedeAutorizar(nivelDeVinculo(mio.nivel))) {

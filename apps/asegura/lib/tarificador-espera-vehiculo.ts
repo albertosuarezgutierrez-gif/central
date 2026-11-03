@@ -88,6 +88,23 @@ export function leerVehiculoWorker(cuerpo: Record<string, unknown>): { vehiculo:
   return { vehiculo: out.seleccionVehiculo || out.vehiculoConfirmado ? out : null, descartado }
 }
 
+/**
+ * 31/10/2026 · «probar» Generali auto devolvía 422 `generali_sin_vehiculo` con un cliente cuya póliza de auto VIVA vinculada a la
+ * oportunidad ya dice qué coche es. De su `datos_especificos` SOLO las claves de catálogo `marca`, `modelo` y `version` (nunca matrícula
+ * ni bastidor) → `seleccionVehiculo` (la versión, en `descripcion`). Sin marca o sin modelo → `null` (no se inventa); una versión que no
+ * pasa el validador se omite (marca y modelo siguen valiendo). Mismo validador que lo del worker (`validarSeleccionCatalogo`). PURA.
+ */
+export function vehiculoDePolizaViva(datosEspecificos: unknown): VehiculoEncadenado | null {
+  const d = obj(datosEspecificos)
+  if (!d) return null
+  const marca = texto(d.marca)
+  const modelo = texto(d.modelo)
+  if (!marca || !modelo) return null
+  const version = texto(d.version)
+  const s = (version ? validarSeleccionCatalogo({ marca, modelo, descripcion: version }) : null) ?? validarSeleccionCatalogo({ marca, modelo })
+  return s ? { seleccionVehiculo: s } : null
+}
+
 /** ¿El riesgo ya trae un vehículo que Generali puede buscar? (marca+modelo, o denominación de Mapfre). PURA. */
 export function tieneVehiculo(riesgo: unknown): boolean {
   const r = obj(riesgo)

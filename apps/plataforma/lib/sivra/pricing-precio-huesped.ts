@@ -43,6 +43,9 @@
 //
 // Módulo PURO (sin BD ni `@/`), testeable con `node --test`.
 
+import { EVENTS } from '../pricing-calendar.ts'
+import { calendarioEntre } from './eventos-calendario.ts'
+import { FACTOR_EVENTO_MINIMO } from './mercado-ventanas.ts'
 import { guestDesdeBase, fijoPorNoche, markupEnFecha, type ParametrosCanal } from './pricing-canal.ts'
 
 export interface FechaHuesped {
@@ -64,12 +67,69 @@ export interface FechaHuesped {
    * es justo la distinción que hace accionable el aviso.
    */
   hayEvento?: boolean | null
+  /**
+   * Ventas del PROPIO piso en los últimos 12 meses del MISMO tipo de noche (vie/sáb vs dom-jue) y
+   * MISMO mes del año que esta fecha: `n` reservas y `med` = mediana de €/noche huésped
+   * (amount_gross / nights). TRES estados: `null`/ausente = no se ha podido leer el histórico →
+   * `vendeAlPrecio` null (comportamiento de siempre) · `{n:0}` = se miró y no hay ventas · dato.
+   */
+  ventas?: { n: number; med: number | null } | null
+  /**
+   * Prima vie/sáb por ritmo propio que el motor APLICÓ a esta noche (`pricing-ritmo-finde.ts`, la
+   * misma lectura que `apply`). TRES estados: `null`/ausente = no se ha podido saber (lectura caída,
+   * o evento sin comprobar en un piso habilitado) · `1` = se miró y no aplica (piso fuera de
+   * `SIVRA_PRIMA_FINDE_PISOS`, entre semana, evento o sin prima) · `>1` = prima aplicada. Con prima,
+   * «sobre mercado» está RESPALDADO por el ritmo de reservas y pasa a `caro_vendiendo`: si no, el
+   * aviso acusaría de caro justo el finde que el motor ha subido a propósito.
+   */
+  primaFinde?: number | null
 }
 
-export type EstadoHuesped = 'sin_mercado' | 'ok' | 'caro' | 'barato'
+/**
+ * `caro_vendiendo` = sobre el mercado, pero respaldado: el piso vende noches comparables a ese
+ * precio, o es un vie/sáb subido por la prima de ritmo propio (`primaFinde > 1`).
+ */
+export type EstadoHuesped = 'sin_mercado' | 'ok' | 'caro' | 'caro_vendiendo' | 'barato'
+
+/**
+ * Reservas mínimas del histórico para afirmar «se vende a ese precio». Regla (una línea): en los
+ * últimos 12 meses, ≥ MIN_VENTAS_PRECIO reservas del mismo tipo de noche (vie/sáb vs dom-jue) y mismo
+ * mes del año, con mediana de €/noche huésped ≥ el precio huésped de esa fecha. `null` = no se sabe.
+ */
+export const MIN_VENTAS_PRECIO = 3
+
+/**
+ * Noches de EVENTO (Feria, Semana Santa, congresos…) para EXCLUIR de las ventas que deciden
+ * `vendeAlPrecio`: la mediana de un finde normal no puede contaminarse con 1.010€ de una noche de
+ * Feria (medido: House, abril vie/sáb). `pricing_eventos_auto` sólo cubre desde jul-2026, así que
+ * el histórico se completa con el calendario fijo del motor (`EVENTS`) y la Semana Santa derivada
+ * de la Pascua (`calendarioEntre`). Misma condición que el resto: factor >= FACTOR_EVENTO_MINIMO.
+ * El SQL la une a `pricing_eventos_auto` (estado <> 'descartado'). Un año sin datos de Feria en la
+ * tabla (p. ej. 2025) no se inventa: esas noches cuentan como normales (hueco conocido).
+ */
+export function fechasEventoParaVentas(desde: string, hasta: string): string[] {
+  const s = new Set<string>()
+  for (const [d, f] of Object.entries(EVENTS)) if (f >= FACTOR_EVENTO_MINIMO && d >= desde && d <= hasta) s.add(d)
+  for (const n of calendarioEntre(desde, hasta).noches) if (n.factor >= FACTOR_EVENTO_MINIMO) s.add(n.fecha)
+  return [...s].sort()
+}
+
+/** true/false si hay muestra suficiente; null si no se sabe (sin histórico leído o muestra corta). */
+export function vendeAlPrecio(
+  ventas: { n: number; med: number | null } | null | undefined, guest: number,
+): boolean | null {
+  if (!ventas || ventas.med == null || !(ventas.n >= MIN_VENTAS_PRECIO) || !(ventas.med > 0)) return null
+  return ventas.med >= guest
+}
 
 export interface VeredictoHuesped {
   fecha: string
+  /** base aplicada (para decidir si la cuota fija manda) */
+  baseAplicada: number
+  /** `null` = no se sabe si se vende a ese precio (ver `vendeAlPrecio`) */
+  vendeAlPrecio: boolean | null
+  /** prima vie/sáb aplicada (ver `FechaHuesped.primaFinde`): `null` no se sabe · 1 no aplica · >1 prima */
+  primaFinde: number | null
   /** lo que ve el huésped por esa noche con la base aplicada */
   guest: number
   medMercadoGuest: number | null
@@ -99,6 +159,10 @@ export interface ResumenHuesped {
   carasSinEvento: number
   carasConEvento: number
   carasEventoSinComprobar: number
+  /** Sobre mercado pero vendiéndose a ese precio: NO cuenta en `caras` ni dispara el aviso. */
+  carasVendiendo: number
+  /** Piso listable en el aviso: caras SIN evento o con evento sin comprobar (nunca solo con evento). */
+  avisar: boolean
   /**
    * Las peores para el aviso, ya ordenadas: primero las CARAS SIN evento (las accionables), luego
    * las caras cuyo evento no se ha podido comprobar, luego las caras con evento, y solo después el
@@ -166,12 +230,15 @@ export function precioHuesped(
       const mercado = f.medMercadoGuest != null && Number(f.medMercadoGuest) > 0
         ? Number(f.medMercadoGuest) : null
       const ratio = mercado != null ? Number((guest / mercado).toFixed(3)) : null
+      const vende = vendeAlPrecio(f.ventas, guest)
+      const prima = f.primaFinde == null || !Number.isFinite(Number(f.primaFinde)) ? null : Number(f.primaFinde)
+      const respaldada = vende === true || (prima != null && prima > 1)
       const estado: EstadoHuesped = ratio == null ? 'sin_mercado'
-        : ratio > topeCaro ? 'caro'
+        : ratio > topeCaro ? (respaldada ? 'caro_vendiendo' : 'caro')
         : ratio < sueloBarato ? 'barato'
         : 'ok'
       return {
-        fecha: f.fecha, guest, medMercadoGuest: mercado, ratio,
+        fecha: f.fecha, baseAplicada: Number(f.baseAplicada), vendeAlPrecio: vende, primaFinde: prima, guest, medMercadoGuest: mercado, ratio,
         pesoCuota: guest > 0 ? Number((fijo / guest).toFixed(3)) : 0,
         estado,
         hayEvento: f.hayEvento ?? null,
@@ -189,6 +256,9 @@ export function precioHuesped(
     carasSinEvento: caras.filter(v => v.hayEvento === false).length,
     carasConEvento: caras.filter(v => v.hayEvento === true).length,
     carasEventoSinComprobar: caras.filter(v => v.hayEvento == null).length,
+    carasVendiendo: veredictos.filter(v => v.estado === 'caro_vendiendo').length,
+    // Una cara CON evento sola no avisa: la mediana ±3 días diluye el pico de la noche de evento.
+    avisar: caras.some(v => v.hayEvento !== true),
     peores: veredictos
       .filter(v => v.ratio != null)
       .sort((a, b) => prioridadAviso(a) - prioridadAviso(b) || b.ratio! - a.ratio!)
@@ -204,7 +274,7 @@ export function precioHuesped(
  */
 function prioridadAviso(v: VeredictoHuesped): number {
   const evento = v.hayEvento === false ? 0 : v.hayEvento == null ? 1 : 2
-  return (v.estado === 'caro' ? 0 : 4) + evento
+  return (v.estado === 'caro' ? 0 : v.estado === 'caro_vendiendo' ? 3 : 4) * 10 + evento
 }
 
 /**

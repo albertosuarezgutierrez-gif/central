@@ -13,11 +13,18 @@ import { cotizarMotoNuevaAsegura } from '@/lib/moto-nuevo-asegura'
 import { tarificacionNuevaGuardadaAsegura, type RespuestaRetarificar, type RespuestaTarificacionNueva } from '@/lib/retarificar-asegura'
 import { otroRamoPack, planPackOtroVehiculo, type RamoPack } from '@/lib/correduria/pack-otro-vehiculo'
 import { cargarVariante } from '../../oportunidad/[id]/cargar-variante'
+import { exigirCorreduria } from '@/lib/correduria-acceso'
+
+// 🚨 Cada export exige la correduría: una acción es un POST que no pasa por el layout (02/11/2026:
+// `pedirCotizacionPack` gastaba 0,50€ con cualquier sesión). Cepo `test/regression-correduria-acciones-guarda.test.ts`.
+const SIN_ACCESO = 'No tienes acceso a la correduría.'
 
 export type RespuestaPack = RespuestaRetarificar | { estado: 'pack_no'; motivo: string }
 
 /** La tarificación YA guardada del otro vehículo. **Gratis.** Evita pagar otra vez lo que ya se pagó. */
 export async function pedirPackGuardado(entrada: { clienteId: string; ramoActual: RamoPack; oportunidadOtroId: string }): Promise<RespuestaTarificacionNueva> {
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return { estado: 'sin_configurar', mensaje: SIN_ACCESO }
   return tarificacionNuevaGuardadaAsegura(entrada.clienteId, otroRamoPack(entrada.ramoActual), { oportunidadId: entrada.oportunidadOtroId, tarificacionId: null })
 }
 
@@ -30,6 +37,8 @@ export async function pedirCotizacionPack(entrada: {
   municipioId: string
   fechaEfecto: string | null
 }): Promise<RespuestaPack> {
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return { estado: 'sin_configurar', mensaje: SIN_ACCESO }
   const ramo = otroRamoPack(entrada.ramoActual)
   const carga = await cargarVariante(entrada.oportunidadOtroId, null, entrada.clienteId, ramo)
   if (carga.estado !== 'ok') {

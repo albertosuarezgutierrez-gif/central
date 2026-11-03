@@ -57,11 +57,12 @@ import { decidirAvisoVencimiento, diasEfectivosDeFicha, type OrigenAviso } from 
 import { descifrar } from './avisos-vencimiento-reglas'
 import { campoIlegible, descifrarCampo } from './cartera-edicion'
 import {
-  cuerpoAvisosIntranet, enviarAvisosIntranet, debeEscribirHoy, esTablaInexistente, elegirDestino, direccionesBloqueadas,
+  cuerpoAvisosIntranet, enviarAvisosIntranet, debeEscribirHoy, debeRegistrarCampana, esTablaInexistente, elegirDestino, direccionesBloqueadas,
   type DetalleAviso, type EventoRebote,
 } from './correo-avisos-intranet'
 import { avisosNuevos, claveAviso, enlacePortal, type Pendiente } from './avisos-intranet-reglas'
 import { detectarCambiosPolizas, type ResumenCambiosPoliza } from './poliza-cambios-detector'
+import { prepararPresentacionApp, registrarPresentacionEnviada } from './aviso-venc-app'
 
 const MS_DIA = 86_400_000
 
@@ -922,6 +923,12 @@ export async function avisarIntranet(
 
     if (soloContar) continue
 
+    // 📱 «Tu app gratuita» (campaña `aviso_venc_app`): solo con un vencimiento entre lo nuevo y a quien
+    // se SABE que no entra al portal. Aquí solo se decide y se genera el ref; la fila, tras el envío.
+    const presentacion = await prepararPresentacionApp({
+      correduriaId, clienteId: p.clienteId, destino, portal: enlace, tiposNuevos: nuevos.map((a) => a.tipo),
+    })
+
     const resultado = await enviarAvisosIntranet(
       destino,
       {
@@ -933,6 +940,7 @@ export async function avisarIntranet(
         // deja los otros tres donde estaban.
         total,
         ...(await enlaceDirecto(correduriaId, p.clienteId, destino, nuevos.map((a) => a.tipo), enlace)),
+        presentarApp: presentacion ? { enlace: presentacion.enlace } : null,
       },
       { correduriaId, clienteId: p.clienteId },
     )
@@ -962,6 +970,10 @@ export async function avisarIntranet(
         p.clienteId,
         e instanceof Error ? e.message : e,
       )
+    }
+    // Después del sello y sin tocarlo: la atribución de la campaña no puede retrasar ni romper el aviso.
+    if (presentacion && debeRegistrarCampana({ soloContar, resultado, ref: presentacion.ref })) {
+      await registrarPresentacionEnviada(correduriaId, p.clienteId, presentacion)
     }
   }
 

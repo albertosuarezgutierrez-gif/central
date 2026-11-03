@@ -43,6 +43,22 @@ export const BAJADA_MAX = 0.85
 export const ALZA_MAX = 1.6
 /** Suelo del índice de subida crudo antes de recortar (se conserva). */
 export const ALZA_MIN = 0.7
+/**
+ * Rampa del suelo CON bucket del mes (27/10/2026). Antes era un escalón en 1,15: House dic pasó
+ * de alza 1,145 a 1,193 al entrar UNA reserva y el suelo saltó de 0 a ~441 € (+20 % de golpe).
+ * Ahora el suelo entra lineal: 0 en RAMPA_DESDE, pleno en RAMPA_HASTA. Centrada en el 1,15 de
+ * siempre (mismo punto medio, así no desplaza en promedio dónde actúa la red) y de 0,10 de ancho:
+ * un movimiento de 0,01 del índice mueve el suelo como mucho ~10 % del ancla, nunca de 0 a pleno.
+ */
+export const RAMPA_DESDE = 1.10
+export const RAMPA_HASTA = 1.20
+/** Rebaja del suelo cuando hay bucket del mes: el mercado fresco manda. */
+export const REBAJA_CON_BUCKET = 0.9
+
+/** Fracción del suelo que aplica con bucket del mes: 0 → 1 lineal entre RAMPA_DESDE y RAMPA_HASTA. */
+export function factorRampa(alza: number): number {
+  return clamp((alza - RAMPA_DESDE) / (RAMPA_HASTA - RAMPA_DESDE), 0, 1)
+}
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v))
 
@@ -78,8 +94,8 @@ export function indicesPrior(rows: MesHistorico[]): IndicePrior[] {
  * Objetivo corregido por el prior. Devuelve el `target` nuevo (o el mismo si no toca).
  *
  * - Al alza actúa como SUELO, igual que antes: sin bucket del mes sustituye al global plano; con
- *   bucket solo si el índice es claramente alto (≥1,15) y rebajado un 10%, porque el mercado
- *   fresco manda.
+ *   bucket entra en RAMPA (0 en 1,10 → pleno en 1,20, ver `RAMPA_DESDE`) y rebajado un 10%,
+ *   porque el mercado fresco manda. Antes era un escalón en 1,15 y oscilaba (+20 % por una reserva).
  * - A la baja actúa como TECHO y **solo sin bucket del mes**: si hay mercado medido de ese mes,
  *   ese mercado ya dice el precio y no hace falta el histórico. Nunca perfora `floor`.
  */
@@ -95,7 +111,7 @@ export function aplicarPrior(params: {
   if (indice.alza > 1) {
     const suelo = !hayBucketMes
       ? Math.round(anclaGlobal * indice.alza)
-      : (indice.alza >= 1.15 ? Math.round(anclaGlobal * indice.alza * 0.9) : 0)
+      : Math.round(anclaGlobal * indice.alza * REBAJA_CON_BUCKET * factorRampa(indice.alza))
     return suelo > target ? suelo : target
   }
 

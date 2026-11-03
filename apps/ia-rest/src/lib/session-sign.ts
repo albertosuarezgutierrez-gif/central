@@ -88,13 +88,10 @@ export function verificarObjeto(obj: Record<string, unknown> | null | undefined)
   return timingSafeEqual(a, b)
 }
 
-// Regla de migración común: si trae firma, debe ser válida; si no, solo se
-// acepta mientras SESSION_ENFORCE no esté en 'true'.
+// Regla común: la sesión tiene que venir FIRMADA y la firma ser válida. El modo
+// permisivo de migración (aceptar sesiones sin firma) se
+// eliminó el 02/11/2026.
 export function sesionAceptable(parsed: Record<string, unknown> | null | undefined, tipo: 'subset' | 'objeto'): boolean {
-  if (!parsed) return false
-  const enforce = process.env.SESSION_ENFORCE === 'true'
-  if (parsed._sig) {
-    return tipo === 'objeto' ? verificarObjeto(parsed) : verificarSesion(parsed)
-  }
-  return !enforce
+  if (!parsed || !parsed._sig) return false
+  return tipo === 'objeto' ? verificarObjeto(parsed) : verificarSesion(parsed)
 }

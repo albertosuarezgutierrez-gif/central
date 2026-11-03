@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { autorizacionBearerValida } from '@central/core-identity'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { pushEmpleado } from '@/lib/push'
@@ -6,8 +7,7 @@ import { pushEmpleado } from '@/lib/push'
 // Vercel Cron: 0 7 * * 1-5 (lunes a viernes a las 7:00 UTC ≈ 9:00 hora española)
 // Envía una notificación push a los empleados que aún no han fichado hoy.
 export async function GET(req: Request) {
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret || req.headers.get('authorization') !== `Bearer ${cronSecret}`) {
+  if (!autorizacionBearerValida(req, 'CRON_SECRET')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

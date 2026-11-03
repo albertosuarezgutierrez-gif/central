@@ -17,6 +17,7 @@ import { bloqueParking } from './parking'
 import { bloqueEquipaje } from './equipaje'
 import { bloqueLlegada } from './llegada'
 import { bloqueSalida } from './salida'
+import type { EstadoFacturaChat } from './factura'
 
 // `emisor`: las señales CRUDAS de Smoobu con las que se decidió `from` (y qué campos traía el
 // mensaje). Solo diagnóstico: el 28/09/2026 (reserva 154692216) mensajes escritos por Alberto
@@ -57,6 +58,12 @@ export type Contexto = {
   enviados: Set<string>   // respuestas que YA enviamos (normalizadas) — para no respondernos a nosotros
   aprendizajes: Aprendizaje[]
   preguntaTs?: string     // cuándo escribió el huésped lo que se contesta (lo pone el orquestador)
+  // Enlace al formulario de datos fiscales (/factura/<token>) si el huésped pide factura y se pudo crear la solicitud
+  // (lo pone el orquestador). Sin él, el agente pide los datos en el mensaje como antes.
+  enlaceFactura?: string
+  // Cómo quedó la solicitud de factura tras leer los mensajes del huésped (lo pone el orquestador): completa → «tomo
+  // nota, te la envío en cuanto la revise» (sin fecha); incompleta → se piden SOLO los datos que faltan.
+  facturaEstado?: EstadoFacturaChat
 }
 
 function strip(html: string): string {

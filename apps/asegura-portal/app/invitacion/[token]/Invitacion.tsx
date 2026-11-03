@@ -230,7 +230,17 @@ const QUE_RECIBES: Record<string, string> = {
   ver_economico: 'los datos de sus pólizas y, además, lo que paga: la prima y los recibos.',
   partes: 'los datos de sus pólizas, y podrás dar partes en su nombre.',
   documentos: 'los datos de sus pólizas y su documentación.',
+  // Patrimonio (27/10/2026): mismo reparto que la tabla `puede()` de `@central/module-patrimonio`, dicho desde quien recibe.
+  patrimonio_gestion:
+    'su patrimonio y gestionarlo (gastos, facturas, documentos, recordatorios y seguros de cada inmueble), sin dar de alta ni de ' +
+    'baja inmuebles, contratos o inquilinos, y sin ver los datos personales de sus inquilinos.',
+  patrimonio_total:
+    'su patrimonio y hacer lo mismo que su titular: dar de alta y de baja inmuebles, contratos e inquilinos, ver sus datos ' +
+    'personales y pedir precio de seguros en su nombre.',
 }
+
+/** Invitación al PATRIMONIO (inmuebles y alquileres), no a los seguros. */
+const ES_PATRIMONIO = (a: string) => a === 'patrimonio_gestion' || a === 'patrimonio_total'
 
 /** Errores de `POST /api/invitaciones/responder`. */
 const ERROR_RESPONDER: Record<string, string> = {
@@ -313,6 +323,7 @@ export function ResponderInvitacion({
   const nombre = (otorganteNombre ?? '').trim()
   const quien = nombre === '' ? 'Una persona' : nombre
   const caduca = fechaLarga(caducaEn)
+  const patrimonio = ES_PATRIMONIO(alcance)
 
   async function responder(accion: 'aceptar' | 'rechazar') {
     setEnviando(accion)
@@ -328,7 +339,7 @@ export function ResponderInvitacion({
         // Rechazar se queda aquí: irse a un sitio con seguros ajenos después de
         // decir que no sería justo lo contrario de lo que la persona pidió.
         if (accion === 'aceptar') {
-          window.location.href = '/boveda'
+          window.location.href = patrimonio ? '/patrimonio' : '/boveda'
           return
         }
         setHecho('rechazada')
@@ -350,7 +361,11 @@ export function ResponderInvitacion({
       <div className="seccion">
         <h1 style={{ fontSize: '1.5rem', marginTop: 0 }}>Has rechazado la invitación</h1>
         <p style={{ marginTop: 0 }}>
-          {sinAcceso ? 'Este enlace ya no vale.' : `No verás los seguros de ${quien} y este enlace ya no vale.`}{' '}
+          {sinAcceso
+            ? 'Este enlace ya no vale.'
+            : patrimonio
+              ? `No gestionarás el patrimonio de ${quien} y este enlace ya no vale.`
+              : `No verás los seguros de ${quien} y este enlace ya no vale.`}{' '}
           Si cambias de idea, pídele que te invite otra vez.
         </p>
       </div>
@@ -362,7 +377,9 @@ export function ResponderInvitacion({
       <h1 style={{ fontSize: '1.5rem', marginTop: 0 }}>
         {sinAcceso
           ? `${quien} te invita a Mis Seguros`
-          : `${quien} quiere darte acceso a ${soloUnaPoliza ? 'una de sus pólizas' : 'sus seguros'}`}
+          : patrimonio
+            ? `${quien} quiere que le ayudes a gestionar su patrimonio`
+            : `${quien} quiere darte acceso a ${soloUnaPoliza ? 'una de sus pólizas' : 'sus seguros'}`}
       </h1>
 
       {/* Lo que escribió quien invita. Va como texto (React lo escapa), y
@@ -393,7 +410,12 @@ export function ResponderInvitacion({
         </div>
       )}
 
-      {sinAcceso ? null : soloUnaPoliza ? (
+      {sinAcceso ? null : patrimonio ? (
+        <div className="linea dicho">
+          Alcanza a <strong>todo el patrimonio de {quien}</strong>, también a los inmuebles que añada más adelante. No abre
+          ninguno de sus seguros.
+        </div>
+      ) : soloUnaPoliza ? (
         <div className="linea dicho">
           Alcanza <strong>solo a una de sus pólizas</strong>. El resto de sus seguros no los verás. Cuál
           es en concreto lo verás al entrar, no antes.
@@ -420,6 +442,12 @@ export function ResponderInvitacion({
           Si lo aceptas, <strong>solo queda registrado que {quien} te invitó y que aceptaste</strong>, con
           la fecha. No accedes a ningún dato suyo y {quien} no ve nada tuyo. Puedes borrar tu cuenta
           cuando quieras.
+        </div>
+      ) : patrimonio ? (
+        <div className="aviso-linea">
+          Si lo aceptas, <strong>queda registrado que gestionas el patrimonio de otra persona</strong>: se guarda quién eres y
+          cuándo lo aceptaste. {quien} puede quitarte el acceso cuando quiera y se corta en ese momento. No podrás autorizar a
+          nadie más.
         </div>
       ) : (
         <div className="aviso-linea">

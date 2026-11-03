@@ -1,0 +1,105 @@
+'use client'
+import { useEffect, useState } from 'react'
+import Bloque from '../../Bloque'
+import { btnStyle } from '@/components/ui'
+import { autorDeModo, combinacionValida, cuerpoCaja, motivoFallo, type ModoCaja } from '@/lib/correduria/siniestro-hilo'
+import type { DocumentoResumen } from '@central/module-seguros'
+import { CAMPO, ERROR, NOTA } from './estilos'
+import VolcadoIntranet from './VolcadoIntranet'
+
+/** `sustituyeA` = EDITAR ese mensaje (se guarda como versión nueva; el anterior se conserva). */
+export type Precarga = { modo: ModoCaja; texto: string; n: number; sustituyeA?: string; documentoId?: string | null; reclamacionSac?: boolean }
+
+const OPCIONES: { modo: ModoCaja | 'volcado'; etiqueta: string }[] = [
+  { modo: 'volcado', etiqueta: 'Pegar volcado de la intranet (subir todo)' },
+  { modo: 'compania', etiqueta: 'Pegar de la compañía (comentario)' },
+  { modo: 'rehuse', etiqueta: 'Pegar de la compañía (rehúse)' },
+  { modo: 'enviado', etiqueta: 'Lo que he enviado' },
+  { modo: 'interna', etiqueta: 'Nota interna' },
+]
+
+export default function CajaMensaje({ siniestroId, documentos, precarga, onGuardado }: {
+  siniestroId: string
+  documentos: DocumentoResumen[]
+  precarga: Precarga | null
+  onGuardado: () => void
+}) {
+  const [modoSel, setModoSel] = useState<ModoCaja | 'volcado'>('compania')
+  const volcado = modoSel === 'volcado'
+  const modo: ModoCaja = modoSel === 'volcado' ? 'compania' : modoSel
+  const setModo = (m: ModoCaja) => setModoSel(m)
+  const [texto, setTexto] = useState('')
+  const [docId, setDocId] = useState('')
+  const [sac, setSac] = useState(false)
+  const [ocupado, setOcupado] = useState(false)
+  const [aviso, setAviso] = useState<string | null>(null)
+  const [edita, setEdita] = useState<{ id: string; modo: ModoCaja } | null>(null)
+
+  useEffect(() => {
+    if (!precarga) return
+    setModo(precarga.modo); setTexto(precarga.texto); setAviso(null)
+    if (precarga.sustituyeA) {
+      setEdita({ id: precarga.sustituyeA, modo: precarga.modo })
+      setDocId(precarga.documentoId ?? ''); setSac(precarga.reclamacionSac === true)
+    } else setEdita(null)
+  }, [precarga])
+
+  function cancelarEdicion() { setEdita(null); setTexto(''); setDocId(''); setSac(false); setAviso(null) }
+
+  async function guardar() {
+    if (texto.trim() === '') return setAviso('Escribe el texto.')
+    const cuerpo = cuerpoCaja(modo, texto, docId || null, modo === 'enviado' && sac, edita?.id ?? null)
+    if (!combinacionValida(cuerpo.autor, cuerpo.tipo)) return setAviso('Esa combinación de autor y tipo no es válida.')
+    setOcupado(true); setAviso(null)
+    try {
+      const r = await fetch('/api/correduria/siniestro/hilo', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ siniestroId, ...cuerpo }),
+      })
+      if (!r.ok) {
+        const j: unknown = await r.json().catch(() => null)
+        setAviso(`NO se ha guardado: ${motivoFallo(r.status, j)}.`)
+        return
+      }
+      setTexto(''); setDocId(''); setSac(false); setEdita(null)
+      onGuardado()
+    } catch {
+      setAviso('NO se sabe si se ha guardado: sin conexión. Mira el hilo antes de repetir.')
+    } finally { setOcupado(false) }
+  }
+
+  return (
+    <Bloque titulo={edita ? 'Editar mensaje' : 'Añadir al hilo'}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
+        {edita && (
+          <p role="status" style={NOTA}>
+            Estás editando un mensaje. Se guardará como versión nueva; la anterior queda en el expediente (se ve con «Ver versiones anteriores»).
+          </p>
+        )}
+        <select aria-label="Tipo de entrada" value={modoSel} onChange={e => setModoSel(e.target.value as ModoCaja | 'volcado')} style={CAMPO}>
+          {OPCIONES.filter(o => o.modo !== 'volcado' ? (!edita || autorDeModo(o.modo) === autorDeModo(edita.modo)) : !edita).map(o => <option key={o.modo} value={o.modo}>{o.etiqueta}</option>)}
+        </select>
+ {volcado ? <VolcadoIntranet siniestroId={siniestroId} onGuardado={onGuardado} /> : <>
+        <textarea aria-label="Texto" value={texto} onChange={e => setTexto(e.target.value)} rows={6} style={{ ...CAMPO, resize: 'vertical' }} />
+        {modo === 'enviado' && (
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, fontSize: 14 }}>
+            <input type="checkbox" checked={sac} onChange={e => setSac(e.target.checked)} style={{ width: 20, height: 20 }} />
+            Es la reclamación al servicio de atención al cliente
+          </label>
+        )}
+        {documentos.length > 0 && (
+          <select aria-label="Adjuntar documento" value={docId} onChange={e => setDocId(e.target.value)} style={CAMPO}>
+            <option value="">Sin adjunto</option>
+            {documentos.filter(d => d.nombre !== null).map(d => <option key={d.id} value={d.id}>{d.nombre}</option>)}
+          </select>
+        )}
+        {aviso && <p role="alert" style={ERROR}>{aviso}</p>}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <button type="button" disabled={ocupado} onClick={guardar} style={btnStyle('primario')}>{ocupado ? 'Guardando…' : edita ? 'Guardar edición' : 'Guardar'}</button>
+          {edita && <button type="button" disabled={ocupado} onClick={cancelarEdicion} style={btnStyle('secundario')}>Cancelar edición</button>}
+          <span style={NOTA}>Solo se guarda en el expediente; no se envía nada a nadie.</span>
+        </div></>}
+      </div>
+    </Bloque>
+  )
+}

@@ -94,6 +94,8 @@ export function validarOfertas(entrada: unknown, numPdfs: number): ValidacionOfe
       fechaTerminoPortal: fecha(o.fechaTerminoPortal),
       avisos: Array.isArray(o.avisos) ? o.avisos.map(txt).filter((a): a is string => a !== null) : [],
       ...((du) => (du ? { datosUsados: du } : {}))(datosUsadosDe(o.datosUsados)),
+      // Solo el booleano `true` estricto (un «sí», 1 o cualquier otra cosa = no consta: nunca se supone que se tecleó).
+      ...(o.polizaAnteriorTecleada === true ? { polizaAnteriorTecleada: true as const } : {}),
     })
   })
   return errores.length ? { ok: false, errores } : { ok: true, ofertas }

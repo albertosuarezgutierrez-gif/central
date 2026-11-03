@@ -5,12 +5,8 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
+import { getSession } from '@/lib/session'
 
-function getSession(req: NextRequest) {
-  const h = req.headers.get('x-ia-session')
-  if (!h) return null
-  try { return JSON.parse(h) } catch { return null }
-}
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params

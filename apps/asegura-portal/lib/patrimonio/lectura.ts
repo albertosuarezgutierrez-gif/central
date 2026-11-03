@@ -17,6 +17,8 @@
 // `getDate()` del huso local (Vercel corre en UTC, el portátil en Madrid).
 import {
   CATEGORIAS_OBLIGACION_PROPIA,
+  CRITERIOS_REPARTO,
+  type CriterioReparto,
   esCategoriaGasto,
   type Centimos,
   type Contrato,
@@ -108,7 +110,8 @@ export function titularDeFila(f: FilaTitular, ficha: FichaTitular): Titular {
 
 // ─── Inmueble ───────────────────────────────────────────────────────────────────────────────────────────────
 
-const USOS: readonly UsoInmueble[] = ['vivienda', 'local', 'oficina', 'nave', 'garaje', 'trastero', 'otro']
+const USOS: readonly UsoInmueble[] = ['vivienda', 'local', 'oficina', 'nave', 'garaje', 'trastero', 'otro', 'edificio']
+const CRITERIOS: readonly CriterioReparto[] = CRITERIOS_REPARTO
 
 export type FilaInmueble = {
   id: string
@@ -122,6 +125,10 @@ export type FilaInmueble = {
   anioConstruccion: number | null
   enComunidad: boolean | null
   suministros: string[]
+  /** Edificio sin división horizontal (27/10/2026). Opcionales: una fila leída sin esas columnas es un inmueble suelto. */
+  inmueblePadreId?: string | null
+  repartoCriterio?: string | null
+  repartoPorcentaje?: DecimalLike | null
 }
 
 /**
@@ -149,6 +156,9 @@ export function inmuebleDeFila(f: FilaInmueble): Inmueble {
     superficieM2: decimal(f.superficieM2),
     anioConstruccion: f.anioConstruccion,
     enComunidad: f.enComunidad,
+    inmueblePadreId: f.inmueblePadreId ?? null,
+    repartoCriterio: f.repartoCriterio === undefined || f.repartoCriterio === null ? null : deLista(CRITERIOS, f.repartoCriterio, 'inmueble.reparto_criterio'),
+    repartoPorcentaje: f.repartoPorcentaje === undefined ? null : decimal(f.repartoPorcentaje),
   }
 }
 

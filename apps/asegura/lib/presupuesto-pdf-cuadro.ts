@@ -24,6 +24,8 @@ export type EstudioPdf = {
   actualId: string | null
   comparacion: ResultadoComparacion
   narrativa: NarrativaPdf
+  /** `estudio.rpa.incompleto`: ofertas del bot sin garantías fiables (borrador incompleto → sin PDF). */
+  incompletas?: string[]
 }
 
 const esObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v)
@@ -43,7 +45,11 @@ export function leerEstudio(json: unknown): EstudioPdf | null {
   if (!c.ofertas.every((o) => esObj(o) && esTxt(o.id) && esTxt(o.compania) && esObj(o.garantias))) return null
   if (!c.filas.every((f) => esObj(f) && esTxt(f.clave) && esTxt(f.etiqueta) && Array.isArray(f.celdas))) return null
   if (!c.resumen.every((r) => esObj(r) && esTxt(r.ofertaId))) return null
+  const inc = esObj(json.rpa) && Array.isArray(json.rpa.incompleto)
+    ? json.rpa.incompleto.filter(esObj).map((o) => `${esTxt(o.compania) ? o.compania : ''} · ${esTxt(o.producto) ? o.producto : ''}`.trim())
+    : []
   return {
+    ...(inc.length ? { incompletas: inc } : {}),
     recomendadaId: esTxt(json.recomendadaId) ? json.recomendadaId : null,
     actualId: esTxt(json.actualId) ? json.actualId : null,
     comparacion: c as unknown as ResultadoComparacion,
@@ -63,6 +69,8 @@ export type IconoCelda = 'si' | 'no' | 'nose'
 
 /** Lo que se escribe en una celda del cuadro (`\n` separa líneas). `null`/sin dato = «No figura». */
 export function textoCelda(c: CeldaMatriz | undefined): { texto: string; marca: MarcaCeldaPdf; icono: IconoCelda } {
+  // Garantía que el documento completo de la compañía no nombra: «No incluida» (02/11/2026: un presupuesto no lleva «No figura» por ahí).
+  if (c?.ausenteEnDocumento) return { texto: 'No incluida', marca: c.peorQueActual ? 'peor' : null, icono: 'no' }
   if (!c || !c.consta || !c.valor) return { texto: NO_FIGURA, marca: c?.hueco ? 'hueco' : null, icono: 'nose' }
   const v: ValorGarantia = c.valor
   const marca: MarcaCeldaPdf = c.hueco ? 'hueco' : c.peorQueActual ? 'peor' : c.mejorQueActual ? 'mejor' : null
@@ -74,6 +82,25 @@ export function textoCelda(c: CeldaMatriz | undefined): { texto: string; marca: 
   else if (v.estado === 'incluida') l.push('Incluida')
   if (num(v.franquicia)) l.push(`Franquicia ${eur(v.franquicia)}`)
   return l.length ? { texto: l.join('\n'), marca, icono: 'si' } : { texto: NO_FIGURA, marca, icono: 'nose' }
+}
+
+/**
+ * 01/11/2026 (AS-26-0042): las ofertas cuya columna sería ENTERA «No figura» (con el cuadro con filas). Nunca se pinta una columna así:
+ * el PDF no se genera hasta que la oferta tenga garantías (el borrador queda marcado incompleto y Alberto lo sabe). PURA.
+ */
+export function ofertasSinGarantias(cmp: Pick<ResultadoComparacion, 'ofertas' | 'filas'>): OfertaNormalizada[] {
+  if (cmp.filas.length === 0) return []
+  return cmp.ofertas.filter((o) => o.rol !== 'actual').filter((o) => cmp.filas.every((f) => textoCelda(f.celdas.find((c) => c.ofertaId === o.id)).icono === 'nose'))
+}
+
+/** El estudio tiene columnas enteras «No figura»: no se genera el PDF. */
+export class EstudioIncompletoError extends Error {
+  ofertas: readonly string[]
+  constructor(ofertas: readonly string[]) {
+    super(`Estudio incompleto: sin garantías leídas en ${ofertas.join(', ')}`)
+    this.name = 'EstudioIncompletoError'
+    this.ofertas = ofertas
+  }
 }
 
 /**
@@ -232,6 +259,8 @@ export async function pintarCuadroComparativo(L: LienzoPdf, cmp: ResultadoCompar
   const { f } = L
   const trozos = repartirColumnas(cmp.ofertas, 4)
   if (trozos.length === 0 || cmp.filas.length === 0) return
+  const vacias = ofertasSinGarantias(cmp)
+  if (vacias.length > 0) throw new EstudioIncompletoError(vacias.map((o) => `${o.compania} · ${o.producto ?? ''}`.trim()))
   const actual = cmp.ofertas.find((o) => o.rol === 'actual') ?? null
   const nombres = cabecerasColumnas(cmp.ofertas)
   if (L.y - 200 < M + PIE) L.nuevaPagina()

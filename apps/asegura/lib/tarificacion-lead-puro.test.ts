@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { datosVehiculoDeInfoRiesgo } from '@central/module-seguros'
 import {
   botonesFalloBotLead, caben, carneDePersonaFicha, cilindradaEnTexto, clasificarFalloBot, claveContratoDeBot, diaDeCompacto, diaMadrid, esElPropioCliente, formularioBotDesdeLead,
-  garajeDeTexto, historialDeTexto, lecturaMoto, opcionEnTexto, ramoConBot, textoFalloBotLead, topeDiario, validarPeticionTarificarLead,
+  garajeDeTexto, historialDeTexto, lecturaMoto, opcionEnTexto, ramoConBot, riesgoParaCompania, textoFalloBotLead, topeDiario, validarPeticionTarificarLead,
   valorarCompania, viviendasYLocalesDeTexto,
 } from './tarificacion-lead-puro.ts'
 
@@ -296,4 +296,113 @@ test('carné de la ficha: en moto solo vale A, A1 o A2; la fecha del B no se cue
   assert.equal(carneDePersonaFicha({ fechaCarnet: '2010-02-03', tipoCarnet: 'a1' }, 'moto'), '2010-02-03')
   assert.equal(carneDePersonaFicha(b, 'auto'), '2004-06-01')
   assert.equal(carneDePersonaFicha(null, 'moto'), null)
+})
+
+// ── 30/10/2026: matriculación estimada por la matrícula (matrículas inventadas) ──
+import { matriculacionParaRiesgo } from './tarificacion-lead-puro.ts'
+
+test('🪤 matriculación: la real manda; sin real y estimable → estimada y marcada; no estimable → falta', () => {
+  assert.deepEqual(matriculacionParaRiesgo('2019-03-05', '0000JGB', HOY), { fecha: '2019-03-05' })
+  const est = matriculacionParaRiesgo('', '0000JGB', HOY)
+  assert.equal(est.fecha, undefined)
+  assert.equal(est.estimada, '2015-06-01')
+  assert.match(est.supuesto!.texto, /estimada por la matrícula/)
+  assert.deepEqual(matriculacionParaRiesgo('', '0000BBB', HOY).fecha, undefined)
+  assert.deepEqual(matriculacionParaRiesgo('', 'C0000BBB', HOY), {})
+  assert.deepEqual(matriculacionParaRiesgo('', '', HOY), {})
+  // real futura = no es dato: cae a la estimación, nunca se acepta
+  assert.equal(matriculacionParaRiesgo('2030-01-01', '0000JGB', HOY).fecha, undefined)
+})
+
+test('🪤 formulario: matrícula estimable sin fecha real → riesgo.fechaMatriculacionEstimada + supuesto; la real no se toca', () => {
+  const base = { ramo: 'auto' as const, valores: { ...COMPLETO, matricula: '0000JGB' }, bloque: null, fichaNacimiento: null, hoy: HOY }
+  const f = formularioBotDesdeLead(base)
+  assert.equal(f.riesgo.fechaMatriculacion, undefined)
+  assert.equal(f.riesgo.fechaMatriculacionEstimada, '2015-06-01')
+  assert.ok(f.supuestos.some((s) => s.campo === 'fechaMatriculacion'))
+  const r = formularioBotDesdeLead({ ...base, bloque: { fechaMatriculacion: '2016-02-02' } })
+  assert.equal(r.riesgo.fechaMatriculacion, '2016-02-02')
+  assert.equal(r.riesgo.fechaMatriculacionEstimada, undefined)
+  const n = formularioBotDesdeLead({ ...base, valores: { ...COMPLETO, matricula: 'C0000BBB' } })
+  assert.equal(n.riesgo.fechaMatriculacion, undefined)
+  assert.equal(n.riesgo.fechaMatriculacionEstimada, undefined)
+})
+
+test('🪤 CP de circulación: sin él en el correo ni en el bloque, sale de la ficha del cliente (supuesto dicho); lo dicho manda', () => {
+  const { cpCirculacion: _cp, ...sinCp } = COMPLETO
+  const base = { ramo: 'auto' as const, valores: sinCp, bloque: null, fichaNacimiento: null, hoy: HOY }
+  assert.equal('codigoPostal' in formularioBotDesdeLead(base).riesgo, false, 'sin CP en ninguna parte: no se inventa')
+  assert.equal('codigoPostal' in formularioBotDesdeLead({ ...base, fichaCodigoPostal: null }).riesgo, false)
+  assert.equal('codigoPostal' in formularioBotDesdeLead({ ...base, fichaCodigoPostal: '4100' }).riesgo, false, 'solo 5 dígitos')
+  const f = formularioBotDesdeLead({ ...base, fichaCodigoPostal: ' 41001 ' })
+  assert.equal(f.riesgo.codigoPostal, '41001')
+  assert.ok(f.supuestos.some((s) => s.campo === 'cpCirculacion'))
+  assert.equal(formularioBotDesdeLead({ ...base, bloque: { cpCirculacion: '41002' }, fichaCodigoPostal: '41001' }).riesgo.codigoPostal, '41002')
+  assert.equal(formularioBotDesdeLead({ ...base, valores: COMPLETO, fichaCodigoPostal: '41001' }).riesgo.codigoPostal, '41003')
+})
+
+test('🪤 póliza viva vinculada: su compañía y antigüedad cubren «compañía anterior» y años (supuesto dicho); lo declarado manda; <1 año no prueba nada', () => {
+  const { aseguradoAntes: _a, ...sinAntes } = COMPLETO as Record<string, unknown>
+  const base = { ramo: 'auto' as const, valores: sinAntes, bloque: null, fichaNacimiento: null, hoy: '2026-10-30' }
+  const sin = formularioBotDesdeLead(base).riesgo
+  assert.equal('companiaAnterior' in sin, false, 'sin póliza vinculada: no se inventa')
+  const f = formularioBotDesdeLead({ ...base, polizaActual: { aseguradora: ' mapfre seguros ', desde: '2021-10-31' } })
+  assert.equal(f.riesgo.companiaAnterior, 'Mapfre')
+  assert.equal(f.riesgo.aniosAseguradoAnterior, 4, 'años COMPLETOS')
+  assert.ok(f.supuestos.some((s) => s.campo === 'aseguradoAntes'))
+  assert.equal(formularioBotDesdeLead({ ...base, polizaActual: { aseguradora: 'Aseguradora Rara', desde: '2020-01-01' } }).riesgo.companiaAnterior, 'Aseguradora Rara')
+  for (const pa of [{ aseguradora: 'Mapfre', desde: '2026-03-01' }, { aseguradora: '', desde: '2020-01-01' }, { aseguradora: 'Mapfre', desde: null }, { aseguradora: 'Mapfre', desde: '2030-01-01' }]) {
+    assert.equal('companiaAnterior' in formularioBotDesdeLead({ ...base, polizaActual: pa }).riesgo, false)
+  }
+  const dicho = formularioBotDesdeLead({ ...base, valores: { ...sinAntes, aseguradoAntes: 'sin seguro anterior' }, polizaActual: { aseguradora: 'Mapfre', desde: '2020-01-01' } })
+  assert.notEqual(dicho.riesgo.companiaAnterior, 'Mapfre', 'lo que dice el cliente manda')
+})
+
+test('🪤 SINCO al tarificar: el nº de la póliza viva vinculada viaja al riesgo (solo 5 últimas cifras) si su compañía es la anterior', () => {
+  const { aseguradoAntes: _a, ...sinAntes } = COMPLETO as Record<string, unknown>
+  const base = { ramo: 'auto' as const, valores: sinAntes, bloque: null, fichaNacimiento: null, hoy: '2026-10-30' }
+  // Número SINTÉTICO (no es de ningún cliente).
+  const NUM = 'ZZ-000-0098765'
+  const f = formularioBotDesdeLead({ ...base, polizaActual: { aseguradora: 'Mapfre', desde: '2020-01-01', numero: NUM } })
+  assert.equal(f.riesgo.polizaAnteriorUltimos5, '98765')
+  assert.equal(JSON.stringify(f).includes(NUM), false, 'el número entero no sale')
+  assert.equal(JSON.stringify(f.supuestos).includes('98765'), false, 'ni en supuestos')
+  // Sin número, con menos de 5 cifras o sin póliza: no se inventa.
+  for (const pa of [{ aseguradora: 'Mapfre', desde: '2020-01-01' }, { aseguradora: 'Mapfre', desde: '2020-01-01', numero: 'AB-12' }, { aseguradora: 'Mapfre', desde: '2020-01-01', numero: null }]) {
+    assert.equal('polizaAnteriorUltimos5' in formularioBotDesdeLead({ ...base, polizaActual: pa }).riesgo, false)
+  }
+  assert.equal('polizaAnteriorUltimos5' in formularioBotDesdeLead(base).riesgo, false)
+  // La póliza no cuenta como anterior (menos de 1 año): su número tampoco.
+  assert.equal('polizaAnteriorUltimos5' in formularioBotDesdeLead({ ...base, polizaActual: { aseguradora: 'Mapfre', desde: '2026-06-01', numero: NUM } }).riesgo, false)
+  // El cliente dijo OTRA compañía: ese número no es el de su seguro anterior.
+  const otra = formularioBotDesdeLead({ ...base, valores: { ...sinAntes, aseguradoAntes: 'Con Allianz, llevo 6 años asegurado y sin partes' }, polizaActual: { aseguradora: 'Mapfre', desde: '2020-01-01', numero: NUM } })
+  assert.equal('polizaAnteriorUltimos5' in otra.riesgo, false)
+  // El cliente dijo la MISMA compañía: vale.
+  const misma = formularioBotDesdeLead({ ...base, valores: { ...sinAntes, aseguradoAntes: 'Con Mapfre, llevo 8 años asegurado y sin partes' }, polizaActual: { aseguradora: 'Mapfre', desde: '2020-01-01', numero: NUM } })
+  assert.equal(misma.riesgo.polizaAnteriorUltimos5, '98765')
+  // Dijo «sin seguro anterior» (0 años): nada.
+  const sinSeguro = formularioBotDesdeLead({ ...base, valores: { ...sinAntes, aseguradoAntes: 'sin seguro anterior' }, polizaActual: { aseguradora: 'Mapfre', desde: '2020-01-01', numero: NUM } })
+  assert.equal('polizaAnteriorUltimos5' in sinSeguro.riesgo, false)
+  // Misma compañía pero declara 0 años: no hay seguro anterior que consultar.
+  const cero = formularioBotDesdeLead({ ...base, valores: { ...sinAntes, aseguradoAntes: 'Con Mapfre, 0 años asegurado' }, polizaActual: { aseguradora: 'Mapfre', desde: '2020-01-01', numero: NUM } })
+  assert.equal(cero.riesgo.companiaAnterior, 'Mapfre')
+  assert.equal('polizaAnteriorUltimos5' in cero.riesgo, false)
+})
+
+test('🪤 SINCO al tarificar: polizaAnteriorUltimos5 solo viaja a las compañías cuyo bot lo teclea (mapfre, allianz)', () => {
+  const riesgo = { ramo: 'auto', matricula: 'TEST', polizaAnteriorUltimos5: '98765' }
+  for (const c of ['mapfre', 'allianz', ' Mapfre ']) assert.equal(riesgoParaCompania(c, riesgo).polizaAnteriorUltimos5, '98765', c)
+  for (const c of ['occident', 'generali', 'reale', '', null, undefined]) {
+    const r = riesgoParaCompania(c, riesgo)
+    assert.equal('polizaAnteriorUltimos5' in r, false, String(c))
+    assert.equal(r.matricula, 'TEST', 'el resto del riesgo no se toca')
+  }
+  assert.equal(riesgo.polizaAnteriorUltimos5, '98765', 'no muta')
+  const sinClave = { ramo: 'auto' }
+  assert.equal(riesgoParaCompania('occident', sinClave), sinClave)
+})
+
+test('🪤 tarificarLead aplica riesgoParaCompania al riesgo de cada compañía', () => {
+  const src = readFileSync(new URL('./tarificacion-lead.ts', import.meta.url), 'utf8')
+  assert.match(src, /riesgo: riesgoParaCompania\(v\.compania, val\.entrada\.riesgo\)/)
 })

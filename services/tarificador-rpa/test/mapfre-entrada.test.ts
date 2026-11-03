@@ -12,10 +12,10 @@ import type { AddressInfo } from 'node:net'
 import { after, before, test } from 'node:test'
 import { chromium, type Browser } from 'playwright'
 import { ENTRADAS_EXPLORACION, PATRON_EMISION } from '@central/module-tarificacion'
-import { cerrarFaseEntrada, instalarGuardEmision, pulsar, pulsarEnlaceEntradaAutorizado, ENLACES_ENTRADA_AUTORIZADOS } from '../src/guard.ts'
+import { cerrarFaseEntrada, instalarGuardEmision, pulsar, pulsarAccesoNseMapfre, pulsarMenuOfertaNseMapfre, pulsarEnlaceEntradaAutorizado, ENLACES_ENTRADA_AUTORIZADOS } from '../src/guard.ts'
 import { entrarYExplorar, resultadoDeFin, type ContextoBucle, type CtxEntrada, type PortalExploracion } from '../src/explorador.ts'
 import type { RespuestaPaso } from '../src/api.ts'
-import { abrirTarificacionRapidaAuto as abrirNuevo, etiquetaExacta, URL_NSEI_AUTO } from '../src/adapters/mapfre/entrada.ts'
+import { abrirTarificacionPatineteMapfre, abrirTarificacionRapidaAuto as abrirNuevo, etiquetaExacta, URL_NSEI_AUTO } from '../src/adapters/mapfre/entrada.ts'
 import { ErrorMapaIncompleto } from '../src/adapters/mapfre/auto.ts'
 import { prepararFormador } from '../src/formador.ts'
 
@@ -70,7 +70,7 @@ const LOGIN_ANTIGUO = `<!doctype html><html><head><title>Login 2026</title></hea
       else if (q.get('modo') === 'bloq') document.getElementById('msg').textContent = 'Su usuario ha sido bloqueado por demasiados intentos'
       else document.getElementById('msg').textContent = 'Credenciales incorrectas para ' + u + ' / ' + p
     }
-    if (new URLSearchParams(location.search).get('modo') === 'captcha') document.body.insertAdjacentHTML('beforeend', '<div class="g-recaptcha"></div>')
+    if (new URLSearchParams(location.search).get('modo') === 'captcha') document.body.insertAdjacentHTML('beforeend', '<div class="g-recaptcha" style="width:304px;height:78px"></div>')
   </script></body></html>`
 
 // ─── DOM REAL de wmediadores (HTML del fallo a5f06f70, 14/10/2026, sin datos personales) ───
@@ -91,6 +91,17 @@ const ANGULAR = (donde: 'main' | 'iframe' | 'shadow', ia = false) => `<!doctype 
   ${donde === 'shadow' ? `<template id="t">${PAGINA_TARJETAS(false)}</template><script>
     customElements.define('mp-tarjetas', class extends HTMLElement { connectedCallback() { const r = this.attachShadow({ mode: 'open' }); r.appendChild(document.getElementById('t').content.cloneNode(true)); r.addEventListener('click', (ev) => { const c = ev.target.closest('[ng-click]'); if (c) window.open(c.dataset.u, '_blank') }) } })
   </script>` : ''}
+  <script>function mostrar(id){document.getElementById(id).hidden=false}</script></body></html>`
+
+/** Patinetes (28/10/2026): «Tarificación y Emisión» sale en VARIAS tarjetas (Camiones lo trae ANTES en el DOM): solo vale el de «Patinetes». */
+const HOME_PATINETES = (variante: 'nueva' | 'misma' | 'sin_enlace', destino = '/patinete-destino') => `<!doctype html><html><body>
+  <nav><a role="tab" onclick="mostrar('menu')">Nueva producción</a></nav>
+  <ul id="menu" hidden><li><a role="menuitem" onclick="mostrar('pag')">Automóviles</a></li></ul>
+  <div id="pag" hidden><h1>Automóviles</h1>
+    <div class="tarjeta"><h3>Camiones, Autobuses y vehículos Industriales</h3><a href="/otro-camiones" target="_blank">Tarificación y Emisión</a></div>
+    <div class="tarjeta"><h3>Turismos y Motos</h3><a href="/otro-general" target="_blank">Tarificación y Emisión Rápida</a></div>
+    <div class="tarjeta"><h3>Patinetes</h3>${variante === 'sin_enlace' ? '<a href="/otro-ayuda" target="_blank">Ayuda patinetes</a>' : `<a id="pt" href="${destino}"${variante === 'nueva' ? ' target="_blank"' : ''}>Tarificación y Emisión</a>`}</div>
+  </div>
   <script>function mostrar(id){document.getElementById(id).hidden=false}</script></body></html>`
 
 let servidor: Server
@@ -137,6 +148,17 @@ before(async () => {
       return void res.end(ruta === '/nsei' ? NSEI : SIN_NSEI)
     }
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+    if (ruta === '/patinetes') return void res.end(HOME_PATINETES('nueva'))
+    if (ruta === '/patinetes-misma') return void res.end(HOME_PATINETES('misma'))
+    if (ruta === '/patinetes-sin-enlace') return void res.end(HOME_PATINETES('sin_enlace'))
+    // Real 28/10/2026: «Tarificación y Emisión» de Patinetes aterriza en una página SIN formulario con solo el enlace «Acceso a NSE».
+    if (ruta === '/patinetes-acceso') return void res.end(HOME_PATINETES('nueva', '/patinete-landing'))
+    if (ruta === '/patinetes-acceso-misma') return void res.end(HOME_PATINETES('misma', '/patinete-landing'))
+    if (ruta === '/patinete-landing') return void res.end('<!doctype html><html><body><a href="/otro-ayuda">Ayuda</a><a href="/patinete-form" target="_blank">Acceso a NSE</a></body></html>')
+    if (ruta === '/patinete-landing-misma') return void res.end('<!doctype html><html><body><a href="/patinete-form">Acceso a NSE</a></body></html>')
+    if (ruta === '/patinete-landing-doble') return void res.end('<!doctype html><html><body><a href="/otro-1">Acceso a NSE</a><a href="/otro-2">Acceso a NSE</a></body></html>')
+    if (ruta === '/patinete-form') return void res.end('<!doctype html><html><body><p>Formulario NSE patinete (sintético)</p></body></html>')
+    if (ruta === '/patinete-destino') return void res.end('<!doctype html><html><body><p>Formulario de patinetes (sintético)</p></body></html>')
     if (ruta === '/span-trampa') return void res.end(HOME_SPAN_EMITIR)
     if (ruta === '/angular') return void res.end(ANGULAR('main'))
     if (ruta === '/angular-iframe') return void res.end(ANGULAR('iframe'))
@@ -310,6 +332,125 @@ test('entrada cerrada de Mapfre: pestaña/producto fijos y sin avances autorizad
   assert.deepEqual([...e.avancesAutorizados], [])
 })
 
+test('entrada cerrada de Mapfre Patinetes: recorrido fijo, ramo patinete, tomador = mediador y sin avances autorizados', () => {
+  const e = ENTRADAS_EXPLORACION['mapfre:automoviles:patinetes']
+  assert.equal(e.compania, 'mapfre')
+  assert.equal(e.ramo, 'patinete')
+  assert.equal(e.pestana, 'Nueva producción')
+  assert.equal(e.productoMenu, 'Patinetes')
+  assert.equal(e.tomadorMediador, true)
+  assert.deepEqual([...e.avancesAutorizados], [])
+})
+
+test('Patinetes: menús → tarjeta «Patinetes» → «Tarificación y Emisión» (no el de Camiones, que va antes) → pestaña nueva; guard real sin violación', async () => {
+  const { context, page, ctxGuard, guard } = await abrir('/patinetes')
+  const pulsados: string[] = []
+  const ctx = { ...ctxGuard, pulsar: async (b: Locator) => { pulsados.push(((await b.textContent()) ?? '').trim()); await ctxGuard.pulsar(b) }, pulsarEnlaceEntrada: async (b: Locator) => { pulsados.push(((await b.textContent()) ?? '').trim()); await ctxGuard.pulsarEnlaceEntrada(b) } }
+  try {
+    const nueva = await abrirTarificacionPatineteMapfre(page, ctx)
+    assert.notEqual(nueva, page)
+    assert.match(nueva.url(), /\/patinete-destino$/)
+    assert.deepEqual(pulsados, ['Nueva producción', 'Automóviles', 'Tarificación y Emisión'])
+    assert.equal(guard.violacion(), null)
+  } finally {
+    await context.close()
+  }
+})
+
+test('Patinetes: la landing sin formulario trae «Acceso a NSE»: se pulsa (guard real, sin violación) y se sigue en la pestaña que abre', async () => {
+  const { context, page, ctxGuard, guard } = await abrir('/patinetes-acceso')
+  const pulsados: string[] = []
+  const ctx = { ...ctxGuard, pulsar: async (b: Locator) => { pulsados.push(((await b.textContent()) ?? '').trim()); await ctxGuard.pulsar(b) }, pulsarEnlaceEntrada: async (b: Locator) => { pulsados.push(((await b.textContent()) ?? '').trim()); await ctxGuard.pulsarEnlaceEntrada(b) } }
+  try {
+    const nueva = await abrirTarificacionPatineteMapfre(page, ctx, { menuMs: 2_500 })
+    assert.match(nueva.url(), /\/patinete-form$/)
+    assert.deepEqual(pulsados, ['Nueva producción', 'Automóviles', 'Tarificación y Emisión', 'Acceso a NSE'])
+    assert.equal(guard.violacion(), null)
+  } finally {
+    await context.close()
+  }
+})
+
+test('Patinetes (real 28/10): «Acceso a NSE» con href `abrirAplicacion(\'inicio.jsp\', \'NUEVO SISTEMA DE EMISIÓN\')` pasa SOLO por su puerta; con `pulsar` genérico se bloquea', async () => {
+  const LANDING_NSE = `<!doctype html><html><body><a href="javascript:abrirAplicacion('inicio.jsp', 'NUEVO SISTEMA DE EMISI%C3%93N');">Acceso a NSE</a><script>function abrirAplicacion(j, a){ window.open('/patinete-form', '_blank') }</script></body></html>`
+  {
+    const { context, page, ctxGuard, guard } = await abrir('/patinetes-acceso')
+    try {
+      await context.route('**/patinete-landing', (r) => r.fulfill({ contentType: 'text/html', body: LANDING_NSE }))
+      const ctx = { ...ctxGuard, pulsarAccesoNse: (b: Locator) => pulsarAccesoNseMapfre(b, guard, 'mapfre') }
+      const nueva = await abrirTarificacionPatineteMapfre(page, ctx, { menuMs: 2_500 })
+      assert.match(nueva.url(), /\/patinete-form$/)
+      assert.equal(guard.violacion(), null)
+    } finally {
+      await context.close()
+    }
+  }
+  {
+    // Sin la puerta (el fallo real de main-57b99d0): el guard genérico lo bloquea.
+    const { context, page, ctxGuard } = await abrir('/patinetes-acceso')
+    try {
+      await context.route('**/patinete-landing', (r) => r.fulfill({ contentType: 'text/html', body: LANDING_NSE }))
+      await assert.rejects(() => abrirTarificacionPatineteMapfre(page, ctxGuard, { menuMs: 2_500 }), /NUEVO SISTEMA DE EMISI/)
+    } finally {
+      await context.close()
+    }
+  }
+})
+
+test('Patinetes: si el enlace de la landing no abre pestaña, la navegación sigue en la MISMA', async () => {
+  const { context, page, ctx } = await abrir('/patinetes-acceso-misma')
+  try {
+    // La landing «misma» no tiene target=_blank en «Acceso a NSE»: se sirve desde otra ruta con el enlace en la misma pestaña.
+    await context.route('**/patinete-landing', (r) => r.fulfill({ contentType: 'text/html', body: '<!doctype html><html><body><a href="/patinete-form">Acceso a NSE</a></body></html>' }))
+    const destino = await abrirTarificacionPatineteMapfre(page, ctx, { menuMs: 2_500 })
+    assert.match(destino.url(), /\/patinete-form$/)
+  } finally {
+    await context.close()
+  }
+})
+
+test('Patinetes: DOS «Acceso a NSE» en la landing → ErrorMapaIncompleto (no se adivina)', async () => {
+  const { context, page, ctx, pulsados } = await abrir('/patinetes-acceso')
+  try {
+    await context.route('**/patinete-landing', (r) => r.fulfill({ contentType: 'text/html', body: '<!doctype html><html><body><a href="/otro-1">Acceso a NSE</a><a href="/otro-2">Acceso a NSE</a></body></html>' }))
+    await assert.rejects(() => abrirTarificacionPatineteMapfre(page, ctx, { menuMs: 2_500 }), ErrorMapaIncompleto)
+    assert.ok(!pulsados.includes('Acceso a NSE'))
+  } finally {
+    await context.close()
+  }
+})
+
+test('Patinetes: si el enlace de la tarjeta ya lleva al formulario (sin «Acceso a NSE»), no se pulsa nada más', async () => {
+  const { context, page, ctx, pulsados } = await abrir('/patinetes')
+  try {
+    await abrirTarificacionPatineteMapfre(page, ctx, { menuMs: 2_500 })
+    assert.deepEqual(pulsados, ['Nueva producción', 'Automóviles', 'Tarificación y Emisión'])
+  } finally {
+    await context.close()
+  }
+})
+
+test('Patinetes: si el enlace navega en la MISMA pestaña, sigue en ella (no hay formulario NSEI que esperar)', async () => {
+  const { context, page, ctx } = await abrir('/patinetes-misma')
+  try {
+    const destino = await abrirTarificacionPatineteMapfre(page, ctx, { menuMs: 1_500 })
+    assert.equal(destino, page)
+    assert.match(destino.url(), /\/patinete-destino$/)
+  } finally {
+    await context.close()
+  }
+})
+
+test('Patinetes: sin el enlace en SU tarjeta → ErrorMapaIncompleto (no se acepta el homónimo de Camiones en toda la página)', async () => {
+  const { context, page, ctx, pulsados } = await abrir('/patinetes-sin-enlace')
+  try {
+    await assert.rejects(() => abrirTarificacionPatineteMapfre(page, ctx, { menuMs: 1_500 }), ErrorMapaIncompleto)
+    assert.ok(!pulsados.includes('Tarificación y Emisión'), 'no pulsó el enlace de otra tarjeta')
+  } finally {
+    await context.close()
+  }
+})
+
 test('el contexto del explorador NO lleva httpCredentials (el diálogo HTTP se cancela → 401)', () => {
   for (const f of ['../src/explorador.ts', '../src/adapters/mapfre/entrada.ts', '../src/adapters/mapfre/login.ts']) {
     const src = readFileSync(new URL(f, import.meta.url), 'utf8').replace(/\/\/.*$/gm, '')
@@ -456,6 +597,82 @@ test('pestaña nueva: una ventana abierta DURANTE el bucle sigue parando con sin
     })
     assert.equal(fin.motivo, 'sin_salida', JSON.stringify(fin))
     assert.equal(vistos.length, 1)
+  } finally {
+    await context.close()
+  }
+})
+
+test('Patinetes (real 0.3.2, `sin_salida` con 0 pasos): home → pestaña landing → VENTANA de «Acceso a NSE»; el bucle inventaría la ventana NSE y la landing no cuenta como ventana nueva', async () => {
+  const { context, page, ctxGuard, guard } = await abrir('/patinetes-acceso')
+  try {
+    // La landing abre la aplicación NSE con `abrirAplicacion` (window.open), como el portal real; el formulario tarda en abrirse.
+    await context.route('**/patinete-landing', (r) => r.fulfill({ contentType: 'text/html', body: `<!doctype html><html><body><a href="javascript:abrirAplicacion('inicio.jsp', 'NUEVO SISTEMA DE EMISI%C3%93N');">Acceso a NSE</a><script>function abrirAplicacion(j, a){ setTimeout(() => window.open('/nsei-patin', '_blank'), 300) }</script></body></html>` }))
+    await context.route('**/nsei-patin', (r) => r.fulfill({ contentType: 'text/html', body: '<!doctype html><html><body><h1>MásPatín</h1><label for="fp">Fecha de efecto</label><input id="fp" name="fp"></body></html>' }))
+    const ctx = { ...ctxGuard, pulsarAccesoNse: (b: Locator) => pulsarAccesoNseMapfre(b, guard, 'mapfre') }
+    const portal: PortalExploracion = { credencial: 'X', entrar: (pg, c) => abrirTarificacionPatineteMapfre(pg, c, { menuMs: 3_000 }) }
+    const vistos: string[] = []
+    const fin = await entrarYExplorar(page, portal, ctx as unknown as CtxEntrada, ENTRADAS_EXPLORACION['mapfre:automoviles:patinetes'], {
+      guard, redactar: (t) => t, env: {},
+      contextoBucle: ctxBucle(guard, vistos, async () => resp([{ accion: 'parar', motivo: 'dato_no_disponible' }])),
+    })
+    assert.equal(fin.motivo, 'dato_no_disponible', JSON.stringify(fin))
+    assert.equal(context.pages().length, 3)
+    assert.equal(vistos.length, 1)
+    assert.match(vistos[0], /Fecha de efecto/)
+    assert.equal(guard.violacion(), null)
+  } finally {
+    await context.close()
+  }
+})
+
+test('Patinetes 0.3.4: en la ventana NSE la entrada pulsa «Oferta / Contratación» por su puerta y el bucle empieza en la oferta (MásPatín)', async () => {
+  const { context, page, ctxGuard, guard } = await abrir('/patinetes-acceso')
+  try {
+    await context.route('**/patinete-landing', (r) => r.fulfill({ contentType: 'text/html', body: `<!doctype html><html><body><a href="javascript:abrirAplicacion('inicio.jsp', 'NUEVO SISTEMA DE EMISI%C3%93N');">Acceso a NSE</a><script>function abrirAplicacion(j, a){ window.open('/EVT21_NSE_FWEB/inicio.jsp', '_blank') }</script></body></html>` }))
+    await context.route('**/EVT21_NSE_FWEB/inicio.jsp', (r) => r.fulfill({ contentType: 'text/html; charset=utf-8', body: '<!doctype html><html><body><a href="#">Búsqueda de Respuestas y Gestión</a><a href="/EVT21_NSE_FWEB/oferta.jsp">Oferta / Contratación</a><a href="#">Oferta Multiprecio</a><a href="#" onclick="btnSalirAplicacion();">Salir</a></body></html>' }))
+    await context.route('**/EVT21_NSE_FWEB/oferta.jsp', (r) => r.fulfill({ contentType: 'text/html; charset=utf-8', body: '<!doctype html><html><body><h1>Oferta</h1><a href="#">MásPatín</a></body></html>' }))
+    const pulsadosMenu: string[] = []
+    const ctx = {
+      ...ctxGuard,
+      pulsarAccesoNse: (b: Locator) => pulsarAccesoNseMapfre(b, guard, 'mapfre'),
+      pulsarMenuNse: async (b: Locator) => { pulsadosMenu.push(((await b.textContent()) ?? '').trim()); await pulsarMenuOfertaNseMapfre(b, guard, 'mapfre') },
+    }
+    const portal: PortalExploracion = { credencial: 'X', entrar: (pg, c) => abrirTarificacionPatineteMapfre(pg, c, { menuMs: 3_000 }) }
+    const vistos: string[] = []
+    const fin = await entrarYExplorar(page, portal, ctx as unknown as CtxEntrada, ENTRADAS_EXPLORACION['mapfre:automoviles:patinetes'], {
+      guard, redactar: (t) => t, env: {},
+      contextoBucle: ctxBucle(guard, vistos, async () => resp([{ accion: 'parar', motivo: 'dato_no_disponible' }])),
+    })
+    assert.equal(fin.motivo, 'dato_no_disponible', JSON.stringify(fin))
+    assert.deepEqual(pulsadosMenu, ['Oferta / Contratación'])
+    assert.match(vistos[0], /MásPatín/)
+    assert.equal(guard.violacion(), null)
+  } finally {
+    await context.close()
+  }
+})
+
+test('Patinetes 0.3.7 (real 16:06): si tras «Oferta / Contratación» la ventana vuelve a la portada de NSE («Acceso a NSE»), la entrada falla con diagnóstico y SIN preguntar a la IA', async () => {
+  const { context, page, ctxGuard, guard } = await abrir('/patinetes-acceso')
+  try {
+    const PORTADA = `<!doctype html><html><body><a href="javascript:abrirAplicacion('inicio.jsp', 'NUEVO SISTEMA DE EMISI%C3%93N');">Acceso a NSE</a><script>function abrirAplicacion(j, a){ window.open('/EVT21_NSE_FWEB/inicio.jsp', '_blank') }</script></body></html>`
+    await context.route('**/patinete-landing', (r) => r.fulfill({ contentType: 'text/html; charset=utf-8', body: PORTADA }))
+    await context.route('**/EVT21_NSE_FWEB/inicio.jsp', (r) => r.fulfill({ contentType: 'text/html; charset=utf-8', body: '<!doctype html><html><body><a href="/EVT21_NSE_FWEB/" target="contenido">Oferta / Contratación</a></body></html>' }))
+    await context.route('**/EVT21_NSE_FWEB/', (r) => r.fulfill({ contentType: 'text/html; charset=utf-8', body: PORTADA }))
+    const ctx = {
+      ...ctxGuard,
+      pulsarAccesoNse: (b: Locator) => pulsarAccesoNseMapfre(b, guard, 'mapfre'),
+      pulsarMenuNse: (b: Locator) => pulsarMenuOfertaNseMapfre(b, guard, 'mapfre'),
+    }
+    const portal: PortalExploracion = { credencial: 'X', entrar: (pg, c) => abrirTarificacionPatineteMapfre(pg, c, { menuMs: 3_000 }) }
+    const vistos: string[] = []
+    const fin = await entrarYExplorar(page, portal, ctx as unknown as CtxEntrada, ENTRADAS_EXPLORACION['mapfre:automoviles:patinetes'], {
+      guard, redactar: (t) => t, env: {},
+      contextoBucle: ctxBucle(guard, vistos, async () => resp([{ accion: 'parar', motivo: 'ambiguo' }])),
+    })
+    assert.equal(vistos.length, 0, 'no se pregunta a la IA por la portada')
+    assert.match(JSON.stringify(fin), /volvi[oó] a su portada/)
+    assert.match(JSON.stringify(fin), /target=contenido/)
   } finally {
     await context.close()
   }
@@ -769,6 +986,26 @@ test('login antiguo: CAPTCHA presente → error captcha ANTES de escribir usuari
       (e) => e instanceof ErrorTarificador && e.tipo === 'captcha',
     )
     assert.deepEqual(pulsados, [])
+  } finally {
+    await context.close()
+  }
+})
+
+test('Patinetes (real 28/10): un modal AngularJS que aparece TRAS abrir la pestaña y otro tras «Automóviles» se cierran antes de pulsar', async () => {
+  const { context, page, ctx, pulsados, guard } = await abrir('/patinetes')
+  try {
+    // Script en TEXTO (tsx inyecta `__name` en las funciones y el navegador no lo tiene).
+    await page.evaluate(`(() => {
+      const original = window.mostrar
+      const modal = (id) => document.body.insertAdjacentHTML('beforeend', '<div id="' + id + '" role="dialog" modal-window class="modal fade in" style="display:block;position:fixed;inset:0;background:#ccc;z-index:99"><h4 class="modal-title">Aviso</h4><button class="close" aria-label="Cerrar" onclick="this.closest(\\'[role=dialog]\\').remove()">×</button></div>')
+      window.mostrar = (id) => { original(id); if (id === 'menu') modal('m1'); if (id === 'pag') modal('m2') }
+    })()`)
+    const nueva = await abrirTarificacionPatineteMapfre(page, ctx)
+    assert.notEqual(nueva, page)
+    assert.equal(await page.locator('[role=dialog]').count(), 0)
+    assert.deepEqual(pulsados.filter((t) => t !== '×' && !/^cerrar$/i.test(t)), ['Nueva producción', 'Automóviles', 'Tarificación y Emisión'])
+    assert.equal(pulsados.filter((t) => /^(×|cerrar)$/i.test(t)).length, 2, 'cada modal se cierra con su botón de cierre')
+    assert.equal(guard.violacion(), null)
   } finally {
     await context.close()
   }

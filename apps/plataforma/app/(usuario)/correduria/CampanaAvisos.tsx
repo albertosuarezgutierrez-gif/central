@@ -6,7 +6,7 @@ import { Bell, X } from 'lucide-react'
 import { Badge, btnStyle } from '@/components/ui'
 import { interpretarCampana, tonoGrupo, type LecturaCampana } from '@/lib/correduria/campana'
 import type { GrupoCampana, ItemCampana } from '@/lib/correduria/avisos'
-import { textoResultadoAccion, type SolicitudPortal } from '@/lib/correduria/solicitudes-portal'
+import { confirmacionProspecto, cuerpoAccion, textoResultadoAccion, type SolicitudPortal } from '@/lib/correduria/solicitudes-portal'
 import SolicitudesPortal from './SolicitudesPortal'
 import OportunidadesPatrimonio from './OportunidadesPatrimonio'
 import CartasMediador from './CartasMediador'
@@ -206,13 +206,16 @@ function AccionesSolicitud({ s, onCambio }: { s: SolicitudPortal; onCambio: () =
   const [ocupado, setOcupado] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
   async function actuar(accion: 'activar' | 'retirar') {
-    if (!s.clienteId) return
+    const cuerpo = cuerpoAccion(s, accion)
+    if (!cuerpo) return
     if (accion === 'retirar' && !window.confirm(`¿Rechazar «${s.moduloNombre}» para ${s.cliente}? La petición se retira.`)) return
+    const pregunta = confirmacionProspecto(s, accion)
+    if (pregunta && !window.confirm(pregunta)) return
     setOcupado(true); setAviso(null)
     try {
       const r = await fetch('/api/correduria/cliente/portal-modulos', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clienteId: s.clienteId, modulo: s.modulo, accion }),
+        body: JSON.stringify(cuerpo),
       })
       setAviso(textoResultadoAccion(accion, r.status, await r.json().catch(() => null)).texto)
     } catch {

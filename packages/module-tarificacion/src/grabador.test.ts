@@ -307,10 +307,14 @@ describe('bookmarklet: forma', () => {
     expect(fuente).toMatch(/a\.download = nombre;?\s*a\.click\(\)/)
     expect(fuente).not.toMatch(/appendChild\(a\)/)
   })
-  it('lleva el aviso de marcos ilegibles en español y la URL completa solo en el alert', () => {
-    expect(AVISO_MARCO_NO_LEGIBLE).toBe('Esta pantalla tiene el formulario en un marco que no se puede leer. Abre este enlace en una pestaña nueva y vuelve a pulsar el marcador: ')
+  it('avisa de los marcos ilegibles UNA vez y sin bloquear: nunca alert() (Generali, 30/10/2026: alert en bucle por vídeos)', () => {
+    expect(AVISO_MARCO_NO_LEGIBLE).toMatch(/extensión «Grabador ASegura»/)
     expect(configGrabador().aviso).toBe(AVISO_MARCO_NO_LEGIBLE)
-    expect(FUENTE_GRABADOR).toMatch(/win\.alert\(aviso\)/)
+    for (const f of [FUENTE_GRABADOR, FUENTE_GRABADOR_AUTO]) expect(f).not.toMatch(/alert\s*\(/)
+    expect(FUENTE_GRABADOR).toMatch(/var aviso = M\.textoAviso\(urlsSinLeer, cfg\)/)
+    expect(FUENTE_GRABADOR).toMatch(/if \(descargar && aviso\) avisoEnPantalla\(aviso\)/)
+    // Los irrelevantes (vídeo, mapas, ocultos, diminutos…) ni avisan ni cuentan como «sin leer».
+    expect(FUENTE_GRABADOR).toMatch(/var motivo = M\.irrelevante\([\s\S]*?if \(motivo\) \{\s*ignorados\+\+/)
   })
   it('es autocontenido: lleva los patrones del formador y la marca de marcos', () => {
     const cfg = configGrabador()

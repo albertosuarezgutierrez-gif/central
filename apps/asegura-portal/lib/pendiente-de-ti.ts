@@ -213,3 +213,18 @@ export function pendientesDeTi(e: EntradaPendientes, ramo: (r: string) => string
 
   return { items, sinComprobar }
 }
+
+/**
+ * «Pendiente de ti» en INICIO (27/10/2026). Lo pendiente vive en UN solo sitio: lo que antes pintaba `/boveda` (firmas de
+ * anulación, presupuestos, confirmar el contacto, patrimonio) se pinta ahora en Inicio con LA MISMA regla `pendientesDeTi`.
+ * Lo que Inicio ya tiene por su cuenta NO se repite: los recibos devueltos (`pendienteInicio`) y los vencimientos de las
+ * pólizas aportadas (`vence-aportada`) — por eso aquí `recibosDevueltos` va vacío y `declaradasPorVencer` ausente.
+ * Los enlaces que eran un ancla de la bóveda (`#firma-titulo`, `#aviso-contacto-titulo`) pasan a apuntar a `/boveda#…`.
+ */
+export function pendientesDeTiEnInicio(
+  e: Pick<EntradaPendientes, 'anulaciones' | 'presupuestos' | 'contactoPorConfirmar' | 'patrimonio'>,
+  ramo: (r: string) => string,
+): PendientesDeTi {
+  const r = pendientesDeTi({ ...e, recibosDevueltos: [] }, ramo)
+  return { ...r, items: r.items.map((i) => (i.href.startsWith('#') ? { ...i, href: `/boveda${i.href}` } : i)) }
+}

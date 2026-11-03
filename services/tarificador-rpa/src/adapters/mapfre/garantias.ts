@@ -1,0 +1,384 @@
+// Mapfre auto 0.8.39 (01/11/2026) · GARANTÍAS de cada producto, leídas del PDF del proyecto o, si no hay, de la pantalla «Coberturas».
+// Alberto (AS-26-0042): el bot solo guardaba el precio y las 14 garantías de las 2 opciones salían «No figura»; «hay que descargar el
+// proyecto, que tiene toda la información». Mismo formato que Allianz (`OfertaNormalizada.coberturas` / `franquicias`).
+//
+// 🚨 Solo LECTURA y funciones PURAS (texto → coberturas). Nunca se inventa un estado, un límite ni una franquicia: lo que no consta
+//    queda `null`. Una línea sin estado ni importe no es una garantía. Sin texto legible → [] (y el aviso «coberturas no leídas»).
+// 🚨 Sin datos personales en avisos ni logs (solo recuentos).
+import type { FilaPdf } from '../../pdf-texto.ts'
+import type { CoberturaOferta, FranquiciaOferta, OfertaNormalizada } from '@central/module-tarificacion'
+
+export const AVISO_COBERTURAS_NO_LEIDAS = 'coberturas no leídas'
+export const AVISO_COBERTURAS_PDF = 'Garantías leídas del PDF del proyecto de Mapfre.'
+export const AVISO_COBERTURAS_PANTALLA = 'Garantías leídas de la pantalla «Coberturas» de Mapfre (el PDF del proyecto no se pudo leer).'
+export const AVISO_GARANTIAS_POSIBLEMENTE_INCOMPLETAS = 'Garantías posiblemente incompletas: hay filas de la tabla del PDF que no se pudieron asignar a este producto.'
+export const AVISO_GARANTIAS_IDENTICAS = 'garantías idénticas entre productos de distinto precio: revisar'
+export const AVISO_COBERTURAS_SIN_LEER = 'Garantías de Mapfre NO leídas (ni del PDF del proyecto ni de la pantalla): coberturas no leídas.'
+
+const limpiar = (s: string) => s.replace(/\s+/g, ' ').trim()
+const plano = (s: string) => limpiar(s).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+
+/** Importe español «1.234,56» / «150» / «150,5» → número; ilegible → null. */
+export function importeEsp(t: string | null | undefined): number | null {
+  if (typeof t !== 'string') return null
+  const s = t.trim()
+  if (!/^\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?$|^\d+(?:,\d{1,2})?$/.test(s)) return null
+  const n = Number(s.replace(/\./g, '').replace(',', '.'))
+  return Number.isFinite(n) ? n : null
+}
+
+const IMPORTE = '(\\d{1,3}(?:\\.\\d{3})+(?:,\\d{1,2})?|\\d+(?:,\\d{1,2})?)\\s*(?:€|eur\\b|euros?)'
+const RE_LIMITE = new RegExp(`(?:l[ií]mite|hasta|m[aá]ximo|suma\\s+asegurada)\\s*(?:de)?\\s*:?\\s*${IMPORTE}`, 'i')
+const RE_CAPITAL = new RegExp(`(?:capital)\\s*(?:asegurado)?\\s*:?\\s*${IMPORTE}`, 'i')
+const RE_FRANQ = new RegExp(`franquicia\\s*(?:de)?\\s*:?\\s*${IMPORTE}`, 'i')
+const RE_SIN_FRANQ = /sin\s+franquicia/i
+const RE_IMPORTE_SUELTO = new RegExp(IMPORTE, 'i')
+
+const RE_EXCLUIDA = /^(?:no\s+incluid[oa]s?|no\s+contratad[oa]s?|no\s+cubre|excluid[oa]s?|no|[-–—]+)$/i
+const RE_INCLUIDA = /^(?:incluid[oa]s?|contratad[oa]s?|cubre|cubierto|s[ií])$/i
+// Líneas que nunca son una garantía (precio, datos del riesgo, cabeceras del documento).
+const RE_NO_GARANTIA = /prima|recibo|impuesto|consorcio|\btotal\b|tomador|\bnif\b|\bdni\b|matr[ií]cula|bastidor|fecha|n[ºo°]\s*de\s*(?:proyecto|p[oó]liza)|p[aá]gina|mapfre\s+espa|domicilio|tel[eé]fono|e-?mail|c[oó]digo\s+postal|mediador|forma\s+de\s+pago|periodicidad/i
+
+type Valor = { estado: CoberturaOferta['estado']; capital: number | null; limite: number | null; franquicia: number | null; franquiciaTexto: string | null }
+
+/** Interpreta el texto de valor de una línea («Incluida», «No», «Límite 300 €», «Franquicia 150 €»…). null = no dice nada útil. */
+export function valorDeTexto(texto: string): Valor | null {
+  const t = limpiar(texto)
+  if (t === '') return null
+  let estado: CoberturaOferta['estado'] = null
+  const trozos = t.split(/\s*[|;]\s*/)
+  for (const z of trozos) {
+    const w = z.replace(/[.:]+$/g, '').trim()
+    if (RE_EXCLUIDA.test(w)) { estado = 'excluida'; break }
+    if (RE_INCLUIDA.test(w)) { estado = 'incluida'; break }
+  }
+  if (estado === null) {
+    const ini = /^(no\s+incluid[oa]s?|no\s+contratad[oa]s?|excluid[oa]s?|incluid[oa]s?|contratad[oa]s?)\b/i.exec(t)
+    if (ini) estado = /^(?:no|excluid)/i.test(ini[1]!) ? 'excluida' : 'incluida'
+  }
+  const lim = RE_LIMITE.exec(t), cap = RE_CAPITAL.exec(t), fr = RE_FRANQ.exec(t)
+  const limite = lim ? importeEsp(lim[1]) : null
+  const capital = cap ? importeEsp(cap[1]) : null
+  let franquicia = fr ? importeEsp(fr[1]) : null
+  if (franquicia === null && RE_SIN_FRANQ.test(t)) franquicia = 0
+  // Un importe suelto sin palabra clave es el límite/suma de esa garantía (no se llama franquicia ni capital sin que lo diga).
+  let suelto: number | null = null
+  if (limite === null && capital === null && franquicia === null) {
+    const s = RE_IMPORTE_SUELTO.exec(t)
+    suelto = s ? importeEsp(s[1]) : null
+  }
+  if (estado === null && limite === null && capital === null && franquicia === null && suelto === null) return null
+  // Un límite o una franquicia dentro de una garantía sin estado explícito implica que figura contratada.
+  if (estado === null && (limite !== null || capital !== null || suelto !== null)) estado = 'incluida'
+  return { estado, capital, limite: limite ?? suelto, franquicia, franquiciaTexto: fr || RE_SIN_FRANQ.test(t) ? t.slice(0, 120) : null }
+}
+
+/**
+ * v0.2.59/Allianz: valor de un texto en el contexto de su FILA. Una fila de «franquicia» con un importe suelto (sin palabra clave) → franquicia, no límite.
+ * Sin importe en el texto → no cambia nada (nunca se inventa). PURA.
+ */
+export function valorDeTextoEnFila(descripcion: string, texto: string): Valor | null {
+  const v = valorDeTexto(texto)
+  if (v && /franquicia/i.test(descripcion) && v.franquicia === null && v.limite !== null && v.capital === null) return { ...v, franquicia: v.limite, limite: null, franquiciaTexto: limpiar(texto).slice(0, 120) }
+  return v
+}
+
+const SEP = /\t+|\s{2,}|\s*\|\s*|\s*:\s+|\s*\.{3,}\s*/
+const RE_VALOR_FINAL = /^(.*\S)\s+(no\s+incluid[oa]s?|no\s+contratad[oa]s?|incluid[oa]s?|contratad[oa]s?|excluid[oa]s?|s[ií]|no)$/i
+
+function etiquetaValida(e: string): boolean {
+  const t = limpiar(e)
+  return t.length >= 3 && t.length <= 90 && /\p{L}{3}/u.test(t) && !RE_NO_GARANTIA.test(t)
+}
+
+/** ¿La línea es SOLO un valor (el PDF/pantalla pone etiqueta y valor en líneas distintas)? */
+function esSoloValor(l: string): boolean {
+  const t = limpiar(l)
+  if (t === '') return false
+  const v = valorDeTexto(t)
+  if (!v) return false
+  // «Franquicia 150 €» / «Incluida» / «300 €» / «Límite 600 €»: sin letras de una etiqueta propia.
+  const resto = t.replace(RE_LIMITE, '').replace(RE_CAPITAL, '').replace(RE_FRANQ, '').replace(RE_SIN_FRANQ, '').replace(new RegExp(IMPORTE, 'ig'), '')
+    .replace(/\b(no\s+incluid[oa]s?|no\s+contratad[oa]s?|incluid[oa]s?|contratad[oa]s?|excluid[oa]s?|s[ií]|no|franquicia|l[ií]mite|capital)\b/gi, '').replace(/[\s.:;,|€\-–—]+/g, '')
+  return resto === ''
+}
+
+/** `descartadas`: filas de la tabla por columnas que no se pudieron asignar (solo recuento y forma, sin texto libre). */
+export type Resultado = { coberturas: CoberturaOferta[]; franquicias: FranquiciaOferta[]; descartadas?: { filas: number; estructura: string } }
+
+/** Acumulador de garantías de UNA oferta: sin repetidas (gana la primera) y sin etiquetas que no sean garantías. */
+function nuevoAcumulador(): { res: Resultado; anotar: (etiqueta: string, v: Valor) => void } {
+  const res: Resultado = { coberturas: [], franquicias: [] }
+  const vistas = new Set<string>()
+  const anotar = (etiqueta: string, v: Valor) => {
+    const lit = limpiar(etiqueta).replace(/[.:\-–]+$/g, '').trim()
+    if (!etiquetaValida(lit)) return
+    const k = plano(lit)
+    if (vistas.has(k)) return
+    vistas.add(k)
+    res.coberturas.push({ clave: lit, literal: lit, estado: v.estado, capital: v.capital, limite: v.limite, franquicia: v.franquicia })
+    if (v.franquicia !== null || v.franquiciaTexto) res.franquicias.push({ ambito: lit, importeEur: v.franquicia, literal: v.franquicia === null ? v.franquiciaTexto : null })
+  }
+  return { res, anotar }
+}
+
+/** Líneas de texto → coberturas (formato Allianz). Sin repetidas (gana la primera); lo que no es una garantía se ignora. PURA. */
+export function coberturasDeLineas(lineas: readonly string[]): Resultado {
+  const { res, anotar } = nuevoAcumulador()
+  let pendiente: string | null = null
+  for (const bruta of lineas) {
+    const l = limpiar(bruta.replace(/\t/g, '  '))
+    if (l === '') { pendiente = null; continue }
+    if (pendiente !== null && esSoloValor(l)) { const v = valorDeTexto(l); if (v) anotar(pendiente, v); pendiente = null; continue }
+    pendiente = null
+    const partes = bruta.trim().split(SEP).map(limpiar).filter(Boolean)
+    if (partes.length >= 2) {
+      const v = valorDeTexto(partes.slice(1).join(' | '))
+      if (v) { anotar(partes[0]!, v); continue }
+    }
+    const fin = RE_VALOR_FINAL.exec(l)
+    if (fin) { const v = valorDeTexto(fin[2]!); if (v) { anotar(fin[1]!, v); continue } }
+    // «Robo - Límite 300 €» / «Lunas: franquicia 50 €» en una sola cadena.
+    const kw = /^(.*?\S)\s*[-–:]?\s+((?:l[ií]mite|capital|franquicia|sin\s+franquicia|suma\s+asegurada)\b.*)$/i.exec(l)
+    if (kw) { const v = valorDeTexto(kw[2]!); if (v && etiquetaValida(kw[1]!)) { anotar(kw[1]!, v); continue } }
+    if (etiquetaValida(l) && !valorDeTexto(l)) pendiente = l
+  }
+  return res
+}
+
+/**
+ * v0.8.45 · TABLA COMPARATIVA POR COLUMNAS (multiprecio: «TERCEROS» y «TERCEROS AMPLIADO» como cabeceras CONSECUTIVAS y debajo, por fila, una garantía y
+ * UN valor por producto). Cada fila es «etiqueta + N valores» (misma línea o N líneas de solo valor) y el valor j es del producto j. Una fila que no
+ * trae exactamente N valores se descarta (nunca se reparte a ojo ni se copia la columna de otro producto). PURA.
+ */
+export function coberturasDeColumnas(lineas: readonly string[], n: number): Resultado[] {
+  const acc = Array.from({ length: n }, () => nuevoAcumulador())
+  const bruta = lineas.map((l) => l.replace(/\t/g, '  ').trim()).filter((l) => l !== '')
+  const ls = bruta.map(limpiar)
+  const desc: string[] = []
+  const poner = (etiqueta: string, vals: string[]) => {
+    const vs = vals.map((t) => valorDeTextoEnFila(etiqueta, t))
+    if (vs.some((v) => !v)) { desc.push(formaFila(etiqueta, vals)); return }
+    vs.forEach((v, j) => acc[j]!.anotar(etiqueta, v!))
+  }
+  for (let i = 0; i < ls.length; i++) {
+    const partes = bruta[i]!.split(SEP).map(limpiar).filter(Boolean)
+    if (partes.length >= n + 1 && partes.slice(-n).every((t) => valorDeTexto(t))) { poner(partes.slice(0, -n).join(' '), partes.slice(-n)); continue }
+    // Etiqueta + MENOS valores que columnas en la misma línea (celda vacía o «—» perdida): ambigua, no se asigna pero se cuenta.
+    if (partes.length >= 2 && partes.length <= n && etiquetaValida(partes[0]!) && !valorDeTexto(partes[0]!) && valorDeTexto(partes[partes.length - 1]!)) { desc.push(formaFila(partes[0]!, partes.slice(1))); continue }
+    if (!etiquetaValida(ls[i]!) || valorDeTexto(ls[i]!)) continue
+    let k = i + 1
+    const vals: string[] = []
+    while (k < ls.length && vals.length < n && esSoloValor(ls[k]!)) vals.push(ls[k++]!)
+    if (vals.length !== n) { if (vals.length > 0) desc.push(formaFila(ls[i]!, vals)); i = k - 1; continue }
+    if (k < ls.length && esSoloValor(ls[k]!)) { desc.push(formaFila(ls[i]!, [...vals, ls[k]!])); while (k < ls.length && esSoloValor(ls[k]!)) k++; i = k - 1; continue } // más valores que columnas: fila ambigua
+    poner(ls[i]!, vals)
+    i = k - 1
+  }
+  return acc.map((a) => ({ ...a.res, ...(desc.length > 0 ? { descartadas: resumenDescartes(desc) } : {}) }))
+}
+
+const resumenDescartes = (formas: readonly string[]) => ({ filas: formas.length, estructura: formas.join(' ').slice(0, 600) })
+
+/**
+ * v0.8.46 · TABLA POR COLUMNAS CON POSICIÓN X. Cada fragmento del PDF trae su X: el valor es de la columna cuya cabecera de producto tiene la X más cercana, y una
+ * columna SIN fragmento es una celda vacía (la garantía no figura en ese producto → no se anota; nunca se copia la del otro). `claves` = nombres de producto
+ * (planos) en el orden de las columnas. Devuelve null si no halla todas las cabeceras con X distintas (→ se usa la lectura por líneas). PURA.
+ */
+export function coberturasDeColumnasXY(filas: readonly FilaPdf[], claves: readonly string[], todas: readonly string[] = claves): Resultado[] | null {
+  const n = claves.length
+  if (n < 2) return null
+  const esCab = (t: string) => plano(t.replace(/^\W+|\W+$/g, ''))
+  for (let r0 = 0; r0 < filas.length; r0++) {
+    if (!filas[r0]!.frags.some((f) => esCab(f.t) === claves[0])) continue
+    const cabX: number[] = []
+    let ultima = r0
+    for (let r = r0; r < Math.min(filas.length, r0 + 4) && cabX.length < n; r++) {
+      for (let f = filas[r]!.frags.find((x) => esCab(x.t) === claves[cabX.length]); f && cabX.length < n; f = filas[r]!.frags.find((x) => esCab(x.t) === claves[cabX.length])) { cabX.push(f.x); ultima = r }
+    }
+    if (cabX.length !== n) continue
+    const ord = [...cabX].sort((a, b) => a - b)
+    const gap = Math.min(...ord.slice(1).map((x, i) => x - ord[i]!))
+    if (!(gap >= 10)) continue
+    const limite = ord[0]! - gap / 2
+    const acc = Array.from({ length: n }, () => nuevoAcumulador())
+    const desc: string[] = []
+    for (let r = ultima + 1; r < filas.length; r++) {
+      const fs = filas[r]!.frags
+      if (fs.some((f) => todas.includes(esCab(f.t)))) break // cabecera de cualquier producto: acaba la tabla
+      const etiqueta = limpiar(fs.filter((f) => f.x < limite).map((f) => f.t).join(' '))
+      const celdas: string[][] = Array.from({ length: n }, () => [])
+      for (const f of fs.filter((x) => x.x >= limite)) {
+        let j = 0
+        for (let c = 1; c < n; c++) if (Math.abs(f.x - cabX[c]!) < Math.abs(f.x - cabX[j]!)) j = c
+        celdas[j]!.push(f.t)
+      }
+      const textos = celdas.map((c) => limpiar(c.join(' ')))
+      if (textos.every((t) => t === '')) continue
+      if (etiqueta === '') { if (textos.filter((t) => t !== '').every((t) => esSoloValor(t))) desc.push(formaFila('', textos)); continue }
+      if (!etiquetaValida(etiqueta)) continue
+      const vs = textos.map((t) => (t === '' ? null : valorDeTextoEnFila(etiqueta, t)))
+      if (textos.some((t, j) => t !== '' && !vs[j])) { desc.push(formaFila(etiqueta, textos)); continue }
+      vs.forEach((v, j) => { if (v) acc[j]!.anotar(etiqueta, v) })
+    }
+    return acc.map((a) => ({ ...a.res, ...(desc.length > 0 ? { descartadas: resumenDescartes(desc) } : {}) }))
+  }
+  return null
+}
+export type CoberturasPorProducto = Map<string, Resultado>
+
+/**
+ * Parte un texto en secciones por el NOMBRE EXACTO del producto (línea que es solo el nombre, sin importar mayúsculas/tildes). Una
+ * sección acaba en el siguiente nombre de producto. Sin ningún encabezado: con UN solo producto, todo el texto; con varios, nada
+ * (no se reparte a ojo). PURA.
+ */
+export function coberturasPorProducto(lineas: readonly string[], productos: readonly string[], filas?: readonly FilaPdf[]): CoberturasPorProducto {
+  const salida: CoberturasPorProducto = new Map()
+  const claves = productos.map((p) => plano(p)).filter(Boolean)
+  const cab: { i: number; k: string }[] = []
+  lineas.forEach((l, i) => { const k = plano(l.replace(/^\W+|\W+$/g, '')); if (claves.includes(k)) cab.push({ i, k }) })
+  // v0.8.43: un producto SIN encabezado exacto (run 48b0df76: solo «TERCEROS AMPLIADO» se halló en el PDF) admite «NOMBRE – 392,02 €» / «NOMBRE (anual)»:
+  // la línea EMPIEZA por el nombre y lo que sigue no es una letra ni un dígito (no «Terceros afectados…»), y no es el comienzo de otro producto más largo.
+  for (const k of claves) {
+    if (cab.some((h) => h.k === k)) continue
+    lineas.forEach((l, i) => {
+      const p = plano(l.replace(/^\W+/, ''))
+      if (!p.startsWith(k) || p.length === k.length || !/^\s*(?:[-–—:(|·/]|\d)/.test(p.slice(k.length))) return
+      if (claves.some((o) => o.length > k.length && p.startsWith(o))) return
+      if (!cab.some((h) => h.i === i)) cab.push({ i, k })
+    })
+  }
+  cab.sort((a, b) => a.i - b.i)
+  // v0.8.45: cabeceras CONSECUTIVAS (solo líneas en blanco entre ellas) de productos distintos = cabecera de una tabla por columnas. Su contenido se reparte por
+  // columna (la 1.ª es del 1.er producto…); nunca se le da todo al último producto (antes TERCEROS quedaba vacío y TERCEROS AMPLIADO leía la columna ajena).
+  const enGrupo = new Set<number>()
+  for (let n = 0; n < cab.length; ) {
+    let m = n
+    while (m + 1 < cab.length && cab[m + 1]!.k !== cab[m]!.k && lineas.slice(cab[m]!.i + 1, cab[m + 1]!.i).every((x) => x.trim() === '')) m++
+    const grupo = cab.slice(n, m + 1)
+    if (grupo.length >= 2 && new Set(grupo.map((h) => h.k)).size === grupo.length) {
+      const fin = cab[m + 1]?.i ?? lineas.length
+      const claveGrupo = grupo.map((h) => h.k)
+      const xy = filas && filas.length > 0 ? coberturasDeColumnasXY(filas, claveGrupo, claves) : null
+      ;(xy && xy.some((c) => c.coberturas.length > 0) ? xy : coberturasDeColumnas(lineas.slice(grupo[grupo.length - 1]!.i + 1, fin), grupo.length)).forEach((c, j) => {
+        const k = grupo[j]!.k
+        if (c.coberturas.length > (salida.get(k)?.coberturas.length ?? 0)) salida.set(k, c)
+      })
+      for (let x = n; x <= m; x++) enGrupo.add(x)
+    }
+    n = m + 1
+  }
+  if (cab.length === 0) {
+    if (productos.length === 1) {
+      const c = coberturasDeLineas(lineas)
+      if (c.coberturas.length > 0) salida.set(plano(productos[0]!), c)
+    }
+    return salida
+  }
+  cab.forEach((h, n) => {
+    if (enGrupo.has(n)) return
+    const fin = cab[n + 1]?.i ?? lineas.length
+    const c = coberturasDeLineas(lineas.slice(h.i + 1, fin))
+    const previa = salida.get(h.k)
+    if (c.coberturas.length > (previa?.coberturas.length ?? 0)) salida.set(h.k, c)
+  })
+  return salida
+}
+
+export const textoALineas = (t: string): string[] => t.split(/\r?\n/)
+
+/**
+ * v0.8.43 · POR QUÉ no se leyeron las garantías (para el aviso; solo recuentos y nombres de producto, sin datos personales). PURA.
+ * Distingue «no hubo PDF» de «hubo PDF pero sin sección para este producto» (run 48b0df76: PDF bajado, solo un producto con sección).
+ */
+export function diagnosticoGarantiasMapfre(d: { pdfBytes: number | null; pdfLineas: number; deLaPdf: CoberturasPorProducto; deLaPantalla: CoberturasPorProducto; productos: readonly string[]; lineasPdf?: readonly string[] }): string {
+  const lista = (m: CoberturasPorProducto) => d.productos.filter((p) => (m.get(plano(p))?.coberturas.length ?? 0) > 0)
+  const pdf = d.pdfBytes === null ? 'PDF del proyecto: no descargado' : d.pdfLineas === 0 ? `PDF del proyecto: descargado (${d.pdfBytes} bytes) pero sin texto legible` : `PDF del proyecto: descargado, ${d.pdfLineas} líneas de texto; con garantías de: ${lista(d.deLaPdf).map((p) => `«${p}»`).join(', ') || 'ningún producto'}`
+  const base = `Diagnóstico de garantías · ${pdf}; pantalla «Coberturas» con garantías de: ${lista(d.deLaPantalla).map((p) => `«${p}»`).join(', ') || 'ningún producto'}.`
+  const sinGarantias = d.productos.some((p) => (d.deLaPdf.get(plano(p))?.coberturas.length ?? 0) === 0)
+  return d.lineasPdf && d.lineasPdf.length > 0 && sinGarantias ? `${base} Estructura del PDF: ${estructuraPdfMapfre(d.lineasPdf, d.productos)}` : base
+}
+
+// Vocabulario de garantías conocidas: del diagnóstico solo sale ESTA palabra canónica, jamás el texto de la línea.
+const VOCABULARIO_GARANTIAS: readonly [RegExp, string][] = [
+  [/responsabilidad\s+civil|r\.?\s?c\.?\s+obligatoria/i, 'rc'], [/defensa\s+jur[ií]dica|reclamaci[oó]n/i, 'defensa'], [/\brobo\b/i, 'robo'], [/incendio/i, 'incendio'],
+  [/lunas?\b/i, 'lunas'], [/da[ñn]os\s+propios|todo\s+riesgo/i, 'danos'], [/asistencia/i, 'asistencia'], [/ocupantes|accidentes/i, 'ocupantes'],
+  [/veh[ií]culo\s+de\s+sustituci[oó]n|veh[ií]culo\s+sustituto/i, 'sustituto'], [/retirada|carnet|permiso/i, 'carnet'], [/franquicia/i, 'franquicia'], [/ruedas|neum[aá]ticos/i, 'ruedas'],
+]
+
+/** Forma (no contenido) de una línea del PDF: CABECERA:<producto ofertado> · ETIQUETA(<garantía del vocabulario>) · VALOR(importe|Incluida|Excluida) · OTRO(n chars). */
+function formaLinea(l: string, productos: readonly string[]): string {
+  const t = limpiar(l)
+  const k = plano(t.replace(/^\W+|\W+$/g, ''))
+  const prod = productos.find((p) => plano(p) === k)
+  if (prod) return `CABECERA:${prod}`
+  if (esSoloValor(t)) return `VALOR(${/^(?:no\b|excluid|[-–—]+$)/i.test(t) ? 'Excluida' : /^(?:incluid|contratad|s[ií]\b)/i.test(t) ? 'Incluida' : 'importe'})`
+  const voc = VOCABULARIO_GARANTIAS.find(([re]) => re.test(t))
+  if (voc && t.length <= 90 && !RE_NO_GARANTIA.test(t)) return `ETIQUETA(${voc[1]})`
+  return `OTRO(${t.length})`
+}
+
+/** Forma de una fila descartada: ETIQUETA(palabra del vocabulario) + forma de cada valor (VACIA = celda sin texto). Sin texto libre ni dígitos. */
+function formaFila(etiqueta: string, valores: readonly string[]): string {
+  const voc = VOCABULARIO_GARANTIAS.find(([re]) => re.test(etiqueta))
+  const val = (t: string) => { if (limpiar(t) === '') return 'VACIA'; const f = formaLinea(t, []); return f.startsWith('VALOR') ? f : 'VALOR(otro)' }
+  return `${etiqueta === '' ? 'SIN_ETIQUETA' : `ETIQUETA(${voc ? voc[1] : 'otra'})`}=${valores.map(val).join('+')}`
+}
+
+/**
+ * v0.8.45 · ESTRUCTURA de ~40 líneas alrededor de cada cabecera de producto hallada en el PDF (para ver cómo está maquetada la tabla). Solo formas y el
+ * nombre del producto ofertado; el texto de las líneas desconocidas NUNCA sale (ni nombres, NIF, matrículas ni cifras). Máx. ~600 caracteres. PURA.
+ */
+export function estructuraPdfMapfre(lineas: readonly string[], productos: readonly string[]): string {
+  const ls = lineas.filter((l) => l.trim() !== '')
+  const claves = productos.map((p) => plano(p))
+  const idx: number[] = []
+  ls.forEach((l, i) => { if (claves.includes(plano(l.replace(/^\W+|\W+$/g, '')))) idx.push(i) })
+  if (idx.length === 0) return 'sin ninguna línea que sea solo el nombre de un producto'
+  const MAX = 600
+  const cupo = Math.max(60, Math.floor((MAX - 20) / Math.min(idx.length, 6)))
+  const trozos: string[] = []
+  for (const i of idx.slice(0, 6)) {
+    const toks: string[] = []
+    for (const f of ls.slice(Math.max(0, i - 20), i + 20).map((l) => formaLinea(l, productos))) {
+      if (toks.length > 0 && toks[toks.length - 1]!.replace(/×\d+$/, '') === f) {
+        const m = /×(\d+)$/.exec(toks[toks.length - 1]!)
+        toks[toks.length - 1] = `${f}×${m ? Number(m[1]) + 1 : 2}`
+      } else toks.push(f)
+    }
+    trozos.push(`[${toks.join(' ')}]`.slice(0, cupo))
+  }
+  return trozos.join(' ').slice(0, MAX)
+}
+
+/** Nombre de producto de una oferta de Mapfre auto («Auto · TERCEROS» → «TERCEROS»). */
+export const productoDeOferta = (o: Pick<OfertaNormalizada, 'producto'>): string => o.producto.replace(/^Auto\s*·\s*/i, '')
+
+/**
+ * Pone las garantías en cada oferta. Orden: PDF del proyecto > pantalla. Un producto sin garantías por ninguna vía queda con
+ * `coberturas: []` y el aviso «coberturas no leídas» (asegura lo marca INCOMPLETO y avisa a Alberto; nunca se inventan). PURA.
+ */
+export function ofertasConGarantiasMapfre(
+  ofertas: readonly OfertaNormalizada[],
+  deLaPdf: CoberturasPorProducto,
+  deLaPantalla: CoberturasPorProducto,
+  diagnostico?: string,
+  estructuraPdf?: string,
+): OfertaNormalizada[] {
+  const firma = (c: readonly CoberturaOferta[]) => c.map((x) => `${plano(x.clave)}|${x.estado}|${x.capital}|${x.limite}|${x.franquicia}`).sort().join(';')
+  const delPdf = ofertas.map((o) => { const r = deLaPdf.get(plano(productoDeOferta(o))); return r && r.coberturas.length > 0 ? r : null })
+  const leidas = ofertas.map((o, i) => ({ o, r: delPdf[i] })).filter((x): x is { o: OfertaNormalizada; r: Resultado } => x.r !== null)
+  // v0.8.46: todos los productos de un PDF multiprecio con las MISMAS garantías y precios distintos = casi seguro una tabla mal repartida.
+  const identicas = leidas.length >= 2 && leidas.length === ofertas.length && new Set(leidas.map((x) => firma(x.r.coberturas))).size === 1 && new Set(leidas.map((x) => x.o.primaAnualEur)).size > 1
+  return ofertas.map((o, i) => {
+    const k = plano(productoDeOferta(o))
+    const pdf = delPdf[i]
+    const pant = deLaPantalla.get(k)
+    const elegida = pdf ? { ...pdf, aviso: AVISO_COBERTURAS_PDF } : pant && pant.coberturas.length > 0 ? { ...pant, aviso: AVISO_COBERTURAS_PANTALLA } : null
+    if (!elegida) return { ...o, avisos: [...o.avisos, AVISO_COBERTURAS_SIN_LEER, ...(diagnostico ? [diagnostico] : [])] }
+    const extra: string[] = []
+    if (pdf?.descartadas && pdf.descartadas.filas > 0) extra.push(`${pdf.descartadas.filas} filas de garantías no asignadas a producto · estructura: ${pdf.descartadas.estructura}`.slice(0, 700), AVISO_GARANTIAS_POSIBLEMENTE_INCOMPLETAS)
+    if (identicas && pdf) extra.push(`${AVISO_GARANTIAS_IDENTICAS}${estructuraPdf ? ` · estructura: ${estructuraPdf}` : ''}`.slice(0, 700), ...(extra.includes(AVISO_GARANTIAS_POSIBLEMENTE_INCOMPLETAS) ? [] : [AVISO_GARANTIAS_POSIBLEMENTE_INCOMPLETAS]))
+    return { ...o, coberturas: elegida.coberturas, franquicias: elegida.franquicias, avisos: [...o.avisos, elegida.aviso, ...extra] }
+  })
+}

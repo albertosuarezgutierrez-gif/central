@@ -1,0 +1,208 @@
+{
+ "sesion": "e26fe98d-1900-5f3d-9722-92f2980b9bef",
+ "inicio": "2026-10-26T21:07:24.050Z",
+ "fin": "2026-10-28T05:04:01.316Z",
+ "llamadas": 1765,
+ "categorias": {
+  "agente:rastreador-codigo": {
+   "llamadas": 1,
+   "chars_in": 1127,
+   "chars_out": 1346,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 1102278,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 18,
+   "chars_in": 36341,
+   "chars_out": 38916,
+   "errores": 0,
+   "archivos_citados": 39,
+   "chars_citados": 2793268,
+   "tools": {
+    "Agent": 18
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 47,
+   "chars_in": 5319,
+   "chars_out": 322289,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Glob": 9,
+    "Grep": 21,
+    "Read": 17
+   }
+  },
+  "otro": {
+   "llamadas": 254,
+   "chars_in": 164252,
+   "chars_out": 1694449,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 45,
+    "WebSearch": 10,
+    "SubagentHandback": 50,
+    "ReadNotifications": 112,
+    "SendMessage": 10,
+    "Monitor": 16,
+    "SendUserFile": 1,
+    "TaskCreate": 4,
+    "TaskUpdate": 6
+   }
+  },
+  "mcp:OpenSEO": {
+   "llamadas": 2,
+   "chars_in": 524,
+   "chars_out": 2559,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__OpenSEO__list_projects": 1,
+    "mcp__OpenSEO__get_keyword_metrics": 1
+   }
+  },
+  "bash": {
+   "llamadas": 1213,
+   "chars_in": 991111,
+   "chars_out": 5829014,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 1213
+   }
+  },
+  "escritura": {
+   "llamadas": 58,
+   "chars_in": 439242,
+   "chars_out": 1077913,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 51,
+    "Edit": 7
+   }
+  },
+  "mcp:github": {
+   "llamadas": 53,
+   "chars_in": 21232,
+   "chars_out": 157552,
+   "errores": 0,
+   "archivos_citados": 11,
+   "chars_citados": 2375138,
+   "tools": {
+    "mcp__github__create_pull_request": 8,
+    "mcp__github__pull_request_read": 24,
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__update_pull_request": 11,
+    "mcp__github__merge_pull_request": 8,
+    "mcp__github__get_job_logs": 1
+   }
+  },
+  "mcp:claude-code-remote": {
+   "llamadas": 18,
+   "chars_in": 1630,
+   "chars_out": 5098,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__claude-code-remote__subscribe_pr_activity": 8,
+    "mcp__claude-code-remote__send_later": 3,
+    "mcp__claude-code-remote__unsubscribe_pr_activity": 5,
+    "mcp__claude-code-remote__delete_trigger": 2
+   }
+  },
+  "agente:agente-architect": {
+   "llamadas": 17,
+   "chars_in": 36661,
+   "chars_out": 38988,
+   "errores": 0,
+   "archivos_citados": 29,
+   "chars_citados": 2621964,
+   "tools": {
+    "Agent": 17
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 16,
+   "chars_in": 27009,
+   "chars_out": 3631,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 9,
+    "mcp__Supabase__apply_migration": 7
+   }
+  },
+  "sql": {
+   "llamadas": 57,
+   "chars_in": 31517,
+   "chars_out": 160477,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 57
+   }
+  },
+  "agente:agente-mecanico": {
+   "llamadas": 2,
+   "chars_in": 2463,
+   "chars_out": 1504,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 14128,
+   "tools": {
+    "Agent": 2
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 5,
+   "chars_in": 778,
+   "chars_out": 9590,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Vercel__create_project_env": 1,
+    "mcp__Vercel__list_deployments": 2,
+    "mcp__Vercel__create_deployment": 1,
+    "mcp__Vercel__get_deployment": 1
+   }
+  },
+  "agente:Explore": {
+   "llamadas": 3,
+   "chars_in": 4859,
+   "chars_out": 4059,
+   "errores": 0,
+   "archivos_citados": 3,
+   "chars_citados": 27879,
+   "tools": {
+    "Agent": 3
+   }
+  },
+  "agente:verificador-esceptico": {
+   "llamadas": 1,
+   "chars_in": 1862,
+   "chars_out": 2069,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 26992,
+   "tools": {
+    "Agent": 1
+   }
+  }
+ }
+}

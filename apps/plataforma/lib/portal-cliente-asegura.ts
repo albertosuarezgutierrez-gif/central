@@ -546,8 +546,13 @@ export function modulosPortalAsegura(clienteId: string): Promise<Reenvio> {
   return llamar(`/api/operador/cliente/portal-modulos?clienteId=${encodeURIComponent(clienteId)}`, { method: 'GET' })
 }
 
-/** `POST /api/operador/cliente/portal-modulos` — activa o retira un módulo. El `actor` lo pone el servidor. */
-export function escribirModuloPortalAsegura(entrada: { clienteId: string; modulo: string; accion: 'activar' | 'retirar'; actor: string }): Promise<Reenvio> {
+/**
+ * `POST /api/operador/cliente/portal-modulos` — activa o retira un módulo. El `actor` lo pone el servidor. Por `identidadId`
+ * (27/10/2026): persona del portal sin ficha; asegura crea la ficha de prospecto y solo admite `activar`.
+ */
+export function escribirModuloPortalAsegura(
+  entrada: ({ clienteId: string } | { identidadId: string }) & { modulo: string; accion: 'activar' | 'retirar'; actor: string },
+): Promise<Reenvio> {
   return llamar('/api/operador/cliente/portal-modulos', { method: 'POST', body: JSON.stringify(entrada) })
 }
 

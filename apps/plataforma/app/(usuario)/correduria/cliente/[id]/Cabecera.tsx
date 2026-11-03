@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Cake, CarFront, ChevronRight, Construction, FileText, Heart, IdCard, Lock, Mail, MapPin, Phone } from 'lucide-react'
 import { Ico, FILA } from '../../iconos'
-import { alertaVencimiento, contactoEfectivo, etiquetaRol, mensajePresentacionWhatsapp, siguientePaso, personaDeFicha, esTelefonoComodin, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
+import { alertaVencimiento, esCarteraEnVigor, contactoEfectivo, etiquetaRol, mensajePresentacionWhatsapp, siguientePaso, personaDeFicha, esTelefonoComodin, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
 import { ramosConOfertas, urlOportunidadNueva } from '@/lib/seguimiento-asegura'
 import { ramosConBot } from '@/lib/presupuestos-companias'
 import { estadoCaducidadCarnet, urlRetarificar, RAMOS_PRESUPUESTO, type CarnetFicha, type DatosDePolizas, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
@@ -39,11 +39,16 @@ export default function Cabecera({ ficha, resumen, seguros, idsConChip }: {
 }) {
   // Solo el cónyuge sube a la cabecera; el resto de vínculos vive en «Contactos».
   const conyuge = ficha.relaciones?.find(r => r.tipo === 'Cónyuge/Pareja de Hecho') ?? null
-  // 🚨 El MISMO criterio que el rótulo de estado, calculado una sola vez: CIMA
-  // engancha pólizas por DNI a fichas que siguen marcadas como `lead`, así que
-  // el enum `tipo` no basta. Si el rótulo dice «Cliente» y el WhatsApp le trata
-  // de desconocido (o al revés), el fallo se ve en la pantalla y en el chat.
-  const esCliente = ficha.tipo === 'cliente' || resumen.conteo.vivas > 0
+  // 🚨 El MISMO criterio que el rótulo de estado (`EstadoCabecera`), calculado una sola vez: el
+  // estado DERIVADO por asegura y, sin él (asegura viejo), póliza confirmada por CIMA EN VIGOR
+  // (`esCarteraEnVigor`). NUNCA `ficha.tipo` (02/11/2026): el volcado dejó `tipo='cliente'` en
+  // ex-clientes, y CIMA engancha pólizas a fichas `lead`. Si el rótulo dice «Cliente» y el
+  // WhatsApp le trata de desconocido (o al revés), el fallo se ve en la pantalla y en el chat.
+  const esCliente = ficha.estado
+    ? ficha.estado.estado === 'cliente'
+    : ficha.polizas.some(p => p.confirmadaCima && esCarteraEnVigor({
+      importRef: p.viva ? null : 'volcado', eiacXmlHash: null, estado: p.estado, sustituidaAt: p.sustituida ? 'sustituida' : null,
+    }))
   // Ramos con algún SEGURO en vigor (no canceladas, no volcado). Siempre es array (nunca null),
   // así que esto no necesita un tercer estado.
   const tiposVivos = seguros.map(p => p.tipo)
@@ -339,7 +344,7 @@ function EstadoCabecera({ estado, cotizacionesVivas, cliente }: {
 }) {
   const etiqueta = estado ? estado.etiqueta : cliente ? 'Cliente (CIMA)' : 'Lead'
   const esCliente = estado ? estado.estado === 'cliente' : cliente
-  const title = estado ? estado.motivo : cliente ? 'tiene póliza viva por CIMA o su ficha es de tipo cliente' : 'sin póliza viva por CIMA'
+  const title = estado ? estado.motivo : cliente ? 'tiene póliza en vigor confirmada por CIMA' : 'sin póliza en vigor confirmada por CIMA'
   // Segmentación visual (Occident pinta un badge de segmento junto al nombre,
   // capturas en Drive 11/09/2026): mismo rótulo de siempre, pero como Badge del
   // sistema de diseño en vez de texto plano — un vistazo distingue el estado

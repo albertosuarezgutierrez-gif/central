@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic'
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { cronAutorizado } from '@/lib/cron-auth'
 import { createServerClient } from '@/lib/supabase'
 import { generarAliasFoneticos } from '@/lib/fuzzy-comanda'
 import { invalidarCache } from '@/lib/brain-cache'
@@ -16,7 +17,7 @@ export const maxDuration = 300
 
 export async function GET(req: NextRequest) {
   const auth = req.headers.get('authorization')
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!cronAutorizado(req)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
 

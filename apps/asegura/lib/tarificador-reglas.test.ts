@@ -47,6 +47,8 @@ test('la máquina recibe TARIFICADOR_EXPLORADOR_VISTA solo con dom|aria|ambas ex
     assert.deepEqual(Object.keys(env).sort(), ['JOB_ID', 'TARIFICADOR_API_URL'], String(v))
   }
   assert.deepEqual(Object.keys(JSON.parse(peticionMaquina(CFG, JOB).init.body).config.env).sort(), ['JOB_ID', 'TARIFICADOR_API_URL'])
+  assert.equal(JSON.parse(peticionMaquina(CFG, JOB, null, 'true').init.body).config.env.MAPFRE_HOGAR_ACTIVO, 'true')
+  assert.equal('MAPFRE_HOGAR_ACTIVO' in JSON.parse(peticionMaquina(CFG, JOB, null, 'TRUE').init.body).config.env, false)
 })
 
 test('resultado ok: valida ofertas y exige que el PDF sea un PDF', () => {
@@ -505,7 +507,7 @@ test('NIF Mapfre: encolarTrabajo GUARDA el riesgo sin NIF (comprobado tras el cl
   assert.match(w, /aplicarNifTomador\(f\.compania, f\.ramo, riesgo, \(\) => lecturaNifFicha\(dni, decryptField\)\)/)
   assert.match(w, /const base = \{ id: f\.id, compania: f\.compania, ramo: f\.ramo, riesgo,/)
   assert.ok(!/update\s+\w+\.tarificacion_trabajos|insert into/i.test(w), 'el NIF nunca se escribe al entregar')
-  assert.ok(!/riesgo\s*=/.test(w.replace(/let riesgo = f\.riesgo|riesgo = conNif\.riesgo|riesgo = conDatos\.riesgo|riesgo = conTomador\.riesgo|riesgo = conFicha\b|riesgo = conCompania\b|riesgo = conPoliza\b/g, '')), 'el riesgo solo se toca para la respuesta')
+  assert.ok(!/riesgo\s*=/.test(w.replace(/let riesgo = f\.riesgo|riesgo = conNif\.riesgo|riesgo = conDatos\.riesgo|riesgo = conTomador\.riesgo|riesgo = conFicha\b|riesgo = conCompania\b|riesgo = conPoliza\b|riesgo = riesgoConReferencia\(/g, '')), 'el riesgo solo se toca para la respuesta')
 })
 
 test('póliza actual (19/10/2026): se lee SOLO esa clave, de ESTA correduría, y se inyecta al entregar sin escribir en BD', () => {

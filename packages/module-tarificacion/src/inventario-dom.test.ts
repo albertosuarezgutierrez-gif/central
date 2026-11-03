@@ -36,7 +36,9 @@ describe('sanearInventarioDom', () => {
     const inv = sanearInventarioDom(crudo([{ tag: 'select', id: 'marca', opciones, opcionesTotal: 55, requerido: true }]))!
     expect(inv.marcos[0].url).toBe('https://cloud.example.test/ngx-motor-azs/alta')
     const sel = inv.marcos[0].elementos[0]
-    expect(sel.opciones).toHaveLength(MAX_OPCIONES_INVENTARIO)
+    // 0.3.21: tope por select 200 (40 garantizadas + fondo común): las 55 caben enteras.
+    expect(MAX_OPCIONES_INVENTARIO).toBe(200)
+    expect(sel.opciones).toHaveLength(55)
     expect(sel.opciones![0]).toEqual({ valor: 'M0', texto: 'Marca 0' })
     expect(sel.opcionesTotal).toBe(55)
     expect(sel.requerido).toBe(true)

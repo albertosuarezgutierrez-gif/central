@@ -1,9 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { callAIVision, cleanJSON } from '@/lib/ai-client'
+import { getSession } from '@/lib/session'
 
 export const maxDuration = 90
 
+// Límite por restaurante (memoria de instancia; primera capa — la auth es la barrera real).
+const VENTANA_MS = 60 * 60 * 1000
+const MAX_POR_VENTANA = 20
+const usos = new Map<string, number[]>()
+function dentroDeLimite(clave: string): boolean {
+  const ahora = Date.now()
+  const recientes = (usos.get(clave) ?? []).filter(t => ahora - t < VENTANA_MS)
+  if (recientes.length >= MAX_POR_VENTANA) { usos.set(clave, recientes); return false }
+  recientes.push(ahora); usos.set(clave, recientes)
+  return true
+}
+
 export async function POST(req: NextRequest) {
+  // Visión IA de pago: solo owner/super_admin con sesión FIRMADA (antes era un POST público).
+  const session = getSession(req)
+  if (!session?.restaurante_id || !['owner', 'super_admin'].includes(session.rol)) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  }
+  if (!dentroDeLimite(session.restaurante_id)) {
+    return NextResponse.json({ error: 'Demasiadas peticiones, prueba en un rato' }, { status: 429 })
+  }
   try {
     const { images } = await req.json()
     if (!images?.length) return NextResponse.json({ error: 'Sin imágenes' }, { status: 400 })

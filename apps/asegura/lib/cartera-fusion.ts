@@ -245,6 +245,11 @@ const MOTIVOS_BD: Record<string, ResultadoFusion> = {
     motivo: 'Hay una TERCERA ficha de cliente con este mismo DNI. Fusiona primero esa; no se ha tocado nada.',
   },
   ya_fusionada: { estado: 'conflicto', motivo: 'Una de las dos fichas ya está fusionada. Recarga la ficha.' },
+  // `2026-10-27_fusionar_clientes_vinculos_portal.sql`: un acceso al portal entró a la vez en la ficha que se queda.
+  vinculo_portal_concurrente: {
+    estado: 'conflicto',
+    motivo: 'Mientras se fusionaba, la misma persona del portal se vinculó a la ficha que se queda. No se ha tocado nada: vuelve a intentarlo.',
+  },
   no_encontrado: { estado: 'no_encontrado' },
   misma_ficha: { estado: 'invalido', motivo: 'Es la misma ficha.' },
 }

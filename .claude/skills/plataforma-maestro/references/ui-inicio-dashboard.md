@@ -274,3 +274,10 @@ apostar 19 pantallas a ciegas. Las siguientes por uso serían Relaciones, Docume
 que el landmine de `var(--card)`: no falla, no se ve, y quien lo lea creerá que ahí hay responsive.
 
 <!-- verificado: 2026-09-03 -->
+
+## Calendario de la tarjeta «Pisos» (28/10/2026, PR #5201)
+- Navegable ◀ / Hoy / ▶ por ventanas de 14 días: `inicio/CalendarioReservas.tsx` pide `/api/inicio/calendario-pisos?desde=YYYY-MM-DD`
+  (sesión obligatoria, fecha ±3 años vía `desdeValido`). Consulta única en `lib/inicio-pisos.ts` (`leerReservasPisos`), la usan tarjeta y API.
+- Chips «hoy entra/sale», noches libres y estimación del mes se calculan SIEMPRE con hoy real, no con la ventana navegada.
+- `desde` solo avanza cuando llega la respuesta (si falla, rejilla y rango siguen en la ventana anterior).
+- `/sivra/calendario` navega por su cuenta (ventanas de 30 días) con datos de año pasado → año que viene.

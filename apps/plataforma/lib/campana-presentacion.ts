@@ -252,13 +252,26 @@ export function estadoPersona(p: Pick<PersonaCampana, 'etapa' | 'bajaEn' | 'rebo
 
 export type Reenvio = { status: number; json: unknown }
 
-export async function campanaPresentacionAsegura(): Promise<Reenvio> {
+/** Las campañas que la pantalla sabe pedir. Mismos ids que asegura (`campana_envio.campana`). */
+export const CAMPANAS_CORREO = [
+  { id: 'presentacion_app', titulo: 'Presentación app (leads)', sub: 'Correo de presentación de la app a los leads antiguos. Solo lectura: el envío lo hace el cron de asegura.' },
+  { id: 'aviso_venc_app', titulo: 'App en el aviso de vencimiento', sub: 'Bloque «Tu app gratuita» dentro del aviso de vencimiento a clientes en vigor que aún no entran al portal. Sin eventos de apertura/clic: cuenta visitas y altas por el enlace personal.' },
+] as const
+export type IdCampana = (typeof CAMPANAS_CORREO)[number]['id']
+
+/** `null` = no es una campaña conocida (la ruta responde 400; nunca se reenvía texto libre). */
+export function campanaDeParametro(v: string | null | undefined): IdCampana | null {
+  if (v === null || v === undefined || v === '') return 'presentacion_app'
+  return CAMPANAS_CORREO.some((c) => c.id === v) ? (v as IdCampana) : null
+}
+
+export async function campanaPresentacionAsegura(campana: IdCampana = 'presentacion_app'): Promise<Reenvio> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
   const h = secret ? await cabecerasPuerto(secret) : null
   if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
   const base = (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
   try {
-    const res = await fetch(`${base}/api/operador/campana/presentacion-app`, {
+    const res = await fetch(`${base}/api/operador/campana/presentacion-app?campana=${encodeURIComponent(campana)}`, {
       method: 'GET', headers: h, cache: 'no-store', signal: AbortSignal.timeout(30_000),
     })
     return { status: res.status, json: await res.json().catch(() => null) }

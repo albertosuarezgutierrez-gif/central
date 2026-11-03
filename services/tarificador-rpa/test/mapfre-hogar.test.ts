@@ -19,6 +19,12 @@ import {
   partesFilaCatastro,
   primasDesdeTextoPrecio,
   referenciaCatastralDe,
+  planVivienda,
+  habitacionesYBanosPorM2,
+  indiceOpcionDesplegable,
+  indiceOpcionCp,
+  primasDesdeTextoLibre,
+  resumenPantallaPrecio,
 } from '../src/adapters/mapfre/hogar.ts'
 
 const RC = '0000000AA0000A0001BC'
@@ -74,12 +80,13 @@ test('ofertasDesdePrimasHogar: una oferta por modalidad, sin garantías inventad
   assert.ok(o[0]!.avisos.some((a) => /Garant/.test(a)))
 })
 
-test('referencia catastral: solo 20 caracteres; sin ella el riesgo es `datos` (no hay buscador por dirección)', () => {
+test('referencia catastral: solo 20 caracteres (ya no obligatoria: se tarifica por CP)', () => {
   assert.equal(referenciaCatastralDe(FORM(RC)), RC)
   assert.equal(referenciaCatastralDe(FORM('0000000AA0000A')), null)
   assert.equal(referenciaCatastralDe(FORM()), null)
-  assert.equal(exigirDatosHogar(FORM(RC)), RC)
-  assert.throws(() => exigirDatosHogar(FORM()), (e: Error & { tipo?: string }) => e.tipo === 'datos' && !e.message.includes('Ficticia'))
+  // v0.3.0: la vivienda se tarifica por CP; la referencia ya NO es obligatoria (exploración 9a1ced53).
+  assert.equal(exigirDatosHogar(FORM()).codigoPostal, '41001')
+  assert.throws(() => exigirDatosHogar({ ...FORM(), inmueble: { ...FORM().inmueble, codigoPostal: '4100' } }), (e: Error & { tipo?: string }) => e.tipo === 'datos' && !e.message.includes('Ficticia'))
 })
 
 test('validarFormularioHogar conserva la referencia catastral normalizada y rechaza una mal formada', () => {
@@ -117,8 +124,10 @@ test('datosTomador (lo inyecta asegura): solo persona física; jurídica o ausen
   assert.deepEqual(datosTomadorDe({ ...base, datosTomador: { tipo: 'juridica', razonSocial: 'EMPRESA PRUEBA' } }), {})
 })
 
-test('huecos explícitos: sin selector de la referencia ni mapa de protecciones; apagado, tarificar ni abre el navegador', async () => {
+test('huecos explícitos: protecciones sin mapear (no se tocan); apagado, tarificar ni abre el navegador', async () => {
   assert.equal(SEL_HOGAR.referenciaCatastral, null)
+  assert.equal(SEL_HOGAR.codigoPostal, 'input[name="cp"]') // `#cp` está duplicado (vivienda y tomador)
+  assert.equal(SEL_HOGAR.codigoPostalTomador, 'input[name="cpTomador"]')
   assert.equal(PROTECCIONES_MAPEADAS, false)
   await assert.rejects(() => mapfreHogar.tarificar(null as never, FORM(RC), null as never), (e: Error & { tipo?: string }) => e.tipo === 'datos' && /apagado/.test(e.message))
   assert.equal(new ErrorMapaIncompleto('x').pideInventarioDom, true)
@@ -128,4 +137,89 @@ test('el borrador no nombra acciones de emisión ni de impresión como acción',
   const src = readFileSync(new URL('../src/adapters/mapfre/hogar.ts', import.meta.url), 'utf8')
   const codigo = src.split('\n').filter((l) => !l.trim().startsWith('//') && !l.trim().startsWith('*') && !l.trim().startsWith('/**')).join('\n')
   assert.ok(!/imprimir|contratar|emitir|\.click\(|grabar/i.test(codigo.replace(/«[^»]*»/g, '')))
+})
+
+// v0.3.1 (primer run real 5b010917): el opcion «CP» es `#cpRadio` (no `#cpOpcion`); ids contrastados con un fixture ficticio de la pantalla real.
+const FIXTURE_RIESGO = readFileSync(new URL('./fixtures/mapfre-hogar/datos-riesgo.html', import.meta.url), 'utf8')
+const idsDe = (html: string) => [...html.matchAll(/<(?:input|button)\b[^>]*\bid="([^"]+)"/g)].map((m) => m[1]!)
+
+test('v0.3.1: version y opcion CP con el id real del portal (cpRadio), no el inventado', () => {
+  assert.equal(mapfreHogar.version, '0.3.4')
+  assert.equal(SEL_HOGAR.opcionCodigoPostal, 'cpRadio')
+  const codigo = readFileSync(new URL('../src/adapters/mapfre/hogar.ts', import.meta.url), 'utf8').replace(/^\s*\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '')
+  assert.ok(!/cpOpcion/.test(codigo))
+})
+
+test('v0.3.1: todos los ids que el adaptador pulsa o rellena existen en la estructura real (fixture)', () => {
+  const ids = new Set(idsDe(FIXTURE_RIESGO))
+  const usados = [SEL_HOGAR.opcionCodigoPostal, SEL_HOGAR.tipoVivienda, SEL_HOGAR.planta, SEL_HOGAR.tipoConstruccion, 'habitual', 'temporal', 'propiedad', 'inquilinoAlquiler', 'Media',
+    SEL_HOGAR.superficie, SEL_HOGAR.anoConstruccion, SEL_HOGAR.anoReforma, SEL_HOGAR.habitaciones, SEL_HOGAR.banos, SEL_HOGAR.documento, SEL_HOGAR.fechaNacimiento, SEL_HOGAR.nombre, SEL_HOGAR.apellido1, SEL_HOGAR.apellido2]
+    .map((s) => s.replace(/^#/, ''))
+  for (const id of usados) assert.ok(ids.has(id), `falta #${id} en la pantalla real`)
+  assert.ok(FIXTURE_RIESGO.includes('name="cp"') && FIXTURE_RIESGO.includes('name="cpTomador"'))
+  assert.ok(FIXTURE_RIESGO.includes('id="cpRadio" name="ubicacionTipo" checked')) // de serie
+})
+
+test('v0.3.1: indiceOpcionCp — exacto, único no catastral, o nada', () => {
+  assert.equal(indiceOpcionCp(['cpRadio', 'refCatastralVivienda']), 0)
+  assert.equal(indiceOpcionCp(['refCatastralVivienda', 'cpRadio']), 1)
+  assert.equal(indiceOpcionCp(['codigoPostalRadio', 'refCatastralVivienda']), 0)
+  assert.equal(indiceOpcionCp(['a', 'b', 'refCatastralVivienda']), null)
+  assert.equal(indiceOpcionCp([]), null)
+})
+
+test('planVivienda: mapeo a los campos de «Datos de riesgo - Hogar» y supuestos declarados', () => {
+  const p = planVivienda(FORM())
+  assert.equal(p.opcionUso, 'habitual')
+  assert.equal(p.opcionRegimen, 'propiedad')
+  assert.deepEqual(p.tipoTextos, ['Piso o Apartamento'])
+  assert.deepEqual(p.plantaTextos, ['Intermedia'])
+  assert.equal(p.plantaPorDefecto, true)
+  assert.deepEqual([p.habitaciones, p.banos], [3, 2]) // 80 m²
+  for (const k of ['calidad_media', 'habitaciones_y_banos_por_m2', 'planta_intermedia', 'sin_medidas_proteccion']) assert.ok(p.supuestos.includes(k), k)
+  const f = FORM()
+  const baja = planVivienda({ ...f, inmueble: { ...f.inmueble, planta: 'BJ' } })
+  assert.deepEqual(baja.plantaTextos, ['Baja', 'Planta baja'])
+  assert.ok(!baja.supuestos.includes('planta_intermedia'))
+  const casa = planVivienda({ ...f, hogar: { ...f.hogar, tipoVivienda: 'adosada', regimen: 'inquilino', uso: 'secundaria' } })
+  assert.equal(casa.plantaTextos, null)
+  assert.equal(casa.opcionUso, 'temporal')
+  assert.equal(casa.opcionRegimen, 'inquilinoAlquiler')
+  assert.ok(casa.supuestos.includes('uso_secundaria_como_temporal'))
+})
+
+test('planVivienda NO adivina: uso alquiler/turístico y madera → datos', () => {
+  const f = FORM()
+  const datos = (e: Error & { tipo?: string }) => e.tipo === 'datos'
+  assert.throws(() => planVivienda({ ...f, hogar: { ...f.hogar, uso: 'alquiler' } }), datos)
+  assert.throws(() => planVivienda({ ...f, hogar: { ...f.hogar, uso: 'turistico' } }), datos)
+  assert.throws(() => planVivienda({ ...f, hogar: { ...f.hogar, conMadera: true } }), datos)
+})
+
+test('habitaciones y baños por m² (supuesto) en los umbrales', () => {
+  assert.deepEqual(habitacionesYBanosPorM2(30), { habitaciones: 1, banos: 1 })
+  assert.deepEqual(habitacionesYBanosPorM2(64), { habitaciones: 2, banos: 2 })
+  assert.deepEqual(habitacionesYBanosPorM2(200), { habitaciones: 5, banos: 3 })
+})
+
+test('indiceOpcionDesplegable: única o nada (ambigua = null; "contiene" solo de la opción hacia el candidato)', () => {
+  assert.equal(indiceOpcionDesplegable(['Casa', 'Piso o Apartamento'], ['Piso o Apartamento']), 1)
+  assert.equal(indiceOpcionDesplegable(['Planta baja', 'Intermedia', 'Última'], ['Baja', 'Planta baja']), 0)
+  assert.equal(indiceOpcionDesplegable(['Casa', 'Chalet adosado'], ['Casa independiente']), null)
+  assert.equal(indiceOpcionDesplegable(['Baja', 'Planta baja'], ['Baja', 'Planta baja']), null)
+  assert.equal(indiceOpcionDesplegable([], ['X']), null)
+})
+
+test('primasDesdeTextoLibre: encabezado HOGAR + prima etiquetada o importe «/año»; ambiguo o sin € → []', () => {
+  const t = 'Modalidades\nHOGAR FAMILIAR\nPrima total: 210,50 €\nHOGAR PLATINO\n1.320,00 € / año\n55,00 € / mes'
+  assert.deepEqual(primasDesdeTextoLibre(t).map((x) => [x.modalidad, x.primaAnualEur]), [['HOGAR FAMILIAR', 210.5], ['HOGAR PLATINO', 1320]])
+  assert.deepEqual(primasDesdeTextoLibre('HOGAR FAMILIAR\nPrima total: 10,00 €\nPrima anual: 20,00 €'), [])
+  assert.deepEqual(primasDesdeTextoLibre('HOGAR FAMILIAR\nSin precio'), [])
+  assert.deepEqual(primasDesdeTextoLibre('HOGAR FAMILIAR\nPrima total: 275 euros'), [])
+})
+
+test('resumenPantallaPrecio: dice qué se vio sin datos personales (secretos, dígitos largos)', () => {
+  const r = resumenPantallaPrecio({ url: 'https://wmediadores.mapfre.com/x/y?token=ABC', titulos: ['Modalidades', 'Presupuesto de JUAN PEREZ'], botones: ['VOLVER', 'IMPRIMIR 12345678'], invalidos: ['vc'], importes: 0 }, ['JUAN PEREZ'])
+  assert.ok(r.includes('«Modalidades»') && r.includes('«VOLVER»') && r.includes('«vc»'))
+  assert.ok(!r.includes('JUAN') && !r.includes('12345678') && !r.includes('token'))
 })

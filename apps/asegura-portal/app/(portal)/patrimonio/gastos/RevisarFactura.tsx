@@ -7,6 +7,7 @@ import { eur } from '@/lib/dinero'
 import type { PropuestaFactura } from '@/lib/patrimonio/factura-propuesta'
 import { destinoDelFichero, reglaInmuebleSubida } from '@/lib/patrimonio/facturas-regla'
 import { CATEGORIAS_GASTO, ETIQUETA_CATEGORIA, type FacturaPendiente } from '@/lib/patrimonio/gastos-api'
+import { GENERAL, inmuebleInicial } from '@/lib/patrimonio/gastos-vista'
 
 const ERRORES: Record<string, string> = {
   no_encontrado: 'No tienes permiso para hacer eso en este titular.',
@@ -24,8 +25,8 @@ const etiqueta: React.CSSProperties = { display: 'grid', gap: 4, fontSize: 13, f
 const rejilla: React.CSSProperties = { display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr)' }
 const boton: React.CSSProperties = { minHeight: 44 }
 
-type Subida = { id: string; inmueble: string | null; fuente: 'texto' | 'vision' | 'none'; propuesta: PropuestaFactura; motivos: string[] }
-type RespuestaApi = Partial<Subida> & { error?: string; campo?: string; motivo?: string }
+type Subida = { id: string; inmueble: string | null; fuente: 'texto' | 'vision' | 'none'; propuesta: PropuestaFactura; motivos: string[]; cupoAgotado?: boolean }
+type RespuestaApi = Partial<Subida> & { cupo_agotado?: boolean; error?: string; campo?: string; motivo?: string }
 const PAGINA = 50
 
 /** Céntimos → texto editable en español («1234,56»); `null` → vacío (no se sabe, no «0»). */
@@ -81,7 +82,7 @@ function Revision({ s, clienteId, inmuebles, fin }: { s: Subida; clienteId: stri
     <div style={rejilla}>
       <h3 style={{ margin: 0 }}>Revisa la factura</h3>
       {s.fuente === 'none' ? (
-        <p role="status" style={{ margin: 0 }}>No hemos podido leer la factura. Rellena los datos a mano o descártala.</p>
+        <p role="status" style={{ margin: 0 }}>{s.cupoAgotado ? 'La factura está subida. Rellena los datos a mano o descártala.' : 'No hemos podido leer la factura. Rellena los datos a mano o descártala.'}</p>
       ) : (
         <div style={{ ...rejilla, gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }} aria-label="Lo que hemos leído">
           <Dato k="Proveedor" v={p.proveedor ?? '—'} />
@@ -184,7 +185,8 @@ export function FacturasPendientes({ clienteId, inmuebles, pendientes }: { clien
 /** Subir factura → ver propuesta y motivos → corregir → confirmar. El gasto no existe como confirmado hasta el último paso. */
 export function RevisarFactura({ clienteId, inmuebles }: { clienteId: string; inmuebles: { id: string; alias: string }[] }) {
   const [abierto, setAbierto] = useState(false)
-  const [inmueble, setInmueble] = useState('')
+  // Un único inmueble (p. ej. desde su ficha) viene elegido; con varios hay que elegir.
+  const [inmueble, setInmueble] = useState(() => { const i = inmuebleInicial(inmuebles); return i === GENERAL ? '' : i })
   const [fichero, setFichero] = useState<File | null>(null)
   const [subiendo, setSubiendo] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -208,7 +210,7 @@ export function RevisarFactura({ clienteId, inmuebles }: { clienteId: string; in
       f.set('fichero', fichero)
       const res = await fetch('/api/patrimonio/facturas', { method: 'POST', body: f })
       const j = (await res.json().catch(() => ({}))) as RespuestaApi
-      if (res.ok && j.id && j.propuesta) setSubida({ id: j.id, inmueble: j.inmueble ?? null, fuente: j.fuente ?? 'none', propuesta: j.propuesta, motivos: j.motivos ?? [] })
+      if (res.ok && j.id && j.propuesta) setSubida({ id: j.id, inmueble: j.inmueble ?? null, fuente: j.fuente ?? 'none', propuesta: j.propuesta, motivos: j.motivos ?? [], cupoAgotado: j.cupo_agotado === true })
       else setError(mensaje(j))
     } catch {
       setError('No hemos podido conectar. Vuelve a intentarlo.')

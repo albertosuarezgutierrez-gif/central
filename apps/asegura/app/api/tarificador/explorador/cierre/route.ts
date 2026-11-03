@@ -67,6 +67,7 @@ export async function POST(req: Request) {
         )
         const hueco = huecoDeDetalleFin(p.motivoFin, p.detalleFin)
         if (hueco) mapa.huecos.push(hueco)
+        if (p.notaFin) mapa.huecos.push(p.notaFin)
         mapa.huecos.push(...huecosLogin)
         if (!validarMapa(mapa)) throw new MapaInvalido('mapa_invalido')
         resumen = { pantallas: mapa.pantallas.length, huecos: mapa.huecos.length, resultado: mapa.resultado.alcanzado, coste: mapa.coste }

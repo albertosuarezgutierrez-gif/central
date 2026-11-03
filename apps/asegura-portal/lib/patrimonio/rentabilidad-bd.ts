@@ -4,7 +4,7 @@
 // 🚨 Parte de `accesosPatrimonio(identidadId)` (cookie + `portal_vinculo`): los titulares, inmuebles, contratos y gastos
 // salen SOLO de los titulares autorizados y vivos. Solo cuentan los gastos CONFIRMADOS; los propuestos por la IA se
 // cuentan aparte (`gastosSinConfirmar`). Lanza si la BD falla: la página dice «no hemos podido leerlo», nunca «0 €».
-import { rentabilidadPorInmueble, type ResultadoRentabilidad } from '@central/module-patrimonio'
+import { rcEfectiva, rentabilidadConEdificios, type ResultadoConEdificios } from '@central/module-patrimonio'
 
 import { prisma } from '../db'
 import { getIdentidad } from '../session'
@@ -17,9 +17,10 @@ import { primasDeInmuebles } from './seguros-inmueble-bd'
 
 export type RentabilidadDeIdentidad = {
   periodo: Periodo
-  resultado: ResultadoRentabilidad
-  /** Alias del inmueble y nombre del titular, por id de inmueble. */
-  inmuebles: { id: string; alias: string; titular: string }[]
+  /** Con edificios (27/10/2026): sin edificios con unidades, `inmuebles` es el cálculo de siempre y `edificios` = []. */
+  resultado: ResultadoConEdificios
+  /** Alias del inmueble y nombre del titular, por id de inmueble; `edificioId` = edificio del que cuelga la unidad. */
+  inmuebles: { id: string; alias: string; titular: string; edificioId: string | null; referenciaCatastral: string | null }[]
 }
 
 /** `null` = esta identidad no tiene patrimonio a la vista. `pedido` = `?anio=` sin fiar. */
@@ -35,7 +36,7 @@ export async function rentabilidadDeIdentidad(identidadId: string, pedido: unkno
     where: { clienteId: { in: [...acc.keys()] }, archivadoEn: null },
     select: { id: true, clienteId: true, tipo: true, deduceIva: true },
   })
-  if (titulares.length === 0) return { periodo, resultado: rentabilidadPorInmueble({ titulares: [], inmuebles: [], contratos: [], gastos: [], primas: [], ...periodo }), inmuebles: [] }
+  if (titulares.length === 0) return { periodo, resultado: rentabilidadConEdificios({ titulares: [], inmuebles: [], contratos: [], gastos: [], primas: [], ...periodo }), inmuebles: [] }
   // Los nombres salen de la lista de la pantalla de Patrimonio (la misma lectura, ya acotada por `accesosPatrimonio`).
   const nombres = new Map((await patrimonioDeIdentidad(identidadId)).map((t) => [t.clienteId, t.nombre]))
 
@@ -63,7 +64,8 @@ export async function rentabilidadDeIdentidad(identidadId: string, pedido: unkno
     return titularDeFila(t, { nombre: nombres.get(t.clienteId) ?? '', apellidos: null })
   })
   const nombrePorTitular = new Map(titularesPuros.map((t) => [t.id, t.nombre]))
-  const resultado = rentabilidadPorInmueble({
+  // Los gastos y seguros de un EDIFICIO se reparten entre sus unidades (m² o %): rentabilidad POR PISO.
+  const resultado = rentabilidadConEdificios({
     titulares: titularesPuros,
     inmuebles: inmuebles.map((i) => inmuebleDeFila(i as FilaInmueble)),
     contratos: contratos.map((c) => contratoDeFila(c as FilaContrato, [], c.actualizaciones)),
@@ -72,5 +74,16 @@ export async function rentabilidadDeIdentidad(identidadId: string, pedido: unkno
     desde: periodo.desde,
     hasta: periodo.hasta,
   })
-  return { periodo, resultado, inmuebles: inmuebles.map((i) => ({ id: i.id, alias: i.alias, titular: nombrePorTitular.get(i.titularId) ?? '' })) }
+  const vivos = new Set(ids)
+  return {
+    periodo,
+    resultado,
+    inmuebles: inmuebles.map((i) => ({
+      id: i.id,
+      alias: i.alias,
+      titular: nombrePorTitular.get(i.titularId) ?? '',
+      edificioId: i.inmueblePadreId !== null && vivos.has(i.inmueblePadreId) ? i.inmueblePadreId : null,
+      referenciaCatastral: rcEfectiva(i, i.inmueblePadreId === null ? null : (inmuebles.find((p) => p.id === i.inmueblePadreId) ?? null)),
+    })),
+  }
 }

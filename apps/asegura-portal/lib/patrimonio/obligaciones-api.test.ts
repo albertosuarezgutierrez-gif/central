@@ -3,6 +3,8 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
+  CategoriaNoDisponible,
+  esRechazoDelCatalogo,
   obligacionesDeInmueble,
   responderObligaciones,
   type FilaPropia,
@@ -82,7 +84,7 @@ test('🚨 inmueble archivado: solo lectura (409), ninguna acción escribe', asy
 test('datos inválidos: 400 con su campo y sin escribir', async () => {
   const { p, escritos } = puertos()
   const casos: [unknown, string][] = [
-    [{ ...buen, categoria: 'hipoteca' }, 'categoria'],
+    [{ ...buen, categoria: 'prestamo' }, 'categoria'],
     [{ ...buen, vence: '2026-02-31' }, 'vence'],
     [{ ...buen, periodicidad: 'semanal' }, 'periodicidad'],
     [{ ...buen, categoria: 'otro', descripcion: '' }, 'descripcion'],
@@ -137,4 +139,39 @@ test('editar y archivar propias del inmueble: 200', async () => {
   assert.equal((await responderObligaciones(p, INM, { ...buen, accion: 'editar', obligacionId: O1 }, HOY)).status, 200)
   assert.equal((await responderObligaciones(p, INM, { accion: 'archivar', obligacionId: O1 }, HOY)).status, 200)
   assert.equal(escritos.length, 2)
+})
+
+test('hipoteca (27/10/2026): se crea y se edita como cualquier categoría', async () => {
+  const { p, escritos } = puertos()
+  const hip = { ...buen, categoria: 'hipoteca', periodicidad: 'mensual', descripcion: undefined }
+  assert.equal((await responderObligaciones(p, INM, hip, HOY)).status, 201)
+  assert.equal((await responderObligaciones(p, INM, { ...hip, accion: 'editar', obligacionId: O1 }, HOY)).status, 200)
+  assert.equal(escritos.length, 2)
+})
+
+test('🚨 la BD aún no admite la categoría (CHECK viejo): 409 categoria_no_disponible, nunca 500; otro fallo sigue siendo fallo', async () => {
+  const { p } = puertos()
+  const rechaza: PuertosObligaciones = {
+    ...p,
+    async crear() { throw new CategoriaNoDisponible() },
+    async actualizar() { throw new CategoriaNoDisponible() },
+  }
+  const hip = { ...buen, categoria: 'hipoteca', periodicidad: 'mensual' }
+  const esperado = { status: 409, body: { error: 'categoria_no_disponible' } }
+  assert.deepEqual(await responderObligaciones(rechaza, INM, hip, HOY), esperado)
+  assert.deepEqual(await responderObligaciones(rechaza, INM, { ...hip, accion: 'editar', obligacionId: O1 }, HOY), esperado)
+  const rota: PuertosObligaciones = { ...p, async crear() { throw new Error('conexion_perdida') } }
+  await assert.rejects(responderObligaciones(rota, INM, hip, HOY), /conexion_perdida/)
+})
+
+test('esRechazoDelCatalogo: solo el CHECK del catálogo (viejo o _v2), por mensaje o meta', () => {
+  const pg = 'new row for relation "portal_patrimonio_obligacion" violates check constraint "portal_patrimonio_obligacion_categoria_catalogo"'
+  assert.equal(esRechazoDelCatalogo(new Error(pg)), true)
+  assert.equal(esRechazoDelCatalogo({ message: 'P2004', meta: { database_error: pg.replace('catalogo"', 'catalogo_v2"') } }), true)
+  for (const e of [
+    new Error('violates check constraint "portal_patrimonio_obligacion_propia_coherente"'),
+    new Error('connection refused'),
+    null,
+    'portal_patrimonio_obligacion_categoria_catalogo',
+  ]) assert.equal(esRechazoDelCatalogo(e), false, String(e))
 })

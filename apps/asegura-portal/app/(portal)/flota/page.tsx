@@ -1,14 +1,17 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 
-import { TEXTO_JEFE_FLOTA } from '@central/module-seguros-portal'
+import { TEXTO_JEFE_FLOTA, rutaManual } from '@central/module-seguros-portal'
 
 import { empresasDeFlota, flotaDeEmpresa, nombramientosPendientes } from '@/lib/flota'
 import { fechaEs } from '@/lib/fechas'
 import { puertaDeSesion } from '@/lib/puertas-portal'
 import { getIdentidad } from '@/lib/session'
+import { estadoQrEmpresa, estadoQrParaVista } from '@/lib/vehiculo-qr'
 
 import { FlotaEmpresa, NombramientoPendiente } from './FlotaEmpresa'
+import { AvisoManual } from '../herramientas/AvisoManual'
+import { EnlaceComoFunciona } from '../herramientas/EnlaceComoFunciona'
 import { EncabezadoPortal } from '../../PaginaPortal'
 
 export const dynamic = 'force-dynamic'
@@ -22,9 +25,10 @@ export const dynamic = 'force-dynamic'
  * `flotaDeEmpresa()` lo busca dentro de los accesos ya resueltos por la cookie, y
  * si no está, 404 (nunca 403: no confirma que exista).
  *
- * No está en la barra de secciones a propósito: la ven pocas identidades y la
- * barra es la misma para todas. Se llega desde el aviso de la bóveda
- * (`EnlaceFlota`) y desde la tarjeta de la sociedad.
+ * Vive dentro de «Herramientas» (menú de cinco, 26/10/2026): se llega desde su tarjeta «Flota de vehículos» (que salta
+ * directo a la sociedad si solo hay una, `lib/flota-destino.ts`), desde la tarjeta «Mi flota» de Inicio (lo pendiente) y
+ * desde el atajo de «Seguros» (`EnlaceFlota`). El trabajo diario —ITV, fechas de matriculación, jefes— está en la ficha de
+ * cada sociedad, y desde cada vehículo el dueño llega a la ficha de su póliza.
  */
 export default async function FlotaPage({
   searchParams,
@@ -39,9 +43,17 @@ export default async function FlotaPage({
   if (pedida !== undefined) {
     const flota = await flotaDeEmpresa(identidad.id, pedida)
     if (flota === null) notFound()
+    // El QR del vehículo (27/10/2026, F1). Si no se puede leer, la flota se pinta igual y sin el bloque de QR:
+    // no se afirma «sin etiqueta» de algo que no se ha podido mirar.
+    const qr = await estadoQrEmpresa(identidad.id, flota.empresa.id).catch((e: unknown) => {
+      console.error('[portal/flota] no se pudo leer el estado de los QR:', e instanceof Error ? e.message : e)
+      return null
+    })
     return (
       <>
         <EncabezadoPortal antetitulo="Tu sociedad" titulo="Flota de" acento={flota.empresa.nombre} />
+        <AvisoManual modulo="flota" />
+        <EnlaceComoFunciona modulo="flota" aparte />
         <p className="suave" style={{ marginTop: 0 }}>
           {flota.papel === 'dueno'
             ? 'Los vehículos de la sociedad con su seguro en vigor. Ves esto porque constas como dueño.'
@@ -59,6 +71,8 @@ export default async function FlotaPage({
           }
           candidatos={flota.candidatos}
           textoJefe={TEXTO_JEFE_FLOTA}
+          qrPorClave={qr === null ? null : Object.fromEntries([...qr.porClave].map(([k, e]) => [k, estadoQrParaVista(e)]))}
+          qrDefecto={qr?.defecto ?? null}
         />
         <p style={{ marginTop: 24 }}>
           <Link href="/flota">← Todas tus flotas</Link>
@@ -75,6 +89,8 @@ export default async function FlotaPage({
   return (
     <>
       <EncabezadoPortal antetitulo="Herramientas" titulo="Tu" acento="flota" />
+      <AvisoManual modulo="flota" />
+      <EnlaceComoFunciona modulo="flota" aparte />
       <p className="suave" style={{ marginTop: 0 }}>
         Los vehículos de las sociedades que llevas: seguro, vencimiento y próxima ITV.
       </p>
@@ -103,6 +119,9 @@ export default async function FlotaPage({
             <p style={{ margin: 0 }}>
               No llevas la flota de ninguna sociedad. Si eres el dueño de una empresa cliente y no la ves aquí,
               escríbenos: puede que no conste en tu ficha que eres el dueño.
+            </p>
+            <p className="suave" style={{ margin: '8px 0 0' }}>
+              Mira <Link href={rutaManual('flota')} style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>cómo funciona la flota</Link>.
             </p>
           </section>
         )

@@ -121,12 +121,12 @@ test('v0.2.31 · hastaPrecioGenerali: con la tabla lee el precio SIN pulsar Sigu
   let siguientes = 0
   const ctx = { pulsarSubpestanaGenerali: async () => {}, pulsarSiguienteGenerali: async () => { siguientes++; return {} } } as unknown as ContextoPortal
   await conPagina(tabla(fila('Todo Riesgo', '456,78', '500,00', true)), async (page) => {
-    const r = await hastaPrecioGenerali(page, coche(), [], ctx, { esperaPrecioMs: 300 })
+    const r = await hastaPrecioGenerali(page, coche(), [], ctx, { esperaGarantiasMs: 0, esperaPrecioMs: 300 })
     assert.equal(r.ofertas[0]!.primaAnualEur, 456.78)
   })
   assert.equal(siguientes, 0)
   await conPagina(tabla(fila('Todo Riesgo', '', ''), fila('Terceros', '', '')), async (page) => {
-    await assert.rejects(hastaPrecioGenerali(page, coche(), [], ctx, { esperaPrecioMs: 300 }), (e: unknown) => {
+    await assert.rejects(hastaPrecioGenerali(page, coche(), [], ctx, { esperaGarantiasMs: 0, esperaPrecioMs: 300 }), (e: unknown) => {
       if (!(e instanceof ErrorMapaIncompletoGenerali)) return false
       assert.match(e.message, /Modalidades \(2f\): «Todo Riesgo» RA=∅ PA=∅ ; «Terceros» RA=∅ PA=∅/, e.message)
       assert.match(e.message, /#btnComparar v=Comparar/, e.message)

@@ -52,6 +52,9 @@ export const CAMPOS_CON_VALOR: ReadonlySet<string> = new Set([
   'acuerdo.revisado_at',
   // Relanzar un trabajo del tarificador (15/10/2026): el valor es la COMPAÑÍA; con él se cuenta el tope de 24 h.
   'trabajo_tarificador.relanzado',
+  // Imagen del bot del tarificador (27/10/2026): referencias `registry.fly.io/asegura-tarificador:<etiqueta>`, sin datos de nadie.
+  'tarificador_imagen.produccion',
+  'trabajo_tarificador.imagen_prueba',
   // Presupuesto enviado a una PERSONA DE CONTACTO (21/10/2026): el valor es el uuid de SU ficha, no un dato personal.
   'presupuesto.destinatario_tercero',
 ])

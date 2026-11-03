@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { confirmarPendiente, confirmarProveedor, descartarPendiente } from '@/lib/agente-facturas/pendientes'
 import { CATEGORIAS_GASTO, PROPS_GASTO } from '@/lib/sivra/constantes'
+import { bloqueoPorCierre, idsPendientesDelProveedor, paresDeGastos } from '@/lib/cierre-mes-db'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,6 +35,11 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     ...(body.propiedad === undefined ? {} : { propiedad: body.propiedad }),
   }
 
+  // Mes cerrado → 409. Se miran el piso ACTUAL y, si se cambia, el NUEVO (mover un gasto altera los dos).
+  const afectadas = body.todasDelProveedor ? await idsPendientesDelProveedor(id) : [id]
+  const bloqueo = await bloqueoPorCierre(await paresDeGastos(afectadas, body.propiedad === undefined ? undefined : (body.propiedad || null)))
+  if (bloqueo) return bloqueo
+
   if (body.todasDelProveedor) {
     const ids = await confirmarProveedor(id, cambios)
     if (ids == null) return NextResponse.json({ error: 'No encontrada o ya revisada' }, { status: 404 })
@@ -52,6 +58,8 @@ export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: str
   const session = await getSession()
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const { id } = await ctx.params
+  const bloqueo = await bloqueoPorCierre(await paresDeGastos([id]))
+  if (bloqueo) return bloqueo
   const ok = await descartarPendiente(id)
   if (!ok) return NextResponse.json({ error: 'No encontrada o ya revisada' }, { status: 404 })
   return NextResponse.json({ ok: true })

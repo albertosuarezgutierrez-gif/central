@@ -28,7 +28,7 @@ export default async function GastosPage() {
 
   return (
     <>
-      <p className="antetitulo"><Link href="/patrimonio">Patrimonio</Link></p>
+      <p className="antetitulo"><Link href="/patrimonio" style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>Patrimonio</Link></p>
       <h1>Gastos fijos</h1>
       <p className="suave" style={{ marginTop: 0 }}>
         Cuotas de comunidad, impuestos, seguros… que se repiten, y las derramas. Cada mes proponemos el gasto y tú lo confirmas.

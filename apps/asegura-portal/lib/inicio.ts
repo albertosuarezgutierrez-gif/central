@@ -11,6 +11,8 @@
 import { ETIQUETA_RAMO } from '@central/module-seguros-portal'
 import { declaradaVigente } from '@central/module-patrimonio'
 
+import { anulacionesPendientes, polizasConBajaEnMarcha } from './anulacion-firma'
+import { peticionesPrecio } from './mejorar-precio'
 import { carteraALaVista, carteraDeIdentidad, cuentaComoEnVigor, type CarteraPortal } from './cartera-lectura'
 import { prisma } from './db'
 import { DECLARADA_NO_ELIMINADA } from './declaradas-eliminadas'
@@ -46,7 +48,7 @@ export async function resumenInicio(identidadId: string): Promise<ResumenInicio 
   const ahora = new Date()
   const hoy = ahora.toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
 
-  const [rCartera, rDeclaradas, rMarcas] = await Promise.allSettled([
+  const [rCartera, rDeclaradas, rMarcas, rFirmas, rPeticiones] = await Promise.allSettled([
     carteraDeIdentidad(identidadId),
     prisma.portalPolizaDeclarada.findMany({
       where: { identidadId, ...DECLARADA_NO_ELIMINADA },
@@ -59,11 +61,16 @@ export async function resumenInicio(identidadId: string): Promise<ResumenInicio 
           where: { identidadId, clave: { startsWith: PREFIJO_HUECOS } },
           select: { clave: true, creadoEn: true },
         }),
+    // Para Vencimientos (misma regla que tenía la bóveda): bajas en marcha y «ya lo pediste». Dos lecturas al puente, en paralelo.
+    anulacionesPendientes(identidadId),
+    peticionesPrecio(identidadId),
   ])
 
   const cartera: CarteraPortal | null = valor(rCartera, 'cartera')
   const declaradas = valor(rDeclaradas, 'declaradas')
   const marcas = valor(rMarcas, 'sugerencia')
+  const firmas = valor(rFirmas, 'bajas')
+  const peticiones = valor(rPeticiones, 'peticiones')
   const vista = cartera ? carteraALaVista(cartera) : null
 
   // Solo las pólizas SUYAS cuentan para los recibos (el de una que le dejan ver lo paga su titular).
@@ -116,5 +123,11 @@ export async function resumenInicio(identidadId: string): Promise<ResumenInicio 
     if (estado !== 'oculta') sugerencia = { huecos, estado }
   }
 
-  return { pendiente: pendienteInicio({ polizas, declaradas: aportadas, hoy }), sugerencia }
+  return { pendiente: pendienteInicio({
+      polizas,
+      declaradas: aportadas,
+      conBaja: firmas === null ? null : polizasConBajaEnMarcha(firmas, { conConfirmadas: true }),
+      peticiones,
+      hoy,
+    }), sugerencia }
 }

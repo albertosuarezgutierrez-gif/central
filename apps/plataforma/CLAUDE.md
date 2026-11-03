@@ -5,6 +5,7 @@
 > entera: búscala con Grep** por la palabra del tema («subastas», «latido», «comisiones», «Telegram», «CORS»,
 > «pricing», «banca_destino_reglas», «asistente», «PSD2»…). Skills: `plataforma-maestro`, `correduria-crm`,
 > `sivra-maestro`, `correo-triaje`. Visión del CRM: `docs/CORREDURIA-CRM-VISION.md`.
+> Cierre contable mensual de pisos (`cierres_mes`, cron 5/15, botón `cmes_`): sección en la skill `plataforma-maestro`.
 
 ## Qué es
 - Cuadro de mando consolidado de la casa de marcas. Jerarquía `Cuenta → Sociedad (CIF) → Negocio (sector)`.
@@ -27,7 +28,7 @@
 
 ## BD y roles
 - Supabase compartida `wswbehlcuxqxyinousql` (con sivra + ialimp + resto). Tablas propias `cuentas`, `sociedades`, `negocios`. `cuentas` NO tiene columna `estado`. Migraciones en `prisma/sql/`.
-- Aislamiento entre apps por puerto HTTP Bearer: ia-rest (`OPERADOR_SHARED_SECRET`), iarrhh (`RRHH_OPERADOR_SECRET`, distinto, no reutilizar), asegura (`ASEGURA_OPERADOR_SECRET`, `/api/operador/*`). **No existe `ASEGURA_DATABASE_URL` aquí ni debe pedirse.** Rotar secreto = mismo valor en ambos proyectos Vercel y redeploy en el mismo paso.
+- Aislamiento entre apps por puerto HTTP Bearer: ia-rest (`OPERADOR_SHARED_SECRET`), iarrhh (`RRHH_OPERADOR_SECRET`, distinto, no reutilizar), asegura (`ASEGURA_OPERADOR_SECRET`, `/api/operador/*`). **No existe `ASEGURA_DATABASE_URL` aquí ni debe pedirse.** Única excepción a nivel de BD (31/10/2026): `prisma_plataforma` lee `seguros_agregado.v_comisiones_mes` (totales de comisiones por mes, sin datos personales) para el motor fiscal; nada más de `seguros`. Rotar secreto = mismo valor en ambos proyectos Vercel y redeploy en el mismo paso.
 - **Ingresos turísticos por piso = tabla `incomes`** (INGLÉS; `propertyId`, `amount` neto, `amount_gross`, `portal`); gastos `expenses`/`gastos`; pisos `properties`; enlace `negocios.ref_ext = incomes.propertyId`. Helper `lib/financiero.ts::getResumenSivra`. El banco NO separa pisos. Tablas DEMO (`propiedades`, `propietario_ingresos`, negocios `[seed-demo]`) no son contabilidad de Alberto. Buscar nombres de tabla en inglés Y español.
 - `reservas_canceladas` separada de `incomes` a propósito (`lib/sivra/cancelaciones.ts`); `nights`/`amount_gross` NULL = no se sabe.
 - `lib/destino.ts`: correduría (`seguros`) solo BBVA; abonos por CONCEPTO (`RE_LIQUID_SEGUROS` = códigos de `detectarCompania`); categorías en `lib/categorias-personales.ts`; tarjeta `lib/categoria-reglas.ts`. IRPF: tramos `importesDe(year)` (`lib/fiscal-deducciones.ts`). Vigilantes de tarjeta: solo hablan si la señal distingue.
@@ -38,7 +39,7 @@
 - PSD2: `lib/psd2-semaforo.ts::partirAvisos()` (notas `ℹ️` no son fallo ni mandan Telegram). Health-check: NO contar `alertas` (es de ialimp).
 
 ## Envs (solo nombres; detalle en la copia completa)
-- Apps/puertos: `IAREST_URL`, `IALIMP_URL`, `RRHH_URL`, `OPERADOR_SHARED_SECRET`, `RRHH_OPERADOR_SECRET`, `ASEGURA_OPERADOR_SECRET`; Gmail: `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `FACTURAS_CUENTA_ID`; banca PIS: `EB_PIS_ENABLED`, `EB_DEBTOR_IBAN`; `SMOOBU_LEGACY_API_KEY` (puente temporal solo `GET /api/rates`; quitar cuando Smoobu resuelva); `TRIAJE_DRY_RUN`; `BOE_PORTAL_*` (sin efecto).
+- Apps/puertos: `IAREST_URL`, `IALIMP_URL`, `RRHH_URL`, `OPERADOR_SHARED_SECRET`, `RRHH_OPERADOR_SECRET`, `ASEGURA_OPERADOR_SECRET`; Gmail: `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `FACTURAS_CUENTA_ID`; banca PIS: `EB_PIS_ENABLED`, `EB_DEBTOR_IBAN`; `SMOOBU_LEGACY_API_KEY` (puente temporal solo `GET /api/rates`; quitar cuando Smoobu resuelva); `TRIAJE_DRY_RUN`; `BOE_PORTAL_*` (sin efecto); `SIVRA_PRIMA_FINDE_PISOS` (ids de piso con coma: los únicos donde se APLICA la prima vie/sáb y el factor dom-jue de `lib/sivra/pricing-ritmo-finde.ts`; vacía = se calcula pero no se aplica; desde el 27/10/2026 = `prop_house_sevillana`).
 - Core: `DATABASE_URL`, `DIRECT_URL`, `JWT_SECRET`, `CRON_SECRET` (llave maestra, NO en prompts de rutinas), `ALERTA_TOKEN` (solo abre `/api/internal/alerta`), `AI_GATEWAY_SECRET`, `CRON_DISPATCH_BASE_URL`.
 - IA: `OPENROUTER_API_KEY` (primaria; `OPENROUTER_MODEL`, `OPENROUTER_FALLBACK_MODELS`), `NVIDIA_API_KEY`, `GROQ_API_KEY`, `CEREBRAS_API_KEY`, `MOONSHOT_API_KEY`, `GEMINI_API_KEY` (apagado: `GEMINI_WEBSEARCH`, `GEMINI_TEXTO`), `DIRECTOR_MODO` (+ `DIRECTOR_*`), `AI_GATEWAY_LIMITE_DIARIO_EUR`, `AI_CREDITOS_UMBRAL`, `IA_CACHE_SEMANTICA`, `CONTABLE_MODEL`, `DIRECTOR_PLAN_PRECIO_OUT`, `MAPA_STALE_DIAS`.
 - Telegram: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`. Correduría asistente: `CORREDURIA_ASISTENTE_APAGADO`, `CORREDURIA_ASISTENTE_EMISION_ACTIVA`, `CORREDURIA_ASISTENTE_AUTONOMO`.
@@ -76,3 +77,5 @@
 
 ## Pantallas clave (qué hace qué)
 - `/inicio` (`lib/inicio-resumen.ts`, 4 tarjetas en `<Suspense>` propio; banda «Pide acción hoy» `banca/HoyAccionable.tsx` + `lib/inicio-acciones.ts`: banco viejo (`BANCO_STALE_H=48`) primero; `horasDesdeBanco` = número | `null` | `'no_aplica'`). `/banca` segmentos Dinero · Ingresos · Negocios · Fiscal · Personal (`banca/SegTabs.tsx`, perezoso por `?tab`); libro paginado (`listarMovimientosLedger`), ficha de movimiento, `RevisarBandeja` (pregunta el NEGOCIO). No añadir widgets de detalle a la home.
+- `/sivra/facturas` — facturas a huéspedes (`lib/sivra/facturas/`): serie anual en `sivra_factura_series`, ✅ en Telegram (`fhu_*`, solo el mensaje vigente) → emite → correo (`FACTURAS_HUESPED_FROM`) → aviso en Smoobu. Smoobu ya NO numera. Detalle: skill `sivra-maestro`.
+  - Factura del huésped: cuando el huésped la pide por mensaje, el agente prepara el borrador con sus datos y lo manda a Alberto por Telegram con ✅ Enviar / ✏️ Modificar; nada sale sin su botón (29/10/2026).

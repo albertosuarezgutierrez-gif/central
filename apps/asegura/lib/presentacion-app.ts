@@ -106,7 +106,7 @@ async function candidatosBD(correduriaId: string): Promise<FilaCandidata[]> {
  * Lo de HOY (día de Madrid): cuántos se han intentado ya (cuentan contra el tope) y qué lote toca — el de
  * hoy si ya se abrió, si no el siguiente al último.
  */
-async function loteDeHoy(correduriaId: string): Promise<{ yaHoy: number; lote: number; fecha: string }> {
+export async function loteDeHoy(correduriaId: string, campana: string = CAMPANA_PRESENTACION_APP): Promise<{ yaHoy: number; lote: number; fecha: string }> {
   const filas = await prismaAsegura().$queryRaw<{ yaHoy: bigint; lote: number; fecha: string }[]>(Prisma.sql`
     with hoy as (select (now() at time zone 'Europe/Madrid')::date as d)
     select
@@ -114,7 +114,7 @@ async function loteDeHoy(correduriaId: string): Promise<{ yaHoy: number; lote: n
       coalesce(max(k.lote) filter (where k.lote_fecha = hoy.d), max(k.lote) + 1, 1)::int as lote,
       to_char(hoy.d, 'YYYY-MM-DD') as fecha
     from hoy left join campana_envio k
-      on k.correduria_id = ${correduriaId}::uuid and k.campana = ${CAMPANA_PRESENTACION_APP}
+      on k.correduria_id = ${correduriaId}::uuid and k.campana = ${campana}
     group by hoy.d`)
   const f = filas[0]
   if (!f) throw new Error('lote_ilegible')
@@ -340,7 +340,7 @@ type FilaBD = {
 const iso = (d: Date | null) => (d ? d.toISOString() : null)
 
 /** El embudo de la campaña: total, por lote, por variante y por persona. Lanza si no puede leer. */
-export async function embudoPresentacionApp(correduriaId: string): Promise<EmbudoPresentacion> {
+export async function embudoPresentacionApp(correduriaId: string, campana: string = CAMPANA_PRESENTACION_APP): Promise<EmbudoPresentacion> {
   if (!(await campanaMigrada())) return { estado: 'sin_migracion' }
   const filas = await prismaAsegura().$queryRaw<FilaBD[]>(Prisma.sql`
     select k.cliente_id as "clienteId", c.nombre, c.apellidos, c.email, k.lote, to_char(k.lote_fecha, 'YYYY-MM-DD') as "loteFecha",
@@ -358,7 +358,7 @@ export async function embudoPresentacionApp(correduriaId: string): Promise<Embud
         min(e.ocurrido_en) filter (where e.tipo in ('email.bounced', 'email.complained', 'email.suppressed')) as rebote
       from correo_evento e where e.resend_id = k.resend_message_id
     ) ev on true
-    where k.correduria_id = ${correduriaId}::uuid and k.campana = ${CAMPANA_PRESENTACION_APP}
+    where k.correduria_id = ${correduriaId}::uuid and k.campana = ${campana}
     order by k.creado_en desc`)
   const conEmbudo = filas.map((f) => {
     const fila: FilaEmbudo = {
@@ -373,7 +373,7 @@ export async function embudoPresentacionApp(correduriaId: string): Promise<Embud
   })
   return {
     estado: 'ok',
-    campana: CAMPANA_PRESENTACION_APP,
+    campana,
     total: embudoCampana(conEmbudo),
     porLote: embudoPorGrupo(conEmbudo, (x) => x.lote),
     porVariante: embudoPorGrupo(conEmbudo, (x) => x.variante),

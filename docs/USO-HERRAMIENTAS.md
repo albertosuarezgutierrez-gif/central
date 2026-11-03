@@ -167,53 +167,53 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 390 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 428 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 379 | 64.721 | 56.854.801 | 0 | 0 |
-| `otro` | 374 | 15.061 | 33.364.927 | 19.979.821 | 0 |
-| `lectura-directa` | 321 | 10.072 | 28.765.500 | 0 | 0 |
-| `mcp:github` | 324 | 7.733 | 5.950.801 | 55.197.845 | 102 |
-| `sql` | 236 | 6.125 | 3.106.275 | 2.351.230 | 24 |
-| `escritura` | 236 | 5.648 | 80.218.893 | 0 | 0 |
+| `bash` | 416 | 75.982 | 65.817.595 | 0 | 0 |
+| `otro` | 410 | 17.808 | 36.568.083 | 21.480.658 | 0 |
+| `lectura-directa` | 351 | 11.583 | 31.654.132 | 0 | 0 |
+| `mcp:github` | 352 | 8.736 | 6.412.924 | 58.212.794 | 119 |
+| `sql` | 266 | 8.266 | 4.598.426 | 3.040.710 | 30 |
+| `escritura` | 254 | 6.592 | 103.584.152 | 0 | 0 |
+| `mcp:Vercel` | 89 | 1.537 | 1.331.114 | 237.328 | 49 |
+| `mcp:Booking-com` | 53 | 1.505 | 6.179.360 | 0 | 0 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
-| `mcp:Vercel` | 81 | 1.416 | 1.244.805 | 237.328 | 41 |
-| `mcp:Gmail` | 59 | 1.374 | 1.527.855 | 0 | 101 |
-| `mcp:Booking-com` | 48 | 1.346 | 5.510.355 | 0 | 0 |
-| `agente:general-purpose` | 129 | 1.083 | 638.551 | 23.128.903 | 0 |
-| `mcp:claude-code-remote` | 65 | 814 | 70.721 | 20.519 | 0 |
-| `mcp:Interactive-Brokers--IBKR-` | 12 | 591 | 721.568 | 0 | 0 |
-| `mcp:Supabase` | 139 | 456 | 75.982 | 5.123 | 7 |
-| `agente:agente-architect` | 78 | 407 | 286.360 | 9.778.792 | 0 |
-| `mcp:Google_Drive` | 24 | 405 | 454.467 | 0 | 50 |
-| `mcp:Google-Drive` | 30 | 164 | 166.479 | 0 | 2 |
-| `agente:agente-mecanico` | 54 | 139 | 77.853 | 7.572.500 | 0 |
-| `agente:rastreador-codigo` | 57 | 111 | 34.978 | 1.399.460 | 0 |
-| `mcp:Resend` | 10 | 95 | 84.756 | 0 | 0 |
-| `mcp:OpenSEO` | 5 | 92 | 76.972 | 0 | 2 |
-| `agente:Explore` | 39 | 86 | 42.159 | 2.194.162 | 0 |
-| `mcp:idealista` | 3 | 77 | 205.245 | 0 | 33 |
-| `mcp:Booking_com` | 4 | 71 | 262.059 | 0 | 0 |
+| `mcp:Gmail` | 69 | 1.461 | 1.609.999 | 0 | 101 |
+| `agente:general-purpose` | 150 | 1.390 | 821.611 | 27.825.130 | 0 |
+| `mcp:claude-code-remote` | 86 | 1.310 | 193.592 | 2.984.731 | 0 |
+| `mcp:Interactive-Brokers--IBKR-` | 17 | 711 | 831.624 | 0 | 0 |
+| `mcp:Supabase` | 154 | 518 | 148.735 | 17.601 | 9 |
+| `agente:agente-architect` | 90 | 515 | 358.330 | 12.940.667 | 0 |
+| `mcp:Google_Drive` | 26 | 468 | 599.051 | 0 | 51 |
+| `mcp:Google-Drive` | 36 | 177 | 183.372 | 0 | 2 |
+| `mcp:Booking_com` | 5 | 166 | 443.032 | 0 | 0 |
+| `agente:agente-mecanico` | 64 | 159 | 85.709 | 8.187.207 | 0 |
+| `agente:rastreador-codigo` | 66 | 126 | 39.976 | 2.082.908 | 0 |
+| `mcp:Resend` | 11 | 98 | 86.009 | 0 | 0 |
+| `mcp:idealista` | 3 | 94 | 255.209 | 0 | 34 |
+| `mcp:OpenSEO` | 6 | 94 | 77.612 | 0 | 2 |
+| `agente:Explore` | 41 | 90 | 43.546 | 2.217.721 | 0 |
 | `mcp:Trivago` | 3 | 53 | 8.707.439 | 0 | 1 |
 | `mcp:posthog` | 5 | 47 | 64.610 | 0 | 1 |
-| `agente:verificador-esceptico` | 16 | 33 | 9.992 | 126.515 | 0 |
+| `agente:verificador-esceptico` | 18 | 35 | 11.159 | 133.263 | 0 |
+| `agente:jefe-contabilidad` | 5 | 29 | 12.739 | 579.584 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
-| `agente:general` | 13 | 19 | 11.866 | 1.259.677 | 0 |
+| `agente:general` | 14 | 20 | 12.731 | 1.297.222 | 0 |
 | `mcp:Claude_Docs` | 1 | 18 | 11.559 | 0 | 0 |
+| `agente:lector-correo` | 7 | 18 | 6.289 | 0 | 0 |
 | `mcp:Supabase_asegura` | 14 | 15 | 3.939 | 0 | 0 |
-| `agente:lector-correo` | 6 | 14 | 4.888 | 0 | 0 |
 | `mcp:Expedia` | 1 | 12 | 29.795 | 0 | 0 |
-| `mcp:Google_Calendar` | 2 | 7 | 5.018 | 0 | 0 |
+| `mcp:Google_Calendar` | 3 | 10 | 6.076 | 0 | 0 |
 | `mcp:openrouter` | 3 | 7 | 19.723 | 0 | 0 |
 | `mcp:bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a` | 1 | 6 | 162 | 0 | 0 |
 | `code-map` | 3 | 5 | 10.551 | 88.901 | 1 |
-| `agente:Plan` | 2 | 2 | 1.832 | 12.062 | 0 |
+| `agente:Plan` | 3 | 3 | 2.700 | 18.015 | 0 |
 | `mcp:ccd_session` | 2 | 2 | 175 | 0 | 0 |
 | `mcp:Context7` | 1 | 2 | 1.257 | 0 | 0 |
 | `mcp:Tripadvisor` | 1 | 2 | 19.151 | 0 | 0 |
-| `agente:jefe-contabilidad` | 1 | 2 | 418 | 7.630 | 0 |
 | `agente:searchfit-seo:competitor-analyzer:AGENT` | 1 | 1 | 322 | 0 | 0 |
 | `agente:searchfit-seo:seo-auditor:AGENT` | 1 | 1 | 289 | 0 | 0 |
 <!-- ahorro:fin -->

@@ -353,3 +353,20 @@ test('llegar a la hora de entrada o después NO escala', () => {
 test('la respuesta del bot que acepta una entrada anterior sigue cazada', () => {
   assert.equal(respuestaConfirmaHorario('Perfecto, podéis entrar a las 10:00', { checkIn: '15:00', checkOut: '11:00' }), 'entrada')
 })
+
+// ── Disponibilidad anticipada sin verbo de llegada ──
+test('peticionCambioHorario: «¿está listo antes de…?» (EN/ES/IT) es ENTRADA', () => {
+  for (const f of [
+    'Hi, is the Apartment ready before 15?',
+    'Is the room available before 3pm?',
+    'Can we get in before 2pm?', 'Can we enter before check-in time?', 'Can we access the flat before 15:00?',
+    'Is it possible to check in earlier?',
+    '¿Está listo el piso antes de las 15?', '¿Está disponible el apartamento antes de las 3?', '¿Podemos entrar antes?',
+    "L'appartamento è pronto prima delle 15?", 'Possiamo entrare prima?',
+  ]) assert.deepEqual(peticionCambioHorario(f, 'general'), { tipo: 'entrada' }, f)
+})
+
+test('peticionCambioHorario: sin «antes/before» o de salida NO es entrada', () => {
+  assert.equal(peticionCambioHorario('Hi, is the apartment ready?', 'general'), null)
+  assert.equal(peticionCambioHorario('Can we check out before 11?', 'general'), null)
+})

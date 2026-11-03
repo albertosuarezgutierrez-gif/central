@@ -19,6 +19,10 @@
 //     repinta el formulario tras el autocompletado de la dirección). Aquí se rellenan los ÚLTIMOS, por `formcontrolname`
 //     (nada de refs viejos) y se comprueba que el valor quedó y que el control no está inválido.
 //
+// 0.1.11 (01/11/2026, job 53d9eefe): `streetNumber` es `input[type=number]`; el riesgo puede traer «S/N» (asegura: número de la ficha → Catastro → «S/N»).
+//   Con «S/N» y campo numérico: casilla visible de rótulo exacto «Sin número»/«S/N» (por `ctx.pulsar`) → si no existe, se teclea `0` como ÚLTIMO recurso y se
+//   declara en «Precio con supuestos: …» (precio estimado). Campo de texto: «S/N» tal cual. Más de una casilla candidata → hueco. Ver `resolverNumeroSinNumero`.
+//
 // HUECOS (→ `ErrorMapaIncompleto` con inventario de estructura de todos los marcos, `pideInventarioDom`):
 //   · la etiqueta exacta del «Tipo de documento» (el robot NO lo cambia: lee lo que muestra y solo sigue si es el del doc.);
 //   · un CP con varias poblaciones, una vía que el autocompletado no resuelve, cualquier obligatorio que siga inválido o un
@@ -34,13 +38,14 @@
 // campo; nunca en logs ni mensajes.
 
 import type { Frame, Locator, Page } from 'playwright'
-import { EmisionBloqueadaError, importeEs, type FormularioHogar, type OfertaNormalizada, type ResultadoAdaptador } from '@central/module-tarificacion'
+import { EmisionBloqueadaError, capitalContenidoEstimado, capitalContinenteEstimado, importeEs, textoSupuestos, type FormularioHogar, type OfertaNormalizada, type ResultadoAdaptador } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
 import { claveCampo, conRespaldoIA, normalizarTexto, registrarAtasco, type PeticionResolver } from '../../formador.ts'
 import { esTextoContinuar } from '../../continuar.ts'
-import { esAppHogarAllianz, etiquetaEnGrupoHogarAllianz, grupoOpcionesHogarAllianz, opcionesMarcadasHogarAllianz } from '../../guard.ts'
+import { leerGarantiasTablaHogarAllianz, esAppHogarAllianz, etiquetaEnGrupoHogarAllianz, grupoOpcionesHogarAllianz, opcionesMarcadasHogarAllianz } from '../../guard.ts'
 import { comprobarCampo } from './auto.ts'
+import { garantiasPorModalidadHogar, ofertasConGarantiasHogar } from './garantias-hogar.ts'
 import { login, sesionSirve } from './comunidades.ts'
 import { abrirNuevaAlta, esperarMarcoApp } from './entrada.ts'
 import { elegirPoblacionHogar, nucleoDeVia } from './poblacion-localidad.ts'
@@ -566,8 +571,10 @@ async function obligatoriosInvalidos(marco: Frame): Promise<string[]> {
  * Pantalla 1 «Vivienda»: rellena con el plan puro y comprueba cada autocompletado. Pulsa «Comprobar» (0.1.5) solo si la información de la vivienda sigue oculta; no
  * cambia el «Tipo de documento» (lista no vista): si hace falta, hueco con inventario.
  */
-export async function rellenarPantallaVivienda(page: Page, marco: Frame, f: FormularioHogar, ctx: CtxVivienda): Promise<void> {
+export async function rellenarPantallaVivienda(page: Page, marco: Frame, f: FormularioHogar, ctx: CtxVivienda): Promise<string[]> {
   await exigirPaso(marco, 'Vivienda')
+  /** 0.1.11: supuestos propios de esta pantalla (hoy: el número de calle «S/N» en un campo numérico); el llamante los declara como «Precio con supuestos». */
+  const supuestosVivienda: string[] = []
   // Solo se LEE (el robot no cambia el tipo): fijo por `formcontrolname` → aprendido → IA → atasco (capa común).
   const { loc: tipoDoc, confirmar: confirmarTipoDoc } = (await conRespaldoIA(
     page,
@@ -601,7 +608,14 @@ export async function rellenarPantallaVivienda(page: Page, marco: Frame, f: Form
         throw new ErrorMapaIncompleto(`por qué «Año de construcción» sigue deshabilitado sin un año del Catastro aceptable (${await diagnosticoCampoCatastro(marco, anio)})`)
       }
     }
-    const loc = await escribir(marco, ctx, op)
+    let opEscribir = op
+    if (op.control === CONTROLES.numero && esNumeroSinNumero(op.valor)) {
+      const r = await resolverNumeroSinNumero(marco, ctx, op)
+      if (r.supuesto) supuestosVivienda.push(r.supuesto)
+      if (r.hecho) continue
+      opEscribir = r.op
+    }
+    const loc = await escribir(marco, ctx, opEscribir)
     if (op.autocompleta === 'poblacion') {
       let confirmarPob: (() => Promise<void>) | null = null
       let elegidaPor: 'nucleo' | 'municipio' | 'unica' | null = null
@@ -647,6 +661,61 @@ export async function rellenarPantallaVivienda(page: Page, marco: Frame, f: Form
   }
   const invalidos = await obligatoriosInvalidos(marco)
   if (invalidos.length) throw new ErrorMapaIncompleto(`por qué siguen inválidos estos obligatorios: ${invalidos.join(', ')}`)
+  return supuestosVivienda
+}
+
+/**
+ * 0.1.11 (01/11/2026, job 53d9eefe): el riesgo trae «S/N» (asegura: plan B `numeroSinNumero`, última opción tras ficha y Catastro) pero el
+ * campo `streetNumber` de Allianz es `input[type=number]` y `fill('S/N')` revienta («Cannot type text into input[type=number]»).
+ * ¿El número de calle es «sin número»? (S/N, s/n, SN, «sin número», «sin numero»). PURA.
+ */
+export function esNumeroSinNumero(v: string | null | undefined): boolean {
+  return /^\s*(s\s*\/\s*n|sn|sin\s+n[uú]mero|sin\s+numero)\s*\.?\s*$/i.test(String(v ?? ''))
+}
+
+/** Rótulo EXACTO de una casilla «sin número» (texto visible entero; nunca «contiene»). PURA. */
+export function esRotuloCasillaSinNumero(t: string | null | undefined): boolean {
+  return /^\s*(sin\s+n[uú]mero|s\s*\/\s*n|vivienda\s+sin\s+n[uú]mero)\s*\.?\s*$/i.test(String(t ?? '').normalize('NFC'))
+}
+
+/** Número que se teclea cuando el campo es numérico y no hay casilla «sin número» ni número de la ficha (último recurso, SIEMPRE con aviso). */
+export const NUMERO_CALLE_SUPUESTO = '0'
+export const SUPUESTO_NUMERO_CALLE = 'número de calle: 0 (supuesto; la vivienda no tiene número y el portal exige uno numérico)'
+export const SUPUESTO_CASILLA_SIN_NUMERO = 'número de calle: casilla «sin número» del portal'
+
+/**
+ * Orden: (1) campo de TEXTO → se escribe «S/N» tal cual (`hecho: false`, sin supuesto); (2) campo NUMÉRICO con UNA casilla visible de rótulo exacto
+ * «sin número»/«S/N» → se marca por `ctx.pulsar` (guard) y se exige que quede marcada (`hecho: true`); (3) sin casilla → se teclea `0`
+ * (`hecho: false`, op con `0`) y se declara el supuesto (precio estimado). El número de la ficha/Catastro ya lo resuelve asegura ANTES de encolar
+ * (si hubiera, `op.valor` no sería «S/N»). Más de una casilla candidata o una que no queda marcada → hueco con inventario (nunca se adivina).
+ */
+async function resolverNumeroSinNumero(
+  marco: Frame,
+  ctx: Pick<ContextoPortal, 'pulsar' | 'pausaAccion'>,
+  op: Extract<OperacionVivienda, { tipo: 'escribir' }>,
+): Promise<{ hecho: boolean; op: Extract<OperacionVivienda, { tipo: 'escribir' }>; supuesto: string | null }> {
+  const campo = marco.locator(`input${selControl(op.control)}:visible`)
+  if ((await campo.count()) !== 1) return { hecho: false, op, supuesto: null } // `escribir` da el hueco con su diagnóstico
+  const tipo = ((await campo.getAttribute('type').catch(() => null)) ?? 'text').toLowerCase()
+  if (tipo !== 'number') return { hecho: false, op, supuesto: null }
+  const rotulos = marco.locator('nx-checkbox label:visible, label:visible').filter({ hasText: /n[uú]mero|s\s*\/\s*n/i })
+  const todos = await rotulos.all()
+  const candidatas: Locator[] = []
+  for (const r of todos) if (esRotuloCasillaSinNumero(await r.innerText().catch(() => ''))) candidatas.push(r)
+  if (candidatas.length > 1) throw new ErrorMapaIncompleto(`qué casilla «sin número» marcar para la calle (${candidatas.length} coincidencias)`)
+  if (candidatas.length === 1) {
+    const etiqueta = candidatas[0]!
+    await ctx.pausaAccion()
+    await ctx.pulsar(etiqueta)
+    const marcada = await etiqueta.evaluate((el) => {
+      const para = el.getAttribute('for')
+      const c = (para ? document.getElementById(para) : el.parentElement?.querySelector('input[type="checkbox"]')) as HTMLInputElement | null
+      return !!c && c.checked === true
+    }).catch(() => false)
+    if (!marcada) throw new ErrorMapaIncompleto('el efecto de marcar la casilla «sin número» de la calle (tras pulsar no quedó marcada)')
+    return { hecho: true, op, supuesto: SUPUESTO_CASILLA_SIN_NUMERO }
+  }
+  return { hecho: false, op: { ...op, valor: NUMERO_CALLE_SUPUESTO }, supuesto: SUPUESTO_NUMERO_CALLE }
 }
 
 /**
@@ -794,8 +863,14 @@ export const SEL_PANTALLA_VALORACION = 'epac-goods-page'
 export const TEXTO_SIGUIENTE_VALORACION = 'Siguiente'
 
 export type OperacionValoracion =
-  | { tipo: 'importe'; control: string; que: string; valor: number | null; minimo: number }
-  | { tipo: 'grupo'; pregunta: string; valor: 'Si' | 'No' | null }
+  | { tipo: 'importe'; control: string; que: string; valor: number | null; minimo: number; /** 0.1.14: estimado (m² × coste de reconstrucción) que SOLO se usa si no hay dato y el importe de serie no es razonable. */ estimado?: number | null }
+  | {
+      tipo: 'grupo'
+      pregunta: string
+      valor: 'Si' | 'No' | null
+      /** 0.1.13: protecciones sí/no: rótulos de respaldo (contiene) y, si el grupo no existe, se anota y se sigue (no bloquea). */
+      opcional?: { alternativas: string[] }
+    }
 
 /** Plan de «Valoración de bienes» (orden incluido). Pura. Joyas EN caja fuerte > 0 → hueco (su campo no está visto). */
 export function planValoracionBienes(f: FormularioHogar): OperacionValoracion[] {
@@ -804,17 +879,20 @@ export function planValoracionBienes(f: FormularioHogar): OperacionValoracion[] 
     throw new ErrorMapaIncompleto('el campo de joyas EN caja fuerte de «Valoración de bienes» (con «Caja fuerte = Si»; sin explorar)')
   }
   const pb = f.hogar.protecciones?.puertaBlindada ?? null
+  // 0.1.14 (job ac0b4631): sin capital en el formulario pero con superficie → estimado de reserva (asegura ya lo manda; esto cubre un riesgo antiguo).
+  const estCont = f.hogar.capitalContinenteEur ?? capitalContinenteEstimado(f.inmueble.superficieM2, null)
+  const estCnt = f.hogar.capitalContenidoEur ?? capitalContenidoEstimado(f.hogar.capitalContinenteEur ?? estCont)
   return [
     // «Caja fuerte» no consta en el formulario: se deja la de serie (solo se exige que haya una marcada).
     { tipo: 'grupo', pregunta: 'Caja fuerte', valor: null },
-    { tipo: 'importe', control: 'sumInsuredBuilding', que: 'Inmueble', valor: f.hogar.capitalContinenteEur, minimo: 1 },
-    { tipo: 'importe', control: 'sumInsuredContent', que: 'Mobiliario', valor: f.hogar.capitalContenidoEur, minimo: 1 },
+    { tipo: 'importe', control: 'sumInsuredBuilding', que: 'Inmueble', valor: f.hogar.capitalContinenteEur, minimo: 1, estimado: estCont },
+    { tipo: 'importe', control: 'sumInsuredContent', que: 'Mobiliario', valor: f.hogar.capitalContenidoEur, minimo: 1, estimado: estCnt },
     { tipo: 'importe', control: 'sumInsuredValuablesNoSafe', que: 'Joyas fuera de caja fuerte', valor: ov?.joyasFueraCajaEur ?? null, minimo: 0 },
     // HIPÓTESIS (a confirmar con Alberto): «Objetos especiales» de Allianz = `objetosValorEur` del formulario.
     { tipo: 'importe', control: 'sumInsuredSpecialObjects', que: 'Objetos especiales', valor: ov?.objetosValorEur ?? null, minimo: 0 },
     // La alarma NO está en el formulario (id de catálogo sin traducir): se deja la de serie.
-    { tipo: 'grupo', pregunta: 'Alarma conectada', valor: null },
-    { tipo: 'grupo', pregunta: 'Puerta blindada', valor: pb === null ? null : pb ? 'Si' : 'No' },
+    { tipo: 'grupo', pregunta: 'Alarma conectada', valor: null, opcional: { alternativas: ['Alarma'] } },
+    { tipo: 'grupo', pregunta: 'Puerta blindada', valor: pb === null ? null : pb ? 'Si' : 'No', opcional: { alternativas: ['Puerta', 'Blindada'] } },
   ]
 }
 
@@ -830,13 +908,32 @@ export function importeDeSerieAceptable(leido: string | null | undefined, minimo
 }
 
 async function fijarGrupoValoracion(marco: Frame, ctx: CtxVivienda, op: Extract<OperacionValoracion, { tipo: 'grupo' }>, supuestos: string[]): Promise<void> {
-  const grupo = grupoOpcionesHogarAllianz(marco, SEL_PANTALLA_VALORACION, op.pregunta)
-  const n = await grupo.count()
-  if (n !== 1) throw new ErrorMapaIncompleto(`el grupo «${op.pregunta}» de «Valoración de bienes» (${n} coincidencias)`)
+  let grupo = grupoOpcionesHogarAllianz(marco, SEL_PANTALLA_VALORACION, op.pregunta)
+  let n = await grupo.count()
+  // 0.1.13: rótulo de respaldo (contiene) solo si el exacto no encuentra nada (job ac0b4631: «Alarma conectada», 0 coincidencias).
+  for (const alt of op.opcional?.alternativas ?? []) {
+    if (n !== 0) break
+    grupo = grupoOpcionesHogarAllianz(marco, SEL_PANTALLA_VALORACION, alt, true)
+    n = await grupo.count()
+  }
+  if (n !== 1) {
+    if (op.opcional) {
+      supuestos.push(`${op.pregunta}: no localizada en la pantalla (supuesto: se sigue sin ella)`)
+      return
+    }
+    throw new ErrorMapaIncompleto(`el grupo «${op.pregunta}» de «Valoración de bienes» (${n} coincidencias)`)
+  }
   const marcadas = await opcionesMarcadasHogarAllianz(grupo)
   if (op.valor === null) {
-    if (marcadas.length !== 1) throw new ErrorMapaIncompleto(`«${op.pregunta}» de «Valoración de bienes» sin dato en el formulario y sin una opción de serie (${marcadas.length} marcadas)`)
-    supuestos.push(`${op.pregunta}: «${marcadas[0]}» (de serie)`)
+    if (marcadas.length === 1) {
+      supuestos.push(`${op.pregunta}: «${marcadas[0]}» (de serie)`)
+      return
+    }
+    if (!op.opcional || marcadas.length !== 0) throw new ErrorMapaIncompleto(`«${op.pregunta}» de «Valoración de bienes» sin dato en el formulario y sin una opción de serie (${marcadas.length} marcadas)`)
+    // 0.1.13: el riesgo no trae el dato y el portal no deja nada marcado → «No» (supuesto; precio estimado).
+    if (typeof ctx.marcarOpcionHogarResuelta !== 'function') throw new ErrorMapaIncompleto('la puerta guardada de opciones de Hogar en el contexto del worker', false)
+    const r = await ctx.marcarOpcionHogarResuelta(marco, etiquetaEnGrupoHogarAllianz(grupo, 'No'))
+    supuestos.push(r.estado === 'no_unica' || r.estado === 'no_quedo' ? `${op.pregunta}: sin poder marcar «No» (supuesto: se sigue)` : `${op.pregunta}: «No» (supuesto; el riesgo no trae el dato)`)
     return
   }
   if (marcadas.length === 1 && plano(marcadas[0]) === plano(op.valor)) return
@@ -855,6 +952,14 @@ async function fijarImporteValoracion(marco: Frame, ctx: CtxVivienda, op: Extrac
   const deshabilitado = await campo.isDisabled()
   const leido = await leer(campo)
   const estado = `campo: ${deshabilitado ? 'deshabilitado' : 'habilitado'}, ${leido === null ? 'valor ilegible' : leido.trim() === '' ? 'vacío' : importeDeSerieAceptable(leido, op.minimo) ? 'con importe del portal' : 'con un valor no razonable'}`
+  if (op.valor === null && (op.estimado ?? null) !== null && (!importeDeSerieAceptable(leido, op.minimo) || (await esInvalido(campo)))) {
+    // 0.1.14: sin dato y el de serie no vale → el estimado por superficie (supuesto; la validación de razonabilidad del de serie se mantiene).
+    if (deshabilitado) throw new ErrorMapaIncompleto(`por qué «${op.que}» de «Valoración de bienes» está deshabilitado (${estado})`)
+    const loc = await escribir(marco, ctx, { tipo: 'escribir', control: op.control, que: op.que, valor: importeCampo(op.estimado as number) }, campo)
+    if (await esInvalido(loc)) throw new ErrorMapaIncompleto(`por qué el portal marca inválido «${op.que}» de «Valoración de bienes» tras rellenarlo con el estimado`)
+    supuestos.push(`${op.que}: importe estimado por superficie`)
+    return
+  }
   if (op.valor === null) {
     if (!importeDeSerieAceptable(leido, op.minimo) || (await esInvalido(campo))) throw new ErrorMapaIncompleto(`«${op.que}» de «Valoración de bienes» sin dato en el formulario y sin un importe de serie aceptable (${estado})`)
     supuestos.push(`${op.que}: el importe de serie del portal`)
@@ -1025,7 +1130,10 @@ export async function leerPrecioHogar(page: Page, marco: Frame, supuestos: reado
     const lista = l !== null && l.modalidades.length > 0 && l.modalidades.every((m) => primaDeTexto(m.anualidad) !== null)
     if (lista || Date.now() >= fin) {
       if (l === null) throw new ErrorMapaIncompleto(`la pantalla «Precio» (${SEL_PANTALLA_PRECIO} visible: no)`)
-      return ofertasDesdePrecioHogar(l, supuestos)
+      const ofertas = ofertasDesdePrecioHogar(l, supuestos)
+      // 0.1.11: garantías por modalidad de la tabla (solo lectura); sin filas legibles → aviso «coberturas no leídas».
+      const filas = await leerGarantiasTablaHogarAllianz(marco)
+      return ofertasConGarantiasHogar(ofertas, garantiasPorModalidadHogar(Array.isArray(filas) ? filas : [], ofertas.length))
     }
     await page.waitForTimeout(500)
   }
@@ -1077,14 +1185,14 @@ export const allianzHogar = {
   compania: 'allianz',
   ramo: 'hogar',
   credencial: 'ALLIANZ_EPAC',
-  version: '0.1.10',
+  version: '0.1.14',
   async tarificar(page: Page, f: FormularioHogar, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (f.ramo !== 'hogar') throw new ErrorTarificador('datos', `${ADAPTADOR}: el formulario no es de hogar`)
     if (!(ctx.sesionReutilizada && (await sesionSirve(page, ctx)))) await login(page, ctx)
     await ctx.trasLogin()
     await ctx.paso('navegacion', () => abrirNuevaAlta(page, ctx, { pestana: 'Particulares', producto: PRODUCTO_MENU }))
     const marco = await marcoHogar(page)
-    await ctx.paso('formulario', () => rellenarPantallaVivienda(page, marco, f, ctx))
+    const supuestosVivienda = await ctx.paso('formulario', () => rellenarPantallaVivienda(page, marco, f, ctx))
     const paso = await ctx.paso('tarificar', () => avanzarDesdeVivienda(page, marco, ctx))
     if (paso !== 'Valoración de bienes') return pasoSinMapa(page, marco, ctx, paso)
     const supuestos = await ctx.paso('formulario', () => rellenarValoracionBienes(page, marco, f, ctx))
@@ -1092,6 +1200,8 @@ export const allianzHogar = {
     if (paso2 !== 'Precio') return pasoSinMapa(page, marco, ctx, paso2, supuestos)
     // 0.1.10: «Precio» se LEE (sin pulsar nada) y el bot termina aquí: no «Siguiente» (→ Datos/emisión), no «Guardar presupuesto».
     const ofertas = await ctx.paso('lectura_primas', () => leerPrecioHogar(page, marco, supuestos))
-    return { ofertas }
+    // 0.1.11: lo supuesto en «Vivienda» (número de calle) se declara con el formato que asegura reconoce («Precio con supuestos: …»).
+    const aviso = textoSupuestos(supuestosVivienda ?? [])
+    return { ofertas: aviso ? ofertas.map((o) => ({ ...o, avisos: [...o.avisos, aviso] })) : ofertas }
   },
 } as const

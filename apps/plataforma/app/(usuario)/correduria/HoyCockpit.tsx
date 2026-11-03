@@ -8,6 +8,7 @@ import { lineaEstadoIngesta } from './hoy-cockpit'
 import Aprobaciones from './Aprobaciones'
 import Anulaciones from './Anulaciones'
 import BajasPue from './BajasPue'
+import SiniestrosEsperando from './SiniestrosEsperando'
 
 /**
  * El cockpit de «Gestión» (antes «Hoy»; pieza 1-4 de ASegura OS). Desde el 13/10/2026 NO lleva la franja de
@@ -59,6 +60,7 @@ export default function HoyCockpit({
 
       <Anulaciones />
       <BajasPue onContador={setNBajasPue} />
+      <SiniestrosEsperando />
 
       {/* ── Esperan tu OK ─────────────────────────────────────────── */}
       <section id="esperan-ok" style={{ display: 'grid', gap: 6 }}>

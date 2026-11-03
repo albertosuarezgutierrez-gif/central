@@ -1,0 +1,15 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { provinciaPorCp } from '@central/module-seguros'
+import { municipiosPorCp } from '@/lib/codigo-postal'
+import { exigirTokenPublico } from '@/lib/sivra/facturas/acceso-publico'
+
+// GET /api/publico/factura/<token>/cp?cp=41003 → { municipios, provincia } (mismo contrato que /api/correduria/codigo-postal).
+// `municipios: null` = CP que la tabla no conoce (se escribe a mano), no «ninguno». Solo con un token de factura válido.
+export async function GET(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+  const { token } = await params
+  const g = await exigirTokenPublico(req, token, 'cp', 60, 10 * 60_000)
+  if (!g.ok) return g.respuesta
+  const cp = (req.nextUrl.searchParams.get('cp') ?? '').trim()
+  if (!/^\d{5}$/.test(cp)) return NextResponse.json({ error: 'cp de 5 cifras' }, { status: 400 })
+  return NextResponse.json({ cp, municipios: municipiosPorCp(cp), provincia: provinciaPorCp(cp) }, { headers: { 'cache-control': 'private, max-age=86400' } })
+}

@@ -21,7 +21,7 @@
 // dejan de pasar por Alberto.
 
 // Separadores/relleno admitidos entre fórmulas: espacios, puntuación suave y emoji.
-const SEP = '[\\s!¡.,;:…\\-–—\\p{Extended_Pictographic}\\uFE0F\\u200D]'
+const SEP = '[\\s!¡.,;:…\\)\\-–—\\p{Extended_Pictographic}\\uFE0F\\u200D]'
 
 // Intensificadores del agradecimiento («muchísimas gracias», «mil gracias», «thank you so much»).
 const INTENS = '(?:mu(?:ch[íi]sim|ch)[ao]s?|mil|tantas|un mill[óo]n de|very|so|thank you)\\s+'

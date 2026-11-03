@@ -15,3 +15,11 @@ test('valores no finitos → 0,00€', () => {
   assert.equal(eur(NaN), '0,00€')
   assert.equal(eur(Infinity), '0,00€')
 })
+
+test('string numérico (numeric de $queryRaw) se coacciona', () => {
+  assert.equal(eur('10.90'), '10,90€')
+  assert.equal(eur('1234.5'), '1.234,50€')
+  assert.equal(eur(null), '0,00€')
+  assert.equal(eur(undefined), '0,00€')
+  assert.equal(eur('abc'), '0,00€')
+})

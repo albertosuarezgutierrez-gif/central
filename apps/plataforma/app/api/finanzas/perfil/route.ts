@@ -40,12 +40,16 @@ export async function PUT(req: NextRequest) {
     ascendientesACargo: Math.trunc(Number(p.ascendientesACargo ?? 0)) || 0,
     ascendientesMayores75: Math.trunc(Number(p.ascendientesMayores75 ?? 0)) || 0,
     donativosAnual: Number(p.donativosAnual ?? 0) || 0,
-    conyugeEsAutonomo: Boolean(p.conyugeEsAutonomo ?? false),
-    conyugeIngresosBrutos: p.conyugeIngresosBrutos != null ? Number(p.conyugeIngresosBrutos) || null : null,
-    conyugeGastosDeducibles: p.conyugeGastosDeducibles != null ? Number(p.conyugeGastosDeducibles) || null : null,
-    conyugeCuotaAutonomos: p.conyugeCuotaAutonomos != null ? Number(p.conyugeCuotaAutonomos) || null : null,
-    conyugeRetenciones: p.conyugeRetenciones != null ? Number(p.conyugeRetenciones) || null : null,
   }
+  // Los campos de la cónyuge solo se escriben si vienen en el cuerpo: el formulario familiar no los envía y un
+  // guardado suyo no debe borrarlos a null. `cuotasSSMadreAnual` es el alias que lee el motor. 0 es un valor.
+  const dec = (v: unknown) => (v != null && v !== '' && Number.isFinite(Number(v)) ? Number(v) : null)
+  const conyuge: Record<string, unknown> = {}
+  if ('conyugeEsAutonomo' in p) conyuge.conyugeEsAutonomo = Boolean(p.conyugeEsAutonomo)
+  if ('conyugeIngresosBrutos' in p) conyuge.conyugeIngresosBrutos = dec(p.conyugeIngresosBrutos)
+  if ('conyugeGastosDeducibles' in p) conyuge.conyugeGastosDeducibles = dec(p.conyugeGastosDeducibles)
+  if ('conyugeCuotaAutonomos' in p || 'cuotasSSMadreAnual' in p) conyuge.conyugeCuotaAutonomos = dec(p.conyugeCuotaAutonomos ?? p.cuotasSSMadreAnual)
+  if ('conyugeRetenciones' in p) conyuge.conyugeRetenciones = dec(p.conyugeRetenciones)
 
   const hijos: DescIn[] = Array.isArray(body.descendientes) ? body.descendientes : []
   const hijosData = hijos
@@ -61,8 +65,8 @@ export async function PUT(req: NextRequest) {
   await prisma.$transaction([
     prisma.fiscalPerfil.upsert({
       where: { cuentaId: session.id },
-      create: { cuentaId: session.id, ...perfilData },
-      update: { ...perfilData, updatedAt: new Date() },
+      create: { cuentaId: session.id, ...perfilData, ...conyuge },
+      update: { ...perfilData, ...conyuge, updatedAt: new Date() },
     }),
     prisma.fiscalDescendiente.deleteMany({ where: { cuentaId: session.id } }),
     ...(hijosData.length ? [prisma.fiscalDescendiente.createMany({ data: hijosData })] : []),

@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 import { NextRequest, NextResponse } from 'next/server'
+import { cronAutorizado } from '@/lib/cron-auth'
 
 // Siembra (una vez) un pool de MÚSICA royalty-free en Cloudinary a partir de enlaces MP3
 // públicos (p.ej. Pixabay, cuyos enlaces de CDN son fetchables). Cloudinary los descarga
@@ -76,7 +77,7 @@ function parseUrls(raw: string | null): string[] {
 
 // POST: Bearer CRON_SECRET, body { urls: string[] } (o ?urls= en la query).
 export async function POST(req: NextRequest) {
-  if (req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`)
+  if (!cronAutorizado(req))
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   let urls = parseUrls(req.nextUrl.searchParams.get('urls'))
   if (urls.length === 0) {

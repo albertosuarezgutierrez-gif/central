@@ -43,6 +43,18 @@ test('oferta del bot → opción: prima, franquicia, firmeza «estimado», cober
   assert.equal(opcionDeOfertaRpa('auto', fila(OF1, 0), HOY), null)
 })
 
+test('🪤 SINCO al tarificar: firme solo con compañía ≠ occident + auto + oferta guardada con nº de póliza tecleado', () => {
+  const con = (companiaTrabajo: string | null, tecleada: unknown) => ({ ...fila(OF1, 412.3), companiaTrabajo, oferta: { coberturas: COB_TR, avisos: [], polizaAnteriorTecleada: tecleada } })
+  assert.equal(opcionDeOfertaRpa('auto', con('mapfre', true), HOY)!.firmeza, 'firme')
+  assert.equal(opcionDeOfertaRpa('auto', con('allianz', true), HOY)!.firmeza, 'firme')
+  assert.equal(opcionDeOfertaRpa('auto', con('occident', true), HOY)!.firmeza, 'estimado', 'Occident siempre estimado')
+  assert.equal(opcionDeOfertaRpa('auto', con('mapfre', undefined), HOY)!.firmeza, 'estimado', 'sin tecleo confirmado')
+  assert.equal(opcionDeOfertaRpa('auto', con('mapfre', 'true'), HOY)!.firmeza, 'estimado', 'solo `true` estricto')
+  assert.equal(opcionDeOfertaRpa('auto', con(null, true), HOY)!.firmeza, 'estimado', 'compañía desconocida')
+  assert.equal(opcionDeOfertaRpa('moto', con('mapfre', true), HOY)!.firmeza, 'estimado', 'solo auto')
+  assert.equal(opcionDeOfertaRpa('auto', { ...con('mapfre', true), oferta: null }, HOY)!.firmeza, 'estimado', 'sin oferta guardada')
+})
+
 test('precio de Avant2: se enseña, NUNCA es enviable desde F4, y sin firmeza no es «firme»', () => {
   const a = opcionDePrecioAvant2({ id: OF2, compania: 'Reale', producto: null, prima_eur: '350.00', franquicia_eur: null, firmeza: null, avisos: [], garantias: null })!
   assert.equal(a.firmeza, 'estimado')

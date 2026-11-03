@@ -4,6 +4,7 @@
 // y lo aplica como customer.balance credit en Stripe
 // → la siguiente factura SaaS se reduce automáticamente
 import { NextRequest, NextResponse } from 'next/server'
+import { cronAutorizado } from '@/lib/cron-auth'
 import { createStripe } from '@central/core-payments'
 import { createServerClient } from '@/lib/supabase'
 
@@ -13,9 +14,7 @@ export const maxDuration = 60
 const getStripe = () => createStripe()
 
 function autorizado(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET
-  if (!secret) return true
-  return req.headers.get('authorization') === `Bearer ${secret}`
+  return cronAutorizado(req)
 }
 
 export async function GET(req: NextRequest) {

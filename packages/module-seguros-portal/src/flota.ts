@@ -327,6 +327,8 @@ export type VehiculoFlota = {
   clave: string | null
   compania: string
   ramo: string
+  /** El nº de póliza que lo cubre hoy. Lo usa la vista pública del QR del vehículo («datos para carretera»). */
+  numeroPoliza: string | null
   vencimiento: VencimientoFlota
   itv: ItvVehiculo
   matriculacionDeclarada: string | null
@@ -365,6 +367,7 @@ export function vehiculosDeFlota(entradas: readonly VehiculoFlotaEntrada[], hoy:
         clave: claveVehiculo(matricula),
         compania: e.compania,
         ramo: e.ramo,
+        numeroPoliza: e.numeroPoliza?.trim() ? e.numeroPoliza.trim() : null,
         vencimiento: vencimientoFlota(e.fechaVencimiento, hoy),
         itv: itvDeVehiculo({
           ramo: e.ramo,

@@ -258,6 +258,8 @@ export type CuerpoCierre = {
   trabajoId: string
   motivoFin: string
   detalleFin?: string
+  /** 0.3.11: «frontera bancaria: campo «<etiqueta>»» (≤60) → `mapa.huecos`. Solo etiqueta, nunca valor. */
+  notaFin?: string
   /** Incidencias de ejecución del último lote (14/10/2026): asegura las anota en los `errores` del último paso. */
   incidencias?: IncidenciaEjecucion[]
   redNoGet: string[]

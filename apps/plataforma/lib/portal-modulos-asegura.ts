@@ -17,6 +17,18 @@ export type RespuestaModulos =
   | { estado: 'ok'; modulos: ModuloFicha[] }
   | { estado: 'no_encontrado' | 'sin_configurar' | 'error'; motivo: string }
 
+/**
+ * Nota fija bajo «Patrimonio y alquileres» (decisión de Alberto, 27/10/2026): el módulo va ligado al email con el que el
+ * cliente entra al portal, y activarlo es AUTORIZARLO (no exige póliza con nosotros). `null` = ese módulo no lleva nota.
+ */
+export function notaModulo(id: string): string | null {
+  if (id !== 'alquileres') return null
+  return (
+    'Va ligado al email con el que el cliente entra al portal: solo se abre si ese email está en su ficha y la ficha ' +
+    'está activa. Activarlo es autorizarlo: no exige póliza con nosotros. Si cambia de email tiene que avisar; puede tener más emails en su ficha.'
+  )
+}
+
 const txt = (v: unknown): string | null => (typeof v === 'string' && v.trim() !== '' ? v : null)
 
 export function interpretarModulos(status: number, json: unknown): RespuestaModulos {
@@ -60,6 +72,8 @@ export function textoMotivoModulos(motivo: string): string {
       return 'la respuesta de asegura no tenía la forma esperada.'
     case 'permisos':
       return 'falta aplicar el permiso de escritura en la base (prisma/sql/2026-10-24_portal_modulos_operador.sql).'
+    case 'sin_migracion':
+      return 'falta aplicar en la base prisma/sql/2026-10-27_portal_acceso_por_autorizacion.sql.'
     default:
       return motivo
   }

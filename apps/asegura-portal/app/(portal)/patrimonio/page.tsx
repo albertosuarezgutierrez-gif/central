@@ -1,7 +1,10 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
+import { rutaManual } from '@central/module-seguros-portal'
+
 import { patrimonioDeIdentidad } from '@/lib/patrimonio/inmuebles-bd'
+import { canjearRecomendaciones } from '@/lib/patrimonio/recomendacion-bd'
 import { avisosPolizasSinInmueble, type AvisoPintable } from '@/lib/patrimonio/poliza-sin-inmueble-bd'
 import { precargaDeParametros, type ParametrosAlta } from '@/lib/patrimonio/precarga-alta'
 import { oposicionSenalesVigente } from '@/lib/oposicion-senales'
@@ -9,7 +12,10 @@ import { puertaDeSesion } from '@/lib/puertas-portal'
 import { getIdentidad } from '@/lib/session'
 
 import { AvisoPolizaSinInmueble } from './AvisoPolizaSinInmueble'
+import { AvisoManual } from '../herramientas/AvisoManual'
+import { EnlaceComoFunciona } from '../herramientas/EnlaceComoFunciona'
 import { OposicionSenalesPatrimonio } from '../configuracion/OposicionSenalesPatrimonio'
+import { InvitaPropietario } from './InvitaPropietario'
 import { ListaInmuebles } from './ListaInmuebles'
 import { NuevoInmueble } from './NuevoInmueble'
 import { EncabezadoPortal } from '../../PaginaPortal'
@@ -27,6 +33,9 @@ export default async function PatrimonioPage({ searchParams }: { searchParams: P
   if (!(await puertaDeSesion('patrimonio', 'lectura'))) redirect('/inicio')
   const titulares = await patrimonioDeIdentidad(identidad.id)
   const precarga = precargaDeParametros(await searchParams)
+  // Recomendación entre propietarios: si esta persona es la invitada y ya tiene patrimonio activo, se canjea aquí (idempotente,
+  // nunca lanza). Gana el cupo de IA «amplio» 90 días, igual que quien la recomendó.
+  if (titulares.length > 0) await canjearRecomendaciones(identidad.id)
   // P15 publicado (interés legítimo informado): con algún titular se INFORMA aquí, antes de calcular, y se ofrece oponerse.
   // No depende del interruptor del motor. Un fallo al leer la oposición no enseña la casilla (no se puede afirmar su estado).
   let oposicion: boolean | null | 'ilegible' | undefined
@@ -48,35 +57,39 @@ export default async function PatrimonioPage({ searchParams }: { searchParams: P
   return (
     <>
       <EncabezadoPortal antetitulo="Herramientas" titulo="Mi" acento="patrimonio" />
-      <p className="suave" style={{ marginTop: 0 }}>Tus inmuebles y los de quien te ha dado acceso, por titular.</p>
-      {titulares.length > 0 && (
-        <p style={{ margin: '0 0 12px', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          <Link className="boton-tenue" style={{ minHeight: 44 }} href="/patrimonio/gastos">Gastos fijos, comunidad y derramas</Link>
-          <Link className="boton-tenue" style={{ minHeight: 44 }} href="/herramientas/calendario">Calendario y avisos</Link>
-          <Link className="boton-tenue" style={{ minHeight: 44 }} href="/patrimonio/rentabilidad">Rentabilidad</Link>
-          {titulares.some((t) => t.puedeAlta) && <Link className="boton-tenue" style={{ minHeight: 44 }} href="/patrimonio/importar">Importar desde Excel</Link>}
-        </p>
-      )}
-
-      {oposicion !== undefined && (
-        <section className="seccion" aria-labelledby="oposicion-senales-titulo">
-          <p className="antetitulo">Revisión de seguros de tus inmuebles</p>
-          <h2 id="oposicion-senales-titulo">Revisamos si a tus inmuebles les falta algún seguro</h2>
-          {oposicion === 'ilegible' ? (
-            <p className="suave" style={{ margin: 0 }}>
-              No hemos podido comprobar ahora si te has opuesto a esta revisión. Vuelve a intentarlo en un rato o
-              cámbialo en <a href="/configuracion#privacidad">Configuración</a>.
-            </p>
-          ) : (
-            <OposicionSenalesPatrimonio inicial={oposicion} conAviso />
-          )}
-        </section>
-      )}
-
+      <AvisoManual modulo="alquileres" />
+      <EnlaceComoFunciona modulo="alquileres" aparte />
+      <p className="suave" style={{ marginTop: 0 }}>Tus inmuebles y los de quien te ha dado acceso, por titular. Entra en uno para ver sus seguros, contratos y gastos.</p>
       {titulares.length === 0 ? (
-        <section className="seccion"><p style={{ margin: 0 }}>No tienes ningún patrimonio asignado en este portal.</p></section>
+        <section className="seccion">
+          <p style={{ margin: 0 }}>No tienes ningún patrimonio asignado en este portal.</p>
+          <p className="suave" style={{ margin: '8px 0 0' }}>
+            ¿No sabes por dónde empezar? Mira <Link href={rutaManual('alquileres')} style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>cómo funciona Patrimonio</Link>.
+          </p>
+        </section>
       ) : (
         <>
+          {titulares.map((t) => (
+            <section key={t.clienteId} className="seccion" aria-labelledby={`titular-${t.clienteId}`}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'space-between' }}>
+                <h2 id={`titular-${t.clienteId}`} style={{ margin: 0, overflowWrap: 'anywhere' }}>{t.nombre}</h2>
+                <span className="chip">{t.propio ? 'Tuyo' : t.nivel === 'total' ? 'Acceso total' : 'Acceso de gestión'}</span>
+              </div>
+              <div style={{ marginTop: 12 }}>
+                <ListaInmuebles
+                  inmuebles={t.inmuebles.map((i) => ({
+                    id: i.id,
+                    alias: i.alias,
+                    uso: i.uso,
+                    direccion: i.direccion,
+                    calleSinValidar: i.calleSinValidar,
+                    superficie: i.superficieM2 === null ? null : i.superficieM2.toLocaleString('es-ES'),
+                    inmueblePadreId: i.inmueblePadreId,
+                  }))}
+                />
+              </div>
+            </section>
+          ))}
           <NuevoInmueble titulares={titulares.filter((t) => t.puedeAlta).map((t) => ({ clienteId: t.clienteId, nombre: t.nombre }))} precarga={precarga} />
           {sueltas === null ? (
             <p className="suave">No hemos podido comprobar ahora si tienes pólizas de hogar sin inmueble en tu patrimonio.</p>
@@ -93,26 +106,33 @@ export default async function PatrimonioPage({ searchParams }: { searchParams: P
               </section>
             )
           )}
-          {titulares.map((t) => (
-            <section key={t.clienteId} className="seccion" aria-labelledby={`titular-${t.clienteId}`}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'space-between' }}>
-                <h2 id={`titular-${t.clienteId}`} style={{ margin: 0, overflowWrap: 'anywhere' }}>{t.nombre}</h2>
-                <span className="chip">{t.propio ? 'Tuyo' : t.nivel === 'total' ? 'Acceso total' : 'Acceso de gestión'}</span>
-              </div>
-              <div style={{ marginTop: 12 }}>
-                <ListaInmuebles
-                  inmuebles={t.inmuebles.map((i) => ({
-                    id: i.id,
-                    alias: i.alias,
-                    uso: i.uso,
-                    direccion: i.direccion,
-                    calleSinValidar: i.calleSinValidar,
-                    superficie: i.superficieM2 === null ? null : i.superficieM2.toLocaleString('es-ES'),
-                  }))}
-                />
-              </div>
-            </section>
-          ))}
+        <section aria-labelledby="otras-herramientas" style={{ margin: '0 0 12px' }}>
+          <h2 id="otras-herramientas" style={{ fontSize: 16 }}>Otras herramientas</h2>
+          <p style={{ margin: 0, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <Link className="boton-tenue" style={{ minHeight: 44 }} href="/patrimonio/gastos">Gastos de todos los pisos</Link>
+          <Link className="boton-tenue" style={{ minHeight: 44 }} href="/herramientas/calendario">Calendario y avisos</Link>
+          <Link className="boton-tenue" style={{ minHeight: 44 }} href="/patrimonio/rentabilidad">Rentabilidad</Link>
+          {titulares.some((t) => t.puedeAlta) && <Link className="boton-tenue" style={{ minHeight: 44 }} href="/patrimonio/volcado">Cargar todo de una vez</Link>}
+          {titulares.some((t) => t.puedeAlta) && <Link className="boton-tenue" style={{ minHeight: 44 }} href="/patrimonio/importar">Importar desde Excel</Link>}
+          </p>
+        </section>
+
+      {oposicion !== undefined && (
+        <section className="seccion" aria-labelledby="oposicion-senales-titulo">
+          <p className="antetitulo">Revisión de seguros de tus inmuebles</p>
+          <h2 id="oposicion-senales-titulo">Revisamos si a tus inmuebles les falta algún seguro</h2>
+          {oposicion === 'ilegible' ? (
+            <p className="suave" style={{ margin: 0 }}>
+              No hemos podido comprobar ahora si te has opuesto a esta revisión. Vuelve a intentarlo en un rato o
+              cámbialo en <a href="/configuracion#privacidad">Configuración</a>.
+            </p>
+          ) : (
+            <OposicionSenalesPatrimonio inicial={oposicion} conAviso />
+          )}
+        </section>
+      )}
+
+          <InvitaPropietario />
         </>
       )}
     </>

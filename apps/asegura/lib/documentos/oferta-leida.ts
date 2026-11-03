@@ -11,7 +11,7 @@
 //   · Un JSON que no parsea o no tiene la forma es «no se ha podido leer», nunca una oferta vacía.
 
 import { z } from 'zod'
-import { fraccionamientoDe, normalizarGarantia, remapearGarantiasLectura, normalizarTexto, type OfertaNormalizada, type RamoOferta, type ValorGarantia } from '@central/module-seguros'
+import { fraccionamientoDe, garantiasLeidasDeDocumento, normalizarGarantia, remapearGarantiasLectura, normalizarTexto, type OfertaNormalizada, type RamoOferta, type ValorGarantia } from '@central/module-seguros'
 
 const MAX_GARANTIAS = 80
 const MAX_TEXTO_EVIDENCIA = 300
@@ -260,6 +260,10 @@ export function ofertaNormalizadaDeFila(f: {
       ? { avisos: [`${remap.sinEquivalencia.length === 1 ? 'Una garantía leída' : `${remap.sinEquivalencia.length} garantías leídas`} con claves genéricas sin equivalencia en este ramo (${remap.sinEquivalencia.join(', ')}): no se comparan, revisa la oferta`] }
       : {}),
     fuente: esBot ? 'bot' : f.rol === 'actual' ? 'pdf_competencia' : 'pdf_compania',
+    ...(f.rol !== 'actual' && garantiasLeidasDeDocumento({
+      compania: f.compania, fuente: esBot ? 'bot' : null,
+      avisos: [...(Array.isArray(extra.avisos) ? extra.avisos : []), ...(Array.isArray(extra.avisosInternos) ? extra.avisosInternos : [])].filter((a): a is string => typeof a === 'string'),
+    }) ? { garantiasDeDocumento: true } : {}),
     franquiciaGeneral: franq,
     fraccionamiento: fraccionamientoDe(typeof extra.formaPago === 'string' ? extra.formaPago : typeof extra.fraccionamiento === 'string' ? extra.fraccionamiento : null),
     referencia: { tipo: 'oportunidad_oferta', id: f.id },

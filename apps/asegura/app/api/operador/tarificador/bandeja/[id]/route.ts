@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { esAccionBandeja } from '@central/module-tarificacion'
 import { operadorAutorizado } from '@/lib/operador'
 import { auditado } from '@/lib/auditoria'
@@ -7,6 +7,7 @@ import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aplicarAccionBandeja } from '@/lib/tarificador-bandeja'
 import { leerEleccionBandeja, leerEleccionPoblacionBandeja } from '@/lib/tarificador-bandeja-reglas'
 import { lanzarPendientes } from '@/lib/tarificador'
+import { presupuestoTrasTrabajoRpa } from '@/lib/presupuesto-rpa'
 import { rpaActivo } from '@/lib/tarificador-reglas'
 
 export const runtime = 'nodejs'
@@ -62,8 +63,16 @@ export const POST = auditado(async (req: Request, ctx: { params: Promise<{ id: s
       lanzado = !!l?.lanzados.includes(id)
       if (!errorLanzando && l?.omitido) errorLanzando = l.omitido
     }
+    // Vehículo de referencia (01/11/2026): la elección se propagó a otros trabajos de la oportunidad → su máquina, por compañía (mejor
+    // esfuerzo: si falla, quedan `pendiente` y los lanza el barrido). Solo ids y compañías en la respuesta, nada del vehículo.
+    const propagados = r.estado === 'aplicado' ? (r.propagados ?? []) : []
+    for (const c of [...new Set(propagados.map((x) => x.compania))].filter((c) => r.estado === 'aplicado' && c !== r.compania)) {
+      await lanzarPendientes(correduria.id, c).catch(() => null)
+    }
+    // Cancelar cierra un trabajo: si era el último abierto de la oportunidad, el borrador del presupuesto se prepara con los `ok`.
+    if (accion === 'cancelar' && r.estado === 'aplicado') after(() => presupuestoTrasTrabajoRpa(id).then(() => undefined))
     const { estado, estadoTrabajo } = r
-    return NextResponse.json({ estado, estadoTrabajo, lanzado, ...(errorLanzando ? { errorLanzando } : {}) })
+    return NextResponse.json({ estado, estadoTrabajo, lanzado, ...(errorLanzando ? { errorLanzando } : {}), ...(propagados.length ? { propagados: propagados.map((x) => ({ id: x.id, compania: x.compania })) } : {}) })
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/tarificador/bandeja', e) }, { status: 503 })
   }

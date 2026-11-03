@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-26T17:36:31Z",
+  "generadoEn": "2026-11-03T07:41:34Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -88,11 +88,6 @@
       "npm": "@central/core-vehiculos"
     },
     {
-      "id": "module-agenda",
-      "tipo": "module",
-      "npm": "@central/module-agenda"
-    },
-    {
       "id": "module-alquiler",
       "tipo": "module",
       "npm": "@central/module-alquiler"
@@ -106,6 +101,11 @@
       "id": "module-chat",
       "tipo": "module",
       "npm": "@central/module-chat"
+    },
+    {
+      "id": "module-cima",
+      "tipo": "module",
+      "npm": "@central/module-cima"
     },
     {
       "id": "module-concursos",
@@ -381,7 +381,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 8
+        "evidencias": 9
       },
       "asegura-web": {
         "estado": "no",
@@ -405,7 +405,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 42
+        "evidencias": 43
       },
       "rrhh": {
         "estado": "usado",
@@ -459,7 +459,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 9
+        "evidencias": 12
       },
       "rrhh": {
         "estado": "no",
@@ -493,7 +493,7 @@
       },
       "asegura-web": {
         "estado": "usado",
-        "evidencias": 6
+        "evidencias": 7
       },
       "housesevillana": {
         "estado": "usado",
@@ -539,7 +539,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       },
       "asegura-portal": {
         "estado": "usado",
@@ -567,7 +567,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 7
       },
       "rrhh": {
         "estado": "no",
@@ -621,7 +621,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "rrhh": {
         "estado": "usado",
@@ -728,8 +728,8 @@
         "evidencias": 0
       },
       "plataforma": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 4
       },
       "rrhh": {
         "estado": "no",
@@ -783,19 +783,19 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 6
+        "evidencias": 17
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 11
       },
       "sivra": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 1
       },
       "transporte": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       }
     },
     "core-payments": {
@@ -1025,7 +1025,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 18
+        "evidencias": 21
       },
       "asegura-portal": {
         "estado": "usado",
@@ -1053,7 +1053,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 38
+        "evidencias": 43
       },
       "rrhh": {
         "estado": "usado",
@@ -1080,60 +1080,6 @@
       "asegura": {
         "estado": "usado",
         "evidencias": 2
-      },
-      "asegura-portal": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "asegura-web": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "housesevillana": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "ia-rest": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "ialimp": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "mariscos": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "plataforma": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "rrhh": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "sivra": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "transporte": {
-        "estado": "no",
-        "evidencias": 0
-      }
-    },
-    "module-agenda": {
-      "almacen": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "alquiler": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "asegura": {
-        "estado": "no",
-        "evidencias": 0
       },
       "asegura-portal": {
         "estado": "no",
@@ -1328,6 +1274,60 @@
       "rrhh": {
         "estado": "usado",
         "evidencias": 2
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-cima": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
       },
       "sivra": {
         "estado": "no",
@@ -2055,7 +2055,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 62
+        "evidencias": 94
       },
       "asegura-web": {
         "estado": "no",
@@ -2321,11 +2321,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 316
+        "evidencias": 336
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 186
+        "evidencias": 214
       },
       "asegura-web": {
         "estado": "usado",
@@ -2349,7 +2349,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 240
+        "evidencias": 248
       },
       "rrhh": {
         "estado": "no",
@@ -2375,7 +2375,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 64
+        "evidencias": 66
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2429,11 +2429,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 47
+        "evidencias": 54
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 145
+        "evidencias": 167
       },
       "asegura-web": {
         "estado": "usado",
@@ -2565,7 +2565,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 38
+        "evidencias": 40
       },
       "rrhh": {
         "estado": "no",
@@ -2591,7 +2591,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 65
+        "evidencias": 76
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2619,7 +2619,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 35
+        "evidencias": 36
       },
       "rrhh": {
         "estado": "no",
@@ -3025,11 +3025,11 @@
       },
       "asegura": {
         "presente": true,
-        "evidencias": 24
+        "evidencias": 25
       },
       "asegura-portal": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 2
       },
       "asegura-web": {
         "presente": false,
@@ -3169,7 +3169,7 @@
       },
       "sivra": {
         "presente": true,
-        "evidencias": 31
+        "evidencias": 30
       },
       "transporte": {
         "presente": false,
@@ -3701,7 +3701,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 6
+        "evidencias": 52
       },
       "rrhh": {
         "presente": false,
@@ -4063,13 +4063,17 @@
     "core-storage": [],
     "core-telegram": [],
     "core-vehiculos": [],
-    "module-agenda": [],
     "module-alquiler": [
       "module-intercompany",
       "module-materiales"
     ],
     "module-asn": [],
     "module-chat": [],
+    "module-cima": [
+      "core-identity",
+      "module-seguros",
+      "module-seguros-pii"
+    ],
     "module-concursos": [],
     "module-contabilidad": [],
     "module-crm": [],
@@ -4296,6 +4300,7 @@
       "/api/operador/expedientes",
       "/api/operador/expedientes/auto",
       "/api/operador/export-rgpd",
+      "/api/operador/felicitaciones/exclientes",
       "/api/operador/formacion",
       "/api/operador/formacion/baja",
       "/api/operador/google-contactos",
@@ -4333,6 +4338,7 @@
       "/api/operador/oportunidades-aviso",
       "/api/operador/oportunidades-patrimonio",
       "/api/operador/partes",
+      "/api/operador/patrimonio-conversion",
       "/api/operador/poliza",
       "/api/operador/poliza-documento",
       "/api/operador/poliza/emitida",
@@ -4363,8 +4369,14 @@
       "/api/operador/revision",
       "/api/operador/sin-canal",
       "/api/operador/siniestro",
+      "/api/operador/siniestro/cierre",
+      "/api/operador/siniestro/hilo",
+      "/api/operador/siniestro/hilo/volcado",
+      "/api/operador/siniestro/ia",
+      "/api/operador/siniestro/poliza-buscar",
       "/api/operador/siniestro/terceros",
       "/api/operador/siniestros-nuevos",
+      "/api/operador/siniestros/esperando",
       "/api/operador/solicitud-datos",
       "/api/operador/solicitud-datos/lead-web",
       "/api/operador/supresiones",
@@ -4392,6 +4404,7 @@
       "/api/operador/tarificador/grabaciones/[id]",
       "/api/operador/tarificador/grabaciones/[id]/analizar",
       "/api/operador/tarificador/grabaciones/[id]/pantallas",
+      "/api/operador/tarificador/imagen",
       "/api/operador/tarificador/integraciones",
       "/api/operador/tarificador/intervenciones",
       "/api/operador/tarificador/oportunidad",
@@ -4424,6 +4437,7 @@
       "/api/portal/mejorar-precio",
       "/api/portal/nota",
       "/api/portal/patrimonio/inquilino",
+      "/api/portal/patrimonio/inquilino-precio",
       "/api/portal/patrimonio/pedir-precio",
       "/api/portal/personas-poliza",
       "/api/portal/presupuesto",
@@ -4488,6 +4502,7 @@
       "/api/inquilino/[contratoId]/consentimiento",
       "/api/inquilino/[contratoId]/documento/[documentoId]",
       "/api/inquilino/[contratoId]/justificantes",
+      "/api/inquilino/[contratoId]/pedir-precio",
       "/api/inquilino/[contratoId]/revocar",
       "/api/inquilino/canjear",
       "/api/invitaciones",
@@ -4508,6 +4523,8 @@
       "/api/mis-datos/cuenta/codigo",
       "/api/modulos",
       "/api/oposicion-senales-patrimonio",
+      "/api/patrimonio/autorizaciones",
+      "/api/patrimonio/autorizaciones/[id]",
       "/api/patrimonio/codigo-postal",
       "/api/patrimonio/comunidades",
       "/api/patrimonio/contratos",
@@ -4522,21 +4539,31 @@
       "/api/patrimonio/documentos",
       "/api/patrimonio/documentos/[id]",
       "/api/patrimonio/facturas",
+      "/api/patrimonio/gastos",
       "/api/patrimonio/importaciones",
       "/api/patrimonio/importaciones/[id]",
       "/api/patrimonio/importaciones/[id]/confirmar",
       "/api/patrimonio/importaciones/[id]/descartar",
       "/api/patrimonio/importaciones/plantilla",
+      "/api/patrimonio/informe-gestor",
       "/api/patrimonio/inmuebles",
       "/api/patrimonio/inmuebles/[id]/hipoteca",
       "/api/patrimonio/inmuebles/[id]/obligaciones",
       "/api/patrimonio/inmuebles/[id]/pedir-precio",
+      "/api/patrimonio/inmuebles/[id]/reparto",
       "/api/patrimonio/inmuebles/[id]/seguros",
+      "/api/patrimonio/inmuebles/[id]/unidades",
       "/api/patrimonio/inquilinos/[id]",
       "/api/patrimonio/ofertas",
       "/api/patrimonio/plantillas",
+      "/api/patrimonio/recomendaciones",
+      "/api/patrimonio/recomendaciones/[id]",
       "/api/patrimonio/rentabilidad/fiscal",
       "/api/patrimonio/vias",
+      "/api/patrimonio/volcados",
+      "/api/patrimonio/volcados/[id]",
+      "/api/patrimonio/volcados/[id]/confirmar",
+      "/api/patrimonio/volcados/[id]/descartar",
       "/api/peticiones",
       "/api/peticiones/[id]",
       "/api/polizas",
@@ -4568,7 +4595,13 @@
       "/api/sugerencia",
       "/api/sugerencias",
       "/api/sugerencias/pedir",
-      "/api/supresion"
+      "/api/supresion",
+      "/api/vehiculos/[bienId]/publico",
+      "/api/vehiculos/[bienId]/qr",
+      "/api/vehiculos/[bienId]/qr/[id]",
+      "/api/vehiculos/etiquetas",
+      "/api/vehiculos/ficha",
+      "/api/vehiculos/publico-defecto"
     ],
     "asegura-web": [
       "/api/aviso",
@@ -4694,7 +4727,6 @@
       "/api/cron/crm-lead-hunter-sevilla",
       "/api/cron/crm-recordatorio-dia2",
       "/api/cron/crm-recordatorios",
-      "/api/cron/eventos-entorno",
       "/api/cron/feedback-visita",
       "/api/cron/instagram",
       "/api/cron/instagram-ideas",
@@ -5351,6 +5383,7 @@
       "/api/banca/reglas",
       "/api/banca/revisar",
       "/api/banca/ticket",
+      "/api/cierres-mes/reabrir",
       "/api/comunicacion/categorias",
       "/api/comunicacion/conversaciones",
       "/api/comunicacion/conversaciones/[id]",
@@ -5474,6 +5507,7 @@
       "/api/correduria/oportunidad/whatsapp",
       "/api/correduria/oportunidades-patrimonio",
       "/api/correduria/partes",
+      "/api/correduria/patrimonio-conversion",
       "/api/correduria/poliza",
       "/api/correduria/poliza/traer-pdf",
       "/api/correduria/portal-invitaciones",
@@ -5491,7 +5525,13 @@
       "/api/correduria/revision",
       "/api/correduria/sin-canal",
       "/api/correduria/siniestro",
+      "/api/correduria/siniestro/cierre",
+      "/api/correduria/siniestro/hilo",
+      "/api/correduria/siniestro/ia",
+      "/api/correduria/siniestro/poliza-buscar",
       "/api/correduria/siniestro/terceros",
+      "/api/correduria/siniestro/volcado",
+      "/api/correduria/siniestros-esperando",
       "/api/correduria/solicitud-datos",
       "/api/correduria/solicitudes-portal",
       "/api/correduria/supresiones",
@@ -5514,6 +5554,7 @@
       "/api/correduria/tarificador/grabaciones/[id]",
       "/api/correduria/tarificador/grabaciones/[id]/analizar",
       "/api/correduria/tarificador/grabaciones/[id]/pantallas",
+      "/api/correduria/tarificador/grabaciones/extension",
       "/api/correduria/tarificador/integraciones",
       "/api/correduria/tarificador/oportunidad",
       "/api/correduria/tarificador/oportunidad/[id]/presupuesto-rpa",
@@ -5535,6 +5576,7 @@
       "/api/cron/canario-lead",
       "/api/cron/catastro-pisos",
       "/api/cron/categorizar-movimientos",
+      "/api/cron/cierre-mes",
       "/api/cron/cima-liq",
       "/api/cron/cima-pull-respaldo",
       "/api/cron/cima-sincro",
@@ -5566,9 +5608,11 @@
       "/api/cron/facturas-conciliar-gmail",
       "/api/cron/facturas-resumen-semanal",
       "/api/cron/facturas-scan",
+      "/api/cron/fiscal-avisos",
       "/api/cron/health-check",
       "/api/cron/ia-director-refresh",
       "/api/cron/ia-saldo",
+      "/api/cron/idealista-correos",
       "/api/cron/paper-tracker",
       "/api/cron/patrones-fiscal-refresh",
       "/api/cron/pre-renta",
@@ -5618,6 +5662,8 @@
       "/api/finanzas/categorias/insights",
       "/api/finanzas/categorias/movimientos",
       "/api/finanzas/comparativa",
+      "/api/finanzas/compras-previstas",
+      "/api/finanzas/compras-previstas/[id]",
       "/api/finanzas/export",
       "/api/finanzas/gastos",
       "/api/finanzas/gastos/conciliar-gmail",
@@ -5630,7 +5676,9 @@
       "/api/finanzas/novedades/[id]/descartar",
       "/api/finanzas/perfil",
       "/api/finanzas/proyeccion",
+      "/api/finanzas/situacion-fiscal",
       "/api/finanzas/tarjeta",
+      "/api/inicio/calendario-pisos",
       "/api/internal/alerta",
       "/api/internal/gsc",
       "/api/internal/latido",
@@ -5650,6 +5698,9 @@
       "/api/publico/correduria/consentimiento",
       "/api/publico/correduria/lead",
       "/api/publico/disponibilidad",
+      "/api/publico/factura/[token]",
+      "/api/publico/factura/[token]/cp",
+      "/api/publico/factura/[token]/vias",
       "/api/sivra/conciliar-booking",
       "/api/sivra/domotica/acceso/[id]",
       "/api/sivra/domotica/acceso/[id]/abrir",
@@ -5672,8 +5723,14 @@
       "/api/sivra/expenses/fijos/generar",
       "/api/sivra/expenses/parse-invoice",
       "/api/sivra/extras/webhook",
+      "/api/sivra/facturas",
       "/api/sivra/facturas-control",
       "/api/sivra/facturas-limpieza",
+      "/api/sivra/facturas/[id]",
+      "/api/sivra/facturas/[id]/pdf",
+      "/api/sivra/facturas/reservas",
+      "/api/sivra/facturas/solicitud",
+      "/api/sivra/facturas/solicitud/preparar",
       "/api/sivra/fiscal",
       "/api/sivra/income",
       "/api/sivra/incomes",
@@ -5760,7 +5817,6 @@
       "/api/subastas",
       "/api/subastas/criterios",
       "/api/subastas/documentos",
-      "/api/subastas/fase3-debug",
       "/api/subastas/mapa",
       "/api/subastas/mercado/idealista",
       "/api/subastas/nota-simple",
@@ -5915,7 +5971,6 @@
       "/api/limpiadoras/alertas",
       "/api/limpiadoras/auth",
       "/api/limpiadoras/auto-assign",
-      "/api/limpiadoras/auto-sessions",
       "/api/limpiadoras/complete",
       "/api/limpiadoras/early-checkin",
       "/api/limpiadoras/fichar",
@@ -5928,7 +5983,6 @@
       "/api/mensajes",
       "/api/mensajes/[bookingId]",
       "/api/mensajes/[bookingId]/email",
-      "/api/mensajes/auto-reply",
       "/api/mensajes/knowledge",
       "/api/mensajes/reply",
       "/api/mercado/cron",
@@ -6119,6 +6173,7 @@
       "seguros.siniestro_contrarios",
       "seguros.siniestro_intervinientes",
       "seguros.siniestro_lesionados",
+      "seguros.siniestro_mensajes",
       "seguros.siniestro_testigos",
       "seguros.siniestros",
       "seguros.solicitud_cambio_documentos",
@@ -6141,6 +6196,7 @@
       "seguros.tarificador_grabacion_pantallas",
       "seguros.tarificador_grabaciones",
       "seguros.tarificador_humo_informes",
+      "seguros.tarificador_imagen",
       "seguros.tarificador_intervenciones",
       "seguros.tarificador_pausas",
       "seguros.tarificador_sesiones",
@@ -6190,6 +6246,7 @@
       "seguros.portal_patrimonio_obligacion",
       "seguros.portal_patrimonio_plantilla_gasto",
       "seguros.portal_patrimonio_recibo_compartido",
+      "seguros.portal_patrimonio_recomendacion",
       "seguros.portal_patrimonio_renta_actualizacion",
       "seguros.portal_patrimonio_titular",
       "seguros.portal_peticion_acceso",
@@ -6200,6 +6257,8 @@
       "seguros.portal_push_suscripcion",
       "seguros.portal_revision_poliza",
       "seguros.portal_supresion",
+      "seguros.portal_vehiculo_publico",
+      "seguros.portal_vehiculo_qr",
       "seguros.portal_vinculo",
       "seguros.portal_vista_corredor"
     ],
@@ -6342,6 +6401,7 @@
       "broker_saldos",
       "categoria_alertas",
       "categoria_alertas_log",
+      "cierres_mes",
       "cima_liquidaciones",
       "comisiones_cobertura",
       "comisiones_devengo",
@@ -6389,7 +6449,9 @@
       "empresas_enriquecimiento_coste",
       "empresas_ficha",
       "facturas_proveedor",
+      "fiscal_avisos_enviados",
       "fiscal_ayudas",
+      "fiscal_compras_previstas",
       "ia_cache_semantica",
       "ia_director_aprendizaje",
       "ia_director_prompt",
@@ -6435,6 +6497,8 @@
       "pricing_escaparate",
       "pricing_flight_demand",
       "pricing_pl_referencia",
+      "pricing_suelos_fecha",
+      "propiedad_titularidad",
       "reservas_canceladas",
       "reservas_correo_booking",
       "rutina_tokens",
@@ -6445,6 +6509,9 @@
       "sivra_codigos_acceso",
       "sivra_extras_catalogo",
       "sivra_extras_reserva",
+      "sivra_factura_series",
+      "sivra_factura_solicitudes",
+      "sivra_facturas_huesped",
       "sivra_ordenes_limpieza",
       "sobre",
       "subastas",
@@ -6629,7 +6696,7 @@
     {
       "id": "idealista-radar",
       "name": "idealista-radar",
-      "description": "Rutina PROGRAMADA diaria que busca CASAS de 3+ dormitorios cerca de la playa (costa de Huelva a diario; Asturias, Cantabria y Cádiz por turnos) con el conector de Idealista y las mete en el corpus `mercado_comparables` (radar de subastas/chollos/lente 🌊). Sustituye a las alertas de correo de Idealista (Fotocasa sigue por correo). Úsala al disparo diario o si Alberto pide \"mira Idealista en la costa\". Sin secretos."
+      "description": "Referencia de zonas de playa y del corredor A-49 para buscar casas en idealista. RUTINA DESACTIVADA el 28/10/2026 (condiciones de uso del conector). Sin rutina ni escritura en mercado_comparables. Úsala solo si Alberto pide ver anuncios concretos de idealista en el chat, o para guardar búsquedas con alerta. El perfil casa vacacional (avisos Telegram de idealista y subastas) vive en module-subastas. Sin secretos."
     },
     {
       "id": "inversion-inmueble",
@@ -6837,12 +6904,12 @@
         "label": "QR / portal cliente",
         "tiene": [
           "asegura",
+          "asegura-portal",
           "ia-rest"
         ],
         "falta": [
           "almacen",
           "alquiler",
-          "asegura-portal",
           "asegura-web",
           "housesevillana",
           "ialimp",
@@ -7200,7 +7267,7 @@
     "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1825,
+    "apis": 1875,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

@@ -161,6 +161,11 @@ export type DerramaFila = {
   id: string; comunidadId: string; comunidadNombre: string; inmuebleId: string; inmuebleAlias: string; concepto: string
   totalCent: number; cuotas: number; primera: string
 }
+/** Gasto ya generado (cron mensual, derrama o factura confirmada). `propuesto` = espera confirmación; `importeCent` `null` = importe sin saber. */
+export type GastoFila = {
+  id: string; inmuebleId: string | null; fecha: string; concepto: string | null; categoria: string | null
+  totalCent: number | null; estado: 'propuesto' | 'confirmado'; origen: string
+}
 /** Factura leída con IA que se subió y aún no se ha confirmado ni descartado (la revisión se pudo cerrar sin resolverla). */
 export type FacturaPendiente = {
   id: string
@@ -184,6 +189,8 @@ export type TitularGastos = {
   plantillas: PlantillaFila[]
   comunidades: ComunidadFila[]
   derramas: DerramaFila[]
+  /** Gastos propuestos (cron/derrama) y confirmados recientes. Las facturas por revisar van en `facturasPendientes`. */
+  gastos: GastoFila[]
   /** Solo con nivel de gestión; vacío si no puede gestionar. */
   facturasPendientes: FacturaPendiente[]
 }

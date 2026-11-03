@@ -69,7 +69,7 @@ test('el correo dice CUÁNTAS cosas hay y de qué clase, y lleva el enlace', () 
 test('sin nombre se saluda sin nombre, y no se inventa uno', () => {
   const c = cuerpoAvisosIntranet({ nombre: null, avisos: [{ tipo: 'peticion_recibida' }], total: 1, enlace: 'https://x.es/' })
   assert.match(c.texto, /^Hola:/)
-  assert.match(c.asunto, /^Novedades/, 'una es «Novedades», no «1 novedades»')
+  assert.match(c.asunto, /^\p{Extended_Pictographic}\uFE0F? Novedades/u, 'UN emoji + espacio + «Novedades»; una es «Novedades», no «1 novedades»')
 })
 
 test('🚨 el correo habla de lo NUEVO, y lo que ya estaba lo dice APARTE', () => {

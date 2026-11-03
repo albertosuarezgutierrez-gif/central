@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
-import { getRestauranteId } from '@/lib/session'
+import { getRestauranteId, getSession } from '@/lib/session'
 import { crearPrintJobs } from '@/lib/courier'
 import { notifyError } from '@/lib/notify'
 import { enviarEmailErrorTecnicoOwner } from '@/lib/email'
@@ -60,9 +60,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'items requeridos' }, { status: 400 })
     }
 
-    const sessionHeader = req.headers.get('x-ia-session')
-    let camarero_id = ''
-    try { camarero_id = JSON.parse(sessionHeader ?? '{}').id ?? '' } catch {}
+    // camarero_id SOLO de la sesión firmada (antes se leía de la cabecera cruda → suplantación en tickets)
+    const camarero_id = getSession(req)?.id ?? ''
 
     // Resolver nombre real del camarero para el ticket
     let camarero_nombre = 'Equipo'

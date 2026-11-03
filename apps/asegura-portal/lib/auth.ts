@@ -4,7 +4,7 @@ import {
   requireSecret,
 } from '@central/core-identity'
 import { createHash } from 'node:crypto'
-import { IDENTIDAD_CORREDOR_ID, SESION_CORREDOR, SESION_CORREDOR_SEGUNDOS } from '@central/module-seguros-portal'
+import { SESION_CORREDOR, SESION_CORREDOR_SEGUNDOS } from '@central/module-seguros-portal'
 
 import { COOKIE_NAME } from './auth-cookie'
 export { COOKIE_NAME }
@@ -20,7 +20,7 @@ export const COOKIE_OPTS = {
 // portal no debe valer jamás en la app interna. `requireSecret` lanza en
 // producción si falta y solo cae al literal en desarrollo — es lo que exige el
 // guardián `test/regression-secrets.test.ts` (ver `packages/core-identity/src/secret.ts`).
-const SECRET = () => requireSecret('ASEGURA_PORTAL_SESSION_SECRET', 'portal-dev-secret-change-in-prod')
+const SECRET = () => requireSecret('ASEGURA_PORTAL_SESSION_SECRET')
 
 /**
  * Hash del canal para poder buscarlo sin guardar el email o el móvil en claro.
@@ -47,7 +47,7 @@ export function hashCanal(valor: string): string {
  * usuario crea una identidad nueva vacía (landmine del CLAUDE.md de la app).
  */
 function hashConPimienta(valor: string): string {
-  const pimienta = requireSecret('ASEGURA_PORTAL_CANAL_PEPPER', 'portal-dev-pepper-change-in-prod')
+  const pimienta = requireSecret('ASEGURA_PORTAL_CANAL_PEPPER')
   return createHash('sha256').update(`${pimienta}:${valor}`).digest('hex')
 }
 
@@ -75,8 +75,8 @@ export async function crearSesion(identidadId: string): Promise<string> {
 
 /**
  * La sesión del CORREDOR mirando el portal como lo ve un cliente (08/09/2026).
- * Es la identidad dedicada `IDENTIDAD_CORREDOR_ID` con el cliente que se mira
- * en el propio token: quien lea la cookie sabe que NO es el cliente, y la
+ * Es la identidad de ESA apertura (`lib/vista-corredor-identidad.ts`, una por
+ * vista desde el 02/11/2026) con el cliente que se mira en el propio token: quien lea la cookie sabe que NO es el cliente, y la
  * banda de aviso y el veto a escrituras (`middleware.ts`) salen de aquí.
  * Dura 4 h, no 30 días: es una consulta, no una cuenta.
  */
@@ -84,9 +84,9 @@ export type SesionCorredor = { clienteId: string }
 
 export type SesionPortal = { identidadId: string; corredor: SesionCorredor | null }
 
-export async function crearSesionCorredor(clienteId: string): Promise<string> {
+export async function crearSesionCorredor(identidadId: string, clienteId: string): Promise<string> {
   const { token } = await createToken({
-    claims: { identidadId: IDENTIDAD_CORREDOR_ID, corredor: { clienteId } },
+    claims: { identidadId, corredor: { clienteId } },
     secret: SECRET(),
     expiresIn: SESION_CORREDOR,
   })

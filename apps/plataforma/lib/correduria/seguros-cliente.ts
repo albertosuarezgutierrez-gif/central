@@ -234,7 +234,20 @@ export function repartirSegurosCliente({ polizas, declaradas, oportunidades, hoy
   }
   const visibles = grupos.filter(g => !coberturas.some(c => tapa(c, g)) && !bienesDescartados.some(d => tapa(d, g)))
   const reales = (oportunidades ?? []).filter(o => !(o.estado === 'perdida' && o.motivoPerdida === 'error_alta'))
+  // Mismo nº de póliza que una viva del cliente = el mismo seguro (compañía absorbida: Plus Ultra →
+  // Occident) aunque ramo+título no casen. Mismas pólizas que alimentan `coberturas`.
+  const numerosVivos = new Set<string>()
+  for (const p of [
+    ...conNosotros.flatMap(s => (s.clase === 'poliza' ? [s.poliza] : [])),
+    ...enCompetencia.map(s => s.poliza),
+    ...sustituidas,
+    ...yaNoExiste.flatMap(s => (s.clase === 'poliza' ? [s.poliza] : [])),
+  ]) {
+    const n = claveNumeroPoliza(p.numeroPoliza)
+    if (n !== null) numerosVivos.add(n)
+  }
   const representante = visibles
+    .filter(g => !g.filas.some(f => comparteNumeroVivo(f, numerosVivos)))
     .filter(g => !reales.some(o => (o.ramo === null || o.ramo === g.rep.tipo) && g.filas.some(f => mismoRiesgo(o, f))))
     .map(g => g.rep)
   for (const p of representante) {
@@ -257,6 +270,15 @@ export function repartirSegurosCliente({ polizas, declaradas, oportunidades, hoy
       // competencia y difieren de los de nuestra póliza perdida aunque sea el mismo seguro.
       // La que cuelga de una póliza concreta (renovación, o abierta al anotarle el vencimiento)
       // va a SU tarjeta: con dos del mismo ramo, casar por ramo la pintaría en la otra.
+      // Si la abierta es de una póliza VIVA con nosotros (mismo id, o mismo nº normalizado, o misma
+      // matrícula; null nunca casa) NO es una oportunidad aparte: se cuelga de su tarjeta. Si la
+      // tarjeta ya lleva una, no se pisa ni se duplica en sueltas.
+      const viva = conNosotros.find((s): s is Extract<SeguroCliente, { clase: 'poliza' }> => s.clase === 'poliza' && o.polizaId != null && s.poliza.id === o.polizaId)
+        ?? (claveNumeroPoliza(o.numeroPoliza) === null ? undefined
+          : conNosotros.find((s): s is Extract<SeguroCliente, { clase: 'poliza' }> => s.clase === 'poliza' && claveNumeroPoliza(s.poliza.numeroPoliza) === claveNumeroPoliza(o.numeroPoliza)))
+        ?? (claveMatricula(o.matricula) === null ? undefined
+          : conNosotros.find((s): s is Extract<SeguroCliente, { clase: 'poliza' }> => s.clase === 'poliza' && claveMatricula(s.poliza.matricula) === claveMatricula(o.matricula)))
+      if (viva) { if (viva.oportunidad === null) viva.oportunidad = o; continue }
       const hueco = enCompetencia.find(s => s.oportunidad === null && o.polizaId != null && s.poliza.id === o.polizaId)
         ?? enCompetencia.find(s => s.oportunidad === null && o.ramo !== null && s.poliza.tipo === o.ramo
           && !otraMatricula(o.matricula, s.poliza.matricula))
@@ -340,6 +362,12 @@ function tieneClaves(o: OportunidadDeCliente): boolean {
 function mismoRiesgo(o: OportunidadDeCliente, p: PolizaFicha): boolean {
   const m = claveMatricula(o.matricula), n = claveNumeroPoliza(o.numeroPoliza)
   return (m !== null && m === claveMatricula(p.matricula)) || (n !== null && n === claveNumeroPoliza(p.numeroPoliza))
+}
+
+/** ¿La fila del volcado lleva el nº de póliza de alguna viva del cliente? `null` (número corto) nunca casa. */
+function comparteNumeroVivo(p: PolizaFicha, numerosVivos: Set<string>): boolean {
+  const n = claveNumeroPoliza(p.numeroPoliza)
+  return n !== null && numerosVivos.has(n)
 }
 
 function otraMatricula(a: string | null, b: string | null): boolean {

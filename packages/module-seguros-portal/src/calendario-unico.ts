@@ -1,7 +1,7 @@
 // EL CALENDARIO ÚNICO del portal (26/10/2026, Alberto): hasta hoy había TRES «calendarios» —la pestaña «Recordatorios»
 // de la bóveda, la tarjeta «Calendario» de Inicio y `/patrimonio/calendario`— más la campana «Avisos». Ahora es UNA
 // vista (Herramientas → Calendario) que junta vencimientos de seguros, recibos, avisos con fecha, las fechas del
-// patrimonio y los recordatorios propios.
+// patrimonio, las ITV de la flota de la empresa y los recordatorios propios.
 //
 // Este fichero es la COMPOSICIÓN pura (sin BD, sin reloj: `hoy` entra). La lectura de cada fuente vive en la app.
 //
@@ -13,7 +13,7 @@
 /** La ruta del calendario único. Las viejas (`/boveda?vista=recordatorios`, `/patrimonio/calendario`) redirigen aquí. */
 export const RUTA_CALENDARIO = '/herramientas/calendario' as const
 
-export const ORIGENES_CALENDARIO = ['seguro', 'recibo', 'patrimonio', 'recordatorio', 'aviso'] as const
+export const ORIGENES_CALENDARIO = ['seguro', 'recibo', 'patrimonio', 'flota', 'recordatorio', 'aviso'] as const
 export type OrigenCalendario = (typeof ORIGENES_CALENDARIO)[number]
 
 /** Cuántas filas se pintan de golpe antes del «Ver más» (regla de rendimiento de la casa). */
@@ -30,6 +30,11 @@ export type EntradaCalendarioCruda = {
   href: string
   /** Pide hacer algo ya (p. ej. un recibo devuelto): se marca, además del color, con texto. */
   urgente?: boolean
+  /**
+   * Una segunda acción propia de la fila (p. ej. «Revisar mi seguro» en un vencimiento de póliza: la oportunidad para
+   * la correduría, el mismo mecanismo que «Mejorar el precio»). Solo se pone cuando la página destino la atendería.
+   */
+  accion?: { texto: string; href: string }
 }
 
 /** `null` = NO se ha podido comprobar (≠ `[]`, que es «se miró y no hay»). */
@@ -134,4 +139,42 @@ export function componerCalendario(entrada: {
     return a.dias - b.dias || a.titulo.localeCompare(b.titulo, 'es')
   })
   return { entradas, avisos, sinComprobar, vacio: sinComprobar.length === 0 && entradas.length === 0 && avisos.length === 0 }
+}
+
+export type GrupoCalendario = {
+  /** `vencidas` · `sin_fecha` · `YYYY-MM`. */
+  clave: string
+  /** «Ya vencido» · «octubre de 2026» · «Sin fecha». */
+  titulo: string
+  entradas: EntradaCalendario[]
+}
+
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+
+/**
+ * Agrupa las entradas YA ordenadas (`componerCalendario`) en: lo ya vencido, un grupo por mes y lo que no tiene fecha al
+ * final. Conserva el orden de entrada dentro de cada grupo y no inventa fecha: sin fecha va a «Sin fecha», nunca a un mes.
+ */
+export function agruparPorMes(entradas: readonly EntradaCalendario[]): GrupoCalendario[] {
+  const vencidas: EntradaCalendario[] = []
+  const sinFecha: EntradaCalendario[] = []
+  const meses = new Map<string, EntradaCalendario[]>()
+  for (const e of entradas) {
+    if (e.fecha === null || e.dias === null) sinFecha.push(e)
+    else if (e.dias < 0) vencidas.push(e)
+    else {
+      const k = e.fecha.slice(0, 7)
+      const l = meses.get(k)
+      if (l) l.push(e)
+      else meses.set(k, [e])
+    }
+  }
+  const out: GrupoCalendario[] = []
+  if (vencidas.length > 0) out.push({ clave: 'vencidas', titulo: 'Ya vencido', entradas: vencidas })
+  for (const k of [...meses.keys()].sort()) {
+    const [a, m] = k.split('-')
+    out.push({ clave: k, titulo: `${MESES[Number(m) - 1]} de ${a}`, entradas: meses.get(k)! })
+  }
+  if (sinFecha.length > 0) out.push({ clave: 'sin_fecha', titulo: 'Sin fecha', entradas: sinFecha })
+  return out
 }

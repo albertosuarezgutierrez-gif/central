@@ -45,6 +45,13 @@ export type CtxEntradaMapfre = Pick<ContextoPortal, 'pulsar' | 'pausa'> & {
   log?: (m: string, d?: Record<string, unknown>) => void
   /** El enlace «…Emisión…» de menú: SOLO por la excepción exacta del guard (`pulsarEnlaceEntradaAutorizado`). */
   pulsarEnlaceEntrada: (boton: Locator) => Promise<void>
+  /**
+   * «Acceso a NSE» de la página intermedia de Patinetes (28/10/2026): SOLO por la puerta exacta del guard (`pulsarAccesoNseMapfre`),
+   * porque su href (`abrirAplicacion('inicio.jsp', 'NUEVO SISTEMA DE EMISIÓN')`) casa con `emisi`. Sin ella, `ctx.pulsar` (que lo bloquea).
+   */
+  pulsarAccesoNse?: (boton: Locator) => Promise<void>
+  /** «Oferta / Contratación» del menú de la aplicación NSE (28/10/2026): SOLO por `pulsarMenuOfertaNseMapfre` del guard. */
+  pulsarMenuNse?: (boton: Locator) => Promise<void>
   /** Las MISMAS credenciales del login (`ctx.credenciales`): solo para el login antiguo (`/loginexternopi/`) que a veces
    *  se interpone ante la URL directa del NSEI. Jamás van a un mensaje de error ni al log. */
   credenciales?: { usuario: string; contrasena: string }
@@ -63,6 +70,28 @@ export const OPCION_AUTOMOVILES = 'Automóviles'
 /** Título de la tarjeta (NO se pulsa): solo se comprueba que existe y acota la búsqueda del enlace. */
 export const TARJETA_TURISMOS_Y_MOTOS = 'Turismos y Motos'
 export const ENLACE_TARIFICACION_RAPIDA = 'Tarificación y Emisión Rápida'
+/** Patinetes (28/10/2026): tarjeta «Patinetes» de la página «Automóviles» y su enlace «Tarificación y Emisión» (producto «MásPatín»). */
+export const TARJETA_PATINETES = 'Patinetes'
+export const ENLACE_TARIFICACION_EMISION = 'Tarificación y Emisión'
+
+/** Tarjeta y enlace de la página «Automóviles» a los que lleva la entrada por menús. */
+export type DestinoMenusMapfre = {
+  tarjeta: string
+  enlace: string
+  /** `true` = SOLO el enlace dentro de su tarjeta (sin el respaldo «único en toda la página»: «Tarificación y Emisión» sale en varias). */
+  soloEnTarjeta: boolean
+  /** Formulario que se espera en la pestaña nueva; `null` = no se conoce su DOM (se sigue en cuanto carga). */
+  selFormulario: string | null
+  /**
+   * Enlace de una página INTERMEDIA que hay que pulsar para llegar al formulario (real 28/10/2026: el enlace de la tarjeta
+   * «Patinetes» aterriza en una página sin formulario cuyo único enlace es «Acceso a NSE»). Si no aparece, la página ya era el formulario.
+   */
+  pasoIntermedio?: string
+  /** Entrada de menú de la aplicación NSE que se pulsa tras el paso intermedio (Patinetes: «Oferta / Contratación»). */
+  menuNse?: string
+}
+export const DESTINO_TURISMOS_Y_MOTOS: DestinoMenusMapfre = { tarjeta: TARJETA_TURISMOS_Y_MOTOS, enlace: ENLACE_TARIFICACION_RAPIDA, soloEnTarjeta: false, selFormulario: 'app-datos-basicos' }
+export const DESTINO_PATINETES: DestinoMenusMapfre = { tarjeta: TARJETA_PATINETES, enlace: ENLACE_TARIFICACION_EMISION, soloEnTarjeta: true, selFormulario: null, pasoIntermedio: 'Acceso a NSE', menuNse: 'Oferta / Contratación' }
 /** El formulario NSEI está listo cuando existe su primer componente (paso «Datos básicos»). */
 export const SEL_FORMULARIO_NSEI = 'app-datos-basicos'
 
@@ -239,14 +268,14 @@ async function describirCandidatos(page: Page): Promise<string> {
  * acotado no casa con el DOM, en TODOS los marcos por texto exacto, y solo si hay EXACTAMENTE una coincidencia visible (0 o
  * ≥2 → no se adivina: ErrorMapaIncompleto, y ahí entra el respaldo IA si está encendido).
  */
-async function enlaceDeEntrada(page: Page, menuMs: number): Promise<Locator> {
-  const que = `enlace en la tarjeta «${TARJETA_TURISMOS_Y_MOTOS}»`
-  const enTarjeta = await enTodosLosMarcos(page, (f) => pulsablesExactos(f, ENLACE_TARIFICACION_RAPIDA, tarjetaDe(f, TARJETA_TURISMOS_Y_MOTOS, tituloDe(f))), Math.min(ESPERA_TARJETA_MS, menuMs))
+async function enlaceDeEntrada(page: Page, menuMs: number, destino: DestinoMenusMapfre = DESTINO_TURISMOS_Y_MOTOS): Promise<Locator> {
+  const que = `enlace en la tarjeta «${destino.tarjeta}»`
+  const enTarjeta = await enTodosLosMarcos(page, (f) => pulsablesExactos(f, destino.enlace, tarjetaDe(f, destino.tarjeta, tituloDe(f))), Math.min(ESPERA_TARJETA_MS, menuMs))
   if (enTarjeta.length === 1) return enTarjeta[0]!
-  const todos = await enTodosLosMarcos(page, (f) => pulsablesExactos(f, ENLACE_TARIFICACION_RAPIDA), menuMs)
+  const todos = destino.soloEnTarjeta ? enTarjeta : await enTodosLosMarcos(page, (f) => pulsablesExactos(f, destino.enlace), menuMs)
   if (todos.length === 1) return todos[0]!
   const detalle = todos.length === 0 ? 'ninguna coincidencia exacta visible' : `${todos.length} coincidencias exactas visibles, ambiguo`
-  throw new ErrorMapaIncompleto(`el elemento de menú «${ENLACE_TARIFICACION_RAPIDA}» (${que}; en todos los marcos: ${detalle}${await describirCandidatos(page)}; pantalla: ${await diagnosticoDePagina(page, null)}) de wmediadores`, true)
+  throw new ErrorMapaIncompleto(`el elemento de menú «${destino.enlace}» (${que}; en todos los marcos: ${detalle}${await describirCandidatos(page)}; pantalla: ${await diagnosticoDePagina(page, null)}) de wmediadores`, true)
 }
 
 /** Selector FIJO → capa común `conRespaldoIA` (aprendido → IA, validado en formador.ts). Guarda el `confirmar` para el final. */
@@ -275,6 +304,71 @@ export async function abrirTarificacionRapidaAuto(page: Page, ctx: CtxEntradaMap
     const err = new ErrorMapaIncompleto(`${e.message.replace(/^mapfre\/auto: mapa incompleto: faltan /, '')} (además la URL directa del formulario NSEI falló: ${motivoDirecta})`, e.pideInventarioDom)
     throw err
   }
+}
+
+/**
+ * PATINETES (28/10/2026): home de wmediadores (ya con sesión) → «Nueva producción» › «Automóviles» › tarjeta «Patinetes» › enlace
+ * «Tarificación y Emisión» (producto «MásPatín»). Solo por menús (no hay URL directa conocida). Devuelve la pestaña nueva si el
+ * enlace la abre; si no, la misma página. El enlace es NAVEGACIÓN (excepción exacta del guard); el guard sigue bloqueando emitir.
+ */
+export async function abrirTarificacionPatineteMapfre(page: Page, ctx: CtxEntradaMapfre, esperas: { menuMs?: number; formularioMs?: number } = {}): Promise<Page> {
+  return abrirPorMenus(page, ctx, esperas, DESTINO_PATINETES)
+}
+
+/**
+ * Página intermedia (Patinetes: «Acceso a NSE»). EXACTAMENTE un enlace visible con ese texto en algún marco → se pulsa con
+ * `ctx.pulsar` (el guard genérico: no es emisión) y se sigue en la pestaña nueva si la abre, o en la misma. Ninguno → la
+ * página ya era el formulario. Varios → no se adivina (ErrorMapaIncompleto con inventario).
+ */
+async function pasarPorEnlaceIntermedio(pagina: Page, ctx: CtxEntradaMapfre, texto: string, menuMs: number, formularioMs: number): Promise<Page> {
+  const candidatos = await enTodosLosMarcos(pagina, (f) => pulsablesExactos(f, texto), Math.min(ESPERA_TARJETA_MS * 2, menuMs))
+  if (candidatos.length === 0) return pagina
+  if (candidatos.length > 1) throw new ErrorMapaIncompleto(`el enlace «${texto}» de la página intermedia (${candidatos.length} coincidencias exactas visibles, ambiguo) de wmediadores`, true)
+  // Real 28/10/2026 (0.3.2): `abrirAplicacion` abre la aplicación NSE en una VENTANA nueva y puede tardar más de 5 s; se espera
+  // el tope de menú entero y, si el evento se perdió, se adopta la página nueva del MISMO contexto (el guard es por contexto).
+  const antes = new Set(pagina.context().pages())
+  const nueva = pagina.context().waitForEvent('page', { timeout: menuMs })
+  nueva.catch(() => undefined)
+  // «Acceso a NSE» abre la aplicación «Nuevo Sistema de Emisión» (su href casa con `emisi`): por su puerta exacta del guard.
+  if (ctx.pulsarAccesoNse && texto === 'Acceso a NSE') await ctx.pulsarAccesoNse(candidatos[0]!)
+  else await ctx.pulsar(candidatos[0]!)
+  await ctx.pausa()
+  const otra = (await nueva.then((p) => p, () => null)) ?? pagina.context().pages().filter((p) => !antes.has(p) && !p.isClosed()).pop() ?? null
+  const destino = otra ?? pagina
+  await destino.waitForLoadState('domcontentloaded', { timeout: formularioMs }).catch(() => undefined)
+  return destino
+}
+
+/**
+ * Menú de la aplicación NSE (Patinetes, real 28/10/2026): EXACTAMENTE una entrada visible con ese texto en algún marco → se pulsa
+ * por su puerta exacta del guard (`pulsarMenuNse`). Ninguna → se sigue (la IA verá la pantalla). Varias → no se adivina.
+ */
+async function pasarPorMenuNse(pagina: Page, pulsarMenu: (b: Locator) => Promise<void>, ctx: CtxEntradaMapfre, texto: string, menuMs: number): Promise<Page> {
+  const candidatos = await enTodosLosMarcos(pagina, (f) => pulsablesExactos(f, texto), Math.min(ESPERA_TARJETA_MS * 2, menuMs))
+  if (candidatos.length === 0) return pagina
+  if (candidatos.length > 1) throw new ErrorMapaIncompleto(`la entrada de menú «${texto}» de la aplicación NSE (${candidatos.length} coincidencias exactas visibles, ambiguo)`, true)
+  // Diagnóstico (real 28/10/2026 16:06, 0.3.6): tras el clic la ventana volvió a la PORTADA de NSE («Acceso a NSE») y la IA solo veía
+  // ese enlace. Se anota cómo abre el enlace (target y ruta, sin query) para saberlo con la evidencia del siguiente intento.
+  const como = await candidatos[0]!.evaluate((a) => {
+    const href = a.getAttribute('href') || ''
+    let ruta = ''
+    try { ruta = /^javascript:/i.test(href) ? 'javascript' : new URL(href, document.baseURI).pathname } catch { ruta = '?' }
+    return { target: a.getAttribute('target') || '-', ruta, onclick: a.hasAttribute('onclick') ? 'si' : 'no' }
+  }).catch(() => ({ target: '?', ruta: '?', onclick: '?' }))
+  // Si el enlace abre la oferta en OTRA ventana (target a un marco que no existe, o `_blank`), se sigue en ella (el guard es por contexto).
+  const antes = new Set(pagina.context().pages())
+  const nueva = pagina.context().waitForEvent('page', { timeout: Math.min(menuMs, 5_000) })
+  nueva.catch(() => undefined)
+  await pulsarMenu(candidatos[0]!)
+  await ctx.pausa()
+  const otra = (await nueva.then((p) => p, () => null)) ?? pagina.context().pages().filter((p) => !antes.has(p) && !p.isClosed()).pop() ?? null
+  const destino = otra ?? pagina
+  await destino.waitForLoadState('networkidle', { timeout: Math.min(menuMs, 15_000) }).catch(() => undefined)
+  const portada = await enTodosLosMarcos(destino, (f) => pulsablesExactos(f, 'Acceso a NSE'), 1_000)
+  if (portada.length > 0) {
+    throw new ErrorMapaIncompleto(`la oferta de NSE: tras «${texto}» la aplicación volvió a su portada («Acceso a NSE»; enlace target=${como.target}, ruta ${como.ruta}, onclick ${como.onclick}, ${otra ? 'en ventana nueva' : 'en la misma ventana'})`, true)
+  }
+  return destino
 }
 
 /** Login ANTIGUO que Mapfre antepone a la URL directa (`/loginexternopi/docs/html/loginFormPage.html?page=…`). */
@@ -421,7 +515,7 @@ async function abrirPorUrlDirecta(page: Page, ctx: CtxEntradaMapfre, url: string
   }
 }
 
-async function abrirPorMenus(page: Page, ctx: CtxEntradaMapfre, esperas: { menuMs?: number; formularioMs?: number }): Promise<Page> {
+async function abrirPorMenus(page: Page, ctx: CtxEntradaMapfre, esperas: { menuMs?: number; formularioMs?: number }, ruta: DestinoMenusMapfre = DESTINO_TURISMOS_Y_MOTOS): Promise<Page> {
   const menuMs = esperas.menuMs ?? ESPERA_MENU_MS
   const confirmaciones: (() => Promise<void>)[] = []
   await cerrarAvisosModales(page, ctx) // v0.8.13: un modal del portal sobre la home intercepta el clic en «Nueva producción»
@@ -431,6 +525,7 @@ async function abrirPorMenus(page: Page, ctx: CtxEntradaMapfre, esperas: { menuM
   }, confirmaciones)
   await ctx.pulsar(pestana)
   await ctx.pausa()
+  await cerrarAvisosModales(page, ctx) // un modal AngularJS que aparece tras abrir la pestaña intercepta el clic en «Automóviles» (real 28/10/2026)
   // La opción «Automóviles» del desplegable se PULSA (visible tras abrirlo); aún no existe el título homónimo de la página.
   const opcion = await conRespaldo(page, ctx, () => localizar(page, ['menuitem', 'link', 'button'], OPCION_AUTOMOVILES, 'opción del desplegable', menuMs), {
     clave: 'menu_automoviles', tipo: 'accion', textoEsperado: OPCION_AUTOMOVILES,
@@ -438,18 +533,19 @@ async function abrirPorMenus(page: Page, ctx: CtxEntradaMapfre, esperas: { menuM
   }, confirmaciones)
   await ctx.pulsar(opcion)
   await ctx.pausa()
+  await cerrarAvisosModales(page, ctx) // y otra vez antes de la tarjeta
   // Página «Automóviles» (SPA AngularJS): se da margen a la red para que pinte las tarjetas; el título solo se comprueba.
   await page.waitForLoadState('networkidle', { timeout: Math.min(ESPERA_TARJETAS_RED_MS, menuMs) }).catch(() => undefined)
   const conTitulo = await enTodosLosMarcos(page, (f) => tituloDe(f).filter({ visible: true }), menuMs)
   // La tarjeta «Turismos y Motos» (es un título, no se pulsa) y su enlace: fijo acotado → página entera única → respaldo IA.
   const enlace = await conRespaldo(page, ctx, async () => {
     if (conTitulo.length === 0) throw new ErrorMapaIncompleto(`el título de la página «${OPCION_AUTOMOVILES}» de wmediadores`, true)
-    const tarjeta = await enTodosLosMarcos(page, (f) => f.getByText(etiquetaExacta(TARJETA_TURISMOS_Y_MOTOS)).filter({ visible: true }), menuMs)
-    if (tarjeta.length === 0) throw new ErrorMapaIncompleto(`el elemento de menú «${TARJETA_TURISMOS_Y_MOTOS}» (tarjeta, solo se comprueba) de wmediadores`, true)
-    return enlaceDeEntrada(page, menuMs)
+    const tarjeta = await enTodosLosMarcos(page, (f) => f.getByText(etiquetaExacta(ruta.tarjeta)).filter({ visible: true }), menuMs)
+    if (tarjeta.length === 0) throw new ErrorMapaIncompleto(`el elemento de menú «${ruta.tarjeta}» (tarjeta, solo se comprueba) de wmediadores`, true)
+    return enlaceDeEntrada(page, menuMs, ruta)
   }, {
-    clave: ACCION_ENLACE_ENTRADA, tipo: 'accion', textoEsperado: ENLACE_TARIFICACION_RAPIDA,
-    descripcion: `enlace «${ENLACE_TARIFICACION_RAPIDA}» DENTRO de la tarjeta «${TARJETA_TURISMOS_Y_MOTOS}» (no el de Flotas, Patinetes u otras tarjetas); abre el formulario de cotización`,
+    clave: ACCION_ENLACE_ENTRADA, tipo: 'accion', textoEsperado: ruta.enlace,
+    descripcion: `enlace «${ruta.enlace}» DENTRO de la tarjeta «${ruta.tarjeta}» (no el de otras tarjetas); abre el formulario de cotización`,
   }, confirmaciones)
 
   // El listener va ANTES del clic: la pestaña se abre durante él.
@@ -460,14 +556,21 @@ async function abrirPorMenus(page: Page, ctx: CtxEntradaMapfre, esperas: { menuM
   try {
     destino = await nueva
   } catch {
-    throw new ErrorMapaIncompleto(`la pestaña nueva que abre «${ENLACE_TARIFICACION_RAPIDA}» (no se abrió)`, true)
+    // Sin formulario conocido (Patinetes) el enlace puede navegar en la MISMA pestaña; con el de Auto, no abrirla es un fallo.
+    if (ruta.selFormulario !== null) throw new ErrorMapaIncompleto(`la pestaña nueva que abre «${ruta.enlace}» (no se abrió)`, true)
+    destino = page
   }
+  if (ruta.selFormulario === null) await destino.waitForLoadState('domcontentloaded', { timeout: esperas.formularioMs ?? ESPERA_FORMULARIO_MS }).catch(() => undefined)
   // Sin `httpCredentials` en el contexto, el desafío de auth básica se responde 401 (= cancelar) y el formulario sigue ahí.
-  try {
-    await destino.locator(SEL_FORMULARIO_NSEI).first().waitFor({ state: 'attached', timeout: esperas.formularioMs ?? ESPERA_FORMULARIO_MS })
-  } catch {
-    throw new ErrorMapaIncompleto(`el formulario NSEI (${SEL_FORMULARIO_NSEI}) en la pestaña nueva`, true)
+  if (ruta.selFormulario !== null) {
+    try {
+      await destino.locator(ruta.selFormulario).first().waitFor({ state: 'attached', timeout: esperas.formularioMs ?? ESPERA_FORMULARIO_MS })
+    } catch {
+      throw new ErrorMapaIncompleto(`el formulario NSEI (${ruta.selFormulario}) en la pestaña nueva`, true)
+    }
   }
+  if (ruta.pasoIntermedio) destino = await pasarPorEnlaceIntermedio(destino, ctx, ruta.pasoIntermedio, menuMs, esperas.formularioMs ?? ESPERA_FORMULARIO_MS)
+  if (ruta.menuNse && ctx.pulsarMenuNse) destino = await pasarPorMenuNse(destino, ctx.pulsarMenuNse, ctx, ruta.menuNse, menuMs)
   // La entrada llegó al formulario: lo que resolvió el respaldo (aprendido o IA) queda APRENDIDO. Mejor esfuerzo.
   for (const c of confirmaciones) await c().catch(() => undefined)
   return destino

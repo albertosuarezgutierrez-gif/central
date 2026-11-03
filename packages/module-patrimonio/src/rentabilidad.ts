@@ -29,6 +29,8 @@ export type AvisoRentabilidad =
   | 'iva_sin_dato'
   | 'gasto_sin_importe'
   | 'sin_contrato'
+  /** UNIDAD de un edificio cuyos gastos no se han podido repartir (sin criterio, sin m²/% o % que no suman 100): su número NO incluye su parte. */
+  | 'reparto_edificio_pendiente'
 
 export interface RentabilidadInmueble {
   inmuebleId: string

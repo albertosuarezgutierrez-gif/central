@@ -2,6 +2,7 @@
 // SOLO si hay algo que decir (por revisar / facturas sin cerrar / cargos sin justificante).
 // Programado en vercel.json: "0 9 * * 1" (lunes 09:00). Auth por CRON_SECRET.
 import { NextResponse } from 'next/server'
+import { secretoCoincide } from '@central/core-identity'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { resumenProactivo } from '@/lib/contable/proactivo'
@@ -13,7 +14,7 @@ function isCronAuthorized(req: Request): boolean {
   const bearer = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
   const qs = new URL(req.url).searchParams.get('secret')
   const secret = process.env.CRON_SECRET
-  return !!secret && (bearer === secret || qs === secret)
+  return secretoCoincide(bearer, secret) || secretoCoincide(qs, secret)
 }
 
 export async function GET(req: Request) {

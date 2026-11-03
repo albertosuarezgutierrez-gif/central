@@ -14,6 +14,19 @@
  * dominio.
  */
 export function enlaceDeHoja(token: string): string | null {
+  return enlacePublico('hoja', token)
+}
+
+/**
+ * El enlace que va dentro del QR de un VEHÍCULO (27/10/2026, F1): `/v/<token>`, con las MISMAS reglas que la
+ * hoja (https o `null`; quien llama devuelve 503 sin escribir la fila: una pegatina que no lleva a ningún sitio
+ * no se puede arreglar después de pegarla). Ruta corta a propósito: menos módulos, QR más legible a 3 cm.
+ */
+export function enlaceDeVehiculo(token: string): string | null {
+  return enlacePublico('v', token)
+}
+
+function enlacePublico(ruta: 'hoja' | 'v', token: string): string | null {
   const base = process.env.PORTAL_PUBLIC_URL?.trim()
   if (!base) return null
 
@@ -21,20 +34,20 @@ export function enlaceDeHoja(token: string): string | null {
   try {
     url = new URL(base)
   } catch {
-    console.error('[portal] PORTAL_PUBLIC_URL no es una URL válida: no se puede formar la hoja')
+    console.error(`[portal] PORTAL_PUBLIC_URL no es una URL válida: no se puede formar el enlace de /${ruta}`)
     return null
   }
 
   // Solo https: el token viaja en la URL y un http lo pondría en claro en la red.
   if (url.protocol !== 'https:') {
-    console.error('[portal] PORTAL_PUBLIC_URL no es https: no se puede formar la hoja')
+    console.error(`[portal] PORTAL_PUBLIC_URL no es https: no se puede formar el enlace de /${ruta}`)
     return null
   }
 
   // El token va en la RUTA y no en un `?query`: los proxies, los historiales y
   // los registros de servidor guardan la query con más alegría, y además una
   // ruta limpia hace el QR más corto (menos módulos = se lee mejor impreso).
-  url.pathname = `/hoja/${token}`
+  url.pathname = `/${ruta}/${token}`
   url.search = ''
   return url.toString()
 }

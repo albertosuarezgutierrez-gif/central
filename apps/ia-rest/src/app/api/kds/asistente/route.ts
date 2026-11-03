@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { callAI } from '@/lib/ai-client'
+import { getSession } from '@/lib/session'
 
 export const maxDuration = 30
 
@@ -54,11 +55,9 @@ Asistente: Cocina caliente: 4 comandas activas. La más antigua T3 (34 min). Tot
 
 export async function POST(req: NextRequest) {
   try {
-    const sesStr = req.headers.get('x-ia-session')
-    if (!sesStr) return NextResponse.json({ error: 'Sin sesión' }, { status: 401 })
-    let session: { restaurante_id: string; nombre?: string } | null = null
-    try { session = JSON.parse(sesStr) } catch { return NextResponse.json({ error: 'Sesión inválida' }, { status: 401 }) }
-    if (!session?.restaurante_id) return NextResponse.json({ error: 'Sin restaurante' }, { status: 401 })
+    const session = getSession(req)
+    if (!session) return NextResponse.json({ error: 'Sesión no válida' }, { status: 401 })
+    if (!session.restaurante_id) return NextResponse.json({ error: 'Sin restaurante' }, { status: 401 })
     const rid = session.restaurante_id
 
     const { pregunta } = await req.json()

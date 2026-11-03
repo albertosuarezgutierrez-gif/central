@@ -141,6 +141,26 @@ function normalizarToken(t: string): string {
 }
 
 /**
+ * Formatos habituales de CIMA/CRM que rompían el troceo (01/11/2026): «Nº12», «NUM.12», «N.12» (marcador pegado al número),
+ * «CL.SOCORRO» (punto sin espacio tras el tipo de vía) y «12-3-A» / «12-3ºB» (número pegado a piso/puerta por guion).
+ * Solo separa tokens: no inventa ni quita ningún dato. PURA.
+ */
+function prepararTexto(t: string): string {
+  return t
+    .replace(/^([a-zñ]{1,5})\.(?=[^\s.])/i, '$1. ')
+    .replace(/(^|[\s,])(?:n[ºª°]\.?|n\.\s*[ºª°]|n\.|n[uú]m(?:ero|\.)?|nro\.?)\s*(?=\d)/gi, '$1 ')
+    .replace(/(?<=\d[a-zA-Z]?)\s*[-–]\s*|\s*[-–]\s*(?=\d)/g, ' ')
+}
+
+const RE_SIN_NUMERO = /(?:^|[\s,])(?:s\/n|s\.n\.?|sn|sin\s+n[uú]mero)(?=$|[\s,.])/i
+
+/** La dirección DICE que no tiene número («PLAZA NUEVA S/N»): `partirDireccion` deja `numero: null` y esto distingue «sin número» de «no consta». */
+export function direccionSinNumero(direccion: string | null): boolean {
+  const t = limpio(direccion)
+  return t !== null && RE_SIN_NUMERO.test(t) && partirDireccion(t).numero === null
+}
+
+/**
  * Trocea «CL SOCORRO 24 3º IZQ» en tipo de vía / nombre / número / planta /
  * puerta. Best-effort y CONSERVADOR: lo que no se reconoce queda a `null` (y
  * la pantalla lo pide), nunca se inventa un número. Solo se usan los primeros
@@ -148,8 +168,9 @@ function normalizarToken(t: string): string {
  * escalera o un bloque no van al vendor).
  */
 export function partirDireccion(direccion: string | null): DireccionPartida {
-  const t = limpio(direccion)
-  if (t === null) return { ...SIN }
+  const t0 = limpio(direccion)
+  if (t0 === null) return { ...SIN }
+  const t = prepararTexto(t0)
   const tokens = t.replace(/,/g, ' ').split(/\s+/).filter((x) => x !== '')
   if (tokens.length === 0) return { ...SIN }
 

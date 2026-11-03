@@ -5,8 +5,8 @@ import { RAMOS_VARIANTE, ramoVariante } from '../../app/(usuario)/correduria/opo
 import { RAMOS_COTIZADOR_EMBEBIDO, ramoCotizadorEmbebido } from '../../app/(usuario)/correduria/oportunidad/[id]/cotizador-embebido.ts'
 import { claveDatosDeRamo, diferenciasVariante, rolesDelRamo } from '@central/module-seguros'
 
-test('el registro cubre los 10 ramos y lee roles y clave de module-seguros (sin copia)', () => {
-  assert.equal(RAMOS_RIESGO.length, 10)
+test('el registro cubre los 11 ramos y lee roles y clave de module-seguros (sin copia)', () => {
+  assert.equal(RAMOS_RIESGO.length, 11)
   for (const r of RAMOS_RIESGO) {
     assert.deepEqual(REGISTRO_RAMOS[r].roles, rolesDelRamo(r), r)
     assert.equal(REGISTRO_RAMOS[r].claveObjeto, claveDatosDeRamo(r), r)
@@ -27,7 +27,7 @@ test('cotizador del registro == lo que hace hoy la pantalla (ramoVariante / ramo
 test('un ramo sin comparador pinta «no comparable»: el registro y diferenciasVariante coinciden (H1)', () => {
   // Ids reales de `insuranceLine` (importar.ts): TermLife, Health, Burial. Vida lleva `risk.insured`; salud y decesos
   // `risk.insureds[]` (13/10/2026: los tres comparan por identidad del asegurado).
-  const linea: Record<string, string> = { auto: 'Car', moto: 'Motorcycle', hogar: 'Home', vida: 'TermLife', salud: 'Health', decesos: 'Burial', comercio: 'Business', rc: 'Liability', comunidades: 'Community', otros: 'Other' }
+  const linea: Record<string, string> = { auto: 'Car', moto: 'Motorcycle', hogar: 'Home', vida: 'TermLife', salud: 'Health', decesos: 'Burial', comercio: 'Business', rc: 'Liability', comunidades: 'Community', patinete: 'Other', otros: 'Other' }
   const ana = { name: 'Ana', surname: 'Ruiz', birthDate: '1980-01-01', gender: { id: 'Female' } }
   for (const r of RAMOS_RIESGO) {
     const p = (x: number) => ({ insuranceLine: { id: linea[r] }, effectiveDate: '2026-10-01', risk: { capital: x, insured: ana, insureds: [ana] } })
@@ -71,4 +71,14 @@ test('sin Avant2 (comercio, RC, comunidades, otros, tipos fuera del registro): a
   assert.match(avisoSinAvant2('comunidades', { hayBots: true })!, /bots de compañía/)
   assert.equal(REGISTRO_RAMOS.comunidades.cotizador, 'bots')
   for (const r of ['comercio', 'rc', 'otros'] as const) assert.equal(REGISTRO_RAMOS[r].cotizador, 'fuera', r)
+})
+
+test('28/10/2026: el patinete (VMP) NO tarifica: fuera, sin comparador, datos en el bloque libre y aviso honesto', async () => {
+  const { avisoSinAvant2, tieneAvant2 } = await import('./registro-ramos.ts')
+  const p = REGISTRO_RAMOS.patinete
+  assert.equal(p.cotizador, 'fuera')
+  assert.equal(p.comparable, false)
+  assert.equal(p.claveObjeto, 'datosRiesgoLibre')
+  assert.equal(tieneAvant2('patinete'), false)
+  assert.match(avisoSinAvant2('patinete', { hayBots: false })!, /Sin precio automático por Avant2/)
 })

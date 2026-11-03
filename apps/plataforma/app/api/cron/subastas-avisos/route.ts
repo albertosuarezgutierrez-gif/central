@@ -10,6 +10,7 @@ import { prisma } from '@/lib/db'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { eur } from '@/lib/dinero'
 import { decidirAviso, esEmpresaInmobiliaria, titularPujas, umbralesPuja, zonaPreferenteDe, type EstadoPujas } from '@central/module-subastas'
+import { avisarCasaVacacional } from '@/lib/subastas/casa-vacacional'
 import { RADAR_CON_CORPUS, RADAR_VIGENTE } from '@/lib/subastas-radar'
 
 export const dynamic = 'force-dynamic'
@@ -97,7 +98,8 @@ export async function GET(req: NextRequest) {
         UPDATE subastas_radar SET avisado_at = now()
         WHERE avisado_at IS NULL AND created_at < now() - make_interval(days => ${DIAS_FRESCURA}::int)
       `)
-      return NextResponse.json({ ok: true, avisados: 0, silenciados: Number(silenciados) })
+      const casaVacacional = await avisarCasaVacacional().catch(() => ({ candidatas: 0, avisadas: 0, error: true }))
+      return NextResponse.json({ ok: true, avisados: 0, silenciados: Number(silenciados), casaVacacional })
     }
 
     // Un mensaje POR SUBASTA con botones [👀 Seguir][🚫 Descartar]: el volumen
@@ -277,8 +279,15 @@ export async function GET(req: NextRequest) {
       return { detectadas: 0, avisadas: 0 }
     })
 
+    // 🏡 Perfil casa vacacional: independiente de los criterios de la cuenta.
+    const casaVacacional = await avisarCasaVacacional().catch((e) => {
+      console.error('[subastas-avisos] casa-vacacional', e)
+      return { candidatas: 0, avisadas: 0, error: true }
+    })
+
     return NextResponse.json({
       ok: true,
+      casaVacacional,
       avisados: aAvisar.length,
       silenciados: silenciadas.length,
       // Vuelven mañana, ya con la documentación leída.

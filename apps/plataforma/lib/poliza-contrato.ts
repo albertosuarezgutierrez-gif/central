@@ -271,10 +271,16 @@ export function primaParaPintar(
   }
 }
 
-/** «01/01/2026 → 01/01/2027», o `null` si no hay ninguna de las dos. */
+/**
+ * «01/01/2026 → 01/01/2027». `null` si falta alguna de las dos fechas, no se leen, o el fin no es
+ * posterior al inicio (inicio = fin pintaba «12/11/2026 → 12/11/2026»: una vigencia vacía no informa).
+ */
 export function vigenciaRiesgo(r: RiesgoFicha): string | null {
-  if (!(r.inicio && fecha(r.inicio)) && !(r.fin && fecha(r.fin))) return null
-  return `${(r.inicio && fecha(r.inicio)) || '?'} → ${(r.fin && fecha(r.fin)) || '?'}`
+  const ini = r.inicio ? fecha(r.inicio) : null
+  const fin = r.fin ? fecha(r.fin) : null
+  if (!ini || !fin || !r.inicio || !r.fin) return null
+  if (r.fin.slice(0, 10) <= r.inicio.slice(0, 10)) return null
+  return `${ini} → ${fin}`
 }
 
 /** Dónde está / qué es el bien del riesgo, sin nada cifrado. `null` = no consta. */

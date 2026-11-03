@@ -29,10 +29,8 @@
   `module-alquiler`/`module-transporte` replican su patrón por id, `encargoId`, en vez de componerse
   sobre él; el PATRÓN sigue vigente, el package no) y `module-revenue` (su analítica quedó superada
   por el motor real de pricing/rentabilidad de plataforma).
-- **Pendiente de CABLEADO (el código ya existe como módulo):** `module-agenda`
-  (disponibilidad/reserva de recurso) — se conserva SIN consumidor a propósito: el plan de
-  `apps/almacen` Fase 2 (`docs/ALMACEN-JJ-reunion-y-auditoria.md`) lo asigna al calendario de
-  eventos + anti-doble-reserva.
+- **Retirado el 02/11/2026:** `module-agenda` (disponibilidad/reserva de recurso), sin consumidor
+  nunca; recuperable de git si `apps/almacen` Fase 2 llega a necesitar el calendario de eventos.
 - **BD:** `plataforma`+`ialimp`+`sivra`+`rrhh` comparten Supabase `wswbehlcuxqxyinousql`
   (schema `public`/`rrhh`); `ia-rest` usa schema `iarest`. (Nota histórica: el proyecto viejo
   `efncqyvhniaxsirhdxaa` es pre-migración; los datos vivos de ia-rest están en `wswbehlcuxqxyinousql`,
@@ -98,7 +96,6 @@ para crecer a verticales nuevas (alquiler de materiales, transporte, clínica/ci
 | `module-documental` | Expedientes agnósticos (carpetas categorizadas + permisos por actor). | ✅ rrhh, ialimp |
 | `module-chat` | Mensajería interna 1-a-1 gestor↔titular (no-leídos, cronológico). | ✅ rrhh |
 | `module-rrhh` | Orquestación de firma avanzada OTP (eIDAS) sobre expedientes. | ✅ rrhh, ialimp |
-| `module-agenda` | Disponibilidad + reserva de recurso (sala, vehículo, kit, persona) con detección de solapes. | ⏳ HECHO sin consumo → reservado para almacén Fase 2 (calendario de eventos) |
 | `module-flota` | Flota/transporte: vehículos, portes, asignación por capacidad/tipo, rentabilidad por porte/vehículo, documental ITV/seguro, intercompany. | ✅ ia-rest (`flota-adapter.ts` + `/api/owner/flota/resumen`), `apps/transporte` |
 | `module-transporte` | Servicio/orden de transporte (porte interno intercompany o externo a cliente) sobre `module-flota` + Encargo tipo 'porte'. | ✅ apps/transporte |
 | `module-intercompany` | Consolidación con **eliminación** de operaciones entre sociedades del holding (cocina→tiendas, flota→catering, materiales→eventos) → resultado real del grupo + detalle por sociedad. | ✅ apps/plataforma |
@@ -109,9 +106,8 @@ para crecer a verticales nuevas (alquiler de materiales, transporte, clínica/ci
 | `module-pagos` | Pago de facturas a proveedores: SEPA XML pain.001, normalización, deduplicación (agnóstico de PIS/banco). | ✅ plataforma |
 | `legal-templates` | Plantillas legales versionadas (RGPD, confidencialidad, código de conducta) → HTML. | ✅ rrhh |
 
-> **Nota:** 23 de 24 `module-*` están construidos Y consumidos por ≥1 vertical. La modularización
-> NO es un diseño pendiente: es realidad. Sin cablear aún solo `module-agenda` (reservado para
-> almacén Fase 2). `module-encargo` y `module-revenue` se retiraron el 29/08/2026 sin haberse
+> **Nota:** los 23 `module-*` están construidos Y consumidos por ≥1 vertical. La modularización
+> NO es un diseño pendiente: es realidad. `module-agenda` (02/11/2026), `module-encargo` y `module-revenue` (29/08/2026) se retiraron sin haberse
 > consumido nunca (recuperables de git, ver el bloque de arriba).
 
 ---

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { isCronAuthorized } from '@/lib/cron-auth'
 import { enviarPaperTracker } from '@/lib/trading/paper-tracker'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 
@@ -8,8 +9,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 async function handler(req: NextRequest) {
-  const auth = req.headers.get('authorization')
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isCronAuthorized(req, { soloCabecera: true })) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   try {

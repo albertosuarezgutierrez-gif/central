@@ -44,6 +44,7 @@ import {
 import { Prisma } from '@prisma/client'
 
 import { prisma } from './db'
+import type { EntradaFlotaInicio, SociedadFlotaInicio } from './flota-inicio'
 import { empresasDeFichas } from './representacion'
 import { getIdentidad } from './session'
 
@@ -311,6 +312,65 @@ export async function flotaDeEmpresa(identidadId: string, empresaPedida: unknown
   }
 }
 
+/**
+ * Las flotas de TODAS las sociedades que ve esta identidad, en UNA pasada (27/10/2026): para la tarjeta «Mi flota» de Inicio
+ * y las ITV del calendario. Sin N+1 sobre vehículos ni filas: los accesos se resuelven UNA vez (`accesosFlota`), los nombres
+ * en UNA consulta y cada sociedad se lee con `vehiculosDeEmpresa(empresaId)` (la misma lectura de `/flota`, con el `where`
+ * de la empresa ya autorizada), todas en paralelo — el nº de lecturas crece con las SOCIEDADES de la persona (1-3), no con
+ * sus vehículos. Una sociedad que no se lee queda con `vehiculos: null` (≠ «sin vehículos»).
+ *
+ * `null` = no se pudieron resolver los accesos; `[]` = se miró y no lleva la flota de ninguna sociedad.
+ */
+async function flotasDeIdentidad(identidadId: string): Promise<SociedadFlotaInicio[] | null> {
+  let accesos: Map<string, PapelFlota>
+  try {
+    accesos = await accesosFlota(identidadId)
+  } catch (e) {
+    console.error('[flota] accesos sin comprobar:', e instanceof Error ? e.message : e)
+    return null
+  }
+  const ids = [...accesos.keys()]
+  if (ids.length === 0) return []
+  const [rNombres, ...rFlotas] = await Promise.allSettled([
+    prisma.cliente.findMany({ where: { id: { in: ids } }, select: { id: true, nombre: true, apellidos: true } }),
+    ...ids.map((empresaId) => vehiculosDeEmpresa(empresaId)),
+  ])
+  const nombrePor = new Map(
+    rNombres.status === 'fulfilled' ? (rNombres.value as { id: string; nombre: string; apellidos: string }[]).map((f) => [f.id, `${f.nombre} ${f.apellidos}`.trim()] as const) : [],
+  )
+  return ids.map((id, i): SociedadFlotaInicio => {
+    const r = rFlotas[i]!
+    if (r.status === 'rejected') console.error('[flota] vehículos de una sociedad sin leer:', r.reason instanceof Error ? r.reason.message : r.reason)
+    const leida = r.status === 'fulfilled' ? (r.value as { vehiculos: VehiculoFlota[]; recortada: boolean }) : null
+    return { id, nombre: nombrePor.get(id) ?? 'Tu sociedad', vehiculos: leida === null ? null : leida.vehiculos, recortada: leida?.recortada ?? false }
+  })
+}
+
+/** Las flotas para el CALENDARIO (ITV). `null` = no se pudo comprobar (ni los accesos ni alguna sociedad). */
+export async function flotaParaCalendario(identidadId: string): Promise<SociedadFlotaInicio[] | null> {
+  const sociedades = await flotasDeIdentidad(identidadId)
+  if (sociedades === null || sociedades.some((s) => s.vehiculos === null)) return null
+  return sociedades
+}
+
+/**
+ * La tarjeta «Mi flota» de Inicio. `undefined` = sin flota ni nombramientos a la vista (no se pinta nada); `null` = no se
+ * pudo comprobar nada (se dice); objeto = lo leído, con `nombramientos: null` si solo ese dato falló.
+ */
+export async function flotaParaInicio(identidadId: string): Promise<EntradaFlotaInicio | null | undefined> {
+  const [rSoc, rNom] = await Promise.allSettled([flotasDeIdentidad(identidadId), nombramientosPendientes(identidadId)])
+  const sociedades = rSoc.status === 'fulfilled' ? rSoc.value : null
+  let nombramientos: number | null = null
+  if (rNom.status === 'fulfilled') nombramientos = rNom.value.length
+  else console.error('[flota] nombramientos sin comprobar:', rNom.reason instanceof Error ? rNom.reason.message : rNom.reason)
+  if (sociedades === null) return null
+  if (sociedades.length === 0) {
+    if (nombramientos === null) return null
+    return nombramientos === 0 ? undefined : { sociedades: [], nombramientos }
+  }
+  return { sociedades, nombramientos }
+}
+
 export type InvitacionFlota = { autorizacionId: string; empresa: string | null; otorgadoEn: Date }
 
 /** Nombramientos de jefe de flota que ESTA identidad tiene pendientes de aceptar. */
@@ -455,4 +515,102 @@ export async function guardarMatriculacion(datos: {
     throw e
   }
   return { ok: true }
+}
+
+// ─── QR del VEHÍCULO (27/10/2026, F1) ────────────────────────────────────────
+// Spec `docs/superpowers/specs/2026-10-27-qr-vehiculo-flota.md`. Las dos piezas de EMPRESA viven aquí, junto al
+// resto de lecturas y escrituras de la flota, para que el cepo `regression-portal-flota` las vea con las mismas
+// reglas (el `portal_bien` de la empresa se lee y escribe SIEMPRE por la empresa autorizada).
+
+export type VehiculoAsegurado = { polizaId: string; bienId: string; etiqueta: string; matricula: string }
+export type ResultadoVehiculosFlota =
+  | { ok: true; vehiculos: VehiculoAsegurado[]; sinMatricula: number }
+  | { ok: false; error: ErrorFlota; mensaje: string }
+
+/**
+ * La FICHA (`portal_bien`) de los vehículos de la flota a los que se les va a colgar un QR, creada bajo demanda
+ * (hoy solo existe si alguien anotó la matriculación). Dueño o jefe de flota. `polizaIds: 'todos'` = todos los de
+ * la flota con matrícula (impresión en lote); los que no tienen matrícula se CUENTAN (`sinMatricula`), no se
+ * inventan. Empresa y pólizas se buscan DENTRO de la flota ya autorizada; el ancla va por `clienteId: empresaId`.
+ */
+export async function asegurarVehiculosDeFlota(datos: {
+  identidadId: string
+  empresaId: unknown
+  polizaIds: readonly unknown[] | 'todos'
+}): Promise<ResultadoVehiculosFlota> {
+  const flota = await flotaDeEmpresa(datos.identidadId, datos.empresaId)
+  if (flota === null) return { ok: false, error: 'no_encontrada', mensaje: 'No hemos encontrado esa empresa.' }
+  if (!puedeEditarVehiculo(flota.papel)) return { ok: false, error: 'no_te_toca', mensaje: 'No puedes cambiar estos vehículos.' }
+  const pedidos = datos.polizaIds === 'todos' ? null : new Set(datos.polizaIds.filter((x): x is string => typeof x === 'string'))
+  const elegidos = flota.vehiculos.filter((v) => pedidos === null || pedidos.has(v.polizaId))
+  if (pedidos !== null && elegidos.length === 0) return { ok: false, error: 'no_encontrada', mensaje: 'Ese vehículo no está en la flota.' }
+  const conMatricula = elegidos.filter((v): v is VehiculoFlota & { clave: string } => v.clave !== null)
+  if (pedidos !== null && conMatricula.length === 0) {
+    return { ok: false, error: 'sin_matricula', mensaje: 'No conocemos la matrícula de este vehículo: pídenos que la anotemos.' }
+  }
+
+  const empresaId = flota.empresa.id
+  const claves = [...new Set(conMatricula.map((v) => v.clave))]
+  const leer = () =>
+    prisma.portalBien.findMany({
+      where: { clienteId: empresaId, tipo: 'vehiculo', matricula: { in: claves } },
+      select: { id: true, matricula: true },
+    })
+  const existentes = new Map((await leer()).map((b) => [b.matricula as string, b.id]))
+  const hoy = new Date()
+  for (const v of conMatricula) {
+    if (existentes.has(v.clave)) continue
+    try {
+      const b = await prisma.portalBien.create({
+        data: {
+          clienteId: empresaId,
+          tipo: 'vehiculo',
+          nombre: v.etiqueta,
+          matricula: v.clave,
+          creadoPorIdentidadId: datos.identidadId,
+          actualizadoPorIdentidadId: datos.identidadId,
+          actualizadoEn: hoy,
+        },
+        select: { id: true },
+      })
+      existentes.set(v.clave, b.id)
+    } catch (e) {
+      // Dos pestañas a la vez: la otra creó el ancla entre medias. El índice único decide; se relee.
+      if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002')) throw e
+      for (const b of await leer()) existentes.set(b.matricula as string, b.id)
+    }
+  }
+  return {
+    ok: true,
+    vehiculos: conMatricula.flatMap((v) => {
+      const bienId = existentes.get(v.clave)
+      return bienId ? [{ polizaId: v.polizaId, bienId, etiqueta: v.etiqueta, matricula: v.clave }] : []
+    }),
+    sinMatricula: elegidos.length - conMatricula.length,
+  }
+}
+
+/**
+ * 🚨 SIN SESIÓN, a propósito, y por eso se dice en voz alta: la usa SOLO la página PÚBLICA del QR del vehículo
+ * (`lib/vehiculo-publico.ts`), con el `cliente_id` del bien que abrió el TOKEN (`vehiculoPorToken`) — nunca un id de
+ * la request (cepo `regression-portal-vehiculo-qr`). Devuelve lo MÍNIMO para la allow-list pública: la razón social
+ * y su tipo (la pura decide si sale), y el vehículo de la flota con esa matrícula (compañía, nº de póliza,
+ * vencimiento e ITV ya calculados). `null` = la ficha de la empresa ya no está viva (fusionada o inactiva): el QR
+ * da 404. `vehiculo: null` = no hay póliza en vigor con esa matrícula (≠ «sin seguro»).
+ */
+export async function vehiculoDeEmpresaParaQr(
+  empresaId: string,
+  clave: string | null,
+): Promise<{ razonSocial: string; tipoFicha: TipoFicha; vehiculo: VehiculoFlota | null } | null> {
+  const ficha = await prisma.cliente.findFirst({
+    where: { id: empresaId, mergedIntoClienteId: null, activo: true },
+    select: { nombre: true, apellidos: true, tipoPersona: true },
+  })
+  if (!ficha) return null
+  const { vehiculos } = await vehiculosDeEmpresa(empresaId)
+  return {
+    razonSocial: `${ficha.nombre} ${ficha.apellidos}`.trim(),
+    tipoFicha: tipoDe(ficha.tipoPersona),
+    vehiculo: clave === null ? null : (vehiculos.find((v) => v.clave === clave) ?? null),
+  }
 }

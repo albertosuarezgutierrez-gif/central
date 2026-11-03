@@ -76,20 +76,28 @@ flowchart TB
 
 | Agente | Función | Cadencia | Entrega | Telegram | Archivo |
 |---|---|---|---|---|---|
-| Auditoría nocturna ligera | Reconcilia memoria+skills+docs vs código/infra; vigila crons | Diaria 04:00 | texto→main / raro→PR draft | ✅ | `.claude/skills/auditoria-central` · `/auditoria-diaria` |
-| Auditoría semanal profunda | `auditoria-central` entera: typecheck de las 12 apps (matriz de `tests.yml`) + tests + seguridad multi-tenant + infra + tramos caros de pricing y correduría | Domingo 04:00 | mixto + informe | ✅ | `auditoria-central --profunda` |
-| Facturas correo | Gmail → clasifica facturas → Drive → concilia con banca | Diaria 08:00 | PR draft | ✅ | `.claude/skills/facturas-correo` |
-| Pricing agente (SIVRA) | Estudia mercado → precio → aplica por Paso 4 → aprende en BD | Lunes 06:00 | PR draft | ✅ | `.claude/skills/pricing-agente` |
+| Auditoría nocturna ligera | Reconcilia memoria+skills+docs vs código/infra; vigila crons | Diaria 10:00 Madrid (`0 8 * * *` UTC) | texto→main / raro→PR draft | ✅ | `.claude/skills/auditoria-central` · `/auditoria-diaria` |
+| Auditoría semanal profunda | `auditoria-central` entera: typecheck de las 13 apps (matriz de `tests.yml`) + tests + seguridad multi-tenant + infra + tramos caros de pricing y correduría | Domingo 04:00 | mixto + informe | ✅ | `auditoria-central --profunda` |
+| Facturas correo | Gmail → clasifica facturas → Drive → concilia con banca | Diaria 11:00 Madrid | PR draft | ✅ | `.claude/skills/facturas-correo` |
+| Pricing agente (SIVRA) | Estudia mercado → precio → aplica por Paso 4 → aprende en BD | Lunes 07:00 Madrid | PR draft | ✅ | `.claude/skills/pricing-agente` |
 | Vigilante fiscal IRPF + ayudas | Contrasta importes con BOE/BOJA; actualiza constante + BD. Además radar de convocatorias de ayudas → Telegram | Día 1 mes 07:00 | PR draft | ✅ | `.claude/skills/fiscal-novedades` |
 | Guardián PSD2 | Verifica que la banca llega fresca (<48h); alerta si roto | Miércoles 09:00 | solo lectura | ✅ | `.claude/skills/psd2-health-check` |
 | ialimp client health | Pulso semanal de Sique Brilla (PMS, impagos…) | Viernes 17:00 | solo lectura | ✅ | `.claude/skills/ialimp-client-health` |
 | RRHH compliance calendar | Filtra obligaciones legales 🔴 pendientes e informa plazos | Día 1 mes 08:00 | solo lectura | — | `.claude/skills/rrhh-compliance-calendar` |
-| Vigía GitHub/OSS | Releases vigilados + descubrimiento + npm outdated/CVE | Día 15 mes 07:00 · *pendiente trigger* | PR draft | ✅ | `.claude/skills/github-vigia` |
+| Vigía GitHub/OSS | Releases vigilados + descubrimiento + npm outdated/CVE | Día 15 mes 07:00 | PR draft | ✅ | `.claude/skills/github-vigia` |
 | Agentes-entrenador | Mejora los prompts de los agentes por rendimiento/calidad | Domingo 07:30 | PR draft | ✅ | `.claude/skills/agentes-entrenador` |
-| Buscador de IA | Watch de deprecación + descubrimiento + mini-eval de core-ai | Lunes 07:00 · *pendiente trigger* | PR draft | ✅ | `.claude/skills/buscador-ia` |
-| Radar España | Ciclo inmobiliario por zona + regulación VUT + valoración viva/dual de los inmuebles | Días 1 y 16, 08:00 · *pendiente trigger* | BD + doc estado | señal accionable | `.claude/skills/radar-espana` |
-| Coordinador patrimonial (CFO) | Neto + coste de oportunidad por activo + escenarios con impuestos + memoria de decisiones | Día 2 mes 09:00 · *pendiente trigger* | informe + BD | ✅ | `.claude/skills/patrimonio-cfo` |
-| Vigía de conectores MCP | Huecos vs registro + canario sobre los conectores en uso + higiene de los conectados | Día 5 mes 04:00 · *pendiente trigger* | PR draft | ✅ | `.claude/skills/conectores-vigia` |
+| Buscador de IA | Watch de deprecación + descubrimiento + mini-eval de core-ai | Lunes 07:00 Madrid (corre) | PR draft | ✅ | `.claude/skills/buscador-ia` |
+| Radar España | Ciclo inmobiliario por zona + regulación VUT + valoración viva/dual de los inmuebles | Días 1 y 16, 08:00 | BD + doc estado | señal accionable | `.claude/skills/radar-espana` |
+| Coordinador patrimonial (CFO) | Neto + coste de oportunidad por activo + escenarios con impuestos + memoria de decisiones | Día 2 mes 09:00 | informe + BD | ✅ | `.claude/skills/patrimonio-cfo` |
+| Vigía de conectores MCP | Huecos vs registro + canario sobre los conectores en uso + higiene de los conectados | Día 5 mes 04:00 | PR draft | ✅ | `.claude/skills/conectores-vigia` |
+| Agente de la correduría | Aprende el sector e informa a Alberto (cartera, vencimientos, compañías); NUNCA contacta clientes | Martes 07:30 Madrid (**ACTIVA**) | bitácora / PR | sin `ALERTA_TOKEN` en el prompt | `.claude/skills/agente-correduria` |
+| cima-guardia | Vigila la ingesta CIMA/EIAC (cola, cuarentena, cadena hasta TIREA) | Diaria 08:48 Madrid | informe | — | `.claude/skills/cima-ingesta` |
+| Médico del bot tarificador | Comprueba que el bot RPA del tarificador está sano («Sin fallos» en una línea) | L-V 08:52 Madrid | informe | — | `docs/TARIFICADOR-RPA.md` |
+| SEO ASegura mensual | Pasada profunda OpenSEO + GA4 + GSC de `grupoasegura.es` (tope 2.000 créditos) | Día 1 mes ~07:37 | informe / PR | ✅ | `.claude/skills/seo-asegura` |
+| SEO ASegura semanal | Pasada ligera contra `seo-correduria/semana` (depende de GSC) | Lunes 08:00 | informe | ✅ | `.claude/skills/seo-asegura` |
+| Vigía de infra y cuotas | Mensual, día 8 (diseñada). **Sin trigger creado** a 02/11/2026 | — | PR draft | ✅ | `.claude/skills/vigia-infra` |
+
+> Borradas el 02/11/2026: «Seguimiento campaña portal», «Idealista radar» y los one-shot de PRs/tarificador/Google Contactos. Estado vivo y fichas: `docs/RUTINAS-PROGRAMADAS.md`.
 
 ## B · Agente Director (pasarela IA)
 

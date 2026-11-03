@@ -37,3 +37,16 @@ test('esIntercambioDeCortesia — no si el borrador suelta un dato', () =>
   assert.equal(esIntercambioDeCortesia('Muchas gracias', 'De nada, la entrada es a las 15:00.'), false))
 test('esIntercambioDeCortesia — no si la pregunta pide algo', () =>
   assert.equal(esIntercambioDeCortesia('Gracias, ¿hay parking?', 'De nada, te cuento.'), false))
+
+// Bug 29/10/2026: «Gracias :)» llegaba al juez de cobertura, que decía ESCALAR y mandaba a Telegram
+// «Esto no lo encuentro en la guía». Un cierre puro no pasa por el juez; con pregunta, sí.
+test('esCierre — «Gracias :)» es cierre puro (no hay hueco de guía)', () => assert.equal(esCierre('Gracias :)'), true))
+test('esCierre — «Gracias, ¿a qué hora es el checkout?» NO es cierre (sigue al juez)', () => assert.equal(esCierre('Gracias, ¿a qué hora es el checkout?'), false))
+test('decidir — el juez de cobertura se salta solo con cierre puro y mantiene las reglas duras', async () => {
+  const { readFileSync } = await import('node:fs')
+  const src = readFileSync(new URL('./decidir.ts', import.meta.url), 'utf8')
+  const i = src.indexOf('const veredicto: Veredicto')
+  const bloque = src.slice(i, src.indexOf('const escalaIA', i))
+  assert.match(bloque, /sensible \|\| sentimiento === 'negativo' \|\| rev\.inventado\)\s*\n\s*\? 'ESCALAR'/, 'las reglas duras van primero')
+  assert.match(bloque, /esCierre\(pregunta\)\s*\n\s*\? 'OK'\s*\n\s*: await debeEscalar/, 'un cierre puro no debe llamar a debeEscalar')
+})

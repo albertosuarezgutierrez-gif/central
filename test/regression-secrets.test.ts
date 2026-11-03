@@ -72,3 +72,67 @@ test('ningún secreto de auth con fallback a un literal hardcodeado', () => {
     culpables.join('\n  - '),
   )
 })
+
+// ── Comparación de secretos: NUNCA con ===/!== (02/11/2026) ─────────────────────────────────────
+// `===` corta en el primer carácter distinto (filtra el prefijo por tiempo) y, con la variable de
+// entorno ausente, `undefined !== undefined` autoriza (fail-open). Todo se compara con
+// `secretoCoincide` / `autorizacionBearerValida` de @central/core-identity (tiempo constante y
+// fail-closed). Se miran SOLO los ficheros ya migrados; añade aquí los que migres.
+import { readdirSync, statSync } from 'node:fs'
+
+const SIN_COMENTARIOS = (f: string) => f.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+
+function rutasCron(dir: string): string[] {
+  const out: string[] = []
+  for (const n of readdirSync(join(ROOT, dir))) {
+    const p = join(dir, n)
+    if (statSync(join(ROOT, p)).isDirectory()) out.push(...rutasCron(p))
+    else if (n === 'route.ts') out.push(p)
+  }
+  return out
+}
+
+const COMPARACION_DIRECTA: RegExp[] = [
+  /(?:===|!==)\s*`Bearer\b/, // x === `Bearer ${secret}`
+  /`Bearer\s*\$\{[^}]*\}`\s*(?:===|!==)/, // `Bearer ${secret}` === x
+  /(?:===|!==)\s*process\.env\.[A-Z0-9_]*(?:SECRET|TOKEN|PASSWORD|KEY)/, // x === process.env.X_SECRET
+  /process\.env\.[A-Z0-9_]*(?:SECRET|TOKEN|PASSWORD|KEY)[A-Z0-9_]*\s*(?:===|!==)/,
+  /\b(?:cron|alerta)?secret\w*\s*(?:===|!==)|(?:===|!==)\s*(?:cron|alerta)?secret\w*\b/i, // bearer === secret
+  /(?:===|!==)\s*alertaToken\b|\balertaToken\s*(?:===|!==)/,
+]
+
+const MIGRADOS: string[] = [
+  'apps/plataforma/middleware.ts',
+  'apps/transporte/lib/ingest-auth.ts',
+  'apps/rrhh/lib/operador.ts',
+  'apps/sivra/lib/auth.ts',
+  ...[
+    'facturas-conciliar-gmail', 'concursos-avisos', 'briefing', 'cima-sincro', 'banca-alertas', 'concursos-cierre',
+    'cima-liq', 'facturas-scan', 'facturas-resumen-semanal', 'contable-proactivo',
+  ].map((r) => `apps/plataforma/app/api/cron/${r}/route.ts`),
+  ...rutasCron('apps/rrhh/app/api/cron'),
+]
+
+test('detector de comparación directa: reconoce las formas malas (si no, el cepo sería ciego)', () => {
+  const malos = [
+    'if (auth !== `Bearer ${secret}`) {',
+    'return (h || "") === `Bearer ${secret}`',
+    'if (bearer === alertaToken) ok()',
+    'return !!k && k === SECRET',
+    'password !== process.env.ADMIN_PASSWORD',
+    'const ok = qs === secret',
+  ]
+  for (const m of malos) assert.ok(COMPARACION_DIRECTA.some((re) => re.test(m)), `no detecta: ${m}`)
+  const bueno = "if (!autorizacionBearerValida(req, 'CRON_SECRET')) {} secretoCoincide(qs, secret)"
+  assert.ok(!COMPARACION_DIRECTA.some((re) => re.test(bueno)))
+})
+
+test('los ficheros migrados NO comparan secretos con ===/!== y usan el helper de core-identity', () => {
+  const culpables: string[] = []
+  for (const f of MIGRADOS) {
+    const src = SIN_COMENTARIOS(readFileSync(join(ROOT, f), 'utf8'))
+    if (COMPARACION_DIRECTA.some((re) => re.test(src))) culpables.push(`${f}: comparación directa de secreto`)
+    if (!/secretoCoincide|autorizacionBearerValida/.test(src)) culpables.push(`${f}: no usa el helper de @central/core-identity`)
+  }
+  assert.deepEqual(culpables, [])
+})

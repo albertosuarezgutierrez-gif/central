@@ -24,6 +24,9 @@ import {
   nombresCredencial,
   crearRedactor,
   redactarHtml,
+  redactarHtmlGrabacion,
+  redactarTextoGrabacion,
+  redactarUrl,
   secretosDelEntorno,
   secretosDelRiesgo,
   crearTraza,
@@ -45,13 +48,15 @@ import { exigirSinCaptcha } from './captcha.ts'
 import { crearTrazaIntento } from './traza-intento.ts'
 import { ErrorCodigoSmsPendiente, ErrorTarificador, ErrorVerificacionHumana, MOTIVO_VERIFICACION_HUMANA, cabeReintento, clasificar, clasificarIntento, esperaReintentoMs, limiteDelTrabajo, pideInventarioDom, type Clasificacion } from './errores.ts'
 import { capturarInventarioDom, marcosDePestanas } from './inventario-dom.ts'
-import { pulsarMediadorGenerali, pulsarEntrarGenerali, entrarTurismosGenerali, cerrarAvisoSabiasQueGenerali, pulsarSubpestanaGenerali, marcarPlacasEspecialesGenerali, pulsarConfirmarVehiculoGenerali, pulsarConfirmarDatosPersonasGenerali, pulsarSiguienteValoracionGenerali, abrirDesplegableMarcaGenerali, elegirMarcaListaGenerali, abrirDesplegableModeloGenerali, elegirModeloListaGenerali, elegirPotenciaGenerali, elegirFilaVersionGenerali, elegirCombustibleGenerali, abrirDesplegableVersionGenerali, elegirVersionListaGenerali, cerrarAvisoTomadorMapfre, cerrarClubMapfre, generarProyectoMapfre, companiaActualTurismosAllianz, marcarAntecedenteTurismosAllianz, confirmarVehiculoMapfre, elegirTomadorMapfre, elegirOpcion, pulsarContinuarMapfre, instalarGuardEmision, marcarOpcionRiesgoHogarAllianz, marcarOpcionResueltaHogarAllianz, marcarOpcionTurismosAllianz, marcarTarjetaVehiculoTurismosAllianz, polizaActualTurismosAllianz,
+import { pulsarMediadorGenerali, pulsarEntrarGenerali, entrarTurismosGenerali, cerrarAvisoSabiasQueGenerali, pulsarSubpestanaGenerali, pulsarRecalcularGenerali, marcarPlacasEspecialesGenerali, pulsarConfirmarVehiculoGenerali, pulsarConfirmarDatosPersonasGenerali, pulsarSiguienteValoracionGenerali, abrirDesplegableMarcaGenerali, elegirMarcaListaGenerali, abrirDesplegableModeloGenerali, elegirModeloListaGenerali, elegirPotenciaGenerali, elegirFilaVersionGenerali, elegirCombustibleGenerali, abrirDesplegableVersionGenerali, elegirVersionListaGenerali, cerrarAvisoTomadorMapfre, cerrarClubMapfre, leerOpcionesComercialesMapfre, elegirOpcionComercialMapfre, cerrarControlesTecnicosMapfre, rearmarContinuarMapfreTrasControlesTecnicos, generarProyectoMapfre, companiaActualTurismosAllianz, localidadTurismosAllianz, marcarAntecedenteTurismosAllianz, confirmarVehiculoMapfre, elegirTomadorMapfre, elegirOpcion, pulsarContinuarMapfre, instalarGuardEmision, marcarOpcionRiesgoHogarAllianz, marcarOpcionResueltaHogarAllianz, marcarOpcionTurismosAllianz, marcarTarjetaVehiculoTurismosAllianz, polizaActualTurismosAllianz,
   guardarPresupuestoTurismosAllianz, buscarBotonDescargaProyecto, pulsarDescargaProyectoAuto, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto, esUrlOktaSmsGenerali, type GuardEmision } from './guard.ts'
 import { puertoCodigoHttp, relevarCodigoSmsGenerali, type Relevo } from './relevo-sms.ts'
 import { crearLog } from './log.ts'
 import { localizarContinuarConRespaldo, pulsarContinuarSeguro } from './continuar.ts'
-import { elegirOpcionMatSelect } from './mat-select.ts'
+import { elegirOpcionMatSelect, leerOpcionesMatSelect } from './mat-select.ts'
 import { capturarEvidencia } from './evidencia.ts'
+import { construirVolcado, MAX_BYTES_VOLCADO, nombreDocumentoVolcado, recogerMarcosCrudos, truncarMensajeConReferencia, vaciarValoresCampos, type MarcoCrudo } from './volcado-atasco.ts'
+import { separarAria, seccionAria } from './aria-snapshot.ts'
 import { atascoDeRespaldoHueco, cerrarFormador, esPeticionOpcion, prepararFormador, type ContextoFormador } from './formador.ts'
 import { capturaJpegAtasco, capturaParaCable, leerOpcionesVisibles, limpiarOpciones, pideCapturaAtasco } from './opciones-atasco.ts'
 import { enSerie, sesionEpac, type EstadoNavegador } from './sesion.ts'
@@ -71,6 +76,12 @@ const TOPE_GLOBAL_MS = 4 * 60_000
 /** Techo absoluto del trabajo (dos intentos + espera), por si el lease no llega legible. */
 const TOPE_TRABAJO_MS = 5 * 60_000 + 30_000
 const TOPE_PASO_MS = 30_000
+/** v0.6.31: tope de cada lectura de la página tras el timeout del intento (login visible, evidencia). */
+const TOPE_REPORTE_MS = 10_000
+function topeReporte<T>(p: Promise<T>, defecto: T, ms = TOPE_REPORTE_MS): Promise<T> {
+  let reloj: ReturnType<typeof setTimeout> | undefined
+  return Promise.race([p, new Promise<T>((r) => { reloj = setTimeout(() => r(defecto), ms) })]).finally(() => clearTimeout(reloj))
+}
 const PAUSA_MIN_MS = 800
 const PAUSA_MAX_MS = 2_500
 // Pausa corta antes de cada acción (campo o pulsación): ritmo humano.
@@ -81,7 +92,7 @@ const MAX_BYTES_EVIDENCIA = 4 * 1024 * 1024
 const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 const azar = (min: number, max: number) => min + Math.random() * (max - min)
 
-type Evidencia = { url: string; captura: Buffer | null; html: string | null; inventarioDom: InventarioDom | null; capturaAtasco: Buffer | null; opcionesAtasco: string[] | null }
+type Evidencia = { url: string; captura: Buffer | null; html: string | null; inventarioDom: InventarioDom | null; capturaAtasco: Buffer | null; opcionesAtasco: string[] | null; volcado: MarcoCrudo[] | null }
 type Intento =
   | { ok: true; ofertas: OfertaNormalizada[]; pdfs: { nombre: string; base64: string }[]; vehiculo: VehiculoDelResultado }
   | { ok: false; c: Clasificacion; evidencia: Evidencia; atasco: AtascoWorker | null }
@@ -211,6 +222,15 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
         if (pagina.context() !== context) throw new ErrorTarificador('portal', 'mapfre: la pestaña del diálogo «Club MAPFRE» no es de este trabajo')
         return cerrarClubMapfre(pagina, guard)
       },
+      leerOpcionesComercialesMapfre: async (pagina, indice) => {
+        if (pagina.context() !== context) throw new ErrorTarificador('portal', 'mapfre: la pestaña del selector comercial no es de este trabajo')
+        return leerOpcionesComercialesMapfre(pagina, guard, indice)
+      },
+      elegirOpcionComercialMapfre: async (pagina, indice, opcion, permitidas) => {
+        if (pagina.context() !== context) throw new ErrorTarificador('portal', 'mapfre: la pestaña del selector comercial no es de este trabajo')
+        await ctx.pausaAccion()
+        return elegirOpcionComercialMapfre(pagina, guard, indice, opcion, permitidas)
+      },
       generarProyectoMapfre: async (pagina, completar) => {
         if (pagina.context() !== context) throw new ErrorTarificador('portal', 'mapfre: la pestaña de «Generar Proyecto» no es de este trabajo')
         await ctx.pausaAccion()
@@ -237,6 +257,15 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
         if (pagina.context() !== context) throw new ErrorTarificador('portal', 'mapfre: la pestaña del stepper no es de este trabajo')
         await pulsarContinuarMapfre(pagina, guard, paso, (p) => localizarContinuarConRespaldo(p, k.formador))
       },
+      cerrarControlesTecnicosMapfre: async (pagina) => {
+        if (pagina.context() !== context) throw new ErrorTarificador('portal', 'mapfre: la pestaña de controles técnicos no es de este trabajo')
+        return cerrarControlesTecnicosMapfre(pagina, guard)
+      },
+      reintentarAvanceMapfre: async (pagina, paso) => {
+        if (pagina.context() !== context) throw new ErrorTarificador('portal', 'mapfre: la pestaña del stepper no es de este trabajo')
+        rearmarContinuarMapfreTrasControlesTecnicos(guard, paso)
+        await pulsarContinuarMapfre(pagina, guard, paso, (p) => localizarContinuarConRespaldo(p, k.formador))
+      },
       continuar: async (pagina, o) => {
         const destino = pagina ?? page
         if (destino.context() !== context) throw new ErrorTarificador('portal', 'continuar: la pestaña no es de este trabajo')
@@ -246,6 +275,10 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
       elegirMatSelect: (select, valores, o) => {
         if (select.page().context() !== context) throw new ErrorTarificador('portal', 'mat-select: la pestaña no es de este trabajo')
         return elegirOpcionMatSelect(select, valores, { ...o, formador: k.formador, pulsar: ctx.pulsar })
+      },
+      leerOpcionesMatSelect: async (select) => {
+        if (select.page().context() !== context) return null
+        return leerOpcionesMatSelect(select, { pulsar: ctx.pulsar })
       },
       abrirProyecto: (pestana) => pulsarProyecto(page, pestana, guard),
       marcarOpcionHogar: async (marco, etiqueta) => {
@@ -273,6 +306,11 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
         if (marco.page() !== page) throw new ErrorTarificador('portal', 'allianz/auto: el marco no es de este trabajo')
         await ctx.pausaAccion()
         return companiaActualTurismosAllianz(marco, guard, buscada)
+      },
+      localidadTurismos: async (marco, busquedas, elegir) => {
+        if (marco.page() !== page) throw new ErrorTarificador('portal', 'allianz/auto: el marco no es de este trabajo')
+        await ctx.pausaAccion()
+        return localidadTurismosAllianz(marco, guard, busquedas, elegir)
       },
       marcarAntecedenteTurismos: async (marco, clave, dato) => {
         if (marco.page() !== page) throw new ErrorTarificador('portal', 'allianz/auto: el marco no es de este trabajo')
@@ -368,6 +406,12 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
         await capturar('avance')
         return r
       },
+      pulsarRecalcularGenerali: async () => {
+        await ctx.pausaAccion()
+        const r = await pulsarRecalcularGenerali(page, guard)
+        await capturar('avance')
+        return r
+      },
       pulsarSiguienteGenerali: async () => {
         await ctx.pausaAccion()
         const r = await pulsarSiguienteValoracionGenerali(page, guard)
@@ -433,11 +477,15 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
       error = guard.violacion() ?? rv.error
     }
 
-    const loginVisible = await page
-      .locator('input[type="password"]')
-      .filter({ visible: true })
-      .count()
-      .then((n) => n > 0, () => false)
+    // v0.6.31: cada lectura posterior al timeout lleva su tope (10 s): el reporte SIEMPRE sale aunque la página esté colgada.
+    const loginVisible = await topeReporte(
+      page
+        .locator('input[type="password"]')
+        .filter({ visible: true })
+        .count()
+        .then((n) => n > 0, () => false),
+      false,
+    )
     // Una pantalla de código/SMS manda sobre cualquier otra clasificación (un timeout de selector, p. ej.): no se reintenta.
     if (clasificar(error).tipo === 'portal') {
       await exigirSinVerificacion(page, k.compania).catch((e: unknown) => { error = e })
@@ -461,7 +509,7 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
     const actual = abiertas.at(-1) ?? page
     // Recorrido: la pantalla donde se paró (hueco de mapa → «pantalla_no_reconocida», con su diálogo si lo hay), antes de la evidencia.
     await capturar(pideInventarioDom(error) ? 'pantalla_no_reconocida' : 'fallo')
-    const { captura, html } = await capturarEvidencia(actual)
+    const { captura, html } = await topeReporte((async () => await capturarEvidencia(actual))().catch(() => ({ url: '', captura: null, html: null })), { url: '', captura: null, html: null })
     // Hueco de mapa (`ErrorMapaIncompleto`): inventario de ESTRUCTURA de todos los marcos de TODAS las pestañas (la más
     // reciente primero, por el tope de tamaño), incluidos los de otro origen (solo lectura, saneado y ≤60 KB;
     // inventario-dom.ts). Nunca para el envío del resultado: si falla, `null`.
@@ -475,7 +523,10 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
     // lleve datos personales, marcado `capturaConDatos`) y, si el atasco es de elegir una opción de lista, sus textos visibles.
     const capturaAtasco = pideCapturaAtasco({ hayAtasco: atasco !== null, huecoMapa: pideInventarioDom(error) }) ? await capturaJpegAtasco(actual) : null
     const opcionesAtasco = atasco && esPeticionOpcion(atasco) ? await leerOpcionesVisibles(actual).catch(() => null) : null
-    return { ok: false, c, evidencia: { url: actual.url(), captura, html, inventarioDom, capturaAtasco, opcionesAtasco }, atasco }
+    // VOLCADO (27/10/2026, volcado-atasco.ts): hueco de mapa o atasco → TODOS los marcos de TODAS las pestañas (HTML + resumen de
+    // pantalla), crudos; se sanean al enviar (ahí está el redactor del trabajo). Si falla, queda el HTML de evidencia de siempre.
+    const volcado = pideInventarioDom(error) || atasco !== null ? await topeReporte(recogerMarcosCrudos(abiertas).catch(() => null), null, 25_000) : null
+    return { ok: false, c, evidencia: { url: actual.url(), captura, html, inventarioDom, capturaAtasco, opcionesAtasco, volcado }, atasco }
   } catch (e) {
     ti.cubrir({ ok: false, codigo: 'desconocido' })
     await k.sesion.alFallo(false).catch(() => undefined)
@@ -742,7 +793,25 @@ async function main(): Promise<number> {
       }
       const recorridoDelTrabajo: Recorrido = recorrido.recorrido()
       const secretos = [...secretosDelEntorno(env), ...secretosRiesgo]
-      const htmlRedactado = evidencia.html ? redactarHtml(evidencia.html, secretos) : null
+      // VOLCADO (hueco/atasco): un HTML por marco + resumen de pantalla, por el saneador MÁS ESTRICTO (`redactarHtmlGrabacion`) + valores
+      // de campos vaciados + redactor del trabajo; recorta por marco si pasa del tope. La sección de accesibilidad (ya redactada) va al final.
+      let volcadoHtml: { html: string; recortes: string[] } | null = null
+      if (evidencia.volcado && evidencia.volcado.length > 0) {
+        try {
+          const aria = evidencia.html ? separarAria(evidencia.html).aria : null
+          const seccion = aria ? seccionAria(aria) : ''
+          const v = construirVolcado(evidencia.volcado, {
+            html: (h) => redactarHtml(vaciarValoresCampos(redactarHtmlGrabacion(h)), secretos),
+            texto: (t) => redactarTrabajo(redactarTextoGrabacion(t)),
+            url: (u) => redactarTrabajo(redactarUrl(u)),
+          }, MAX_BYTES_VOLCADO - Buffer.byteLength(seccion))
+          volcadoHtml = { html: v.html + seccion, recortes: v.recortes }
+        } catch {
+          log('volcado_fallido')
+        }
+      }
+      const htmlRedactado = volcadoHtml ? redactarHtml(volcadoHtml.html, secretos) : evidencia.html ? redactarHtml(evidencia.html, secretos) : null
+      const htmlViaja = htmlRedactado !== null && Buffer.byteLength(htmlRedactado) <= 2 * 1024 * 1024
       // Dispositivo verificado pero NO guardado en la bóveda: que se vea en el resultado (el stdout de Fly se pierde).
       // Va al FINAL (asegura reconoce `[nota] requiere_verificacion_humana:` con UNA sola nota delante) y cabe siempre en el tope.
       const notaBoveda = fuente.notaBoveda?.() ?? null
@@ -753,7 +822,8 @@ async function main(): Promise<number> {
         resultado: 'error',
         error: {
           tipo: c.tipo,
-          mensaje: redactarTrabajo(mensaje).slice(0, 2000 - colaBoveda.length) + colaBoveda,
+          // Cabeza + cola del mensaje y, al final, la referencia al documento del volcado (nunca un corte a ciegas).
+          mensaje: truncarMensajeConReferencia(redactarTrabajo(mensaje), { max: 2000, referencia: htmlViaja ? nombreDocumentoVolcado(trabajo.id) : null, recortes: volcadoHtml?.recortes, cola: colaBoveda }),
           url: redactarTrabajo(evidencia.url).slice(0, 500),
           // Lista COMPLETA de versiones (solo catálogo), sin pasar por el redactor: asegura la valida y la usa por código.
           ...(c.opcionesVersion ? { opcionesVersion: c.opcionesVersion.slice(0, MAX_OPCIONES_VERSION_CABLE) } : {}),
@@ -774,7 +844,7 @@ async function main(): Promise<number> {
           const cap = capturaParaCable({ png: evidencia.captura, jpegAtasco: evidencia.capturaAtasco, hayDatosPersonales: secretosRiesgo.length > 0, maxBytes: MAX_BYTES_EVIDENCIA })
           return cap ? { capturaBase64: cap.base64, ...(cap.conDatos ? { capturaConDatos: true as const } : {}) } : {}
         })(),
-        ...(htmlRedactado && Buffer.byteLength(htmlRedactado) <= 2 * 1024 * 1024 ? { html: htmlRedactado } : {}),
+        ...(htmlViaja ? { html: htmlRedactado } : {}),
         ...meta(),
       }
       // El worker no tiene canal de avisos (ni Telegram ni BD: variables prohibidas): el aviso a Alberto sale de
@@ -787,6 +857,7 @@ async function main(): Promise<number> {
         transitorio: c.transitorio,
         intentos: primerFallo ? 2 : 1,
         mensaje: redactarTrabajo(c.mensaje).slice(0, 300),
+        ...(volcadoHtml ? { volcadoMarcos: evidencia.volcado?.length ?? 0, volcadoBytes: Buffer.byteLength(volcadoHtml.html), volcadoRecortes: volcadoHtml.recortes.length } : {}),
         ...(evidencia.inventarioDom ? { inventarioElementos: evidencia.inventarioDom.totalElementos, inventarioMarcos: evidencia.inventarioDom.marcos.length } : {}),
         recorridoCapturas: recorridoDelTrabajo.capturas.length,
         ...(r.atasco ? { atasco: r.atasco.clave, atascoCandidatos: r.atasco.candidatos.length } : {}),

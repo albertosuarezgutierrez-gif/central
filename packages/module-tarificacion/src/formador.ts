@@ -35,6 +35,9 @@ export function redactarVehiculos(texto: string): string {
   return out
 }
 
+/** Cualquier tirada de 7+ cifras (cuentas, pólizas, referencias catastrales numéricas). Aparte para que 0.3.18 la pueda excluir. */
+export const PATRON_TIRADA_CIFRAS = /\d[\d\s.-]{5,}\d/g
+
 /** Exportada para el GRABADOR (07/10/2026): el bookmarklet lleva estos mismos patrones al navegador. */
 export const PATRONES_PERSONALES: readonly RegExp[] = [
   ...PATRONES_VEHICULO,
@@ -52,7 +55,7 @@ export const PATRONES_PERSONALES: readonly RegExp[] = [
   // Id de usuario de portal (dos letras + 6 cifras, p. ej. PA123456).
   /\b[A-Z]{2}\d{6}\b/g,
   // Cualquier otra tirada de 7+ cifras (cuentas, pólizas, referencias catastrales numéricas).
-  /\d[\d\s.-]{5,}\d/g,
+  PATRON_TIRADA_CIFRAS,
 ]
 
 /** Tapa datos personales reconocibles. Puro: no conoce secretos (eso lo hace `crearRedactor`). */

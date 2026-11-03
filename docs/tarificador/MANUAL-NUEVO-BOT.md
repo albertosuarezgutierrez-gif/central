@@ -36,6 +36,11 @@
 - Un cepo no está terminado hasta verlo FALLAR (rompe lo que protege, míralo en rojo, restaura). Uso/régimen de Hogar siempre explícitos, sin valor por defecto.
 
 ## 3. Alta de una compañía nueva (checklist de piezas)
+0. **Parte del vocabulario (antes de escribir un solo selector):** abre `services/tarificador-rpa/src/vocabulario.ts` y la sección «Vocabulario común» de `CONOCIMIENTO-PORTALES.md`.
+   Los rótulos de lectura (precio, recibo anual, compañía anterior, fechas…) y de acción (avanzar, guardar/generar proyecto, descargar documento) se buscan ahí POR CONCEPTO: si el portal nuevo usa un
+   sinónimo, se AÑADE al concepto con su origen (compañía + fecha), no se copia en el adaptador (`test/vocabulario.test.ts` rompe si un patrón repite ≥3 términos de un concepto fuera de `vocabulario.ts`).
+   Lo de acción no autoriza ningún clic: se pulsa siempre por el guard; la lista de bloqueo (emitir, contratar, pagar, firmar…) gana siempre. Tras los primeros trabajos reales, pasa
+   `npm run vocabulario-candidatos -- <avisos.json>` (en `services/tarificador-rpa`) para ver qué rótulos nuevos han salido.
 1. **BD:** SQL idempotente en `apps/asegura/prisma/sql/AAAA-MM-DD_<tema>.sql` con la fila en `seguros.companias_integracion` (`compania`, `ramo`, `modo='rpa_autorizada'`, `nota_autorizacion`, `credencial_clave`, `max_concurrencia`, `activo=false`). Modelo: `2026-10-13c_tarificador_explorador_fase_b.sql`. Nace APAGADA; la enciende Alberto. Se aplica con la sesión de Supabase de asegura, nunca a ciegas.
 2. **Credenciales:** `CRED_<CLAVE>_USER` / `_PASS` como fly secrets de `asegura-tarificador` (`<CLAVE>` = `credencial_clave`, p. ej. `ALLIANZ_EPAC`). Pide a Alberto que los ponga; tú solo nombras la variable. Nunca `DATABASE_URL`/`CODEOSCOPIC_*` en el worker.
 3. **Login y entrada:** función de login por código (con `exigirSinCaptcha` y detección de 2FA/SMS → parar) y entrada común del portal (casi todas: Venta → «Nueva Alta» → producto). Referencia: `src/adapters/allianz/entrada.ts` (`loginEpac`, `abrirNuevaAlta`, `etiquetaProducto`). Regístrala en `PORTALES_EXPLORACION` (`src/explorador.ts`).

@@ -28,7 +28,7 @@ test('esInicioEntrada: reconoce "- **" y "### "', () => {
 });
 
 test('esInicioEntrada: rechaza otros formatos de cabecera', () => {
-  assert.equal(esInicioEntrada('## Título (04/08/2026)'), false);
+  assert.equal(esInicioEntrada('## Título sin fecha al principio'), false);
   assert.equal(esInicioEntrada('#### Título (04/08/2026)'), false);
   assert.equal(esInicioEntrada('  - **Título indentado**'), false); // no es columna 0
   assert.equal(esInicioEntrada('Texto suelto en columna 0'), false);
@@ -195,6 +195,40 @@ test('unir: reconstruye el texto con doble salto de línea entre entradas', () =
   ]);
   const texto = unir(entradas);
   assert.equal(texto, '- **A (04/08/2026).** Cuerpo A.\n\n- **B (03/08/2026).** Cuerpo B.');
+});
+
+// --- formato `## (dd/mm/aaaa)` (el real desde septiembre 2026) ------------------
+
+test('esInicioEntrada: reconoce "## (dd/mm/aaaa)" y "## dd/mm/aaaa"', () => {
+  assert.equal(esInicioEntrada('## (02/11/2026) Título'), true);
+  assert.equal(esInicioEntrada('## 23/09/2026 — Título'), true);
+});
+
+test('trocear: "## (fecha)" abre entrada y sus sub-bullets "- **" son cuerpo', () => {
+  const entradas = trocear([
+    '## (02/11/2026) Entrada A',
+    '- **Sub-bullet:** cuerpo',
+    '- **Otro:** cuerpo',
+    '## (01/11/2026) Entrada B',
+    '- **Sub:** cuerpo',
+    '### 🗂 (05/09/2026) Entrada vieja',
+    'cuerpo',
+  ]);
+  assert.equal(entradas.length, 3);
+  assert.equal(entradas[0].length, 3);
+});
+
+test('clasificar: entradas "## (fecha)" de octubre se archivan y las de noviembre quedan vivas', () => {
+  const entradas = trocear([
+    '## (02/11/2026) Nov',
+    '- **sub:** x',
+    '## (30/10/2026) Oct',
+    '- **sub:** y',
+    '## (24/09/2026) Sep',
+  ]);
+  const { vivas, porMes } = clasificar(entradas, '2026-11');
+  assert.equal(vivas.length, 1);
+  assert.deepEqual([...porMes.keys()].sort(), ['2026-09', '2026-10']);
 });
 
 // --- resultado -------------------------------------------------------------

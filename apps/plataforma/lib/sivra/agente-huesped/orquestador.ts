@@ -19,6 +19,10 @@ import { intentarCobroAutomatico } from '@/lib/sivra/extras/cobro-auto'
 import { preciosVigentes } from '@/lib/sivra/extras/catalogo'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
+import { esPeticionFactura, esTramiteFiscal } from './factura'
+import { asegurarSolicitud } from '@/lib/sivra/facturas/servicio'
+import { conEnlace } from '@/lib/sivra/facturas/enlace'
+import { proponerSiCompleta, rellenarDesdeChat, solicitudVivaDe } from '@/lib/sivra/facturas/chat'
 
 
 // Idempotencia por id del mensaje. El llamador (sondeo/webhook) puede pasar la pregunta y el
@@ -151,7 +155,46 @@ export async function procesarMensajeHuesped(
       const reply = await recomendar(pregunta, ctx.zona, lang)
       dec = { reply, confidence: 0.6, needs_human: false, categoria: 'recomendacion', sentimiento: 'neutro', motivo: '', fuente: 'web' }
     } else {
+      // 1-quater) FACTURA (27/10/2026): si el huésped la PIDE, se crea (o reutiliza) la solicitud y el borrador lleva el
+      // enlace al formulario de datos fiscales. No cambia la política de envío: una petición de factura sigue pasando
+      // SIEMPRE por Alberto (`needs_human` en decidir.ts y otra vez abajo). Si no se puede crear, el agente pide los
+      // datos en el mensaje como antes y el motivo lo dice.
+      let avisoEnlace = ''
+      // 29/10/2026: los datos que el huésped da EN EL CHAT rellenan la solicitud (nunca pisan lo que ya rellenó en el
+      // formulario; lo dudoso queda pendiente). Si queda completa y válida, `proponerSiCompleta` manda YA a Alberto el
+      // borrador por Telegram (✅ Enviar / ✏️ Modificar), una sola vez por solicitud; nada se emite ni envía sin su ✅.
+      // El texto al huésped (`ctx.facturaEstado`): completa → «tomo nota, te la envío en cuanto la revise» (sin fecha)
+      // y sin enlace; incompleta → pide SOLO lo que falta (+ enlace). Un mensaje que SIGUE a una petición (p. ej. solo
+      // los datos) usa la solicitud que ya existe, sin crear otra.
+      const guestPrevios = ctx0.historial.filter(h => h.from === 'guest').map(h => h.text)
+      const textosGuest = normalizarTexto(guestPrevios.at(-1) || '') === normalizarTexto(pregunta) ? guestPrevios : [...guestPrevios, pregunta]
+      let solFactura: { id: string; url: string } | null = null
+      if (esPeticionFactura(pregunta)) {
+        const sol = await asegurarSolicitud(ctx.reservationId, 'agente').catch((e: unknown) => ({ ok: false as const, motivo: e instanceof Error ? e.message : 'fallo interno' }))
+        if (sol.ok) solFactura = { id: sol.solicitudId, url: sol.url }
+        else avisoEnlace = `NO he podido crear el enlace al formulario de factura (${sol.motivo}): el borrador pide los datos a mano; o créalo en /sivra/facturas.`
+      } else if (esTramiteFiscal(pregunta, guestPrevios) && guestPrevios.some(t => esPeticionFactura(t))) {
+        solFactura = await solicitudVivaDe(ctx.reservationId).catch(() => null)
+      }
+      if (solFactura) {
+        const estadoFactura = await rellenarDesdeChat(solFactura.id, textosGuest).catch((e: unknown) => {
+          console.warn('[agente-huesped] datos de factura desde el chat:', e instanceof Error ? e.message.slice(0, 120) : 'error')
+          return null
+        })
+        if (estadoFactura) ctx.facturaEstado = estadoFactura
+        if (!estadoFactura?.completa) ctx.enlaceFactura = solFactura.url
+        else {
+          // Fallar aquí no tumba la respuesta al huésped: el borrador se puede preparar a mano en /sivra/facturas.
+          const p = await proponerSiCompleta(solFactura.id).catch((e: unknown) => {
+            console.warn('[agente-huesped] borrador de factura desde el chat:', e instanceof Error ? e.message.slice(0, 120) : 'error')
+            return null
+          })
+          if (p === null || (typeof p === 'object' && !p.ok)) avisoEnlace = `NO he podido preparar el borrador de la factura${p ? ` (${p.motivo})` : ''}: hazlo en /sivra/facturas (alta manual, misma reserva).`
+          else if (typeof p === 'object' && p.propuesta !== 'enviada') avisoEnlace = 'borrador de la factura preparado, pero su Telegram con ✅ Enviar no ha salido: «Reenviar a Telegram» en /sivra/facturas.'
+        }
+      }
       dec = await decidir(ctx, pregunta, categoria)
+      if (avisoEnlace) dec.motivo = `${dec.motivo ? dec.motivo + ' · ' : ''}${avisoEnlace}`
     }
 
     // Hueco de conocimiento: escalamos porque la respuesta no queda cubierta por las fuentes. Antes
@@ -203,6 +246,19 @@ export async function procesarMensajeHuesped(
     } else if (dec.reply && respuestaConfirmaHorario(dec.reply, horarioOficial)) {
       dec.needs_human = true
       dec.motivo = `${dec.motivo ? dec.motivo + ' · ' : ''}El borrador acepta una hora de entrada/salida distinta de la oficial — solo la autorizas tú.`
+    }
+
+    // 2-quinquies) Enlace del formulario de factura: lo pone el CÓDIGO al final (el modelo no escribe URLs) y el
+    // mensaje nunca sale solo (decisión de política: una factura la mira Alberto).
+    if (ctx.enlaceFactura && dec.reply) {
+      dec.reply = conEnlace(dec.reply, ctx.lang, ctx.enlaceFactura)
+      dec.needs_human = true
+      dec.motivo = `${dec.motivo ? dec.motivo + ' · ' : ''}lleva el enlace al formulario de datos fiscales; al rellenarlo te llegará el borrador de la factura`
+    }
+    // Datos completos desde el chat: sin enlace, y el mensaje TAMPOCO sale solo (una factura la mira Alberto).
+    if (ctx.facturaEstado?.completa && dec.reply) {
+      dec.needs_human = true
+      dec.motivo = `${dec.motivo ? dec.motivo + ' · ' : ''}datos de facturación completos (sacados del chat y validados): te llega aparte el borrador de la factura con ✅ Enviar / ✏️ Modificar`
     }
 
     // 3) ¿Auto-envío o propuesta por Telegram? La regla vive en `auto.ts` (pura y testeada); aquí

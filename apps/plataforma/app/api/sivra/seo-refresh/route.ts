@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
+import { isCronAuthorized } from '@/lib/cron-auth'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { aiComplete } from '@/lib/ai-client'
@@ -55,8 +56,9 @@ async function runSeoAnalysis(current: ReturnType<typeof extractSeoParams>) {
   return parsed
 }
 
-export async function GET(req: Request) {
-  const cronOk = req.headers.get('authorization') === `Bearer ${process.env.CRON_SECRET}`
+export async function GET(req: NextRequest) {
+  // Tiempo constante y sin «Bearer undefined»: sin CRON_SECRET en producción se deniega.
+  const cronOk = isCronAuthorized(req, { soloCabecera: true })
   if (!cronOk) {
     const session = await getSession()
     if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })

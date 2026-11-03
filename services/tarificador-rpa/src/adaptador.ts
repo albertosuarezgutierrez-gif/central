@@ -6,7 +6,7 @@ import type { ModalidadPortal, NombrePasoTraza, PermisoEmision } from '@central/
 import type { ContextoTarificacion, RiesgoComunidad, TarificadorAdapter } from '@central/module-tarificacion'
 import type { ContextoFormador } from './formador.ts'
 import type { OpcionesMatSelect } from './mat-select.ts'
-import type { PasoContinuarMapfre, ClaveAntecedenteTurismos, ResultadoAntecedenteTurismos, ResultadoCompaniaActualTurismos, ResultadoOpcionHogar, ResultadoPolizaActualTurismos, ResultadoGuardarPresupuestoTurismos, ResultadoProyectoMapfre, SelectorAvancePestana, CompaniaDescargaProyecto, BusquedaDescargaProyecto } from './guard.ts'
+import type { PasoContinuarMapfre, ClaveAntecedenteTurismos, ResultadoAntecedenteTurismos, ResultadoCompaniaActualTurismos, ResultadoLocalidadTurismos, ResultadoOpcionHogar, ResultadoPolizaActualTurismos, ResultadoGuardarPresupuestoTurismos, ResultadoProyectoMapfre, SelectorAvancePestana, CompaniaDescargaProyecto, BusquedaDescargaProyecto, OpcionesComercialesMapfre, EstadoTarjetaComercialMapfre } from './guard.ts'
 
 export type ContextoPortal = ContextoTarificacion & {
   /** Pulsa un botón/enlace SOLO si no casa con el patrón de emisión. Nunca `locator.click()`. */
@@ -72,6 +72,10 @@ export type ContextoPortal = ContextoTarificacion & {
    * contexto que `confirmarVehiculoMapfre`.
    */
   continuarMapfre?: (pagina: Page, paso: PasoContinuarMapfre) => Promise<void>
+  /** Mapfre NSEI (v0.8.47): cierra el diálogo «Controles técnicos» (`cerrarControlesTecnicosMapfre`) y devuelve su texto SIN sanear. */
+  cerrarControlesTecnicosMapfre?: (pagina: Page) => Promise<string>
+  /** Mapfre NSEI (v0.8.47): UN reintento de «Continuar» desde «Datos básicos» tras cerrar un rechazo de controles técnicos (código 232). */
+  reintentarAvanceMapfre?: (pagina: Page, paso: PasoContinuarMapfre) => Promise<void>
   /**
    * Mapfre NSEI (14/10/2026): elige en el diálogo de selección de persona del tomador la ÚNICA fila cuyo NIF normalizado es
    * el del riesgo (`elegirTomadorMapfre` de guard.ts; la comparación y el NIF no salen del guard). `ninguna`/`varias`/
@@ -85,6 +89,18 @@ export type ContextoPortal = ContextoTarificacion & {
    * IZQUIERDA (texto validado en guard.ts, `cerrarClubMapfre`). Una vez y solo tras el «Continuar» desde Figuras.
    */
   cerrarClubMapfre?: (pagina: Page) => Promise<'cerrado'>
+  /**
+   * Mapfre 0.8.49: LEE las opciones del selector de «producto comercial» de la tarjeta `indice` de Coberturas (abre, lee el overlay y cierra con
+   * Escape SIN elegir; `leerOpcionesComercialesMapfre` de guard.ts). Una apertura por tarjeta y trabajo. Fallo blando = `ErrorTarificador`;
+   * `ErrorSelectorComercialAlteradoMapfre` (cambió valor/prima) aborta el trabajo.
+   */
+  leerOpcionesComercialesMapfre?: (pagina: Page, indice: number) => Promise<OpcionesComercialesMapfre>
+  /**
+   * Mapfre 0.8.50 (Alberto, 02/11/2026): ELIGE la variante comercial `opcion` (texto EXACTO de la lista cerrada `permitidas` leída de esa tarjeta) en la tarjeta `indice`
+   * y espera su recálculo (`elegirOpcionComercialMapfre` de guard.ts). Sirve también para RESTAURAR la selección original. Tope duro por trabajo; sin ventanas de red.
+   * Fallo blando = `ErrorTarificador`; `ErrorSelectorComercialAlteradoMapfre` (otra tarjeta cambió, diálogo desconocido, recálculo que no acaba) aborta SOLO las variantes.
+   */
+  elegirOpcionComercialMapfre?: (pagina: Page, indice: number, opcion: string, permitidas: readonly string[]) => Promise<EstadoTarjetaComercialMapfre>
   /**
    * Mapfre NSEI (v0.8.14, 22/10/2026, autorizado por Alberto: un proyecto no es póliza): tras LEER las primas, pulsa «Generar
    * Proyecto» y lee el nº de proyecto, por `generarProyectoMapfre` (guard.ts). Nunca lanza por «no se pudo» (salvo violación del guard).
@@ -114,6 +130,8 @@ export type ContextoPortal = ContextoTarificacion & {
   marcarTarjetaVehiculoTurismos?: (marco: Frame, indice: number, etiqueta: string) => Promise<ResultadoOpcionHogar>
   /** Allianz AUTOS Turismos (v0.6.5, 17/10/2026): abre «Compañía actual del vehículo», lee sus opciones y elige como mucho la ÚNICA que casa con `buscada`, por `companiaActualTurismosAllianz` (guard.ts). */
   companiaActualTurismos?: (marco: Frame, buscada: string | null) => Promise<ResultadoCompaniaActualTurismos>
+  /** Allianz AUTOS Turismos (v0.6.37, 31/10/2026): rellena «Localidad» (autocompletado del tomador) tecleando `busquedas` y eligiendo como mucho la opción que decide `elegir` (pura), por `localidadTurismosAllianz` (guard.ts). */
+  localidadTurismos?: (marco: Frame, busquedas: readonly string[], elegir: (opciones: readonly string[]) => number | null) => Promise<ResultadoLocalidadTurismos>
   /** Allianz AUTOS Turismos (v0.6.10, 18/10/2026): contesta una pregunta de «Antecedentes» (dato, o la opción más favorable si `dato` es null) por `marcarAntecedenteTurismosAllianz` (guard.ts). */
   marcarAntecedenteTurismos?: (marco: Frame, clave: ClaveAntecedenteTurismos, dato: number | null) => Promise<ResultadoAntecedenteTurismos>
   /** Allianz AUTOS Turismos (v0.6.11, 19/10/2026): escribe los 5 últimos dígitos de la póliza actual en «Antecedentes» por `polizaActualTurismosAllianz` (guard.ts). Dato sensible. */
@@ -147,6 +165,8 @@ export type ContextoPortal = ContextoTarificacion & {
   confirmarDatosPersonasGenerali?: () => Promise<{ dialogo: string | null }>
   /** Generali (v0.2.27): «Siguiente» de «Valoración Riesgo» (marco emiAutosGenB028.do, tomador confirmado, máx. 3 por trabajo) por `pulsarSiguienteValoracionGenerali` de guard.ts. */
   pulsarSiguienteGenerali?: () => Promise<{ dialogo: string | null }>
+  /** Generali (v0.2.39): «Recalcular» de la botonera «Acciones» (marco emiAutosGenB028.do, una vez por trabajo; nunca «Guardar Cálculo») por `pulsarRecalcularGenerali` de guard.ts. */
+  pulsarRecalcularGenerali?: () => Promise<{ dialogo: string | null }>
   /** Generali (v0.2.7): abre «Todas las marcas» por su disparador (`abrirDesplegableMarcaGenerali` de guard.ts; id `buscamarca`, una vez). */
   abrirDesplegableMarcaGenerali?: (base: string) => Promise<void>
   /** Generali (v0.2.7): pulsa el `li` de la marca elegida (`elegirMarcaListaGenerali` de guard.ts; texto exacto, una vez). */
@@ -176,6 +196,8 @@ export type ContextoPortal = ContextoTarificacion & {
    * clara con `valores` (textos del portal), si no la IA, si no `ErrorOpcionSinResolver`. Todo por el guard.
    */
   elegirMatSelect?: (select: Locator, valores: string | readonly string[], opciones: Pick<OpcionesMatSelect, 'etiqueta' | 'clave'>) => Promise<{ texto: string; origen: 'coincidencia' | 'ia' }>
+  /** v0.8.28 · Solo LEE las opciones de un `mat-select` (lo abre y lo cierra por el guard; no elige). Para el diagnóstico de huecos. `null` = no se pudo. */
+  leerOpcionesMatSelect?: (select: Locator) => Promise<string[] | null>
 }
 
 /**

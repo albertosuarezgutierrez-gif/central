@@ -13,16 +13,41 @@ import { EmisionBloqueadaError } from '@central/module-tarificacion'
 import type { OfertaNormalizada, PdfRef } from '@central/module-tarificacion'
 import type { ContextoPortal } from './adaptador.ts'
 import { esperarPdf, esPdf } from './descarga-pdf.ts'
-import { ErrorFronteraEmision, type CompaniaDescargaProyecto } from './guard.ts'
+import { DescargaNoPulsadaError, ErrorFronteraEmision, pulsarEscapeAvisoModal, type CompaniaDescargaProyecto } from './guard.ts'
 
 /** Interruptor por compañía (constante): `false` apaga la descarga SIN tocar nada más. Por defecto, activadas. */
 export const DESCARGA_PROYECTO_ACTIVA: Readonly<Record<CompaniaDescargaProyecto, boolean>> = { allianz: true, mapfre: true, generali: true }
 
 /** Espera al PDF tras el clic. */
-export const TOPE_DESCARGA_PROYECTO_MS = 30_000
+export const TOPE_DESCARGA_PROYECTO_MS = 20_000
+/** v0.6.31: tope TOTAL de la descarga (buscar + abrir menú + clic + PDF): pase lo que pase, el precio sigue y el aviso dice «tiempo agotado».
+ * v0.8.34: 35 s (cabe un clic fallido de 6 s + Escape + re-escaneo + el reintento y la espera del PDF). */
+export const TOPE_TOTAL_DESCARGA_PROYECTO_MS = 35_000
+/** v0.8.34: pausa antes de re-escanear tras un clic que no llegó a darse (deja cerrar la capa o terminar el re-pintado). */
+export const REINTENTO_CLIC_DESCARGA_MS = 800
 /** Tamaño razonable de un PDF de presupuesto: más pequeño no es un documento; más grande lo rechazaría asegura (`MAX_BYTES_ADJUNTO`, 4 MiB). */
 export const MIN_BYTES_PDF_PROYECTO = 100
 export const MAX_BYTES_PDF_PROYECTO = 4 * 1024 * 1024
+
+/** v0.8.43: tope de espera a que desaparezca la capa de un diálogo de Material (cdk-overlay-backdrop) antes de buscar el botón de descarga. */
+export const TOPE_CAPA_OVERLAY_MS = 6_000
+const SEL_CAPA_OVERLAY = '.cdk-overlay-backdrop-showing, .cdk-overlay-backdrop.cdk-overlay-dark-backdrop'
+
+/**
+ * v0.8.43 (Mapfre, tras cerrar el diálogo de alta): espera —SOLO LECTURA, sin pulsar nada— a que no quede ninguna capa `cdk-overlay-backdrop` visible
+ * (la que tapaba el icono «picture_as_pdf»). Devuelve true si ya no hay capa, false si sigue tras `topeMs` (la descarga se intenta igual: su reintento
+ * y su cierre de diálogos informativos siguen siendo los de siempre). Nunca lanza. Una página sin `locator` (de prueba) cuenta como sin capa.
+ */
+export async function esperarSinCapaOverlay(page: Page, topeMs = TOPE_CAPA_OVERLAY_MS): Promise<boolean> {
+  const hasta = Date.now() + topeMs
+  for (;;) {
+    let visibles = 0
+    try { visibles = await page.locator(SEL_CAPA_OVERLAY).evaluateAll((els) => els.filter((e) => { const r = (e as HTMLElement).getBoundingClientRect(); const st = getComputedStyle(e as HTMLElement); return r.width > 0 && r.height > 0 && st.visibility !== 'hidden' && st.display !== 'none' }).length) } catch { return true }
+    if (visibles === 0) return true
+    if (Date.now() >= hasta) return false
+    try { await page.waitForTimeout(250) } catch { return true }
+  }
+}
 
 const NOMBRE_COMPANIA: Record<CompaniaDescargaProyecto, string> = { allianz: 'Allianz', mapfre: 'Mapfre', generali: 'Generali' }
 
@@ -47,6 +72,36 @@ export async function descargarProyectoAuto(
   nombre: string,
   guardado: boolean,
   topeMs = TOPE_DESCARGA_PROYECTO_MS,
+  topeTotalMs = TOPE_TOTAL_DESCARGA_PROYECTO_MS,
+): Promise<ResultadoDescargaProyecto> {
+  // Un diálogo nativo del portal durante la descarga se descarta (nunca se acepta) para que no bloquee la página.
+  const alDialogo = (d: { dismiss: () => Promise<void> }) => { d.dismiss().catch(() => {}) }
+  try { page.on('dialog', alDialogo) } catch { /* página de prueba sin eventos */ }
+  let reloj: ReturnType<typeof setTimeout> | undefined
+  try {
+    const interna = descargarProyectoAutoInterna(page, ctx, compania, nombre, guardado, topeMs)
+    interna.catch(() => {}) // si pierde la carrera, su error tardío no debe quedar sin atender
+    const agotado = new Promise<ResultadoDescargaProyecto>((resolver) => {
+      reloj = setTimeout(() => {
+        const motivo = 'sin PDF (tiempo agotado)'
+        ctx.log?.(`pdf: ${NOMBRE_COMPANIA[compania]}: ${motivo}`)
+        resolver({ pdf: null, aviso: `PDF del proyecto no descargado en ${NOMBRE_COMPANIA[compania]}: ${motivo}` })
+      }, topeTotalMs)
+    })
+    return await Promise.race([interna, agotado])
+  } finally {
+    clearTimeout(reloj)
+    try { page.off('dialog', alDialogo) } catch { /* idem */ }
+  }
+}
+
+async function descargarProyectoAutoInterna(
+  page: Page,
+  ctx: Partial<Pick<ContextoPortal, 'adjuntarPdf' | 'log' | 'buscarDescargaProyectoAuto' | 'pulsarDescargaProyectoAuto'>>,
+  compania: CompaniaDescargaProyecto,
+  nombre: string,
+  guardado: boolean,
+  topeMs = TOPE_DESCARGA_PROYECTO_MS,
 ): Promise<ResultadoDescargaProyecto> {
   const quien = NOMBRE_COMPANIA[compania]
   const sin = (motivo: string): ResultadoDescargaProyecto => {
@@ -56,14 +111,43 @@ export async function descargarProyectoAuto(
   if (!DESCARGA_PROYECTO_ACTIVA[compania]) return { pdf: null, aviso: null }
   if (!ctx.buscarDescargaProyectoAuto || !ctx.pulsarDescargaProyectoAuto || !ctx.adjuntarPdf) return sin('el runner no trae la puerta guardada de descarga')
   try {
-    const b = await ctx.buscarDescargaProyectoAuto(page, compania, guardado)
+    let b = await ctx.buscarDescargaProyectoAuto(page, compania, guardado)
+    if (!('boton' in b) && b.menu) {
+      // v0.6.30: disparador de menú «Descargar propuesta»: UN clic (por la misma puerta guardada) solo para ABRIRLO; luego se busca de nuevo y solo vale una
+      // opción que pase la lista blanca (rótulo Y atributos sin sms/email/enviar/firma…). Sin opción así: se cierra con Escape y no se pulsa nada más.
+      const etiquetaMenu = b.menu.etiqueta.slice(0, 40)
+      await ctx.pulsarDescargaProyectoAuto(page, b.menu.boton, compania, guardado)
+      await page.waitForTimeout(600)
+      const b2 = await ctx.buscarDescargaProyectoAuto(page, compania, guardado)
+      if (!('boton' in b2)) {
+        await pulsarEscapeAvisoModal(page)
+        return sin(`se abrió el menú «${etiquetaMenu}» pero no hay ninguna opción de descarga/PDF/imprimir sin bloqueo (no se pulsó nada más): ${b2.motivo}`)
+      }
+      b = b2
+    }
     if (!('boton' in b)) return sin(b.motivo)
-    const espera = esperarPdf(page, topeMs)
+    let espera = esperarPdf(page, topeMs)
     try {
       await ctx.pulsarDescargaProyectoAuto(page, b.boton, compania, guardado)
     } catch (e) {
       espera.cancelar()
-      throw e
+      if (!(e instanceof DescargaNoPulsadaError)) throw e
+      // v0.8.34 (Mapfre, 27/10/2026): el clic NO se dio. Una capa encima → Escape (cierra, nunca acepta); en todo caso se re-escanea (marcas nuevas:
+      // el portal pudo re-pintar el control) y se intenta UNA vez más por la misma puerta guardada. Si vuelve a fallar, aviso con la causa.
+      const primera = e
+      if (primera.causa === 'tapado') await pulsarEscapeAvisoModal(page)
+      await page.waitForTimeout(REINTENTO_CLIC_DESCARGA_MS)
+      const b2 = await ctx.buscarDescargaProyectoAuto(page, compania, guardado)
+      if (!('boton' in b2)) return sin(`${primera.message}; al reintentar: ${b2.motivo}`)
+      b = b2
+      espera = esperarPdf(page, topeMs)
+      try {
+        await ctx.pulsarDescargaProyectoAuto(page, b.boton, compania, guardado)
+      } catch (e2) {
+        espera.cancelar()
+        if (e2 instanceof DescargaNoPulsadaError) return sin(`«${b.etiqueta.slice(0, 40)}»: ${e2.message} (también tras ${primera.causa === 'tapado' ? 'Escape y ' : ''}un reintento)`)
+        throw e2
+      }
     }
     const r = await espera.promesa
     if (!r) return sin(`«${b.etiqueta.slice(0, 40)}» no produjo ningún PDF en ${Math.round(topeMs / 1000)} s (ni descarga, ni ventana, ni respuesta PDF)`)

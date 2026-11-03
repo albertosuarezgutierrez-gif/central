@@ -10,7 +10,7 @@
 //   · la URL de cada marco va sin query ni fragmento, y redactada;
 //   · tope de tamaño total con recorte EXPLÍCITO (`recortado`).
 
-import { redactarDatosPersonales } from './formador.ts'
+import { MARCA_DATO_PERSONAL, PATRONES_PERSONALES, PATRON_TIRADA_CIFRAS, redactarDatosPersonales } from './formador.ts'
 import { pareceDatoPersonalEnDescripcion } from './formulario-auto.ts'
 import { PATRON_ELEMENTO_USUARIO, PATRON_MEDIADOR, PATRON_ULTIMO_ACCESO } from './grabador.ts'
 
@@ -19,14 +19,85 @@ export const MAX_BYTES_INVENTARIO_DOM = 60 * 1024
 /** Máximo de marcos y de elementos por marco que se aceptan del crudo (antes del tope de bytes). */
 export const MAX_MARCOS_INVENTARIO = 30
 export const MAX_ELEMENTOS_MARCO_INVENTARIO = 600
-/** Primeras opciones de un `<select>` que se guardan (el total va aparte). */
-export const MAX_OPCIONES_INVENTARIO = 40
+/**
+ * Máximo de opciones de UN `<select>` que se guardan (el total va aparte en `opcionesTotal`). 0.3.21 (Allianz VMP real 29/10/2026, 3c888bba…:
+ * la marca tenía 56 opciones alfabéticas y el tope de 40 dejaba fuera «XIAOMI»): 200, pero solo las primeras
+ * {@link MAX_OPCIONES_GARANTIZADAS_SELECT} van siempre; el resto sale de un fondo COMÚN por inventario ({@link MAX_OPCIONES_EXTRA_INVENTARIO}),
+ * para que varios desplegables enormes no echen elementos por el tope de bytes. Las que casan con una pista NO personal del catálogo
+ * (`OpcionesSaneado.pistasOpciones`) se conservan aunque estén más allá, dentro del mismo tope por select.
+ */
+export const MAX_OPCIONES_INVENTARIO = 200
+/** 0.3.21: opciones de cada `<select>` que se guardan siempre (el tope de antes). */
+export const MAX_OPCIONES_GARANTIZADAS_SELECT = 40
+/** 0.3.21: fondo común de opciones por ENCIMA de las garantizadas, para todo el inventario (~40 B por opción: ≤12 KB de 60). */
+export const MAX_OPCIONES_EXTRA_INVENTARIO = 300
+/** 0.3.21: como mucho estas opciones por select se rescatan por casar con una pista. */
+export const MAX_OPCIONES_PISTA_SELECT = 5
+/** 0.3.21: opciones crudas que el saneado llega a mirar por select (el extractor del worker captura hasta aquí). */
+export const MAX_OPCIONES_CRUDAS_SELECT = 1000
 /** Truncado de los textos visibles (botones, pestañas, etiquetas, opciones). */
 export const MAX_TEXTO_INVENTARIO = 60
 /** Truncado de identificadores y atributos (id, name, onclick…). */
 const MAX_ATRIBUTO = 80
+/**
+ * 0.3.16: el `onclick` (de cualquier elemento: avances td/button/a/div, radios/casillas, ng-click) se conserva hasta 2000 car. para que
+ * el validador (`bloqueoAvance`, `bloqueoGuardadoPresupuesto`, `marcar`) mire emisión, acción final y envío en el texto COMPLETO
+ * (Mapfre NSE: `A4J.AJAX.Submit('formProductos',…` de «Siguiente >>» pasa de 200). A la IA se le enseña recortado a 200
+ * (`inventarioParaPrompt`). Más de 2000 sigue recortado con «…» = `onclick_truncado` (no se pulsa ni se marca).
+ */
+export const MAX_ONCLICK_INVENTARIO = 2000
+/** @deprecated nombre de 0.3.16 previo: hoy el tope vale para todo onclick ({@link MAX_ONCLICK_INVENTARIO}). */
+export const MAX_ONCLICK_CASILLA = MAX_ONCLICK_INVENTARIO
+/**
+ * 0.3.17: tope de CAPTURA del onclick para la EVALUACIÓN (Mapfre NSE, RichFaces A4J con muchos parámetros: `onclick_truncado` en 0.3.16).
+ * Un onclick de 2001..8000 car. viaja entero en `onclickCompleto` (aparte de `onclick`, que sigue recortado a 2000 con «…»); el validador
+ * lo mira ENTERO ({@link conOnclickCompleto}) y la IA solo ve 200 (`inventarioParaPrompt`). Más de 8000 sigue siendo `onclick_truncado`.
+ */
+export const MAX_ONCLICK_EVALUACION = 8000
+/** Presupuesto TOTAL de `onclickCompleto` por inventario (car.). No cuenta para el tope de 60 KB; lo que no cabe queda recortado (= no se pulsa). */
+export const MAX_ONCLICK_COMPLETO_TOTAL = 48_000
+/**
+ * 0.3.16: un onclick que el saneado DESCARTA por parecer dato personal no puede desaparecer sin más (el elemento parecería no tener
+ * manejador y el validador lo dejaría pulsar/marcar). Se sustituye por esta marca, que acaba en «…» = recortado = no se pulsa.
+ */
+export const ONCLICK_REDACTADO = '[onclick redactado]…'
 
-export type OpcionInventario = { valor: string | null; texto: string | null }
+/**
+ * 0.3.18 (Mapfre NSE real 29/10/2026, `busquedaProductos.jsf`): los ids JSF de RichFaces/mojarra llevan tiras largas de cifras
+ * (`j_id_jsp_1234567890_5`) y el patrón de «tirada de 7+ cifras» tiraba el onclick ENTERO (→ {@link ONCLICK_REDACTADO} → `onclick_truncado`).
+ * SOLO en el onclick, cada tira CONTIGUA de ≥7 cifras se sustituye por esta marca (nunca se guarda la cifra) y se vuelve a mirar. No es
+ * `0` a propósito: `#` no cabe en un id JSF, así que la forma normalizada no puede coincidir con el id/name real de otro control
+ * (`onclickEnviaFormulario` además trata como AJENA toda cadena que la lleve).
+ */
+export const MARCA_TIRA_CIFRAS_ONCLICK = '#N#'
+
+/**
+ * ¿Parece dato personal con TODOS los patrones salvo la «tirada de 7+ cifras»? (NIF/NIE/CIF, IBAN, email, teléfono, matrícula, VIN, id de
+ * portal…). Se aplica al onclick ORIGINAL: al normalizar las tiras, un IBAN o un NIF pegados dejan de tener su forma. Pura.
+ */
+function pareceDatoPersonalSalvoTirasCifras(texto: string): boolean {
+  if (pareceDatoPersonalEnDescripcion(texto)) return true
+  let out = texto
+  for (const p of PATRONES_PERSONALES) if (p !== PATRON_TIRADA_CIFRAS) out = out.replace(p, (m) => (/\d/.test(m) || m.includes('@') ? MARCA_DATO_PERSONAL : m))
+  return out !== texto
+}
+
+/**
+ * 0.3.18: el onclick con sus tiras contiguas de ≥7 cifras normalizadas, si ESO es lo único que lo hacía parecer dato personal; si no,
+ * `null` (se redacta como siempre). Pura y exportada para los tests.
+ */
+export function onclickSinTirasCifras(plano: string): string | null {
+  const normal = plano.replace(/\d{7,}/g, MARCA_TIRA_CIFRAS_ONCLICK)
+  if (normal === plano) return null
+  if (pareceDatoPersonalInventario(normal) || pareceDatoPersonalSalvoTirasCifras(plano)) return null
+  return normal
+}
+
+/**
+ * `vacio` (0.3.24, Allianz VMP real 30/10/2026, 8338f86b…): el `value` de la opción en el DOM es EXACTAMENTE la cadena vacía (no
+ * redactado): solo con `valor: null`. Lo usa {@link normalizarOpcionElegir} para saber que la opción coincide con un `<select>` sin valor.
+ */
+export type OpcionInventario = { valor: string | null; texto: string | null; vacio?: true }
 
 export type ElementoInventario = {
   /** Referencia ESTABLE del elemento dentro de ESTE inventario (`m<marco>e<índice crudo>`); solo con `refs: true`. La
@@ -46,17 +117,48 @@ export type ElementoInventario = {
   /** Texto visible: SOLO de botones, pestañas, enlaces-botón, celdas con onclick y labels. */
   texto?: string
   onclick?: string
+  /**
+   * 0.3.17: el `onclick` ENTERO cuando pasa de 2000 car. (y cabe en 8000); `onclick` lleva su prefijo recortado con «…». SOLO para el
+   * validador/guard ({@link conOnclickCompleto}); no cuenta en el tope de 60 KB y la IA no lo ve. Misma lista blanca y mismo filtro de PII.
+   */
+  onclickCompleto?: string
+  /**
+   * 0.3.17 (diagnóstico de un avance rechazado): las primeras clases CSS (≤40 car.) de un control avanzable (td/button/a/input de acción).
+   * Estructura, no dato. Solo se guarda (BD) y se usa en el diagnóstico del rechazo; la IA no lo ve (`recortarOnclickParaIA`).
+   */
+  clase?: string
+  /**
+   * `<a href>` normal (28/10/2026, explorador): SOLO la ruta del enlace, sin query ni fragmento (`/EVT21_NSE_FWEB/oferta.jsp`); de
+   * otro origen, `origen + ruta`. La miran `bloqueoAvance` (un `/contratar.do` es emisión) y la regla de enlaces avanzables.
+   */
+  hrefRuta?: string
   requerido?: true
   deshabilitado?: true
   opciones?: OpcionInventario[]
   opcionesTotal?: number
+  /**
+   * 0.3.24: cuántas opciones del `<select>` se DESCARTARON por ser placeholders totalmente vacíos (`value=""` exacto y sin texto; p. ej.
+   * la `bs-title-option` que bootstrap-select inserta). Solo un número: con él `opcionesTotal` cuadra sin confundirlas con redactadas.
+   */
+  opcionesVacias?: number
   /** ¿El control tiene ya ALGÚN valor? Solo el booleano: el valor nunca sale del navegador. */
   conValor?: boolean
   /** ¿El portal marca el control como INVÁLIDO (aria-invalid, `ng-invalid`, error NDBX)? Solo el booleano (14/10/2026). */
   invalido?: true
+  /**
+   * Texto del MENSAJE de error que el portal pinta junto a un control INVÁLIDO (28/10/2026, ePAC: el NIF del tomador volvía inválido
+   * sin saber por qué). Saneado como cualquier texto (con forma de dato personal → fuera). Solo con `invalido`.
+   */
+  mensajeError?: string
   /** ¿El control AUTOCOMPLETA (aria-autocomplete list/both/inline o `list` de datalist)? Solo el booleano (14/10/2026): su
    *  `rellenar` puede repintar la sección, y el worker lo deja para el final del lote (`ordenarLote`). */
   autocompletar?: true
+  /**
+   * 0.3.20 (Allianz VMP real 29/10/2026): `<select>` OCULTO que sostiene un bootstrap-select (el portal enseña un `button.dropdown-toggle`
+   * sin texto; marca/modelo). Solo en `select`. El worker lo elige con `selectOption` forzado tras comprobarlo VIVO (oculto, dentro de su
+   * `.bootstrap-select` con el botón visible); la IA lo usa con `elegir` como cualquier `<select>`.
+   */
+  selectpicker?: true
   /**
    * Título accesible del DIÁLOGO/MODAL que contiene al control (14/10/2026; el más cercano: `SELECTOR_DIALOGO` de guard.ts),
    * saneado. Solo si el crudo lo trae. Sirve para el «Guardar» de un modal autorizado por entrada (`guardadosEnDialogo`).
@@ -79,12 +181,41 @@ export type MarcoInventario = {
   titulosPantalla?: string[]
   /** Importes visibles (pantalla de resultado). Solo si el crudo los trae. */
   importes?: ImporteInventario[]
+  /**
+   * AVISOS de error del portal en el marco (28/10/2026): filas de error del «INFORME DE AVISO E INCIDENCIAS» de ePAC y mensajes de error
+   * de PrimeFaces/Bootstrap. Saneados (sin datos personales), ≤5. Sirven para saber POR QUÉ un campo vuelve inválido.
+   */
+  avisosPortal?: string[]
 }
 
 export type OpcionesSaneado = {
   /** Asigna `ref` a cada elemento/importe. Conserva la que traiga el crudo si tiene la forma exacta y no se repite (la
    *  segunda pasada, en asegura, no debe renumerar lo que numeró el worker). */
   refs?: boolean
+  /**
+   * 0.3.21: textos NO personales del catálogo de la exploración (`pistasOpcionesInventario`: marca/modelo de prueba, población…). Una
+   * opción cuyo texto casa con una pista (palabras completas, sin mayúsculas ni tildes) se conserva aunque quede más allá del tope. Nunca
+   * se pasan valores reales del riesgo.
+   */
+  pistasOpciones?: readonly string[]
+}
+
+/** 0.3.21: minúsculas, sin tildes, solo letras/cifras separadas por un espacio. */
+const normalPista = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+/**
+ * 0.3.21: ¿el texto de una opción casa con alguna pista? Igual, o una contiene a la otra por PALABRAS completas; la más corta tiene que
+ * tener ≥3 caracteres («XIAOMI» ~ «Xiaomi», «ELECTRIC SCOOTER 4 PRO» ~ «Electric Scooter 4 Pro»). PURA.
+ */
+export function opcionCasaConPista(textoOpcion: string | null | undefined, pistas: readonly string[]): boolean {
+  if (typeof textoOpcion !== 'string') return false
+  const o = normalPista(textoOpcion)
+  if (o.length < 3) return false
+  return pistas.some((p0) => {
+    if (typeof p0 !== 'string') return false
+    const p = normalPista(p0)
+    if (p.length < 3) return false
+    return o === p || ` ${o} `.includes(` ${p} `) || ` ${p} `.includes(` ${o} `)
+  })
 }
 
 /** Máximo de títulos e importes por marco. */
@@ -195,6 +326,20 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
     }
     return plano.length > max ? plano.slice(0, max - 1) + '…' : plano
   }
+  // 0.3.18: SOLO el onclick. Si lo único que parece dato es una tira contigua de ≥7 cifras (id JSF), va NORMALIZADO; si no, `texto` lo redacta.
+  const textoOnclick = (v: unknown, max: number): string | undefined => {
+    if (typeof v === 'string') {
+      const plano = v.replace(/\s+/g, ' ').trim()
+      if (plano && pareceDatoPersonalInventario(plano) && !esCabeceraPersonal(plano, nombresMediador)) {
+        const normal = onclickSinTirasCifras(plano)
+        if (normal !== null) return texto(normal, max)
+      }
+    }
+    return texto(v, max)
+  }
+  let presupuestoCompleto = MAX_ONCLICK_COMPLETO_TOTAL
+  let extraRestante = MAX_OPCIONES_EXTRA_INVENTARIO
+  const pistas = Array.isArray(opciones.pistasOpciones) ? opciones.pistasOpciones.filter((p) => typeof p === 'string').slice(0, 50) : []
   const refsUsadas = new Set<string>()
   const ponerRef = (propuesta: unknown, re: RegExp, porDefecto: string): string | null => {
     // Ref del cable con la forma exacta: se conserva; si se repite, el elemento es ambiguo → fuera (null).
@@ -232,31 +377,63 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
       pon('formControlName', texto(eo.formControlName, MAX_ATRIBUTO))
       pon('etiqueta', texto(eo.etiqueta, MAX_TEXTO_INVENTARIO))
       pon('texto', texto(eo.texto, MAX_TEXTO_INVENTARIO))
-      pon('onclick', texto(eo.onclick, MAX_ATRIBUTO))
+      // 0.3.17: el onclick se mira entero hasta 8000 car. (PII sobre el texto ENTERO). Hasta 2000 va en `onclick`; entre 2001 y 8000,
+      // `onclick` lleva el prefijo recortado («…») y el entero va en `onclickCompleto` (fuera del tope de bytes). Más de 8000 = recortado.
+      const ocCrudo = typeof eo.onclick === 'string' ? eo.onclick : ''
+      const norm = (v: string) => v.replace(/\s+/g, ' ').trim()
+      const prefijo = norm(ocCrudo).replace(/…$/, '')
+      const ocFuente = typeof eo.onclickCompleto === 'string' && norm(eo.onclickCompleto).length > norm(ocCrudo).length && norm(eo.onclickCompleto).startsWith(prefijo) ? eo.onclickCompleto : eo.onclick
+      const ocPlano = textoOnclick(ocFuente, MAX_ONCLICK_EVALUACION)
+      // Fail-closed: un onclick no vacío que el saneado quitó (dato personal) queda como RECORTADO, nunca como «sin onclick».
+      const ocVacio = !(typeof ocFuente === 'string' && ocFuente.trim() !== '')
+      if (ocPlano === undefined) pon('onclick', ocVacio ? undefined : ONCLICK_REDACTADO)
+      else if (ocPlano.length <= MAX_ONCLICK_INVENTARIO) pon('onclick', ocPlano)
+      else {
+        pon('onclick', ocPlano.slice(0, MAX_ONCLICK_INVENTARIO - 1) + '…')
+        if (!ocPlano.endsWith('…') && presupuestoCompleto - ocPlano.length >= 0) {
+          presupuestoCompleto -= ocPlano.length
+          el.onclickCompleto = ocPlano
+        }
+      }
+      pon('clase', texto(eo.clase, 40))
+      pon('hrefRuta', texto(eo.hrefRuta, MAX_ATRIBUTO))
       pon('dialogo', texto(eo.dialogo, MAX_TEXTO_INVENTARIO))
       if (eo.requerido === true) el.requerido = true
       if (eo.deshabilitado === true) el.deshabilitado = true
       if (typeof eo.conValor === 'boolean' && (tag === 'input' || tag === 'select' || tag === 'textarea')) el.conValor = eo.conValor
       if (eo.invalido === true && (tag === 'input' || tag === 'select' || tag === 'textarea')) el.invalido = true
+      if (el.invalido === true) pon('mensajeError', texto(eo.mensajeError, 160))
       if (eo.autocompletar === true && (tag === 'input' || tag === 'textarea')) el.autocompletar = true
+      if (eo.selectpicker === true && tag === 'select') el.selectpicker = true
       // Elemento que MUESTRA el usuario/mediador (cabecera: id/name/aria «usuario», «mediador», «perfil»…): su texto fuera.
       if (el.texto !== undefined && tag !== 'input' && tag !== 'select' && tag !== 'textarea'
         && [eo.id, eo.name, eo.ariaLabel].some((x) => typeof x === 'string' && PATRON_ELEMENTO_USUARIO.test(x))) {
         delete el.texto
         descartados++
       }
-      if (tag === 'select' && Array.isArray(eo.opciones)) {
-        const opciones: OpcionInventario[] = []
-        for (const o of eo.opciones.slice(0, MAX_OPCIONES_INVENTARIO)) {
+      if ((tag === 'select' || tag === 'nx-dropdown') && Array.isArray(eo.opciones)) {
+        const todas: OpcionInventario[] = []
+        // 0.3.24: placeholders vacíos descartados (`value=""` EXACTO y sin texto); la 2.ª pasada (asegura) hereda la cuenta de la 1.ª.
+        let vacias = tag === 'select' && typeof eo.opcionesVacias === 'number' && Number.isInteger(eo.opcionesVacias) && eo.opcionesVacias > 0 ? Math.min(eo.opcionesVacias, 100_000) : 0
+        for (const o of eo.opciones.slice(0, MAX_OPCIONES_CRUDAS_SELECT)) {
           const oo = obj(o)
           if (!oo) continue
           const valor = texto(oo.valor, MAX_ATRIBUTO) ?? null
           const t = texto(oo.texto, MAX_TEXTO_INVENTARIO) ?? null
-          if (valor !== null || t !== null) opciones.push({ valor, texto: t })
+          // `value` EXACTAMENTE '' (no redactado; o ya marcado en la 1.ª pasada): solo en <select>, solo con valor null.
+          const vacio = tag === 'select' && valor === null && (oo.valor === '' || (oo.valor === null && oo.vacio === true))
+          if (valor !== null || t !== null) todas.push(vacio ? { valor, texto: t, vacio: true } : { valor, texto: t })
+          else if (vacio && (oo.texto === undefined || oo.texto === null || (typeof oo.texto === 'string' && oo.texto.trim() === ''))) vacias++
         }
-        el.opciones = opciones
+        // 0.3.21: 40 garantizadas + lo que quede del fondo común, hasta 200; las que casan con una pista se meten en lugar de las del final.
+        const cupo = Math.min(MAX_OPCIONES_INVENTARIO, todas.length, MAX_OPCIONES_GARANTIZADAS_SELECT + extraRestante)
+        extraRestante -= Math.max(0, cupo - MAX_OPCIONES_GARANTIZADAS_SELECT)
+        const rescatar = pistas.length === 0 ? [] : todas.map((o, i) => [o, i] as const).filter(([o, i]) => i >= cupo && opcionCasaConPista(o.texto, pistas)).slice(0, Math.min(MAX_OPCIONES_PISTA_SELECT, cupo))
+        el.opciones = rescatar.length === 0 ? todas.slice(0, cupo) : [...todas.slice(0, cupo - rescatar.length), ...rescatar.map(([o]) => o)]
+        const opciones = el.opciones
         const total = typeof eo.opcionesTotal === 'number' && Number.isFinite(eo.opcionesTotal) ? Math.max(0, Math.floor(eo.opcionesTotal)) : opciones.length
         el.opcionesTotal = Math.min(total, 100_000)
+        if (vacias > 0) el.opcionesVacias = vacias
       }
       elementos.push(el)
     }
@@ -265,6 +442,15 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
       nombre: texto(mo.nombre, MAX_ATRIBUTO) ?? null,
       elementos,
       ...(mo.ilegible === true ? { ilegible: true as const } : {}),
+    }
+    if (Array.isArray(mo.avisosPortal)) {
+      const avisos: string[] = []
+      for (const a of mo.avisosPortal.slice(0, 20)) {
+        const t = texto(a, 160)
+        if (t !== undefined && !avisos.includes(t)) avisos.push(t)
+        if (avisos.length >= 5) break
+      }
+      if (avisos.length > 0) marco.avisosPortal = avisos
     }
     if (Array.isArray(mo.titulos)) {
       // Crudo del worker: texto suelto o `{ texto, tag }`. Segunda pasada (asegura): `titulos` en texto + `titulosPantalla`.
@@ -313,7 +499,7 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
   // Tope de bytes: se quitan elementos del FINAL del marco con más elementos hasta caber (recorte explícito).
   // TextEncoder (no Buffer): el index del módulo también llega al navegador.
   const cod = new TextEncoder()
-  const bytes = (v: unknown) => cod.encode(JSON.stringify(v)).length
+  const bytes = (v: unknown) => cod.encode(JSON.stringify(v, (k, x) => (k === 'onclickCompleto' ? undefined : x))).length
   const armar = (rec: InventarioDom['recortado']): InventarioDom => ({
     version: 1,
     marcos,
@@ -372,7 +558,9 @@ export function contieneValorSensible(texto: string, valores: readonly string[])
   return false
 }
 
-const CLAVES_ELEMENTO_TEXTO = ['id', 'name', 'type', 'role', 'ariaLabel', 'placeholder', 'formControlName', 'etiqueta', 'texto', 'onclick', 'dialogo'] as const
+// 0.3.7 (revisión de seguridad): también `mensajeError` (texto del portal junto a un campo inválido) y `hrefRuta` (ruta de un enlace).
+// TODA clave de texto nueva de `ElementoInventario` tiene que estar aquí (lo vigila un test que recorre las claves del saneado).
+export const CLAVES_ELEMENTO_TEXTO = ['id', 'name', 'type', 'role', 'ariaLabel', 'placeholder', 'formControlName', 'etiqueta', 'texto', 'onclick', 'onclickCompleto', 'clase', 'hrefRuta', 'mensajeError', 'dialogo'] as const
 
 /**
  * Copia del inventario SIN ningún texto que contenga uno de `valores` (normalizado; se ignoran los < 3 caracteres). Cuenta
@@ -402,6 +590,11 @@ export function redactarValoresInventario(inv: InventarioDom, valores: readonly 
     const out: MarcoInventario = { ...m, url: limpio(m.url) ? m.url : '', nombre: limpio(m.nombre) ? m.nombre : null, elementos }
     if (m.titulos) out.titulos = m.titulos.filter(limpio)
     if (m.titulosPantalla) out.titulosPantalla = m.titulosPantalla.filter(limpio)
+    if (m.avisosPortal) {
+      const a = m.avisosPortal.filter(limpio)
+      if (a.length > 0) out.avisosPortal = a
+      else delete out.avisosPortal
+    }
     if (m.importes) out.importes = m.importes.map((i) => (i.etiqueta === undefined || limpio(i.etiqueta) ? i : { ref: i.ref, eur: i.eur }))
     return out
   })
@@ -443,4 +636,24 @@ export function valoresSensiblesDeRiesgo(riesgo: unknown): string[] {
   }
   andar(riesgo, 0)
   return [...out]
+}
+
+/**
+ * 0.3.17: copia del inventario donde cada `onclick` recortado que trae su `onclickCompleto` pasa a ser el ENTERO (y desaparece la clave
+ * aparte). Es lo que miran el validador y el guard; lo que sale hacia la IA NO pasa por aquí. Sin `onclickCompleto` devuelve el mismo
+ * objeto. Pura; nunca muta la entrada.
+ */
+export function conOnclickCompleto(inv: InventarioDom): InventarioDom {
+  if (!inv.marcos.some((m) => m.elementos.some((e) => typeof e.onclickCompleto === 'string'))) return inv
+  return {
+    ...inv,
+    marcos: inv.marcos.map((m) => ({
+      ...m,
+      elementos: m.elementos.map((e) => {
+        if (typeof e.onclickCompleto !== 'string') return e
+        const { onclickCompleto, ...resto } = e
+        return typeof e.onclick === 'string' && onclickCompleto.length > e.onclick.length ? { ...resto, onclick: onclickCompleto } : resto
+      }),
+    })),
+  }
 }

@@ -55,7 +55,7 @@ export async function PATCH(
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.iarest.es'
     await fetch(`${baseUrl}/api/push/send`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-ia-session': JSON.stringify({ restaurante_id: rid }) },
+      headers: { 'Content-Type': 'application/json', 'x-ia-restaurante-id': rid, 'x-ia-cron-secret': process.env.CRON_SECRET ?? '' },
       body: JSON.stringify({
         local_id: rid,
         roles: ['cocina', 'jefe_sala'],

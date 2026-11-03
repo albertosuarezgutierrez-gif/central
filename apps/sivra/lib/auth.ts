@@ -1,11 +1,12 @@
 import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
+import { secretoCoincide } from "@central/core-identity"
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [Credentials({ name: "Credenciales",
     credentials: { email: { label: "Email", type: "email" }, password: { label: "Password", type: "password" } },
     async authorize(credentials) {
       const { email, password } = credentials as { email: string; password: string }
-      if (email !== process.env.ADMIN_EMAIL || password !== process.env.ADMIN_PASSWORD) return null
+      if (!secretoCoincide(email, process.env.ADMIN_EMAIL) || !secretoCoincide(password, process.env.ADMIN_PASSWORD)) return null
       return { id: "admin", name: "Administrador", email, role: "admin" }
     }
   })],

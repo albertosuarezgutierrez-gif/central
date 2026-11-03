@@ -234,4 +234,20 @@ export { evaluarOportunidad, FACTORES } from './scoring.ts'
 
 // Radar por criterios
 export { coincideSubasta, filtrarSubastas, claveInmueble } from './radar.ts'
+export {
+  MUNICIPIOS_CASA_VACACIONAL,
+  PRECIO_MAX_CASA_VACACIONAL,
+  DORMITORIOS_MIN,
+  DORMITORIOS_IDEAL,
+  BANOS_MIN,
+  PARCELA_MIN_M2,
+  CRITERIOS_CASA_VACACIONAL,
+  encajaCasaVacacional,
+  encajaSubastaCasaVacacional,
+  esCasaUnifamiliarTexto,
+  municipioDelPerfil,
+  fusionarAvisadas,
+  type AnuncioCasa,
+  type EncajeCasa,
+} from './perfil-casa-vacacional.ts'
 export { veredicto, type Veredicto, type EntradaVeredicto, type NivelVeredicto } from './veredicto.ts'

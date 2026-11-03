@@ -7,9 +7,9 @@
 // (catálogo), nunca cuál está elegida. Lo crudo pasa por `sanearInventarioDom` (@central/module-tarificacion): lista
 // blanca de claves, filtro de datos personales, truncados y tope de 60 KB.
 
-import { sanearInventarioDom, MAX_BYTES_INVENTARIO_DOM, MAX_MARCOS_INVENTARIO, type InventarioDom } from '@central/module-tarificacion'
+import { sanearInventarioDom, MAX_BYTES_INVENTARIO_DOM, MAX_MARCOS_INVENTARIO, MAX_OPCIONES_CRUDAS_SELECT, type InventarioDom } from '@central/module-tarificacion'
 import type { ElementHandle, Frame, JSHandle, Page } from 'playwright'
-import { SELECTOR_AVANCE_SERVLET, SELECTOR_DIALOGO, tituloDialogoVivo } from './guard.ts'
+import { controlOcultoDeEtiqueta, SEL_ERROR_EPAC, SELECTOR_AVANCE_SERVLET, SELECTOR_DIALOGO, tituloDialogoVivo } from './guard.ts'
 
 /**
  * Extractor que corre EN EL MARCO. Va como TEXTO (no como función) a propósito: tsx envuelve las funciones con nombre
@@ -41,6 +41,7 @@ function extractor(explora: boolean): string {
   // guard.ts, \`pulsarGuardadoDialogoAutorizado\`). Solo se lee.
   const SEL_DIALOGO = ${JSON.stringify(SELECTOR_DIALOGO)};
   const tituloDialogo = (${tituloDialogoVivo.toString()});
+  const ctlOculto = (${controlOcultoDeEtiqueta.toString()});
   const CON_TEXTO = { button: 1, a: 1, td: 1, label: 1, 'mat-icon': 1 };
   const ROLES_CON_TEXTO = { button: 1, tab: 1, link: 1, menuitem: 1, option: 1 };
   const corta = (s, n) => (s == null ? null : (String(s).replace(/\\s+/g, ' ').trim().slice(0, n) || null));
@@ -49,6 +50,30 @@ function extractor(explora: boolean): string {
     if (cs.display === 'none' || cs.visibility === 'hidden') return false;
     const r = el.getBoundingClientRect();
     return !(r.width === 0 && r.height === 0);
+  };
+  // 0.3.20: bootstrap-select. El contenedor \`.bootstrap-select\` envuelve al select (1.13+) o va JUSTO DESPUÉS de él (1.6, el botón
+  // hereda la clase \`selectpicker\`). El select tiene que estar OCULTO y su contenedor tener UN botón \`dropdown-toggle\` visible.
+  const contenedorSp = (sel) => {
+    const c = sel.parentElement && sel.parentElement.closest('.bootstrap-select');
+    if (c) return c;
+    const n = sel.nextElementSibling;
+    return n && n.classList.contains('bootstrap-select') ? n : null;
+  };
+  const selectpickerDe = (sel) => {
+    const cs = getComputedStyle(sel);
+    const r = sel.getBoundingClientRect();
+    if (!(cs.display === 'none' || cs.visibility === 'hidden' || (r.width <= 1 && r.height <= 1))) return null;
+    const c = contenedorSp(sel);
+    if (!c) return null;
+    const bs = Array.from(c.querySelectorAll('button.dropdown-toggle'));
+    return bs.length === 1 && visible(bs[0]) ? c : null;
+  };
+  const botonDeSelectpicker = (b) => {
+    if (!b.classList.contains('dropdown-toggle')) return false;
+    const c = b.closest('.bootstrap-select');
+    if (!c) return false;
+    const sel = c.querySelector('select') || (c.previousElementSibling && c.previousElementSibling.tagName === 'SELECT' ? c.previousElementSibling : null);
+    return !!(sel && selectpickerDe(sel) === c);
   };
   const out = [];
   const nodos = [];
@@ -66,10 +91,26 @@ function extractor(explora: boolean): string {
     const tag = el.tagName.toLowerCase();
     const type = (el.getAttribute('type') || '').toLowerCase();
     if (tag === 'input' && type === 'hidden') continue;
+    // 0.3.20 (Allianz VMP real 29/10/2026, marca/modelo): el <select> OCULTO de un bootstrap-select se inventaría (con \`selectpicker\`)
+    // y su \`button.dropdown-toggle\` sin texto NO (la IA elige sobre el select). Solo en exploración.
+    const sp = EXPLORA && tag === 'select' ? selectpickerDe(el) : null;
+    if (EXPLORA && tag === 'button' && botonDeSelectpicker(el)) continue;
     const cs = getComputedStyle(el);
-    if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+    if (!sp && (cs.display === 'none' || cs.visibility === 'hidden')) continue;
     const r = el.getBoundingClientRect();
-    if (r.width === 0 && r.height === 0 && !(el.labels && el.labels.length)) continue;
+    if (!sp && r.width === 0 && r.height === 0 && !(el.labels && el.labels.length)) continue;
+    // EXPLORACIÓN (28/10/2026, ePAC drvp00): la etiqueta de un control de elección OCULTO se inventaría COMO ese control (tag input,
+    // su type, id/name; texto y etiqueta, los de la label). El NODO es la label (la resolución vive en guard.ts: \`controlOcultoDeEtiqueta\`).
+    const rdo = EXPLORA && tag === 'label' ? ctlOculto(el) : null;
+    if (rdo) {
+      const txt = corta(el.innerText || el.textContent || '', 200);
+      const er = { tag: 'input', id: rdo.id, name: rdo.name, type: rdo.type, role: null, ariaLabel: rdo.ariaLabel, placeholder: null, formControlName: rdo.formControlName, requerido: rdo.requerido, deshabilitado: rdo.deshabilitado, texto: txt, etiqueta: txt, conValor: rdo.marcado };
+      const dlgR = tituloDialogo(el, SEL_DIALOGO);
+      if (dlgR) er.dialogo = dlgR;
+      out.push(er);
+      nodos.push(el);
+      continue;
+    }
     const role = el.getAttribute('role');
     const e = {
       tag: tag,
@@ -93,11 +134,42 @@ function extractor(explora: boolean): string {
     // Un [ng-click] que no es control de texto (fila, tarjeta…) puede envolver nombres: su texto, CORTO (80); el saneado lo filtra.
     if (CON_TEXTO[tag] || (role && ROLES_CON_TEXTO[role]) || divServlet) e.texto = corta(el.innerText || el.textContent || '', 200);
     else if (ng) e.texto = corta(el.innerText || el.textContent || '', 80);
-    if (tag === 'td' || tag === 'button' || tag === 'a' || divServlet) e.onclick = corta(el.getAttribute('onclick'), 200);
-    if (ng && !e.onclick) e.onclick = corta(ng, 200);
+    // 0.3.17: el onclick COMPLETO (hasta 8001 car.; el saneado lo parte en onclick hasta 2000 + onclickCompleto hasta 8000, y más de 8000 queda recortado) de avances (td/button/a/div del servlet) e inputs que no son de texto (casillas,
+    // elecciones, botones input): el saneado lo deja entero si cabe en 2000 y, si no, lo recorta con «…» (= no se pulsa ni se marca).
+    // El validador mira emisión, acción final y envío sobre TODO el texto; la IA lo ve recortado a 200 (inventarioParaPrompt).
+    if (tag === 'td' || tag === 'button' || tag === 'a' || divServlet) e.onclick = corta(el.getAttribute('onclick'), 8001);
+    if (tag === 'input' && !['text', 'number', 'date', 'tel', 'email', 'search', 'password'].includes(type)) e.onclick = corta(el.getAttribute('onclick'), 8001);
+    // 0.3.17: clases CSS (≤40) de los controles de acción, para el diagnóstico de un avance rechazado (estructura, no dato).
+    if (tag === 'td' || tag === 'button' || tag === 'a' || divServlet || (tag === 'input' && !['text', 'number', 'date', 'tel', 'email', 'search', 'password'].includes(type))) e.clase = corta(String(el.getAttribute('class') || '').split(/\\s+/).filter(Boolean).slice(0, 3).join(' '), 40);
+    // EXPLORACIÓN (28/10/2026, menú de Mapfre NSE): un <a href> es una entrada de menú. \`href="javascript:…"\` viaja como onclick
+    // (lo miran el validador y el guard); cualquier otro href marca el rol \`link\` (sin la URL: puede llevar datos).
+    // Con onclick Y \`javascript:\` se CONCATENAN (los dos se ejecutan). Un href normal: su RUTA sin query (\`hrefRuta\`; de otro origen,
+    // origen + ruta) para que el validador la mire (\`/contratar.do\` = emisión). Lo largo lo recorta el saneado con «…» (= no se pulsa).
+    if (EXPLORA && tag === 'a' && el.hasAttribute('href')) {
+      const href = String(el.getAttribute('href') || '').trim();
+      if (/^javascript:/i.test(href)) {
+        const propio = el.getAttribute('onclick');
+        e.onclick = propio ? String(propio).replace(/\\s+/g, ' ').trim() + ' ; ' + href.replace(/\\s+/g, ' ') : href.replace(/\\s+/g, ' ');
+      } else {
+        let u = null;
+        try { u = new URL(href, document.baseURI); } catch (err) { u = null; }
+        if (u) e.hrefRuta = u.origin === location.origin ? u.pathname : u.origin + u.pathname;
+        if (!e.role) e.role = 'link';
+      }
+    }
+    if (ng && !e.onclick) e.onclick = corta(ng, 8001);
     if (tag === 'select') {
-      e.opciones = Array.from(el.options).slice(0, 40).map((o) => ({ valor: o.value, texto: o.textContent }));
+      // 0.3.21: hasta MAX_OPCIONES_CRUDAS_SELECT (antes 40: «XIAOMI» de Allianz VMP quedaba fuera). El saneado decide cuántas salen.
+      e.opciones = Array.from(el.options).slice(0, ${MAX_OPCIONES_CRUDAS_SELECT}).map((o) => ({ valor: o.value, texto: o.textContent }));
       e.opcionesTotal = el.options.length;
+      if (sp) e.selectpicker = true;
+    }
+    // nx-dropdown (ndbx, Allianz ePAC) ABIERTO: sus opciones son las del panel visible (\`nx-dropdown-item\` / role=option). Cerrado no
+    // las tiene en el DOM: el worker lo abre al ejecutar un \`elegir\` y, si la opción no está, lo deja abierto para el paso siguiente.
+    if (EXPLORA && tag === 'nx-dropdown' && el.getAttribute('aria-expanded') === 'true') {
+      const items = Array.from(document.querySelectorAll('nx-dropdown-item,[role=option]')).filter(visible).slice(0, 40);
+      e.opciones = items.map((o) => ({ valor: null, texto: corta(o.innerText || o.textContent || '', 200) }));
+      e.opcionesTotal = items.length;
     }
     if (EXPLORA && (tag === 'input' || tag === 'select' || tag === 'textarea')) {
       // Solo el booleano: el valor no sale de la página. Casillas/opciones: marcadas; su valor por defecto es «on».
@@ -109,6 +181,21 @@ function extractor(explora: boolean): string {
         || /(^|\\s)[\\w-]*-invalid(\\s|$)/.test(String(el.getAttribute('class') || ''))
         || !!(caja && /(^|\\s)[\\w-]*(has-error|invalid)[\\w-]*(\\s|$)/.test(String(caja.getAttribute('class') || '')));
       // ¿AUTOCOMPLETA? (14/10/2026) aria-autocomplete list/both/inline o un datalist (atributo list): su rellenar puede repintar.
+      // MENSAJE de error junto a un control INVÁLIDO (28/10/2026): aria-errormessage/aria-describedby, title, o el texto de error de su
+      // contenedor (PrimeFaces/Bootstrap/ePAC). Solo se lee; el saneado lo filtra.
+      if (e.invalido) {
+        let msg = '';
+        const ids = ((el.getAttribute('aria-errormessage') || '') + ' ' + (el.getAttribute('aria-describedby') || '')).split(/\\s+/).filter((x) => x);
+        for (const id of ids) { const x = document.getElementById(id); if (x && (x.innerText || x.textContent || '').trim()) { msg = x.innerText || x.textContent || ''; break; } }
+        if (!msg && el.getAttribute('title')) msg = el.getAttribute('title');
+        if (!msg) {
+          const cont = el.closest('td,li,.form-group,.ui-g,nx-formfield,div');
+          const cands = cont ? Array.from(cont.querySelectorAll('.error,.errorMessage,.ui-message-error,.ui-message,.help-block,.invalid-feedback,nx-error,[class*="error"],[class*="Error"]')) : [];
+          for (const c of cands) { if (c === el) continue; const t = (c.innerText || c.textContent || '').trim(); if (t) { msg = t; break; } }
+        }
+        if (!msg && el.validationMessage) msg = el.validationMessage;
+        if (msg) e.mensajeError = corta(msg, 300);
+      }
       const ac = String(el.getAttribute('aria-autocomplete') || '').toLowerCase();
       if (tag !== 'select' && (ac === 'list' || ac === 'both' || ac === 'inline' || el.hasAttribute('list'))) e.autocompletar = true;
     }
@@ -141,7 +228,16 @@ function extractor(explora: boolean): string {
     if (!etiqueta && n.previousElementSibling) etiqueta = corta(n.previousElementSibling.innerText || n.previousElementSibling.textContent || '', 200);
     importes.push({ texto: t, etiqueta: etiqueta });
   }
-  return { elementos: out, nodos: nodos, titulos: titulos, importes: importes };
+  // AVISOS de error del portal (28/10/2026): filas de error del informe de incidencias de ePAC y mensajes de error PrimeFaces/Bootstrap.
+  // 0.3.25: y los de RichFaces 3 (rich:messages / rich:message de Mapfre NSE). Pasan por el mismo saneado que el resto (asegura).
+  const avisosPortal = [];
+  for (const n of Array.from(document.querySelectorAll(${JSON.stringify(SEL_ERROR_EPAC)} + ',.ui-messages-error-detail,.ui-message-error-detail,.ui-messages-error-summary,.alert-danger,.rich-messages-label,.rich-message-label'))) {
+    if (avisosPortal.length >= 10) break;
+    if (!visible(n)) continue;
+    const t = corta(n.innerText || n.textContent || '', 300);
+    if (t) avisosPortal.push(t);
+  }
+  return { elementos: out, nodos: nodos, titulos: titulos, importes: importes, avisosPortal: avisosPortal };
 })()`
 }
 
@@ -206,7 +302,7 @@ type MarcoExplorable = Pick<Frame, 'url' | 'name' | 'isDetached' | 'evaluateHand
  * ≤60 KB) más `ref` por elemento, `conValor`, `titulos {texto, tag}` e `importes`, y la lista de NODOS en el mismo orden
  * que el crudo (la ref es el índice crudo: `m<marco>e<índice>`). Solo lectura. `null` si no se puede leer.
  */
-export async function capturarInventarioExploracion(page: Pick<Page, 'frames'>, maxBytes = MAX_BYTES_INVENTARIO_DOM, msPorMarco = 5_000, msTotal = 15_000): Promise<InventarioExploracion | null> {
+export async function capturarInventarioExploracion(page: Pick<Page, 'frames'>, maxBytes = MAX_BYTES_INVENTARIO_DOM, msPorMarco = 5_000, msTotal = 15_000, pistasOpciones: readonly string[] = []): Promise<InventarioExploracion | null> {
   const handles: JSHandle[] = []
   const liberar = async () => {
     await Promise.all(handles.splice(0).map((h) => h.dispose().catch(() => undefined)))
@@ -220,12 +316,12 @@ export async function capturarInventarioExploracion(page: Pick<Page, 'frames'>, 
       const resta = fin - Date.now()
       if (resta <= 0) break
       const h = await conTope(f.evaluateHandle(EXTRACTOR_EXPLORACION) as Promise<JSHandle>, Math.min(msPorMarco, resta))
-      let datos: { elementos?: unknown; titulos?: unknown; importes?: unknown } | null = null
+      let datos: { elementos?: unknown; titulos?: unknown; importes?: unknown; avisosPortal?: unknown } | null = null
       let nodos: (ElementHandle<Node> | null)[] = []
       if (h) {
         handles.push(h)
         const [d, n] = await Promise.all([
-          conTope(h.evaluate((x: { elementos: unknown; titulos: unknown; importes: unknown }) => ({ elementos: x.elementos, titulos: x.titulos, importes: x.importes })), msPorMarco),
+          conTope(h.evaluate((x: { elementos: unknown; titulos: unknown; importes: unknown; avisosPortal: unknown }) => ({ elementos: x.elementos, titulos: x.titulos, importes: x.importes, avisosPortal: x.avisosPortal })), msPorMarco),
           conTope(h.getProperty('nodos'), msPorMarco),
         ])
         datos = d
@@ -245,11 +341,12 @@ export async function capturarInventarioExploracion(page: Pick<Page, 'frames'>, 
       if (!elementos) nodos = []
       marcos.push({
         url: f.url(), nombre: f.name() || null, elementos: elementos ?? [],
-        ...(elementos ? { titulos: Array.isArray(datos?.titulos) ? datos!.titulos : [], importes: Array.isArray(datos?.importes) ? datos!.importes : [] } : { ilegible: true }),
+        ...(elementos ? { titulos: Array.isArray(datos?.titulos) ? datos!.titulos : [], importes: Array.isArray(datos?.importes) ? datos!.importes : [], ...(Array.isArray(datos?.avisosPortal) ? { avisosPortal: datos!.avisosPortal } : {}) } : { ilegible: true }),
       })
       porMarco.push({ marco: f, nodos })
     }
-    const inventario = sanearInventarioDom({ marcos }, maxBytes, { refs: true })
+    // 0.3.21: pistas NO personales del catálogo (`pistasOpcionesInventario`): las opciones que casan se conservan más allá del tope.
+    const inventario = sanearInventarioDom({ marcos }, maxBytes, { refs: true, pistasOpciones })
     if (!inventario) {
       await liberar()
       return null

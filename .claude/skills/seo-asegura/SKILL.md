@@ -172,6 +172,11 @@ No cinco a medias. Por orden de retorno (§3 del plan):
   norma que cites va a `NORMAS_CITABLES` (`packages/module-seguros/src/normas.ts`) leída de ahí.
   **Nunca** aceptes el texto de una norma que dé otro asistente o un chat: el 23/09 uno devolvió
   un art. 73 LCS inventado («delimitadoras» por «limitativas» y un párrafo que no existe).
+  🚨 **Lección del agente del blog (PR #5328, 01/11/2026):** los cepos de citas validan que la norma
+  sea citable, **no el razonamiento**. Un error de fondo recurrente (mora del art. 20 LCS: intereses
+  desde la fecha del siniestro, no desde el día 41) se ataja con la síntesis exacta de la norma en
+  `packages/module-seguros/src/normas.ts` (lcs-18/lcs-20) y con el cepo de razonamiento
+  `errorDeMora()` en `apps/plataforma/lib/correduria/blog-agente.ts` (reparo `razonamiento`, PR #5336).
 - **La voz de la home es PRIMERA PERSONA, y el nombre no se teclea** (decidido el 06/09/2026, PR
   #2421). El hero explicaba lo que la correduría *es* («Somos correduría, no compañía…») y
   enumeraba cinco ramos de un tirón, así que no priorizaba ninguno; ahora abre por el momento del

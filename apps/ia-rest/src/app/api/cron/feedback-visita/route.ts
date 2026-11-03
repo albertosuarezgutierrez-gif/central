@@ -9,6 +9,7 @@
  * 3. Si el restaurante no tiene email_feedback activo → skip
  */
 import { NextRequest, NextResponse } from 'next/server'
+import { cronAutorizado } from '@/lib/cron-auth'
 import { createServerClient } from '@/lib/supabase'
 import { Resend } from 'resend'
 import { tgAlert } from '@/lib/telegram'
@@ -18,9 +19,7 @@ export const maxDuration = 45
 export const runtime     = 'nodejs'
 
 function autorizado(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET
-  if (!secret) return true
-  return req.headers.get('authorization') === `Bearer ${secret}`
+  return cronAutorizado(req)
 }
 
 function emailHtml(d: {

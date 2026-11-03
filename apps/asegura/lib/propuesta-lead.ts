@@ -70,7 +70,8 @@ async function preciosDe(correduriaId: string, oportunidadId: string, ramo: stri
     const leida = leidas?.find((l) => l.clave === extra.rpaClave) ?? null
     const o = opcionDeOfertaRpa(ramo, {
       id: f.id, compania: f.compania, producto: f.producto, primaTotal: f.prima_total, estado: f.estado, datosExtra: f.datos_extra,
-      oferta: leida ? { coberturas: leida.oferta.coberturas, avisos: leida.oferta.avisos } : null,
+      oferta: leida ? { coberturas: leida.oferta.coberturas, avisos: leida.oferta.avisos, polizaAnteriorTecleada: leida.oferta.polizaAnteriorTecleada } : null,
+      companiaTrabajo: esObj(f.respuesta) && typeof f.respuesta.compania === 'string' ? f.respuesta.compania : null,
     }, hoy)
     if (o) out.push(o)
   }

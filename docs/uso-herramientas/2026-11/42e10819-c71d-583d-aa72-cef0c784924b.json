@@ -1,0 +1,103 @@
+{
+ "sesion": "42e10819-c71d-583d-aa72-cef0c784924b",
+ "inicio": "2026-11-01T08:20:46.729Z",
+ "fin": "2026-11-01T09:17:25.590Z",
+ "llamadas": 52,
+ "categorias": {
+  "otro": {
+   "llamadas": 11,
+   "chars_in": 5620,
+   "chars_out": 43291,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 6,
+    "SubagentHandback": 2,
+    "ReadNotifications": 3
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 9,
+   "chars_in": 1187,
+   "chars_out": 46394,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 3,
+    "Read": 5,
+    "Glob": 1
+   }
+  },
+  "bash": {
+   "llamadas": 16,
+   "chars_in": 7409,
+   "chars_out": 31315,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 16
+   }
+  },
+  "sql": {
+   "llamadas": 6,
+   "chars_in": 1118,
+   "chars_out": 7331,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 6
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 2,
+   "chars_in": 3545,
+   "chars_out": 296,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 2
+   }
+  },
+  "mcp:github": {
+   "llamadas": 4,
+   "chars_in": 1187,
+   "chars_out": 1644,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__pull_request_read": 2,
+    "mcp__github__update_pull_request": 1
+   }
+  },
+  "mcp:claude-code-remote": {
+   "llamadas": 3,
+   "chars_in": 412,
+   "chars_out": 455,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__claude-code-remote__subscribe_pr_activity": 1,
+    "mcp__claude-code-remote__send_later": 2
+   }
+  },
+  "agente:agente-mecanico": {
+   "llamadas": 1,
+   "chars_in": 585,
+   "chars_out": 539,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  }
+ }
+}

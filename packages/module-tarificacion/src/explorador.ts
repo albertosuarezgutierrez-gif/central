@@ -15,13 +15,16 @@
 // 🚨 TARIFICAR ≠ EMITIR. 🚨 Nada de automatizar SMS/OTP/CAPTCHA: se para y se avisa. 🚨 La IA no escribe texto libre
 // en el portal: solo claves del catálogo y valores de opciones que YA están en el inventario.
 
-import { pareceEmision } from './guard-emision.ts'
+import { neutralizarRutaTolerable, pareceEmision, type RutaTolerable } from './guard-emision.ts'
 import { clasificarAccionPortal, descripcionesSinExcepcionProyecto, fronteraEmisionPorCampos, MOTIVO_FRONTERA_CUENTA, referenciaPresupuestoValida } from './acciones-portal.ts'
 import {
   MAX_TITULOS_MARCO,
+  conOnclickCompleto,
+  MARCA_TIRA_CIFRAS_ONCLICK,
   pareceDatoPersonalInventario,
   valoresSensiblesDeRiesgo,
   type ElementoInventario,
+  type OpcionInventario,
   type InventarioDom,
   type MarcoInventario,
 } from './inventario-dom.ts'
@@ -36,6 +39,92 @@ export type AvanceAutorizado = {
   enTitulo: RegExp
   /** …y ninguno de estos (si la pantalla dice «Tarificar», ese «Aceptar» ya no es el autorizado). */
   nuncaConTitulo: RegExp
+}
+
+/**
+ * Avance de PASO autorizado por IDENTIDAD EXACTA del control (28/10/2026, Allianz ePAC legacy «Movilidad Personal»): no por título
+ * de pantalla, sino por id + onclick + ruta del marco, los tres EXACTOS, y además el texto exacto. Para el «Aceptar»
+ * `#btnAceptar` con `onclick="eventoSiguiente()"` del marco `/drvp00/SEAServlet` (el avance de paso normal del asistente).
+ * Cualquier otro «Aceptar» (otro id, otro handler, otro marco, un título de tarificación/emisión en la pantalla) sigue sin autorizar.
+ */
+export type AvancePorId = {
+  /** `id` EXACTO del control. */
+  id: string
+  /** `onclick` EXACTO, sin espacios y con o sin `;` final. */
+  onclick: string
+  /** Texto EXACTO (plano) del control. */
+  texto: RegExp
+  /** `pathname` EXACTO de la URL del marco que lo contiene. */
+  rutaMarco: string
+  /**
+   * 0.3.17: rutas de marco admitidas ADEMÁS de `rutaMarco` (`pathname` exacto; solo con `sinIdentidad`: la pantalla de «Selección de
+   * Municipio» de ePAC cuelga de `control.do`, no del servlet). Sin la clave = solo `rutaMarco`.
+   */
+  rutasMarco?: readonly string[]
+  /**
+   * 0.3.17 (Allianz patinete real 29/10/2026): el «Aceptar» de «Datos del Vehículo · Selección de Municipio · Tomador y Conductor
+   * Principal» NO tiene id ni onclick. Se identifica por texto EXACTO «Aceptar», SIN id y SIN onclick, ÚNICO control con ese texto del
+   * marco, y todo lo demás de la regla (ruta de marco, origen, `destinosPost`, títulos, sin importes; el guard repite vivo la unicidad,
+   * los encabezados y los importes, y el cuerpo del POST con `cuerpoLlevaAccionFinal`). `id` y `onclick` de la regla se ignoran.
+   */
+  sinIdentidad?: true
+  /**
+   * 0.3.18 (Allianz patinete real 29/10/2026, mismo «Aceptar» de «Selección de Municipio» en otra visita): SOLO con `sinIdentidad`. El
+   * control no tiene id pero SÍ un onclick, que tiene que ser EXACTAMENTE este (tras `trim`; sin `;` ni nada más), y tiene que ser un
+   * `type=button` (no envía el formulario por sí mismo). Todo lo demás, igual que la regla sin id (texto exacto, único, ruta, títulos,
+   * importes; el guard lo repite VIVO y además exige que no haya otros manejadores ni atributos `form*`). Sin la clave = sin onclick.
+   */
+  onclickExacto?: string
+  /**
+   * 0.3.13: rutas (`pathname` exacto, mismo ORIGEN que el marco) a las que el avance puede enviar además un POST — el destino real del
+   * `eventoSiguiente()` (p. ej. `/drvp00/main/control.do`). La capa de contenido del guard sigue mirando URL y cuerpo: un cuerpo con
+   * emitir/confirmar/firmar/pagar/contratar… se aborta igual.
+   */
+  destinosPost?: readonly string[]
+  /** Ningún título de la pantalla puede casar (si dice «Tarificar», «Revisión», «Emisión»… no se avanza). */
+  nuncaConTitulo: RegExp
+  /**
+   * 0.3.14: la lista de títulos del inventario puede llegar RECORTADA (tope {@link MAX_TITULOS_MARCO}; una pantalla de datos con
+   * muchos `th`/`legend` lo alcanza). Con este indicador el validador no se rinde por eso: los títulos que SÍ llegaron siguen sin poder
+   * casar `nuncaConTitulo`, y el guard del worker repite la comprobación VIVA sobre TODOS los encabezados de TODOS los marcos y sobre
+   * todo importe visible antes del clic (`vigilanciaVivaAvancePorId`, sin tope). Solo para reglas que pasan por esa puerta.
+   */
+  toleraTitulosRecortados?: true
+}
+
+/**
+ * 0.3.18 (Fidelidade hogar real 29/10/2026, `OPI_ES_Vivienda/Simualtion.aspx`): el botón de avance de la simulación es un
+ * `<input type=submit>` de OutSystems SIN texto, value, aria-label ni title (el rótulo va por CSS). Excepción ESTRECHA a
+ * `sin_descripcion_completa`: no se identifica por un texto que no existe sino por ORIGEN exacto + ruta + `name` + clases + ausencia de
+ * onclick + ser el ÚNICO control así en el marco, y solo si la pantalla no tiene texto de acción final ni datos bancarios, ni importes.
+ * Tarificar ≠ emitir: el resto del guard (`bloqueoAvance`, red, cuerpo del POST) se aplica igual y el worker repite todo VIVO.
+ */
+export type AvanceSinTexto = {
+  /** Origen EXACTO (esquema + host, sin puerto ni credenciales) del marco que contiene el control. */
+  origen: string
+  /**
+   * 0.3.22: LISTA CERRADA de rutas EXACTAS (pathname, sensible a mayúsculas) de las pantallas del flujo en que vale la regla: la del marco
+   * del control y la del formulario al que va el POST (`action`, misma origen, sin query) tienen que ser una de estas. Antes (0.3.18-0.3.21)
+   * una sola subcadena (`/OPI_ES_Vivienda/Simualtion.aspx`). Nunca pantallas de contratación/emisión/pago.
+   */
+  rutas: readonly string[]
+  /** `name` empieza por esto… */
+  prefijoName: string
+  /** …y contiene esto. */
+  contieneName: string
+  /** Tokens de clase CSS que tiene que llevar el control (todos, exactos). */
+  clase: readonly string[]
+  /** Ningún título de la pantalla puede casar. */
+  nuncaConTitulo: RegExp
+  /** Ningún texto visible de la pantalla puede casar (texto plano). */
+  textoAccionFinal: RegExp
+  /**
+   * 0.3.19 (Fidelidade real 29/10/2026): el botón SÍ lleva onclick (OutSystems `OsAjax(…); return false;`). Patrón CERRADO y anclado
+   * `^…$` con DOS grupos: A (widget con `_`) y B (name del widget con `$`). Solo vale si además A === B con `$`→`_`, B empieza por el name
+   * del control (inventario recortado: prefijo; worker: name ENTERO === B), B cumple `prefijoName`/`contieneName`, ni A ni B casan
+   * {@link RE_NAME_ACCION_FINAL_SIN_TEXTO} y el onclick no está recortado (`onclickCasaFormaSinTexto`). Sin la clave = sin onclick (0.3.18).
+   */
+  onclickForma?: RegExp
 }
 
 /**
@@ -61,8 +150,32 @@ export type EntradaExploracion = {
   pestana: string
   productoMenu: string
   avancesAutorizados: readonly AvanceAutorizado[]
+  /**
+   * ePAC (28/10/2026): el diálogo «Atención» que propone ALARGAR el término se cierra por CÓDIGO antes de cada paso («Cancelar» o
+   * «×», nunca «Aceptar»; `cerrarDialogoTerminoEpac` del worker). Sin la clave = no se toca.
+   */
+  cierraDialogoTermino?: true
+  /**
+   * Rutas de APLICACIÓN cuyo prefijo no cuenta como emisión en URL/href/ruta (`neutralizarRutaTolerable`; decisión de Alberto,
+   * 28/10/2026, Mapfre NSE `/EVT21_NSE_FWEB/app/emision/`). Textos, onclick, cuerpos, IBAN… siguen igual. Sin la clave = ninguna.
+   */
+  rutasAppTolerables?: readonly RutaTolerable[]
+  /** Entradas de menú (`<a>`, menuitem, link) avanzables DENTRO de esta ruta de aplicación (`esEnlaceAvanzable`). Sin la clave = no. */
+  enlacesAvanzables?: { rutaApp: string }
+  /** Avances por identidad exacta del control (ver {@link AvancePorId}). Sin la clave = ninguno. */
+  avancesPorId?: readonly AvancePorId[]
+  /** Avance de un `<input type=submit>` sin texto (ver {@link AvanceSinTexto}). Sin la clave = ninguno. */
+  avancesSinTexto?: readonly AvanceSinTexto[]
   /** «Guardar» de un modal concreto (ver {@link GuardadoEnDialogo}). Sin la clave = ninguno. */
   guardadosEnDialogo?: readonly GuardadoEnDialogo[]
+  /** 0.3.19: subcadena exacta del onclick de UN control exacto que no cuenta como acción (ver {@link NeutralizacionOnclick}). Sin la clave = ninguna. */
+  neutralizacionesOnclick?: readonly NeutralizacionOnclick[]
+  /**
+   * TOMADOR = EL MEDIADOR (Alberto, 28/10/2026: «datos del mediador con su consentimiento»). SOLO las exploraciones de
+   * patinete, y SOLO sintéticas (sin cliente). El NIF, el nombre y la fecha de nacimiento NO viven aquí: asegura los toma
+   * de `MEDIADOR` (`@central/module-seguros`) y los pone en `riesgo.tomador` al encolar; el resolver los lee de ahí.
+   */
+  tomadorMediador?: true
 }
 
 /**
@@ -74,6 +187,155 @@ const ACEPTAR_DATOS_BASICOS: AvanceAutorizado = Object.freeze({
   enTitulo: /datos\s+basicos/,
   nuncaConTitulo: /tarific|revisi|emisi|contrat|pago|firma|iban/,
 })
+
+/**
+ * Allianz ePAC legacy (28/10/2026, exploración real `allianz:autos:movilidad_personal`, «Datos Básicos – Figuras Intervinientes»):
+ * el avance de paso del asistente es `<… id="btnAceptar" onclick="eventoSiguiente()">Aceptar</…>` en el marco `/drvp00/SEAServlet`.
+ * Su título de pantalla no llega como h1-h6/legend, así que `ACEPTAR_DATOS_BASICOS` no lo reconocía. Solo esa identidad exacta.
+ */
+const SIGUIENTE_EPAC_DRVP00: AvancePorId = Object.freeze({
+  id: 'btnAceptar',
+  onclick: 'eventoSiguiente()',
+  texto: /^aceptar$/,
+  rutaMarco: '/drvp00/SEAServlet',
+  // Real 28/10/2026: «Aceptar» de «Figuras Intervinientes» envía el POST a /drvp00/main/control.do (desde /drvp00/SEAServlet).
+  destinosPost: Object.freeze(['/drvp00/main/control.do']),
+  // 0.3.14 (revisión): con títulos recortados el guard VIVO es la única mirada a los títulos 21+; además de los de «Datos básicos»,
+  // un «Resumen» o una «Formalización» tampoco son pantalla de datos (fail-closed: el explorador para con «título vivo»).
+  nuncaConTitulo: /tarific|revisi|emisi|contrat|pago|firma|iban|resumen|formaliz/,
+  toleraTitulosRecortados: true as const,
+})
+
+/**
+ * 0.3.17 (real 29/10/2026, ePAC drvp00 `control.do`): «Aceptar» de «Datos del Vehículo · Selección de Municipio · Tomador y Conductor
+ * Principal», sin id ni onclick (el de la pantalla anterior era `#btnAceptar`). Mismos destinos POST y misma vigilancia de títulos que
+ * {@link SIGUIENTE_EPAC_DRVP00}; solo cambia cómo se identifica el control (texto exacto + único en el marco).
+ */
+const ACEPTAR_EPAC_DRVP00_SIN_ID: AvancePorId = Object.freeze({
+  id: '',
+  onclick: '',
+  texto: /^aceptar$/,
+  // Revisión 0.3.17: SOLO el marco `control.do` (la pantalla real cuelga de ahí); el servlet no se abre a un «Aceptar» sin identidad.
+  rutaMarco: '/drvp00/main/control.do',
+  destinosPost: Object.freeze(['/drvp00/main/control.do']),
+  nuncaConTitulo: /tarific|revisi|emisi|contrat|pago|firma|iban|resumen|formaliz/,
+  toleraTitulosRecortados: true as const,
+  sinIdentidad: true as const,
+})
+
+/**
+ * 0.3.18 (real 29/10/2026, ePAC drvp00 `control.do`): el MISMO «Aceptar» de «Selección de Municipio», sin id pero con
+ * `onclick="eventoSiguienteDialog()"` (botón `type=button`, clase `btn btn-block alz-wm-btn`). Es la regla {@link ACEPTAR_EPAC_DRVP00_SIN_ID}
+ * con el onclick EXACTO como única diferencia. `eventoSiguienteDialog` probablemente abre un diálogo (municipio): lo que salga de él pasa
+ * por las reglas normales en el paso siguiente (un `confirm()` nativo se descarta y el explorador para; un segundo «Aceptar» = no único).
+ */
+const ACEPTAR_EPAC_DRVP00_DIALOGO: AvancePorId = Object.freeze({
+  ...ACEPTAR_EPAC_DRVP00_SIN_ID,
+  onclickExacto: 'eventoSiguienteDialog()',
+})
+
+/**
+ * 0.3.18: acción final o dato bancario en un texto visible (texto plano). «pagar» y no «pago»: «Forma de pago» es un campo normal de una
+ * simulación. El worker repite esta MISMA expresión sobre el texto vivo de todos los marcos.
+ */
+export const RE_TEXTO_ACCION_FINAL_SIN_TEXTO = /\b(?:emit|emis|contrat|confirm|firm|pagar|formaliz)|\biban\b|cuenta bancaria|numero de cuenta|\bn[º°.]*\s*de cuenta\b|datos bancarios|cuenta corriente|tarjeta de (?:credito|debito)/
+
+/**
+ * 0.3.18 (revisión adversarial): OutSystems pone el NOMBRE DEL WIDGET al final del `name`/`id` (`…$wtMainContent$wtBtnContratar`). Sin
+ * fronteras de palabra (va pegado). El worker repite esta MISMA expresión sobre el `name` e `id` VIVOS (minúsculas).
+ */
+export const RE_NAME_ACCION_FINAL_SIN_TEXTO = /emit|emis|contrat|contract|confirm|firm|pagar|pago|payment|formaliz|iban|tarjet/
+
+/**
+ * 0.3.19 (real 29/10/2026): el onclick EXACTO del avance de «Simulación» de Fidelidade (OutSystems). Sobre el onclick con los espacios
+ * colapsados. Nada antes ni después (sin llamadas extra, sin URL): A = widget con `_`, B = name del widget con `$`.
+ */
+export const RE_ONCLICK_OSAJAX_SIN_TEXTO = /^OsAjax\(arguments\[0\] \|\| window\.event,'([A-Za-z0-9_]{1,300})','([A-Za-z0-9_$]{1,300})','','__OSVSTATE,',''\); return false;$/
+
+/**
+ * 0.3.20 (Fidelidade real 29/10/2026, e0e482d1…): en el DOM VIVO el `<input type=submit>` «sin rótulo» SÍ lleva `value` (el inventario
+ * solo dice `conValor`: puesto por el servidor/JS, el rótulo se ve por CSS) y el guard lo rechazaba con `con_rotulo`. LISTA CERRADA de
+ * rótulos de AVANCE NEUTROS: el rótulo vivo (value, aria-label, title, alt, texto), si existe, tiene que ser EXACTAMENTE uno de estos
+ * (trim, espacios colapsados, sin mayúsculas ni tildes). Nada con acción final («tarificar y contratar», «confirmar», «emitir»…).
+ */
+export const ROTULOS_AVANCE_NEUTROS_SIN_TEXTO: readonly string[] = Object.freeze(['siguiente', 'avanzar', 'continuar', 'siguiente paso', 'calcular', 'simular'])
+
+/**
+ * 0.3.20: ¿es `rotulo` (vivo) un rótulo de avance NEUTRO para la regla {@link AvanceSinTexto}? Vacío = sí (sin rótulo, 0.3.18). Si no, tiene
+ * que ser EXACTAMENTE uno de {@link ROTULOS_AVANCE_NEUTROS_SIN_TEXTO} y además no casar ni `textoAccionFinal` de la regla, ni
+ * {@link RE_TEXTO_ACCION_FINAL_SIN_TEXTO}, ni {@link RE_NAME_ACCION_FINAL_SIN_TEXTO}, ni `pareceEmision`. Pura; el worker la llama sobre el DOM vivo.
+ */
+export function rotuloNeutroSinTexto(rotulo: string | null | undefined, textoAccionFinal: RegExp = RE_TEXTO_ACCION_FINAL_SIN_TEXTO): boolean {
+  if (rotulo === null || rotulo === undefined) return true
+  if (typeof rotulo !== 'string') return false
+  const t = rotulo.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase()
+  if (t === '') return true
+  if (!ROTULOS_AVANCE_NEUTROS_SIN_TEXTO.includes(t)) return false
+  return !textoAccionFinal.test(t) && !RE_TEXTO_ACCION_FINAL_SIN_TEXTO.test(t) && !RE_NAME_ACCION_FINAL_SIN_TEXTO.test(t) && !pareceEmision(t) && !pareceEmision(rotulo)
+}
+
+/** Origen del que sale la regla y ruta de la pantalla de simulación de Fidelidade Vivienda (con la errata «Simualtion» del portal). */
+export const ORIGEN_FIDELIDADE_MEDIADORES = 'https://mediadores.fidelidade.es'
+
+/**
+ * 0.3.18 (real 29/10/2026): botón primario de «Simulación» de Fidelidade Vivienda, `input[type=submit]` de OutSystems
+ * (`name="OPI_Theme_wt25$block$wtMainContent$FID_B…"`, clase «Button First Is_Default») sin ningún rótulo.
+ */
+const SIMULACION_FIDELIDADE_SIN_TEXTO: AvanceSinTexto = Object.freeze({
+  origen: ORIGEN_FIDELIDADE_MEDIADORES,
+  // SOLO la pantalla de simulación (revisión adversarial 29/10/2026): con todo el módulo, el botón primario del tema (Button+Is_Default, el
+  // mismo en cada pantalla) de cualquier pantalla de emisión/contratación de Vivienda quedaba cubierto por la regla. Otra pantalla = otra regla.
+  // 0.3.22 (Fidelidade real 29/10/2026, 530656a4…): LISTA CERRADA de pantallas del flujo de SIMULACIÓN de Vivienda, antes del precio. Solo
+  // las vistas en real: «Simulación» (con la errata del portal) y «Datos Cliente» (`ClientData.aspx`, a la que envía el formulario de la
+  // simulación). No hay más pantallas de Vivienda documentadas en el repo; una nueva se añade aquí al verla, nunca una de contratación/pago.
+  rutas: Object.freeze(['/OPI_ES_Vivienda/Simualtion.aspx', '/OPI_ES_Vivienda/ClientData.aspx']),
+  prefijoName: 'OPI_Theme_wt',
+  contieneName: '$block$wtMainContent$',
+  clase: Object.freeze(['Button', 'Is_Default']),
+  nuncaConTitulo: /revisi|emisi|contrat|firma|iban|resumen|formaliz|confirm|pagar/,
+  textoAccionFinal: RE_TEXTO_ACCION_FINAL_SIN_TEXTO,
+  // 0.3.19: el botón real lleva `OsAjax(…,'<widget _>','<name $>',…); return false;` (rechazo real `con_onclick`).
+  onclickForma: RE_ONCLICK_OSAJAX_SIN_TEXTO,
+})
+
+/**
+ * 0.3.19 (Mapfre NSE real 29/10/2026, `busquedaProductos`): el «Siguiente >>» de `formDG` lleva en el `oncomplete` de su A4J la llamada
+ * `mostrarModalPanelConfirmarLimpiezaPolizaPorDias(…)` (abre un modal; NO confirma nada por sí misma), y «conFIRMAr» lo marcaba como emisión
+ * (`ACCIONES_PORTAL`). Excepción ESTRECHA, análoga a `EXCEPCION_PROYECTO_AMPLIADO`: SOLO para el control con origen, ruta, tag, id, name y
+ * texto EXACTOS, se quita del onclick SOLO esa subcadena exacta (una vez, como identificador seguido de `(`); el resto del onclick tiene que
+ * pasar `clasificarAccionPortal` y `pareceEmision` sin emisión (si no, no se neutraliza nada). El modal que abra después pasa por las reglas
+ * normales. El worker repite lo mismo sobre el DOM VIVO.
+ */
+export type NeutralizacionOnclick = {
+  /** Origen EXACTO de la ventana/marco. */
+  origen: string
+  /** La ruta del marco empieza por esto (exacto, sensible a mayúsculas; acaba en «/»). */
+  prefijoRuta: string
+  tag: string
+  /** `id` y `name` EXACTOS (los dos). */
+  id: string
+  name: string
+  /** Texto EXACTO (espacios colapsados). */
+  texto: string
+  /** La ÚNICA subcadena que se quita del onclick. */
+  subcadena: string
+}
+
+const SIGUIENTE_NSE_LIMPIEZA_POLIZA: NeutralizacionOnclick = Object.freeze({
+  origen: 'https://wmediadores.mapfre.com',
+  prefijoRuta: '/EVT21_NSE_FWEB/app/emision/busquedaProductos/',
+  tag: 'a',
+  id: 'formDG:btnSiguiente',
+  name: 'formDG:btnSiguiente',
+  texto: 'Siguiente >>',
+  subcadena: 'mostrarModalPanelConfirmarLimpiezaPolizaPorDias',
+})
+
+/** ¿La ruta del marco es la de la regla (o una de sus `rutasMarco`, solo si es `sinIdentidad`)? Pura; la repite el guard con la ruta VIVA. */
+export function rutaCasaAvancePorId(a: AvancePorId, ruta: string | null): boolean {
+  if (ruta === null) return false
+  return ruta === a.rutaMarco || (a.sinIdentidad === true && (a.rutasMarco ?? []).includes(ruta))
+}
 
 export const ENTRADAS_EXPLORACION: Readonly<Record<string, EntradaExploracion>> = Object.freeze({
   'allianz:particulares:hogar': Object.freeze({
@@ -87,10 +349,42 @@ export const ENTRADAS_EXPLORACION: Readonly<Record<string, EntradaExploracion>> 
     compania: 'allianz', ramo: 'comunidades', producto: 'comunidades', pestana: 'Particulares', productoMenu: 'Comunidades',
     avancesAutorizados: Object.freeze([ACEPTAR_DATOS_BASICOS]),
   }),
+  // Allianz Movilidad Personal (patinete/VMP, 28/10/2026): «Nueva Alta» → acordeón «Autos» → tile «Movilidad Personal».
+  // Tomador = el MEDIADOR (Alberto, 28/10/2026, datos propios con su consentimiento). Solo se autoriza el «Aceptar» de
+  // «Datos Básicos» (el mismo mecanismo que Hogar): el de cualquier pantalla de tarificar/emisión sigue bloqueado.
+  'allianz:autos:movilidad_personal': Object.freeze({
+    compania: 'allianz', ramo: 'patinete', producto: 'patinete', pestana: 'Autos', productoMenu: 'Movilidad Personal',
+    avancesAutorizados: Object.freeze([ACEPTAR_DATOS_BASICOS]),
+    avancesPorId: Object.freeze([SIGUIENTE_EPAC_DRVP00, ACEPTAR_EPAC_DRVP00_SIN_ID, ACEPTAR_EPAC_DRVP00_DIALOGO]),
+    cierraDialogoTermino: true as const,
+    tomadorMediador: true as const,
+  }),
+  // Mapfre Patinetes (28/10/2026): Portal Digital de Mediadores › «Nueva producción» › «Automóviles» › tarjeta «Patinetes» ›
+  // enlace «Tarificación y Emisión» (producto «MásPatín»); el recorrido va fijo en el código de Mapfre (`entrada.ts`).
+  // Tomador = el MEDIADOR (ver arriba). Sin avances autorizados: solo se lee la primera pantalla.
+  'mapfre:automoviles:patinetes': Object.freeze({
+    compania: 'mapfre', ramo: 'patinete', producto: 'patinete', pestana: 'Nueva producción', productoMenu: 'Patinetes',
+    avancesAutorizados: Object.freeze([]),
+    // Menú de la aplicación NSE (28/10/2026): sus entradas son `<a>` (la IA elige el producto, MásPatín). Solo dentro de la app.
+    enlacesAvanzables: Object.freeze({ rutaApp: '/EVT21_NSE_FWEB/' }),
+    // NSE = «Nuevo Sistema de Emisión»: sus pantallas de TARIFICAR viven bajo `/app/emision/` (real 28/10/2026, `cargaOperacion.jsf`).
+    rutasAppTolerables: Object.freeze([Object.freeze({ origen: 'https://wmediadores.mapfre.com', prefijo: '/EVT21_NSE_FWEB/app/emision/' })]),
+    // 0.3.19: el «Siguiente >>» de `formDG` (busquedaProductos) abre en su oncomplete el modal de «limpieza de póliza por días».
+    neutralizacionesOnclick: Object.freeze([SIGUIENTE_NSE_LIMPIEZA_POLIZA]),
+    tomadorMediador: true as const,
+  }),
   // Mapfre Auto (14/10/2026): «Nueva producción» → «Turismos y Motos». El bloque «Automóviles» y el enlace «Tarificación y
   // Emisión Rápida» (abre pestaña nueva) van fijos en el código de Mapfre. Sin avances autorizados: solo se lee.
   'mapfre:nueva_produccion:auto': Object.freeze({
     compania: 'mapfre', ramo: 'auto', producto: 'auto', pestana: 'Nueva producción', productoMenu: 'Turismos y Motos',
+    avancesAutorizados: Object.freeze([]),
+  }),
+  // Mapfre Hogar (31/10/2026, «un bot por compañía»): «Nueva producción» → «Patrimoniales» → «Tarificación y emisión rápida» (MISMA
+  // pestaña), el recorrido grabado por Alberto que ya usa el borrador `mapfre/hogar.ts` (`abrirTarificacionRapidaHogar`; el enlace pasa
+  // por la puerta exacta del guard, `ENLACES_ENTRADA_AUTORIZADOS`). Hogar = 2.º ramo de la cartera en vigor. Sin avances autorizados:
+  // solo se LEE el formulario (CP, «Ref. catastral»…). Puerta de BD: fila `companias_integracion` mapfre/hogar activa (hoy no existe).
+  'mapfre:patrimoniales:hogar': Object.freeze({
+    compania: 'mapfre', ramo: 'hogar', producto: 'hogar', pestana: 'Nueva producción', productoMenu: 'Patrimoniales',
     avancesAutorizados: Object.freeze([]),
   }),
   // Occident Hogar (14/10/2026): «Productos» › «Análisis de necesidades» › «Hogar» › «Tarificación» (menú fijo en el código de
@@ -102,6 +396,16 @@ export const ENTRADAS_EXPLORACION: Readonly<Record<string, EntradaExploracion>> 
     compania: 'occident', ramo: 'hogar', producto: 'hogar', pestana: 'Productos', productoMenu: 'Hogar',
     avancesAutorizados: Object.freeze([]),
     guardadosEnDialogo: Object.freeze([Object.freeze({ texto: /^guardar$/, dialogo: /^datos de la situacion$/ })]),
+  }),
+  // Fidelidade Vivienda (28/10/2026): intranet de mediadores (usuario + contraseña, sin 2FA) › «OFICINA VIRTUAL» › «PROYECTO» ›
+  // «Nuevo proyecto» › «PARTICULARES - Crear nuevo proyecto» › tarjeta «Producto 4216 · Fidelidade Vivienda» › botón «Simulación».
+  // El recorrido va fijo en el código de Fidelidade (`fidelidade/entrada.ts`; NUNCA la tarjeta EMPRESAS, Producto 4215). Solo se LEE
+  // el formulario: sin avances autorizados; los clics de menú y «Simulación» van por la puerta exacta del guard (`ENLACES_ENTRADA_AUTORIZADOS`).
+  'fidelidade:particulares:vivienda': Object.freeze({
+    compania: 'fidelidade', ramo: 'hogar', producto: 'hogar', pestana: 'Oficina virtual', productoMenu: 'Fidelidade Vivienda',
+    avancesAutorizados: Object.freeze([]),
+    // 0.3.18: el botón de avance de «Simulación» no tiene rótulo (input submit de OutSystems): regla estrecha, ver `AvanceSinTexto`.
+    avancesSinTexto: Object.freeze([SIMULACION_FIDELIDADE_SIN_TEXTO]),
   }),
 })
 
@@ -127,6 +431,12 @@ export type DatoCatalogo = {
   rutaRiesgo?: string
   /** Variable de entorno (contacto de Alberto). Nunca en código, tests ni logs. */
   env?: string
+  /**
+   * 0.3.16: en una exploración SIN datos reales, si la clave no tiene valor (p. ej. la matrícula de un patinete: no se inventa) el
+   * worker NO rellena ese campo y sigue (en vez de parar). Si el portal lo exige, su mensaje de campo inválido llega al inventario
+   * siguiente y se cuenta. Con datos reales no cambia nada (sale del riesgo o para).
+   */
+  omitibleSinValor?: true
 }
 
 export const ENV_EXPLORADOR_EMAIL = 'TARIFICADOR_EXPLORADOR_EMAIL'
@@ -227,6 +537,27 @@ const DATOS_AUTO: readonly DatoCatalogo[] = [
   D({ clave: 'historial.anios_asegurado', descripcion: 'Años asegurado en la compañía anterior', tipo: 'numero', personal: false, fuente: 'sintetico', sintetico: '5', rutaRiesgo: 'aniosAseguradoAnterior' }),
 ]
 
+/**
+ * Riesgo de PATINETE / VMP (Allianz ePAC «Datos del Vehículo · Selección de Municipio», 29/10/2026). Datos de PRUEBA, sin PII:
+ * Xiaomi Electric Scooter 4 Pro, uso NO profesional, homologado DGT, CP 41001 / Sevilla. La MATRÍCULA no se inventa (puede ser de una
+ * persona real): sin dato real la clave no tiene valor y el worker deja el campo vacío (`omitibleSinValor`). El CP reutiliza el de
+ * circulación/pernocta de Auto.
+ */
+const DATOS_PATINETE: readonly DatoCatalogo[] = [
+  D({ clave: 'vehiculo.matricula', descripcion: 'Matrícula del patinete/VMP (sin valor de prueba: si el campo no es obligatorio, déjalo vacío)', tipo: 'texto', personal: true, fuente: 'riesgo', rutaRiesgo: 'matricula', omitibleSinValor: true }),
+  D({ clave: 'vehiculo.codigo_postal', descripcion: 'Código postal de circulación/pernocta', tipo: 'texto', personal: false, fuente: 'sintetico', sintetico: '41001', rutaRiesgo: 'codigoPostal' }),
+  D({ clave: 'vehiculo.poblacion', descripcion: 'Población/municipio de circulación/pernocta', tipo: 'texto', personal: false, fuente: 'sintetico', sintetico: 'Sevilla', rutaRiesgo: 'poblacion' }),
+  D({ clave: 'vmp.marca', descripcion: 'Marca del patinete/VMP', tipo: 'texto', personal: false, fuente: 'sintetico', sintetico: 'Xiaomi', rutaRiesgo: 'vmp.marca' }),
+  D({ clave: 'vmp.modelo', descripcion: 'Modelo del patinete/VMP', tipo: 'texto', personal: false, fuente: 'sintetico', sintetico: 'Electric Scooter 4 Pro', rutaRiesgo: 'vmp.modelo' }),
+  D({ clave: 'vmp.uso_profesional', descripcion: 'Uso profesional del patinete (Sí/No): radio «uso profesional» / «uso no profesional»', tipo: 'opcion', personal: false, fuente: 'sintetico', sintetico: 'No', rutaRiesgo: 'vmp.usoProfesional' }),
+  D({ clave: 'vmp.homologado', descripcion: 'Patinete homologado por la DGT (Sí/No): radio «homologado»', tipo: 'opcion', personal: false, fuente: 'sintetico', sintetico: 'Sí', rutaRiesgo: 'vmp.homologado' }),
+]
+
+/** ¿Esta entrada usa al MEDIADOR como tomador? (solo las de patinete; ver {@link EntradaExploracion.tomadorMediador}). */
+export function entradaConTomadorMediador(entrada: string): boolean {
+  return esEntradaExploracion(entrada) && ENTRADAS_EXPLORACION[entrada].tomadorMediador === true
+}
+
 /** Fecha de efecto y contacto: los comunes. En auto, el NIF y la fecha de nacimiento del tomador salen del formulario de auto (arriba y comunes). */
 const DATOS_COMUNES_AUTO: readonly DatoCatalogo[] = DATOS_COMUNES.filter((d) => d.clave !== 'tomador.nif' && d.clave !== 'tomador.nombre_completo')
 
@@ -234,10 +565,158 @@ export const CATALOGO_EXPLORACION: Readonly<Record<string, readonly DatoCatalogo
   hogar: Object.freeze([...DATOS_COMUNES, ...DATOS_INMUEBLE, ...DATOS_HOGAR]),
   comunidades: Object.freeze([...DATOS_COMUNES, ...DATOS_INMUEBLE, ...DATOS_COMUNIDADES]),
   auto: Object.freeze([...DATOS_COMUNES_AUTO, ...DATOS_AUTO]),
+  // Patinete/VMP (28-29/10/2026): datos comunes (tomador, contacto, efecto) + vehículo de prueba (0.3.16).
+  patinete: Object.freeze([...DATOS_COMUNES, ...DATOS_PATINETE]),
 })
 
 export function catalogoDe(ramo: string): readonly DatoCatalogo[] {
   return Object.hasOwn(CATALOGO_EXPLORACION, ramo) ? CATALOGO_EXPLORACION[ramo] : []
+}
+
+/**
+ * 0.3.21 (Allianz VMP real 29/10/2026, 3c888bba…: «XIAOMI» era la opción 50 de 56 y el inventario solo llevaba 40): pistas para que el
+ * saneado conserve las opciones de un `<select>` que casan con el dato de prueba (`OpcionesSaneado.pistasOpciones`). SOLO valores
+ * SINTÉTICOS de claves NO personales, de texto u opción, de ≥3 caracteres (nunca `@manana`, nunca el riesgo real ni el entorno). Pura.
+ */
+export function pistasOpcionesInventario(ramo: string): string[] {
+  return [...new Set(catalogoDe(ramo)
+    .filter((d) => !d.personal && d.fuente === 'sintetico' && (d.tipo === 'texto' || d.tipo === 'opcion') && typeof d.sintetico === 'string' && !d.sintetico.startsWith('@') && d.sintetico.trim().length >= 3)
+    .map((d) => d.sintetico!.trim()))]
+}
+
+/** ¿Esta clave del ramo se puede dejar SIN rellenar si no tiene valor (exploración sin datos reales)? Ver {@link DatoCatalogo.omitibleSinValor}. */
+export function claveOmitibleSinValor(ramo: string, clave: string): boolean {
+  return catalogoDe(ramo).some((d) => d.clave === clave && d.omitibleSinValor === true)
+}
+
+/**
+ * 0.3.20 (Allianz VMP real 29/10/2026, 5f47a553…): ¿esta acción NO hace nada en el portal? Un `rellenar` de una clave
+ * {@link DatoCatalogo.omitibleSinValor} en una exploración SIN datos reales: el worker deja el campo vacío y sigue. Un lote solo de esto
+ * repite la pantalla tal cual (el robot cortaba por `bucle`). Pura.
+ */
+export function esAccionSinEfecto(a: unknown, ramo: string, datosReales: unknown): boolean {
+  if (datosReales !== null && datosReales !== undefined) return false
+  if (typeof a !== 'object' || a === null) return false
+  const o = a as Record<string, unknown>
+  return o.accion === 'rellenar' && typeof o.dato === 'string' && claveOmitibleSinValor(ramo, o.dato)
+}
+
+/**
+ * 0.3.21 (Fidelidade real 29/10/2026, b8e871fe…, «Simulación»): la IA manda [rellenar nombre, marcar régimen, avanzar] y el botón de avance
+ * está DESHABILITADO hasta que se rellena (el portal lo habilita después). Antes el lote entero caía («el elemento está deshabilitado»).
+ * ¿Es este lote ese caso? Sí solo si: hay ≥2 acciones, la ÚLTIMA es `avanzar` sobre un ref del inventario marcado `deshabilitado`, y
+ * TODAS las anteriores son rellenar/marcar/elegir sobre refs del inventario del MISMO marco. Entonces el validador quita el `avanzar` (no
+ * lo valida ni lo ejecuta: un control deshabilitado nunca se vuelve pulsable) y valida el resto como siempre; en el paso siguiente la IA
+ * ve el botón ya habilitado y su avance pasa por todas las barreras. Pura.
+ */
+export function avanceDeshabilitadoAlFinal(lista: readonly unknown[], refs: ReadonlyMap<string, { el: ElementoInventario; marco: MarcoInventario }>): boolean {
+  if (lista.length < 2) return false
+  const ult = obj(lista[lista.length - 1])
+  if (!ult || ult.accion !== 'avanzar' || typeof ult.ref !== 'string') return false
+  const av = refs.get(ult.ref)
+  if (!av || av.el.deshabilitado !== true) return false
+  return lista.slice(0, -1).every((a0) => {
+    const a = obj(a0)
+    if (!a || !['rellenar', 'marcar', 'elegir'].includes(String(a.accion)) || typeof a.ref !== 'string') return false
+    const hit = refs.get(a.ref)
+    return hit !== undefined && hit.marco === av.marco
+  })
+}
+
+/** 0.3.22: resultado de {@link normalizarOpcionElegir}. `yaPuesta` = la opción de valor VACÍO que el `<select>` ya tiene: no se ejecuta. */
+export type OpcionElegirNormalizada = { ok: true; valor: string } | { ok: true; yaPuesta: true } | { ok: false; error: string }
+
+/**
+ * 0.3.22 (Allianz VMP real 29/10/2026, 6b3176de…, «Figuras Intervinientes»): la IA mandó `elegir` sobre `IntervinientesBean$nifTomador_tipoDoc`
+ * con una `opcion` que no era `{ valor: string }` y el lote entero cayó. La opción que buscaba («DNI/NIF/NIE/CIF») tiene `value=""` y el
+ * inventario la lleva con `valor: null`: la IA NO podía expresarla con `{ valor }`. Formas que se aceptan (INEQUÍVOCAS), siempre resueltas
+ * contra las opciones DEL INVENTARIO (la comprobación de opción permitida no se relaja):
+ *   · `{ valor: string }`: como siempre (el validador comprueba después que es una opción del inventario).
+ *   · una CADENA: el valor de UNA opción, o el texto EXACTO (espacios colapsados) de UNA opción; si casa con dos opciones distintas, ambigua.
+ *   · `{ texto: string }` (o `{ valor: null, texto }`): el texto EXACTO de UNA opción. `{ valor: string, texto }` solo si ambos son de la MISMA.
+ * En un nx-dropdown el «valor» ES el texto: cadena o `{ texto }` → `{ valor: texto }` (sus comprobaciones de siempre van después).
+ * Si la opción resuelta no tiene valor en el inventario (vacío o redactado): solo vale como `yaPuesta` (no se ejecuta nada) cuando el
+ * `<select>` NO tiene valor (`conValor === false`), están TODAS sus opciones en el inventario y esa es la ÚNICA sin valor (luego es la de
+ * `value=""`, la que ya está puesta). Si no, rechazo: una opción redactada nunca se elige. PURA.
+ * 0.3.24 (Allianz VMP real 30/10/2026, 8338f86b…: el mismo rechazo de forma; la respuesta cruda de la IA no se guarda): además
+ *   · `{ valor: null }`, `{ valor: "" }` o `""` (la IA copia el `valor: null` del inventario) = la ÚNICA opción con valor null;
+ *   · sinónimos `value` (de valor) y `text`/`label`/`etiqueta` (de texto), uno por clave; un índice NO (¿base 0 o 1?: ambiguo).
+ *   El inventario de esa pantalla traía `opcionesTotal` 4 con 3 opciones: la cuarta era el placeholder vacío de bootstrap-select
+ *   (`opcionesVacias`); con él, `yaPuesta` exige además que la opción tenga `value=""` EXACTO (`vacio`).
+ */
+export function normalizarOpcionElegir(opcion: unknown, el: ElementoInventario): OpcionElegirNormalizada {
+  const forma = 'opcion tiene que ser { valor } (o { texto } con el texto exacto de la opción), p. ej. "opcion": { "valor": "P" } o "opcion": { "texto": "Pasaporte" }'
+  const plano = (s: string) => s.replace(/\s+/g, ' ').trim()
+  let cadena: string | null = null
+  let texto: string | null = null
+  let valor: string | null = null
+  /** 0.3.24: la IA señala la opción SIN valor (`{ valor: null }`, `{ valor: "" }` o `""`): la ÚNICA del inventario con valor null. */
+  let sinValor = false
+  if (typeof opcion === 'string') {
+    if (plano(opcion) === '') sinValor = true
+    else cadena = opcion
+  } else {
+    const o = obj(opcion)
+    if (!o) return { ok: false, error: forma }
+    // 0.3.24 (Allianz VMP real 30/10/2026, 8338f86b…): sinónimos INEQUÍVOCOS de las dos claves (inglés y «etiqueta»); dos sinónimos
+    // de la MISMA clave a la vez = rechazo (no se elige cuál manda). Cualquier otra clave (índice incluido: ¿base 0 o 1?) = rechazo.
+    const SIN_VALOR = ['valor', 'value']
+    const SIN_TEXTO = ['texto', 'text', 'label', 'etiqueta']
+    const ks = Object.keys(o)
+    if (ks.length === 0 || ks.some((k) => !SIN_VALOR.includes(k) && !SIN_TEXTO.includes(k))) return { ok: false, error: forma }
+    const kv = ks.filter((k) => SIN_VALOR.includes(k))
+    const kt = ks.filter((k) => SIN_TEXTO.includes(k))
+    if (kv.length > 1 || kt.length > 1) return { ok: false, error: `${forma}: una sola clave de valor y una de texto` }
+    const v0 = kv.length ? o[kv[0]] : undefined
+    const t0 = kt.length ? o[kt[0]] : undefined
+    if (t0 !== undefined && t0 !== null && typeof t0 !== 'string') return { ok: false, error: forma }
+    if (v0 !== undefined && v0 !== null && typeof v0 !== 'string') return { ok: false, error: forma }
+    texto = typeof t0 === 'string' && plano(t0) !== '' ? t0 : null
+    // `""` y `null` como valor = «la opción sin valor» (la IA copia el `valor: null` del inventario).
+    valor = typeof v0 === 'string' && v0 !== '' ? v0 : null
+    if (texto === null && valor === null) {
+      if (v0 === undefined || (t0 !== undefined && t0 !== null)) return { ok: false, error: forma }
+      sinValor = true
+    } else if (texto === null) return { ok: true, valor: valor! } // La forma de siempre: las comprobaciones de opción van después, en el validador.
+  }
+  if (el.tag === 'nx-dropdown') {
+    if (sinValor) return { ok: false, error: `${forma}: en un nx-dropdown la opción es su texto` }
+    if (cadena !== null) return { ok: true, valor: cadena }
+    if (valor !== null && plano(valor) !== plano(texto!)) return { ok: false, error: `${forma}: valor y texto no son de la misma opción` }
+    return { ok: true, valor: texto! }
+  }
+  const ops = el.opciones ?? []
+  const porTexto = (t: string) => ops.filter((o) => o.texto !== null && plano(o.texto) === plano(t))
+  let candidatas: OpcionInventario[]
+  if (sinValor) candidatas = ops.filter((o) => o.valor === null)
+  else if (cadena !== null) candidatas = [...new Set([...ops.filter((o) => o.valor !== null && o.valor === cadena), ...porTexto(cadena)])]
+  else {
+    candidatas = porTexto(texto!)
+    if (valor !== null && !(candidatas.length === 1 && candidatas[0].valor === valor)) return { ok: false, error: `${forma}: valor y texto no son de la misma opción` }
+  }
+  if (candidatas.length === 0) return { ok: false, error: 'el valor no está entre las opciones del inventario' }
+  if (candidatas.length > 1) return { ok: false, error: 'opción ambigua: casa con más de una opción del inventario' }
+  const op = candidatas[0]
+  if (op.valor !== null) return { ok: true, valor: op.valor }
+  // 0.3.24: los placeholders vacíos descartados (`opcionesVacias`, p. ej. la `bs-title-option` de bootstrap-select) cuentan para «están
+  // todas»; con alguno, la opción tiene que tener `value=""` EXACTO (`vacio`): el `<select>` sin valor ya envía ese mismo valor.
+  const vacias = typeof el.opcionesVacias === 'number' ? el.opcionesVacias : 0
+  const todas = typeof el.opcionesTotal === 'number' && el.opcionesTotal === ops.length + vacias
+  if (el.conValor === false && todas && ops.filter((o) => o.valor === null).length === 1 && (vacias === 0 || op.vacio === true)) return { ok: true, yaPuesta: true }
+  return { ok: false, error: 'esa opción no tiene valor en el inventario (vacía o redactada): no se elige; si es la vacía y el desplegable no tiene valor, ya está puesta' }
+}
+
+/** Lo que dice el propio campo del portal (id, name, etiqueta, placeholder, aria, formControlName): para comprobar que la clave encaja. */
+const RE_CAMPO_VEHICULO_O_DIRECCION = /matr[ií]cula|c[oó]digo\s*_?postal|codigopostal|\bcp\b|poblaci[oó]n|municipio/i
+const RE_CLAVE_CONTACTO = /^contacto\.(telefono|email)$/
+
+/**
+ * 0.3.16: una clave de CONTACTO (teléfono, correo) no se escribe en un campo que se llama matrícula, código postal, población o
+ * municipio (Allianz patinete, 29/10/2026: la IA mapeó matrícula y CP a `contacto.telefono`). `true` = incompatible. Pura.
+ */
+export function claveIncompatibleConCampo(clave: string, el: ElementoInventario): boolean {
+  if (!RE_CLAVE_CONTACTO.test(clave)) return false
+  return [el.id, el.name, el.etiqueta, el.placeholder, el.ariaLabel, el.formControlName].some((t) => typeof t === 'string' && RE_CAMPO_VEHICULO_O_DIRECCION.test(t))
 }
 
 /**
@@ -292,6 +771,8 @@ export function valorVisibleIA(clave: string, riesgo: unknown): { valor: string;
 
 export type ContextoDatos = {
   ramo: string
+  /** La entrada tiene `tomadorMediador`: `tomador.*` sale de `riesgo.tomador` (los datos del mediador que puso asegura). */
+  tomadorMediador?: boolean
   /**
    * `true` SOLO si la exploración va ligada a una petición de tarificación REAL de ese cliente/lead (trabajo origen del
    * mismo cliente). Sin ella, todo lo personal es sintético y lo que no tiene sintético (NIF) PARA.
@@ -378,6 +859,12 @@ function resolverDatoCrudo(clave: string, ctx: ContextoDatos): DatoResuelto {
     return ok ? { ok: true, valor: v } : { ok: false, motivo: 'dato_no_disponible' }
   }
   if (d.personal) {
+    // Tomador = MEDIADOR (solo entradas con `tomadorMediador`, sintéticas): de `riesgo.tomador` o no sale (nada inventado:
+    // si falta la fecha de nacimiento, el explorador PARA y lo cuenta).
+    if (!ctx.conDatosReales && ctx.tomadorMediador === true && d.rutaRiesgo?.startsWith('tomador.')) {
+      const v = enRuta(ctx.riesgo, d.rutaRiesgo)
+      return v !== null ? { ok: true, valor: v } : { ok: false, motivo: 'dato_sensible_requerido' }
+    }
     if (ctx.conDatosReales) {
       // Lo personal de una exploración ligada a un cliente sale de SU riesgo o no sale: nunca un nombre de prueba con un NIF real.
       const v = d.rutaRiesgo ? enRuta(ctx.riesgo, d.rutaRiesgo) : null
@@ -400,7 +887,7 @@ function resolverDatoCrudo(clave: string, ctx: ContextoDatos): DatoResuelto {
  * contacto de entorno siempre y, con datos reales, los del riesgo del trabajo. `null` = exploración con datos reales SIN
  * riesgo legible → quien llama PARA (fail-closed: sin saber qué quitar no se manda nada).
  */
-export function valoresSensiblesExploracion(ctx: { conDatosReales: boolean; riesgo: unknown; env: Record<string, string | undefined> }): string[] | null {
+export function valoresSensiblesExploracion(ctx: { conDatosReales: boolean; riesgo: unknown; env: Record<string, string | undefined>; tomadorMediador?: boolean }): string[] | null {
   const valores: string[] = []
   for (const k of [ENV_EXPLORADOR_EMAIL, ENV_EXPLORADOR_TELEFONO]) {
     const v = ctx.env[k]?.trim()
@@ -410,7 +897,7 @@ export function valoresSensiblesExploracion(ctx: { conDatosReales: boolean; ries
     const dig = v.replace(/\D/g, '')
     if (k === ENV_EXPLORADOR_TELEFONO && dig.length > 9) valores.push(dig.slice(-9))
   }
-  if (!ctx.conDatosReales) return valores
+  if (!ctx.conDatosReales && ctx.tomadorMediador !== true) return valores
   if (typeof ctx.riesgo !== 'object' || ctx.riesgo === null || Array.isArray(ctx.riesgo)) return null
   return [...valores, ...valoresSensiblesDeRiesgo(ctx.riesgo)]
 }
@@ -475,6 +962,34 @@ export const DETALLES_FIN_EXPLORACION = [
    * encontró por su identidad (`relocalizarElemento`: misma huella de pantalla, marco, tag, type, id exacto, name/formControlName y etiqueta). 14/10/2026.
    */
   'nodo_no_relocalizado',
+  /**
+   * 0.3.12: parada «cerca de emisión» por TÍTULO o por CAMPO. El código lleva el NOMBRE canónico del patrón que casó
+   * (`titulo:<patrón>` / `campo:<patrón>`), nunca el texto de la página.
+   */
+  'titulo:revision',
+  'titulo:forma_pago',
+  'titulo:domiciliacion',
+  'titulo:iban',
+  'titulo:cuenta_bancaria',
+  'titulo:datos_bancarios',
+  'titulo:firma',
+  'titulo:firmar',
+  'titulo:emitir',
+  'titulo:emision',
+  'titulo:contrat',
+  'titulo:formaliz',
+  'titulo:grabar',
+  'titulo:archivar',
+  'titulo:datos_emision',
+  'titulo:resumen_contratacion',
+  'titulo:pago_tarjeta',
+  'campo:tarjeta_credito',
+  'campo:numero_tarjeta',
+  'campo:cvv',
+  'campo:cvc',
+  'campo:caducidad_tarjeta',
+  'campo:firma_digital',
+  'campo:firma_manuscrita',
 ] as const
 export type DetalleFinExploracion = (typeof DETALLES_FIN_EXPLORACION)[number]
 
@@ -638,6 +1153,13 @@ export function erroresDeIncidencias(incidencias: readonly IncidenciaEjecucion[]
  */
 export const CLAVES_AUTOCOMPLETADO: ReadonlySet<string> = new Set(['inmueble.codigo_postal', 'inmueble.provincia', 'inmueble.municipio'])
 
+/**
+ * Claves que el portal VALIDA al salir del campo (28/10/2026, Allianz ePAC Movilidad Personal, real 15:17: `change` → petición
+ * asíncrona; con «Aceptar» en el mismo lote el envío salía antes y el NIF volvía INVÁLIDO). Tras escribirlas el worker quita el foco y
+ * espera a la red ANTES de la siguiente acción; no cambian el orden del lote ni lo cortan (no repintan).
+ */
+export const CLAVES_VALIDAN_AL_SALIR: ReadonlySet<string> = new Set(['tomador.nif'])
+
 /** Roles ARIA de un control que despliega sugerencias (NDBX/Angular Material: `role=combobox` en el input). */
 const ROLES_AUTOCOMPLETADO = new Set(['combobox', 'searchbox'])
 
@@ -771,6 +1293,8 @@ export type ContextoValidacion = {
    * Por defecto `false` (lo calcula `presupuestoEnCursoDe` sobre los pasos validados anteriores).
    */
   presupuestoEnCurso?: boolean
+  /** `true` si en un paso ANTERIOR de este trabajo se vio un importe en cualquier marco: ningún avance por id más (precio pegajoso). */
+  precioVisto?: boolean
 }
 
 /** ¿Algún paso anterior (validado) pulsó un `guardar_presupuesto`? Para {@link ContextoValidacion.presupuestoEnCurso}. */
@@ -778,7 +1302,44 @@ export function presupuestoEnCursoDe(respuestas: readonly (RespuestaExplorador |
   return respuestas.some((r) => !!r && r.acciones.some((a) => a.accion === 'avanzar' && a.efectoEsperado === 'guardar_presupuesto'))
 }
 
-export type ValidacionRespuesta = { ok: true; respuesta: RespuestaExplorador } | { ok: false; errores: string[] }
+/**
+ * 0.3.16: diagnóstico de una acción RECHAZADA por el validador: qué acción (de la lista blanca), sobre qué ref (solo si existe en
+ * el inventario: `rN`/`mXeY`, sin datos) y la causa (el texto del error sin el prefijo). Nunca valores.
+ */
+export type RechazoAccion = { indice: number; accion: AccionExplorador | null; ref: string | null; causa: string; /** 0.3.17: qué control era (tag/type/name/clase/texto ≤40; sin valores). */ control?: string }
+
+/**
+ * 0.3.17: descripción corta del control rechazado para el diagnóstico (tag, type, name, clase y texto visible, cada uno ≤40 car.). Nunca
+ * el valor de un campo: de un input de texto/select/textarea no sale texto; un texto con forma de dato personal tampoco. Pura.
+ */
+export function describirControlRechazado(el: ElementoInventario): string {
+  const corto = (v: unknown) => (typeof v === 'string' && v.trim() !== '' ? v.replace(/\s+/g, ' ').trim().slice(0, 40) : '-')
+  const campoDeTexto = el.tag === 'select' || el.tag === 'textarea' || (el.tag === 'input' && !['button', 'submit', 'reset', 'image', 'radio', 'checkbox'].includes((el.type ?? '').toLowerCase()))
+  const texto = !campoDeTexto && typeof el.texto === 'string' && !pareceDatoPersonalInventario(el.texto) ? corto(el.texto) : '-'
+  return `tag=${corto(el.tag)} type=${corto(el.type)} name=${corto(el.name)} clase=${corto(el.clase)} texto=${texto === '-' ? '-' : `«${texto}»`}`
+}
+export type ValidacionRespuesta = { ok: true; respuesta: RespuestaExplorador } | { ok: false; errores: string[]; rechazos?: RechazoAccion[] }
+
+/** «rechazo acciones[1] avanzar r12: onclick_truncado» — la línea que se guarda en los errores del paso. Pura. */
+export function textoRechazo(r: RechazoAccion): string {
+  return `rechazo acciones[${r.indice}] ${r.accion ?? '?'} ${r.ref ?? '?'}: ${r.causa}${r.control ? ` [${r.control}]` : ''}`
+}
+
+/** Las acciones rechazadas de una lista de errores del validador (`acciones[i]…`), con la acción y la ref de la respuesta. Pura. */
+function rechazosDe(errores: readonly string[], lista: readonly unknown[], refs: ReadonlyMap<string, unknown>): RechazoAccion[] {
+  const out: RechazoAccion[] = []
+  for (const e of errores) {
+    const m = /^acciones\[(\d+)\]:?\s*(.*)$/.exec(e)
+    if (!m) continue
+    const indice = Number(m[1])
+    const a = obj(lista[indice])
+    const accion = ACCIONES_EXPLORADOR.find((x) => x === a?.accion) ?? null
+    const ref = typeof a?.ref === 'string' && refs.has(a.ref) ? a.ref : null
+    const hit = ref ? (refs.get(ref) as { el?: ElementoInventario } | undefined) : undefined
+    out.push({ indice, accion, ref, causa: m[2].slice(0, 160), ...(hit?.el ? { control: describirControlRechazado(hit.el) } : {}) })
+  }
+  return out
+}
 
 const obj = (v: unknown): Record<string, unknown> | null => (typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null)
 const plano = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
@@ -819,12 +1380,66 @@ export function indiceRefs(inv: InventarioDom): Map<string, { el: ElementoInvent
 }
 
 const TIPOS_INPUT_TEXTO = new Set(['', 'text', 'number', 'date', 'tel', 'email', 'search'])
-/** Etiquetas de radio que NUNCA se marcan: consentimientos (RGPD, publicidad, cesión…). */
-const RE_CONSENTIMIENTO = /rgpd|lopd|acept|consient|autoriz|publicidad|comercial|cesion|privacidad|proteccion de datos|condiciones/
-
-/** Todo lo que describe a un elemento (para el guard de emisión y el de consentimientos). */
+/** 0.3.16: `submit()` / `requestSubmit()` en el onclick de una casilla: envío del formulario entero, botón disfrazado, no se marca. */
+const RE_ONCLICK_SUBMIT = /\b(submit|requestSubmit)\s*\(/i
+/** 0.3.16 (revisión): clic PROGRAMÁTICO sobre otro elemento (`x.click()`, `dispatchEvent`, `fireEvent`, jQuery `trigger('click')`). */
+const RE_ONCLICK_CLIC_AJENO = /\.\s*(?:click|dispatchEvent|fireEvent)\s*\(|\.\s*trigger\s*\(\s*['"]click/i
+/** 0.3.16: llamadas JSF/PrimeFaces/RichFaces que mandan algo al servidor (envío clásico o AJAX). */
+const RE_LLAMADA_JSF = /\b(?:mojarra\.jsfcljs|jsfcljs|mojarra\.ab|jsf\.ajax\.request|PrimeFaces\.ab|PrimeFaces\.ajax\.[A-Za-z.]+|A4J\.AJAX\.Submit|a4j\.ajax|RichFaces\.ajax)\s*\(/gi
+/** Cadenas entre comillas de un trozo de código. */
+const cadenas = (s: string) => Array.from(s.matchAll(/['"]([^'"]*)['"]/g), (m) => m[1])
+/**
+ * 0.3.16: ¿el onclick COMPLETO de una radio/casilla envía el formulario o dispara la acción de OTRO componente? Pura. Fail-closed.
+ *  - `submit(…)` / `requestSubmit(…)` o un clic programático sobre otro elemento: sí, siempre.
+ *  - Más de una llamada JSF/AJAX en el mismo onclick: sí (solo se razona sobre una).
+ *  - `jsfcljs(form, {params}, target)`: NO si todas las cadenas de `{params}` son el id o el name del propio control; si no, sí.
+ *  - AJAX `mojarra.ab` / `jsf.ajax.request` / `RichFaces.ajax` (primer argumento) y `PrimeFaces.ab` (`s:`): el ORIGEN tiene que ser
+ *    `this` o el propio control. Motivo (revisión 0.3.16): en JSF una acción de servidor la dispara el componente que figura como
+ *    ORIGEN de la petición, y su id es opaco (`j_idt88`): un ajax cuyo origen es otro componente puede ejecutar la acción de un botón
+ *    sin que ninguna palabra de emisión aparezca en el onclick ni en el cuerpo POST (la red no lo vería).
+ *  - `A4J.AJAX.Submit`: los `parameters` (que nombran el componente de acción) solo el propio control.
+ *  - Otras llamadas reconocidas (p. ej. `PrimeFaces.ajax.Request.handle`): sí (no se sabe leer su origen).
+ * La emisión («emitir», «contratar», «confirmar»…) NO se decide aquí: la mira `pareceEmision` sobre el texto completo.
+ */
+export function onclickEnviaFormulario(onclick: string | undefined, el: Pick<ElementoInventario, 'id' | 'name'>): boolean {
+  const oc = (onclick ?? '').trim()
+  if (oc === '') return false
+  if (RE_ONCLICK_CLIC_AJENO.test(oc)) return true
+  // `A4J.AJAX.Submit(` contiene «Submit(»: el envío genérico se mira con las llamadas reconocidas quitadas.
+  if (RE_ONCLICK_SUBMIT.test(oc.replace(RE_LLAMADA_JSF, '('))) return true
+  const llamadas = Array.from(oc.matchAll(RE_LLAMADA_JSF))
+  if (llamadas.length === 0) return false
+  if (llamadas.length > 1) return true
+  const propios = [el.id, el.name].filter((x): x is string => typeof x === 'string' && x !== '' && !truncado(x))
+  if (propios.length === 0) return true
+  // 0.3.18: una cadena con la marca de tira de cifras normalizada (`MARCA_TIRA_CIFRAS_ONCLICK`) nunca es «propia»: podría nombrar a OTRO
+  // componente cuyo id solo difiere en las cifras.
+  const esPropio = (x: string) => !x.includes(MARCA_TIRA_CIFRAS_ONCLICK) && propios.includes(x)
+  const llamada = llamadas[0]
+  const nombre = llamada[0].toLowerCase()
+  const resto = oc.slice((llamada.index ?? 0) + llamada[0].length)
+  if (nombre.includes('jsfcljs')) {
+    const mapa = /^[^{}]*\{([^}]*)\}/.exec(resto)?.[1]
+    const ids = mapa ? cadenas(mapa) : []
+    return ids.length === 0 || !ids.every(esPropio)
+  }
+  if (nombre.startsWith('a4j.ajax.submit')) {
+    const params = /['"]parameters['"]\s*:\s*\{([^}]*)\}/.exec(resto)?.[1]
+    const ids = params ? cadenas(params) : []
+    return ids.length === 0 || !ids.every(esPropio)
+  }
+  if (nombre.startsWith('primefaces.ab')) {
+    const s = /[{,]\s*['"]?s['"]?\s*:\s*(?:(this)\b|['"]([^'"]+)['"])/.exec(resto)
+    return !s || (s[1] !== 'this' && !esPropio(s[2] ?? ''))
+  }
+  if (nombre.startsWith('primefaces.ajax')) return true
+  // mojarra.ab, jsf.ajax.request, RichFaces.ajax, a4j.ajax: el origen es el PRIMER argumento.
+  const origen = /^\s*(?:(this)\b|['"]([^'"]+)['"])\s*,/.exec(resto)
+  return !origen || (origen[1] !== 'this' && !esPropio(origen[2] ?? ''))
+}
+/** Todo lo que describe a un elemento (para el guard de emisión). */
 export function descripcionesElemento(el: ElementoInventario): string[] {
-  return [el.texto, el.ariaLabel, el.etiqueta, el.id, el.name, el.onclick, el.placeholder, el.formControlName].filter((x): x is string => typeof x === 'string' && x !== '')
+  return [el.texto, el.ariaLabel, el.etiqueta, el.id, el.name, el.onclick, el.hrefRuta, el.placeholder, el.formControlName].filter((x): x is string => typeof x === 'string' && x !== '')
 }
 
 function esControlTexto(el: ElementoInventario): boolean {
@@ -837,6 +1452,28 @@ function esAvanzable(el: ElementoInventario): boolean {
   if (el.tag === 'input') return ['submit', 'button'].includes((el.type ?? '').toLowerCase())
   if (el.role === 'button' || el.role === 'tab') return true
   return el.tag === 'td' && typeof el.onclick === 'string'
+}
+
+/**
+ * Entradas de MENÚ avanzables (28/10/2026, Mapfre NSE: menú lateral de `<a>`), SOLO en entradas que lo declaran
+ * (`enlacesAvanzables`) y SOLO dentro de su aplicación: el marco (la ventana) en la ruta de la app y, si el enlace es un href normal,
+ * su ruta (mismo origen: empieza por «/») también dentro. Vale un `<a>`/`[role=menuitem|link]` con onclick, role menuitem/link o
+ * href. El guard y `bloqueoAvance` siguen mirando cada uno (texto, onclick, ruta del href).
+ */
+export function esEnlaceAvanzable(entrada: string, el: ElementoInventario, marco: MarcoInventario): boolean {
+  const e = esEntradaExploracion(entrada) ? ENTRADAS_EXPLORACION[entrada] : null
+  const regla = e?.enlacesAvanzables
+  if (!regla) return false
+  const ruta = rutaDeMarco(marco.url)
+  if (ruta === null || !ruta.toUpperCase().startsWith(regla.rutaApp.toUpperCase())) return false
+  const esEnlace = el.tag === 'a' || el.role === 'menuitem' || el.role === 'link'
+  if (!esEnlace) return false
+  if (typeof el.hrefRuta === 'string') {
+    if (el.hrefRuta.endsWith('…') || !el.hrefRuta.toUpperCase().startsWith(regla.rutaApp.toUpperCase())) return false
+    return true
+  }
+  // Sin ruta de href: solo con onclick (incluye el `javascript:` del href) o role menuitem. Un role `link` sin ruta (se descartó) no.
+  return (typeof el.onclick === 'string' && el.onclick.trim() !== '') || el.role === 'menuitem'
 }
 
 /**
@@ -856,14 +1493,263 @@ export function esAceptarDivAutorizado(entrada: string, el: ElementoInventario, 
  */
 export function esAvanceAutorizado(entrada: string, el: ElementoInventario, marco: MarcoInventario): boolean {
   const e = esEntradaExploracion(entrada) ? ENTRADAS_EXPLORACION[entrada] : null
+  // 0.3.18: el input submit sin rótulo de una entrada que lo declara (no tiene `texto`).
+  if (e && avanceSinTextoAutorizado(entrada, el, marco) !== null) return true
   if (!e || typeof el.texto !== 'string') return false
-  // Lista de títulos en el TOPE = recortada: el título de Tarificar podría ser justo el que no llegó → ningún «Aceptar».
-  if ((marco.titulos?.length ?? 0) >= MAX_TITULOS_MARCO || (marco.titulosPantalla?.length ?? 0) >= MAX_TITULOS_MARCO) return false
+  // Lista de títulos en el TOPE = recortada: el título de Tarificar podría ser justo el que no llegó → ningún «Aceptar» POR TÍTULO.
+  // (El avance por identidad exacta decide por su cuenta si tolera el recorte; ver `toleraTitulosRecortados`.)
+  if (titulosRecortados(marco)) return avancePorIdAutorizado(entrada, el, marco) !== null
   // Autoriza SOLO un título de pantalla (h1-h6/legend), nunca el `th` de una tabla; prohíbe CUALQUIER título.
   const dePantalla = (marco.titulosPantalla ?? []).map(plano)
   const todos = [...(marco.titulos ?? []), ...(marco.titulosPantalla ?? [])].map(plano)
   const texto = plano(el.texto)
-  return e.avancesAutorizados.some((a) => a.texto.test(texto) && dePantalla.some((t) => a.enTitulo.test(t)) && !todos.some((t) => a.nuncaConTitulo.test(t)))
+  if (e.avancesAutorizados.some((a) => a.texto.test(texto) && dePantalla.some((t) => a.enTitulo.test(t)) && !todos.some((t) => a.nuncaConTitulo.test(t)))) return true
+  return avancePorIdAutorizado(entrada, el, marco) !== null
+}
+
+/** La lista de títulos del marco llegó en el TOPE (recortada): no se sabe qué decía el resto. */
+const titulosRecortados = (marco: MarcoInventario): boolean => (marco.titulos?.length ?? 0) >= MAX_TITULOS_MARCO || (marco.titulosPantalla?.length ?? 0) >= MAX_TITULOS_MARCO
+
+/** `onclick` normalizado para la comparación EXACTA de `AvancePorId` (sin espacios ni `;` final). Pura. */
+export function onclickNormalizado(onclick: string | null | undefined): string {
+  return (onclick ?? '').replace(/\s+/g, '').replace(/;+$/, '')
+}
+
+/**
+ * `pathname` de la URL de un marco (sin `;jsessionid=…` final), o `null` si no se puede leer. Pura. Por expresión y no con `new URL`: el saneado del inventario
+ * puede tapar el HOST (`http://[DATO]:puerto/…`) y la ruta sigue siendo legible.
+ */
+export function rutaDeMarco(url: string | null | undefined): string | null {
+  const m = /^[a-z][a-z0-9+.-]*:\/\/[^/?#]*(\/[^?#]*)?(?:[?#]|$)/i.exec(String(url ?? ''))
+  // El `;jsessionid=…` que los servlets Java meten en la ruta no cambia QUÉ marco es.
+  return m ? (m[1] ?? '/').replace(/;jsessionid=[^/?#;]*$/i, '') : null
+}
+
+/**
+ * ¿Es este control el avance por IDENTIDAD EXACTA (`AvancePorId`) de ESTA entrada en ESTE marco? Exige: id EXACTO, onclick
+ * EXACTO (sin recortar), texto EXACTO (y aria-label, si lo hay, igual), ruta del marco EXACTA, ningún título de la pantalla
+ * de tarificación/emisión (lista de títulos sin recortar) y NINGÚN importe en el marco (pantalla con precio = no). Devuelve la regla que casa o `null`. Pura y compartida con el worker.
+ */
+export function avancePorIdAutorizado(entrada: string, el: ElementoInventario, marco: MarcoInventario): AvancePorId | null {
+  const e = esEntradaExploracion(entrada) ? ENTRADAS_EXPLORACION[entrada] : null
+  if (!e?.avancesPorId?.length || typeof el.texto !== 'string') return null
+  if (truncado(el.texto)) return null
+  const conIdentidad = typeof el.id === 'string' && typeof el.onclick === 'string'
+  if (conIdentidad && (truncado(el.id as string) || truncado(el.onclick as string))) return null
+  // 0.3.17: sin id y sin onclick solo vale una regla `sinIdentidad`; con id u onclick (aunque solo uno), una regla por id exacto.
+  const sinId = !tieneAlgo(el.id) && !tieneAlgo(el.onclick)
+  // 0.3.18: sin id y CON onclick solo vale una regla `sinIdentidad` con `onclickExacto` (ver `casaSinIdentidad`).
+  const sinIdConOnclick = !tieneAlgo(el.id) && tieneAlgo(el.onclick)
+  if (!conIdentidad && !sinId && !sinIdConOnclick) return null
+  if (el.id !== undefined && truncado(el.id)) return null
+  if (el.onclick !== undefined && truncado(el.onclick)) return null
+  const recortada = titulosRecortados(marco)
+  // Con PRECIO en el marco (revisión de seguridad 28/10/2026) ya es la pantalla de resultado: su «Aceptar» puede llevar a emitir.
+  if ((marco.importes?.length ?? 0) > 0) return null
+  const todos = [...(marco.titulos ?? []), ...(marco.titulosPantalla ?? [])].map(plano)
+  const texto = plano(el.texto)
+  const aria = typeof el.ariaLabel === 'string' && el.ariaLabel.trim() !== '' ? plano(el.ariaLabel) : null
+  const ruta = rutaDeMarco(marco.url)
+  return e.avancesPorId.find((a) =>
+    (!recortada || a.toleraTitulosRecortados === true) &&
+    (a.sinIdentidad === true ? casaSinIdentidad(a, el) && unicoPorTexto(marco, a.texto) : conIdentidad && el.id === a.id && onclickNormalizado(el.onclick) === a.onclick) &&
+    a.texto.test(texto) && (aria === null || a.texto.test(aria)) &&
+    rutaCasaAvancePorId(a, ruta) &&
+    !todos.some((t) => a.nuncaConTitulo.test(t)),
+  ) ?? null
+}
+
+const tieneAlgo = (v: string | undefined | null): boolean => typeof v === 'string' && v.trim() !== ''
+
+/**
+ * ¿Casa la IDENTIDAD de un control sin id con una regla `sinIdentidad`? Sin `onclickExacto`: sin id y sin onclick (0.3.17). Con
+ * `onclickExacto` (0.3.18): sin id, onclick EXACTO tras `trim` (sin `onclickCompleto` aparte: no hay recorte) y `type=button`. Pura.
+ */
+function casaSinIdentidad(a: AvancePorId, el: ElementoInventario): boolean {
+  if (tieneAlgo(el.id)) return false
+  if (a.onclickExacto === undefined) return !tieneAlgo(el.onclick) && !tieneAlgo(el.onclickCompleto)
+  return typeof el.onclick === 'string' && el.onclick.trim() === a.onclickExacto && el.onclickCompleto === undefined && (el.type ?? '').toLowerCase() === 'button'
+}
+
+/**
+ * 0.3.17: ¿hay EXACTAMENTE un control en el marco cuyo texto (o aria-label) normalizado case con la regla? Un segundo «Aceptar» (de la
+ * pantalla anterior, de un modal…) hace ambigua la identificación: no se pulsa. Un texto recortado no cuenta (el exacto «Aceptar»
+ * mide 7 car. y un recorte del saneado tiene ≥59). Pura.
+ */
+export function unicoPorTexto(marco: MarcoInventario, re: RegExp): boolean {
+  let n = 0
+  for (const x of marco.elementos ?? []) {
+    const ds = [x.texto, x.ariaLabel].filter((d): d is string => typeof d === 'string' && d.trim() !== '')
+    if (ds.some((d) => !truncado(d) && re.test(plano(d)))) n++
+  }
+  return n === 1
+}
+
+/** ¿Este elemento tiene las CARACTERÍSTICAS del control de una regla {@link AvanceSinTexto}? (sin mirar onclick, origen, ruta ni unicidad). Pura. */
+function casaControlSinTexto(x: ElementoInventario, a: AvanceSinTexto): boolean {
+  if (x.tag !== 'input' || (x.type ?? '').toLowerCase() !== 'submit') return false
+  if (tieneAlgo(x.texto) || tieneAlgo(x.ariaLabel) || tieneAlgo(x.etiqueta)) return false
+  // 0.3.19: el onclick NO cuenta aquí (lo exige `motivoNoAvanceSinTexto` sobre el control evaluado): para la UNICIDAD cuenta todo input submit
+  // con name y clase de la regla, tenga el onclick que tenga (como el `iguales` del worker, fail-closed).
+  if (typeof x.name !== 'string' || !x.name.startsWith(a.prefijoName) || !x.name.includes(a.contieneName)) return false
+  const tokens = (x.clase ?? '').split(/\s+/).filter(Boolean)
+  return a.clase.every((t) => tokens.includes(t))
+}
+
+/**
+ * 0.3.19: ¿el onclick casa la forma CERRADA de la regla (`onclickForma`)? Exige: regla con forma, onclick no recortado ni con cifras
+ * normalizadas, casa el patrón anclado (espacios colapsados), A === B con `$`→`_`, B con `prefijoName`/`contieneName`, ni A ni B con
+ * nombre de acción final, y B = el name del control: `nameExacto` (worker, DOM vivo) → name ENTERO === B; si no (inventario), name entero
+ * === B o, si el saneado lo recortó («…»), B empieza por lo que llegó. Pura y compartida con el worker.
+ */
+export function onclickCasaFormaSinTexto(a: AvanceSinTexto, onclick: string | null | undefined, name: string | null | undefined, opts: { nameExacto: boolean }): boolean {
+  if (a.onclickForma === undefined || typeof onclick !== 'string' || typeof name !== 'string' || name === '') return false
+  if (truncado(onclick) || onclick.includes(MARCA_TIRA_CIFRAS_ONCLICK)) return false
+  const m = a.onclickForma.exec(onclick.replace(/\s+/g, ' ').trim())
+  if (!m || typeof m[1] !== 'string' || typeof m[2] !== 'string') return false
+  const [, wA, wB] = m
+  if (wA !== wB.replace(/\$/g, '_')) return false
+  if (RE_NAME_ACCION_FINAL_SIN_TEXTO.test(wA.toLowerCase()) || RE_NAME_ACCION_FINAL_SIN_TEXTO.test(wB.toLowerCase())) return false
+  if (!wB.startsWith(a.prefijoName) || !wB.includes(a.contieneName)) return false
+  if (opts.nameExacto || !truncado(name)) return name === wB
+  const prefijo = name.slice(0, -1)
+  return prefijo.startsWith(a.prefijoName) && prefijo.includes(a.contieneName) && wB.startsWith(prefijo)
+}
+
+/** Reglas de neutralización de onclick de la entrada (lista vacía si no tiene). */
+export function neutralizacionesOnclickDe(entrada: string): readonly NeutralizacionOnclick[] {
+  const e = esEntradaExploracion(entrada) ? ENTRADAS_EXPLORACION[entrada] : null
+  return e?.neutralizacionesOnclick ?? []
+}
+
+/** Lo que hace falta saber de un control (inventario o DOM vivo) para {@link onclickNeutralizado}. */
+export type ControlNeutralizable = {
+  tag: string | null | undefined
+  id: string | null | undefined
+  name: string | null | undefined
+  texto: string | null | undefined
+  onclick: string | null | undefined
+  /** Origen (esquema + host[:puerto]) de la ventana/marco del control. */
+  origen: string | null | undefined
+  /** `pathname` de la ventana/marco del control. */
+  ruta: string | null | undefined
+}
+
+/**
+ * 0.3.19: el onclick con la subcadena de una regla {@link NeutralizacionOnclick} quitada (sustituida por un espacio, para no pegar trozos),
+ * o `null` si no aplica ninguna regla. Exige TODO: origen y tag exactos, ruta con el prefijo (sin `..` ni `//`), id y name EXACTOS, texto
+ * EXACTO, onclick no recortado, la subcadena (solo su primera aparición) como identificador entero seguido de `(`, y que el RESTO no tenga emisión ni
+ * acción prohibida (`clasificarAccionPortal`, `pareceEmision`). Pura y compartida con el worker.
+ */
+export function onclickNeutralizado(reglas: readonly NeutralizacionOnclick[], c: ControlNeutralizable): string | null {
+  const oc = c.onclick
+  if (reglas.length === 0 || typeof oc !== 'string' || oc === '' || truncado(oc)) return null
+  const ruta = typeof c.ruta === 'string' ? c.ruta : ''
+  if (ruta.includes('..') || ruta.includes('//')) return null
+  const texto = typeof c.texto === 'string' && !truncado(c.texto) ? c.texto.replace(/\s+/g, ' ').trim() : null
+  for (const r of reglas) {
+    if (c.origen !== r.origen || !ruta.startsWith(r.prefijoRuta)) continue
+    if ((c.tag ?? '').toLowerCase() !== r.tag || c.id !== r.id || c.name !== r.name || texto !== r.texto) continue
+    // Se quita SOLO la primera aparición: una segunda se queda en `resto` (con su «Confirmar») y la mirada de abajo la rechaza.
+    const i = oc.indexOf(r.subcadena)
+    if (i < 0) continue
+    if (i > 0 && /[A-Za-z0-9_$.]/.test(oc[i - 1])) continue
+    if (!/^\s*\(/.test(oc.slice(i + r.subcadena.length))) continue
+    const resto = `${oc.slice(0, i)} ${oc.slice(i + r.subcadena.length)}`
+    const cat = clasificarAccionPortal([resto])
+    if (cat.emision || cat.prohibida || pareceEmision(resto)) continue
+    return resto
+  }
+  return null
+}
+
+/**
+ * 0.3.18: qué impide autorizar `el` como avance SIN TEXTO de la entrada (nombre de la condición, sin valores del portal), o `null` si se
+ * autoriza. `'sin_regla'` si la entrada no declara ninguna. Exige TODO: input submit sin texto/aria/etiqueta, sin onclick, `name` y clase de
+ * la regla, ORIGEN exacto y ruta del marco, ningún importe, ningún texto visible de acción final o dato bancario (títulos, textos de
+ * controles, avisos), ningún título de emisión/contratación/resumen… y ser el ÚNICO control así del marco. Pura y compartida con el worker.
+ */
+export function motivoNoAvanceSinTexto(entrada: string, el: ElementoInventario, marco: MarcoInventario): string | null {
+  const e = esEntradaExploracion(entrada) ? ENTRADAS_EXPLORACION[entrada] : null
+  const reglas = e?.avancesSinTexto ?? []
+  if (reglas.length === 0) return 'sin_regla'
+  if (el.tag !== 'input' || (el.type ?? '').toLowerCase() !== 'submit') return 'no_es_input_submit'
+  let motivo = 'sin_regla'
+  for (const a of reglas) {
+    if (tieneAlgo(el.texto) || tieneAlgo(el.ariaLabel) || tieneAlgo(el.etiqueta)) { motivo = 'con_nombre_visible'; continue }
+    if (typeof el.name !== 'string' || !el.name.startsWith(a.prefijoName) || !el.name.includes(a.contieneName)) { motivo = 'name_distinto'; continue }
+    // 0.3.19: un onclick solo con la forma cerrada de la regla (`onclickForma`); sin ella, ninguno (0.3.18).
+    if (tieneAlgo(el.onclick) || tieneAlgo(el.onclickCompleto)) {
+      if (a.onclickForma === undefined) { motivo = 'con_onclick'; continue }
+      if (tieneAlgo(el.onclickCompleto) || !onclickCasaFormaSinTexto(a, el.onclick, el.name, { nameExacto: false })) { motivo = 'onclick_fuera_de_forma'; continue }
+    }
+    if (!casaControlSinTexto(el, a)) { motivo = 'clase_distinta'; continue }
+    if ([el.name, el.id].some((v) => typeof v === 'string' && RE_NAME_ACCION_FINAL_SIN_TEXTO.test(v.toLowerCase()))) { motivo = 'name_de_accion_final'; continue }
+    const origen = /^(https?:\/\/[^/?#]+)/i.exec(String(marco.url ?? ''))?.[1]?.toLowerCase() ?? null
+    if (origen !== a.origen) { motivo = 'origen_distinto'; continue }
+    if (!a.rutas.includes(rutaDeMarco(marco.url) ?? '')) { motivo = 'ruta_distinta'; continue }
+    if ((marco.importes?.length ?? 0) > 0) { motivo = 'marco_con_importes'; continue }
+    const titulos = [...(marco.titulos ?? []), ...(marco.titulosPantalla ?? [])].map(plano)
+    if (titulos.some((t) => a.nuncaConTitulo.test(t))) { motivo = 'titulo_de_emision'; continue }
+    const visibles = [
+      ...titulos,
+      ...(marco.avisosPortal ?? []),
+      ...(marco.elementos ?? []).flatMap((x) => [x.texto, x.ariaLabel, x.etiqueta]),
+    ].filter((d): d is string => typeof d === 'string' && d.trim() !== '').map(plano)
+    if (visibles.some((t) => a.textoAccionFinal.test(t))) { motivo = 'texto_de_accion_final'; continue }
+    if ((marco.elementos ?? []).filter((x) => casaControlSinTexto(x, a)).length !== 1) { motivo = 'no_unico_en_marco'; continue }
+    return null
+  }
+  return motivo
+}
+
+/** La regla {@link AvanceSinTexto} que autoriza `el` (o `null`). Pura y compartida con el worker. */
+export function avanceSinTextoAutorizado(entrada: string, el: ElementoInventario, marco: MarcoInventario): AvanceSinTexto | null {
+  if (motivoNoAvanceSinTexto(entrada, el, marco) !== null) return null
+  const e = esEntradaExploracion(entrada) ? ENTRADAS_EXPLORACION[entrada] : null
+  return (e?.avancesSinTexto ?? []).find((a) => casaControlSinTexto(el, a)) ?? null
+}
+
+/**
+ * Por qué NO se autoriza un «Aceptar» por identidad exacta (diagnóstico para el error del validador; SIN valores del portal: solo
+ * el nombre de la condición que falla). `null` si la entrada no tiene reglas de este tipo o si sí se autoriza.
+ */
+export function motivoNoAvancePorId(entrada: string, el: ElementoInventario, marco: MarcoInventario): string | null {
+  const e = esEntradaExploracion(entrada) ? ENTRADAS_EXPLORACION[entrada] : null
+  if (!e?.avancesPorId?.length) return null
+  if (avancePorIdAutorizado(entrada, el, marco)) return null
+  if (typeof el.texto !== 'string') return 'sin_texto'
+  const sinId = !tieneAlgo(el.id) && !tieneAlgo(el.onclick)
+  if (typeof el.id !== 'string' && typeof el.onclick !== 'string' && !sinId) return 'sin_id_u_onclick'
+  if (truncado(el.texto) || (typeof el.id === 'string' && truncado(el.id)) || (typeof el.onclick === 'string' && truncado(el.onclick))) return 'id_u_onclick_recortado'
+  if ((marco.importes?.length ?? 0) > 0) return 'marco_con_importes'
+  // 0.3.18: sin id y CON onclick no es «sin id u onclick»: el onclick no es el de ninguna regla (o el control no es type=button).
+  if (!tieneAlgo(el.id) && tieneAlgo(el.onclick)) {
+    const sr = e.avancesPorId.find((a) => a.sinIdentidad === true && a.onclickExacto !== undefined && casaSinIdentidad(a, el))
+    if (!sr) return 'onclick_no_autorizado'
+    if (!sr.texto.test(plano(el.texto))) return 'texto_distinto'
+    if (!rutaCasaAvancePorId(sr, rutaDeMarco(marco.url))) return 'ruta_de_marco_distinta'
+    if (!unicoPorTexto(marco, sr.texto)) return 'texto_no_unico_en_marco'
+    if (titulosRecortados(marco) && !sr.toleraTitulosRecortados) return 'titulos_recortados'
+    return 'titulo_de_tarificacion_o_emision'
+  }
+  if (sinId) {
+    const sr = e.avancesPorId.find((a) => a.sinIdentidad === true && a.onclickExacto === undefined)
+    if (!sr) return 'sin_id_u_onclick'
+    if (!sr.texto.test(plano(el.texto))) return 'texto_distinto'
+    if (!rutaCasaAvancePorId(sr, rutaDeMarco(marco.url))) return 'ruta_de_marco_distinta'
+    if (!unicoPorTexto(marco, sr.texto)) return 'texto_no_unico_en_marco'
+    if (titulosRecortados(marco) && !sr.toleraTitulosRecortados) return 'titulos_recortados'
+    return 'titulo_de_tarificacion_o_emision'
+  }
+  if (typeof el.id !== 'string' || typeof el.onclick !== 'string') return 'sin_id_u_onclick'
+  const regla = e.avancesPorId.find((a) => a.sinIdentidad !== true && el.id === a.id)
+  if (!regla) return 'id_distinto'
+  if (onclickNormalizado(el.onclick) !== regla.onclick) return 'onclick_distinto'
+  if (!rutaCasaAvancePorId(regla, rutaDeMarco(marco.url))) return 'ruta_de_marco_distinta'
+  if (titulosRecortados(marco) && !regla.toleraTitulosRecortados) return 'titulos_recortados'
+  if (!regla.texto.test(plano(el.texto))) return 'texto_distinto'
+  return 'titulo_de_tarificacion_o_emision'
 }
 
 /** Texto que el saneado recortó (acaba en «…»): no se sabe qué decía el final. */
@@ -903,13 +1789,34 @@ export function esGuardadoEnDialogoAutorizado(entrada: string, el: ElementoInven
   return !cat.emision && !cat.prohibida
 }
 
+/** Rutas de aplicación tolerables de la entrada (lista vacía si no tiene). */
+export function rutasAppTolerablesDe(entrada: string): readonly RutaTolerable[] {
+  const e = esEntradaExploracion(entrada) ? ENTRADAS_EXPLORACION[entrada] : null
+  return e?.rutasAppTolerables ?? []
+}
+
+/**
+ * `descripcionesElemento` con la RUTA del href neutralizada si la entrada declara esa ruta de aplicación (solo `hrefRuta`, y solo si
+ * la ventana del marco es del origen de la regla: la ruta es relativa a ella).
+ */
+function descripcionesEnEntrada(entrada: string, el0: ElementoInventario, marco: MarcoInventario): string[] {
+  const origen = /^([a-z][a-z0-9+.-]*:\/\/[^/?#]+)/i.exec(marco.url)?.[1]?.toLowerCase() ?? null
+  // 0.3.19: la subcadena exacta del onclick de UN control exacto de la entrada (`neutralizacionesOnclick`); el resto se mira igual.
+  const neutro = onclickNeutralizado(neutralizacionesOnclickDe(entrada), { tag: el0.tag, id: el0.id, name: el0.name, texto: el0.texto, onclick: el0.onclick, origen, ruta: rutaDeMarco(marco.url) })
+  const el = neutro === null ? el0 : { ...el0, onclick: neutro }
+  const reglas = rutasAppTolerablesDe(entrada)
+  if (reglas.length === 0 || typeof el.hrefRuta !== 'string') return descripcionesElemento(el)
+  return descripcionesElemento({ ...el, hrefRuta: neutralizarRutaTolerable(el.hrefRuta, reglas, origen) ?? undefined })
+}
+
 /** `null` = el botón se puede pulsar en exploración; si no, por qué no. */
 export function bloqueoAvance(entrada: string, el: ElementoInventario, marco: MarcoInventario): string | null {
   // Hace falta saber QUÉ es el botón: al menos una descripción visible (texto o aria) entera, no recortada por el saneado.
-  if (![el.texto, el.ariaLabel].some((d) => typeof d === 'string' && d.trim() !== '' && !truncado(d))) return 'sin_descripcion_completa'
+  // 0.3.18: salvo el input submit sin rótulo que la entrada declara (`avancesSinTexto`; el resto de comprobaciones sigue igual).
+  if (![el.texto, el.ariaLabel].some((d) => typeof d === 'string' && d.trim() !== '' && !truncado(d)) && avanceSinTextoAutorizado(entrada, el, marco) === null) return 'sin_descripcion_completa'
   // Un onclick recortado puede esconder la llamada de emisión en la parte que no llegó.
   if (typeof el.onclick === 'string' && truncado(el.onclick)) return 'onclick_truncado'
-  const desc = descripcionesElemento(el)
+  const desc = descripcionesEnEntrada(entrada, el, marco)
   const cat = clasificarAccionPortal(desc)
   // Emisión dura (patrón del guard: emitir, contratar, archivar, proyecto ampliado, pago fraccionado, validar_aceptar…; y la
   // categoría EMISIÓN de la lista única: firmar, pagar, tramitar, confirmar, domiciliar…): siempre.
@@ -992,24 +1899,46 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
     for (const k of Object.keys(p)) if (!['nombre', 'tipo'].includes(k)) errores.push(`pantalla.${k.slice(0, 30)} no se admite`)
     const tipo = TIPOS_PANTALLA.find((t) => t === p.tipo)
     if (!tipo) errores.push('pantalla.tipo fuera de lista')
-    pantalla = { nombre: textoCorto(p.nombre, MAX_NOMBRE_PANTALLA, 'pantalla.nombre'), tipo: tipo ?? 'otro' }
+    // 0.3.14: `nombre` es una etiqueta INFORMATIVA (no actúa en nada): uno largo se recorta a 60, no tira el lote (Allianz patinete, 29/10/2026).
+    // El cepo de dato personal mira el texto ENTERO, antes de recortar.
+    const nombreLargo = textoCorto(p.nombre, Number.POSITIVE_INFINITY, 'pantalla.nombre')
+    pantalla = { nombre: nombreLargo === null ? null : nombreLargo.slice(0, MAX_NOMBRE_PANTALLA).trim() || null, tipo: tipo ?? 'otro' }
   }
   // `motivo` es texto libre INFORMATIVO (no es una acción): uno largo se recorta, no invalida el lote
   // (13/10/2026: un motivo de >200 car. tiró un paso 1 bueno a `parar/ambiguo`). El cepo de dato
   // personal sigue mirando el texto ENTERO, antes de recortar.
   const motivo = recortarMotivo(textoCorto(r.motivo, Number.POSITIVE_INFINITY, 'motivo'))
 
-  const refs = indiceRefs(ctx.inventario)
+  // 0.3.17: el validador mira el onclick ENTERO (hasta 8000 car.) de lo que traiga `onclickCompleto`; la IA solo ve 200.
+  const invEvaluacion = conOnclickCompleto(ctx.inventario)
+  const refs = indiceRefs(invEvaluacion)
   const importes = new Set(ctx.inventario.marcos.flatMap((m) => (m.importes ?? []).map((i) => i.ref)))
   const claves = new Set(catalogoDe(ctx.ramo).map((d) => d.clave))
   if (claves.size === 0) errores.push(`ramo «${ctx.ramo.slice(0, 30)}» sin catálogo de exploración`)
 
   const acciones: Accion[] = []
+  // Tolerancia (28/10/2026, Allianz patinete real): [rellenar|elegir|marcar…, parar, …] tiraba TODO el lote («parar va SOLO») y
+  // la pantalla quedaba sin explorar. Se conserva lo anterior al primer `parar` (cada acción se valida igual) y se descarta
+  // el `parar` y lo que le siga; en la pantalla siguiente la IA vuelve a decidir (si no hay salida, para SOLA). Con un
+  // `avanzar` antes, `parar` primero o `terminar`, sigue rechazado: nada se ejecuta a medias en esos casos.
+  let lista: unknown[] = Array.isArray(r.acciones) ? r.acciones : []
+  const iParar = lista.length > 1 ? lista.findIndex((a) => obj(a)?.accion === 'parar') : -1
+  // 0.3.20 (Allianz VMP real, 5f47a553…: [rellenar vehiculo.matricula, parar dato_no_disponible] ×2 → `bucle`): si TODO lo anterior al
+  // `parar` es sin efecto (`esAccionSinEfecto`: rellenar de una clave omitible sin valor), manda el `parar` (va solo); si no, la tolerancia de siempre.
+  const sinEfecto = (a: unknown) => esAccionSinEfecto(a, ctx.ramo, ctx.datosReales)
+  if (iParar > 0 && lista.slice(0, iParar).every(sinEfecto)) lista = [lista[iParar]]
+  else if (iParar > 0 && lista.slice(0, iParar).every((a) => ['rellenar', 'elegir', 'marcar'].includes(String(obj(a)?.accion)))) lista = lista.slice(0, iParar)
+  // 0.3.21 (Fidelidade real, b8e871fe…): [rellenar, marcar, avanzar DESHABILITADO] → se ejecuta lo anterior y el avanzar se OMITE (no se
+  // valida ni se pulsa); el paso siguiente lo ve habilitado. Solo con el avanzar el último y todo lo demás rellenar/marcar/elegir del mismo marco.
+  if (avanceDeshabilitadoAlFinal(lista, refs)) lista = lista.slice(0, -1)
   if (!Array.isArray(r.acciones) || r.acciones.length === 0) errores.push('acciones tiene que ser una lista no vacía')
   else if (r.acciones.length > MAX_ACCIONES_RESPUESTA) errores.push(`más de ${MAX_ACCIONES_RESPUESTA} acciones`)
+  // 0.3.20: un lote SOLO de acciones sin efecto repite la pantalla (bucle): rechazo explicado (la IA ve el error en el paso).
+  else if (lista.every(sinEfecto)) errores.push('lote_sin_efecto: rellenar una clave sin valor (omitible) no cambia nada; elige/marca lo que falte (un desplegable «selectpicker» se elige con elegir) o parar dato_no_disponible')
   else {
     const tocados = new Set<string>()
-    r.acciones.forEach((a0, i) => {
+    let yaPuestas = 0
+    lista.forEach((a0, i) => {
       const a = obj(a0)
       const donde = `acciones[${i}]`
       if (!a) return void errores.push(`${donde} no es un objeto`)
@@ -1019,9 +1948,10 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
         rellenar: ['accion', 'ref', 'dato'], elegir: ['accion', 'ref', 'opcion'], marcar: ['accion', 'ref'],
         avanzar: ['accion', 'ref', 'efectoEsperado', 'confianza'], terminar: ['accion', 'refsPrecio'], parar: ['accion', 'motivo'],
       }
-      for (const k of Object.keys(a)) if (!permitidas[tipo].includes(k)) errores.push(`${donde}: clave «${k.slice(0, 30)}» no se admite en ${tipo}`)
+      // 0.3.14: `motivo` fuera de `parar` es texto INFORMATIVO (Mapfre patinete, 29/10/2026): se ignora (la copia limpia no lo lleva).
+      for (const k of Object.keys(a)) if (!permitidas[tipo].includes(k) && !(k === 'motivo' && tipo !== 'parar')) errores.push(`${donde}: clave «${k.slice(0, 30)}» no se admite en ${tipo}`)
       if (tipo === 'parar' || tipo === 'terminar') {
-        if (r.acciones !== undefined && (r.acciones as unknown[]).length !== 1) errores.push(`${donde}: ${tipo} va SOLO`)
+        if (lista.length !== 1) errores.push(`${donde}: ${tipo} va SOLO`)
       }
       if (tipo === 'parar') {
         const m = normalizarMotivoParar(a.motivo)
@@ -1057,30 +1987,76 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
         // Las claves de CREDENCIAL solo existen en la fase de login (`validarRespuestaLogin`): aquí, nunca (aunque un catálogo las trajera).
         if (typeof a.dato === 'string' && a.dato.startsWith('credencial.')) return void errores.push(`${donde}: las claves de credencial solo valen en la fase de login`)
         if (typeof a.dato !== 'string' || !claves.has(a.dato)) return void errores.push(`${donde}: dato fuera del catálogo`)
+        // 0.3.16: el contacto (teléfono, correo) no va a un campo de matrícula, código postal o población.
+        if (claveIncompatibleConCampo(a.dato, el)) return void errores.push(`${donde}: la clave de contacto no encaja con ese campo`)
         acciones.push({ accion: 'rellenar', ref, dato: a.dato })
       } else if (tipo === 'elegir') {
-        if (el.tag !== 'select') return void errores.push(`${donde}: elegir solo en <select>`)
-        const op = obj(a.opcion)
-        if (!op || Object.keys(op).some((k) => k !== 'valor') || typeof op.valor !== 'string') return void errores.push(`${donde}: opcion tiene que ser { valor }`)
+        if (el.tag !== 'select' && el.tag !== 'nx-dropdown') return void errores.push(`${donde}: elegir solo en <select> o nx-dropdown`)
+        // 0.3.22 (Allianz VMP real, 6b3176de…): formas INEQUÍVOCAS (cadena, { texto }) resueltas contra las opciones del inventario.
+        const norm = normalizarOpcionElegir(a.opcion, el)
+        if (!norm.ok) return void errores.push(`${donde}: ${norm.error}`)
+        // La opción vacía que el <select> YA tiene: no se ejecuta nada (ni cuenta como acción).
+        if ('yaPuesta' in norm) return void yaPuestas++
+        const op = { valor: norm.valor }
+        if (el.tag === 'nx-dropdown') {
+          // Desplegable ndbx (Allianz ePAC, 28/10/2026): `valor` = el TEXTO exacto de la opción. Abierto, tiene que ser una de las
+          // opciones capturadas; cerrado no hay opciones en el DOM y el worker la comprueba al abrir (si no casa, no pulsa nada).
+          const v = op.valor.replace(/\s+/g, ' ').trim()
+          if (v === '' || v.length > 80) return void errores.push(`${donde}: la opción de un nx-dropdown tiene que ser un texto de 1 a 80 caracteres`)
+          if (pareceDatoPersonalInventario(v)) return void errores.push(`${donde}: la opción tiene forma de dato personal`)
+          const abiertas = el.opciones ?? []
+          if (abiertas.length > 0 && !abiertas.some((o) => o.texto !== null && o.texto.replace(/\s+/g, ' ').trim() === v)) return void errores.push(`${donde}: el texto no está entre las opciones capturadas del desplegable`)
+          acciones.push({ accion: 'elegir', ref, opcion: { valor: v } })
+          return
+        }
         if (!(el.opciones ?? []).some((o) => o.valor !== null && o.valor === op.valor)) return void errores.push(`${donde}: el valor no está entre las opciones del inventario`)
+        // 0.3.20: el `<select>` OCULTO tras un bootstrap-select (Allianz VMP, marca/modelo): solo si ni él ni la opción elegida nombran una
+        // acción final (el worker lo elige sin verlo; su `change` y la red siguen pasando por el guard de siempre).
+        if (el.selectpicker === true) {
+          const texto = (el.opciones ?? []).find((o) => o.valor === op.valor)?.texto ?? null
+          if ([...descripcionesElemento(el), op.valor, texto].some((d) => typeof d === 'string' && (pareceEmision(d) || RE_TEXTO_ACCION_FINAL_SIN_TEXTO.test(d.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase())))) {
+            return void errores.push(`${donde}: desplegable de acción final`)
+          }
+        }
         acciones.push({ accion: 'elegir', ref, opcion: { valor: op.valor } })
       } else if (tipo === 'marcar') {
-        if (el.tag !== 'input' || (el.type ?? '').toLowerCase() !== 'radio') return void errores.push(`${donde}: marcar solo radios (nunca checkbox)`)
-        if (descripcionesElemento(el).some((d) => RE_CONSENTIMIENTO.test(plano(d)))) return void errores.push(`${donde}: radio de consentimiento`)
+        // 0.3.15 (Alberto, 29/10/2026): radios y casillas, también de consentimiento/declaración (intranet privada del mediador; el bot
+        // actúa como él). Marcar una casilla NO es pulsar un botón final: emitir/firmar/pagar/IBAN siguen bloqueados en sus topes.
+        const tipoCtl = (el.type ?? '').toLowerCase()
+        if (el.tag !== 'input' || (tipoCtl !== 'radio' && tipoCtl !== 'checkbox')) return void errores.push(`${donde}: marcar solo radios o casillas`)
+        // Una casilla cuyo texto/etiqueta/id/name/onclick es una ACCIÓN FINAL («Acepto y contrato», `chkEmitir`, onclick que
+        // contrata) o cuyo onclick ENVÍA el formulario (submit, jsfcljs) es un botón disfrazado: no se marca. «Acepto…» sí
+        // (`permitirAceptar`). El guard del worker no ve la etiqueta de un input pulsado directamente: esta es SU barrera.
+        // 0.3.16: un onclick RECORTADO (>2000 car.) esconde su final: no se marca. El completo se mira entero (emisión y envío); un
+        // refresco AJAX o la selección de fila (`jsfcljs` con el id del propio control) sin emisión SÍ se marca (Mapfre patinete).
+        if (typeof el.onclick === 'string' && truncado(el.onclick)) return void errores.push(`${donde}: onclick_truncado`)
+        const desc = descripcionesElemento(el)
+        if (desc.some((d) => pareceEmision(d, { permitirAceptar: true })) || onclickEnviaFormulario(el.onclick, el)) return void errores.push(`${donde}: casilla de acción final`)
         acciones.push({ accion: 'marcar', ref })
       } else {
-        if (i !== (r.acciones as unknown[]).length - 1) return void errores.push(`${donde}: avanzar va el ÚLTIMO (y solo uno)`)
-        if (!esAvanzable(el) && !esAceptarDivAutorizado(ctx.entrada, el, marco)) return void errores.push(`${donde}: el elemento no es un botón/pestaña`)
+        if (i !== lista.length - 1) return void errores.push(`${donde}: avanzar va el ÚLTIMO (y solo uno)`)
+        if (!esAvanzable(el) && !esAceptarDivAutorizado(ctx.entrada, el, marco) && !esEnlaceAvanzable(ctx.entrada, el, marco)) return void errores.push(`${donde}: el elemento no es un botón/pestaña`)
         const efecto = EFECTOS_AVANCE.find((x) => x === a.efectoEsperado)
         if (!efecto) return void errores.push(`${donde}: efectoEsperado fuera de lista`)
         if (a.confianza !== 'alta' && a.confianza !== 'media') return void errores.push(`${donde}: avanzar exige confianza alta o media`)
         const bloqueo = efecto === 'guardar_presupuesto'
           ? bloqueoGuardadoPresupuesto(el, { tipoPantalla: pantalla.tipo, hayImportes: importes.size > 0, presupuestoEnCurso: ctx.presupuestoEnCurso === true })
           : bloqueoAvance(ctx.entrada, el, marco)
-        if (bloqueo) return void errores.push(`${donde}: ${bloqueo}`)
+        if (bloqueo) {
+          const causa = bloqueo === 'aceptar_no_autorizado' ? motivoNoAvancePorId(ctx.entrada, el, marco)
+            : bloqueo === 'sin_descripcion_completa' && el.tag === 'input' && (el.type ?? '').toLowerCase() === 'submit' && (ENTRADAS_EXPLORACION[ctx.entrada as keyof typeof ENTRADAS_EXPLORACION]?.avancesSinTexto?.length ?? 0) > 0 ? motivoNoAvanceSinTexto(ctx.entrada, el, marco)
+            : null
+          return void errores.push(`${donde}: ${bloqueo}${causa ? ` (${causa})` : ''}`)
+        }
+        // Avance por id (ePAC drvp00) con un importe en CUALQUIER marco del inventario (o ya visto antes en este trabajo): nunca.
+        if (efecto !== 'guardar_presupuesto' && (avancePorIdAutorizado(ctx.entrada, el, marco) || avanceSinTextoAutorizado(ctx.entrada, el, marco)) && (importes.size > 0 || ctx.precioVisto === true)) {
+          return void errores.push(`${donde}: avance_por_id_con_precio`)
+        }
         acciones.push({ accion: 'avanzar', ref, efectoEsperado: efecto, confianza: a.confianza })
       }
     })
+    // 0.3.22: un lote que solo «elige» la opción vacía que ya está puesta no cambia nada (repetiría la pantalla): rechazo explicado.
+    if (yaPuestas > 0 && acciones.length === 0 && errores.length === 0) errores.push('lote_sin_efecto: la opción vacía de ese desplegable ya está puesta (conValor false); no hace falta elegirla: rellena/marca lo demás o avanza')
   }
 
   const mapeo: MapeoCampo[] = []
@@ -1096,6 +2072,9 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
         if (m.campoCanonico !== null && (typeof m.campoCanonico !== 'string' || !claves.has(m.campoCanonico))) return void errores.push(`${donde}: campoCanonico fuera del catálogo`)
         const c = CONFIANZAS.find((x) => x === m.confianza)
         if (!c) return void errores.push(`${donde}: confianza fuera de lista`)
+        // 0.3.16: un mapeo contacto → campo de matrícula/CP/población es un error de la IA (informativo): se descarta esa entrada.
+        const elMapeado = refs.get(m.ref)
+        if (typeof m.campoCanonico === 'string' && elMapeado && claveIncompatibleConCampo(m.campoCanonico, elMapeado.el)) return
         mapeo.push({ ref: m.ref, campoCanonico: m.campoCanonico as string | null, confianza: c })
       })
   }
@@ -1118,7 +2097,10 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
     })
   }
 
-  if (errores.length) return { ok: false, errores: errores.slice(0, 20) }
+  if (errores.length) {
+    const rechazos = rechazosDe(errores, lista ?? [], refs)
+    return { ok: false, errores: errores.slice(0, 20), ...(rechazos.length ? { rechazos: rechazos.slice(0, 20) } : {}) }
+  }
   return { ok: true, respuesta: { version: 1, pantalla, acciones, mapeo, motivo } }
 }
 
@@ -1135,10 +2117,37 @@ const RE_OTP = /\botp\b|\bsms\b|codigo (?:de )?(?:verificacion|seguridad|confirm
 const RE_CAPTCHA = /captcha|no soy un robot|i'?m not a robot|verifica que eres humano|desafio de seguridad/
 /** Títulos de pantalla de emisión. Solo TÍTULOS: «Contratación» como pestaña futura o «Forma de pago» como desplegable de
  *  periodicidad aparecen en pantallas de tarificar y no son parada. */
-const RE_TITULO_EMISION = /\brevision\b|forma de pago|domiciliacion|\biban\b|cuenta bancaria|datos bancarios|\bfirma\b|firmar|\bemitir\b|emision|contrat|formaliz|\bgrabar\b|archivar|datos (?:de|para) (?:la )?emision|resumen de (?:la )?contratacion|pago con tarjeta/
+const PATRONES_TITULO_EMISION: readonly (readonly [DetalleFinExploracion, RegExp])[] = [
+  ['titulo:revision', /\brevision\b/],
+  ['titulo:forma_pago', /forma de pago/],
+  ['titulo:domiciliacion', /domiciliacion/],
+  ['titulo:iban', /\biban\b/],
+  ['titulo:cuenta_bancaria', /cuenta bancaria/],
+  ['titulo:datos_bancarios', /datos bancarios/],
+  ['titulo:firma', /\bfirma\b/],
+  ['titulo:firmar', /firmar/],
+  ['titulo:emitir', /\bemitir\b/],
+  ['titulo:emision', /emision/],
+  // 0.3.13: «Contratación» (sustantivo de sección: Mapfre «Contratación…») NO para por sí sola; «contratar», «contrato», «contratada/o»… sí.
+  ['titulo:contrat', /contrat(?!acion)/],
+  ['titulo:formaliz', /formaliz/],
+  ['titulo:grabar', /\bgrabar\b/],
+  ['titulo:archivar', /archivar/],
+  ['titulo:datos_emision', /datos (?:de|para) (?:la )?emision/],
+  ['titulo:resumen_contratacion', /resumen de (?:la )?contratacion/],
+  ['titulo:pago_tarjeta', /pago con tarjeta/],
+]
 /** Campos de pago/firma que solo existen en emisión (por etiqueta/name/id). Los BANCARIOS (IBAN, cuenta, SWIFT…) viven en
  *  `CAMPOS_BANCARIOS` (acciones-portal.ts, fuente única) y se miran con `fronteraEmisionPorCampos`. */
-const RE_CAMPO_EMISION = /tarjeta de credito|\bcvv\b|\bcvc\b|caducidad de la tarjeta|firma digital|firma manuscrita/
+const PATRONES_CAMPO_EMISION: readonly (readonly [DetalleFinExploracion, RegExp])[] = [
+  ['campo:tarjeta_credito', /tarjeta de credito/],
+  ['campo:numero_tarjeta', /numero[\s_.-]*(?:de[\s_.-]*)?(?:la[\s_.-]*)?tarjeta(?![\s_.-]*sanitaria)/],
+  ['campo:cvv', /\bcvv\b/],
+  ['campo:cvc', /\bcvc\b/],
+  ['campo:caducidad_tarjeta', /caducidad de la tarjeta/],
+  ['campo:firma_digital', /firma digital/],
+  ['campo:firma_manuscrita', /firma manuscrita/],
+]
 
 /** Controles que la frontera de cuenta bancaria mira: nativos y NO nativos (mat-select, combobox/textbox ARIA). El
  *  inventario no trae `contenteditable`: ese lo caza el guard del worker (`exigirSinCuentaBancaria`) en cada pulsación. */
@@ -1180,10 +2189,14 @@ export function detectarParada(inv: InventarioDom): Parada | null {
   if (t1 !== undefined) return { motivo: 'captcha', senal: t1.slice(0, 60) }
   const t2 = todos.find((t) => RE_OTP.test(t))
   if (t2 !== undefined) return { motivo: 'otp', senal: t2.slice(0, 60) }
-  const t3 = titulos.find((t) => RE_TITULO_EMISION.test(t))
-  if (t3 !== undefined) return { motivo: 'cerca_de_emision', senal: t3.slice(0, 60) }
-  const t4 = campos.map(plano).find((t) => RE_CAMPO_EMISION.test(t))
-  if (t4 !== undefined) return { motivo: 'cerca_de_emision', senal: t4.slice(0, 60) }
+  for (const t of titulos) {
+    const p = PATRONES_TITULO_EMISION.find(([, re]) => re.test(t))
+    if (p) return { motivo: 'cerca_de_emision', senal: t.slice(0, 60), detalle: p[0] }
+  }
+  for (const t of campos.map(plano)) {
+    const p = PATRONES_CAMPO_EMISION.find(([, re]) => re.test(t))
+    if (p) return { motivo: 'cerca_de_emision', senal: t.slice(0, 60), detalle: p[0] }
+  }
   return null
 }
 
@@ -1409,7 +2422,8 @@ export type MapaExploracion = {
 }
 
 const RE_ID_GENERADO = /^(?:mat-|cdk-|ng-|ui-id-|react-|ember|j_id|__)|\d{3,}|[0-9a-f]{8}-[0-9a-f]{4}/i
-const RE_SELECTOR_SEGURO = /^[\w.:[\]-]{1,80}$/
+// `$` (28/10/2026): ids de JSF/ePAC como `IntervinientesBean$nifTomador_doc`. El selector se compara por IGUALDAD, nunca como CSS.
+const RE_SELECTOR_SEGURO = /^[\w.:[\]$-]{1,80}$/
 
 /** El selector estable de un elemento: id (no autogenerado) > name > formControlName > etiqueta exacta > texto exacto. */
 export function selectorDeElemento(el: ElementoInventario): SelectorMapa | null {
@@ -1569,6 +2583,10 @@ export function validarMapa(v: unknown): MapaExploracion | null {
  * `validarRespuestaExplorador` igual que una de la IA.
  */
 export function planDesdeMapa(pantalla: PantallaMapaExploracion, inv: InventarioDom): RespuestaExplorador | null {
+  // 0.3.25 (Fidelidade real 30/10/2026, 56b4b52c…): una pantalla del mapa SIN avance conocido es memoria a medias (el nombre no tenía selector
+  // estable y el submit tampoco): repetirla solo marcaba el régimen ANTES del nombre y el portal, que recalcula el avance en el `change` del
+  // radio, dejó el botón deshabilitado. Sin avance, decide la IA con el inventario completo (y su orden: textos y luego opciones).
+  if (!pantalla.avance) return null
   const unico = (sel: SelectorMapa, marco: string): string | null => {
     const hits = inv.marcos.filter((m) => rutaMarco(m.url) === marco).flatMap((m) => m.elementos.filter((e) => e.ref && casaSelector(e, sel)))
     return hits.length === 1 ? hits[0].ref! : null

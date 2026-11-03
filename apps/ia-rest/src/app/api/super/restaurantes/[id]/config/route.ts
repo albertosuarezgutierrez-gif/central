@@ -2,12 +2,8 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
+import { getSession } from '@/lib/session'
 
-function getSession(req: NextRequest) {
-  const header = req.headers.get('x-ia-session')
-  if (!header) return null
-  try { return JSON.parse(header) } catch { return null }
-}
 
 // GET /api/super/restaurantes/[id]/config
 // Devuelve configuración completa del restaurante + stats para el panel super admin

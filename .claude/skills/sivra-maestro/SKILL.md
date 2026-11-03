@@ -46,6 +46,8 @@ compartida `wswbehlcuxqxyinousql` (con ialimp+plataforma).
    negocio viven en plataforma — NO re-programarlos en sivra.
 10. **Agente huéspedes: solo el botón ✅ Enviar manda al huésped**; quejas/dinero/cambios
     NUNCA se auto-envían (allowlist de graduación + cortesía con guardas).
+    Aparte (no es el agente): tras el ✅ de una **factura a huésped**, el aviso «te hemos enviado la factura» sale
+    solo por Smoobu (sección «Facturas a huéspedes» de `references/contexto-y-agente-huesped.md`).
 11. 🚨 **Partes de viajeros (SES.HOSPEDAJES): el emisor REAL de hoy es Chekin, en los cuatro pisos.**
     Nada nuestro envía un parte hasta apagar Chekin piso a piso (sustitución en fases, como
     PriceLabs) — dos emisores a la vez = partes duplicados. Detalle en `references/infra-seo-landmines.md`.
@@ -61,7 +63,8 @@ compartida `wswbehlcuxqxyinousql` (con ialimp+plataforma).
   contabilidad, seguridad BD) · TODO el agente de mensajería con huéspedes (flujo
   Telegram ✅/✏️/🔧, re-borrador, hilo como contexto, texto plano sin JSON, modelo, estilo,
   fase temporal, `horarios.ts`, early check-in / late check-out, parking, equipaje, idioma,
-  idempotencia, graduación, auto-cortesía).
+  idempotencia, graduación, auto-cortesía) · **🧾 Facturas a huéspedes** (`/sivra/facturas`:
+  series, ✅ en Telegram, correo + aviso Smoobu, pendientes).
   → Léelo para cualquier tarea del agente de huéspedes o para ubicar dónde vive una feature.
 - **`references/infra-seo-landmines.md`** — Infra (Supabase compartida, Prisma, pasarela IA,
   envs) · agente SEO de housesevillana (DOS rutas: botón en plataforma vs cron semanal en

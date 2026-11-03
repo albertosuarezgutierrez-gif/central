@@ -4,15 +4,25 @@
 # Secreto de repo: FLY_API_TOKEN_TARIFICADOR. La PRIMERA vez, token de ORGANIZACIÓN grupo-asegura (para poder
 # crear la app); después, sustitúyelo por el token deploy de la app y revoca el de organización.
 # Resultado: referencia `registry.fly.io/asegura-tarificador:<etiqueta>` en el resumen del run.
+#
+# 27/10/2026 — sin redesplegar asegura:
+#   · Lanzado sobre `main` (ref refs/heads/main): etiqueta `main-<sha7>` por defecto y, al terminar bien, PUBLICA la imagen
+#     como la de producción en `seguros.tarificador_imagen` llamando al puerto de operador de asegura
+#     (`POST /api/operador/tarificador/imagen`, Bearer ASEGURA_OPERADOR_SECRET; nunca SQL desde Actions). La env
+#     `TARIFICADOR_FLY_IMAGE` de Vercel queda de respaldo. asegura rechaza (409) una imagen de un commit ANTERIOR al de la
+#     vigente: no se pone una imagen anterior por accidente.
+#   · Lanzado sobre OTRA rama: etiqueta `rama-<sha7>` (o una `rama-*` dada) y NO toca producción. Se prueba con
+#     «Tarificador RPA · relanzar» accion=probar + imagen (solo con el interruptor `permitir_imagen_prueba` encendido).
+# Secretos/variables: ASEGURA_OPERADOR_SECRET (requerido para publicar desde main), ASEGURA_URL (opcional).
 name: Tarificador RPA · imagen
 
 on:
   workflow_dispatch:
     inputs:
       etiqueta:
-        description: 'Etiqueta de la imagen (minúsculas, números, . _ -)'
-        required: true
-        default: 'v20261005'
+        description: 'Etiqueta (opcional). Vacía = main-<sha7> en main, rama-<sha7> en otra rama (fuera de main solo rama-*)'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -27,10 +37,37 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      ETIQUETA: ${{ inputs.etiqueta }}
+      ETIQUETA_PEDIDA: ${{ inputs.etiqueta }}
       FLYCTL_VERSION: '0.4.112'
     steps:
       - uses: actions/checkout@v4
+
+      # La etiqueta y si se publica salen de la REF, no de lo que se teclee: solo `main` publica producción.
+      - name: Calcular etiqueta
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          sha7="${GITHUB_SHA::7}"
+          formato='^[a-z0-9][a-z0-9._-]{0,63}$'
+          if [ "$REF" = "refs/heads/main" ]; then
+            etiqueta="${ETIQUETA_PEDIDA:-main-${sha7}}"
+            case "$etiqueta" in rama-*) echo "::error::una etiqueta rama-* no se construye desde main"; exit 1 ;; esac
+            publicar=1
+          else
+            etiqueta="${ETIQUETA_PEDIDA:-rama-${sha7}}"
+            case "$etiqueta" in rama-*) ;; *) echo "::error::fuera de main la etiqueta tiene que empezar por rama- (main-* es producción)"; exit 1 ;; esac
+            publicar=0
+          fi
+          if ! printf '%s' "$etiqueta" | grep -Eq "$formato"; then
+            echo "::error::Etiqueta no válida: minúsculas, números, punto, guion y guion bajo (máx. 64)."; exit 1
+          fi
+          {
+            echo "ETIQUETA=${etiqueta}"
+            echo "PUBLICAR=${publicar}"
+            echo "COMMIT_AT=$(git log -1 --format=%cI HEAD)"
+          } >> "$GITHUB_ENV"
+          echo "etiqueta=${etiqueta} publicar=${publicar}"
 
       # flyctl de una release FIJA de superfly/flyctl bajada con `gh` (preinstalado) y verificada con el
       # fichero de checksums de esa release (se localiza por patrón: no se llama `checksums.txt`). Sin
@@ -64,7 +101,7 @@ jobs:
             echo "::error::Falta el secreto de repo FLY_API_TOKEN_TARIFICADOR (Settings → Secrets and variables → Actions)."
             exit 1
           fi
-          if ! printf '%s' "$ETIQUETA" | grep -Eq '^[a-z0-9._-]+$'; then
+          if ! printf '%s' "$ETIQUETA" | grep -Eq '^[a-z0-9][a-z0-9._-]{0,63}$'; then
             echo "::error::Etiqueta no válida: solo minúsculas, números, punto, guion y guion bajo."
             exit 1
           fi
@@ -90,6 +127,28 @@ jobs:
             --build-only --push --remote-only \
             --image-label "$ETIQUETA"
 
+      # SOLO main: publica la imagen como la de producción por el puerto de operador (doble guarda: `if` del paso + PUBLICAR).
+      # El Bearer va por stdin (`--config -`): ni en la línea de órdenes ni en el log. 409 = imagen anterior a la vigente.
+      - name: Publicar como producción (solo main)
+        if: github.ref == 'refs/heads/main'
+        env:
+          ASEGURA_URL: ${{ secrets.ASEGURA_URL || vars.ASEGURA_URL || 'https://central-asegura.vercel.app' }}
+          ASEGURA_OPERADOR_SECRET: ${{ secrets.ASEGURA_OPERADOR_SECRET }}
+        run: |
+          set -uo pipefail
+          [ "$PUBLICAR" = "1" ] || { echo "no se publica (no es main)"; exit 0; }
+          if [ -z "$ASEGURA_OPERADOR_SECRET" ]; then echo "::error::Falta ASEGURA_OPERADOR_SECRET: la imagen está subida pero NO publicada"; exit 1; fi
+          case "$ASEGURA_URL" in https://*) ;; *) echo "::error::ASEGURA_URL tiene que ser https"; exit 1 ;; esac
+          imagen="registry.fly.io/asegura-tarificador:${ETIQUETA}"
+          cuerpo=$(jq -cn --arg i "$imagen" --arg c "$COMMIT_AT" '{imagen: $i, commitAt: $c}')
+          http=$(printf 'header = "Authorization: Bearer %s"\n' "$ASEGURA_OPERADOR_SECRET" | curl -sS --config - \
+            -o respuesta.json -w '%{http_code}' --max-time 60 -X POST "${ASEGURA_URL%/}/api/operador/tarificador/imagen" \
+            -H 'content-type: application/json' -H 'x-actor: agente:claude-actions' --data "$cuerpo") || http="000"
+          echo "HTTP ${http}"
+          jq -c 'if type == "object" then with_entries(select(.key | IN("estado","motivo","mensaje","imagen","anterior"))) | map_values(if type == "string" then .[0:300] else . end) else {estado: "respuesta_no_objeto"} end' respuesta.json 2>/dev/null || echo '{"estado":"respuesta_no_json"}'
+          rm -f respuesta.json
+          case "$http" in 2*) exit 0 ;; *) echo "::error::asegura no aceptó la imagen (HTTP ${http})"; exit 1 ;; esac
+
       - name: Resumen
         run: |
           {
@@ -97,5 +156,9 @@ jobs:
             echo
             echo "\`registry.fly.io/asegura-tarificador:${ETIQUETA}\`"
             echo
-            echo "Ponla en Vercel (central-asegura) como \`TARIFICADOR_FLY_IMAGE\`."
+            if [ "$PUBLICAR" = "1" ]; then
+              echo "Publicada como producción en asegura (\`seguros.tarificador_imagen\`): sin redesplegar. \`TARIFICADOR_FLY_IMAGE\` de Vercel queda de respaldo."
+            else
+              echo "Imagen de RAMA: no toca producción. Pruébala con «Tarificador RPA · relanzar» accion=probar + imagen (interruptor \`permitir_imagen_prueba\`)."
+            fi
           } >> "$GITHUB_STEP_SUMMARY"

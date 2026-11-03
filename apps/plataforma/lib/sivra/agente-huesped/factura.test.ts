@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert'
 import { readFileSync } from 'node:fs'
-import { esPeticionFactura, esTramiteFiscal, contieneIdFiscal, MOTIVO_FACTURA, REGLA_GESTIONES, REGLA_VOZ, REGLA_FACTURA } from './factura.ts'
+import { esPeticionFactura, esTramiteFiscal, contieneIdFiscal, MOTIVO_FACTURA, REGLA_GESTIONES, REGLA_VOZ, REGLA_FACTURA, textosDesdePeticion, reglaFacturaEstado } from './factura.ts'
 import { tipoHueco } from './reglas.ts'
 
 const FUENTE = readFileSync(new URL('./decidir.ts', import.meta.url), 'utf8')
@@ -35,8 +35,8 @@ test('el prompt habla en primera persona: sin «anfitrión» ni «se lo traslado
   assert.match(FUENTE.slice(ini, fin), /\$\{REGLA_GESTIONES\}/)
 })
 
-test('regla de factura: confirma, pide solo lo que falta y envía el día de salida', () => {
-  for (const k of [/razón social/, /NIF\/CIF\/VAT/, /dirección fiscal completa/, /email de envío/, /día de salida/, /NO le pidas lo que ya haya dado/])
+test('regla de factura: confirma, pide solo lo que falta y no promete fecha', () => {
+  for (const k of [/razón social/, /NIF\/CIF\/VAT/, /dirección fiscal completa/, /email de envío/, /en cuanto la revise/, /NO le prometas fecha/, /NO le pidas lo que ya haya dado/])
     assert.match(REGLA_FACTURA, k)
 })
 
@@ -79,4 +79,40 @@ test('factura de la luz / electricity bill NO es petición de factura', () => {
 
 test('decidir.ts usa esTramiteFiscal con los mensajes previos del huésped', () => {
   assert.match(FUENTE, /esTramiteFiscal\(pregunta, ctx\.historial\.filter\(h => h\.from === 'guest'\)/)
+})
+
+// ── 29/10/2026: datos de factura desde el chat + promesa honesta ─────────────────────────────────────────────────
+
+test('textosDesdePeticion: solo desde la primera petición de factura (el DNI del registro previo no entra)', () => {
+  assert.deepEqual(textosDesdePeticion(['Mi DNI 12345678Z para el registro', 'Necesito factura a Laie SL', 'NIF B08549784']), ['Necesito factura a Laie SL', 'NIF B08549784'])
+  assert.deepEqual(textosDesdePeticion(['Mi DNI 12345678Z', 'gracias']), [])
+})
+
+test('reglaFacturaEstado: completa «tomo nota, en cuanto la revise» sin fecha ni datos/enlaces; incompleta pide solo lo que falta', () => {
+  const c = reglaFacturaEstado({ completa: true, email: 'info@laie.es', cc: ['lcalles@laie.es'] }, false)
+  assert.match(c, /tomo nota/)
+  assert.match(c, /en cuanto la revise/)
+  assert.match(c, /NO le prometas fecha/)
+  assert.doesNotMatch(c, /día de (su )?salida|24 horas|automátic|sola/)
+  assert.match(c, /info@laie\.es \(con copia a lcalles@laie\.es\)/)
+  assert.match(c, /NO le pidas ninguno ni le pongas enlaces/)
+  const i = reglaFacturaEstado({ completa: false, faltan: ['NIF/CIF/VAT'] }, true)
+  assert.match(i, /FALTAN: NIF\/CIF\/VAT/)
+  assert.match(i, /NO le prometas fecha/)
+  assert.doesNotMatch(i, /día de (su )?salida/)
+})
+
+test('REGLA_FACTURA no promete fecha ni envío automático (nada sale sin el ✅ de Alberto)', () => {
+  assert.match(REGLA_FACTURA, /NO le prometas fecha ni plazo/)
+  assert.doesNotMatch(REGLA_FACTURA, /día de salida|le llega sola/)
+})
+
+test('orquestador: con datos completos NO hay enlace y el mensaje sigue pasando por Alberto', () => {
+  const ORQ = readFileSync(new URL('./orquestador.ts', import.meta.url), 'utf8')
+  assert.match(ORQ, /if \(!estadoFactura\?\.completa\) ctx\.enlaceFactura = solFactura\.url/)
+  const i = ORQ.indexOf('if (ctx.facturaEstado?.completa && dec.reply) {')
+  assert.ok(i > 0 && i < ORQ.indexOf('decidirAutoEnvio(dec, pregunta, horarioOficial)'))
+  assert.match(ORQ.slice(i, ORQ.indexOf('}', i)), /dec\.needs_human = true/)
+  const DEC = readFileSync(new URL('./decidir.ts', import.meta.url), 'utf8')
+  assert.match(DEC, /\$\{ctx\.facturaEstado \? ` \$\{reglaFacturaEstado\(ctx\.facturaEstado, !!ctx\.enlaceFactura\)\}` : ''\}/)
 })

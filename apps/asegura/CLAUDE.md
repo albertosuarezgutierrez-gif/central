@@ -111,7 +111,8 @@
   nunca `enviados: 0`. `avisada_at`/sellos se escriben justo tras el envío.
 - `avisos-vencimiento` (08:00 UTC) · `avisos-intranet` (08:15, deriva de la campana del portal, sello
   `portal_aviso_enviado`, el correo nunca dice el TÍTULO del aviso) · `avisos-web` (08:30, APAGADO) ·
-  `felicitaciones` (APAGADO) · `polizas-pdf` (horario).
+  `felicitaciones` (APAGADO; ex-clientes con su puerta `ASEGURA_FELICITACIONES_EXCLIENTES` = vacío/`aprobar`/`auto`) · `polizas-pdf` (horario).
+- Felicitaciones y comunicaciones a clientes/ex-clientes salen de hola@grupoasegura.es, nunca de un Gmail personal.
 - Un aviso a un tercero (persona de referencia) nunca se manda como si fuera al tomador (`textoAviso`, `paraTercero`).
 - **Bloqueos de compañía (30/09/2026):** solo es bloqueante si la compañía YA lo anuncia (Allianz, moto de Manuel
   Piña Franco); si no avisa, se emite sin recomendar la básica (no hay aviso preventivo). Un bloqueo anunciado lo
@@ -128,6 +129,11 @@
 - **Datos del riesgo por ramo (PR #4127):** módulo puro `@central/module-seguros/datos-riesgo-{generico,ramo,vivienda,capital,libre}.ts` con claves `datosVehiculo|datosVivienda|datosCapital|datosRiesgoLibre` en `info_riesgo`. PATCH `/api/operador/oportunidad/riesgo` edita una clave (400 si no es del ramo); precarga desde `polizas.datos_especificos` (nunca confirmada). Helper `leerRiesgo()` con validación pura `calcularEdicionRiesgo()`.
 
 - **Figuras multi (10/10/2026):** rol `asegurado` en `oportunidad_figura` (varias fichas; la misma no dos veces), cardinalidad por ramo en `cardinalidadesDelRamo()` de `module-seguros`. SQL `prisma/sql/2026-10-10_figuras_multi.sql`: **código ANTES que el SQL** (todo `on conflict (oportunidad_id, rol)` lleva `where rol <> 'asegurado'`). Sin el SQL, el puerto da 503 `sin_migracion` (`estadoFigurasMultiBD`). Alta ligera sin DNI = SIEMPRE ficha nueva. Cepo `lib/oportunidad-figuras-multi.test.ts`.
+
+## Aislamiento por correduría (garantía real)
+- El rol `prisma_seguros` tiene BYPASSRLS: las políticas RLS NO aplican. `lib/tenant` solo re-exporta Prisma; **no es una garantía**.
+- La garantía son dos cosas, por sentencia o por fichero: el SQL sobre tablas con `correduria_id` lo filtra, o el fichero usa `correduriaUnica()` (`lib/cartera.ts`), que LANZA si hay más de una correduría en la base (hoy hay 1).
+- Cepo `test/regression-asegura-aislamiento.test.ts`: lee las tablas multi-tenant del DDL y falla si una plantilla SQL las toca sin `correduria_id`. Excepciones (UPDATE/EXISTS por id de fila ya acotada) en su allowlist `SIN_FILTRO_A_PROPOSITO`, con motivo. Al dar de alta la 2ª correduría, `correduriaUnica()` deja de valer: hay que acotar cada consulta.
 
 ## Tarificador RPA (bots Playwright)
 Guía viva (arquitectura, DOM de ePAC, seguridad, interruptores, plan): **`docs/TARIFICADOR-RPA.md`**. TARIFICAR ≠ EMITIR; guardián `test/regression-tarificador-rpa.test.ts`.

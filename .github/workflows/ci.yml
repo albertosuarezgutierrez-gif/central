@@ -62,7 +62,7 @@ jobs:
         if: steps.afecta.outputs.afecta != 'false'
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'pnpm'
           cache-dependency-path: pnpm-lock.yaml
 
@@ -75,12 +75,9 @@ jobs:
         if: steps.afecta.outputs.afecta != 'false'
         run: pnpm run lint
 
-      # ── 2. TypeScript ──────────────────────────────────────────────────────
-      - name: TypeScript check
-        if: steps.afecta.outputs.afecta != 'false'
-        run: pnpm exec tsc --noEmit
+      # (tsc de ia-rest: lo hace el job «Typecheck · ia-rest» de tests.yml, idéntico)
 
-      # ── 3. Build ───────────────────────────────────────────────────────────
+      # ── 2. Build ───────────────────────────────────────────────────────────
       # Usamos vars dummy para que next build no falle por falta de env.
       # El objetivo es verificar que el código compila, no que funciona en runtime.
       - name: Build

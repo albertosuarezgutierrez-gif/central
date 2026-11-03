@@ -116,6 +116,56 @@ export async function listarCandidatosConLimite(
   return { correos: out, truncado, buzon }
 }
 
+/** Correo genérico leído de un buzón/etiqueta (lo usa `lib/sivra/inversion-correos.ts`). */
+export interface CorreoBuzon {
+  /** Cabecera `Message-ID` (identidad estable entre buzones); `null` si no la trae. */
+  messageId: string | null
+  uid: number
+  from: string
+  subject: string
+  /** Cabecera Date en ISO, o '' si no consta. */
+  fecha: string
+  text: string
+  html: string
+}
+
+/**
+ * Lee los correos de un buzón/etiqueta de Gmail desde `desde`, con el mismo cliente IMAP
+ * que el agente de facturas. Lanza si faltan GMAIL_USER/GMAIL_APP_PASSWORD, si IMAP falla
+ * o si el buzón no existe (quien llama decide cómo degradar).
+ */
+export async function leerCorreosBuzon(opts: { buzon: string; desde: Date; max?: number }): Promise<CorreoBuzon[]> {
+  const client = nuevoCliente()
+  const out: CorreoBuzon[] = []
+  await client.connect()
+  try {
+    const boxes = await client.list()
+    const match = boxes.find((b) => b.path === opts.buzon || b.name === opts.buzon)
+    if (!match) throw new Error(`Buzón IMAP «${opts.buzon}» no existe`)
+    const lock = await client.getMailboxLock(match.path)
+    try {
+      for await (const msg of client.fetch({ since: opts.desde }, { uid: true, source: true })) {
+        const parsed = await simpleParser(msg.source as Buffer)
+        out.push({
+          messageId: parsed.messageId || null,
+          uid: msg.uid,
+          from: parsed.from?.text || '',
+          subject: parsed.subject || '',
+          fecha: parsed.date ? parsed.date.toISOString() : '',
+          text: parsed.text || '',
+          html: typeof parsed.html === 'string' ? parsed.html : '',
+        })
+      }
+    } finally {
+      lock.release()
+    }
+  } finally {
+    await client.logout().catch(() => {})
+  }
+  out.sort((a, b) => b.fecha.localeCompare(a.fecha))
+  return opts.max ? out.slice(0, opts.max) : out
+}
+
 /** Variante sin presupuesto (compatibilidad con los llamadores que no lo acotan). */
 export async function listarCandidatos(opts: { desde: Date; etiqueta?: string }): Promise<CorreoCandidato[]> {
   return (await listarCandidatosConLimite(opts)).correos

@@ -1,0 +1,190 @@
+{
+ "sesion": "54e93d8b-fbd0-57fd-aecb-d0adf33945e0",
+ "inicio": "2026-10-27T07:59:13.868Z",
+ "fin": "2026-10-28T10:01:08.925Z",
+ "llamadas": 906,
+ "categorias": {
+  "lectura-directa": {
+   "llamadas": 19,
+   "chars_in": 2324,
+   "chars_out": 59620,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 11,
+    "Read": 7,
+    "Glob": 1
+   }
+  },
+  "bash": {
+   "llamadas": 455,
+   "chars_in": 322034,
+   "chars_out": 2134792,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 455
+   }
+  },
+  "otro": {
+   "llamadas": 130,
+   "chars_in": 84985,
+   "chars_out": 720703,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 39,
+    "SubagentHandback": 27,
+    "ReadNotifications": 60,
+    "SendMessage": 1,
+    "Monitor": 3
+   }
+  },
+  "sql": {
+   "llamadas": 182,
+   "chars_in": 122655,
+   "chars_out": 564988,
+   "errores": 1,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 182
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 11,
+   "chars_in": 23173,
+   "chars_out": 19876,
+   "errores": 0,
+   "archivos_citados": 4,
+   "chars_citados": 87996,
+   "tools": {
+    "Agent": 11
+   }
+  },
+  "agente:agente-architect": {
+   "llamadas": 12,
+   "chars_in": 30254,
+   "chars_out": 32773,
+   "errores": 0,
+   "archivos_citados": 12,
+   "chars_citados": 4074359,
+   "tools": {
+    "Agent": 12
+   }
+  },
+  "escritura": {
+   "llamadas": 20,
+   "chars_in": 48817,
+   "chars_out": 3488979,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 9,
+    "Edit": 11
+   }
+  },
+  "mcp:github": {
+   "llamadas": 25,
+   "chars_in": 9672,
+   "chars_out": 86445,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__create_pull_request": 4,
+    "mcp__github__get_job_logs": 4,
+    "mcp__github__pull_request_read": 10,
+    "mcp__github__actions_run_trigger": 1,
+    "mcp__github__update_pull_request": 3,
+    "mcp__github__merge_pull_request": 3
+   }
+  },
+  "mcp:claude-code-remote": {
+   "llamadas": 19,
+   "chars_in": 3756,
+   "chars_out": 6558,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__claude-code-remote__subscribe_pr_activity": 5,
+    "mcp__claude-code-remote__send_later": 7,
+    "mcp__claude-code-remote__unsubscribe_pr_activity": 4,
+    "mcp__claude-code-remote__delete_trigger": 2,
+    "mcp__claude-code-remote__update_trigger": 1
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 22,
+   "chars_in": 2438,
+   "chars_out": 68934,
+   "errores": 2,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Vercel__list_projects": 3,
+    "mcp__Vercel__filter_project_envs": 2,
+    "mcp__Vercel__create_project_env": 1,
+    "mcp__Vercel__list_deployments": 4,
+    "mcp__Vercel__get_project_env": 1,
+    "mcp__Vercel__create_deployment": 1,
+    "mcp__Vercel__get_deployment": 1,
+    "mcp__Vercel__list_deployment_events": 1,
+    "mcp__Vercel__list_project_domains": 1,
+    "mcp__Vercel__web_fetch_vercel_url": 1,
+    "mcp__Vercel__list_teams": 1,
+    "mcp__Vercel__get_runtime_logs": 4,
+    "mcp__Vercel__get_runtime_errors": 1
+   }
+  },
+  "agente:agente-mecanico": {
+   "llamadas": 2,
+   "chars_in": 2849,
+   "chars_out": 296,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 2
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 2,
+   "chars_in": 1575,
+   "chars_out": 32,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__apply_migration": 2
+   }
+  },
+  "agente:verificador-esceptico": {
+   "llamadas": 1,
+   "chars_in": 2390,
+   "chars_out": 2597,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "mcp:Booking_com": {
+   "llamadas": 6,
+   "chars_in": 1464,
+   "chars_out": 130350,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Booking_com__accommodations_search": 6
+   }
+  }
+ }
+}

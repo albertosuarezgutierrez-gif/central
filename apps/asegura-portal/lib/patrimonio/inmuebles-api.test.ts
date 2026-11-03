@@ -82,3 +82,16 @@ test('duplicado: 409', async () => {
   p.crear = async () => ({ ok: false, motivo: 'duplicado' })
   assert.equal((await responderAlta(p, cuerpo(MIO))).status, 409)
 })
+
+test('edificio con unidades: el alta pasa las unidades al puerto (una transacción) y lo dice en la respuesta', async () => {
+  const { p } = puertos(mapa([[MIO, 'total']]))
+  let recibidas: string[] = []
+  p.crear = async ({ datos }) => {
+    recibidas = datos.unidades
+    return { ok: true, id: 'ed' }
+  }
+  const r = await responderAlta(p, { ...cuerpo(MIO), uso: 'edificio', unidades: ['Piso 1', 'Piso 2'] })
+  assert.equal(r.status, 201)
+  assert.equal(r.body.unidades, 2)
+  assert.deepEqual(recibidas, ['Piso 1', 'Piso 2'])
+})

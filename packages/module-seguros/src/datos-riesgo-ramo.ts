@@ -8,6 +8,7 @@
  *   vida, salud, decesos      → `datosCapital`    (datos-capital-riesgo.ts)
  *   comercio                  → `datosComercio`   (datos-comercio-riesgo.ts; los campos de CIMA + régimen del local)
  *   RC, comunidades, otros    → `datosRiesgoLibre` (datos-riesgo-libre.ts; sin tarifa, para el expediente)
+ *   patinete (VMP, 28/10/2026)→ `datosRiesgoLibre` con sus campos propios (`camposLibreDelRamo`): sin matrícula ni tarifa
  *
  * Todo PURO: entra el `info_riesgo` que hay, la edición y el instante; sale lo que hay que escribir y qué cambió.
  * La transacción, la fila de `oportunidad_historial` y la auditoría las pone el puerto de asegura.

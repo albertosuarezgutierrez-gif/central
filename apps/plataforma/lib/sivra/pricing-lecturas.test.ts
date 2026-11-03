@@ -40,3 +40,11 @@ test('🚨 las seis lecturas de la auditoría tienen efecto declarado', () => {
     assert.ok(EFECTO_LECTURA[nombre], `falta el efecto de ${nombre}`)
   }
 })
+
+test('🚨 toda lectura que `apply` declara caída tiene su efecto (cepo sobre el fuente)', async () => {
+  const { readFileSync } = await import('node:fs')
+  const src = readFileSync(new URL('../../app/api/sivra/pricing/apply/route.ts', import.meta.url), 'utf8')
+  const nombres = [...src.matchAll(/lecturasCaidas\.push\(\{\s*nombre:\s*'([a-z_]+)'/g)].map(m => m[1])
+  assert.ok(nombres.includes('ritmo_finde'), 'apply ya no declara ritmo_finde: revisa el cepo')
+  for (const n of nombres) assert.ok(EFECTO_LECTURA[n], `falta el efecto de ${n}`)
+})

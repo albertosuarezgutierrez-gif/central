@@ -6,7 +6,7 @@ import { Badge, btnStyle } from '@/components/ui'
 import { fechaEs, fechaHoraEs } from '@/lib/ficha-asegura'
 import Bloque from './Bloque'
 import {
-  estadoPersona, fechaDelPaso, interpretarCampana, pasosEmbudo, personasDelPaso, textoNumero, textoPorcentaje,
+  CAMPANAS_CORREO, estadoPersona, fechaDelPaso, interpretarCampana, type IdCampana, pasosEmbudo, personasDelPaso, textoNumero, textoPorcentaje,
   type EmbudoCampana, type GrupoEmbudo, type PersonaCampana, type RespuestaCampana,
 } from '@/lib/campana-presentacion'
 
@@ -160,11 +160,13 @@ export default function Campanas() {
   const [lectura, setLectura] = useState<RespuestaCampana | null>(null)
   const [cargando, setCargando] = useState(true)
   const [visibles, setVisibles] = useState(PAGINA)
+  const [campana, setCampana] = useState<IdCampana>('presentacion_app')
+  const def = CAMPANAS_CORREO.find((c) => c.id === campana) ?? CAMPANAS_CORREO[0]
 
-  const leer = async () => {
+  const leer = async (id: IdCampana = campana) => {
     setCargando(true)
     try {
-      const res = await fetch('/api/correduria/campana-presentacion')
+      const res = await fetch(`/api/correduria/campana-presentacion?campana=${encodeURIComponent(id)}`)
       const r = interpretarCampana(res.status, await res.json().catch(() => null))
       // Una recarga fallida conserva lo último bueno y avisa abajo.
       setLectura((prev) => (r.estado === 'ok' || !prev || prev.estado !== 'ok' ? r : prev))
@@ -183,10 +185,28 @@ export default function Campanas() {
 
   const personas = useMemo(() => (lectura?.estado === 'ok' ? lectura.personas : []), [lectura])
 
+  // Cambiar de campaña NO mezcla datos: se vacía lo leído y se pide la otra.
+  const elegir = (id: IdCampana) => {
+    if (id === campana || cargando) return
+    setCampana(id)
+    setLectura(null)
+    setFallo(null)
+    setVisibles(PAGINA)
+    void leer(id)
+  }
+
   const accion = (
-    <button type="button" onClick={() => void leer()} disabled={cargando} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
-      {cargando ? 'Leyendo…' : 'Actualizar'}
-    </button>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+      {CAMPANAS_CORREO.map((c) => (
+        <button key={c.id} type="button" onClick={() => elegir(c.id)} disabled={cargando} aria-pressed={c.id === campana}
+          style={{ ...btnStyle(c.id === campana ? 'primario' : 'secundario', 'sm'), minHeight: 44 }}>
+          {c.titulo}
+        </button>
+      ))}
+      <button type="button" onClick={() => void leer()} disabled={cargando} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
+        {cargando ? 'Leyendo…' : 'Actualizar'}
+      </button>
+    </div>
   )
 
   const ok = lectura?.estado === 'ok' ? lectura : null
@@ -194,8 +214,7 @@ export default function Campanas() {
 
   return (
     <>
-      <Bloque titulo="Campaña «presentación app»" Icono={Mail} accion={accion} primero
-        sub="Correo de presentación de la app a los clientes en vigor. Solo lectura: el envío lo hace el cron de asegura.">
+      <Bloque titulo={`Campaña «${def.titulo}»`} Icono={Mail} accion={accion} primero sub={def.sub}>
         {lectura === null && <p style={pMuted}>Leyendo la campaña…</p>}
 
         {lectura !== null && lectura.estado !== 'ok' && (

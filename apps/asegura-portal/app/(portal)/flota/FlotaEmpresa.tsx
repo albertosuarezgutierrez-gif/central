@@ -1,10 +1,13 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useId, useState } from 'react'
 import { hoyMadrid } from '@central/module-seguros'
 
-import type { EstadoAutorizacion, ItvVehiculo, PapelFlota, VehiculoFlota, VencimientoFlota } from '@central/module-seguros-portal'
+import { INTERRUPTORES_DEFECTO, rutaManual, type EstadoAutorizacion, type InterruptoresPublicos, type ItvVehiculo, type PapelFlota, type VehiculoFlota, type VencimientoFlota } from '@central/module-seguros-portal'
+
+import { EtiquetasImprimibles, Interruptores, QrVehiculo, type EstadoQrVista } from '../QrVehiculo'
 
 /**
  * La flota de una sociedad (05/10/2026). Todo lo que se pinta llega YA decidido
@@ -135,13 +138,130 @@ function EditarMatriculacion({ empresaId, v }: { empresaId: string; v: VehiculoF
   )
 }
 
-function ListaVehiculos({ empresaId, vehiculos, recortada }: { empresaId: string; vehiculos: VehiculoFlota[]; recortada: boolean }) {
+/** El QR de un vehículo de la flota (27/10/2026, F1). Sin matrícula no hay a qué colgarlo: se dice. */
+function QrDeFlota({ empresaId, v, qr, defecto }: { empresaId: string; v: VehiculoFlota; qr: EstadoQrVista | null; defecto: InterruptoresPublicos }) {
+  if (v.clave === null) return null
+  return (
+    <details style={{ marginTop: 8 }}>
+      <summary style={{ minHeight: 44, display: 'flex', alignItems: 'center', cursor: 'pointer', fontSize: 14 }}>
+        Etiqueta QR{qr?.qr ? ' · activa' : ''}
+      </summary>
+      <QrVehiculo
+        origen={{ tipo: 'flota', empresaId, polizaId: v.polizaId }}
+        estado={qr ?? { bienId: null, matricula: v.clave, qr: null, publico: { valores: defecto, excepcion: false, defecto } }}
+        pideMatricula={false}
+        ambitoDefecto={{ ambito: 'empresa', empresaId }}
+      />
+    </details>
+  )
+}
+
+type Etiqueta = { bienId: string; etiqueta: string; matricula: string; enlace: string }
+
+/**
+ * Impresión en LOTE (27/10/2026, F1). Por defecto solo los vehículos SIN etiqueta: reimprimir las demás anula las
+ * que ya están pegadas, y eso se marca a mano y se dice.
+ */
+function EtiquetasFlota({ empresaId, defecto }: { empresaId: string; defecto: InterruptoresPublicos | null }) {
+  const idReimprimir = useId()
+  const [reimprimir, setReimprimir] = useState(false)
+  const [enCurso, setEnCurso] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [lote, setLote] = useState<{ etiquetas: Etiqueta[]; yaTenian: number; sinMatricula: number; pendientes: number; fallidas: number; inicioLote?: string } | null>(null)
+  // El instante en que empezó ESTE lote: se devuelve en cada pasada para que el servidor no vuelva a anular lo que se
+  // acaba de imprimir. Se olvida al cambiar la casilla (es otro lote).
+  const [inicioLote, setInicioLote] = useState<string | null>(null)
+
+  const generar = async () => {
+    setEnCurso(true)
+    setError(null)
+    try {
+      const r = await fetch('/api/vehiculos/etiquetas', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ empresaId, reimprimir, ...(inicioLote ? { inicioLote } : {}) }),
+      })
+      const j = (await r.json().catch(() => null)) as (typeof lote & { mensaje?: string }) | null
+      if (!r.ok || !j) setError(j?.mensaje ?? 'No se han podido generar las etiquetas. Vuelve a intentarlo.')
+      else {
+        setLote(j)
+        if (j.inicioLote && inicioLote === null) setInicioLote(j.inicioLote)
+      }
+    } catch {
+      setError('No se han podido generar las etiquetas: comprueba tu conexión.')
+    } finally {
+      setEnCurso(false)
+    }
+  }
+
+  return (
+    <section className="seccion" aria-labelledby="etiquetas-flota">
+      <h2 id="etiquetas-flota" style={{ marginTop: 0 }}>Etiquetas QR de la flota</h2>
+      <p className="suave" style={{ marginTop: 0, fontSize: 14 }}>
+        Una pegatina para la guantera de cada vehículo: quien la escanee ve los teléfonos de asistencia y qué hacer en un accidente. Cada
+        QR solo se ve al generarlo: imprímelas en ese momento.
+      </p>
+      {defecto && (
+        <details style={{ marginBottom: 12 }}>
+          <summary style={{ minHeight: 44, display: 'flex', alignItems: 'center', cursor: 'pointer', fontSize: 14 }}>
+            Qué ve quien escanee (para todos los vehículos de la sociedad)
+          </summary>
+          <Interruptores inicial={defecto} deEmpresa urlVehiculo={null} ambitoDefecto={{ ambito: 'empresa', empresaId }} textoDefecto="Guardar para toda la flota" />
+        </details>
+      )}
+      <label htmlFor={idReimprimir} className="qr-vehiculo-interruptor">
+        <input id={idReimprimir} type="checkbox" checked={reimprimir} disabled={enCurso} onChange={(e) => {
+            setReimprimir(e.target.checked)
+            setInicioLote(null)
+          }} />
+        <span>
+          Reimprimir también las que ya tienen etiqueta. <strong>Las pegadas dejarán de valer.</strong>
+        </span>
+      </label>
+      <button type="button" className="boton auto" style={{ marginTop: 8 }} disabled={enCurso} onClick={() => void generar()}>
+        {enCurso ? 'Generando…' : 'Generar etiquetas'}
+      </button>
+      {error && <p role="alert" className="aviso-linea">{error}</p>}
+      {lote && (
+        <div style={{ marginTop: 12 }}>
+          <p className="suave" role="status" style={{ marginTop: 0, fontSize: 14 }}>
+            {lote.etiquetas.length === 0 ? 'No se ha generado ninguna etiqueta.' : `${lote.etiquetas.length} etiqueta(s) lista(s).`}
+            {lote.yaTenian > 0 ? ` ${lote.yaTenian} vehículo(s) ya tenían la suya.` : ''}
+            {lote.sinMatricula > 0 ? ` ${lote.sinMatricula} sin matrícula conocida: escríbenos y la anotamos.` : ''}
+            {lote.pendientes > 0 ? ` Quedan ${lote.pendientes}: vuelve a pulsar cuando hayas impreso estas.` : ''}
+            {lote.fallidas > 0 ? ` ${lote.fallidas} no se han podido generar: vuelve a intentarlo.` : ''}
+          </p>
+          {lote.etiquetas.length > 0 && (
+            <EtiquetasImprimibles etiquetas={lote.etiquetas.map((e) => ({ clave: e.bienId, matricula: e.matricula, enlace: e.enlace }))} />
+          )}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function ListaVehiculos({
+  empresaId,
+  papel,
+  vehiculos,
+  recortada,
+  qrPorClave,
+  qrDefecto,
+}: {
+  empresaId: string
+  papel: PapelFlota
+  vehiculos: VehiculoFlota[]
+  recortada: boolean
+  qrPorClave: Record<string, EstadoQrVista> | null
+  qrDefecto: InterruptoresPublicos | null
+}) {
   const [visibles, setVisibles] = useState(PASO)
   if (vehiculos.length === 0) {
     return (
       <p style={{ margin: 0 }}>
         No nos consta ningún vehículo de la sociedad con un seguro en vigor con nosotros. Si tenéis vehículos
-        asegurados en otra correduría, podemos revisarlos: escríbenos.
+        asegurados en otra correduría, podemos revisarlos: escríbenos.{' '}
+        <Link href={rutaManual('flota')} style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>Cómo funciona la flota</Link>.
       </p>
     )
   }
@@ -164,6 +284,14 @@ function ListaVehiculos({ empresaId, vehiculos, recortada }: { empresaId: string
             </div>
             <TextoItv itv={v.itv} />
             <EditarMatriculacion empresaId={empresaId} v={v} />
+            {qrPorClave !== null && <QrDeFlota empresaId={empresaId} v={v} qr={v.clave === null ? null : (qrPorClave[v.clave] ?? null)} defecto={qrDefecto ?? INTERRUPTORES_DEFECTO} />}
+            {/* La ficha de su póliza (`/boveda/poliza/[id]`): SOLO el dueño la abre. Un jefe de flota no ve el resto de
+                seguros de la sociedad (la bóveda de la sociedad no se le abre): el enlace le daría un 404. */}
+            {papel === 'dueno' && (
+              <Link className="boton-tenue" style={{ minHeight: 44, width: '100%', marginTop: 8 }} href={`/boveda/poliza/${encodeURIComponent(v.polizaId)}`}>
+                Ver su póliza
+              </Link>
+            )}
           </li>
         ))}
       </ul>
@@ -268,6 +396,9 @@ export function FlotaEmpresa(props: {
   jefes: Jefe[] | null
   candidatos: Candidato[] | null
   textoJefe: string
+  /** Estado del QR de cada vehículo por matrícula. `null` = no se pudo leer o no te toca: no se pinta el QR. */
+  qrPorClave: Record<string, EstadoQrVista> | null
+  qrDefecto: InterruptoresPublicos | null
 }) {
   return (
     <>
@@ -275,8 +406,9 @@ export function FlotaEmpresa(props: {
         <h2 id="vehiculos-flota" style={{ marginTop: 0 }}>
           Vehículos <span className="suave" style={{ fontSize: 14, fontWeight: 400 }}>({props.vehiculos.length})</span>
         </h2>
-        <ListaVehiculos empresaId={props.empresaId} vehiculos={props.vehiculos} recortada={props.recortada} />
+        <ListaVehiculos empresaId={props.empresaId} papel={props.papel} vehiculos={props.vehiculos} recortada={props.recortada} qrPorClave={props.qrPorClave} qrDefecto={props.qrDefecto} />
       </section>
+      {props.qrPorClave !== null && props.vehiculos.length > 0 && <EtiquetasFlota empresaId={props.empresaId} defecto={props.qrDefecto} />}
       {props.papel === 'dueno' && props.jefes !== null && props.candidatos !== null && (
         <JefesDeFlota empresaId={props.empresaId} jefes={props.jefes} candidatos={props.candidatos} textoJefe={props.textoJefe} />
       )}

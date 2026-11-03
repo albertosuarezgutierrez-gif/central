@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { isLimpiadoraAuthorized } from '@/lib/limpiadora-auth'
 
 // Polled by admin sidebar to push-notify urgent incidencias
 export async function GET() {
+  if (!(await isLimpiadoraAuthorized())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
     const urgentes = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT i.id, i.titulo, i.property_id, i.urgencia, i.created_at,

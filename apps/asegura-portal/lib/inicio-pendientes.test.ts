@@ -75,3 +75,32 @@ test('sin nada pendiente y todo leído: vacío limpio (la pantalla pinta el esta
   assert.equal(hayPendiente(r), false)
   assert.deepEqual(r.sinComprobar, [])
 })
+
+test('Vencimientos: una póliza con BAJA en marcha no «renueva» (misma regla que tenía la bóveda); sin saberlo, no se excluye nada', () => {
+  const polizas = [pol({ id: 'a', vence: '2026-11-10' }), pol({ id: 'b', vence: '2026-11-12' })]
+  const base = pendienteInicio({ hoy: HOY, polizas })
+  assert.equal(base.vencimientos.length, 2)
+  assert.deepEqual(pendienteInicio({ hoy: HOY, polizas, conBaja: new Set(['a']) }).vencimientos.map((v) => v.clave), ['vence:b'])
+  // `null` = el puente no contestó: no se afirma nada, se enseñan las dos.
+  assert.equal(pendienteInicio({ hoy: HOY, polizas, conBaja: null }).vencimientos.length, 2)
+})
+
+test('Vencimientos: «ya lo pediste» recupera la petición de precio abierta, solo en pólizas SUYAS', () => {
+  const polizas = [pol({ id: 'a', vence: '2026-11-10' }), pol({ id: 'b', propia: false, vence: '2026-11-12' })]
+  const peticiones = [{ polizaId: 'a', pedidoEl: '2026-10-20' }, { polizaId: 'b', pedidoEl: '2026-10-21' }]
+  const r = pendienteInicio({ hoy: HOY, polizas, peticiones })
+  assert.match(r.vencimientos.find((v) => v.clave === 'vence:a')!.detalle!, /Nos pediste que lo miremos el 20\/10\/2026/)
+  assert.doesNotMatch(r.vencimientos.find((v) => v.clave === 'vence:b')!.detalle!, /pediste/)
+  // Sin saber si pidió (null), no se dice nada.
+  assert.doesNotMatch(pendienteInicio({ hoy: HOY, polizas, peticiones: null }).vencimientos[0]!.detalle!, /pediste/)
+})
+
+test('cableado: Inicio lee bajas y peticiones y las pasa a pendienteInicio; la página lee sus tres tarjetas en paralelo', async () => {
+  const { readFileSync } = await import('node:fs')
+  const quita = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1')
+  const inicio = quita(readFileSync(new URL('./inicio.ts', import.meta.url), 'utf8'))
+  assert.match(inicio, /polizasConBajaEnMarcha\(firmas, \{ conConfirmadas: true \}\)/)
+  assert.match(inicio, /peticionesPrecio\(identidadId\)/)
+  const pagina = quita(readFileSync(new URL('../app/(portal)/inicio/page.tsx', import.meta.url), 'utf8'))
+  assert.match(pagina, /await Promise\.all\(\[\s*conPatrimonio \?[\s\S]*pendientesDeTiParaInicio[\s\S]*flotaParaInicio/)
+})

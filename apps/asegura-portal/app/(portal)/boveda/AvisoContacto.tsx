@@ -3,7 +3,6 @@ import { useState } from 'react'
 import Link from 'next/link'
 
 import type { LecturaMisDatos } from '@/lib/mis-datos'
-import { avisarPendienteResuelto } from './PendienteDeTi'
 
 /**
  * «Comprueba tus datos de contacto» — el aviso AUTOMÁTICO en la pestaña
@@ -42,7 +41,6 @@ export function AvisoContacto({ lectura }: { lectura: LecturaMisDatos }) {
       const j = (await res.json().catch(() => null)) as { estado?: string } | null
       if (res.ok && j?.estado === 'ok') {
         setConfirmado(true)
-        avisarPendienteResuelto('contacto')
         return
       }
       setAviso('No hemos podido guardar la confirmación. Inténtalo de nuevo en un momento.')

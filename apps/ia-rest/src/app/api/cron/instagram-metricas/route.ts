@@ -1,11 +1,12 @@
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 import { NextRequest, NextResponse } from 'next/server'
+import { cronAutorizado } from '@/lib/cron-auth'
 import { createServerClient } from '@/lib/supabase'
 import { obtenerMetricas } from '@/lib/instagram'
 import { tgAlert } from '@/lib/telegram'
 export async function GET(req: NextRequest) {
-  if (req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  if (!cronAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const supabase = createServerClient()
   const { data: posts } = await supabase.from('instagram_posts').select('id,post_id').eq('estado','publicado').gte('created_at', new Date(Date.now()-30*86400000).toISOString())
   let actualizados = 0

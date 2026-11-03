@@ -84,15 +84,21 @@ function fechaDelMes(year: number, month: number, dia: number): string {
 
 export interface ResultadoGeneracion {
   year: number; month: number; sincronizados: number; creados: number; existentes: number; detalle: string[]
+  /** Fijos NO generados porque su piso tiene el mes CERRADO (`cierres_mes`). */
+  bloqueados: string[]
 }
 
-export async function generarGastosFijos(year: number, month: number, opts: { commit?: boolean } = {}): Promise<ResultadoGeneracion> {
+export async function generarGastosFijos(
+  year: number, month: number,
+  opts: { commit?: boolean; bloqueado?: (propiedad: string | null) => boolean } = {},
+): Promise<ResultadoGeneracion> {
   const commit = opts.commit !== false
   const fijos = await listarGastosFijos(true)
-  const res: ResultadoGeneracion = { year, month, sincronizados: 0, creados: 0, existentes: 0, detalle: [] }
+  const res: ResultadoGeneracion = { year, month, sincronizados: 0, creados: 0, existentes: 0, detalle: [], bloqueados: [] }
 
   for (const f of fijos) {
     const fp = huellaFijo(f)
+    if (opts.bloqueado?.(f.propiedad)) { res.bloqueados.push(`${f.propiedad ?? '—'} · ${f.concepto}`); continue }
     if (await existeEnMes(fp, year, month)) { res.existentes++; continue }
     const fecha = fechaDelMes(year, month, f.dia_mes)
     res.detalle.push(`${fecha} · ${f.propiedad ?? '—'} · ${f.concepto} · ${eur(f.total)}`)

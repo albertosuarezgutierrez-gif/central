@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { cronAutorizado } from '@/lib/cron-auth'
 import { createServerClient } from '@/lib/supabase'
 import { getSession } from '@/lib/session'
 
@@ -61,9 +62,8 @@ async function uploadJson(accessToken: string, folderId: string, filename: strin
 
 // ── Auth ───────────────────────────────────────────────────────────────────────
 function autorizado(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET
-  if (!secret) return false
-  if (req.headers.get('authorization') === `Bearer ${secret}`) return true
+  if (!process.env.CRON_SECRET) return false
+  if (cronAutorizado(req)) return true
   const session = getSession(req)
   return !!(session && session.rol === 'super_admin')
 }

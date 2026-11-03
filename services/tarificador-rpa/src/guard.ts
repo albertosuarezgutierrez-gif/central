@@ -9,7 +9,23 @@
 
 import type { BrowserContext, Dialog, Frame, Locator, Page, Request } from 'playwright'
 import { ErrorTarificador } from './errores.ts'
+import { esTextoControlesTecnicos, SEL_DIALOGO_CONTROLES_TECNICOS } from './controles-tecnicos-mapfre.ts'
 import { indiceOpcionGenerica, indicesCompaniaActualCompuesta } from './compania-actual.ts'
+import {
+  BLOQUEO,
+  CONCEPTOS_ACCION,
+  RE_EXCLUIR_DESCARGA,
+  RE_OBJETO_DESCARGA,
+  RE_OBJETO_PROPUESTA,
+  RE_VERBO_DESCARGA,
+  RE_VERBO_DESCARGA_CON_OBJETO,
+  regexBloqueoRotulo,
+  regexPalabras,
+  regexRotuloConAdornos,
+  rotuloMayus,
+  terminoPropio,
+  type Termino,
+} from './vocabulario.ts'
 import {
   ID_CONFIRMAR_DATOS_PERSONAS_GENERALI,
   MEDIADOR_GENERALI,
@@ -35,11 +51,31 @@ import {
   descripcionesSinExcepcionProyecto,
   comprobarBoton,
   esAvanceAutorizado,
+  avancePorIdAutorizado,
+  avanceSinTextoAutorizado,
+  RE_NAME_ACCION_FINAL_SIN_TEXTO,
+  rotuloNeutroSinTexto,
+  type AvanceSinTexto,
+  onclickCasaFormaSinTexto,
+  onclickNeutralizado,
+  type NeutralizacionOnclick,
+  rutaCasaAvancePorId,
+  onclickNormalizado,
+  rutaDeMarco,
+  esLanzadorAplicacionNseMapfre,
+  neutralizarRutaTolerable,
+  detalleCuerpoToleradoConAccionReal,
+  textoDetalleCuerpo,
+  RE_ACCION_REAL_TRAS_PREFIJO,
+  decodificarUrlTolerante,
+  type RutaTolerable,
+  TEXTO_ACCESO_NSE_MAPFRE,
   esMatriculaEspanola,
   normalizarMatricula,
   esBotonDeListaBlanca,
   MOTIVO_FRONTERA_CUENTA,
   parametrosParecenEmision,
+  cuerpoLlevaAccionFinal,
   senalCuentaBancaria,
   pareceEmision,
   redactarDatosPersonales,
@@ -111,6 +147,13 @@ export type AjaxValidacionAvance = Readonly<{
   /** Únicas claves del cuerpo (urlencoded), cada una una vez, y la forma de su valor. */
   cuerpo: readonly string[]
   valorCuerpo: RegExp
+  /** 0.3.25: forma propia de UNA clave del cuerpo (manda sobre `valorCuerpo` para esa clave). Sin la clave = `valorCuerpo` para todas. */
+  valorCuerpoPorClave?: Readonly<Record<string, RegExp>>
+  /**
+   * 0.3.19: ningún valor del cuerpo (ni la query entera) puede nombrar una acción final ni un dato bancario
+   * (`RE_ACCION_REAL_TRAS_PREFIJO`) y el cuerpo tiene que pasar `cuerpoLlevaAccionFinal`. Sin la clave = solo la forma (`valorCuerpo`).
+   */
+  estricto?: true
 }>
 
 /**
@@ -146,9 +189,33 @@ export const AJAX_AYUDA_APLICACIONES_ALLIANZ: AjaxValidacionAvance = Object.free
 })
 
 /**
+ * 0.3.25 (Allianz patinete real 30/10/2026, 6255c5e7…, «Figuras Intervinientes»): la ayuda de drvp00 llegó con un `pageId` de longitud 26,
+ * letras+dígitos+símbolos y un símbolo FUERA de `_.:$-` (el diagnóstico no decía cuál: ahora lo dice, ver `formaValor`). Alfabeto CERRADO solo
+ * para `pageId` de drvp00: letras ASCII y latinas con tilde/cedilla (ePAC es de Allianz Portugal), dígitos y la puntuación de un id de
+ * página/recurso (`_ . : $ - / # , | ( ) [ ] ~ ! *`), de 1 a 64. Fuera, siempre: espacio, `& = % + ; ' " < > \ @ { } ?` (estructura de
+ * urlencoded/JS/HTML o forma de correo). El `estricto` de la regla sigue mirando acción final y dato bancario en cada valor.
+ */
+export const RE_PAGEID_AYUDA_DRVP00 = /^[A-Za-z0-9\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u00FF_.:$\/#,|()[\]~!*-]{1,64}$/
+/** 0.3.25: `codCia` de la misma ayuda: código corto alfanumérico (el de drpc18 compartía la forma del pageId; aquí se estrecha). */
+export const RE_CODCIA_AYUDA_DRVP00 = /^[A-Za-z0-9]{1,8}$/
+
+/**
  * LISTA BLANCA de recursos AJAX de SOLO LECTURA (consulta/ayuda/validación) admitidos durante un avance de pestaña. Cada
  * entrada fija endpoint, `resource`, query y cuerpo. Todo lo demás (Emitir/Grabar/Contratar/Guardar/Pago/Firma…) sigue abortado.
  */
+/**
+ * 0.3.19 (regresión real 29/10/2026, Allianz patinete, «Figuras Intervinientes»): la MISMA ayuda contextual, en la aplicación `drvp00`
+ * (`/drvp00/AJAXServlet`). Se dispara en el `ready` de la pantalla de destino del avance de paso por id: si carga antes de que el robot vea
+ * desaparecer el «Aceptar» (sondeo de 250 ms), cae DENTRO de la ventana y la capa (b) la abortaba. Solo para los avances por id de drvp00,
+ * con el cuerpo ESTRICTO (sin acción final ni dato bancario en ningún valor).
+ */
+export const AJAX_AYUDA_APLICACIONES_ALLIANZ_DRVP00: AjaxValidacionAvance = Object.freeze({
+  ...AJAX_AYUDA_APLICACIONES_ALLIANZ,
+  endpoint: 'https://www.e-pacallianz.com/drvp00/AJAXServlet',
+  estricto: true as const,
+  valorCuerpoPorClave: Object.freeze({ pageId: RE_PAGEID_AYUDA_DRVP00, codCia: RE_CODCIA_AYUDA_DRVP00 }),
+})
+
 export const AJAX_LECTURA_ALLIANZ: readonly AjaxValidacionAvance[] = Object.freeze([AJAX_AYUDA_APLICACIONES_ALLIANZ])
 
 /** Claves que la regla declara (se pueden nombrar en un mensaje); cualquier otra podría ser un dato (NIF, nombre) y NUNCA se imprime. */
@@ -162,13 +229,19 @@ const listaClaves = (ks: readonly string[], decl: ReadonlySet<string>): string =
   return [...nombradas, ...(n ? [`${n} clave(s) no declarada(s)`] : [])].join(',')
 }
 
-/** Forma de un valor SIN revelarlo: longitud y categorías de caracteres presentes (nunca el texto; puede llevar un NIF). */
-function formaValor(v: string): string {
+/**
+ * Forma de un valor SIN revelarlo: longitud y categorías de caracteres presentes (nunca el texto; puede llevar un NIF). 0.3.25: los
+ * símbolos ASCII de puntuación se NOMBRAN (`símbolos «/#»`, sin repetir y en orden; ni letras ni cifras: no identifican a nadie) y lo que no es
+ * ASCII se cuenta como categoría `no-ASCII` sin decir cuál (una letra con tilde puede ser de un nombre). Exportada para su cepo.
+ */
+export function formaValor(v: string): string {
   const cat: string[] = []
   if (/[A-Za-z]/.test(v)) cat.push('letras')
   if (/[0-9]/.test(v)) cat.push('dígitos')
   if (/\s/.test(v)) cat.push('espacios')
-  if (/[^A-Za-z0-9\s]/.test(v)) cat.push('símbolos')
+  const simbolos = [...new Set(v.match(/[!-/:-@[-`{-~]/g) ?? [])].sort().join('')
+  if (simbolos) cat.push(`símbolos «${simbolos}»`)
+  if (/[^\x00-\x7F]/.test(v)) cat.push('no-ASCII')
   return `longitud ${v.length}, ${cat.join('+') || 'vacío'}`
 }
 
@@ -198,7 +271,12 @@ function motivoRechazoRegla(r: AjaxValidacionAvance, u: URL, cuerpo: string | nu
   const falta = r.cuerpo.filter((k) => !ck.includes(k))
   if (falta.length) return `falta clave de cuerpo: ${listaClaves(falta, decl)}`
   for (const k of r.cuerpo) {
-    if (!r.valorCuerpo.test(cp.get(k) ?? '\u0000')) return `forma de valor de cuerpo no permitida en «${k}» (${formaValor(cp.get(k) ?? '')})`
+    if (!(r.valorCuerpoPorClave?.[k] ?? r.valorCuerpo).test(cp.get(k) ?? '\u0000')) return `forma de valor de cuerpo no permitida en «${k}» (${formaValor(cp.get(k) ?? '')})`
+  }
+  if (r.estricto === true) {
+    for (const k of r.cuerpo) if (RE_ACCION_REAL_TRAS_PREFIJO.test(cp.get(k) ?? '')) return `valor de cuerpo con acción final o dato bancario en «${k}»`
+    if ([...u.searchParams.entries()].some(([k, v]) => k !== 'resource' && RE_ACCION_REAL_TRAS_PREFIJO.test(`${k}=${v}`))) return 'query con acción final o dato bancario'
+    if (cuerpoLlevaAccionFinal(texto)) return 'cuerpo con acción final (inspección estricta)'
   }
   return null
 }
@@ -307,8 +385,21 @@ export const VENTANA_RED_AVANCE_MS = 20_000
 
 /**
  * ¿Puede ir a `url` una petición que no es GET durante la ventana del avance? Solo si su origen + ruta es EXACTAMENTE uno de
- * `endpoints`, sin query, fragmento ni credenciales (un `;jsessionid=` en la ruta tampoco casa: fail-closed). Pura.
+ * `endpoints`, sin query (salvo el cache-buster `?_ts=<cifras>` solo, 0.3.27), fragmento ni credenciales (un `;jsessionid=` en la ruta
+ * tampoco casa: fail-closed). Pura.
  */
+/**
+ * 0.3.22: NOMBRES de clave de la query para un mensaje del guard (nunca valores). Solo una clave con forma de identificador (empieza por
+ * letra, ≤40, sin tiras de ≥4 cifras: un NIF/NIE o un id largo puesto como clave no sale); el resto, «?». Como mucho 6, sin repetir.
+ * 0.3.26 (explorador, Fidelidade real 24fd7252 del 31/10/2026: «claves ?» no dejaba decidir): también los nombres de framework con 1-2 guiones
+ * bajos delante (`_ts`, `__EVENTTARGET`); la clave oculta dice solo su FORMA, sin longitud ni contenido: «?(cifras)», «?(vacía)» u «?(otra)».
+ * Solo diagnóstico: NO abre nada (la red sigue admitiendo solo destinos exactos sin query).
+ */
+export function clavesQueryDiagnostico(u: URL): string {
+  const forma = (k: string) => (k === '' ? '?(vacía)' : /^\d+$/.test(k) ? '?(cifras)' : '?(otra)')
+  return [...new Set([...u.searchParams.keys()].map((k) => (/^_{0,2}[A-Za-z][A-Za-z0-9_]{0,39}$/.test(k) && !/\d{4,}/.test(k) ? k : forma(k))))].slice(0, 6).join(',')
+}
+
 export function destinoAvancePermitido(url: string, endpoints: readonly string[]): boolean {
   let u: URL
   try {
@@ -316,8 +407,41 @@ export function destinoAvancePermitido(url: string, endpoints: readonly string[]
   } catch {
     return false
   }
-  if (u.username || u.password || u.search || u.hash) return false
+  if (u.username || u.password || u.hash) return false
+  if (u.search && !esQuerySoloCacheBuster(u.search)) return false
   return endpoints.includes(`${u.origin}${u.pathname}`)
+}
+
+/**
+ * 0.3.27 (explorador, Fidelidade Vivienda real 31/10/2026: «POST … /OPI_ES_Vivienda/ClientData.aspx [ruta en la lista, pero con query: claves
+ * _ts]»): la query cuyo ÚNICO parámetro es el cache-buster `_ts` con valor de SOLO cifras (1-17) no impide casar la ruta exacta de la lista.
+ * Cualquier otra clave, `_ts` repetido, vacío o no numérico, o con `=` codificado, sigue fuera (fail-closed). La ruta sigue teniendo que ser
+ * EXACTA de la lista y el cuerpo se inspecciona igual. Pura.
+ */
+export function esQuerySoloCacheBuster(search: string): boolean {
+  return /^\?_ts=\d{1,17}$/.test(search)
+}
+
+/**
+ * TARIFICAR HOGAR DE MAPFRE (adaptador mapfre hogar 0.3.2, 02/11/2026). «SIGUIENTE» en «Datos de riesgo - Hogar» lanza la XHR que CALCULA el
+ * precio, y Mapfre la sirve bajo `/api/emision/…` (todo su portal se llama «emisión»). Excepción ESTRECHA: SOLO este origen + ruta EXACTOS
+ * (sin `;jsessionid`, sin codificar, sin credenciales ni fragmento) dejan de casar con el patrón por la RUTA. La query se sigue mirando
+ * (`pareceEmision`/`parametrosParecenEmision` sobre ella) y, si nombra una acción real (emitir, contratar, confirmar, firma, pago, IBAN,
+ * póliza…), no se neutraliza nada. El cuerpo se inspecciona igual que siempre. Cualquier otra ruta bajo `/api/emision/` sigue bloqueada.
+ */
+export const URL_TARIFICACION_PROYECTO_MAPFRE = 'https://wmediadores.mapfre.com/PortalMediadores_fe-web/api/emision/proyectos/tarificacion'
+export function neutralizarTarificacionProyectoMapfre(url: string): string | null {
+  let u: URL
+  try {
+    u = new URL(url)
+  } catch {
+    return null
+  }
+  if (u.username || u.password || u.hash) return null
+  if (`${u.origin}${u.pathname}` !== URL_TARIFICACION_PROYECTO_MAPFRE) return null
+  const query = decodificarUrlTolerante(u.search.replace(/\+/g, ' ')).normalize('NFD').replace(/[̀-ͯ]/g, '')
+  if (RE_ACCION_REAL_TRAS_PREFIJO.test(query) || /poliz/i.test(query)) return null
+  return `${u.origin}/__tarificacion_proyecto_mapfre__${u.search}`
 }
 
 export async function instalarGuardEmision(context: BrowserContext): Promise<GuardEmision> {
@@ -339,6 +463,9 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
   // `entrarTurismosGenerali`: mientras dura, una navegación GET a www.generali.es cuyo ÚNICO motivo de bloqueo sean los
   // sustantivos «emisión»/«contratación» del menú pasa (`urlTurismosGeneraliPermitida`). Nada más se relaja.
   let turismosGenerali = 0
+  // Rutas de APLICACIÓN tolerables de la entrada (Mapfre NSE `/EVT21_NSE_FWEB/app/emision/`, decisión de Alberto 28/10/2026): solo
+  // las fija `tolerarRutasApp`; su prefijo no cuenta como emisión en la URL (query y cuerpo se miran igual).
+  let tolerables: readonly RutaTolerable[] = []
   // La ventana se cierra en cuanto el MARCO PRINCIPAL navega a otro origen (el SSO redirige al portal tras el login: el
   // portal ya no está en la fase de login). `request` también salta en cada salto de una redirección (route no lo ve).
   context.on('request', (req) => {
@@ -370,8 +497,20 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
       // «Generar Proyecto» de Mapfre (22/10/2026): su ventana abre SOLO su patrón (`permitirGenerarProyectoMapfre`), no Archivar/store.
       const enProyectoMapfre = enGuardado && gv.proyectoMapfre
       const op = { permitirAceptar: fases.aceptarEnVuelo() || enLista, permitirGuardarPresupuesto: enGuardado && !enProyectoMapfre, permitirGenerarProyectoMapfre: enProyectoMapfre }
-      const porUrl = pareceEmision(url, op) || parametrosParecenEmision(url, op)
-      const porCuerpo = !porUrl && noGet && parametrosParecenEmision(cuerpoDe(req), op)
+      const neutra = neutralizarRutaTolerable(url, tolerables) ?? url
+      // Tarificación de hogar de Mapfre (ruta EXACTA, `neutralizarTarificacionProyectoMapfre`): solo su RUTA deja de contar; query y cuerpo igual.
+      const neutraUrl = neutralizarTarificacionProyectoMapfre(url) ?? neutra
+      const porUrl = pareceEmision(neutraUrl, op) || parametrosParecenEmision(url, op)
+      // Ruta TOLERADA (Mapfre NSE): además, los NOMBRES de parámetro y el botón JSF del cuerpo no pueden nombrar una acción real.
+      const porCuerpoGeneral = !porUrl && noGet && parametrosParecenEmision(cuerpoDe(req), op)
+      const detalleTolerado = !porUrl && !porCuerpoGeneral && noGet && neutra !== url ? detalleCuerpoToleradoConAccionReal(cuerpoDe(req), url) : null
+      // 0.3.13: destinos POST EXTRA del avance (índice ≥ 1, p. ej. /drvp00/main/control.do): inspección estricta del cuerpo (también
+      // confirmar/firmar/pagar/IBAN en claves de acción o nombres financieros). El destino primario conserva el criterio de siempre.
+      // Revisión 0.3.17: un destino que es A LA VEZ primario y extra (el «Aceptar» sin id de drvp00 en el marco `control.do`) también
+      // pasa la inspección estricta: estar en la lista de extras basta.
+      const enExtraAvance = av !== null && enLista && noGet && destinoAvancePermitido(url, av.endpoints.slice(1))
+      const porCuerpoExtra = !porUrl && enExtraAvance && cuerpoLlevaAccionFinal(cuerpoDe(req), op)
+      const porCuerpo = !porUrl && noGet && parametrosParecenEmision(cuerpoDe(req), op) || detalleTolerado !== null || porCuerpoExtra
       if (porUrl && !porCuerpo && !noGet && Date.now() < turismosGenerali && av === null && gv === null && Date.now() >= ventanaHasta && urlTurismosGeneraliPermitida(url)) {
         // Navegación del ÚNICO clic de «TURISMOS (RAMO UV)» (ventana abierta por entrarTurismosGenerali): GET a Generali con
         // «emisión»/«contratación» como sustantivo de menú y nada más que case con el patrón. Un POST, otro origen o cualquier
@@ -386,7 +525,12 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
       }
       if (porUrl || porCuerpo) {
         // El cuerpo NO va al mensaje (lleva datos del formulario): solo la URL y que fue por el cuerpo.
-        violacion ??= new EmisionBloqueadaError('url', porCuerpo ? `${url} [acción en el cuerpo de la petición]` : url)
+        // En la ruta TOLERADA (Mapfre NSE) se dice QUÉ parámetro casó y con qué palabra de la lista (nunca su valor).
+        // 0.3.22: TODOS los nombres que casan (solo nombres, nunca valores), para no ir parámetro a parámetro ronda a ronda.
+        // 0.3.23 (real 30/10/2026: la lista salía cortada): cada nombre con la CLASE de su valor (vacío/false/true/num/otro) y el detalle
+        // va DELANTE y FUERA del recorte de 200 del texto (tercer argumento): solo la URL se recorta.
+        const que = detalleTolerado ? textoDetalleCuerpo(detalleTolerado) : ''
+        violacion ??= que ? new EmisionBloqueadaError('url', url, que) : new EmisionBloqueadaError('url', porCuerpo ? `${url} [acción en el cuerpo de la petición]` : url)
         await route.abort('blockedbyclient')
         return
       }
@@ -415,6 +559,12 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
           const u = new URL(url)
           const resource = u.searchParams.get('resource')
           destino = `${u.origin}${u.pathname}${resource && /^[A-Za-z0-9_.]{1,120}$/.test(resource) ? ` (resource=${resource})` : ''}`
+          // 0.3.22 (Fidelidade real, 530656a4…: el destino ERA el del formulario y cayó igual): si origen+ruta están en la lista, lo que sobra
+          // es la query (o credenciales): se dice, solo con los NOMBRES de clave (nunca valores).
+          if (!resource && av.endpoints.includes(`${u.origin}${u.pathname}`)) {
+            const claves = clavesQueryDiagnostico(u)
+            destino += u.search ? ` [ruta en la lista, pero con query: claves ${claves || '?'}]` : ' [ruta en la lista, pero con credenciales]'
+          }
         } catch {}
         // Diagnóstico de un AJAX rechazado (0.7.9): QUÉ no cuadró, solo con nombres de claves y categorías, nunca valores.
         const motivo = destino.includes('AJAXServlet') ? motivoAjaxRechazado(req.method(), url, cuerpoDe(req), av.ajax) : null
@@ -446,6 +596,7 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
       if (violacion) throw violacion
     },
   }
+  FIJAR_TOLERABLES.set(g, (r) => { tolerables = r })
   ABRIR_VENTANA.set(g, (ms) => { ventanaHasta = Date.now() + Math.min(ms, VENTANA_RED_EMISION_MS) })
   ABRIR_AVANCE.set(g, (hasta, endpoints, ajax = []) => { avance = { hasta: Math.min(hasta, Date.now() + VENTANA_RED_AVANCE_MS), endpoints, ajax } })
   ABRIR_GUARDADO.set(g, (origen, proyectoMapfre = false) => { guardado = { hasta: Date.now() + VENTANA_RED_GUARDADO_MS, origen, proyectoMapfre } })
@@ -457,6 +608,69 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
     rechazo: () => rechazoLogin,
   })
   return g
+}
+
+const FIJAR_TOLERABLES = new WeakMap<GuardEmision, (r: readonly RutaTolerable[]) => void>()
+const RUTAS_TOLERABLES = new WeakMap<GuardEmision, readonly RutaTolerable[]>()
+
+/**
+ * RUTAS DE APLICACIÓN TOLERABLES del trabajo (las de su entrada de exploración, `rutasAppTolerablesDe`). Solo origen https sin ruta
+ * y prefijo de ruta absoluto acabado en «/». Desde ese momento, en ESTE guard, el prefijo exacto deja de contar como emisión en la
+ * URL de red y en los href de los botones (`neutralizarRutaTolerable`); textos, onclick, query y cuerpos se miran como siempre.
+ */
+export function tolerarRutasApp(guard: GuardEmision, reglas: readonly RutaTolerable[]): void {
+  const fijar = FIJAR_TOLERABLES.get(guard)
+  if (!fijar) throw new EmisionBloqueadaError('fase', 'guard sin rutas tolerables')
+  for (const r of reglas) {
+    if (!/^https:\/\/[a-z0-9.-]+$/.test(r.origen) || !/^\/[\w./-]+\/$/.test(r.prefijo)) throw new EmisionBloqueadaError('fase', 'ruta tolerable no válida')
+  }
+  const copia = Object.freeze(reglas.map((r) => Object.freeze({ origen: r.origen, prefijo: r.prefijo })))
+  RUTAS_TOLERABLES.set(guard, copia)
+  fijar(copia)
+}
+/**
+ * Posiciones de `descripcion()` que son URL (href del control, formaction y href de los <a> ancestros): las ÚNICAS que se neutralizan.
+ * Texto, aria, title, value, id, name, onclick, ng-click… nunca (aunque contengan una URL). Lo vigila un test contra `descripcion`.
+ */
+export const INDICES_URL_DESCRIPCION: readonly number[] = Object.freeze([6, 8, 15, 19, 23])
+const conRutasTolerables = (guard: GuardEmision, desc: readonly (string | null)[]): (string | null)[] => {
+  const reglas = RUTAS_TOLERABLES.get(guard) ?? []
+  if (reglas.length === 0) return [...desc]
+  // 0.3.6: si el TEXTO/atributos del control (lo que no es URL) nombran una acción real (emitir, contratar, confirmar, firma, pago,
+  // formalizar, grabar, IBAN…), no se tolera NADA: la URL se mira entera. Una excepción por texto exacto (menú «Oferta / Contratación»)
+  // la quita el llamante poniendo ese descriptor a `null` (sin mover posiciones).
+  const plano = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  if (desc.some((d, i) => !INDICES_URL_DESCRIPCION.includes(i) && typeof d === 'string' && RE_ACCION_REAL_TRAS_PREFIJO.test(plano(d)))) return [...desc]
+  return desc.map((d, i) => (INDICES_URL_DESCRIPCION.includes(i) ? neutralizarRutaTolerable(d, reglas) ?? null : d))
+}
+/** Solo para tests: la descripción que ve el guard de un control. */
+export const descripcionParaTest = (boton: Locator) => descripcion(boton)
+
+const NEUTRALIZACIONES_ONCLICK = new WeakMap<GuardEmision, readonly NeutralizacionOnclick[]>()
+/**
+ * 0.3.19: reglas de NEUTRALIZACIÓN de onclick de la entrada del trabajo (`neutralizacionesOnclickDe`, Mapfre NSE «Siguiente >>»). Solo
+ * origen https sin ruta, prefijo de ruta absoluto acabado en «/» y subcadena con forma de identificador. Desde ese momento, en `pulsar()`,
+ * si el control VIVO es EXACTAMENTE el de una regla (origen, ruta, tag, id, name, texto), su onclick se mira sin esa subcadena
+ * (`onclickNeutralizado`, la MISMA función que el validador); el resto de la descripción y la red se miran igual.
+ */
+export function neutralizarOnclicksEntrada(guard: GuardEmision, reglas: readonly NeutralizacionOnclick[]): void {
+  for (const r of reglas) {
+    if (!/^https:\/\/[a-z0-9.-]+$/.test(r.origen) || !/^\/[\w./-]+\/$/.test(r.prefijoRuta) || r.prefijoRuta.includes('..') || !/^[A-Za-z_$][\w$]{5,100}$/.test(r.subcadena)) {
+      throw new EmisionBloqueadaError('fase', 'neutralización de onclick no válida')
+    }
+  }
+  NEUTRALIZACIONES_ONCLICK.set(guard, Object.freeze(reglas.map((r) => Object.freeze({ ...r }))))
+}
+/** `desc` con el onclick PROPIO del control (índice 7) neutralizado si el control vivo es el de una regla; si no, tal cual. Solo lee. */
+async function conOnclickNeutralizado(guard: GuardEmision, boton: Locator, desc: readonly (string | null)[]): Promise<(string | null)[]> {
+  const reglas = NEUTRALIZACIONES_ONCLICK.get(guard) ?? []
+  if (reglas.length === 0 || typeof desc[7] !== 'string') return [...desc]
+  const vivo = await boton
+    .evaluate((el) => ({ tag: el.tagName.toLowerCase(), id: el.getAttribute('id'), name: el.getAttribute('name'), origen: el.ownerDocument.location.origin, ruta: el.ownerDocument.location.pathname }))
+    .catch(() => null)
+  if (!vivo) return [...desc]
+  const neutro = onclickNeutralizado(reglas, { ...vivo, texto: desc[0], onclick: desc[7] })
+  return neutro === null ? [...desc] : desc.map((d, i) => (i === 7 ? neutro : d))
 }
 
 /** Tope de la ventana de red del LOGIN ASISTIDO: un envío del formulario del SSO y su carga. */
@@ -633,12 +847,65 @@ export async function pulsar(boton: Locator, guard: GuardEmision): Promise<void>
   await exigirSinCuentaBancaria(boton.page())
   // La MISMA descripción que el resto de puertas: control + ng-click + manejadores de sus ancestros cercanos.
   const desc = await descripcion(boton)
-  comprobarBoton(desc)
+  // 0.3.19: la subcadena exacta del onclick de UN control exacto de la entrada (Mapfre NSE), antes de mirar nada (ver `neutralizarOnclicksEntrada`).
+  comprobarBoton(conRutasTolerables(guard, await conOnclickNeutralizado(guard, boton, desc)))
   // Generali (26/10/2026): un «Confirmar» de www.generali.es NUNCA por la vía genérica; solo por sus puertas acotadas
   // (`pulsarConfirmarVehiculoGenerali`, `pulsarConfirmarDatosPersonasGenerali`).
   if (confirmarDeGenerali(desc, await boton.evaluate(() => location.href).catch(() => ''))) throw new EmisionBloqueadaError('boton', 'Confirmar (Generali: solo por su puerta del guard)')
   await boton.click()
   guard.comprobar()
+}
+
+/**
+ * 0.3.25 (Fidelidade real 30/10/2026, 56b4b52c…, «Datos Cliente - Nombre y régimen»): el mapa marcó PROPIETARIO ANTES de que la IA rellenara el
+ * nombre; el portal (OutSystems) calcula si habilita el avance en el `change` del radio, así que el botón se quedó deshabilitado, y volver a
+ * pulsar un radio ya marcado no emite `change`. Tras el clic del explorador POR `pulsar` (que ya pasó este nodo por el guard), aquí se repite la
+ * MISMA barrera sobre el nodo vivo (fase, frontera bancaria, descripción completa con `comprobarBoton`) y solo entonces se emiten `input`+`change`
+ * burbujeantes, SOLO si es un `<input type=radio>` conectado, marcado y no deshabilitado. Nunca `click`/`submit`/teclado. La red que provoque
+ * pasa por el guard de contexto de siempre. Devuelve `cambio` | `no_aplica` | `desaparecido` (al log, sin valores); una violación LANZA.
+ */
+export async function redispararCambioMarcado(control: Locator, guard: GuardEmision): Promise<'cambio' | 'no_aplica' | 'desaparecido'> {
+  if ((await control.count().catch(() => 0)) === 0) return 'desaparecido'
+  guard.comprobar()
+  await exigirSinCuentaBancaria(control.page())
+  const desc = await descripcion(control)
+  comprobarBoton(conRutasTolerables(guard, await conOnclickNeutralizado(guard, control, desc)))
+  // Revisión de seguridad (30/10/2026): `input`/`change` BURBUJEAN y `descripcion` solo ve onclick/ng-click/href (3 ancestros). Aquí se leen
+  // `onchange`/`oninput` del radio y de TODOS sus ancestros (atravesando shadow hosts) y del <form> (también el de `form=`); cualquiera con acción
+  // final LANZA, y un <form> con onchange/oninput/onsubmit LANZA siempre. El mensaje nunca lleva el texto del manejador (podría tener datos).
+  const man = await control
+    .evaluate((n) => {
+      // Sin funciones con nombre dentro de `evaluate` (tsx/esbuild inyecta `__name`, que no existe en la página).
+      const out: { tag: string; ev: string; v: string }[] = []
+      const f = (n as HTMLInputElement).form ?? n.closest('form')
+      const nodos: Element[] = []
+      for (let p: Element | null = n; p; p = p.parentElement ?? ((p.getRootNode() as ShadowRoot).host ?? null)) nodos.push(p)
+      if (f) nodos.push(f)
+      for (const e of nodos) {
+        for (const ev of ['onchange', 'oninput']) {
+          const v = e.getAttribute(ev)
+          if (v !== null) out.push({ tag: e.tagName.toLowerCase(), ev, v })
+        }
+      }
+      return { manejadores: out, formConManejador: !!f && ['onchange', 'oninput', 'onsubmit'].some((a) => f.hasAttribute(a)) }
+    }, undefined, { timeout: 2_000 })
+    .catch(() => null)
+  if (man === null) return 'desaparecido'
+  // `pareceEmision` además: RE_ACCION_REAL_TRAS_PREFIJO no casa «emision()» (no contiene «emit»).
+  const malo = man.manejadores.find((m) => RE_ACCION_REAL_TRAS_PREFIJO.test(m.v.normalize('NFD').replace(/[̀-ͯ]/g, '')) || pareceEmision(m.v))
+  if (malo) throw new EmisionBloqueadaError('boton', `redisparo de cambio: ${malo.ev} de <${malo.tag}> con acción final`)
+  if (man.formConManejador) throw new EmisionBloqueadaError('fase', 'redisparo de cambio: el <form> del radio tiene onchange/oninput/onsubmit (no se redispara)')
+  const r = await control
+    .evaluate((n) => {
+      const c = n as HTMLInputElement
+      if (!c.isConnected || c.tagName !== 'INPUT' || (c.type || '').toLowerCase() !== 'radio' || !c.checked || c.disabled) return 'no_aplica' as const
+      c.dispatchEvent(new Event('input', { bubbles: true }))
+      c.dispatchEvent(new Event('change', { bubbles: true }))
+      return 'cambio' as const
+    }, undefined, { timeout: 2_000 })
+    .catch(() => 'desaparecido' as const)
+  guard.comprobar()
+  return r
 }
 
 /** ¿Es un «Confirmar» (texto/valor/aria/title EXACTO, sin mayúsculas/tildes) de un marco de www.generali.es? PURA. */
@@ -733,6 +1000,19 @@ async function descripcion(boton: Locator, alContenedor = false): Promise<(strin
           p = p.parentElement ?? ((p.getRootNode() as ShadowRoot).host ?? null)
         }
         return out
+      })(),
+      // LABEL (revisión de seguridad 28/10/2026): pulsar una etiqueta ACTIVA su control (el radio oculto de ePAC, por `for` o por
+      // `<x>_label` → `#<x>`): el id/name/value/onclick/onchange de ESE control también se ejecutan y el patrón los tiene que ver.
+      // `value` solo de casillas/opciones (catálogo): el de un campo de texto podría ser un dato y la descripción llega a mensajes.
+      ...(() => {
+        if (h.tagName !== 'LABEL') return [] as (string | null)[]
+        const l = base as HTMLLabelElement
+        let c: Element | null = l.control ?? null
+        if (!c && l.id && /_label$/.test(l.id)) c = l.ownerDocument.getElementById(l.id.slice(0, -'_label'.length))
+        if (!c) return [] as (string | null)[]
+        const tipo = (c.getAttribute('type') ?? '').toLowerCase()
+        const conValor = c.tagName === 'INPUT' && ['checkbox', 'radio'].includes(tipo)
+        return [c.id || null, c.getAttribute('name'), conValor ? c.getAttribute('value') : null, c.getAttribute('onclick'), c.getAttribute('onchange')]
       })(),
     ]
   }, alContenedor)
@@ -931,11 +1211,11 @@ export async function pulsarAvancePestanaAutorizado(page: Page, guard: GuardEmis
  * Capitalizadas (o en MAYÚSCULAS) seguidas, con partículas «de/del/la/los/las/y» entre ellas, como posible nombre propio → «[nombre]».
  * Las frases normales («La fecha de expedición del carné es anterior…») no tienen dos capitalizadas seguidas y se conservan. Tope 200.
  */
-export function textoDialogoPortalSeguro(bruto: string): string {
+export function textoDialogoPortalSeguro(bruto: string, max = 200): string {
   const palabra = "\\p{Lu}[\\p{L}'’-]+"
   const nombre = new RegExp(`${palabra}(?:\\s+(?:(?:de|del|la|las|los|y)\\s+)?${palabra})+`, 'gu')
   const limpio = bruto.replace(/\s+/g, ' ').trim().replace(nombre, '[nombre]')
-  return redactarDatosPersonales(limpio).slice(0, 200)
+  return redactarDatosPersonales(limpio).slice(0, max)
 }
 
 /** Filas de ERROR del informe de incidencias del framework legado de ePAC (las de aviso no paran). */
@@ -979,6 +1259,18 @@ export const ENLACES_ENTRADA_AUTORIZADOS: Readonly<Record<string, readonly strin
     'Tarificación y Emisión (Acuerdos)',
     'Tarificación y Emisión',
   ]),
+  // Fidelidade (intranet de mediadores, Alberto 28/10/2026): ruta fija hasta el formulario de Vivienda. Ninguna de estas etiquetas casa con
+  // el patrón de emisión hoy; se listan igual para que el recorrido sea EXACTO, ordenado (`PREVIOS_ENTRADA`) y solo en su origen
+  // (`ORIGEN_ENTRADA`). «Simulación» es el botón rojo de la tarjeta «Fidelidade Vivienda» (simula = tarifica; no emite).
+  fidelidade: Object.freeze(['Oficina Virtual', 'Proyecto', 'Nuevo proyecto', 'Simulación']),
+})
+
+/** Origen EXACTO (https) en el que vale el enlace de entrada de una compañía; sin entrada aquí = sin restricción de origen (Mapfre). */
+export const ORIGEN_ENTRADA: Readonly<Record<string, string>> = Object.freeze({ fidelidade: 'https://mediadores.fidelidade.es' })
+
+/** Orden obligatorio de los enlaces de entrada de una compañía: cada clave solo se pulsa tras su valor (etiquetas normalizadas). */
+export const PREVIOS_ENTRADA: Readonly<Record<string, Readonly<Record<string, string>>>> = Object.freeze({
+  fidelidade: Object.freeze({ proyecto: 'oficina virtual', 'nuevo proyecto': 'proyecto', 'simulación': 'nuevo proyecto' }),
 })
 
 const textoEntrada = (t: string | null | undefined) => (t ?? '').normalize('NFC').replace(/\s+/g, ' ').trim().toLocaleLowerCase('es')
@@ -1008,14 +1300,93 @@ export async function pulsarEnlaceEntradaAutorizado(boton: Locator, guard: Guard
   }
   if ((await boton.count()) !== 1) throw new EmisionBloqueadaError('boton', 'enlace de entrada: no hay exactamente un control')
   const desc = await descripcion(boton)
-  const autorizado = textoEntrada(desc[0])
+  // 0.3.17: un botón `<input value=…>` o una imagen con `aria-label`/`title` no tiene texto propio: la etiqueta es la primera no vacía (value, aria-label, title).
+  // El texto EXACTO sigue siendo la única puerta; el resto de descripciones pasa por `comprobarBoton` como siempre.
+  const etiquetaVisible = (desc[0] ?? '').trim() !== '' ? desc[0] : [desc[3], desc[1], desc[2]].find((x) => (x ?? '').trim() !== '') ?? desc[0]
+  const autorizado = textoEntrada(etiquetaVisible)
   // El mensaje lleva el TEXTO EXACTO del elemento rechazado (llega a plataforma redactado): se desbloquea uno a uno.
-  if (!ENLACES_ENTRADA_AUTORIZADOS[compania].some((t) => textoEntrada(t) === autorizado)) throw new EmisionBloqueadaError('boton', String(desc[0] ?? ''))
+  if (!ENLACES_ENTRADA_AUTORIZADOS[compania].some((t) => textoEntrada(t) === autorizado)) throw new EmisionBloqueadaError('boton', String(etiquetaVisible ?? ''))
+  if (Object.hasOwn(ORIGEN_ENTRADA, compania)) {
+    let origen = ''
+    try {
+      const u = new URL(boton.page().url())
+      origen = u.username || u.password ? '' : u.origin
+      // Y el marco DEL BOTÓN (un iframe de otro origen con la misma etiqueta no vale aunque la página de arriba sea la buena).
+      const h = await boton.elementHandle({ timeout: 2_000 })
+      const marco = h ? await h.ownerFrame() : null
+      const m = marco ? new URL(marco.url()) : null
+      if (!m || m.username || m.password || m.origin !== origen) origen = ''
+    } catch { origen = '' }
+    if (origen !== ORIGEN_ENTRADA[compania]) throw new EmisionBloqueadaError('boton', `enlace de entrada de ${compania} fuera de ${ORIGEN_ENTRADA[compania]}`)
+  }
   const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
   const clave = `entrada:${autorizado}`
   if (usados.has(clave)) throw new EmisionBloqueadaError('fase', `el enlace de entrada «${String(desc[0] ?? '').trim()}» ya se usó en este trabajo`)
+  const previo = PREVIOS_ENTRADA[compania]?.[autorizado]
+  if (previo !== undefined && !usados.has(`entrada:${previo}`)) throw new EmisionBloqueadaError('fase', `el enlace de entrada «${String(desc[0] ?? '').trim()}» va después de «${previo}»`)
   comprobarBoton(desc.filter((d) => textoEntrada(d) !== autorizado))
   usados.add(clave)
+  AVANCES_USADOS.set(guard, usados)
+  await boton.click()
+  guard.comprobar()
+}
+
+/**
+ * «ACCESO A NSE» DE MAPFRE (28/10/2026, patinete): la página intermedia de la tarjeta «Patinetes» solo tiene ese enlace, con
+ * `href="javascript:abrirAplicacion('inicio.jsp', 'NUEVO SISTEMA DE EMISI%C3%93N');"` (abre la APLICACIÓN NSE, donde se tarifica;
+ * no emite). El ÚNICO camino para pulsarlo. Exige, en este orden: guard limpio y ventanas de red cerradas; fase de ENTRADA
+ * abierta; compañía `mapfre`; EXACTAMENTE un control; texto visible EXACTO «Acceso a NSE»; una vez por trabajo; y
+ * `comprobarBoton` sobre TODAS sus descripciones salvo la que sea EXACTAMENTE esa llamada (`esLanzadorAplicacionNseMapfre`):
+ * cualquier otro href/onclick/id con emisión, «Aceptar», «Contratar»… sigue bloqueando. La red sigue con el guard de siempre.
+ */
+export async function pulsarAccesoNseMapfre(boton: Locator, guard: GuardEmision, compania: string): Promise<void> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'acceso a NSE con la ventana de emisión, de avance o de guardado abierta')
+  if (ENTRADA_CERRADA.has(guard)) throw new EmisionBloqueadaError('fase', 'acceso a NSE fuera de la fase de entrada')
+  await exigirSinCuentaBancaria(boton.page())
+  if (compania !== 'mapfre') throw new EmisionBloqueadaError('boton', `acceso a NSE no autorizado para ${String(compania).slice(0, 40)}`)
+  if ((await boton.count()) !== 1) throw new EmisionBloqueadaError('boton', 'acceso a NSE: no hay exactamente un control')
+  const desc = await descripcion(boton)
+  if (textoEntrada(desc[0]) !== textoEntrada(TEXTO_ACCESO_NSE_MAPFRE)) throw new EmisionBloqueadaError('boton', String(desc[0] ?? ''))
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (usados.has('entrada:acceso_nse')) throw new EmisionBloqueadaError('fase', 'el acceso a NSE ya se usó en este trabajo')
+  comprobarBoton(desc.filter((d) => !esLanzadorAplicacionNseMapfre(d)))
+  usados.add('entrada:acceso_nse')
+  AVANCES_USADOS.set(guard, usados)
+  await boton.click()
+  guard.comprobar()
+}
+
+/** Entrada de menú de la aplicación NSE de Mapfre que lleva a las ofertas (MásPatín). Texto EXACTO. */
+export const TEXTO_MENU_OFERTA_NSE_MAPFRE = 'Oferta / Contratación'
+/** Ruta (prefijo) de la aplicación NSE de Mapfre (real 28/10/2026: `/EVT21_NSE_FWEB/inicio.jsp`). */
+const RUTA_APP_NSE_MAPFRE = '/EVT21_NSE_FWEB/'
+
+/**
+ * «OFERTA / CONTRATACIÓN» DEL MENÚ DE LA APLICACIÓN NSE DE MAPFRE (real 28/10/2026, patinete: primera pantalla tras «Acceso a NSE»).
+ * Su texto contiene «contrat» y el guard lo bloquea; es la entrada de menú a la OFERTA (donde se elige MásPatín), no un contrato.
+ * El ÚNICO camino para pulsarla. Exige: guard limpio y ventanas de red cerradas; fase de ENTRADA abierta; compañía `mapfre`; el
+ * control VIVO dentro de la aplicación NSE (ruta `/EVT21_NSE_FWEB/…` de SU documento); EXACTAMENTE un control; texto visible EXACTO
+ * «Oferta / Contratación»; una vez por trabajo; y `comprobarBoton` sobre todas sus descripciones salvo las que son EXACTAMENTE ese
+ * texto (un href/onclick/id con «contrat», emitir, pagar… sigue bloqueando). La red sigue con el guard de siempre.
+ */
+export async function pulsarMenuOfertaNseMapfre(boton: Locator, guard: GuardEmision, compania: string): Promise<void> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'menú NSE con la ventana de emisión, de avance o de guardado abierta')
+  if (ENTRADA_CERRADA.has(guard)) throw new EmisionBloqueadaError('fase', 'menú NSE fuera de la fase de entrada')
+  await exigirSinCuentaBancaria(boton.page())
+  if (compania !== 'mapfre') throw new EmisionBloqueadaError('boton', `menú NSE no autorizado para ${String(compania).slice(0, 40)}`)
+  if ((await boton.count()) !== 1) throw new EmisionBloqueadaError('boton', 'menú NSE: no hay exactamente un control')
+  const ruta = await boton.evaluate((el) => el.ownerDocument.location.pathname).catch(() => '')
+  if (!ruta.toUpperCase().startsWith(RUTA_APP_NSE_MAPFRE)) throw new EmisionBloqueadaError('boton', 'menú NSE: el control no está en la aplicación NSE')
+  const desc = await descripcion(boton)
+  const exacto = textoEntrada(TEXTO_MENU_OFERTA_NSE_MAPFRE)
+  if (textoEntrada(desc[0]) !== exacto) throw new EmisionBloqueadaError('boton', String(desc[0] ?? ''))
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (usados.has('entrada:menu_oferta_nse')) throw new EmisionBloqueadaError('fase', 'el menú «Oferta / Contratación» ya se usó en este trabajo')
+  // Posiciones INTACTAS (0.3.6, real 15:19): con `filter` el href se desplazaba de la posición 6 a la 5 y la tolerancia no lo veía.
+  comprobarBoton(conRutasTolerables(guard, desc.map((d) => (textoEntrada(d) === exacto ? null : d))))
+  usados.add('entrada:menu_oferta_nse')
   AVANCES_USADOS.set(guard, usados)
   await boton.click()
   guard.comprobar()
@@ -1264,7 +1635,7 @@ export async function cerrarAvisoTomadorMapfre(page: Page, guard: GuardEmision):
 }
 
 /** Clic con los diálogos NATIVOS del navegador descartados: si el portal abre uno, el trabajo cae (el robot no confirma). */
-async function clicSinDialogoNativo(page: Page, guard: GuardEmision, boton: Locator, que: string): Promise<void> {
+async function clicSinDialogoNativo(page: Page, guard: GuardEmision, boton: Locator, que: string, timeoutMs?: number): Promise<void> {
   let nativo: string | null = null
   const alDialogo = (d: Dialog) => {
     nativo ??= d.type()
@@ -1272,7 +1643,7 @@ async function clicSinDialogoNativo(page: Page, guard: GuardEmision, boton: Loca
   }
   page.on('dialog', alDialogo)
   try {
-    await boton.click()
+    await (timeoutMs === undefined ? boton.click() : boton.click({ timeout: timeoutMs }))
     await page.waitForTimeout(100)
     guard.comprobar()
     if (nativo) throw new EmisionBloqueadaError('fase', `${que}: el portal abrió un diálogo («${nativo}») y el robot no confirma`)
@@ -1414,6 +1785,60 @@ export async function pulsarContinuarMapfre(
   }
 }
 
+// ─────────── Mapfre NSEI · diálogo «Controles técnicos» tras «Continuar» (v0.8.47) ───────────
+
+/**
+ * CERRAR el diálogo «Controles técnicos» (`.controles-tecnicos-dialog`) que Mapfre abre al rechazar el «Continuar» desde «Datos
+ * básicos» (Código NNN). Exige: guard limpio y ventanas de red cerradas; EXACTAMENTE un diálogo visible cuyo texto es el de
+ * controles técnicos; EXACTAMENTE un botón visible de texto ENTERO «Cerrar» (nada más), que pase `comprobarBoton` SIN «Aceptar»
+ * permitido; como mucho dos veces por trabajo. Devuelve el texto del diálogo (lo sanea quien llama). El diálogo tiene que cerrarse.
+ */
+export async function cerrarControlesTecnicosMapfre(page: Page, guard: GuardEmision): Promise<string> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', '«Controles técnicos» con una ventana de red abierta')
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  const clave = usados.has('mapfre:controles_tecnicos:1') ? 'mapfre:controles_tecnicos:2' : 'mapfre:controles_tecnicos:1'
+  if (usados.has(clave)) throw new EmisionBloqueadaError('fase', 'el diálogo «Controles técnicos» de Mapfre ya se cerró dos veces en este trabajo')
+  await exigirSinCuentaBancaria(page)
+  const dialogos = page.locator(SEL_DIALOGO_CONTROLES_TECNICOS).locator('visible=true')
+  if ((await dialogos.count()) !== 1) throw new ErrorTarificador('portal', 'mapfre: no hay exactamente un diálogo «Controles técnicos» visible')
+  const dialogo = dialogos.first()
+  const texto = await dialogo.evaluate((e) => (e as HTMLElement).innerText ?? e.textContent ?? '')
+  if (!esTextoControlesTecnicos(texto)) throw new ErrorTarificador('portal', 'mapfre: el diálogo no es el de «Controles técnicos» (no se cierra)')
+  const cierre = dialogo.locator('button, [role="button"], input[type="button"], input[type="submit"]').locator('visible=true').filter({ hasText: /^\s*Cerrar\s*$/ })
+  if ((await cierre.count()) !== 1) throw new ErrorTarificador('portal', 'mapfre: el diálogo «Controles técnicos» no tiene exactamente un botón «Cerrar»')
+  const desc = await descripcion(cierre)
+  if (sinTildesMayus(desc[0]) !== 'CERRAR') throw new EmisionBloqueadaError('boton', String(desc[0] ?? ''))
+  comprobarBoton(desc)
+  usados.add(clave)
+  AVANCES_USADOS.set(guard, usados)
+  await clicSinDialogoNativo(page, guard, cierre, 'controles técnicos')
+  const hasta = Date.now() + ESPERA_CIERRE_DIALOGO_MAPFRE_MS
+  for (;;) {
+    guard.comprobar()
+    if ((await page.locator(SEL_DIALOGO_CONTROLES_TECNICOS).locator('visible=true').count()) === 0) return texto
+    if (Date.now() >= hasta) throw new ErrorTarificador('portal', 'mapfre: el diálogo «Controles técnicos» no se cerró')
+    await page.waitForTimeout(200)
+  }
+}
+
+/**
+ * UN reintento del «Continuar» desde «Datos básicos», solo si el primero se usó y su rechazo fue el diálogo «Controles
+ * técnicos» YA cerrado en este trabajo (`cerrarControlesTecnicosMapfre`). Una vez por trabajo; ningún otro paso. Solo libera la
+ * marca de «usado» de ese paso: el resto de comprobaciones de `pulsarContinuarMapfre` (stepper, botón, `comprobarBoton`,
+ * red) se aplican íntegras al pulsar.
+ */
+export function rearmarContinuarMapfreTrasControlesTecnicos(guard: GuardEmision, paso: PasoContinuarMapfre): void {
+  guard.comprobar()
+  if (paso !== 'datosBasicos') throw new EmisionBloqueadaError('fase', `reintento de «Continuar» de Mapfre no autorizado desde «${String(paso).slice(0, 40)}»`)
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (!usados.has('mapfre:continuar:datosBasicos') || !usados.has('mapfre:controles_tecnicos:1')) throw new EmisionBloqueadaError('fase', 'reintento de «Continuar» de Mapfre sin rechazo previo de controles técnicos')
+  if (usados.has('mapfre:continuar_reintento')) throw new EmisionBloqueadaError('fase', 'el reintento de «Continuar» de Mapfre ya se usó en este trabajo')
+  usados.add('mapfre:continuar_reintento')
+  usados.delete('mapfre:continuar:datosBasicos')
+  AVANCES_USADOS.set(guard, usados)
+}
+
 // ─────────── Mapfre NSEI · diálogo «Club MAPFRE» tras calcular (grabación de Alberto, 15/10/2026) ───────────
 
 /** El diálogo que Mapfre abre sobre Coberturas tras «Continuar» desde Figuras. Solo lo nombra este fichero para PULSAR. */
@@ -1475,6 +1900,268 @@ export async function cerrarClubMapfre(page: Page, guard: GuardEmision): Promise
   }
 }
 
+// ─────────── Mapfre 0.8.49 · LEER las opciones del «producto comercial» de cada tarjeta de Coberturas (Alberto, 02/11/2026) ───────────
+// Cada `prima-producto` trae un `mat-select` de producto comercial. Se ABRE una vez por tarjeta y por trabajo, se LEEN los `mat-option` del overlay y se CIERRA con
+// Escape SIN elegir. Si al cerrar cambia el valor mostrado o la prima de la tarjeta → `ErrorSelectorComercialAlteradoMapfre` (el adaptador NO lo traga: aborta).
+// Cualquier otro fallo (selector ausente, deshabilitado, overlay que no aparece) es un `ErrorTarificador` blando que el adaptador convierte en aviso. NO se elige
+// ninguna opción ni se recalcula. TARIFICAR ≠ EMITIR: guard limpio, sin ventanas de red, sin cuenta bancaria y `comprobarBoton` antes del clic.
+
+export const SEL_PRODUCTO_PRIMAS_MAPFRE = 'app-primas prima-producto, app-coberturas prima-producto'
+export type OpcionesComercialesMapfre = { opciones: string[]; seleccionada: string | null }
+
+/** El selector comercial cambió de valor o la prima se movió tras abrirlo/cerrarlo (o el panel no se cerró): se aborta el trabajo. */
+export class ErrorSelectorComercialAlteradoMapfre extends ErrorTarificador {
+  constructor(que: string) {
+    super('portal', `mapfre: selector comercial alterado (${que})`)
+    this.name = 'ErrorSelectorComercialAlteradoMapfre'
+  }
+}
+
+const MAX_OPCIONES_COMERCIALES_MAPFRE = 20
+const ESPERA_PANEL_COMERCIAL_MS = 4_000
+const compactarTexto = (t: string | null | undefined) => (t ?? '').replace(/\s+/g, ' ').trim()
+
+export async function leerOpcionesComercialesMapfre(page: Page, guard: GuardEmision, indice: number): Promise<OpcionesComercialesMapfre> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'selector comercial de Mapfre con una ventana de red abierta')
+  if (!Number.isInteger(indice) || indice < 0 || indice > 20) throw new EmisionBloqueadaError('fase', 'selector comercial de Mapfre: índice de tarjeta fuera de rango')
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (!usados.has('mapfre:continuar:figuras')) throw new EmisionBloqueadaError('fase', 'selector comercial de Mapfre fuera de orden (antes de calcular las primas)')
+  const clave = `mapfre:comercial:${indice}`
+  if (usados.has(clave)) throw new EmisionBloqueadaError('fase', 'el selector comercial de esta tarjeta ya se abrió en este trabajo')
+  await exigirSinCuentaBancaria(page)
+  const tarjeta = page.locator(SEL_PRODUCTO_PRIMAS_MAPFRE).nth(indice)
+  if ((await tarjeta.count().catch(() => 0)) !== 1) throw new ErrorTarificador('portal', 'la tarjeta no está')
+  const select = tarjeta.locator('mat-select').first()
+  if ((await select.locator('visible=true').count().catch(() => 0)) !== 1) throw new ErrorTarificador('portal', 'selector ausente o no visible')
+  const [dis, multi, ctrl] = await select.evaluate((el) => [el.getAttribute('aria-disabled'), el.getAttribute('aria-multiselectable'), el.getAttribute('aria-controls') ?? el.getAttribute('aria-owns')] as const)
+  if (dis === 'true') throw new ErrorTarificador('portal', 'selector deshabilitado')
+  if (multi === 'true') throw new ErrorTarificador('portal', 'selector de selección múltiple')
+  const leerEstado = async () => ({
+    valor: compactarTexto(await select.locator('.mat-select-value-text, .mat-mdc-select-value-text').first().textContent({ timeout: 1_500 }).catch(() => null)),
+    prima: compactarTexto(await tarjeta.locator('.caja-primas p strong').first().textContent({ timeout: 1_500 }).catch(() => null)),
+  })
+  const antes = await leerEstado()
+  const desc = await descripcion(select)
+  comprobarBoton(desc)
+  usados.add(clave)
+  AVANCES_USADOS.set(guard, usados)
+  await clicSinDialogoNativo(page, guard, select, 'selector comercial de Mapfre')
+  const overlay = page.locator('.cdk-overlay-container')
+  const porId = ctrl ? page.locator(`[id="${ctrl.replace(/"/g, '')}"]`) : null
+  const ambito = porId && (await porId.count().catch(() => 0)) > 0 ? porId : overlay
+  const filas = ambito.locator('mat-option, [role="option"]')
+  const hasta = Date.now() + ESPERA_PANEL_COMERCIAL_MS
+  while ((await filas.locator('visible=true').count().catch(() => 0)) === 0 && Date.now() < hasta) {
+    guard.comprobar()
+    await page.waitForTimeout(100)
+  }
+  const leidas = await filas.locator('visible=true').evaluateAll((els) => els.map((e) => ({
+    t: ((e as HTMLElement).innerText || e.textContent || '').replace(/\s+/g, ' ').trim(),
+    s: e.getAttribute('aria-selected') === 'true' || /\bmat-(?:mdc-)?option-?selected\b|\bmdc-list-item--selected\b|\bmat-selected\b/.test(e.className),
+  }))).catch(() => [] as { t: string; s: boolean }[])
+  await page.keyboard.press('Escape').catch(() => undefined)
+  guard.comprobar()
+  const cierre = Date.now() + ESPERA_PANEL_COMERCIAL_MS
+  while ((await filas.locator('visible=true').count().catch(() => 0)) > 0 && Date.now() < cierre) await page.waitForTimeout(100)
+  if ((await filas.locator('visible=true').count().catch(() => 0)) > 0) throw new ErrorSelectorComercialAlteradoMapfre('el panel no se cerró con Escape')
+  await page.waitForTimeout(250)
+  guard.comprobar()
+  const despues = await leerEstado()
+  if (despues.valor !== antes.valor) throw new ErrorSelectorComercialAlteradoMapfre('cambió el producto seleccionado al cerrarlo')
+  if (despues.prima !== antes.prima) throw new ErrorSelectorComercialAlteradoMapfre('cambió la prima de la tarjeta al cerrarlo')
+  const utiles = leidas.filter((o) => o.t !== '').slice(0, MAX_OPCIONES_COMERCIALES_MAPFRE)
+  if (utiles.length === 0) throw new ErrorTarificador('portal', 'el panel de opciones no apareció')
+  const marcada = utiles.find((o) => o.s)
+  const porValor = antes.valor !== '' ? utiles.find((o) => o.t === antes.valor) : undefined
+  return { opciones: utiles.map((o) => o.t.slice(0, 60)), seleccionada: (marcada ?? porValor)?.t.slice(0, 60) ?? null }
+}
+
+// ─────────── Mapfre 0.8.50 · ELEGIR una variante comercial en UNA tarjeta de Coberturas y leer su prima (Alberto, 02/11/2026) ───────────
+// Alberto AUTORIZA tarificar las variantes «BASICar …» del selector comercial. Es un cambio de selección de PRECIO, no un avance ni una emisión: la opción se elige por
+// su texto EXACTO dentro de la lista CERRADA que `leerOpcionesComercialesMapfre` leyó de esa misma tarjeta (nunca por índice), con guard limpio, sin ventanas de red,
+// sin cuenta bancaria y `comprobarBoton` antes de CADA clic (el selector y la opción). El recálculo de la tarjeta NO abre ninguna ventana de red ni amplía la lista
+// blanca: sus peticiones pasan por el filtro normal del guard (emitir/contratar/firmar/pagar/IBAN siguen abortando). Tras elegir se espera el recálculo (diálogo/
+// spinner «Calculando») y se comprueba que NINGUNA OTRA tarjeta cambió y que no salió un diálogo desconocido (→ `ErrorSelectorComercialAlteradoMapfre`: el adaptador
+// aborta SOLO las variantes). Tope duro por trabajo: `MAX_CAMBIOS_COMERCIALES_MAPFRE` elecciones (incluidas las restauraciones de la selección original).
+
+export const MAX_CAMBIOS_COMERCIALES_MAPFRE = 8
+/** v0.8.51: «Calcular» (tarificación) pulsado tras elegir una variante cuando el portal no recalcula solo: uno por elección, tope por trabajo. */
+export const MAX_CALCULOS_COMERCIALES_MAPFRE = 8
+const CALCULOS_COMERCIALES = new WeakMap<GuardEmision, number>()
+const GRACIA_AUTORECALCULO_MS = 1_500
+const RE_ROTULO_CALCULAR = /^\s*(?:calculate\s*)?Calcular\s*$/i
+const ESPERA_RECALCULO_COMERCIAL_MS = 15_000
+const MIN_RECALCULO_COMERCIAL_MS = 1_200
+/** v0.8.58: un diálogo desconocido que desaparece solo antes de este plazo es el del recálculo (sin pulsar nada en él). */
+const ESPERA_DIALOGO_TRANSITORIO_MS = 4_000
+const CAMBIOS_COMERCIALES = new WeakMap<GuardEmision, number>()
+const SEL_DIALOGOS_COMERCIAL = 'mat-dialog-container, [role="dialog"], [role="alertdialog"]'
+const SEL_OCUPADO_COMERCIAL = 'mat-spinner, mat-progress-spinner, mat-progress-bar, .mat-progress-spinner, .mat-spinner, .mat-progress-bar'
+const RE_DIALOGO_CALCULANDO = /calculando|verificando|procesando|cargando|espere/i
+const RE_PRIMA_RESUELTA = /PRIMA\s+TOTAL\s*:\s*\d/i
+const RE_TARJETA_BLOQUEADA = /controles\s+t[eé]cnicos|impiden\s+tarificar|no\s+disponible|no\s+tarificable|consultar|consulte/i
+const escaparRegex = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/** Estado de una tarjeta tras elegir una variante: valor mostrado, texto de la caja de prima y texto de la tarjeta (sin PII), más si quedó sin prima (bloqueada). */
+export type EstadoTarjetaComercialMapfre = {
+  valor: string; textoPrima: string; textoTarjeta: string; bloqueada: boolean
+  /** v0.8.51: cómo se recalculó la prima: sola (diálogo/spinner/cambio de importe), tras pulsar «Calcular» (botón de tarificación, no de emisión) o NO se recalculó (sin botón). */
+  recalculo?: 'auto' | 'calcular' | 'ninguno'
+  /** v0.8.51: si «Calcular» recalculó OTRAS tarjetas con otra prima: «posición: 238,37 → 240,00» (solo importes). Un cambio de producto sí aborta. */
+  otrasPrimas?: string[]
+}
+
+export async function elegirOpcionComercialMapfre(page: Page, guard: GuardEmision, indice: number, opcion: string, permitidas: readonly string[]): Promise<EstadoTarjetaComercialMapfre> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'elegir variante comercial de Mapfre con una ventana de red abierta')
+  if (!Number.isInteger(indice) || indice < 0 || indice > 20) throw new EmisionBloqueadaError('fase', 'variante comercial de Mapfre: índice de tarjeta fuera de rango')
+  const texto = compactarTexto(opcion)
+  if (texto === '' || texto.length > 60 || !permitidas.some((p) => compactarTexto(p) === texto)) throw new EmisionBloqueadaError('fase', 'variante comercial de Mapfre: la opción no está en la lista cerrada leída de la tarjeta')
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (!usados.has('mapfre:continuar:figuras')) throw new EmisionBloqueadaError('fase', 'variante comercial de Mapfre fuera de orden (antes de calcular las primas)')
+  if (!usados.has(`mapfre:comercial:${indice}`)) throw new EmisionBloqueadaError('fase', 'variante comercial de Mapfre: la lista de opciones de esa tarjeta no se leyó antes')
+  const hechos = CAMBIOS_COMERCIALES.get(guard) ?? 0
+  if (hechos >= MAX_CAMBIOS_COMERCIALES_MAPFRE) throw new EmisionBloqueadaError('fase', 'variantes comerciales de Mapfre: tope de cambios de selección por trabajo agotado')
+  await exigirSinCuentaBancaria(page)
+  const tarjetas = page.locator(SEL_PRODUCTO_PRIMAS_MAPFRE)
+  const tarjeta = tarjetas.nth(indice)
+  if ((await tarjeta.count().catch(() => 0)) !== 1) throw new ErrorTarificador('portal', 'la tarjeta no está')
+  const select = tarjeta.locator('mat-select').first()
+  if ((await select.locator('visible=true').count().catch(() => 0)) !== 1) throw new ErrorTarificador('portal', 'selector ausente o no visible')
+  const [dis, multi, ctrl] = await select.evaluate((el) => [el.getAttribute('aria-disabled'), el.getAttribute('aria-multiselectable'), el.getAttribute('aria-controls') ?? el.getAttribute('aria-owns')] as const)
+  if (dis === 'true') throw new ErrorTarificador('portal', 'selector deshabilitado')
+  if (multi === 'true') throw new ErrorTarificador('portal', 'selector de selección múltiple')
+  const leerTodas = () => tarjetas.evaluateAll((els) => els.map((e) => ({
+    valor: ((e.querySelector('.mat-select-value-text, .mat-mdc-select-value-text')?.textContent) ?? '').replace(/\s+/g, ' ').trim(),
+    prima: ((e.querySelector('.caja-primas p strong')?.textContent) ?? '').replace(/\s+/g, ' ').trim(),
+    texto: (((e as HTMLElement).innerText || e.textContent) ?? '').replace(/\s+/g, ' ').trim().slice(0, 1500),
+  })))
+  const antes = await leerTodas()
+  if (antes.length <= indice) throw new ErrorTarificador('portal', 'la tarjeta no está')
+  // v0.8.58 (run real 457d81a4): la tarjeta YA muestra la opción pero SIN importe (recálculo interrumpido) → no se vuelve a elegir: se va directo a la espera, que pulsa
+  // «Calcular» (tarificación, tope propio) si el portal no recalcula. Con importe o bloqueada, como antes: no se toca nada.
+  const yaElegida = antes[indice]!.valor === texto
+  if (yaElegida && (RE_PRIMA_RESUELTA.test(antes[indice]!.prima) || RE_TARJETA_BLOQUEADA.test(antes[indice]!.texto))) return { valor: texto, textoPrima: antes[indice]!.prima, textoTarjeta: antes[indice]!.texto, bloqueada: !RE_PRIMA_RESUELTA.test(antes[indice]!.prima) && RE_TARJETA_BLOQUEADA.test(antes[indice]!.texto), recalculo: 'ninguno' }
+  const porId = ctrl ? page.locator(`[id="${ctrl.replace(/"/g, '')}"]`) : null
+  const ambito = porId && (await porId.count().catch(() => 0)) > 0 ? porId : page.locator('.cdk-overlay-container')
+  const filas = ambito.locator('mat-option, [role="option"]')
+  if (!yaElegida) {
+  comprobarBoton(await descripcion(select))
+  CAMBIOS_COMERCIALES.set(guard, hechos + 1)
+  await clicSinDialogoNativo(page, guard, select, 'selector comercial de Mapfre (elegir variante)')
+  const hastaPanel = Date.now() + ESPERA_PANEL_COMERCIAL_MS
+  while ((await filas.locator('visible=true').count().catch(() => 0)) === 0 && Date.now() < hastaPanel) {
+    guard.comprobar()
+    await page.waitForTimeout(100)
+  }
+  const cerrarPanel = async () => {
+    await page.keyboard.press('Escape').catch(() => undefined)
+    const fin = Date.now() + ESPERA_PANEL_COMERCIAL_MS
+    while ((await filas.locator('visible=true').count().catch(() => 0)) > 0 && Date.now() < fin) await page.waitForTimeout(100)
+  }
+  const visibles = filas.locator('visible=true')
+  const textos = await visibles.evaluateAll((els) => els.map((e) => ((e as HTMLElement).innerText || e.textContent || '').replace(/\s+/g, ' ').trim())).catch(() => [] as string[])
+  const exactas = textos.filter((t) => t === texto).length
+  if (textos.length === 0 || exactas !== 1) {
+    await cerrarPanel()
+    if ((await filas.locator('visible=true').count().catch(() => 0)) > 0) throw new ErrorSelectorComercialAlteradoMapfre('el panel no se cerró con Escape')
+    throw new ErrorTarificador('portal', textos.length === 0 ? 'el panel de opciones no apareció' : exactas === 0 ? 'la opción no está en el panel' : 'la opción está repetida en el panel')
+  }
+  const fila = visibles.filter({ hasText: new RegExp(`^\\s*${escaparRegex(texto)}\\s*$`) })
+  if ((await fila.count().catch(() => 0)) !== 1) { await cerrarPanel(); throw new ErrorTarificador('portal', 'la opción no se pudo localizar por su texto exacto') }
+  if (await fila.first().evaluate((e) => e.getAttribute('aria-disabled') === 'true' || /\bmat-(?:mdc-)?option-disabled\b|\bmdc-list-item--disabled\b/.test(e.className)).catch(() => true)) { await cerrarPanel(); throw new ErrorTarificador('portal', 'la opción está deshabilitada') }
+  comprobarBoton(await descripcion(fila))
+  await clicSinDialogoNativo(page, guard, fila, 'opción comercial de Mapfre')
+  }
+  // Espera del recálculo: diálogo/spinner «Calculando» → esperar; «Controles técnicos» → cerrar y marcar bloqueada; cualquier otro diálogo → ALTERADO.
+  let inicio = Date.now()
+  let hasta = inicio + ESPERA_RECALCULO_COMERCIAL_MS
+  let bloqueoDialogo = false
+  let firmaPrevia: string | null = null
+  let recalculoVisto = false
+  let calcularPulsado = false
+  let desconocidoDesde: number | null = null
+  for (;;) {
+    guard.comprobar()
+    const dialogos = await page.locator(SEL_DIALOGOS_COMERCIAL).locator('visible=true').evaluateAll((els) => els.map((e) => ((e as HTMLElement).innerText || e.textContent || '').replace(/\s+/g, ' ').trim())).catch(() => [] as string[])
+    let ocupado = (await page.locator(SEL_OCUPADO_COMERCIAL).locator('visible=true').count().catch(() => 0)) > 0
+    if (ocupado) recalculoVisto = true
+    let desconocido: string | null = null
+    for (const d of dialogos) {
+      if (esTextoControlesTecnicos(d)) {
+        if ((AVANCES_USADOS.get(guard) ?? new Set<string>()).has('mapfre:controles_tecnicos:2')) throw new ErrorSelectorComercialAlteradoMapfre('el diálogo «Controles técnicos» ya se cerró dos veces en este trabajo')
+        await cerrarControlesTecnicosMapfre(page, guard)
+        bloqueoDialogo = true
+        ocupado = true
+        recalculoVisto = true
+      } else if (d === '' || RE_DIALOGO_CALCULANDO.test(d)) { ocupado = true; recalculoVisto = true }
+      else desconocido ??= d
+    }
+    // v0.8.58 (run real 457d81a4: el diálogo ya NO estaba al leerlo justo después): un diálogo desconocido que se cierra SOLO en ≤ESPERA_DIALOGO_TRANSITORIO_MS es
+    // el del recálculo (texto que no casa) → cuenta como recálculo. Nada se pulsa en él; si sigue abierto pasada la espera, se aborta como antes, con su texto saneado.
+    if (desconocido !== null) {
+      desconocidoDesde ??= Date.now()
+      ocupado = true
+      if (Date.now() - desconocidoDesde >= ESPERA_DIALOGO_TRANSITORIO_MS) throw new ErrorSelectorComercialAlteradoMapfre(`apareció un diálogo desconocido tras elegir la variante: «${limpiarMensajePortalDiagnosticoHasta(desconocido, 60) || 's/texto'}»`)
+    } else if (desconocidoDesde !== null) { desconocidoDesde = null; recalculoVisto = true; hasta = Math.max(hasta, Date.now() + MIN_RECALCULO_COMERCIAL_MS * 2) }
+    if (!ocupado && (await filas.locator('visible=true').count().catch(() => 0)) === 0) {
+      const ahora = await leerTodas()
+      const t = ahora[indice]
+      if (t && t.valor !== antes[indice]!.valor && t.valor !== texto) throw new ErrorSelectorComercialAlteradoMapfre('la tarjeta muestra un producto distinto del elegido')
+      if (t && t.prima !== antes[indice]!.prima) recalculoVisto = true
+      // v0.8.51: elegir la opción puede NO recalcular la prima hasta pulsar «Calcular» (botón de tarificación). Pasada la gracia sin recálculo, se pulsa UNA vez por elección.
+      if (t && t.valor === texto && !recalculoVisto && !calcularPulsado && Date.now() - inicio >= GRACIA_AUTORECALCULO_MS) {
+        const boton = await localizarCalcularComercial(tarjeta, page)
+        if (boton) {
+          const hechosCalc = CALCULOS_COMERCIALES.get(guard) ?? 0
+          if (hechosCalc >= MAX_CALCULOS_COMERCIALES_MAPFRE) throw new EmisionBloqueadaError('fase', 'variantes comerciales de Mapfre: tope de «Calcular» por trabajo agotado')
+          comprobarBoton(await descripcion(boton))
+          CALCULOS_COMERCIALES.set(guard, hechosCalc + 1)
+          await clicSinDialogoNativo(page, guard, boton, 'Calcular (variante comercial de Mapfre)')
+          calcularPulsado = true
+          inicio = Date.now()
+          hasta = inicio + ESPERA_RECALCULO_COMERCIAL_MS
+          firmaPrevia = null
+          continue
+        }
+      }
+      const sinRecalculo = !recalculoVisto && !calcularPulsado
+      if (t && t.valor === texto && (RE_PRIMA_RESUELTA.test(t.prima) || bloqueoDialogo || RE_TARJETA_BLOQUEADA.test(t.texto)) && !/\{\{/.test(`${t.prima} ${t.texto}`) && Date.now() - inicio >= (sinRecalculo ? GRACIA_AUTORECALCULO_MS : MIN_RECALCULO_COMERCIAL_MS)) {
+        const firma = `${t.valor}|${t.prima}|${bloqueoDialogo}`
+        if (firma === firmaPrevia) {
+          if (ahora.length !== antes.length) throw new ErrorSelectorComercialAlteradoMapfre('cambió el número de tarjetas al elegir la variante')
+          const otrasPrimas: string[] = []
+          for (let j = 0; j < ahora.length; j++) {
+            if (j === indice) continue
+            if (ahora[j]!.valor !== antes[j]!.valor) throw new ErrorSelectorComercialAlteradoMapfre('cambió OTRA tarjeta al elegir la variante')
+            if (ahora[j]!.prima !== antes[j]!.prima) {
+              // Sin «Calcular» pulsado por el bot, otra tarjeta no tiene por qué cambiar: anomalía. Tras «Calcular» el portal puede recalcular todas: se anota y se sigue.
+              if (!calcularPulsado) throw new ErrorSelectorComercialAlteradoMapfre('cambió OTRA tarjeta al elegir la variante')
+              otrasPrimas.push(`tarjeta ${j + 1}: ${ahora[j]!.prima.replace(/[^\d.,€ ]/g, '').trim() || '(vacía)'} (antes ${antes[j]!.prima.replace(/[^\d.,€ ]/g, '').trim() || '(vacía)'})`)
+            }
+          }
+          return { valor: t.valor, textoPrima: t.prima, textoTarjeta: t.texto, bloqueada: bloqueoDialogo || !RE_PRIMA_RESUELTA.test(t.prima), recalculo: calcularPulsado ? 'calcular' : recalculoVisto ? 'auto' : 'ninguno', ...(otrasPrimas.length > 0 ? { otrasPrimas } : {}) }
+        }
+        firmaPrevia = firma
+      } else firmaPrevia = null
+    } else firmaPrevia = null
+    if (Date.now() >= hasta) throw new ErrorSelectorComercialAlteradoMapfre('el recálculo de la tarjeta no terminó a tiempo')
+    await page.waitForTimeout(400)
+  }
+}
+
+/** v0.8.51: el botón «Calcular» (icono `calculate`) de la tarjeta o, si no está en ella, de la pantalla de Coberturas: exactamente UNO visible con el rótulo exacto; si no, null. */
+async function localizarCalcularComercial(tarjeta: Locator, page: Page): Promise<Locator | null> {
+  for (const ambito of [tarjeta, page.locator('app-coberturas, app-primas')]) {
+    const c = ambito.locator('button, [role="button"], nx-button').filter({ hasText: RE_ROTULO_CALCULAR }).locator('visible=true')
+    const n = await c.count().catch(() => 0)
+    if (n === 1) return c.first()
+    if (n > 1) return null
+  }
+  return null
+}
+
 // ─────────── Diagnóstico de pantalla SIN datos personales (Mapfre 0.8.15 / Allianz Turismos 0.6.21, 22/10/2026) ───────────
 // Los guardados fallaban con «no aparece el botón» sin HTML guardado. Cuando no se encuentra el control, el motivo (benigno, el
 // precio no se toca) lleva ahora una lista corta de las ETIQUETAS de botones/enlaces a la vista, para saber qué hay en la pantalla.
@@ -1530,14 +2217,66 @@ export const REGLAS_DESCARGA_PROYECTO: Readonly<Record<CompaniaDescargaProyecto,
   generali: { soloConObjeto: true },
 }
 
-const RE_PROHIBIDO_ROTULO_DESCARGA = /\b(emit\w*|contrat\w*|grabar\w*|pagar|pagos?|firm\w*|formaliz\w*|enviar|envio|envia\w*|e-?mail|mail|correo|sms|whatsapp|send|share|compartir|cliente|anular|elimin\w*|borrar|cancelar|aceptar|confirmar|recibos?|domicili\w*|poliza|solicitud)\b/
-const RE_PROHIBIDO_OCULTO_DESCARGA = /(emit|contrat|grabar|pagar|pago|firm|formaliz|enviar|email|mail|sms|anul|elimin|borrar)/
-const RE_AJENO_DESCARGA = /\b(condicion\w*|condicionado|clausulad\w*|manual\w*|ayuda|aplicacion|app|tarifa\w*|bases|politica\w*|privacidad|protocolo|precontractual\w*|ipid|informativ\w*|informacion|extracto|cuestionario|licencia|factura\w*|carta|mandato|catalogo|folleto)\b/
-const RE_VERBO_SUELTO_DESCARGA = /\b(imprim\w*|descarg\w*|print\w*|download\w*|pdf)\b/
-const RE_VERBO_CON_OBJETO_DESCARGA = /\b(imprim\w*|descarg\w*|print\w*|download\w*|pdf|documento)\b/
-const RE_OBJETO_DESCARGA = /\b(proyecto|presupuesto|oferta)s?\b/
+// 26/10/2026: los términos (verbos, objetos, documentos ajenos y la lista negra) viven en `vocabulario.ts`, por concepto y con su origen.
+// Aquí solo se añaden los que ESTE fichero es el único autorizado a nombrar (guardián de la raíz) y se aplica la regla de cada compañía.
+/** Términos de la lista negra que solo puede nombrar `guard.ts`. El guard los suma a `BLOQUEO` de `vocabulario.ts` (script de candidatos y test los leen de aquí). */
+export const TERMINOS_BLOQUEO_SOLO_GUARD: readonly Termino[] = Object.freeze([terminoPropio('aceptar', 'allianz+mapfre+generali', '26/10/2026', 'rótulo de descarga: nunca un control de aceptación')])
+
+const RE_PROHIBIDO_ROTULO_DESCARGA = regexBloqueoRotulo(TERMINOS_BLOQUEO_SOLO_GUARD)
+/** Raíces de la lista negra de atributos internos (en minúsculas, sin tildes). v0.6.32: se casan por TOKEN (ver `palabraBloqueadaEnAtributo`), no por subcadena. */
+const RAICES_ATRIBUTO_DESCARGA: readonly string[] = Object.freeze(BLOQUEO.atributo_interno.map((x) => x.texto.toLowerCase()))
+
+/** v0.6.32: ¿esta tira alfanumérica seguida parece un blob (base64/hex/hash) y no una palabra? Largo >24, mezcla dígito-letra repetida o mayúsculas/minúsculas a saltos. PURA. */
+function esBlobAlfanumerico(run: string): boolean {
+  if (run.length > 24) return true
+  const t = (re: RegExp): number => (run.match(re) ?? []).length
+  if (run.length >= 10 && t(/[0-9][a-zA-Z]|[a-zA-Z][0-9]/g) >= 2) return true
+  return run.length >= 12 && t(/[a-z][A-Z]|[A-Z][a-z]/g) >= 6
+}
+
+/** v0.6.33: segmento de ruta/consulta de una URL que parece CODIFICADO (≥12 con letras y dígitos mezclados, o con % o +; el = de consulta/relleno separa) y no una palabra legible. PURA. */
+function esSegmentoUrlCodificado(seg: string): boolean {
+  if (/[%+]/.test(seg)) return true
+  return seg.length >= 12 && /[0-9]/.test(seg) && /[A-Za-z]/.test(seg)
+}
+
+/** v0.6.33: ¿la `raiz` casa en el token `w` (minúsculas)? Igual, EMPIEZA por ella (emitirpoliza) o la lleva tras un prefijo corto (≤4: btnemitir, doemit; ≤6 pronunciable si acaba en ella: lanzarsms): nunca tras un prefijo largo de token opaco (nrzldmqexemit). PURA. */
+function raizCasaEnToken(w: string, r: string): boolean {
+  if (w.startsWith(r)) return true
+  for (let i = w.indexOf(r, 1); i > 0; i = w.indexOf(r, i + 1)) {
+    const pre = w.slice(0, i)
+    if (/[0-9]/.test(pre)) continue
+    if (pre.length <= 4) return true
+    if (pre.length <= 6 && w.endsWith(r) && !/[^aeiou]{3,}/.test(pre)) return true
+  }
+  return false
+}
+
+/**
+ * v0.6.32: palabra de la lista negra de atributos que casa en `valor` por TOKENS (troceado por no alfanuméricos y por camelCase/snake; minúsculas, sin
+ * tildes): un token igual a una raíz, que EMPIEZA por ella (enviarsms) o que ACABA en ella con prefijo corto (v0.6.33: ≤6 y pronunciable; lanzarsms, btnemitir). Las tiras largas/mezcladas de blob (base64, hex) no cuentan: «sms» dentro de texto
+ * aleatorio no es un envío. v0.6.33: en valores tipo URL (http, blob:, /ruta) se saltan los segmentos de ruta/consulta codificados. Solo para ATRIBUTOS internos; el rótulo visible se sigue mirando con sus reglas de siempre. PURA.
+ */
+export function palabraBloqueadaEnAtributo(valor: string | null | undefined): string | null {
+  const base = String(valor ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+  const esUrl = /^(?:https?:|blob:|\/|\.\.?\/)/i.test(base.trim())
+  const segmentos = esUrl ? base.split(/[\/?&#=]/).filter((sg) => !esSegmentoUrlCodificado(sg)) : [base]
+  for (const run of segmentos.flatMap((sg) => sg.split(/[^A-Za-z0-9]+/))) {
+    if (run === '' || esBlobAlfanumerico(run)) continue
+    const tokens = run.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2').split(' ')
+    for (const tk of tokens) {
+      const w = tk.toLowerCase()
+      const raiz = RAICES_ATRIBUTO_DESCARGA.find((r) => raizCasaEnToken(w, r))
+      if (raiz !== undefined) return raiz
+    }
+  }
+  return null
+}
+const RE_AJENO_DESCARGA = RE_EXCLUIR_DESCARGA
+const RE_VERBO_SUELTO_DESCARGA = RE_VERBO_DESCARGA
+const RE_VERBO_CON_OBJETO_DESCARGA = RE_VERBO_DESCARGA_CON_OBJETO
 /** v0.6.29 (Allianz: «Descargar propuesta», tras «Guardar presupuesto»): «propuesta» SOLO junto a imprimir/descargar/pdf (nunca con «documento» suelto); la lista negra sigue mandando. */
-const RE_OBJETO_PROPUESTA_DESCARGA = /\bpropuestas?\b/
+const RE_OBJETO_PROPUESTA_DESCARGA = RE_OBJETO_PROPUESTA
 
 function sinTildesDescarga(x: string | null | undefined): string {
   return String(x ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[_]+/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase()
@@ -1558,8 +2297,9 @@ export function puntuarBotonDescargaProyecto(desc: readonly (string | null | und
   if (rotulos.length === 0) return 0
   const junto = rotulos.join(' | ')
   if (RE_PROHIBIDO_ROTULO_DESCARGA.test(junto) || RE_AJENO_DESCARGA.test(junto)) return 0
-  const ocultos = desc.slice(4).map((x) => String(x ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()).join(' | ')
-  if (RE_PROHIBIDO_OCULTO_DESCARGA.test(ocultos)) return 0
+  if (desc.slice(4).some((x) => palabraBloqueadaEnAtributo(x) !== null)) return 0
+  // v0.8.44 (Mapfre, run real 01/11/2026): el icono de Material «picture_as_pdf» (rótulo ENTERO) ES el botón del PDF del proyecto; vale aunque el nº no se leyera.
+  if (compania === 'mapfre' && rotulos.some((t) => t === 'picture as pdf')) return 1
   if (RE_VERBO_CON_OBJETO_DESCARGA.test(junto) && RE_OBJETO_DESCARGA.test(junto)) return 2
   if (RE_VERBO_SUELTO_DESCARGA.test(junto) && RE_OBJETO_PROPUESTA_DESCARGA.test(junto)) return 2
   if (guardado && !REGLAS_DESCARGA_PROYECTO[compania].soloConObjeto && RE_VERBO_SUELTO_DESCARGA.test(junto)) return 1
@@ -1574,24 +2314,126 @@ export function rechazoOcultoDescargaProyecto(desc: readonly (string | null | un
   if (puntuarBotonDescargaProyecto(desc, compania, guardado) > 0) return null
   const sinOcultos = [desc[0], desc[1], desc[2], desc[3], desc[11]]
   if (puntuarBotonDescargaProyecto(sinOcultos, compania, guardado) === 0) return null
-  const ocultos = desc.slice(4).map((x) => String(x ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()).join(' | ')
-  return RE_PROHIBIDO_OCULTO_DESCARGA.exec(ocultos)?.[0] ?? null
+  for (const x of desc.slice(4)) {
+    const w = palabraBloqueadaEnAtributo(x)
+    if (w !== null) return w
+  }
+  return null
 }
 
-export type ControlDescargaProyecto = { desc: (string | null)[]; visible: boolean; habilitado: boolean }
+/** `attrs`: class, aria-controls, aria-haspopup, aria-expanded y data-* del control (solo para diagnóstico y para reconocer un disparador de menú). */
+export type ControlDescargaProyecto = { desc: (string | null)[]; visible: boolean; habilitado: boolean; attrs?: Readonly<Record<string, string>>; enDialogo?: boolean }
 
-/** Qué control pulsar (el de mejor puntuación; a igualdad, el primero en pantalla) o por qué ninguno. Visible y habilitado. PURA. */
-export function decidirBotonDescargaProyecto(controles: readonly ControlDescargaProyecto[], compania: CompaniaDescargaProyecto, guardado: boolean): { indice: number } | { motivo: string; definitivo: boolean } {
-  const cand = controles.map((c, i) => ({ c, i, p: puntuarBotonDescargaProyecto(c.desc, compania, guardado) })).filter((x) => x.p > 0)
-  if (cand.length === 0) {
-    const bloqueados = controles.map((c) => rechazoOcultoDescargaProyecto(c.desc, compania, guardado)).filter((x): x is string => x !== null)
-    const nota = bloqueados.length > 0 ? ` (hay ${bloqueados.length} control(es) con rótulo de descarga que NO se pulsan porque un atributo interno casa con la lista negra: «${[...new Set(bloqueados)].join('», «')}»)` : ''
-    return { motivo: `no aparece ningún botón de imprimir/descargar el presupuesto o proyecto${nota}`, definitivo: false }
+const NOMBRES_ATRIBUTO_DESCARGA = ['texto', 'aria-label', 'title', 'value', 'id', 'name', 'href', 'onclick', 'formaction', 'ng-click', 'data-ng-click', 'mattooltip']
+const NOMBRES_ATRIBUTO_ANCESTRO = ['onclick', 'ng-click', 'data-ng-click', 'href']
+
+/** Nombre del atributo que ocupa el índice `i` de la descripción de un control de descarga (los ancestros llevan «ancestro N»). PURA. */
+export function nombreAtributoDescarga(i: number): string {
+  if (i < NOMBRES_ATRIBUTO_DESCARGA.length) return NOMBRES_ATRIBUTO_DESCARGA[i]!
+  const k = i - NOMBRES_ATRIBUTO_DESCARGA.length
+  return `ancestro ${Math.floor(k / 4) + 1} ${NOMBRES_ATRIBUTO_ANCESTRO[k % 4]!}`
+}
+
+const normalizarOcultoDescarga = (x: string | null | undefined): string => String(x ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+
+/** Quita de un texto lo que parece dato personal (emails, cifras largas) y colapsa espacios. PURA. */
+export function sanearTextoDiagnosticoDescarga(x: string): string {
+  // v0.6.31: sin cuantificadores abiertos (`[^…]*@[^…]*` era cuadrático sobre JS minificado sin espacios y colgaba el hilo): ≤64 a cada lado del «@»,
+  // y el texto se recorta a una ventana pequeña ANTES (nunca se sanea un atributo entero).
+  return x.slice(0, 400).replace(/[^\s"'<>()]{0,64}@[^\s"'<>()]{0,64}/g, '@').replace(/\d{4,}/g, '#').replace(/\s+/g, ' ').trim()
+}
+
+/** Extracto de ±40 caracteres alrededor de la palabra `palabra` dentro de `valor`. v0.6.31: se RECORTA primero (la ventana) y solo ella se sanea; si la palabra desaparece al sanear, solo «…». PURA. */
+export function extractoSaneadoDescarga(valor: string, palabra: string): string {
+  const v = normalizarOcultoDescarga(valor)
+  const i = v.indexOf(palabra)
+  if (i < 0) return '…'
+  const ini = Math.max(0, i - 40)
+  const fin = Math.min(v.length, i + palabra.length + 40)
+  const ventana = sanearTextoDiagnosticoDescarga(v.slice(ini, fin))
+  if (!ventana.includes(palabra)) return '…'
+  return `${ini > 0 ? '…' : ''}${ventana.slice(0, 200)}${fin < v.length ? '…' : ''}`
+}
+
+/** ¿Es un disparador de menú/desplegable (aria-haspopup, aria-expanded, dropdown, mat-menu-trigger)? PURA. */
+export function esDisparadorMenuDescarga(attrs: Readonly<Record<string, string>> | undefined): boolean {
+  if (!attrs) return false
+  const hp = attrs['aria-haspopup']
+  if (hp !== undefined && hp !== 'false') return true
+  if (attrs['aria-expanded'] !== undefined) return true
+  const resto = Object.entries(attrs).filter(([k]) => k === 'class' || k === 'data-toggle' || k === 'data-bs-toggle' || k === 'matmenutriggerfor').map(([, v]) => v.toLowerCase()).join(' ')
+  return /dropdown|mat-menu-trigger|menu-trigger/.test(resto) || 'matmenutriggerfor' in attrs
+}
+
+/** v0.6.30: palabra de la lista negra que casa en class/aria-controls/data-*… del control (no en aria-haspopup/aria-expanded, que son true/false), con su atributo; `null` si ninguna. PURA. */
+export function bloqueoEnAtributosExtraDescarga(attrs: Readonly<Record<string, string>> | undefined): { palabra: string; atributo: string; valor: string } | null {
+  for (const [k, v] of Object.entries(attrs ?? {})) {
+    if (k === 'aria-haspopup' || k === 'aria-expanded') continue
+    const w = palabraBloqueadaEnAtributo(v)
+    if (w !== null) return { palabra: w, atributo: k, valor: v }
   }
+  return null
+}
+
+/**
+ * v0.6.30: diagnóstico de UN control con rótulo de descarga descartado por un atributo interno: qué palabra de la lista negra, en qué atributo
+ * (nombre) y un extracto saneado de ±30 caracteres, más si es disparador de menú. `null` si no es ese caso. No autoriza nada. PURA.
+ */
+export function detalleRechazoOcultoDescarga(c: ControlDescargaProyecto, compania: CompaniaDescargaProyecto, guardado: boolean): string | null {
+  if (puntuarBotonDescargaProyecto([c.desc[0], c.desc[1], c.desc[2], c.desc[3], c.desc[11]], compania, guardado) === 0) return null
+  const menu = esDisparadorMenuDescarga(c.attrs) ? ' [disparador de menú]' : ''
+  for (let i = 4; i < c.desc.length; i++) {
+    const v = c.desc[i]
+    if (!v) continue
+    const w = palabraBloqueadaEnAtributo(v)
+    if (w !== null) return `«${w}» en ${nombreAtributoDescarga(i)} («${extractoSaneadoDescarga(v, w)}»)${menu}`
+  }
+  const e = bloqueoEnAtributosExtraDescarga(c.attrs)
+  return e ? `«${e.palabra}» en ${e.atributo} («${extractoSaneadoDescarga(e.valor, e.palabra)}»)${menu}` : null
+}
+
+/** v0.6.30: ¿pasa la lista blanca Y ni class/aria-controls/data-* casan la lista negra? Es lo que se pulsa como descarga. PURA. */
+export function esControlDescargableProyecto(c: ControlDescargaProyecto, compania: CompaniaDescargaProyecto, guardado: boolean): boolean {
+  return puntuarBotonDescargaProyecto(c.desc, compania, guardado) > 0 && bloqueoEnAtributosExtraDescarga(c.attrs) === null
+}
+
+/** Ligaduras de iconos de menú tal y como las deja `sinTildesDescarga` (el `_` ya es espacio). */
+const ICONOS_MENU_DESCARGA = /\b(arrow drop down|arrow drop up|expand more|expand less|keyboard arrow down|keyboard arrow up|more vert|more horiz)\b/g
+
+/**
+ * v0.6.30: ¿es este control un DISPARADOR DE MENÚ cuyo rótulo es «Descargar propuesta» y que solo se puede ABRIR (un clic) sin riesgo?
+ * Exige: visible, habilitado, disparador de menú (aria-haspopup/aria-expanded/dropdown), rótulo entero «Descargar propuesta» (iconos aparte) sin
+ * nada de bloqueo en NINGÚN rótulo, y que la lista negra de atributos solo case en id/name (o en class/aria-controls/data-*, que no van aquí):
+ * un href, onclick, formaction, ng-click o manejador de un ancestro con «sms»/«enviar»… lo descarta (pulsarlo podría enviar). PURA.
+ */
+export function puedeAbrirMenuDescarga(c: ControlDescargaProyecto, compania: CompaniaDescargaProyecto, guardado: boolean): boolean {
+  if (!c.visible || !c.habilitado || !esDisparadorMenuDescarga(c.attrs)) return false
+  const rotulo = [c.desc[0], c.desc[1], c.desc[2], c.desc[3]].map((x) => sinTildesDescarga(x).replace(ICONOS_MENU_DESCARGA, ' ').replace(/\s+/g, ' ').trim()).find((t) => t !== '')
+  if (rotulo !== 'descargar propuesta') return false
+  if (puntuarBotonDescargaProyecto([c.desc[0], c.desc[1], c.desc[2], c.desc[3], c.desc[11]], compania, guardado) === 0) return false
+  // Criterio de seguridad (coordinador, 26/10/2026): NINGÚN atributo (id, name, class, aria-controls, data-*, manejadores, href, ancestros) casa bloqueo.
+  for (let i = 4; i < c.desc.length; i++) {
+    if (i === 11) continue
+    if (palabraBloqueadaEnAtributo(c.desc[i]) !== null) return false
+  }
+  return bloqueoEnAtributosExtraDescarga(c.attrs) === null
+}
+
+/** Qué control pulsar (el de mejor puntuación; a igualdad, el primero en pantalla) o por qué ninguno (+ `abrirMenu`: índice de un disparador de menú «Descargar propuesta» que se puede abrir). Visible y habilitado. PURA. */
+export function decidirBotonDescargaProyecto(controles: readonly ControlDescargaProyecto[], compania: CompaniaDescargaProyecto, guardado: boolean): { indice: number } | { motivo: string; definitivo: boolean; abrirMenu?: number } {
+  const cand = controles.map((c, i) => ({ c, i, p: esControlDescargableProyecto(c, compania, guardado) ? puntuarBotonDescargaProyecto(c.desc, compania, guardado) : 0 })).filter((x) => x.p > 0)
+  const bloqueados = [...new Set(controles.map((c) => detalleRechazoOcultoDescarga(c, compania, guardado)).filter((x): x is string => x !== null))]
+  const nota = bloqueados.length > 0 ? ` (hay ${bloqueados.length} control(es) con rótulo de descarga que NO se pulsan porque un atributo interno casa con la lista negra: ${bloqueados.join('; ')})` : ''
+  const abrir = controles.findIndex((c) => puedeAbrirMenuDescarga(c, compania, guardado))
+  const conMenu = abrir >= 0 ? { abrirMenu: abrir } : {}
+  if (cand.length === 0) return { motivo: `no aparece ningún botón de imprimir/descargar el presupuesto o proyecto${nota}`, definitivo: false, ...conMenu }
   const visibles = cand.filter((x) => x.c.visible)
-  if (visibles.length === 0) return { motivo: `hay ${cand.length} botón(es) de descarga pero OCULTO(s) (puede estar plegado)`, definitivo: false }
-  const habilitados = visibles.filter((x) => x.c.habilitado)
-  if (habilitados.length === 0) return { motivo: 'el botón de descarga está deshabilitado', definitivo: false }
+  if (visibles.length === 0) return { motivo: `hay ${cand.length} botón(es) de descarga pero OCULTO(s) (puede estar plegado)${nota}`, definitivo: false, ...conMenu }
+  const habilitados0 = visibles.filter((x) => x.c.habilitado)
+  if (habilitados0.length === 0) return { motivo: `el botón de descarga está deshabilitado${nota}`, definitivo: false }
+  // v0.8.35 (Mapfre, 28/10/2026): con un diálogo abierto encima, el de DENTRO del diálogo manda (el de debajo lo tapa la capa).
+  const enDialogo = habilitados0.filter((x) => x.c.enDialogo === true)
+  const habilitados = enDialogo.length > 0 ? enDialogo : habilitados0
   const mejor = Math.max(...habilitados.map((x) => x.p))
   return { indice: habilitados.find((x) => x.p === mejor)!.i }
 }
@@ -1606,7 +2448,7 @@ async function escanearControlesDescargaProyecto(page: Page): Promise<(ControlDe
     const l = await marco
       .evaluate((sel) => {
         document.querySelectorAll('[data-rpa-dl]').forEach((n) => n.removeAttribute('data-rpa-dl'))
-        const out: { desc: (string | null)[]; visible: boolean; habilitado: boolean; marca: number }[] = []
+        const out: { desc: (string | null)[]; visible: boolean; habilitado: boolean; marca: number; attrs: Record<string, string>; enDialogo: boolean }[] = []
         for (const n of Array.from(document.querySelectorAll(sel))) {
           if (out.length >= 300) break
           if (n.querySelector('button, a, [role="button"], input[type="button"], input[type="submit"]')) continue
@@ -1620,6 +2462,10 @@ async function escanearControlesDescargaProyecto(page: Page): Promise<(ControlDe
             anc.push(p.getAttribute('onclick'), p.getAttribute('ng-click'), p.getAttribute('data-ng-click'), p.tagName === 'A' ? p.getAttribute('href') : null)
             p = p.parentElement
           }
+          const attrs: Record<string, string> = {}
+          for (const a of Array.from(h.attributes)) {
+            if (a.name === 'class' || a.name === 'aria-controls' || a.name === 'aria-haspopup' || a.name === 'aria-expanded' || a.name === 'matmenutriggerfor' || (a.name.startsWith('data-') && a.name !== 'data-rpa-dl')) attrs[a.name] = a.value.slice(0, 200)
+          }
           const marca = out.length
           h.setAttribute('data-rpa-dl', String(marca))
           out.push({
@@ -1631,6 +2477,8 @@ async function escanearControlesDescargaProyecto(page: Page): Promise<(ControlDe
             visible,
             habilitado: !(h.disabled === true || h.hasAttribute('disabled') || h.getAttribute('aria-disabled') === 'true' || /\bmat(?:-mdc)?-button-disabled\b/.test(h.className?.toString?.() ?? '')),
             marca,
+            attrs,
+            enDialogo: h.closest('mat-dialog-container, [role="dialog"], [role="alertdialog"]') !== null,
           })
         }
         return out
@@ -1641,11 +2489,12 @@ async function escanearControlesDescargaProyecto(page: Page): Promise<(ControlDe
   return salida
 }
 
-export type BusquedaDescargaProyecto = { boton: Locator; etiqueta: string } | { motivo: string }
+export type BusquedaDescargaProyecto = { boton: Locator; etiqueta: string } | { motivo: string; menu?: { boton: Locator; etiqueta: string } }
 
 /**
  * Busca (SIN pulsar) el botón de descargar el proyecto/presupuesto hasta `esperaMs`. Sin él → `motivo` con las etiquetas saneadas de lo que hay
- * a la vista (sin datos personales). Nunca lanza salvo una violación del guard (`guard.comprobar()`).
+ * a la vista (sin datos personales) y, si hay un disparador de menú «Descargar propuesta» que solo se puede abrir (`puedeAbrirMenuDescarga`), `menu`.
+ * Nunca lanza salvo una violación del guard (`guard.comprobar()`).
  */
 export async function buscarBotonDescargaProyecto(page: Page, guard: GuardEmision, compania: CompaniaDescargaProyecto, guardado: boolean, esperaMs = 6_000): Promise<BusquedaDescargaProyecto> {
   const hasta = Date.now() + esperaMs
@@ -1661,10 +2510,29 @@ export async function buscarBotonDescargaProyecto(page: Page, guard: GuardEmisio
     }
     if (Date.now() >= hasta) {
       const vis = etiquetasControlesSaneadas(controles.filter((c) => c.visible).map((c) => etiquetaEfectivaControl({ texto: c.desc[0], aria: c.desc[1], title: c.desc[2], valor: c.desc[3] })))
-      return { motivo: `${d.motivo}${sufijoControlesVisibles(vis)}` }
+      const motivo = `${d.motivo}${sufijoControlesVisibles(vis)}`
+      if (d.abrirMenu !== undefined) {
+        const m = controles[d.abrirMenu]!
+        const boton = m.marco.locator(`[data-rpa-dl="${m.marca}"]`)
+        if ((await boton.count().catch(() => 0)) === 1) return { motivo, menu: { boton, etiqueta: etiquetaEfectivaControl({ texto: m.desc[0], aria: m.desc[1], title: m.desc[2], valor: m.desc[3] }) } }
+      }
+      return { motivo }
     }
     await page.waitForTimeout(500)
   }
+}
+
+/** Lee en VIVO los atributos de menú del control (misma lista que el escáner). Solo lectura. */
+async function atributosMenuVivos(boton: Locator): Promise<Record<string, string>> {
+  return boton
+    .evaluate((el) => {
+      const attrs: Record<string, string> = {}
+      for (const a of Array.from(el.attributes)) {
+        if (a.name === 'class' || a.name === 'aria-controls' || a.name === 'aria-haspopup' || a.name === 'aria-expanded' || a.name === 'matmenutriggerfor' || (a.name.startsWith('data-') && a.name !== 'data-rpa-dl')) attrs[a.name] = a.value.slice(0, 200)
+      }
+      return attrs
+    })
+    .catch(() => ({}))
 }
 
 /**
@@ -1675,12 +2543,182 @@ export async function pulsarDescargaProyectoAuto(page: Page, guard: GuardEmision
   guard.comprobar()
   if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'descarga del proyecto con otra ventana de red abierta')
   await exigirSinCuentaBancaria(page)
-  if ((await boton.count()) !== 1) throw new EmisionBloqueadaError('boton', 'descarga del proyecto: no hay exactamente un control')
+  const n = await boton.count()
+  // v0.8.34: CERO = el portal re-pintó el control y la marca se perdió (no se pulsa nada; quien llama re-escanea). Más de uno sigue siendo bloqueo.
+  if (n === 0) throw new DescargaNoPulsadaError('desaparecido', '')
+  if (n !== 1) throw new EmisionBloqueadaError('boton', 'descarga del proyecto: no hay exactamente un control')
   const desc = await descripcion(boton)
   comprobarBoton(desc)
-  if (!esBotonDescargaProyecto(desc, compania, guardado)) throw new EmisionBloqueadaError('boton', 'descarga del proyecto: el control vivo no pasa la lista blanca')
-  await boton.click({ timeout: 8_000 })
+  const vivo = { desc, visible: true, habilitado: true, attrs: await atributosMenuVivos(boton) }
+  if (!esControlDescargableProyecto(vivo, compania, guardado)) {
+    // v0.6.30: único otro clic posible = ABRIR el menú «Descargar propuesta» (disparador de menú, sin bloqueo en rótulo ni en manejadores/href).
+    if (!puedeAbrirMenuDescarga(vivo, compania, guardado)) throw new EmisionBloqueadaError('boton', 'descarga del proyecto: el control vivo no pasa la lista blanca')
+  }
+  // v0.8.34 (Mapfre, prueba real 27/10/2026: «locator.click: Timeout 8000ms exceeded … waiting for locator('[data-rpa-dl="41"]')»): se trae a la vista
+  // antes y, si Playwright no llega a pulsar (tapado por una capa, oculto, en animación, re-pintado), se lanza `DescargaNoPulsadaError` con la CAUSA
+  // leída de su traza: no se pulsó nada y quien llama decide (Escape a una capa y un único reintento). Nunca `force` ni clic por coordenadas.
+  await boton.scrollIntoViewIfNeeded({ timeout: 2_000 }).catch(() => undefined)
+  try {
+    await boton.click({ timeout: MS_CLIC_DESCARGA_PROYECTO })
+  } catch (e) {
+    guard.comprobar()
+    const msg = e instanceof Error ? e.message : String(e)
+    if (/timeout|intercepts pointer|not visible|not stable|not enabled|detached|outside of the viewport/i.test(msg)) {
+      const c = causaClicNoPulsado(msg)
+      if (c.causa !== 'tapado') throw new DescargaNoPulsadaError(c.causa, c.detalle)
+      // v0.8.35: un diálogo encima. Informativo → se cierra (puerta de arriba) y UN clic más al mismo control; si no, su descripción va al aviso.
+      const cierre = await cerrarDialogoInformativoDescarga(page, guard)
+      if (!cierre.cerrado) throw new DescargaNoPulsadaError('tapado', `${c.detalle}; ${cierre.descripcion}`.slice(0, 400))
+      if ((await boton.count()) !== 1) throw new DescargaNoPulsadaError('desaparecido', 'tras cerrar el diálogo informativo')
+      try {
+        await boton.click({ timeout: MS_CLIC_DESCARGA_PROYECTO })
+      } catch (e2) {
+        guard.comprobar()
+        const c2 = causaClicNoPulsado(e2 instanceof Error ? e2.message : String(e2))
+        throw new DescargaNoPulsadaError(c2.causa, `${c2.detalle ? `${c2.detalle}; ` : ''}tras cerrar un diálogo informativo`)
+      }
+      guard.comprobar()
+      return
+    }
+    throw e
+  }
   guard.comprobar()
+}
+
+// ─────────── v0.8.35 (Mapfre, 28/10/2026): diálogo de Material que tapa la descarga y Escape no cierra ───────────
+// Prueba real con 0.8.34: «otro elemento (capa/diálogo) lo tapa (tapa: <div.cdk-overlay-backdrop…>) (también tras Escape y un reintento)». Si el diálogo
+// es INFORMATIVO (sin campos, sin texto de emitir/contratar/enviar/firmar/pagar, y TODOS sus controles son de cerrar: icono de cerrar, «Cerrar»,
+// «Aceptar», «OK»), se cierra con UN clic de texto EXACTO aquí (única puerta con «aceptar» para esto) y se reintenta. Si no, el aviso lleva su texto
+// saneado y sus botones, para mapearlo en la siguiente ejecución. Nunca se pulsa otra cosa del diálogo.
+
+/** Rótulos EXACTOS (sin tildes, minúsculas) que cierran un diálogo informativo. Los de cruz/icono primero (se prefieren a «aceptar»). */
+export const ROTULOS_CIERRE_DIALOGO_DESCARGA: readonly string[] = Object.freeze(['close', 'clear', 'cerrar', 'x', '×', 'aceptar', 'ok'])
+/** Texto de un diálogo que hace NO tocarlo (sobre texto sin tildes y en minúsculas). */
+const RE_DIALOGO_NO_CERRAR_DESCARGA = /emit|emisi|contrat|formaliz|firm|pagar|\bpago\b|grabar poliza|domicili|iban|envi|sms|e-?mail|correo|whatsapp/
+
+export type DialogoDescarga = { texto: string; botones: readonly string[]; campos: number }
+
+/** ¿Se puede cerrar este diálogo y con qué botón (índice)? Si no, por qué. PURA. */
+export function decidirCierreDialogoDescarga(d: DialogoDescarga): { indice: number } | { motivo: string } {
+  const texto = sinTildesDescarga(d.texto)
+  if (d.campos > 0) return { motivo: 'el diálogo tiene campos' }
+  const m = texto.match(RE_DIALOGO_NO_CERRAR_DESCARGA)
+  if (m) return { motivo: `el diálogo menciona «${m[0]}»` }
+  if (d.botones.length === 0) return { motivo: 'el diálogo no tiene botones' }
+  const norm = d.botones.map((b) => sinTildesDescarga(b))
+  const ajeno = norm.findIndex((b) => !ROTULOS_CIERRE_DIALOGO_DESCARGA.includes(b))
+  if (ajeno >= 0) return { motivo: `el diálogo tiene un control que no es de cerrar («${d.botones[ajeno]!.slice(0, 30)}»)` }
+  for (const r of ROTULOS_CIERRE_DIALOGO_DESCARGA) {
+    const i = norm.indexOf(r)
+    if (i >= 0) return { indice: i }
+  }
+  return { motivo: 'sin control de cerrar' }
+}
+
+/** Descripción saneada del diálogo para el aviso (texto sin datos personales + botones). PURA. */
+export function describirDialogoDescarga(d: DialogoDescarga): string {
+  const t = textoDialogoPortalSeguro(sanearTextoDiagnosticoDescarga(d.texto)).slice(0, 160)
+  const b = etiquetasControlesSaneadas(d.botones, 8)
+  return `diálogo: «${t || '(sin texto)'}»; botones: ${b.length ? b.map((x) => `«${x}»`).join(', ') : '(ninguno)'}${d.campos > 0 ? `; ${d.campos} campo(s)` : ''}`
+}
+
+const SEL_DIALOGO_DESCARGA = 'mat-dialog-container, [role="dialog"], [role="alertdialog"]'
+
+/**
+ * Cierra el ÚNICO diálogo abierto si es informativo (ver arriba) con su control de cerrar de rótulo EXACTO, por `comprobarBoton` con «Aceptar»
+ * permitido SOLO aquí, guard limpio y frontera bancaria. Devuelve `{ cerrado: true }` o `{ cerrado: false, descripcion }` (sin pulsar nada).
+ */
+export async function cerrarDialogoInformativoDescarga(page: Page, guard: GuardEmision): Promise<{ cerrado: true } | { cerrado: false; descripcion: string }> {
+  guard.comprobar()
+  const dialogos = page.locator(SEL_DIALOGO_DESCARGA).filter({ visible: true })
+  const n = await dialogos.count().catch(() => 0)
+  if (n !== 1) return { cerrado: false, descripcion: n === 0 ? 'no hay ningún diálogo a la vista (la capa es otra cosa)' : `hay ${n} diálogos a la vista` }
+  const dlg = dialogos.first()
+  const d = (await dlg
+    .evaluate((el, sel) => {
+      // Sin funciones con nombre dentro de `evaluate` (tsx les mete `__name`, que no existe en la página).
+      el.querySelectorAll('[data-rpa-dlg]').forEach((x) => x.removeAttribute('data-rpa-dlg'))
+      const botones: string[] = []
+      for (const b of Array.from(el.querySelectorAll(sel))) {
+        const rb = (b as HTMLElement).getBoundingClientRect()
+        const cb = getComputedStyle(b)
+        if (!(rb.width > 0 && rb.height > 0 && cb.visibility === 'visible' && cb.display !== 'none') || b.querySelector('button, a, [role="button"]')) continue
+        const h = b as HTMLElement & { value?: unknown }
+        h.setAttribute('data-rpa-dlg', String(botones.length))
+        botones.push(((h.innerText || h.textContent || '').replace(/\s+/g, ' ').trim() || h.getAttribute('aria-label') || h.getAttribute('title') || (typeof h.value === 'string' ? h.value : '') || '').slice(0, 60))
+      }
+      const campos = Array.from(el.querySelectorAll('input:not([type="hidden"]):not([type="button"]):not([type="submit"]), select, textarea')).filter((x) => { const r = (x as HTMLElement).getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(x).visibility === 'visible' }).length
+      return { texto: ((el as HTMLElement).innerText || '').slice(0, 1500), botones, campos }
+    }, SEL_CONTROLES_DESCARGA)
+    .catch(() => null)) as DialogoDescarga | null
+  if (!d) return { cerrado: false, descripcion: 'el diálogo no se pudo leer' }
+  const dec = decidirCierreDialogoDescarga(d)
+  if ('motivo' in dec) return { cerrado: false, descripcion: `${dec.motivo} (no se pulsa); ${describirDialogoDescarga(d)}` }
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'cerrar diálogo de la descarga con otra ventana de red abierta')
+  await exigirSinCuentaBancaria(page)
+  const boton = dlg.locator(`[data-rpa-dlg="${dec.indice}"]`)
+  if ((await boton.count()) !== 1) return { cerrado: false, descripcion: `el control de cerrar cambió antes de pulsarlo; ${describirDialogoDescarga(d)}` }
+  const desc = await descripcion(boton)
+  // Vivo: rótulo EXACTO de la lista (el «aceptar» solo pasa aquí y solo así).
+  if (!ROTULOS_CIERRE_DIALOGO_DESCARGA.includes(sinTildesDescarga(etiquetaEfectivaControl({ texto: desc[0], aria: desc[1], title: desc[2], valor: desc[3] })))) {
+    return { cerrado: false, descripcion: `el control vivo no es de cerrar; ${describirDialogoDescarga(d)}` }
+  }
+  comprobarBoton(desc, { permitirAceptar: true })
+  await boton.click({ timeout: 4_000 })
+  guard.comprobar()
+  await dlg.waitFor({ state: 'hidden', timeout: 4_000 }).catch(() => undefined)
+  if ((await page.locator(SEL_DIALOGO_DESCARGA).filter({ visible: true }).count().catch(() => 0)) > 0) return { cerrado: false, descripcion: `se pulsó «${d.botones[dec.indice]!.slice(0, 20)}» pero el diálogo sigue; ${describirDialogoDescarga(d)}` }
+  return { cerrado: true }
+}
+
+/** v0.8.34: tope del clic de descarga (Playwright reintenta dentro: visible, estable, sin capa encima). */
+export const MS_CLIC_DESCARGA_PROYECTO = 6_000
+
+export type CausaClicNoPulsado = 'tapado' | 'oculto' | 'inestable' | 'deshabilitado' | 'fuera_de_vista' | 'desaparecido' | 'desconocida'
+
+/** v0.8.34: el clic de descarga NO llegó a darse (Playwright agotó su espera de accionabilidad). No se pulsó nada. */
+export class DescargaNoPulsadaError extends Error {
+  constructor(readonly causa: CausaClicNoPulsado, readonly detalle: string) {
+    super(`el control de descarga no se pudo pulsar: ${textoCausaClicNoPulsado(causa)}${detalle ? ` (${detalle})` : ''}`)
+    this.name = 'DescargaNoPulsadaError'
+  }
+}
+
+/** Texto legible de la causa. PURA. */
+export function textoCausaClicNoPulsado(c: CausaClicNoPulsado): string {
+  return {
+    tapado: 'otro elemento (capa/diálogo) lo tapa',
+    oculto: 'no está visible',
+    inestable: 'se está moviendo (animación)',
+    deshabilitado: 'está deshabilitado',
+    fuera_de_vista: 'queda fuera de la vista y no se puede desplazar',
+    desaparecido: 'el portal lo volvió a pintar (la marca ya no está)',
+    desconocida: 'causa no reconocida en la traza del navegador',
+  }[c]
+}
+
+/**
+ * v0.8.34: causa por la que Playwright no pulsó, leída de la traza de `locator.click` (la ÚLTIMA línea de estado manda; si nunca resolvió el
+ * localizador, el control desapareció). `detalle` = solo etiqueta y clases del elemento que tapa (sin texto ni atributos con datos). PURA.
+ */
+export function causaClicNoPulsado(msg: string): { causa: CausaClicNoPulsado; detalle: string } {
+  const lineas = String(msg ?? '').split('\n').map((l) => l.trim()).filter((l) => l !== '')
+  let causa: CausaClicNoPulsado = 'desconocida'
+  let detalle = ''
+  for (const l of lineas) {
+    if (/intercepts pointer events/i.test(l)) {
+      causa = 'tapado'
+      const m = l.match(/<([a-z][a-z0-9-]*)\b[^>]*?\bclass="([^"]*)"/i) ?? l.match(/<([a-z][a-z0-9-]*)\b/i)
+      const clases = (m?.[2] ?? '').split(/\s+/).filter((c) => /^[A-Za-z_-][\w-]{0,40}$/.test(c)).slice(0, 4).join('.')
+      detalle = m ? `tapa: <${m[1]!.toLowerCase()}${clases ? `.${clases}` : ''}>` : ''
+    } else if (/element is not visible|not visible/i.test(l)) { causa = 'oculto'; detalle = '' }
+    else if (/not stable/i.test(l)) { causa = 'inestable'; detalle = '' }
+    else if (/not enabled|disabled/i.test(l)) { causa = 'deshabilitado'; detalle = '' }
+    else if (/outside of the viewport/i.test(l)) { causa = 'fuera_de_vista'; detalle = '' }
+    else if (/detached from the dom|element is detached/i.test(l)) { causa = 'desaparecido'; detalle = '' }
+  }
+  if (causa === 'desconocida' && /timeout/i.test(msg) && !lineas.some((l) => /locator resolved to|resolved to </i.test(l))) causa = 'desaparecido'
+  return { causa, detalle: detalle.slice(0, 120) }
 }
 
 // ─────────── Mapfre NSEI «Generar Proyecto» (v0.8.14, endurecido en 0.8.15; 22/10/2026, AUTORIZADO por Alberto: un proyecto no es póliza) ───────────
@@ -1696,17 +2734,139 @@ export async function pulsarDescargaProyectoAuto(page: Page, guard: GuardEmision
 // lanza `guard.comprobar()`) se relanza: fail-closed, el trabajo cae entero.
 
 /** Texto EXACTO (sin tildes, mayúsculas, espacios colapsados) del único botón que se pulsa. */
-export const TEXTO_GENERAR_PROYECTO_MAPFRE = 'GENERAR PROYECTO'
+export const TEXTO_GENERAR_PROYECTO_MAPFRE = rotuloMayus(CONCEPTOS_ACCION.generar_proyecto, 'rotulos', 'generar proyecto')
 /** Cuánto se espera a leer el nº de proyecto tras el clic (modal «Generando proyecto» incluido). */
 export const MS_PROYECTO_MAPFRE = 45_000
+/** v0.8.42 · cuánto se vigila un diálogo de alta de cliente DESPUÉS de ver ya el nº de proyecto. */
+export const MS_ASENTAR_PROYECTO_MAPFRE = 2_500
 const SEL_DIALOGOS_MAPFRE = 'mat-dialog-container, [role="dialog"], [role="alertdialog"]'
 /** Palabras que, en un diálogo tras el clic, hacen PARAR (sin tocar nada). Sobre texto sin tildes y en minúsculas. */
 const RE_DIALOGO_PELIGROSO_MAPFRE = /emit|emisi|contrat|formaliz|firmar|firma digital|pagar|\bpago\b|grabar poliza|domicili|iban/
 
+/** v0.8.41 · aviso que deja constancia de la ÚNICA excepción (decisión de Alberto, 01/11/2026). */
+export const AVISO_DIALOGO_ALTA_CLIENTE_MAPFRE = 'Mapfre: diálogo de alta de cliente respondido No (decisión de Alberto 01/11/2026)'
+const planoAltaMapfre = (t: string): string => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[¿?¡!]/g, ' ').replace(/\s+/g, ' ').trim()
+/** Lo que puede haber entre «en» y «al contratar esta póliza» (el nombre del sistema): nada que hable de emitir/pagar/firmar/contratar. */
+// v0.8.42 (trabajo 89e0a420): el diálogo REAL lleva un icono de Material delante («warning») y un pie («¡<nombre>! info_outlined <nombre>»), no solo la pregunta.
+const RE_ALTA_CLIENTE_MAPFRE = /^(?:(?:warning|info|info_outlined|error|error_outline|help|help_outline|report_problem) )*desea dar de alta al cliente en ([a-z0-9 ._\-/&()]{1,60}?) al contratar esta poliza(.{0,100})$/
+/** El pie tras la pregunta: solo letras/cifras/símbolos mansos y NADA que hable de emitir, pagar, cobrar, firmar, cuentas… */
+const RE_ALTA_PIE_PROHIBIDO = /emit|emisi|contrat|formaliz|firm|pag|domicili|iban|grabar|cobr|recib|tarjeta|cuenta|sepa|prima|importe|envi|sms|mail|correo/
+const RE_SISTEMA_ALTA_PROHIBIDO = /emit|emisi|contrat|formaliz|firm|pag|domicili|iban|grabar/
+/**
+ * v0.8.41 · EXCEPCIÓN MÍNIMA (Alberto, 01/11/2026): ¿es este diálogo EXACTAMENTE «¿Desea dar de alta al cliente en el [sistema] al
+ * contratar esta póliza?» con EXACTAMENTE dos botones «No» y «Sí»? `textoSinBotones` = texto del diálogo sin sus botones. Cualquier otra
+ * cosa (otro texto, otro botón —«Contratar», «Aceptar»—, un solo botón, tres) → false y el guard sigue parando como siempre. PURA.
+ */
+export function esDialogoAltaClienteMapfre(textoSinBotones: string, botones: readonly string[]): boolean {
+  const m = RE_ALTA_CLIENTE_MAPFRE.exec(planoAltaMapfre(textoSinBotones))
+  if (!m || RE_SISTEMA_ALTA_PROHIBIDO.test(m[1]!)) return false
+  const pie = (m[2] ?? '').trim()
+  if (pie !== '' && (!/^[a-z0-9 ._\-/&()]+$/.test(pie) || RE_ALTA_PIE_PROHIBIDO.test(pie))) return false
+  const bs = botones.map(planoAltaMapfre).map((b) => b.replace(/[.,;:]/g, '').trim())
+  return bs.length === 2 && [...bs].sort().join('|') === 'no|si'
+}
+
+/** v0.8.44 · tope del clic sobre un diálogo de Mapfre: si otro diálogo lo tapa, falla rápido (no 30 s) y se prueba el otro. */
+export const MS_CLIC_DIALOGO_MAPFRE = 4_000
+/** v0.8.44 · tope de respuestas a diálogos (cerrar informativos + «No» al alta) por «Generar Proyecto». */
+export const MAX_ACCIONES_DIALOGOS_MAPFRE = 6
+const RE_CONSOLIDADA_MAPFRE = /^(?:(?:info_outlined|info|check_circle|check|done) ?)*operacion consolidada correctamente(.{0,120})$/
+const RE_CONSOLIDADA_RESTO_PROHIBIDO = /emit|emisi|contrat|formaliz|firm|pag|domicili|iban|grabar|cobr|recib|tarjeta|cuenta|sepa|prima|importe|envi|sms|mail|correo/
+/**
+ * v0.8.44 · ¿es este diálogo el INFORMATIVO «Operación consolidada correctamente <cliente>: <ref>» con UN solo botón «Aceptar»? (run real
+ * 01/11/2026: salía apilado con el de alta y lo tapaba). «consolidada» no es una palabra de emisión; el resto del texto (≤120 car.) solo puede
+ * llevar letras/cifras/signos mansos y nada de emitir/contratar/pagar/firmar/cuenta… PURA.
+ */
+export function esDialogoConsolidadoMapfre(textoSinBotones: string, botones: readonly string[]): boolean {
+  const m = RE_CONSOLIDADA_MAPFRE.exec(planoAltaMapfre(textoSinBotones))
+  if (!m) return false
+  const resto = (m[1] ?? '').trim()
+  if (resto !== '' && (!/^[a-z0-9 ._\-/&():,'[\]]+$/.test(resto) || RE_CONSOLIDADA_RESTO_PROHIBIDO.test(resto))) return false
+  const bs = botones.map(planoAltaMapfre).map((b) => b.replace(/[.,;:]/g, '').trim())
+  return bs.length === 1 && bs[0] === 'aceptar'
+}
+
+export type ClaseDialogoMapfre = 'alta' | 'consolidada' | 'otro'
+/** v0.8.44 · clasifica un diálogo visible tras «Generar Proyecto»: el de alta (→ «No»), el informativo «consolidada» (→ «Aceptar») u otro (→ para). PURA. */
+export function clasificarDialogoMapfre(textoSinBotones: string, botones: readonly string[]): ClaseDialogoMapfre {
+  if (esDialogoAltaClienteMapfre(textoSinBotones, botones)) return 'alta'
+  if (esDialogoConsolidadoMapfre(textoSinBotones, botones)) return 'consolidada'
+  return 'otro'
+}
+
+/**
+ * v0.8.40 · DIAGNÓSTICO (no relaja nada) del diálogo que sale tras «Generar Proyecto» y habla de contratar/emitir/pagar…: su texto ENTERO
+ * (normalizado, sin correos/NIF/matrículas/teléfonos/cifras largas ni nombres propios; tope 600) y los rótulos de sus botones (≤8, ≤40
+ * cada uno), para que Alberto decida si el diálogo es informativo. El bot NO pulsa nada. PURA.
+ */
+export function describirDialogoPeligroMapfre(texto: string, botones: readonly string[]): string {
+  const t = limpiarMensajePortalDiagnosticoHasta(texto, 600)
+  const bs = [...new Set(botones.map((b) => limpiarMensajePortalDiagnosticoHasta(b, 40)).filter((b) => b !== ''))].slice(0, 8)
+  return ` [texto del diálogo: «${t || 'sin texto'}»; botones: ${bs.length ? bs.map((b) => `«${b}»`).join(' · ') : 'ninguno'}]`
+}
+
+/** Lee (solo lectura) el diálogo VISIBLE que casa con las palabras peligrosas: su texto y los rótulos de sus botones. Nunca pulsa. */
+async function leerDialogoPeligroMapfre(page: Page): Promise<string> {
+  try {
+    const ds = await page.locator(SEL_DIALOGOS_MAPFRE).locator('visible=true').evaluateAll((els) =>
+      els.map((d) => ({ texto: (d as HTMLElement).innerText ?? '', botones: Array.from(d.querySelectorAll('button, a, [role="button"], input[type="button"], input[type="submit"]')).map((b) => ((b as HTMLElement).innerText || (b as HTMLInputElement).value || '').trim()) })))
+    const d = ds.find((x) => RE_DIALOGO_PELIGROSO_MAPFRE.test(x.texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()))
+    return d ? describirDialogoPeligroMapfre(d.texto, d.botones) : ''
+  } catch {
+    return ''
+  }
+}
+
 export type ResultadoProyectoMapfre =
-  | { estado: 'generado'; numero: string }
-  | { estado: 'sin_numero'; motivo: string }
+  | { estado: 'generado'; numero: string; avisos?: readonly string[] }
+  | { estado: 'sin_numero'; motivo: string; avisos?: readonly string[] }
   | { estado: 'no_generado'; motivo: string }
+
+/** Selector de controles de un diálogo (el mismo para contar y para pulsar). */
+const SEL_CONTROLES_DIALOGO_MAPFRE = 'button, a, [role="button"], input[type="button"], input[type="submit"]'
+
+/**
+ * v0.8.41 · pulsa «No» (y SOLO «No») del diálogo de alta de cliente ya validado por `esDialogoAltaClienteMapfre`. Vuelve a exigir en VIVO:
+ * sin cuenta bancaria, exactamente 2 controles visibles en ese diálogo, exactamente UNO con rótulo entero «No», y `comprobarBoton`.
+ * Nunca «Sí», «Aceptar» ni «Contratar». Un diálogo nativo se descarta y el trabajo cae.
+ */
+async function responderNoAltaClienteMapfre(page: Page, guard: GuardEmision, indice: number): Promise<void> {
+  guard.comprobar()
+  await exigirSinCuentaBancaria(page)
+  const dialogo = page.locator(SEL_DIALOGOS_MAPFRE).locator('visible=true').nth(indice)
+  const controles = dialogo.locator(SEL_CONTROLES_DIALOGO_MAPFRE).locator('visible=true')
+  const n = await controles.count()
+  if (n !== 2) throw new EmisionBloqueadaError('boton', 'diálogo de alta de cliente: no hay exactamente dos controles')
+  let no: Locator | null = null
+  for (let i = 0; i < n; i++) {
+    const c = controles.nth(i)
+    const d = await descripcion(c)
+    if (planoAltaMapfre(String(d[0] ?? '')).replace(/[.,;:]/g, '').trim() === 'no') {
+      if (no) throw new EmisionBloqueadaError('boton', 'diálogo de alta de cliente: más de un «No»')
+      no = c
+    }
+  }
+  if (!no) throw new EmisionBloqueadaError('boton', 'diálogo de alta de cliente: no hay botón «No»')
+  comprobarBoton(await descripcion(no))
+  await clicSinDialogoNativo(page, guard, no, 'diálogo de alta de cliente', MS_CLIC_DIALOGO_MAPFRE)
+}
+
+/**
+ * v0.8.44 · pulsa «Aceptar» (y SOLO «Aceptar») del diálogo informativo «Operación consolidada» ya validado por `esDialogoConsolidadoMapfre`. En VIVO:
+ * sin cuenta bancaria, exactamente UN control visible en ese diálogo, de rótulo entero «Aceptar», `comprobarBoton` con `permitirAceptar` (única puerta).
+ */
+async function cerrarConsolidadaMapfre(page: Page, guard: GuardEmision, indice: number): Promise<void> {
+  guard.comprobar()
+  await exigirSinCuentaBancaria(page)
+  const dialogo = page.locator(SEL_DIALOGOS_MAPFRE).locator('visible=true').nth(indice)
+  const controles = dialogo.locator(SEL_CONTROLES_DIALOGO_MAPFRE).locator('visible=true')
+  if ((await controles.count()) !== 1) throw new EmisionBloqueadaError('boton', 'diálogo «consolidada»: no hay exactamente un control')
+  const c = controles.first()
+  const d = await descripcion(c)
+  if (planoAltaMapfre(String(d[0] ?? '')).replace(/[.,;:]/g, '').trim() !== 'aceptar') throw new EmisionBloqueadaError('boton', 'diálogo «consolidada»: el control no es «Aceptar»')
+  comprobarBoton(d, { permitirAceptar: true })
+  await clicSinDialogoNativo(page, guard, c, 'diálogo «consolidada»', MS_CLIC_DIALOGO_MAPFRE)
+}
 
 /** ¿Este control es «Generar Proyecto» y nada más? Texto ENTERO exacto + `comprobarBoton` con SOLO `permitirGenerarProyectoMapfre` + lista única: nunca emisión ni prohibida. PURA. */
 export function esBotonGenerarProyectoMapfre(descripciones: readonly (string | null | undefined)[], conGuardar = false): boolean {
@@ -1721,7 +2881,7 @@ export function esBotonGenerarProyectoMapfre(descripciones: readonly (string | n
 }
 
 /** v0.8.17: texto EXACTO del botón final alternativo de la pantalla/diálogo que abre «Ir a generar proyecto» (solo allí, nunca en «Coberturas»). */
-export const TEXTO_GUARDAR_PROYECTO_MAPFRE = 'GUARDAR PROYECTO'
+export const TEXTO_GUARDAR_PROYECTO_MAPFRE = rotuloMayus(CONCEPTOS_ACCION.guardar_proyecto, 'rotulos', 'guardar proyecto')
 
 /** ¿Es el texto de un botón final permitido? «Generar Proyecto» siempre; «Guardar proyecto» solo con `conGuardar` (pantalla tras «Ir a generar proyecto»). Sin tildes/mayúsculas. PURA. */
 export function esEtiquetaFinalProyectoMapfre(etiqueta: string | null | undefined, conGuardar = false): boolean {
@@ -1730,7 +2890,7 @@ export function esEtiquetaFinalProyectoMapfre(etiqueta: string | null | undefine
 }
 
 /** v0.8.16: texto EXACTO del único control de navegación que se pulsa si «Generar Proyecto» no está en «Coberturas». */
-export const TEXTO_IR_A_GENERAR_PROYECTO_MAPFRE = 'IR A GENERAR PROYECTO'
+export const TEXTO_IR_A_GENERAR_PROYECTO_MAPFRE = rotuloMayus(CONCEPTOS_ACCION.ir_a_generar_proyecto, 'rotulos', 'ir a generar proyecto')
 
 /**
  * v0.8.16 (22/10/2026, run real: en «Coberturas» solo había «Ir a generar proyecto», que lleva a la vista del botón «Generar Proyecto»).
@@ -1985,7 +3145,8 @@ async function pulsarGenerarProyectoMapfre(page: Page, guard: GuardEmision, boto
   }
 }
 
-const RE_PROYECTO_SUELTO = /\bproyecto\s*[:#]?\s*(\d[\d/.-]{4,29})(?![A-Za-z0-9])/gi
+const RE_NUM_PROYECTO_MAPFRE = /\bn(?:[º°o]|\.\s?º|um(?:ero)?)?\.?\s*proyecto\s*[:#]?\s*([A-Za-z0-9][A-Za-z0-9/.-]{4,29})(?![A-Za-z0-9])/gi
+const RE_PROYECTO_SUELTO =/\bproyecto\s*[:#]?\s*(\d[\d/.-]{4,29})(?![A-Za-z0-9])/gi
 
 /** Todas las referencias de proyecto de un texto (con etiqueta: «Nº proyecto…», «Proyecto nº…», «Proyecto 123456…»), en orden. PURA. */
 function referenciasProyectoMapfre(texto: string): string[] {
@@ -2000,6 +3161,11 @@ function referenciasProyectoMapfre(texto: string): string[] {
   for (const m of t.matchAll(RE_PROYECTO_SUELTO)) {
     const c = m[1]!.replace(/[.-]+$/, '')
     if (referenciaPresupuestoValida(c)) out.push(c)
+  }
+  // v0.8.44: «Nº Proyecto: XXXXX» (run real 01/11/2026), con Nº/N°/No./N.º/Num. y el valor alfanumérico (letras dentro o delante); misma validación.
+  for (const m of t.matchAll(RE_NUM_PROYECTO_MAPFRE)) {
+    const c = m[1]!.replace(/[.-]+$/, '')
+    if (/\d/.test(c) && referenciaPresupuestoValida(c) && !out.includes(c)) out.push(c)
   }
   return out
 }
@@ -2254,6 +3420,9 @@ export async function generarProyectoMapfre(page: Page, guard: GuardEmision, esp
   let pulsado = false
   let numero: string | null = null
   let peligro: string | null = null
+  let altaRespondida = false
+  let accionesDialogos = 0
+  let numeroVistoEn: number | null = null
   try {
     await pulsarGenerarProyectoMapfre(page, guard, boton, async () => {
       pulsado = true
@@ -2261,14 +3430,51 @@ export async function generarProyectoMapfre(page: Page, guard: GuardEmision, esp
       while (Date.now() < fin) {
         guard.comprobar()
         // Tras el clic NO se pulsa nada: un diálogo que hable de emitir/contratar/firmar/pagar → se para aquí.
-        const dialogos = await page.locator(SEL_DIALOGOS_MAPFRE).locator('visible=true').allInnerTexts().catch(() => [] as string[])
-        const malo = dialogos.map((t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()).find((t) => RE_DIALOGO_PELIGROSO_MAPFRE.test(t))
+        const dialogos = await page
+          .locator(SEL_DIALOGOS_MAPFRE)
+          .locator('visible=true')
+          .evaluateAll((els, selC) => els.map((d) => { const c = d.cloneNode(true) as HTMLElement; c.querySelectorAll(selC).forEach((x) => x.remove()); return { todo: (d as HTMLElement).innerText ?? '', sinBotones: c.textContent ?? '', botones: Array.from(d.querySelectorAll(selC)).map((b) => ((b as HTMLElement).innerText || (b as HTMLInputElement).value || '').trim()) } }), SEL_CONTROLES_DIALOGO_MAPFRE)
+          .catch(() => [] as Array<{ todo: string; sinBotones: string; botones: string[] }>)
+        // v0.8.41: la ÚNICA excepción — el diálogo exacto de alta de cliente se responde «No» (una vez por trabajo). Si además hay otro diálogo
+        // peligroso, o el de alta reaparece, se para como siempre.
+        // v0.8.44: pueden salir DOS di\u00e1logos apilados (\u00abOperaci\u00f3n consolidada\u00bb informativo + el de alta): el informativo se cierra con \u00abAceptar\u00bb y el de
+        // alta se responde \u00abNo\u00bb, en el orden en que el portal los deje pulsar (el de encima primero; si un clic no llega, se prueba el otro), con tope.
+        const clases = dialogos.map((d) => clasificarDialogoMapfre(d.sinBotones, d.botones))
+        const peligrosos = dialogos.filter((_, i) => clases[i] === 'otro').map((d) => d.todo.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase())
+        let malo = peligrosos.find((t) => RE_DIALOGO_PELIGROSO_MAPFRE.test(t))
+        if (malo === undefined && altaRespondida && clases.includes('alta')) malo = 'contrat'
+        if (malo === undefined && accionesDialogos < MAX_ACCIONES_DIALOGOS_MAPFRE) {
+          let hecho = false
+          for (let i = clases.length - 1; i >= 0 && !hecho; i--) {
+            if (clases[i] === 'otro') continue
+            accionesDialogos++
+            try {
+              if (clases[i] === 'alta') {
+                await responderNoAltaClienteMapfre(page, guard, i)
+                altaRespondida = true
+              } else await cerrarConsolidadaMapfre(page, guard, i)
+              hecho = true
+            } catch (e) {
+              // Una violaci\u00f3n del guard (o un di\u00e1logo nativo) para el trabajo; un clic que no lleg\u00f3 (tapado por el otro di\u00e1logo) prueba el siguiente.
+              if (e instanceof EmisionBloqueadaError || e instanceof GuardadoConDialogoError) throw e
+            }
+          }
+          if (hecho) {
+            await page.waitForTimeout(400)
+            continue
+          }
+        }
         if (malo !== undefined) {
           peligro = (malo.match(RE_DIALOGO_PELIGROSO_MAPFRE) ?? [''])[0]
           return
         }
-        numero = numeroProyectoMapfreNuevo(antes, await textoProyectoMapfre(page))
-        if (numero) return
+        numero = numero ?? numeroProyectoMapfreNuevo(antes, await textoProyectoMapfre(page))
+        // v0.8.42: el nº puede pintarse ANTES que el diálogo de alta (run real 89e0a420: nº leído y el diálogo quedó abierto tapando el PDF).
+        // Con nº ya visto se sigue vigilando unos segundos (mismas reglas) antes de dar por cerrado el paso.
+        if (numero) {
+          numeroVistoEn = numeroVistoEn ?? Date.now()
+          if ((altaRespondida && dialogos.length === 0) || Date.now() - numeroVistoEn >= MS_ASENTAR_PROYECTO_MAPFRE) return
+        }
         await page.waitForTimeout(400)
       }
     }, 'generar', conGuardar)
@@ -2285,10 +3491,190 @@ export async function generarProyectoMapfre(page: Page, guard: GuardEmision, esp
     const motivo = `${base}${causa}${sufijoDiagnosticoProyectoMapfre(await diagnosticoPantallaProyectoMapfre(page))}`
     return pulsado ? { estado: 'sin_numero', motivo } : { estado: 'no_generado', motivo }
   }
-  if (numero) return { estado: 'generado', numero }
-  if (peligro !== null) return { estado: 'sin_numero', motivo: `tras pulsar salió un diálogo que menciona «${peligro}»: el bot no toca nada más` }
-  return { estado: 'sin_numero', motivo: `no se leyó el nº de proyecto en ${Math.round(esperaMs / 1000)} s${sufijoDiagnosticoProyectoMapfre(await diagnosticoPantallaProyectoMapfre(page))}` }
+  const avisos = altaRespondida ? { avisos: [AVISO_DIALOGO_ALTA_CLIENTE_MAPFRE] } : {}
+  if (numero) return { estado: 'generado', numero, ...avisos }
+  if (peligro !== null) return { estado: 'sin_numero', motivo: `tras pulsar salió un diálogo que menciona «${peligro}»: el bot no toca nada más${await leerDialogoPeligroMapfre(page)}`, ...avisos }
+  return { estado: 'sin_numero', motivo: `no se leyó el nº de proyecto en ${Math.round(esperaMs / 1000)} s${sufijoDiagnosticoProyectoMapfre(await diagnosticoPantallaProyectoMapfre(page))}`, ...avisos }
 }
+
+/** Trabajos (guards) en los que ya se vio un IMPORTE en algún marco: ningún avance por id más (precio pegajoso, 28/10/2026). */
+const PRECIO_VISTO = new WeakSet<GuardEmision>()
+export function registrarPrecioVisto(guard: GuardEmision): void {
+  PRECIO_VISTO.add(guard)
+}
+export function precioVistoEn(guard: GuardEmision): boolean {
+  return PRECIO_VISTO.has(guard)
+}
+
+/** Cuerpo de `vigilanciaVivaAvancePorId` que corre EN EL MARCO (texto: sin `__name`). */
+const VIGILANCIA_AVANCE_ID = `function (fuenteTitulo) {
+  var reTitulo = new RegExp(fuenteTitulo);
+  var RE = /^(?:€\\s*)?-?\\d[\\d.,]{0,14}\\s*(?:€|eur(?:os)?)?$/i;
+  var esImporte = function (t) { return t.length <= 30 && RE.test(t) && (/€|eur/i.test(t) || /,\\d{1,2}$/.test(t)); };
+  var visible = function (n) { return n.getClientRects().length > 0 && getComputedStyle(n).visibility !== 'hidden'; };
+  var txt = function (n) { return String(n.innerText || n.textContent || '').replace(/\\s+/g, ' ').trim(); };
+  var plano = function (t) { return t.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase(); };
+  var p = false, t = false, i, n, v;
+  var nodos = document.querySelectorAll('td,th,span,strong,b,div,p,dd,li,label,output,em,small,font');
+  for (i = 0; i < nodos.length && !p; i++) { n = nodos[i]; if (visible(n)) { v = txt(n); if (v !== '' && esImporte(v)) p = true; } }
+  var campos = document.querySelectorAll('input[readonly],input[disabled],output');
+  for (i = 0; i < campos.length && !p; i++) { n = campos[i]; v = String(n.value == null ? '' : n.value).replace(/\\s+/g, ' ').trim(); if (v !== '' && visible(n) && esImporte(v)) p = true; }
+  var hs = document.querySelectorAll('h1,h2,h3,h4,h5,h6,legend,th,caption,[role=heading]');
+  for (i = 0; i < hs.length && !t; i++) { n = hs[i]; if (visible(n) && reTitulo.test(plano(txt(n)))) t = true; }
+  return { p: p, t: t };
+}`
+
+/**
+ * VIVO, en TODOS los marcos de la página (revisión de seguridad 28/10/2026), justo antes del clic de un avance por id:
+ *   · `precio`: algún importe visible (texto de un nodo, hoja o no: «123,45 <span>€</span>» cuenta; o el valor de un input/output
+ *     de solo lectura con forma de importe);
+ *   · `titulo`: algún encabezado visible (h1-h6, legend, th, caption, role=heading) que case con `nuncaConTitulo` (texto plano).
+ * Un marco que no se puede leer cuenta como las dos cosas (fail-closed). Solo lee: nunca sale ningún texto ni valor.
+ */
+async function vigilanciaVivaAvancePorId(page: Page, nuncaConTitulo: RegExp): Promise<{ precio: boolean; titulo: boolean }> {
+  let precio = false
+  let titulo = false
+  for (const f of marcosVivos(page)) {
+    // Como TEXTO (no función): tsx envuelve las funciones con nombre en `__name`, que no existe en la página.
+    const r = await (f.evaluate(`(${VIGILANCIA_AVANCE_ID})(${JSON.stringify(nuncaConTitulo.source)})`) as Promise<{ p: boolean; t: boolean }>)
+      .then((x) => (x && typeof x.p === 'boolean' && typeof x.t === 'boolean' ? x : { p: true, t: true }))
+      .catch(() => ({ p: true, t: true }))
+    precio ||= r.p
+    titulo ||= r.t
+  }
+  return { precio, titulo }
+}
+
+/**
+ * 0.3.17: VIVO, ¿es `boton` el ÚNICO control del marco cuyo texto (o aria-label/value) normalizado casa con `fuente` (el patrón de la regla,
+ * sobre texto plano: sin tildes, minúsculas)? Cuenta hojas (un contenedor que solo envuelve a otro con el mismo texto no suma) y también
+ * los ocultos (fail-closed). Solo lee; como TEXTO (tsx envuelve las funciones con nombre en `__name`, que no existe en la página).
+ */
+async function esUnicoPorTextoVivo(boton: Locator, fuente: string): Promise<boolean> {
+  return boton
+    .evaluate(
+      (el, src) => {
+        const re = new RegExp(src)
+        const todos = Array.from(el.ownerDocument.querySelectorAll('a,button,input,td,th,div,span,li,label,p,[role=button],[role=link],[role=menuitem],[onclick]'))
+        const casan = todos.filter((n) =>
+          (n.tagName === 'INPUT' ? [(n as HTMLInputElement).value, n.getAttribute('aria-label')] : [n.textContent, n.getAttribute('aria-label')]).some((x) =>
+            re.test(String(x == null ? '' : x).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase()),
+          ),
+        )
+        const hojas = casan.filter((n) => !casan.some((m) => m !== n && n.contains(m)))
+        return hojas.length === 1 && (hojas[0] === el || el.contains(hojas[0]) || hojas[0].contains(el))
+      },
+      fuente,
+    )
+    .catch(() => false)
+}
+
+/**
+ * 0.3.18: VIVO, todo lo que el inventario afirmó del `<input type=submit>` sin rótulo (regla {@link AvanceSinTexto}) y que aquí se repite sobre
+ * el DOM de verdad: es un input submit sin value/aria-label/title/texto/alt (0.3.20: o con un rótulo de avance NEUTRO exacto,
+ * `rotuloNeutroSinTexto`), sin onclick/formaction/ng-click, con `name` y clases de la regla
+ * (el `name` entero, no el recortado del inventario), en el ORIGEN exacto y con la ruta de la regla, y es el ÚNICO así de su documento.
+ * Devuelve la causa (sin valores del portal) o `null`. Solo lee. Evalúa con funciones ANÓNIMAS (tsx envuelve las con nombre en `__name`).
+ */
+async function causaNoEsAvanceSinTextoVivo(boton: Locator, a: AvanceSinTexto): Promise<string | null> {
+  const r = await boton
+    .evaluate(
+      (el, cfg) => {
+        const d = el.ownerDocument
+        const submit = el.tagName === 'INPUT' && (el.getAttribute('type') ?? '').toLowerCase() === 'submit'
+        const rotulos = [(el as HTMLInputElement).value, (el.getAttribute('aria-label') ?? ''), (el.getAttribute('title') ?? ''), (el.getAttribute('alt') ?? ''), (el as HTMLElement).innerText, el.textContent]
+        // 0.3.19: el onclick va APARTE (solo vale el de la forma cerrada de la regla, comprobado fuera con `onclickCasaFormaSinTexto`).
+        const manejadores = [(el.getAttribute('formaction') ?? ''), (el.getAttribute('ng-click') ?? ''), (el.getAttribute('data-ng-click') ?? ''), (el.getAttribute('onmousedown') ?? ''), (el.getAttribute('onmouseup') ?? ''),
+          (el.getAttribute('onpointerdown') ?? ''), (el.getAttribute('onpointerup') ?? ''),
+          // Revisión adversarial: `form`/`formmethod`/`formtarget`/`formenctype` desvían el envío a OTRO formulario o lo cambian (el destino
+          // abierto en la red es el del `closest('form')`): fuera. 0.3.19: también `formnovalidate` (presencia, aunque vacío).
+          (el.getAttribute('form') ?? ''), (el.getAttribute('formmethod') ?? ''), (el.getAttribute('formtarget') ?? ''), (el.getAttribute('formenctype') ?? ''), el.hasAttribute('formnovalidate') ? 'x' : '']
+        const name = (el.getAttribute('name') ?? '')
+        const id = el.id ?? ''
+        const clases = (el.getAttribute('class') ?? '').split(/\s+/)
+        const iguales = Array.from(d.querySelectorAll('input')).filter(
+          (n) => (n.getAttribute('type') ?? '').toLowerCase() === 'submit' && (n.getAttribute('name') ?? '').startsWith(cfg.prefijoName) && (n.getAttribute('name') ?? '').includes(cfg.contieneName) && cfg.clase.every((t) => (n.getAttribute('class') ?? '').split(/\s+/).includes(t)),
+        ).length
+        return {
+          submit,
+          // 0.3.20: los rótulos vivos salen (solo para decidir aquí, en Node; nunca a un mensaje): vale vacío o uno NEUTRO de la lista cerrada.
+          rotulos: rotulos.map((x) => String(x ?? '')),
+          conManejador: manejadores.some((x) => x.trim() !== ''),
+          onclick: el.getAttribute('onclick') ?? '',
+          name,
+          id,
+          clase: cfg.clase.every((t) => clases.includes(t)),
+          origen: d.location.origin,
+          ruta: d.location.pathname,
+          iguales,
+        }
+      },
+      { prefijoName: a.prefijoName, contieneName: a.contieneName, clase: [...a.clase] },
+    )
+    .catch(() => null)
+  if (!r) return 'no_se_pudo_leer'
+  if (!r.submit) return 'no_es_input_submit'
+  // 0.3.20 (Fidelidade real, e0e482d1…): el `value` vivo («Siguiente»…) que el inventario no ve. Cualquier rótulo fuera de la lista cerrada
+  // de avance neutro (o que case una acción final) sigue siendo `con_rotulo`.
+  if (!Array.isArray(r.rotulos) || !r.rotulos.every((x) => rotuloNeutroSinTexto(x, a.textoAccionFinal))) return 'con_rotulo'
+  if (r.conManejador) return 'con_manejador'
+  if (!/^[A-Za-z0-9_$.:-]{1,300}$/.test(r.name) || !r.name.startsWith(a.prefijoName) || !r.name.includes(a.contieneName)) return 'name_distinto'
+  // 0.3.19: un onclick VIVO solo con la forma cerrada de la regla y con B === el name VIVO ENTERO; sin `onclickForma`, ninguno (0.3.18).
+  if (r.onclick.trim() !== '' && (a.onclickForma === undefined || !onclickCasaFormaSinTexto(a, r.onclick, r.name, { nameExacto: true }))) return a.onclickForma === undefined ? 'con_manejador' : 'onclick_fuera_de_forma'
+  if (!r.clase) return 'clase_distinta'
+  // OutSystems pone el nombre del widget al final del name/id (`…$wtBtnContratar`): la MISMA expresión que el módulo, sobre lo VIVO.
+  if ([r.name, r.id].some((v) => typeof v === 'string' && RE_NAME_ACCION_FINAL_SIN_TEXTO.test(v.toLowerCase()))) return 'name_de_accion_final'
+  if (r.origen !== a.origen) return 'origen_distinto'
+  // 0.3.22: ruta EXACTA de la lista cerrada de pantallas de la simulación (antes, una subcadena).
+  if (!a.rutas.includes(r.ruta)) return 'ruta_distinta'
+  if (r.iguales !== 1) return 'no_unico'
+  return null
+}
+
+/** Cuerpo de {@link hayTextoAccionFinalVivo} que corre EN EL MARCO (texto: sin `__name`). */
+const TEXTO_ACCION_FINAL_VIVO = `function (fuente) {
+  var re = new RegExp(fuente);
+  var plano = function (t) { return String(t == null ? '' : t).normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/\\s+/g, ' ').trim().toLowerCase(); };
+  var partes = [document.body ? document.body.innerText : ''];
+  var cs = document.querySelectorAll('input[type=submit],input[type=button],input[type=image],button,a,[role=button],[aria-label],[title]');
+  for (var i = 0; i < cs.length; i++) { var n = cs[i]; partes.push(n.value, n.getAttribute('aria-label'), n.getAttribute('title'), n.getAttribute('alt')); }
+  for (var j = 0; j < partes.length; j++) { if (re.test(plano(partes[j]))) return true; }
+  return false;
+}`
+
+/**
+ * 0.3.18: VIVO, en TODOS los marcos, ¿hay texto visible (cuerpo, valores/aria/title de controles) de acción final o dato bancario
+ * (`textoAccionFinal`: emitir, contratar, confirmar, firmar, pagar, formaliz, IBAN, cuenta…)? Un marco que no se puede leer cuenta como sí (fail-closed).
+ */
+async function hayTextoAccionFinalVivo(page: Page, fuente: RegExp): Promise<boolean> {
+  for (const f of marcosVivos(page)) {
+    const r = await (f.evaluate(`(${TEXTO_ACCION_FINAL_VIVO})(${JSON.stringify(fuente.source)})`) as Promise<unknown>).catch(() => true)
+    if (r !== false) return true
+  }
+  return false
+}
+
+/**
+ * 0.3.18: VIVO, el «Aceptar» sin id con `onclickExacto` (ePAC `eventoSiguienteDialog()`) no lleva NADA más que pueda ejecutar o desviar un
+ * envío: es `type=button` (o un control que no envía), sin `formaction`/`form`/`formmethod`/`formtarget`/`formenctype`/`formnovalidate`,
+ * sin `onmousedown`/`onmouseup`/`onpointerdown`/`onpointerup`/`ondblclick`/`onkeydown`/`onkeyup`/`onkeypress`/`ng-click`/`data-ng-click`.
+ * Solo lee; función ANÓNIMA (tsx envuelve las con nombre en `__name`). Fallo de lectura = no (fail-closed).
+ */
+async function sinOtrosManejadoresVivo(boton: Locator): Promise<boolean> {
+  return boton
+    .evaluate((el) => {
+      const tag = el.tagName
+      const tipo = (el.getAttribute('type') ?? '').toLowerCase()
+      if (tag === 'BUTTON' && tipo !== 'button') return false
+      if (tag === 'INPUT' && tipo !== 'button') return false
+      const attrs = ['formaction', 'form', 'formmethod', 'formtarget', 'formenctype', 'formnovalidate', 'onmousedown', 'onmouseup', 'onpointerdown', 'onpointerup', 'ondblclick', 'onkeydown', 'onkeyup', 'onkeypress', 'ng-click', 'data-ng-click']
+      return attrs.every((a) => !el.hasAttribute(a))
+    })
+    .catch(() => false)
+}
+
+/** Tope de avances de PASO por identidad exacta (`AvancePorId`) por trabajo (3, revisión de seguridad 28/10/2026). */
+export const MAX_AVANCES_POR_ID = 3
 
 /**
  * AVANCE AUTORIZADO DEL EXPLORADOR IA (Alberto, 13/10/2026: «Aceptar» de Datos básicos → Tarificar, SOLO en exploración;
@@ -2313,7 +3699,15 @@ export async function pulsarExploracionAutorizada(
   guard.comprobar()
   if (guard.ventana.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'avance de exploración con la ventana de emisión o de guardado abierta')
   const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
-  if (usados.has('exploracion')) throw new EmisionBloqueadaError('fase', 'el avance autorizado de exploración ya se usó en este trabajo')
+  // Avance por IDENTIDAD EXACTA (28/10/2026, ePAC `#btnAceptar` + `eventoSiguiente()` en `/drvp00/SEAServlet`): es el avance de
+  // PASO del asistente, con su propio contador (≤ `MAX_AVANCES_POR_ID`). El «Aceptar» por título sigue siendo UNA vez por trabajo.
+  const porId = avancePorIdAutorizado(aut.entrada, aut.el, aut.marco)
+  // 0.3.18: el `<input type=submit>` sin rótulo de la simulación de Fidelidade (regla estrecha): mismo tope que el avance por id.
+  const sinTexto = porId ? null : avanceSinTextoAutorizado(aut.entrada, aut.el, aut.marco)
+  const prefijoId = porId ? `exploracion:id:${porId.id}#` : sinTexto ? 'exploracion:sintexto#' : null
+  const usadosPorId = prefijoId ? [...usados].filter((u) => u.startsWith(prefijoId)).length : 0
+  if (!porId && !sinTexto && usados.has('exploracion')) throw new EmisionBloqueadaError('fase', 'el avance autorizado de exploración ya se usó en este trabajo')
+  if ((porId || sinTexto) && usadosPorId >= MAX_AVANCES_POR_ID) throw new EmisionBloqueadaError('fase', `el avance de paso autorizado de exploración ya se usó ${usadosPorId} veces en este trabajo`)
   await exigirSinCuentaBancaria(page)
   if (!esAvanceAutorizado(aut.entrada, aut.el, aut.marco) || bloqueoAvance(aut.entrada, aut.el, aut.marco) !== null) {
     throw new EmisionBloqueadaError('boton', 'avance de exploración no autorizado para esta entrada y esta pantalla')
@@ -2322,6 +3716,50 @@ export async function pulsarExploracionAutorizada(
   const desc = await descripcion(boton)
   const plano = (t: string | null) => (t ?? '').replace(/\s+/g, ' ').trim()
   if (plano(desc[0]) !== plano(aut.el.texto ?? null)) throw new EmisionBloqueadaError('boton', 'avance de exploración: el control vivo no es el del inventario')
+  if (porId) {
+    // VIVO: id, onclick y ruta del marco EXACTOS (lo que dijo el inventario puede haber cambiado antes del clic).
+    const ruta = rutaDeMarco(await boton.evaluate((el) => el.ownerDocument.location.href).catch(() => null))
+    if (porId.sinIdentidad === true) {
+      // 0.3.17: sin id ni onclick (ni ng-click) VIVOS, ruta de marco VIVA entre las de la regla y ÚNICO «Aceptar» vivo del marco.
+      const vacio = (v: string | null | undefined) => (v ?? '').trim() === ''
+      // 0.3.18: con `onclickExacto`, el onclick VIVO tiene que ser exactamente ese (tras trim); sin él, ninguno (0.3.17).
+      const onclickVivoOk = porId.onclickExacto === undefined ? onclickNormalizado(desc[7]) === '' : (desc[7] ?? '').trim() === porId.onclickExacto
+      if (!vacio(desc[4]) || !onclickVivoOk || !vacio(desc[9]) || !vacio(desc[10]) || !rutaCasaAvancePorId(porId, ruta)) {
+        throw new EmisionBloqueadaError('boton', 'avance de exploración: el control vivo no es el avance de paso autorizado (sin id/onclick/marco)')
+      }
+      if (porId.onclickExacto !== undefined && !(await sinOtrosManejadoresVivo(boton))) {
+        throw new EmisionBloqueadaError('boton', 'avance de exploración: el control vivo tiene otros manejadores, atributos form* o envía el formulario (no es el avance de paso autorizado)')
+      }
+      if (!(await esUnicoPorTextoVivo(boton, porId.texto.source))) {
+        throw new EmisionBloqueadaError('boton', 'avance de exploración: el control vivo no es el único con ese texto en el marco')
+      }
+    } else if (desc[4] !== porId.id || onclickNormalizado(desc[7]) !== porId.onclick || ruta !== porId.rutaMarco) {
+      throw new EmisionBloqueadaError('boton', 'avance de exploración: el control vivo no es el avance de paso autorizado (id/onclick/marco)')
+    }
+    // PRECIO PEGAJOSO + VIVO en TODOS los marcos: un importe visto antes en el trabajo, o a la vista ahora, cierra el avance por id.
+    if (PRECIO_VISTO.has(guard)) throw new EmisionBloqueadaError('boton', 'avance de exploración: ya se vio un precio en este trabajo (no se avanza por id)')
+    const vivo = await vigilanciaVivaAvancePorId(page, porId.nuncaConTitulo)
+    if (vivo.precio) {
+      PRECIO_VISTO.add(guard)
+      throw new EmisionBloqueadaError('boton', 'avance de exploración: la página ya muestra un precio (no se avanza por id)')
+    }
+    // Títulos VIVOS de todos los marcos: tarificar, revisión, emisión, contratar, pago, firma, IBAN… → no.
+    if (vivo.titulo) throw new EmisionBloqueadaError('boton', 'avance de exploración: un título vivo de la página es de tarificación/emisión (no se avanza por id)')
+  } else if (sinTexto) {
+    // 0.3.18: VIVO, el control sin rótulo es el de la regla (input submit, name/clase, origen y ruta exactos, sin manejadores, único)…
+    const causa = await causaNoEsAvanceSinTextoVivo(boton, sinTexto)
+    if (causa) throw new EmisionBloqueadaError('boton', `avance de exploración sin texto: el control vivo no es el autorizado (${causa})`)
+    // …sin precio (pegajoso y vivo), sin títulos de emisión/contratación… y sin texto de acción final ni dato bancario en NINGÚN marco.
+    if (PRECIO_VISTO.has(guard)) throw new EmisionBloqueadaError('boton', 'avance de exploración: ya se vio un precio en este trabajo (no se avanza sin texto)')
+    const vivo = await vigilanciaVivaAvancePorId(page, sinTexto.nuncaConTitulo)
+    if (vivo.precio) {
+      PRECIO_VISTO.add(guard)
+      throw new EmisionBloqueadaError('boton', 'avance de exploración: la página ya muestra un precio (no se avanza sin texto)')
+    }
+    if (vivo.titulo) throw new EmisionBloqueadaError('boton', 'avance de exploración: un título vivo de la página es de emisión/contratación (no se avanza sin texto)')
+    if (await hayTextoAccionFinalVivo(page, sinTexto.textoAccionFinal)) throw new EmisionBloqueadaError('boton', 'avance de exploración: la página muestra texto de acción final o datos bancarios (no se avanza sin texto)')
+    comprobarBoton(desc)
+  }
   comprobarBoton(desc, { permitirAceptar: true })
   const destino = await boton.evaluate((el) => {
     const d = el.ownerDocument
@@ -2329,6 +3767,7 @@ export async function pulsarExploracionAutorizada(
     return f ? { accion: f.action, pagina: d.location.href } : null
   })
   let endpoint: string | null = null
+  let extras: string[] = []
   try {
     if (destino) {
       const a = new URL(destino.accion)
@@ -2338,10 +3777,47 @@ export async function pulsarExploracionAutorizada(
   } catch {
     endpoint = null
   }
+  // Avance de PASO por id (real 28/10/2026, ePAC drvp00): `eventoSiguiente()` envía el formulario del servlet, pero el botón no está
+  // dentro de un <form> y el marco tiene varios. Su ÚNICO destino conocido es el propio servlet del marco: MISMO origen que el marco
+  // (leído vivo) + la ruta EXACTA de la regla (`rutaMarco`, ya comprobada arriba). Nada más se abre; la capa de parámetros sigue.
+  if (porId) {
+    try {
+      const p = new URL(await boton.evaluate((el) => el.ownerDocument.location.href))
+      // 0.3.17: en `sinIdentidad` el destino es la ruta VIVA del marco (ya comprobada contra las de la regla).
+      const rutaDestino = porId.sinIdentidad === true ? rutaDeMarco(p.href) : porId.rutaMarco
+      endpoint = (p.protocol === 'https:' || p.protocol === 'http:') && !p.username && !p.password && rutaDestino && rutaCasaAvancePorId(porId, rutaDestino) ? `${p.origin}${rutaDestino}` : null
+      // 0.3.13: destinos POST declarados de la regla (mismo origen, ruta exacta). Sigue la capa de contenido (URL y cuerpo).
+      if (endpoint) extras = (porId.destinosPost ?? []).filter((r) => /^\/[A-Za-z0-9_./-]{1,120}$/.test(r) && !r.includes('..')).map((r) => `${p.origin}${r}`)
+    } catch {
+      endpoint = null
+    }
+  }
+  // 0.3.19: el avance sin texto con onclick (OsAjax de OutSystems hace un POST al propio formulario): su ÚNICO destino (el del formulario, mismo
+  // origen y ruta) pasa además la inspección ESTRICTA del cuerpo (`cuerpoLlevaAccionFinal`: acción final, IBAN/cuenta/tarjeta) como extra.
+  if (sinTexto && sinTexto.onclickForma !== undefined && endpoint) extras = [endpoint]
+  // 0.3.22 (Fidelidade real 29/10/2026, 530656a4…): el formulario de la simulación envía a OTRA pantalla del flujo («Datos Cliente»,
+  // `ClientData.aspx`). El destino del avance sin texto tiene que ser una de las rutas de la LISTA CERRADA de la regla (antes: cualquier ruta
+  // del mismo origen) y SIN query (la red solo admite destinos exactos sin query: con ella el POST caería después, a medias). Se para ANTES
+  // del clic, diciendo solo NOMBRES de clave de la query (nunca valores). Las rutas de la lista entran todas como destinos con inspección
+  // ESTRICTA del cuerpo (la respuesta de la simulación lleva a la siguiente pantalla de la lista, que repinta con su propio POST).
+  if (sinTexto) {
+    let accion: URL | null = null
+    try { accion = destino ? new URL(destino.accion) : null } catch { accion = null }
+    if (!endpoint || !accion) throw new EmisionBloqueadaError('fase', 'avance de exploración sin texto: sin formulario de envío conocido del mismo origen')
+    if (!sinTexto.rutas.includes(accion.pathname)) throw new EmisionBloqueadaError('boton', 'avance de exploración sin texto: el formulario envía a una pantalla fuera de la lista de la simulación')
+    if (accion.search !== '') {
+      const claves = clavesQueryDiagnostico(accion)
+      throw new EmisionBloqueadaError('boton', `avance de exploración sin texto: el formulario envía con query (claves: ${claves || '?'}); solo destinos exactos sin query`)
+    }
+    const origen = accion.origin
+    extras = [...new Set([endpoint, ...sinTexto.rutas.map((r) => `${origen}${r}`)])]
+  }
   if (!endpoint) throw new EmisionBloqueadaError('fase', 'avance de exploración: sin formulario de envío conocido del mismo origen')
+  // 0.3.19: la ayuda contextual de drvp00 (solo lectura) que la pantalla de destino pide al cargar; SOLO en los avances por id de drvp00.
+  const ajaxAvance: readonly AjaxValidacionAvance[] = porId && porId.rutaMarco.startsWith('/drvp00/') ? [AJAX_AYUDA_APLICACIONES_ALLIANZ_DRVP00] : []
   const abrir = ABRIR_AVANCE.get(guard)
   if (!abrir) throw new EmisionBloqueadaError('fase', 'guard sin ventana de avance')
-  usados.add('exploracion')
+  usados.add(prefijoId ? `${prefijoId}${usadosPorId + 1}` : 'exploracion')
   AVANCES_USADOS.set(guard, usados)
   const hasta = Date.now() + VENTANA_RED_AVANCE_MS
   let dialogo: string | null = null
@@ -2350,7 +3826,7 @@ export async function pulsarExploracionAutorizada(
     d.dismiss().catch(() => {})
   }
   page.on('dialog', alDialogo)
-  abrir(hasta, [endpoint])
+  abrir(hasta, [endpoint, ...extras], ajaxAvance)
   try {
     await boton.click()
     // La pantalla cambió cuando el control ya no está (navegación, recarga del marco o re-pintado).
@@ -2456,6 +3932,84 @@ export async function pulsarGuardadoPresupuesto(
 export const SELECTOR_DIALOGO = 'dialog,[role=dialog],[aria-modal=true],mat-dialog-container,.modal-dialog,.modal'
 /** Controles pulsables que se cuentan como CANDIDATOS dentro de un diálogo (los del inventario que tienen texto). */
 const SELECTOR_PULSABLES_DIALOGO = 'button,a[role=button],[role=button],[role=tab],td[onclick]'
+
+/** Tope de cierres del diálogo «Atención» del término (ePAC) por trabajo. */
+export const MAX_CIERRES_DIALOGO_TERMINO = 3
+/** Texto (plano) del diálogo «Atención» de ePAC que propone ALARGAR/AMPLIAR el término (Movilidad Personal, 28/10/2026). */
+export const RE_DIALOGO_TERMINO = /(alarg|ampli|prorrog)[a-z]*\b.*\btermino\b/
+
+/**
+ * CIERRE DETERMINISTA del diálogo «Atención» de ePAC que pregunta si alargar el término (real 28/10/2026, explorador de Movilidad
+ * Personal: la IA quiso pulsar su «Aceptar» `#buttonOkPopup` → `aceptar_no_autorizado`; con «Cancelar» el flujo sigue). Busca en
+ * TODOS los marcos un control VISIBLE de texto EXACTO «Cancelar» (o, si no hay ninguno, «×») dentro de un diálogo cuyo título
+ * vivo es EXACTAMENTE «Atención» y cuyo texto casa con `RE_DIALOGO_TERMINO`. Exactamente uno; lo pulsa por `pulsar()` (el guard de
+ * siempre: nunca un «Aceptar», que además ni se busca). Como mucho `MAX_CIERRES_DIALOGO_TERMINO` por trabajo. `false` = no había.
+ */
+export async function cerrarDialogoTerminoEpac(page: Page, guard: GuardEmision): Promise<boolean> {
+  guard.comprobar()
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  const hechos = [...usados].filter((u) => u.startsWith('dialogo_termino#')).length
+  if (hechos >= MAX_CIERRES_DIALOGO_TERMINO) return false
+  const plano = (t: string | null | undefined) => (t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
+  for (const exacto of ['cancelar', '×']) {
+    const candidatos: Locator[] = []
+    for (const f of marcosVivos(page)) {
+      const l = f.locator('button,[role=button],a,input[type=button]')
+      const n = await l.count().catch(() => 0)
+      for (let i = 0; i < n; i++) {
+        const c = l.nth(i)
+        if (!(await c.isVisible().catch(() => false))) continue
+        const d = await c.evaluate((e) => ({ t: (e as HTMLElement).innerText || (e as HTMLInputElement).value || e.textContent || '', a: e.getAttribute('aria-label') })).catch(() => null)
+        if (!d || plano(d.t) !== exacto) continue
+        const titulo = await c.evaluate(tituloDialogoVivo, SELECTOR_DIALOGO).catch(() => null)
+        if (plano(titulo) !== 'atencion') continue
+        const texto = await c.evaluate((e, sel) => { const dl = e.closest(sel) as HTMLElement | null; return dl ? (dl.innerText || dl.textContent || '') : '' }, SELECTOR_DIALOGO).catch(() => '')
+        if (!RE_DIALOGO_TERMINO.test(plano(texto))) continue
+        candidatos.push(c)
+      }
+    }
+    if (candidatos.length === 0) continue
+    if (candidatos.length > 1) throw new EmisionBloqueadaError('boton', `diálogo «Atención» del término: ${candidatos.length} controles «${exacto}» (ambiguo, no se pulsa)`)
+    usados.add(`dialogo_termino#${hechos + 1}`)
+    AVANCES_USADOS.set(guard, usados)
+    await pulsar(candidatos[0]!, guard)
+    return true
+  }
+  return false
+}
+
+/**
+ * RADIO OCULTO DE UNA ETIQUETA (`controlOcultoDeEtiqueta`; vive aquí porque solo guard.ts nombra radios: lo usan el inventario de
+ * exploración y la relectura VIVA del explorador). Detalle (28/10/2026, Allianz ePAC `/drvp00/SEAServlet`, «Figuras Intervinientes»): los radios «Es el
+ * Propietario: Si/No» son `<input type=radio>` OCULTOS (estilizados) y lo que se ve es su `<label>` (id `<x>_label`). El input no
+ * sale en el inventario (oculto) y la etiqueta salía como `label`, que `marcar` rechaza. Esta función, PURA de DOM y sin funciones
+ * con nombre dentro (va a la página con `toString()`, como `tituloDialogoVivo`), resuelve el input asociado: por `for`
+ * (`label.control`) o, si no, por el id `<x>_label` → `#<x>`. Solo si es un RADIO y NO se inventaría por sí mismo (oculto: si se
+ * ve, ya sale como input y no se duplica). Un checkbox → `null` (su etiqueta sigue siendo `label` y `marcar` la rechaza). Solo
+ * lee (nunca `.value`; `marcado` es el booleano `checked`).
+ */
+export const controlOcultoDeEtiqueta = (el: Element): { id: string | null; name: string | null; type: string; ariaLabel: string | null; formControlName: string | null; requerido: boolean; deshabilitado: boolean; marcado: boolean } | null => {
+  if (el.tagName !== 'LABEL') return null
+  const l = el as HTMLLabelElement
+  let c: Element | null = l.control ?? null
+  if (!c && l.id && /_label$/.test(l.id)) c = l.ownerDocument.getElementById(l.id.slice(0, -'_label'.length))
+  if (!c || c.tagName !== 'INPUT' || String((c as HTMLInputElement).type).toLowerCase() !== 'radio') return null
+  const r = c as HTMLInputElement
+  const cs = getComputedStyle(r)
+  const b = r.getBoundingClientRect()
+  const oculto = cs.display === 'none' || cs.visibility === 'hidden' || (b.width === 0 && b.height === 0 && !(r.labels && r.labels.length > 0))
+  if (!oculto) return null
+  return {
+    id: r.id || null,
+    name: r.getAttribute('name'),
+    type: 'radio',
+    ariaLabel: r.getAttribute('aria-label'),
+    formControlName: r.getAttribute('formcontrolname'),
+    requerido: r.hasAttribute('required') || r.getAttribute('aria-required') === 'true',
+    deshabilitado: r.disabled === true || r.getAttribute('aria-disabled') === 'true',
+    marcado: r.checked === true,
+  }
+}
 
 /**
  * Título accesible del diálogo más cercano que contiene a `el` (aria-labelledby → aria-label → primer encabezado del
@@ -2729,8 +4283,10 @@ export async function marcarOpcionResueltaHogarAllianz(marco: Frame, guard: Guar
  * su pregunta (`[nxheadline]`) dentro de `ambito`. Solo localiza y lee (el adaptador no puede nombrar radios: guardián de la raíz);
  * marcar sigue siendo SOLO `marcarOpcionResueltaHogarAllianz` (comprobarBoton + label for único + que quede marcado).
  */
-export function grupoOpcionesHogarAllianz(marco: Frame, ambito: string, pregunta: string): Locator {
-  const exacto = new RegExp(`^\\s*${pregunta.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}\\s*$`, 'i')
+export function grupoOpcionesHogarAllianz(marco: Frame, ambito: string, pregunta: string, contiene = false): Locator {
+  const lit = pregunta.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')
+  // 0.1.13: `contiene` = respaldo tolerante (el rótulo real puede llevar más texto que el esperado); sigue siendo solo localizar.
+  const exacto = contiene ? new RegExp(lit, 'i') : new RegExp(`^\\s*${lit}\\s*$`, 'i')
   return marco.locator(`${ambito} nx-radio-group:visible`).filter({ has: marco.locator('[nxheadline]', { hasText: exacto }) })
 }
 
@@ -3235,6 +4791,132 @@ export async function companiaActualTurismosAllianz(marco: Frame, guard: GuardEm
   return { estado: 'elegida', opciones, elegida: opciones[hits[0]], ...(generica ? { generica: true as const } : {}) }
 }
 
+// ─────────── «Localidad» del tomador de Allianz AUTOS Turismos (v0.6.37 del bot, 31/10/2026) ───────────
+// HTML real del trabajo dbb6d451 (solo estructura): en «Datos personales», bloque «¿Quién es el tomador?», `nx-formfield label="Localidad"`
+// con un `<input role=combobox aria-autocomplete=list maxlength=50>` (autocompletado NDBX `nxAutocomplete`) y su `<nx-autocomplete>` vacío:
+// las opciones solo existen con el panel abierto (overlay, `[role=option]` del listbox al que apunta `aria-owns`/`aria-controls`). El
+// portal NO la propuso sola tras el CP. Esta puerta es el ÚNICO camino del adaptador para abrirlo, teclear la búsqueda, leer las opciones y,
+// como mucho, elegir UNA (la que decide `elegir`, función PURA del adaptador). Nunca se fuerza un clic ni se elige con Enter.
+
+export const PASO_LOCALIDAD_TURISMOS = 'Datos personales'
+export const ETIQUETA_LOCALIDAD_TURISMOS = 'Localidad'
+const SEL_BLOQUE_TOMADOR_LOCALIDAD_TURISMOS = 'nx-mt-person-information:has(nx-x-common-header[text="¿Quién es el tomador?"])'
+const MS_PANEL_LOCALIDAD = 3_000
+const MS_TECLEO_LOCALIDAD = 5_000
+const MAX_OPCIONES_LOCALIDAD = 100
+
+export type ResultadoLocalidadTurismos =
+  /** Elegida la opción que decidió `elegir`; `mostrado` = valor del campo tras elegir (quien llama lo relee y compara). */
+  | { estado: 'elegida'; elegida: string; mostrado: string }
+  /** El campo ya trae un valor: no se toca. */
+  | { estado: 'con_valor'; mostrado: string }
+  /** Ni al abrir ni tras teclear salió ninguna opción. */
+  | { estado: 'sin_opciones' }
+  /** Hubo opciones pero `elegir` no decidió UNA (ninguna o varias casan): se cerró sin elegir. */
+  | { estado: 'sin_eleccion'; opciones: string[] }
+  /** Control ausente/repetido/no editable, sin panel declarado o elección que no quedó. */
+  | { estado: 'no_unica'; motivo: string }
+
+/**
+ * Rellena «Localidad» (autocompletado) del bloque del TOMADOR de Turismos. Exige, como `companiaActualTurismosAllianz`: guard limpio y sin
+ * ventanas de red; marco de la app de Turismos; sin campos bancarios; pestaña «Datos personales» (todo eso, bloqueo). EXACTAMENTE un
+ * `input[role=combobox][aria-autocomplete=list]` visible con etiqueta EXACTA «Localidad» en el bloque del tomador, en `appArea` y fuera de
+ * la cabecera; `comprobarBoton` y frontera bancaria sobre él ANTES de tocarlo. Primero lo enfoca (clic) por si el portal ofrece ya las del
+ * CP; si no salen, teclea cada `busquedas` (≤50 car.) hasta que salgan. Las opciones son las `[role=option]` del panel de SU
+ * `aria-owns`/`aria-controls` y nada más; `comprobarBoton` sobre la opción antes del único clic. Sin elegir → Escape. Solo nombres de
+ * municipios: ni valores ni opciones salen en los motivos.
+ */
+export async function localidadTurismosAllianz(
+  marco: Frame,
+  guard: GuardEmision,
+  busquedas: readonly string[],
+  elegir: (opciones: readonly string[]) => number | null,
+): Promise<ResultadoLocalidadTurismos> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'localidad de Turismos con una ventana de red abierta')
+  if (marco.isDetached() || !esAppTurismosAllianz(marco.url())) throw new EmisionBloqueadaError('fase', 'localidad de Turismos fuera de la app de Allianz AUTOS')
+  await exigirSinCuentaBancaria(marco.page())
+  const pestanas = marco.getByRole('tab', { selected: true })
+  const activa = (await pestanas.count()) === 1 ? (await pestanas.first().innerText().catch(() => '')).replace(/\s+/g, ' ').trim() : ''
+  if (activa !== PASO_LOCALIDAD_TURISMOS) throw new EmisionBloqueadaError('fase', `localidad de Turismos fuera del paso «${PASO_LOCALIDAD_TURISMOS}»`)
+  const control = marco
+    .locator(SEL_ZONA_APP_TURISMOS)
+    .locator(SEL_BLOQUE_TOMADOR_LOCALIDAD_TURISMOS)
+    .getByLabel(ETIQUETA_LOCALIDAD_TURISMOS, { exact: true })
+    .and(marco.locator('input[role=combobox][aria-autocomplete=list]'))
+    .and(marco.locator(SEL_FUERA_CABECERA_TURISMOS))
+    .filter({ visible: true })
+  const n = await control.count()
+  if (n !== 1) return { estado: 'no_unica', motivo: `${n} campos` }
+  comprobarBoton(await descripcion(control))
+  await exigirCampoNoBancario(control)
+  if (!(await control.isEditable().catch(() => false))) return { estado: 'no_unica', motivo: 'campo no editable' }
+  const valor = async () => (await control.inputValue().catch(() => '')).replace(/\s+/g, ' ').trim()
+  const actual = await valor()
+  if (actual !== '') return { estado: 'con_valor', mostrado: actual }
+  const cerrar = async () => {
+    await marco.page().keyboard.press('Escape').catch(() => undefined)
+    guard.comprobar()
+  }
+  // Panel declarado por el propio input (NDBX pone `aria-owns` con el panel abierto); sin él no se mira nada más (fail-closed).
+  const leerOpciones = async (): Promise<{ items: Locator; opciones: string[] } | null> => {
+    const fin = Date.now() + MS_PANEL_LOCALIDAD
+    for (;;) {
+      const panelId = ((await control.getAttribute('aria-owns').catch(() => null)) || (await control.getAttribute('aria-controls').catch(() => null)) || '').replace(/["\\]/g, '').trim()
+      if (panelId) {
+        const items = marco.locator(`[id="${panelId}"]`).locator('[role=option]').filter({ visible: true })
+        const k = await items.count().catch(() => 0)
+        if (k > 0) {
+          const opciones = (await items.evaluateAll((els) => els.map((e) => ((e as HTMLElement).innerText || e.textContent || '').replace(/\s+/g, ' ').trim()))).slice(0, MAX_OPCIONES_LOCALIDAD)
+          return { items, opciones }
+        }
+      }
+      if (Date.now() >= fin) return null
+      await marco.page().waitForTimeout(150)
+    }
+  }
+  await control.click()
+  guard.comprobar()
+  let leidas = await leerOpciones()
+  for (const b of busquedas) {
+    if (leidas) break
+    const texto = b.replace(/\s+/g, ' ').trim().slice(0, 50)
+    if (texto === '') continue
+    try {
+      await control.fill(texto, { timeout: MS_TECLEO_LOCALIDAD })
+    } catch {
+      // El error de Playwright lleva el valor tecleado: nunca sube.
+      await cerrar()
+      return { estado: 'no_unica', motivo: 'el portal no dejó escribir en el campo a tiempo' }
+    }
+    guard.comprobar()
+    leidas = await leerOpciones()
+  }
+  if (!leidas) {
+    await cerrar()
+    await control.fill('', { timeout: MS_TECLEO_LOCALIDAD }).catch(() => undefined)
+    return { estado: 'sin_opciones' }
+  }
+  const i = elegir(leidas.opciones)
+  if (i === null || !Number.isInteger(i) || i < 0 || i >= leidas.opciones.length) {
+    await cerrar()
+    await control.fill('', { timeout: MS_TECLEO_LOCALIDAD }).catch(() => undefined)
+    return { estado: 'sin_eleccion', opciones: leidas.opciones }
+  }
+  const item = leidas.items.nth(i)
+  if (((await item.innerText().catch(() => '')).replace(/\s+/g, ' ').trim()) !== leidas.opciones[i]) {
+    await cerrar()
+    return { estado: 'no_unica', motivo: 'la lista cambió antes de elegir' }
+  }
+  comprobarBoton(await descripcion(item))
+  await item.click()
+  guard.comprobar()
+  await control.blur().catch(() => undefined)
+  const mostrado = await valor()
+  if (mostrado === '') return { estado: 'no_unica', motivo: 'la opción no quedó elegida' }
+  return { estado: 'elegida', elegida: leidas.opciones[i], mostrado }
+}
+
 // ─────────── TARJETAS DE VEHÍCULO de Allianz AUTOS Turismos (v0.6.4 del bot, 17/10/2026) ───────────
 // Inventario real del trabajo ebe2bb1e: tras «Encuentra mi vehículo» el motor `ngx-motor-azs` pinta, DENTRO de `appArea` y bajo el
 // encabezado «Detalles del vehículo», una TARJETA SELECCIONABLE por vehículo (`nx-selectable-card`): un radio con id dinámico
@@ -3332,6 +5014,39 @@ const SCRIPT_LEER_PAQUETES_TURISMOS = `(() => {
   }));
   return { paquetes, filas };
 })()`
+
+export type FilaGarantiaLeidaHogar = { descripcion: string; celdas: { icono: string | null; texto: string }[]; opciones: { texto: string; marcada: boolean; adicional: string }[]; comunes: string[] }
+/**
+ * v0.1.11 (Allianz hogar): SOLO LECTURA de las filas de cobertura de la tabla comparativa de «Precio» (`epac-price-page` → `nx-comparison-table`); no pulsa nada.
+ * Texto JS, no función (tsx). Sin tabla → `null`. Mismos selectores que `leerPaquetesTurismosAllianz`; SIN captura de hogar (supuesto).
+ */
+const SCRIPT_LEER_GARANTIAS_HOGAR = `(() => {
+  const txt = (e) => ((e && (e.innerText || e.textContent)) || '').replace(/[\\s\\u00a0]+/g, ' ').trim();
+  const visible = (e) => !!e && getComputedStyle(e).display !== 'none' && e.getClientRects().length > 0;
+  const pag = Array.from(document.querySelectorAll('epac-price-page')).find(visible);
+  if (!pag) return null;
+  const tabla = Array.from(pag.querySelectorAll('nx-comparison-table')).find(visible);
+  if (!tabla) return null;
+  return Array.from(tabla.querySelectorAll('.is-content-row')).map((f) => ({
+    descripcion: txt(f.querySelector('.nx-comparison-table__description-cell')),
+    celdas: Array.from(f.querySelectorAll('.nx-comparison-table__cell')).filter((c) => !c.classList.contains('nx-comparison-table__description-cell') && !c.classList.contains('nx-comparison-table__intersection-cell')).map((c) => ({
+      icono: c.querySelector('nx-icon[name="check"]') ? 'check' : c.querySelector('nx-icon[name="minus"]') ? 'minus' : null,
+      texto: txt(c.querySelector('.nx-dropdown__rendered')) || txt(c),
+    })),
+    opciones: Array.from(f.querySelectorAll('.nx-comparison-table__intersection-cell nx-radio')).map((o) => ({
+      texto: txt(o.querySelector('.nx-radio__label--text > span:first-child')) || txt(o.querySelector('.nx-radio__label--text')),
+      marcada: o.querySelector('.nx-radio__dot') !== null || (o.querySelector('input') !== null && o.querySelector('input').checked === true),
+      adicional: txt(o.querySelector('.option-additional-text')),
+    })),
+    comunes: Array.from(f.querySelectorAll('.common-coverages li')).map((li) => txt(li.querySelector('span') || li)),
+  }));
+})()`
+
+/** Filas de cobertura de «Precio» de Allianz Hogar (textos crudos). Marco desvinculado o sin tabla → `null`. */
+export async function leerGarantiasTablaHogarAllianz(marco: Frame): Promise<FilaGarantiaLeidaHogar[] | null> {
+  if (marco.isDetached()) return null
+  return (marco.evaluate(SCRIPT_LEER_GARANTIAS_HOGAR) as Promise<FilaGarantiaLeidaHogar[] | null>).catch(() => null)
+}
 
 /**
  * Elige UNA tarjeta de vehículo de Turismos (el ÚNICO camino para tocarla). Exige, como `marcarOpcionTurismosAllianz`: guard limpio y
@@ -4009,7 +5724,7 @@ export function textoEmisionGenerali(texto: string): boolean {
   return casaEmisionGenerali(texto) !== null
 }
 
-const RE_EMISION_GENERALI = /\b(emitir|contratar|grabar (la )?poliza|pagar|firmar|formalizar)\b/
+const RE_EMISION_GENERALI = regexPalabras(BLOQUEO.emision_pagina)
 const sinTildesMinus = (x: string) => String(x ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 
 /**
@@ -4062,11 +5777,23 @@ export function sinSeccionPrecontractualGenerali(texto: string): string {
 }
 
 /**
+ * v0.2.41: rótulo INFORMATIVO de «Garantías y Resultados» de Generali (elegir la forma de pago del recibo; prueba real con 0.2.40: bloqueó «Recalcular» por «contratar»).
+ * Se excusa SOLO esta frase exacta (sin tildes, mayúsculas ni espacios de más); cualquier otro «contratar»/«emitir»/«pagar» sigue casando. Mismo mecanismo que
+ * `sinSeccionPrecontractualGenerali` (texto de la página antes de `casaEmisionGenerali`). PURA.
+ */
+export function sinRotulosInformativosGenerali(texto: string): string {
+  return String(texto ?? '').replace(/forma\s+de\s+pago\s+a\s+contratar(?![\p{L}\p{N}])/giu, '')
+}
+
+/** 26/10/2026: el término «siguiente» sale de `vocabulario.ts` (concepto `avanzar`); aquí solo los adornos admitidos al final (`›`, `>`, `»`, espacios, NBSP). */
+const RE_SIGUIENTE_GENERALI = regexRotuloConAdornos(CONCEPTOS_ACCION.avanzar.grupos.siguiente[0]!)
+
+/**
  * v0.2.29: texto del botón «Siguiente» tal como lo pinta Generali: «Siguiente ›» (prueba real con 0.2.28). Tras normalizar, la palabra EXACTA
  * «Siguiente» seguida solo de adornos al final (`›`, `>`, `»`, espacios, incl. NBSP). Nada antes, nada de otras palabras. PURA.
  */
 export function esTextoSiguienteGenerali(texto: string): boolean {
-  return /^SIGUIENTE[\s ›>»]*$/.test(textoMenu(String(texto ?? '').replace(/ /g, ' ')))
+  return RE_SIGUIENTE_GENERALI.test(textoMenu(String(texto ?? '').replace(/ /g, ' ')))
 }
 
 /** Prefijo de los ids del bloque «Interesado / Tomador» del formulario de valoración. */
@@ -4138,6 +5865,75 @@ export async function pulsarSiguienteValoracionGenerali(page: Page, guard: Guard
     guard.comprobar()
     const fin = Date.now() + esperaDialogoMs
     while (dialogo === null && Date.now() < fin) await page.waitForTimeout(150)
+  } finally {
+    page.off('dialog', alDialogo)
+  }
+  guard.comprobar()
+  return { dialogo }
+}
+
+// ─────────── v0.2.39: «Recalcular» de la botonera «Acciones» de Generali (calcula la tabla «Modalidades de Seguro») ───────────
+// Prueba real con 0.2.38: «Garantías y Resultados» llega con la tabla de modalidades VACÍA (el portal no ha calculado). La botonera inferior de
+// `emiAutosGenB028.do` trae «Acciones › Recalcular» (`link('calcular')`) junto a «Guardar Cálculo» (`grabarCalcRap`): ese SÍ guarda y NUNCA se pulsa.
+// Puerta acotada: texto EXACTO «Recalcular», marco `emiAutosGenB028.do` único, UNA vez por trabajo, sin textos de emisión en la página, `comprobarBoton`,
+// y rechazo explícito si el texto o el `onclick` del control o de su contenedor hablan de guardar/grabar/emitir/contratar/pagar/firmar.
+
+/** Texto EXACTO de la acción que calcula las modalidades. */
+export const TEXTO_RECALCULAR_GENERALI = 'Recalcular'
+/** Lo que nunca puede llevar el texto ni el `onclick` de la acción pulsable (sin tildes, sin mayúsculas). */
+const RE_RECALCULAR_PELIGROSO_GENERALI = /guard|grab|emit|emisi|contrat|firm|pag(a|o|ar)|acept|formaliz|suplement|anul|calcrap/i
+
+/** ¿Puede el robot pulsar la acción de la botonera con ESTE texto? Solo «Recalcular» exacto (salvo espacios y mayúsculas) y sin nada peligroso. PURA. */
+export function recalcularGeneraliPermitido(texto: string | null | undefined): boolean {
+  const t = textoMenu(texto)
+  if (t === '' || RE_RECALCULAR_PELIGROSO_GENERALI.test(sinTildesNi(t))) return false
+  return t === textoMenu(TEXTO_RECALCULAR_GENERALI)
+}
+
+export async function pulsarRecalcularGenerali(page: Page, guard: GuardEmision): Promise<{ dialogo: string | null }> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', '«Recalcular» de Generali con una ventana de red abierta')
+  const marcos = marcosVivos(page).filter((f) => urlDatosPersonasGenerali(f.url()))
+  if (marcos.length !== 1) throw new EmisionBloqueadaError('fase', `«Recalcular» de Generali fuera de emiAutosGenB028.do (${marcos.length} marcos; hace falta exactamente uno)`)
+  const marco = marcos[0]!
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (usados.has('generali:recalcular')) throw new EmisionBloqueadaError('fase', '«Recalcular» de Generali ya se pulsó en este trabajo')
+  await exigirSinCuentaBancaria(page)
+  for (const f of marcosVivos(page)) {
+    const casa = casaEmisionGenerali(sinRotulosInformativosGenerali(sinSeccionPrecontractualGenerali((await f.evaluate(JS_TEXTOS_AVISO_GENERALI).catch(() => '')) as string)))
+    if (casa !== null) throw new EmisionBloqueadaError('fase', `«Recalcular» de Generali: casó ${casa.slice(0, 200)} (textos de emisión/contratación/pago/firma en la página o en un diálogo)`)
+  }
+  const control = marco.getByText(new RegExp(`^\\s*${TEXTO_RECALCULAR_GENERALI}\\s*$`)).filter({ visible: true })
+  let n = await control.count()
+  // v0.2.40: la botonera es un menú «Acciones» (`ul.dropdown`): si el enlace no está a la vista se SOBREVUELA el rótulo «Acciones» (un hover no pulsa nada) y se vuelve a contar.
+  if (n === 0) {
+    const titulo = marco.getByText(/^\s*Acciones\s*$/).filter({ visible: true })
+    if ((await titulo.count()) === 1) {
+      await titulo.hover({ timeout: 1_500 }).catch(() => undefined)
+      await page.waitForTimeout(400)
+      n = await control.count()
+    }
+  }
+  if (n !== 1) throw new ErrorMapaGuardGenerali(`la acción «${TEXTO_RECALCULAR_GENERALI}» (${n} controles visibles con ese texto; hace falta exactamente uno)`)
+  const desc = await descripcion(control, true)
+  if (!recalcularGeneraliPermitido(textoControl(desc))) throw new EmisionBloqueadaError('boton', textoControl(desc).slice(0, 80))
+  if (desc.some((d) => d !== null && RE_RECALCULAR_PELIGROSO_GENERALI.test(sinTildesNi(d)))) throw new EmisionBloqueadaError('boton', desc.filter(Boolean).join(' | ').slice(0, 120))
+  comprobarBoton(desc)
+  usados.add('generali:recalcular')
+  AVANCES_USADOS.set(guard, usados)
+  let dialogo: string | null = null
+  const alDialogo = (d: Dialog) => {
+    dialogo ??= `${d.type()}: ${mensajesValidacionGenerali([d.message()])[0] ?? '(sin texto)'}`
+    d.dismiss().catch(() => {})
+  }
+  page.on('dialog', alDialogo)
+  try {
+    await control.click({ timeout: MS_CLIC_NORMAL_CONFIRMAR_GENERALI })
+    guard.comprobar()
+    const fin = Date.now() + 1_500
+    while (dialogo === null && Date.now() < fin) await page.waitForTimeout(150)
+    // v0.2.40: «link('calcular')» recarga el marco; se espera (acotado) a que termine antes de releer la tabla.
+    await marco.waitForLoadState('load', { timeout: 10_000 }).catch(() => undefined)
   } finally {
     page.off('dialog', alDialogo)
   }
@@ -4240,7 +6036,12 @@ export async function elegirFilaVersionGenerali(page: Page, guard: GuardEmision,
   if (v === '' || v.length > 200 || c.length > 40) throw new EmisionBloqueadaError('boton', v.slice(0, 80))
   const marco = marcoSelectorVehiculosGenerali(page)
   const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
-  if (usados.has('generali:elegir-version')) throw new EmisionBloqueadaError('fase', 'la fila de versión del selector de Generali ya se eligió en este trabajo')
+  // v0.2.66: la fila «Otras versiones ...» de la tabla (espejo del desplegable) solo se pulsa TRAS elegirla en el desplegable (misma puerta de versión), una vez, con su
+  // propia clave: NO gasta la de la fila real. Cualquier otra fila sigue con la clave de siempre. Las comprobaciones de abajo (una fila, `comprobarBoton`) no cambian.
+  const filaOtras = esTextoOtrasVersionesGenerali(v)
+  if (filaOtras && (c !== '' || !usados.has(CLAVE_VERSION_OTRAS_GENERALI))) throw new EmisionBloqueadaError('fase', 'la fila «Otras versiones» de Generali solo se pulsa tras elegirla en el desplegable de versiones')
+  const claveFila = filaOtras ? 'generali:fila-version-otras' : 'generali:elegir-version'
+  if (usados.has(claveFila)) throw new EmisionBloqueadaError('fase', 'la fila de versión del selector de Generali ya se eligió en este trabajo')
   await exigirSinCuentaBancaria(page)
   const xp = `xpath=//tr[td[normalize-space(.)=${literalXpath(v)}]${c !== '' ? `][td[normalize-space(.)=${literalXpath(c)}]` : ''}]`
   const fila = marco.locator(xp).filter({ visible: true })
@@ -4250,7 +6051,7 @@ export async function elegirFilaVersionGenerali(page: Page, guard: GuardEmision,
   if (seleccionada) return
   const desc = await descripcion(fila)
   comprobarBoton(desc)
-  usados.add('generali:elegir-version')
+  usados.add(claveFila)
   AVANCES_USADOS.set(guard, usados)
   try {
     await fila.click({ timeout: MS_CLIC_NORMAL_CONFIRMAR_GENERALI })
@@ -4322,19 +6123,29 @@ async function abrirMenuGenerali(page: Page, guard: GuardEmision, base: string, 
   guard.comprobar()
 }
 
-/** Pulsa el `li` de `data-label` EXACTO del panel `#<base>_panel`. Exactamente uno; su texto y atributos pasan `comprobarBoton`. Una vez por `clave`. */
+/** Pulsa el `li` (o `tr`) de `data-label` EXACTO del panel `#<base>_panel`. Exactamente uno; su texto y atributos pasan `comprobarBoton`. Una vez por `clave`. */
 async function elegirItemMenuGenerali(page: Page, guard: GuardEmision, base: string, texto: string, idValido: (b: string) => boolean, clave: string, que: string, primeraDeIguales = false): Promise<void> {
   const { marco, usados } = await prepararPuertaMenuGenerali(page, guard, base, idValido, clave, que)
   const t = (texto ?? '').normalize('NFC').replace(/\s+/g, ' ').trim()
   if (t === '') throw new EmisionBloqueadaError('boton', '')
   const etq = texto.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-  const todos = marco.locator(`[id="${base}_panel"] li[data-label="${etq}"]`)
+  // v0.2.65: el panel de «Versión» puede pintar FILAS de tabla (`tr.ui-selectonemenu-item[data-label]`) en vez de `li`; mismas comprobaciones.
+  const todos = marco.locator(`[id="${base}_panel"] li[data-label="${etq}"], [id="${base}_panel"] tr[data-label="${etq}"]`)
   const n = await todos.count()
   // v0.2.17: la versión puede venir REPETIDA con el mismo texto exacto (prueba real): solo ahí se admite la PRIMERA de las idénticas (tope 40).
   if (primeraDeIguales ? n < 1 || n > 40 : n !== 1) throw new ErrorMapaGuardGenerali(`la opción «${t.slice(0, 60)}» en el panel «#${base}_panel» (${n} elementos con ese texto exacto; hace falta ${primeraDeIguales ? 'al menos uno' : 'exactamente uno'})`)
   const item = todos.first()
   const desc = await descripcion(item)
-  if (textoMenu(desc[0]) !== textoMenu(t)) throw new EmisionBloqueadaError('boton', String(desc[0] ?? '').slice(0, 120))
+  // v0.2.67 (trabajo f84801ce): una FILA (`tr`) lleva más columnas que el texto («52\t5P\t2014-10-01»): su identidad es la PRIMERA celda, exacta, y
+  // las DEMÁS solo pueden ser datos de catálogo con forma cerrada (vacía, puertas «5P», fecha, número); cualquier otro texto («Confirmar póliza»)
+  // sigue bloqueando como antes. Solo cambia ESTA comparación; `comprobarBoton(desc)` de abajo sigue viendo la fila ENTERA, sus atributos y ancestros.
+  const identidad = await item.evaluate((el) => {
+    if (el.tagName !== 'TR') return null
+    const celdas = Array.from((el as HTMLTableRowElement).cells).map((c) => (c.innerText ?? '').replace(/\s+/g, ' ').trim())
+    const dato = /^(?:|[2-9] ?P|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4}|\d{1,4}(?:[.,]\d{1,2})?)$/i
+    return celdas.length >= 1 && celdas.length <= 12 && celdas.slice(1).every((c) => dato.test(c)) ? celdas[0]! : null
+  })
+  if (textoMenu(identidad ?? desc[0]) !== textoMenu(t)) throw new EmisionBloqueadaError('boton', String(desc[0] ?? '').slice(0, 120))
   comprobarBoton(desc)
   usados.add(clave)
   AVANCES_USADOS.set(guard, usados)
@@ -4395,14 +6206,30 @@ export async function elegirModeloListaGenerali(page: Page, guard: GuardEmision,
 // texto está repetido se pulsa el PRIMERO de los idénticos (el adaptador lo declara como supuesto).
 const esIdVersionGenerali = (guard: GuardEmision) => (b: string) => esIdModeloGenerali(b) && !(BASES_MODELO_GENERALI.get(guard)?.has(b) ?? false)
 
-/** Abre el desplegable «Versión» por su disparador propio, UNA vez por trabajo (nunca el de marcas ni el de modelos). */
+/**
+ * v0.2.62: la puerta de versión admite UNA segunda ronda (abrir + elegir) SOLO si la primera elección fue «Otras versiones ...» (misma idea que
+ * «Otros modelos ...» en 0.2.16: el portal recarga la lista con más versiones). La segunda ronda usa su propia clave (`<clave>:2`), también una
+ * vez, y nunca vuelve a elegir «Otras versiones».
+ */
+const CLAVE_VERSION_OTRAS_GENERALI = 'generali:version-otras'
+function claveRondaVersionGenerali(guard: GuardEmision, clave: string): string {
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  return usados.has(clave) && usados.has(CLAVE_VERSION_OTRAS_GENERALI) ? `${clave}:2` : clave
+}
+const esTextoOtrasVersionesGenerali = (t: string) => /^OTR[AO]S\b/.test(textoMenu(t))
+
+/** Abre el desplegable «Versión» por su disparador propio, UNA vez por trabajo (y una segunda tras «Otras versiones ...»; nunca el de marcas ni el de modelos). */
 export async function abrirDesplegableVersionGenerali(page: Page, guard: GuardEmision, base: string): Promise<void> {
-  await abrirMenuGenerali(page, guard, base, esIdVersionGenerali(guard), 'generali:abrir-version', 'el desplegable de versiones')
+  await abrirMenuGenerali(page, guard, base, esIdVersionGenerali(guard), claveRondaVersionGenerali(guard, 'generali:abrir-version'), 'el desplegable de versiones')
 }
 
-/** Pulsa el `li` de la versión elegida (`data-label` exacto; repetido → el primero) del panel `#<base>_panel`, UNA vez por trabajo; el texto pasa `comprobarBoton`. */
+/** Pulsa el `li` de la versión elegida (`data-label` exacto; repetido → el primero) del panel `#<base>_panel`, UNA vez por trabajo (y una segunda tras «Otras versiones ...»); el texto pasa `comprobarBoton`. */
 export async function elegirVersionListaGenerali(page: Page, guard: GuardEmision, base: string, texto: string): Promise<void> {
-  await elegirItemMenuGenerali(page, guard, base, texto, esIdVersionGenerali(guard), 'generali:elegir-version-lista', 'la versión de la lista', true)
+  const clave = claveRondaVersionGenerali(guard, 'generali:elegir-version-lista')
+  const otras = esTextoOtrasVersionesGenerali(texto ?? '')
+  if (otras && clave !== 'generali:elegir-version-lista') throw new EmisionBloqueadaError('fase', '«Otras versiones» en el desplegable de versiones de Generali ya se eligió en este trabajo')
+  await elegirItemMenuGenerali(page, guard, base, texto, esIdVersionGenerali(guard), clave, 'la versión de la lista', true)
+  if (otras) AVANCES_USADOS.get(guard)?.add(CLAVE_VERSION_OTRAS_GENERALI)
 }
 
 // ─────────── «Guardar presupuesto» de Allianz AUTOS Turismos (v0.6.13 del bot, 18/10/2026, autorizado por Alberto) ───────────
@@ -4427,7 +6254,8 @@ export const CASILLAS_GUARDAR_PRESUPUESTO_TURISMOS: Readonly<Record<string, bool
   'Mostrar presupuesto en eCliente': false,
   'Todos los paquetes': true,
 })
-export const MS_CONFIRMA_GUARDADO_TURISMOS = 15_000
+/** v0.6.34 (27/10/2026): 15 s se quedaron cortos (segundo guardado del día: precios sí, confirmación no); el sondeo para en cuanto aparece la señal. */
+export const MS_CONFIRMA_GUARDADO_TURISMOS = 30_000
 
 const planoTurismos = (t: string | null | undefined) => (t ?? '').replace(/\s+/g, ' ').trim()
 /**
@@ -4483,9 +6311,49 @@ export function confirmacionGuardadoNueva(antes: string, despues: string): { con
   return { confirmado: referencia !== null || frases(despues) > frases(antes), referencia }
 }
 
+/** v0.6.34: ¿tras el clic APARECIÓ un «Descargar propuesta» que antes no estaba? (señal tardía de que el portal guardó.) Compara sin tildes/mayúsculas. PURA. */
+export function descargaPropuestaNueva(antes: string, despues: string): boolean {
+  const cuenta = (t: string) => [...claveGuardarTurismos(t).matchAll(/descargar propuesta/g)].length
+  return cuenta(despues) > cuenta(antes)
+}
+
+const MAX_DIAGNOSTICO_SIN_CONFIRMAR = 300
+/** v0.6.34: texto del portal apto para el aviso: fuera correos, NIF/NIE/CIF, matrículas, teléfonos y toda secuencia de 5+ cifras; luego el saneador común de diálogos. PURA. */
+/** Una sola entrada a propósito: se usa en `.map(...)` y un 2º parámetro recibiría el índice. */
+export function limpiarMensajePortalDiagnostico(bruto: string): string {
+  return limpiarMensajePortalDiagnosticoHasta(bruto, 160)
+}
+
+/** Igual que `limpiarMensajePortalDiagnostico` con tope explícito (v0.8.40, diálogo de Mapfre). PURA. */
+export function limpiarMensajePortalDiagnosticoHasta(bruto: string, max: number): string {
+  const t = bruto
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, max)
+    .replace(/[^\s@]+@[^\s@]+/g, '')
+    .replace(/\b[A-Za-z]?\d{7,8}[A-Za-z]\b/g, '')
+    .replace(/\b\d{4}\s?-?\s?[BCDFGHJKLMNPRSTVWXYZ]{3}\b/gi, '')
+    .replace(/\+?\d[\d\s.\-]{6,}\d/g, '')
+    .replace(/\d{5,}/g, '')
+  return textoDialogoPortalSeguro(t, Math.max(200, max)).replace(/\s+/g, ' ').trim()
+}
+
+/** v0.6.34: diagnóstico (≤300) de por qué «Guardar presupuesto» no se confirmó: mensajes del portal ya saneados, estado del formulario y etiquetas de campos vacíos. PURA. */
+export function diagnosticoSinConfirmarTurismos(e: { mensajes: readonly string[]; formularioVisible: boolean; botonHabilitado: boolean | null; pendientes: readonly string[] }): string {
+  const mensajes = [...new Set(e.mensajes.map(limpiarMensajePortalDiagnostico).filter((m) => m !== ''))].slice(0, 4)
+  const partes = [
+    `formulario ${e.formularioVisible ? 'aún a la vista' : 'ya no se ve'}`,
+    `botón ${e.botonHabilitado === null ? 'sin determinar' : e.botonHabilitado ? 'habilitado' : 'deshabilitado'}`,
+    mensajes.length ? `mensajes del portal: ${mensajes.map((m) => `«${m}»`).join(' · ')}` : 'sin mensajes del portal a la vista',
+    e.pendientes.length ? `campos vacíos: ${e.pendientes.map((p) => `«${limpiarMensajePortalDiagnostico(p)}»`).join(', ')}` : '',
+  ].filter(Boolean)
+  const s = partes.join('; ')
+  return s.length > MAX_DIAGNOSTICO_SIN_CONFIRMAR ? `${s.slice(0, MAX_DIAGNOSTICO_SIN_CONFIRMAR - 1)}…` : s
+}
+
 export type ResultadoGuardarPresupuestoTurismos =
   | { estado: 'guardado'; identificador: string; referencia: string | null }
-  | { estado: 'sin_confirmar'; identificador: string }
+  | { estado: 'sin_confirmar'; identificador: string; diagnostico?: string }
   | { estado: 'no_guardado'; motivo: string }
 
 /** Guarda el presupuesto en la pantalla de precios de Turismos con las reglas de arriba. Nunca lanza por «no se pudo»: lo devuelve. */
@@ -4838,6 +6706,37 @@ async function etiquetasPendientesGuardarTurismos(form: Locator): Promise<string
   return [...campos, ...casillas].slice(0, 12)
 }
 
+/** v0.6.34 · SOLO LECTURA (no pulsa ni escribe): mensajes visibles (diálogo/alerta/aviso/error del formulario), estado del formulario y campos vacíos. Nunca lanza. */
+async function diagnosticoTrasGuardarSinConfirmar(form: Locator, boton: Locator): Promise<string> {
+  try {
+    const marco = form.page().frames().find((f) => esAppTurismosAllianz(f.url()))
+    // Sin funciones con nombre dentro de `evaluate` (tsx les mete `__name`): todo en línea.
+    const mensajes = marco
+      ? await marco.evaluate(() => {
+          const out: string[] = []
+          const globales = '[role=dialog],[role=alertdialog],[role=alert],[role=status],nx-message,nx-error,nx-toast,.nx-toast,.nx-message,mat-snack-bar-container'
+          const enForm = '[class*=error],[class*=invalid],nx-error,mat-error'
+          const forms = Array.from(document.querySelectorAll('nx-mt-save-proposal form, nx-mt-save-proposal'))
+          const nodos = Array.from(document.querySelectorAll(globales))
+          for (const f of forms) nodos.push(...Array.from(f.querySelectorAll(enForm)))
+          for (const n of nodos) {
+            const st = getComputedStyle(n)
+            if (st.display === 'none' || st.visibility === 'hidden') continue
+            const t = (n.textContent ?? '').replace(/\s+/g, ' ').trim()
+            if (t !== '') out.push(t.slice(0, 200))
+          }
+          return out
+        }).catch(() => [] as string[])
+      : []
+    const formularioVisible = (await boton.isVisible().catch(() => false)) || (await form.isVisible().catch(() => false))
+    const botonHabilitado = await boton.isEnabled().then((v) => v, () => null)
+    const pendientes = await etiquetasPendientesGuardarTurismos(form).catch(() => [] as string[])
+    return diagnosticoSinConfirmarTurismos({ mensajes, formularioVisible, botonHabilitado, pendientes })
+  } catch {
+    return 'diagnóstico no disponible'
+  }
+}
+
 export async function guardarPresupuestoTurismosAllianz(marco: Frame, guard: GuardEmision, identificador: string, esperaMs = MS_CONFIRMA_GUARDADO_TURISMOS, esperaFormMs = MS_APARECE_FORM_GUARDAR_TURISMOS, contacto: ContactoGuardarTurismos | null = null, esperaHabilitaMs = MS_HABILITA_GUARDAR_TURISMOS): Promise<ResultadoGuardarPresupuestoTurismos> {
   guard.comprobar()
   if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) return { estado: 'no_guardado', motivo: 'otra ventana de red abierta' }
@@ -4949,8 +6848,10 @@ export async function guardarPresupuestoTurismosAllianz(marco: Frame, guard: Gua
     await pulsarGuardadoPresupuesto(page, guard, boton, { el: { tag: 'button', texto: planoTurismos(desc[0]) }, pantalla: { tipoPantalla: 'resultado', hayImportes: true, presupuestoEnCurso: false } }, async () => {
       const fin = Date.now() + esperaMs
       while (Date.now() < fin) {
-        const c = confirmacionGuardadoNueva(textoAntes, await marco.locator('body').innerText().catch(() => ''))
-        if (c.confirmado) {
+        const textoAhora = await marco.locator('body').innerText().catch(() => '')
+        const c = confirmacionGuardadoNueva(textoAntes, textoAhora)
+        // v0.6.34: la señal puede llegar tarde y sin frase/número: un «Descargar propuesta» nuevo también confirma (referencia: la que haya, si no null).
+        if (c.confirmado || descargaPropuestaNueva(textoAntes, textoAhora)) {
           confirmado = true
           referencia = c.referencia
           return
@@ -4958,7 +6859,8 @@ export async function guardarPresupuestoTurismosAllianz(marco: Frame, guard: Gua
         await page.waitForTimeout(300)
       }
     })
-    return confirmado ? { estado: 'guardado', identificador, referencia } : { estado: 'sin_confirmar', identificador }
+    if (confirmado) return { estado: 'guardado', identificador, referencia }
+    return { estado: 'sin_confirmar', identificador, diagnostico: await diagnosticoTrasGuardarSinConfirmar(form, boton) }
   } catch (e) {
     // Una violación del guard (red de emisión) NO se traga: `comprobar` la relanza. Lo demás (campo bancario a la vista, casilla
     // sospechosa, diálogo, timeout) = no se guardó, sin tocar el precio ya leído.
@@ -5150,4 +7052,33 @@ export async function vaciarCodigoSmsGenerali(page: Page): Promise<void> {
  */
 export async function pulsarEscapeAvisoModal(page: Page): Promise<void> {
   await page.keyboard.press('Escape').catch(() => undefined)
+}
+
+// ─────────── v0.2.52 del bot Generali · fase de pruebas de «Tipo de vehículo»: el OTRO botón «Vehículo» (`lnkVehi`) ───────────
+// Puerta EXACTA (decisión de Alberto, 28/10/2026: «que lo pruebe el bot»): solo el control de id `reg1063A_vehiculo_caracVehiculo_lnkVehi` cuyo
+// texto/valor es EXACTAMENTE «Vehículo», en un marco de www.generali.es. El clic va además por `pulsar` (guard genérico). Nunca emitir/contratar/
+// grabar/calcular/confirmar: cualquier otro id o texto, aunque se parezca, no pasa.
+
+/** Id EXACTO del segundo botón «Vehículo» de «Características del vehículo» (Genernet). */
+export const ID_OTRO_VEHICULO_GENERALI = 'reg1063A_vehiculo_caracVehiculo_lnkVehi'
+
+/** ¿Puede la fase de pruebas pulsar este control? Origen www.generali.es, id EXACTO y texto/valor EXACTO «Vehículo». PURA. */
+export function otroVehiculoGeneraliPermitido(c: { id: string | null | undefined; texto: string | null | undefined; url: string | null | undefined }): boolean {
+  let origen = ''
+  try {
+    origen = new URL(String(c.url ?? '')).origin
+  } catch {
+    origen = ''
+  }
+  if (origen !== ORIGEN_PORTAL_GENERALI) return false
+  if (String(c.id ?? '') !== ID_OTRO_VEHICULO_GENERALI) return false
+  return String(c.texto ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase() === 'vehiculo'
+}
+
+/**
+ * v0.2.52 · Opciones de «Tipo de placa» de «Características del vehículo» (Genernet, name EXACTO). Solo LOCALIZA: el adaptador no puede nombrar
+ * radios (cepo de la raíz) y el clic va por `pulsar` (guard genérico + comprobarBoton). La opción (ordinaria/nacional, rótulo exacto) la elige el adaptador.
+ */
+export function opcionesTipoPlacaGenerali(raiz: Page | Frame): Locator {
+  return raiz.locator('input[type="radio"][name="reg1063A.vehiculo.caracVehiculo.yplaca"]')
 }

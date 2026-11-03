@@ -15,6 +15,10 @@ import { prepararTrabajo } from '../src/ramo.ts'
 import { adaptadores } from '../src/adapters/index.ts'
 import {
   ALLIANZ_HOGAR_ACTIVO,
+  esNumeroSinNumero,
+  esRotuloCasillaSinNumero,
+  SUPUESTO_NUMERO_CALLE,
+  SUPUESTO_CASILLA_SIN_NUMERO,
   ErrorMapaIncompleto,
   allianzHogar,
   leerPrecioHogar,
@@ -188,12 +192,16 @@ type OpcionesApp = {
    * Importes RELLENOS de serie (inventados); radios NDBX Si/No con el punto `.nx-radio__dot` en «No» y SIN `checked`.
    * `sinSerie` = esa pregunta sin opción marcada; `vacio` = ese importe vacío de serie.
    */
-  valoracion?: { sinSerie?: string; vacio?: string }
+  valoracion?: { sinSerie?: string; vacio?: string; rotuloAlarma?: string; sinAlarma?: boolean }
   /**
    * 0.1.10: «Precio» (forma del HTML real del job 03b0d6f5, `epac-price-page`), visible tras «Siguiente» de Valoración. 3 modalidades
    * con importes INVENTADOS; `ilegible` = esa modalidad sin «la anualidad»; `frecuencia` = el texto del desplegable (de serie «Anual»).
    */
   precio?: { ilegible?: string; frecuencia?: string }
+  /** 0.1.11: casilla «Sin número» junto al número de calle (`texto` = el rótulo; por defecto «Sin número»). */
+  casillaSinNumero?: { texto?: string; dos?: boolean }
+  /** 0.1.11: el campo del número de calle es de TEXTO (en el portal real es `type=number`). */
+  numeroTexto?: boolean
 }
 
 function app(o: OpcionesApp = {}): string {
@@ -209,7 +217,7 @@ function app(o: OpcionesApp = {}): string {
 ${campo('idNumber', 'Número de documento')}${campo('dateOfBirth', 'Fecha de nacimiento')}
 <h3>Datos de la vivienda</h3>
 ${campo('postalCode', 'Código postal')}${campo('province', 'Provincia', true, true)}${campo('town', 'Población')}
-${campo('streetType', 'Tipo de vía', true, true)}${campo('streetName', 'Nombre de la vía')}${campo('streetNumber', 'Número', true, false, 'number')}
+${campo('streetType', 'Tipo de vía', true, true)}${campo('streetName', 'Nombre de la vía')}${campo('streetNumber', 'Número', true, false, o.numeroTexto ? 'text' : 'number')}${o.casillaSinNumero ? [0, ...(o.casillaSinNumero.dos ? [1] : [])].map((k) => `<nx-checkbox formcontrolname="noStreetNumber${k}"><input type="checkbox" id="sn-${k}" style="opacity:0;position:absolute;width:1px;height:1px" onchange="document.getElementById('streetNumber').required=!this.checked;document.getElementById('streetNumber').disabled=this.checked"><label for="sn-${k}"> ${o.casillaSinNumero!.texto ?? 'Sin número'} </label></nx-checkbox>`).join('') : ''}
 ${campo('block', 'Bloque', false)}${campo('stair', 'Escalera', false)}${campo('floor', 'Piso', false)}${campo('flat', 'Puerta', false)}
 <div id="check-address"><button type="button" id="comprobar" onclick="${o.infoOculta === 'nunca' ? '' : o.infoOculta === 'overlay' ? `document.body.insertAdjacentHTML('beforeend','<div class=cdk-overlay-pane>Revise la direccion</div>')` : `document.getElementById('buildingInformation').hidden=false`}">Comprobar</button></div>
 <div id="buildingInformation" ${o.infoOculta ? 'hidden' : ''}>${o.catastro ? `<nx-checkbox formcontrolname="enableCadastreEditing" class="nx-checkbox"><input type="checkbox" class="nx-checkbox__input" id="cat-1" value="false" style="opacity:0;position:absolute;width:1px;height:1px"><label class="nx-checkbox__label has-label" for="cat-1"><span class="nx-checkbox__control"></span><div class="nx-checkbox__label-text"> Modificar datos del catastro. </div></label></nx-checkbox>` : ''}${campo('yearOfConstruction', 'Año de construcción', true, !!o.catastro, 'number')}${campo('yearOfRefurbishment', 'Año de la reforma', false, !!o.catastro, 'number')}${campo('surfaceAreaLiving', 'Superficie de la vivienda', true, !!o.catastro)}</div>
@@ -225,7 +233,7 @@ ${(() => {
     return `<epac-goods-page id="goods" style="display:none"><nx-message-banner context="warning"><span>No se ha podido obtener la información del Catastro con los valores introducidos</span></nx-message-banner>
 <h4><span> Bienes asegurados </span></h4>${grupo(1, 'Caja fuerte')}${imp('sumInsuredBuilding', 'Inmueble', '120000')}<nx-checkbox formcontrolname="firstRisk"><input type="checkbox" id="fr" value="false"><label for="fr">Asegurar a valor máximo cubierto</label></nx-checkbox>
 ${imp('sumInsuredContent', 'Mobiliario', '30000')}<p>Joyas fuera de caja fuerte</p>${imp('sumInsuredValuablesNoSafe', '¿Qué cantidad quieres asegurar?', '0')}${imp('sumInsuredSpecialObjects', 'Objetos especiales', '0')}
-<h4><span> Medidas de seguridad </span></h4>${grupo(2, 'Alarma conectada')}${grupo(3, 'Puerta blindada')}
+<h4><span> Medidas de seguridad </span></h4>${v.sinAlarma ? '' : grupo(2, v.rotuloAlarma ?? 'Alarma conectada')}${grupo(3, 'Puerta blindada')}
 <h4><span> Fecha de inicio del seguro </span></h4><input formcontrolname="startDate" nxdatefield value="22/10/2026">
 <button type="button" nxbutton="primary">Anterior</button><button type="button" nxbutton="primary" id="sigGoods">Siguiente</button></epac-goods-page>`
   })()}
@@ -525,7 +533,7 @@ test('0.1.9: «Valoración de bienes» (forma real): escribe capitales y joyas d
 test('0.1.9: sin dato y sin valor de serie razonable → hueco con el estado observado (nunca se adivina)', async () => {
   for (const [o, re] of [
     [{ vacio: 'sumInsuredSpecialObjects' }, /«Objetos especiales» de «Valoración de bienes» sin dato en el formulario y sin un importe de serie aceptable \(campo: habilitado, vacío\)/],
-    [{ sinSerie: 'Alarma conectada' }, /«Alarma conectada» de «Valoración de bienes» sin dato en el formulario y sin una opción de serie \(0 marcadas\)/],
+    [{ sinSerie: 'Caja fuerte' }, /«Caja fuerte» de «Valoración de bienes» sin dato en el formulario y sin una opción de serie \(0 marcadas\)/],
   ] as const) {
     const { context, page, ctx, marco } = await hastaValoracion({ valoracion: o })
     try {
@@ -1018,5 +1026,141 @@ test('diagnóstico: dos town VISIBLES y habilitados → «campo town … 2 coinc
     await assert.rejects(() => rellenarPantallaVivienda(a.page, a.marco, FORM, a.ctx), (e) => e instanceof ErrorMapaIncompleto && /campo town visible y habilitado: 2 coincidencias/.test((e as Error).message) && !/sin municipio ni vía/.test((e as Error).message))
   } finally {
     await a.context.close()
+  }
+})
+
+
+// ───────────── 0.1.11: número de calle «S/N» en un campo numérico (job 53d9eefe, 01/11/2026) ─────────────
+
+const FORM_SN: FormularioHogar = { ...FORM, inmueble: { ...FORM.inmueble, numero: 'S/N' } }
+
+test('0.1.11 puros: esNumeroSinNumero / esRotuloCasillaSinNumero (exactos, nunca «contiene»)', () => {
+  for (const v of ['S/N', 's/n', ' S / N ', 'SN', 'sin número', 'Sin numero']) assert.equal(esNumeroSinNumero(v), true, v)
+  for (const v of ['12', '12B', 'SN12', 'sin número 3', '', null, undefined]) assert.equal(esNumeroSinNumero(v), false, String(v))
+  for (const v of ['Sin número', ' sin numero ', 'S/N', 'Vivienda sin número']) assert.equal(esRotuloCasillaSinNumero(v), true, v)
+  for (const v of ['Número', 'Acepto condiciones', 'Sin número de bloque', 'Enviar número']) assert.equal(esRotuloCasillaSinNumero(v), false, v)
+  assert.equal(allianzHogar.version, '0.1.14')
+})
+
+test('0.1.11: «S/N» + campo numérico + casilla «Sin número» → se marca por la puerta guardada, no se teclea y se declara', async () => {
+  const { context, page, ctx, pulsados, marco, marcado, valor } = await abrir({ casillaSinNumero: {} })
+  try {
+    const sup = await rellenarPantallaVivienda(page, marco, FORM_SN, ctx)
+    assert.deepEqual(sup, [SUPUESTO_CASILLA_SIN_NUMERO])
+    assert.equal(await marcado('sn-0'), true)
+    assert.equal(await valor('streetNumber').catch(() => ''), '', 'no se tecleó nada en el número')
+    assert.ok(pulsados.includes('Sin número'))
+  } finally { await context.close() }
+})
+
+test('0.1.11: «S/N» + campo numérico SIN casilla → se teclea 0 y el supuesto se declara (precio estimado)', async () => {
+  const { context, page, ctx, marco, valor } = await abrir()
+  try {
+    const sup = await rellenarPantallaVivienda(page, marco, FORM_SN, ctx)
+    assert.deepEqual(sup, [SUPUESTO_NUMERO_CALLE])
+    assert.equal(await valor('streetNumber'), '0')
+  } finally { await context.close() }
+})
+
+test('0.1.11: «S/N» + campo de TEXTO → se escribe S/N tal cual y no hay supuesto; un número normal no cambia nada', async () => {
+  const a = await abrir({ numeroTexto: true })
+  try {
+    assert.deepEqual(await rellenarPantallaVivienda(a.page, a.marco, FORM_SN, a.ctx), [])
+    assert.equal(await a.valor('streetNumber'), 'S/N')
+  } finally { await a.context.close() }
+  const b = await abrir()
+  try {
+    assert.deepEqual(await rellenarPantallaVivienda(b.page, b.marco, FORM, b.ctx), [])
+    assert.equal(await b.valor('streetNumber'), '1')
+  } finally { await b.context.close() }
+})
+
+test('0.1.11: dos casillas «Sin número» → hueco (no se adivina cuál); casilla de otro rótulo («Acepto condiciones») no cuenta', async () => {
+  const a = await abrir({ casillaSinNumero: { dos: true } })
+  try {
+    await assert.rejects(() => rellenarPantallaVivienda(a.page, a.marco, FORM_SN, a.ctx), (e) => e instanceof ErrorMapaIncompleto && /casilla «sin número»/.test((e as Error).message))
+  } finally { await a.context.close() }
+  const b = await abrir({ casilla: true })
+  try {
+    assert.deepEqual(await rellenarPantallaVivienda(b.page, b.marco, FORM_SN, b.ctx), [SUPUESTO_NUMERO_CALLE])
+    assert.equal(await b.marcado('c1'), false, 'no se toca ninguna casilla ajena')
+  } finally { await b.context.close() }
+})
+
+// ───────────── 0.1.13: protecciones sí/no robustas (job ac0b4631: «Alarma conectada», 0 coincidencias) ─────────────
+
+test('0.1.13: rótulo de la alarma distinto del esperado → se localiza por respaldo y se sigue (sin bloquear)', async () => {
+  const { context, page, ctx, marco } = await hastaValoracion({ valoracion: { rotuloAlarma: 'Alarma conectada a central receptora' } })
+  try {
+    const supuestos = await rellenarValoracionBienes(page, marco, FORM_VAL, ctx)
+    assert.ok(supuestos.includes('Alarma conectada: «No» (de serie)'), supuestos.join(' | '))
+    assert.equal(await avanzarDesdeValoracion(page, marco, ctx, 3_000), 'Precio')
+  } finally {
+    await context.close()
+  }
+})
+
+test('0.1.13: sin dato y sin opción marcada → «No» como supuesto; grupo inexistente → se anota y se sigue', async () => {
+  for (const [o, esperado] of [
+    [{ sinSerie: 'Alarma conectada' }, 'Alarma conectada: «No» (supuesto; el riesgo no trae el dato)'],
+    [{ sinAlarma: true }, 'Alarma conectada: no localizada en la pantalla (supuesto: se sigue sin ella)'],
+  ] as const) {
+    const { context, page, ctx, marco } = await hastaValoracion({ valoracion: o })
+    try {
+      const supuestos = await rellenarValoracionBienes(page, marco, FORM_VAL, ctx)
+      assert.ok(supuestos.includes(esperado), supuestos.join(' | '))
+      if ('sinSerie' in o) assert.equal(await marco.locator('#g2-1').isChecked(), true, 'Alarma = No')
+      assert.equal(await avanzarDesdeValoracion(page, marco, ctx, 3_000), 'Precio')
+    } finally {
+      await context.close()
+    }
+  }
+})
+
+test('0.1.13: «Caja fuerte» sigue siendo estricta (grupo ausente no se inventa)', async () => {
+  const { context, page, ctx, marco } = await hastaValoracion()
+  try {
+    await marco.evaluate(() => { document.querySelector('#g1-0')?.closest('nx-radio-group')?.remove() })
+    await assert.rejects(() => rellenarValoracionBienes(page, marco, FORM_VAL, ctx), (e) => e instanceof ErrorMapaIncompleto && /grupo «Caja fuerte».*0 coincidencias/.test((e as Error).message))
+  } finally {
+    await context.close()
+  }
+})
+
+// ───────────── 0.1.14: «Inmueble» sin dato y con valor de serie no razonable → estimado por superficie (job ac0b4631) ─────────────
+
+const FORM_SIN_CAPITAL: FormularioHogar = { ...FORM_VAL, hogar: { ...FORM_VAL.hogar, capitalContinenteEur: null, capitalContenidoEur: null } }
+
+test('0.1.14 puro: el plan lleva el estimado (m² × 1.150, a miles; contenido 30 %, mín. 15.000) y nunca sin superficie', () => {
+  const plan = planValoracionBienes(FORM_SIN_CAPITAL)
+  const g = (c: string) => plan.find((o) => o.tipo === 'importe' && o.control === c) as Extract<(typeof plan)[number], { tipo: 'importe' }>
+  assert.equal(g('sumInsuredBuilding').valor, null)
+  assert.equal(g('sumInsuredBuilding').estimado, 104000, '90 m² × 1.150 = 103.500 → 104.000')
+  assert.equal(g('sumInsuredContent').estimado, 31000, '30 % de 104.000 = 31.200 → 31.000')
+  const sinM2 = planValoracionBienes({ ...FORM_SIN_CAPITAL, inmueble: { ...FORM_SIN_CAPITAL.inmueble, superficieM2: 0 } })
+  assert.equal((sinM2.find((o) => o.tipo === 'importe' && o.control === 'sumInsuredBuilding') as { estimado?: number | null }).estimado, null)
+  assert.equal(g('sumInsuredBuilding').valor, null)
+})
+
+test('0.1.14: serie no razonable (vacío) + sin dato → se escribe el estimado y se anota sin importes; con dato del formulario no se usa', async () => {
+  const { context, page, ctx, marco, valor } = await hastaValoracion({ valoracion: { vacio: 'sumInsuredBuilding' } })
+  try {
+    const supuestos = await rellenarValoracionBienes(page, marco, FORM_SIN_CAPITAL, ctx)
+    assert.equal(await valor('sumInsuredBuilding'), '104000')
+    assert.ok(supuestos.includes('Inmueble: importe estimado por superficie'), supuestos.join(' | '))
+    assert.ok(!supuestos.join(' ').match(/\d/), 'los supuestos no llevan importes')
+    assert.equal(await valor('sumInsuredContent'), '30000', 'serie razonable: se acepta la de serie, no se pisa')
+  } finally {
+    await context.close()
+  }
+})
+
+test('0.1.14: sin dato, sin superficie y serie no razonable → sigue el hueco (no se inventa)', async () => {
+  const { context, page, ctx, marco } = await hastaValoracion({ valoracion: { vacio: 'sumInsuredBuilding' } })
+  try {
+    const f = { ...FORM_SIN_CAPITAL, inmueble: { ...FORM_SIN_CAPITAL.inmueble, superficieM2: 0 } }
+    await assert.rejects(() => rellenarValoracionBienes(page, marco, f, ctx), (e) => e instanceof ErrorMapaIncompleto && /«Inmueble» de «Valoración de bienes» sin dato en el formulario y sin un importe de serie aceptable/.test((e as Error).message))
+  } finally {
+    await context.close()
   }
 })

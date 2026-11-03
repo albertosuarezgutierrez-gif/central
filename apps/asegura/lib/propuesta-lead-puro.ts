@@ -11,6 +11,7 @@ import {
   bloqueoCompania, clasificarCoberturas, coberturasIncluidas, encajeOpcion, huellaPropuesta, ramoDeCatalogo, recomendarOpcion,
   type EstadoGarantia, type NecesidadesLead, type OpcionComparada, type Recomendacion,
 } from '@central/module-seguros'
+import { firmezaOfertaRpaGuardada } from '@central/module-tarificacion'
 import { messageIdValido, type EnRespuestaA } from './correo-hilo.ts'
 import { eur } from './dinero.ts'
 
@@ -101,7 +102,9 @@ export type FilaOfertaRpa = {
   estado: string
   datosExtra: unknown
   /** La oferta tal como la guardó el worker (`tarificaciones.respuesta.ofertas[i]`). `null` = no se encontró. */
-  oferta: { coberturas: unknown; avisos: unknown; producto?: unknown } | null
+  oferta: { coberturas: unknown; avisos: unknown; producto?: unknown; polizaAnteriorTecleada?: unknown } | null
+  /** Código de compañía del trabajo (`tarificaciones.respuesta.compania`: `mapfre`, `occident`…). Ausente = no se sabe → `estimado`. */
+  companiaTrabajo?: string | null
 }
 
 /** Oferta del bot → opción comparada (prima, franquicia general, firmeza «estimado», catálogo, bloqueo, caducidad). PURA. */
@@ -119,8 +122,9 @@ export function opcionDeOfertaRpa(ramo: string | null | undefined, f: FilaOferta
     producto: f.producto?.trim() || null,
     primaEur: Math.round(prima * 100) / 100,
     franquiciaEur: franquicia !== null && franquicia >= 0 ? franquicia : null,
-    // Precio de portal: una OFERTA estimada (la compañía lo confirma al emitir), como en el borrador del bot.
-    firmeza: 'estimado',
+    // Precio de portal: una OFERTA estimada (la compañía lo confirma al emitir), como en el borrador del bot; `firme` solo con la regla
+    // SINCO (30/10/2026: compañía ≠ Occident, auto, el bot tecleó el nº de póliza anterior que traía el riesgo).
+    firmeza: firmezaOfertaRpaGuardada(f.companiaTrabajo, ramo, f.oferta ? { ...(f.oferta.polizaAnteriorTecleada === true ? { polizaAnteriorTecleada: true as const } : {}) } : null),
     garantias: f.oferta ? garantiasDeCoberturasRpa(ramo, f.oferta.coberturas, f.producto) : null,
     bloqueo: bloqueoCompania(avisos),
     caducada: /^\d{4}-\d{2}-\d{2}/.test(validez) ? validez.slice(0, 10) < hoy : false,

@@ -53,6 +53,11 @@
 // los antecedentes sin dato van al supuesto favorable declarado (`conAntecedentesFavorables`). Se fija por el `<select>` de
 // siempre (`resolverVehiculo`: código de la lista leída + relectura).
 // v0.6.12 (20/10/2026, trabajo real d675077b llegó a «Selección de paquete»): LECTOR DE PRECIOS. La pantalla es una tabla comparativa `nx-comparison-table` (3 paquetes: «Terceros con lunas», «Tercero Ampliado», «Todo Riesgo con franq.»; cada cabecera trae «primer recibo» y «la anualidad»; filas de cobertura con icono check/minus o desplegable por paquete, filas de elección única que abarcan los 3 paquetes y «Todos los paquetes incluyen»). `leerPaquetesTurismosAllianz` (guard.ts, solo lectura) + `ofertasDesdePaquetesTurismos` devuelven una oferta por paquete con supuestos y coberturas; importe ilegible → fuera + aviso; sin tabla → hueco como antes. No se pulsa nada en esta pantalla.
+// v0.6.41 (02/11/2026, Alberto: «que el bot coja el que haya»): si el catálogo no tiene el modelo de la referencia (lista de otro modelo o tarjeta única de otro modelo) se tarifica la más parecida con aviso «Modelo distinto del de referencia» (supuesto) en vez de requiere_humano.
+// v0.6.40 / Moto v0.7.23 (02/11/2026, regla de Alberto «siempre el MISMO modelo de vehículo en todas las compañías»): la referencia canónica manda de cualquier origen (no solo humana), una lista de otro modelo (`otro_modelo`) o una tarjeta única de otro modelo NO se tarifican: requiere_humano.
+// Turismos v0.6.38 / Moto v0.7.22 (01/11/2026, Alberto: «identificar el vehículo UNA vez»): si la versión iba a parar (`requiere_eleccion_version`), se elige SOLA con el vehículo de REFERENCIA de la oportunidad (`vehiculoReferencia`, lo pone asegura al entregar: humano > Mapfre > póliza > Allianz) por similitud (`elegirOpcionPorVehiculoReferencia`, module-tarificacion, compartido con Generali) y se DECLARA como supuesto («vehículo según …» → precio estimado). Una referencia HUMANA manda también sobre la similitud con Mapfre y la equivalencia. Solo sigue parando sin referencia, sin opciones o con la lista de otra marca.
+// v0.6.37 (31/10/2026, trabajo real dbb6d451 atascado en «Datos personales»: «Localidad (no es un campo de texto: desplegable/autocompletado sin puerta en guard.ts)»): «Localidad» del tomador es un autocompletado NDBX (`input[role=combobox][aria-autocomplete=list]`) que el portal no rellena solo tras el CP. Vacío → puerta `localidadTurismosAllianz` (guard.ts): lo enfoca, teclea el municipio (y si no salen opciones, su palabra más larga), lee las `[role=option]` del panel de su `aria-owns` y elige como mucho la que decide `elegirLocalidadTurismos` (CP distinto descartado; única que casa con el municipio; sin casar, solo la única con el CP exacto). Ninguna/varias → hueco con el número de opciones, nunca la primera a ciegas. Con valor del portal distinto → no se toca (hueco, como antes).
+// v0.6.36 (30/10/2026, regla de Alberto «SINCO al tarificar»): si la puerta `polizaActualTurismosAllianz` ESCRIBIÓ y releyó los 5 últimos dígitos de la póliza actual, cada oferta de Turismos lleva `polizaAnteriorTecleada: true` (solo la señal, nunca el valor; «ya con valor» del portal NO cuenta). Con ella asegura marca el precio `firme`.
 // v0.6.11 (19/10/2026, trabajo real atascado en «Antecedentes» con «qué falta para habilitar SIGUIENTE»): el input obligatorio «Cinco últimos dígitos de la póliza actual» (aparece al haber compañía actual) se rellena con `polizaAnteriorUltimos5` del riesgo por la puerta `polizaActualTurismosAllianz` (guard.ts); sin dato → hueco con nombre, nunca inventado; ya con valor → «fijada por Allianz». El atasco genérico lista ahora las etiquetas de los obligatorios vacíos/inválidos del paso. Los 5 dígitos nunca van a supuestos, avisos ni errores.
 // v0.6.10 (18/10/2026, decisión de Alberto «supuesto favorable»): «Antecedentes» contesta las 3 preguntas que bloqueaban «SIGUIENTE» (tiempo en la compañía, partes culpables, tiempo como titular): con dato del riesgo la opción que casa; sin dato, la más favorable y DECLARADA (guard.ts).
 // v0.6.9 (18/10/2026): «Compañía actual del vehículo» casa también por contención de la clave de la ficha en la opción (solo si hay UNA candidata; guard.ts).
@@ -131,6 +136,7 @@ import {
   comprobarBoton,
   conAntecedentesFavorables,
   conDatosUsados,
+  conPolizaAnteriorTecleada,
   MAX_DESCRIPCION_VEHICULO,
   pareceDatoPersonalEnDescripcion,
   AVISO_VERSION_POR_SIMILITUD,
@@ -139,6 +145,10 @@ import {
   esDniNie,
   eleccionPorVehiculoConfirmadoDeEtiquetas,
   elegirVersionAutomaticamente,
+  elegirOpcionPorVehiculoReferencia,
+  vehiculoDivergeDeReferencia,
+  supuestoOtroModelo,
+  textoVehiculoReferencia,
   datosEquivalenciaDesdeEtiqueta,
   referenciaRiesgoVersion,
   etiquetasSupuestos,
@@ -173,9 +183,11 @@ import {
   type Vehiculo,
 } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../../adaptador.ts'
+import type { ResultadoLocalidadTurismos } from '../../guard.ts'
 import { ErrorTarificador } from '../../errores.ts'
 import { descargarProyectoAuto, ofertasConPdfProyecto } from '../../descarga-proyecto-auto.ts'
-import { elegirPoblacionPorLocalidades } from './poblacion-localidad.ts'
+import { valorDeTextoEnFila } from '../mapfre/garantias.ts'
+import { busquedasLocalidadTurismos, elegirLocalidadTurismos, elegirPoblacionPorLocalidades } from './poblacion-localidad.ts'
 import { casarCompaniaActual, indiceOpcionGenerica, normalizarCompania, mensajeCompaniaAmbigua, PREFIJO_SUPUESTO_COMPANIA_GENERICA, supuestoCompaniaGenerica } from '../../compania-actual.ts'
 import { conRespaldoIA, registrarAtasco, sugerirOpcion, type PeticionResolver } from '../../formador.ts'
 import { ErrorMapaIncompleto as ErrorLocalizar, localizarControl } from '../../localizar.ts'
@@ -380,9 +392,13 @@ export async function consultarMatricula(raiz: Pick<Frame, 'locator'>, matricula
  * empate → la primera). Si ninguna entra en tolerancia o la lista no trae CV/CC legibles → `null` y sigue el flujo de siempre
  * (requiere_humano → memoria/IA/persona). Pura. `porSimilitud` deja la traza de que no fue una elección explícita.
  */
-export function eleccionVersionConOrigen(lectura: Pick<LecturaVehiculoPortal, 'versiones'>, form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado'>): { eleccion: EleccionVersion | null; porSimilitud: boolean } {
+export function eleccionVersionConOrigen(lectura: Pick<LecturaVehiculoPortal, 'versiones'>, form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado' | 'vehiculoReferencia'>): { eleccion: EleccionVersion | null; porSimilitud: boolean } {
   const explicita = form.eleccionVersion ?? null
   if (explicita && (explicita.codigo?.trim() || explicita.etiqueta?.trim())) return { eleccion: explicita, porSimilitud: false }
+  // v0.6.38 (01/11/2026): una referencia elegida por una PERSONA en la bandeja manda sobre la similitud con Mapfre (la decide
+  // `versionAutomaticaAllianz` con `elegirOpcionPorVehiculoReferencia`).
+  // v0.6.40 (02/11/2026, Alberto: MISMO modelo para todas las compañías): la referencia CANÓNICA de cualquier origen manda sobre la similitud con Mapfre.
+  if (form.vehiculoReferencia) return { eleccion: null, porSimilitud: false }
   const porSimilitud = eleccionPorVehiculoConfirmadoDeEtiquetas(form.vehiculoConfirmado ?? null, lectura.versiones)
   return { eleccion: porSimilitud, porSimilitud: porSimilitud !== null }
 }
@@ -438,15 +454,36 @@ export function eleccionVersionMotoPorSimilitud(
  */
 export function versionAutomaticaAllianz(
   opciones: readonly CandidatoVersion[],
-  form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado' | 'seleccionVehiculo' | 'fechaMatriculacion'>,
+  form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado' | 'seleccionVehiculo' | 'fechaMatriculacion' | 'vehiculoReferencia'>,
   mostrar: readonly CandidatoVersion[] = opciones,
 ): { indice: number; eleccion: EleccionVersion; supuesto: string | null } {
+  const explicita = !!(form.eleccionVersion?.codigo?.trim() || form.eleccionVersion?.etiqueta?.trim())
+  // v0.6.38 (01/11/2026, Alberto): vehículo de REFERENCIA de la oportunidad (`elegirOpcionPorVehiculoReferencia`, compartido con
+  // Generali). Si lo eligió una PERSONA manda (antes que la equivalencia); si es de un bot/póliza, entra donde antes se paraba.
+  const porReferencia = (): { indice: number; eleccion: EleccionVersion; supuesto: string } | null => {
+    const e = elegirOpcionPorVehiculoReferencia(opciones, form.vehiculoReferencia ?? null, { compania: 'Allianz' })
+    if (e.tipo !== 'coincidencia' && e.tipo !== 'aproximacion') return null
+    const o = opciones[e.indice]!
+    return { indice: e.indice, eleccion: { codigo: o.codigo, etiqueta: o.etiqueta }, supuesto: e.supuesto }
+  }
+  // v0.6.40: la canónica (humano > Mapfre por matrícula > póliza > primera automática) va ANTES que la equivalencia, sea cual sea su origen.
+  if (!explicita && form.vehiculoReferencia) {
+    const h = porReferencia()
+    if (h) return h
+  }
   const r = elegirVersionAutomaticamente(
     opciones.map((o) => ({ etiqueta: o.etiqueta, codigo: o.codigo, datos: datosEquivalenciaDesdeEtiqueta(o.etiqueta) })),
     { riesgo: referenciaRiesgoVersion(form), eleccion: form.eleccionVersion ?? null },
   )
   if (r.tipo === 'ninguna') throw new ErrorTarificador('portal', 'allianz/auto: el portal no ofrece ninguna versión utilizable')
-  if (r.tipo === 'preguntar') throw new ErrorEleccionVersion(mostrar.filter((o) => !esOpcionVacia(o.etiqueta)).map((o): CandidatoVersion => ({ etiqueta: o.etiqueta, codigo: o.codigo })))
+  if (r.tipo === 'preguntar') {
+    // Antes se paraba aquí (requiere_humano). Con vehículo de referencia se elige SOLO por similitud y se declara (precio estimado);
+    // solo se sigue parando si no hay referencia, ninguna opción utilizable o la lista es de otra marca. La elección explícita de la
+    // bandeja que no casa sigue preguntando (una persona ya decidió: no se le enmienda).
+    const ref = r.motivo === 'eleccion_no_casa' ? null : porReferencia()
+    if (ref) return ref
+    throw new ErrorEleccionVersion(mostrar.filter((o) => !esOpcionVacia(o.etiqueta)).map((o): CandidatoVersion => ({ etiqueta: o.etiqueta, codigo: o.codigo })))
+  }
   return { indice: r.indice, eleccion: r.eleccion, supuesto: r.supuesto }
 }
 
@@ -1843,7 +1880,7 @@ export const RE_BOTON_SIGUIENTE_TURISMOS = /^\s*siguiente\s*$/i
 export const botonSiguienteTurismos = (marco: Pick<Frame, 'locator'>): Locator => botonTurismos(marco, RE_BOTON_SIGUIENTE_TURISMOS)
 
 /** `formador` (opcional): solo para el atasco de «Matrícula» (candidatos con pista, se aprende al elegir). */
-export type CtxTurismos = Pick<ContextoPortal, 'pulsar' | 'pausaAccion' | 'marcarOpcionTurismos' | 'marcarTarjetaVehiculoTurismos'> & Partial<Pick<ContextoPortal, 'formador' | 'companiaActualTurismos' | 'marcarAntecedenteTurismos' | 'polizaActualTurismos' | 'guardarPresupuestoTurismos' | 'trabajoId' | 'adjuntarPdf' | 'log' | 'buscarDescargaProyectoAuto' | 'pulsarDescargaProyectoAuto'>>
+export type CtxTurismos = Pick<ContextoPortal, 'pulsar' | 'pausaAccion' | 'marcarOpcionTurismos' | 'marcarTarjetaVehiculoTurismos'> & Partial<Pick<ContextoPortal, 'formador' | 'companiaActualTurismos' | 'localidadTurismos' | 'marcarAntecedenteTurismos' | 'polizaActualTurismos' | 'guardarPresupuestoTurismos' | 'trabajoId' | 'adjuntarPdf' | 'log' | 'buscarDescargaProyectoAuto' | 'pulsarDescargaProyectoAuto'>>
 
 const ESPERA_CONTROL_TURISMOS_MS = 8_000
 /** Espera por campo del resto del paso (la pantalla ya está pintada tras la consulta: no se acumulan 8 s por hueco). */
@@ -1916,7 +1953,7 @@ export async function leerVersionesTurismos(marco: Pick<Frame, 'locator'>): Prom
  */
 export async function resolverVersionTurismos(
   marco: Pick<Frame, 'locator'>,
-  form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado' | 'seleccionVehiculo' | 'fechaMatriculacion'>,
+  form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado' | 'seleccionVehiculo' | 'fechaMatriculacion' | 'vehiculoReferencia'>,
 ): Promise<{ conVersiones: boolean; supuesto: string | null }> {
   const l = await leerVersionesTurismos(marco)
   if (!l || l.opciones.length === 0) return { conVersiones: false, supuesto: null }
@@ -1964,10 +2001,14 @@ async function tarjetasVehiculoEstables(page: Pick<Page, 'waitForTimeout'>, marc
  */
 export function decidirTarjetaVehiculoTurismos(
   tarjetas: readonly Pick<TarjetaVehiculoTurismos, 'etiqueta'>[],
-  form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado' | 'seleccionVehiculo' | 'fechaMatriculacion'>,
+  form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado' | 'seleccionVehiculo' | 'fechaMatriculacion' | 'vehiculoReferencia'>,
 ): { indice: number; supuesto: string | null } {
   if (tarjetas.length === 0) throw new ErrorMapaIncompleto(`las tarjetas de vehículo de «${BOTON_ENCUENTRA_VEHICULO}» (no hay ninguna)`, true)
-  if (tarjetas.length === 1) return { indice: 0, supuesto: null }
+  if (tarjetas.length === 1) {
+    // v0.6.41 (02/11/2026, Alberto: «que el bot coja el que haya»): una sola tarjeta de OTRO modelo que la referencia canónica SÍ se tarifica, con aviso (supuesto).
+    if (form.vehiculoReferencia && !form.eleccionVersion?.etiqueta?.trim() && vehiculoDivergeDeReferencia(form.vehiculoReferencia, tarjetas[0]!.etiqueta)) return { indice: 0, supuesto: supuestoOtroModelo(tarjetas[0]!.etiqueta, textoVehiculoReferencia(form.vehiculoReferencia), 'Allianz') }
+    return { indice: 0, supuesto: null }
+  }
   const candidatos: CandidatoVersion[] = tarjetas.map((t) => ({ etiqueta: t.etiqueta, codigo: null }))
   const { eleccion } = eleccionVersionConOrigen({ versiones: candidatos }, form)
   if (eleccion) {
@@ -1988,7 +2029,7 @@ export function decidirTarjetaVehiculoTurismos(
  */
 export async function elegirTarjetaVehiculoTurismos(
   marco: Frame,
-  form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado' | 'seleccionVehiculo' | 'fechaMatriculacion'>,
+  form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado' | 'seleccionVehiculo' | 'fechaMatriculacion' | 'vehiculoReferencia'>,
   ctx: Pick<CtxTurismos, 'marcarTarjetaVehiculoTurismos'>,
   tarjetas: readonly TarjetaVehiculoTurismos[],
 ): Promise<{ supuesto: string | null }> {
@@ -2130,7 +2171,19 @@ export async function esperarPreguntasAntecedentesTurismos(page: Pick<Page, 'wai
 export const MENSAJE_FALTA_COMPANIA_ACTUAL = 'falta la compañía actual del vehículo; Allianz la exige con cambio de seguro'
 /** v0.6.15: cambio de seguro sin compañía actual en el riesgo → `datos` (no un «mapa incompleto» del portal). Se llama ANTES del login. Puro. */
 export function exigirCompaniaActualTurismos(f: FormularioAuto, hoy: Date = new Date()): void {
-  if (supuestosAuto(f, hoy).compra.valor === 'ya_lo_tenia' && companiaActualDe(f) === null) throw new ErrorTarificador('datos', MENSAJE_FALTA_COMPANIA_ACTUAL)
+  if (supuestosAuto(f, hoy).compra.valor !== 'ya_lo_tenia') return
+  const actual = companiaActualDe(f)
+  if (actual === null) throw new ErrorTarificador('datos', MENSAJE_FALTA_COMPANIA_ACTUAL)
+  if (esCompaniaPropiaAllianz(actual)) throw new ErrorTarificador('datos', MENSAJE_COMPANIA_ACTUAL_ES_ALLIANZ)
+}
+/**
+ * v0.6.35: la compañía actual ya es ALLIANZ (la misma que tarifica). El desplegable del portal no ofrece Allianz (es su casa; solo
+ * «Allianz Direct» y «BBVA Allianz», que son OTRAS entidades) y elegir una sería falso. No hay opción honesta: se para ANTES del login
+ * con un error de DATOS accionable (nunca un match difuso «Allianz» → «Allianz Direct»).
+ */
+export const MENSAJE_COMPANIA_ACTUAL_ES_ALLIANZ = 'la compañía actual del vehículo ya es Allianz y el desplegable de Allianz no ofrece Allianz (solo «Allianz Direct» y «BBVA Allianz», que son otras entidades); no se elige ninguna. Es un seguro de Allianz a Allianz: tarificarlo a mano en el portal o indicar otra compañía actual si el dato es erróneo'
+export function esCompaniaPropiaAllianz(actual: string): boolean {
+  return normalizarCompania(actual) === 'allianz'
 }
 /** Tope del texto de la lista en el mensaje (el runner corta el mensaje a 2.000 caracteres): se corta por opciones enteras, nunca a mitad. */
 const MAX_LISTA_COMPANIAS_MENSAJE = 1_500
@@ -2320,6 +2373,19 @@ export function planDatosTurismos(f: FormularioAuto, hoy: Date = new Date()): { 
   return { pasos, supuestos: supuestosAplicadosTurismos(sup, pasos.flatMap((p) => supuestosDelPlan(p.operaciones))) }
 }
 
+/**
+ * v0.6.37: resultado de la puerta de «Localidad» → hueco (texto) o `null` si quedó puesta y casa con el municipio. PURA. Los motivos no
+ * llevan ni el municipio ni las opciones (solo cuántas).
+ */
+export function mensajeLocalidadTurismos(r: ResultadoLocalidadTurismos, municipio: string): string | null {
+  const et = `«${ETIQUETAS_TURISMOS.localidad}»`
+  if (r.estado === 'elegida') return normalizarValorCampoTurismos(r.mostrado, 'poblacion') === normalizarValorCampoTurismos(r.elegida, 'poblacion') || normalizarValorCampoTurismos(r.mostrado, 'poblacion') === normalizarValorCampoTurismos(municipio, 'poblacion') ? null : `${et} (el portal no dejó puesta la opción elegida)`
+  if (r.estado === 'con_valor') return `${et} (el portal propone otra para el CP: no se toca)`
+  if (r.estado === 'sin_opciones') return `${et} (el autocompletado no ofreció opciones para el municipio)`
+  if (r.estado === 'sin_eleccion') return `${et} (ninguna o varias de las ${r.opciones.length} opciones del autocompletado casan con el municipio y el CP)`
+  return `${et} (${r.motivo})`
+}
+
 /** ¿El control es un campo de TEXTO editable (no un desplegable/combobox, que solo se tocaría por una puerta de guard.ts)? */
 async function esCampoTexto(campo: Locator): Promise<boolean> {
   return campo
@@ -2447,10 +2513,12 @@ async function teclearTurismos(campo: Locator, valor: string): Promise<boolean> 
  * nada tocado). Cada control por su etiqueta EXACTA en la zona `appArea` (CP/localidad/documento, en el bloque del tomador); un
  * campo de texto se escribe tras `comprobarCampo` (guard de emisión + frontera bancaria) y se RELEE; una fecha fuera del rango
  * `min`/`max` del portal no se teclea; las opciones, SOLO por la puerta guardada (`ctx.marcarOpcionTurismos`, lista cerrada de
- * guard.ts). «Localidad» es un autocompletado: NUNCA se teclea; vale si el portal la propone y casa (o, sin dato, se declara).
+ * guard.ts). «Localidad» es un autocompletado: vale si el portal la propone y casa (o, sin dato, se declara); vacía, SOLO por la puerta
+ * `ctx.localidadTurismos` (v0.6.37), nunca tecleada directamente.
  * Lo que no aparece, aparece repetido o no queda puesto → hueco (se juntan). Devuelve los huecos y los supuestos APLICADOS.
+ * v0.6.36: `polizaTecleada: true` solo si la puerta de la póliza actual devolvió `escrita` (escrito y releído igual).
  */
-export async function rellenarPasoTurismos(page: Page, marco: Frame, ctx: CtxTurismos, plan: PasoPlanTurismos): Promise<{ huecos: string[]; aplicados: string[]; opcionesCompania?: string[] }> {
+export async function rellenarPasoTurismos(page: Page, marco: Frame, ctx: CtxTurismos, plan: PasoPlanTurismos): Promise<{ huecos: string[]; aplicados: string[]; opcionesCompania?: string[]; polizaTecleada?: true }> {
   const marcar = ctx?.marcarOpcionTurismos
   if (typeof marcar !== 'function') throw new ErrorMapaIncompleto('la puerta guardada de opciones de Turismos en el contexto del worker', false, true)
   const activo = await pasoActivoTurismos(marco)
@@ -2458,6 +2526,7 @@ export async function rellenarPasoTurismos(page: Page, marco: Frame, ctx: CtxTur
   const huecos = [...plan.huecos]
   const aplicados: string[] = []
   let opcionesCompania: string[] | undefined
+  let polizaTecleada = false
   // v0.6.16: opciones marcables del DOM ANTES de elegir la compañía (las preguntas de «Antecedentes» aparecen después).
   const opcionesAntes = plan.paso === PASO_ANTECEDENTES ? await contarOpcionesMarcablesTurismos(marco) : 0
   const esperar = async (etiqueta: string, bloqueTomador: boolean): Promise<Locator | string> => {
@@ -2507,7 +2576,8 @@ export async function rellenarPasoTurismos(page: Page, marco: Frame, ctx: CtxTur
       }
       // Ni el dato ni nada derivado de él sale en huecos ni supuestos: solo estados.
       const r = await puerta(marco, op.valor)
-      if (r.estado === 'con_valor') aplicados.push(SUPUESTO_POLIZA_FIJADA)
+      if (r.estado === 'escrita') polizaTecleada = true
+      else if (r.estado === 'con_valor') aplicados.push(SUPUESTO_POLIZA_FIJADA)
       else if (r.estado === 'sin_dato') huecos.push(HUECO_POLIZA_ACTUAL)
       else if (r.estado === 'no_unica') huecos.push(`«${ETIQUETA_POLIZA_ACTUAL_TURISMOS}» (${r.motivo})`)
       else if (r.estado === 'no_quedo') huecos.push(`«${ETIQUETA_POLIZA_ACTUAL_TURISMOS}» (el portal no dejó puesto el valor)`)
@@ -2571,7 +2641,19 @@ export async function rellenarPasoTurismos(page: Page, marco: Frame, ctx: CtxTur
       }
       if (clavePoblacion(mostrada) === clavePoblacion(op.valor)) continue
       if (!(await esCampoTexto(campo))) {
-        huecos.push(`«${ETIQUETAS_TURISMOS.localidad}» (no es un campo de texto: desplegable/autocompletado sin puerta en guard.ts${mostrada ? '; el portal propone otra para el CP' : ''})`)
+        // v0.6.37 (31/10/2026, real dbb6d451): autocompletado NDBX vacío → SOLO por la puerta `localidadTurismosAllianz` de guard.ts, que teclea
+        // el municipio y elige como mucho la opción que decide `elegirLocalidadTurismos` (municipio + CP del plan). Con valor del portal, no se toca.
+        const puertaLoc = ctx.localidadTurismos
+        if (mostrada !== '' || typeof puertaLoc !== 'function') {
+          huecos.push(`«${ETIQUETAS_TURISMOS.localidad}» (${mostrada ? 'el portal propone otra para el CP: no se toca' : 'autocompletado sin la puerta guardada en el contexto del worker'})`)
+          continue
+        }
+        const opCp = plan.operaciones.find((o) => o.tipo === 'texto' && o.etiqueta === ETIQUETAS_TURISMOS.codigoPostal)
+        const cpPlan = opCp && opCp.tipo === 'texto' ? normalizarValorCampoTurismos(opCp.valor, 'cp') : null
+        const municipio = op.valor
+        const r = await puertaLoc(marco, busquedasLocalidadTurismos(municipio), (opciones) => elegirLocalidadTurismos(opciones, municipio, cpPlan))
+        const hueco = mensajeLocalidadTurismos(r, municipio)
+        if (hueco) huecos.push(hueco)
         continue
       }
       await ctx.pausaAccion()
@@ -2648,7 +2730,7 @@ export async function rellenarPasoTurismos(page: Page, marco: Frame, ctx: CtxTur
     if (!quedo) huecos.push(`«${op.etiqueta}» (el portal no dejó puesto el valor)`)
     else if (op.supuesto) aplicados.push(op.supuesto)
   }
-  return { huecos, aplicados, ...(opcionesCompania ? { opcionesCompania } : {}) }
+  return { huecos, aplicados, ...(opcionesCompania ? { opcionesCompania } : {}), ...(polizaTecleada ? { polizaTecleada: true as const } : {}) }
 }
 
 /**
@@ -2776,15 +2858,20 @@ export function ofertasDesdePaquetesTurismos(lectura: LecturaPaquetesTurismos, s
       for (const c of f.comunes) if (c !== '') cob(c, c, 'incluida')
       for (const o of f.opciones.filter((x) => x.marcada && x.texto !== '')) {
         const estado: CoberturaOferta['estado'] = /^no\s+incluid/i.test(o.texto) ? 'excluida' : 'incluida'
-        cob(f.descripcion, `${f.descripcion}: ${o.texto}`, estado, importeEs(o.texto))
+        // v0.6.39: límite/franquicia en importe solo si el texto de la opción los trae (nunca el suplemento `adicional`, que es precio).
+        const v = valorDeTextoEnFila(f.descripcion, o.texto)
+        coberturas.push({ clave: f.descripcion, literal: `${f.descripcion}: ${o.texto}`, estado, capital: importeEs(o.texto), limite: v?.limite ?? null, franquicia: v?.franquicia ?? null })
+        if (v && v.franquicia !== null) franquicias.push({ ambito: f.descripcion, importeEur: v.franquicia, literal: null })
       }
       const c = f.celdas.length === n ? f.celdas[i]! : null
       if (c === null || f.opciones.length > 0 || f.comunes.length > 0) continue
       if (c.texto !== '') {
         const t = c.texto.toLowerCase()
         const estado: CoberturaOferta['estado'] = t === 'no' ? 'excluida' : 'incluida'
-        cob(f.descripcion, `${f.descripcion}: ${c.texto}`, estado)
-        if (t !== 'sí' && t !== 'si' && t !== 'no') franquicias.push({ ambito: f.descripcion, importeEur: null, literal: `nivel «${c.texto}» del desplegable (sin importe en pantalla)` })
+        // v0.6.39: si el texto de la celda trae un importe («Franquicia 150 €», «Hasta 6.000 €»), va a franquicia/límite; si no, nivel sin importe como antes.
+        const v = t === 'sí' || t === 'si' || t === 'no' ? null : valorDeTextoEnFila(f.descripcion, c.texto)
+        coberturas.push({ clave: f.descripcion, literal: `${f.descripcion}: ${c.texto}`, estado, capital: null, limite: v?.limite ?? null, franquicia: v?.franquicia ?? null })
+        if (t !== 'sí' && t !== 'si' && t !== 'no') franquicias.push(v && v.franquicia !== null ? { ambito: f.descripcion, importeEur: v.franquicia, literal: null } : { ambito: f.descripcion, importeEur: null, literal: `nivel «${c.texto}» del desplegable (sin importe en pantalla)` })
       } else if (c.icono === 'check') cob(f.descripcion, f.descripcion, 'incluida')
       else if (c.icono === 'minus') cob(f.descripcion, f.descripcion, 'excluida')
     }
@@ -2858,9 +2945,12 @@ export async function recorrerPasosTurismos(
   // de aseguradoras del catálogo del portal, nunca datos del cliente.
   const conOpciones = (m: string) => (opciones ? `${m}; opciones de «${ETIQUETA_COMPANIA_ACTUAL}» leídas (${opciones.length}): ${opciones.join(' | ')}`.slice(0, 1_500) : m)
   const declarar = () => unirSupuestoVersion(supuestoVersion, supuestosAplicadosTurismos(sup, aplicados))
+  // v0.6.36: ¿la puerta escribió y releyó la póliza actual en algún paso? (señal para la firmeza en asegura; el valor no sale).
+  let polizaTecleada = false
   for (const plan of pasos) {
     const r = await rellenarPasoTurismos(page, marco, ctx, plan)
     aplicados.push(...r.aplicados)
+    if (r.polizaTecleada) polizaTecleada = true
     if (r.opcionesCompania) {
       opciones = r.opcionesCompania
       ctx.formador?.log('turismos_compania_actual_opciones', { n: opciones.length, opciones })
@@ -2895,7 +2985,7 @@ export async function recorrerPasosTurismos(
         // v0.6.14: el vehículo de catálogo que Allianz dejó MARCADO viaja también como `seleccionVehiculo` (Generali lo usa).
         // v0.6.28: PDF del presupuesto guardado (botón «Imprimir/Descargar presupuesto»; v0.6.29: también «Descargar propuesta»); si no llega, aviso y el precio se devuelve igual.
         const pdfPresupuesto = await descargarProyectoAuto(page, ctx, 'allianz', 'presupuesto-allianz-turismos.pdf', guardado.estado === 'guardado')
-        return { ofertas: conDatosUsados(ofertasConPdfProyecto(ofertasConPresupuestoTurismos(ofertas, guardado), pdfPresupuesto), usados), seleccionVehiculo: seleccionVehiculoConfirmada(usados?.vehiculo) }
+        return { ofertas: conPolizaAnteriorTecleada(conDatosUsados(ofertasConPdfProyecto(ofertasConPresupuestoTurismos(ofertas, guardado), pdfPresupuesto), usados), polizaTecleada), seleccionVehiculo: seleccionVehiculoConfirmada(usados?.vehiculo) }
       }
       if (Date.now() >= fin) break
       await page.waitForTimeout(300)
@@ -2934,7 +3024,7 @@ export function ofertasConPresupuestoTurismos(ofertas: readonly OfertaNormalizad
         ? `${AVISO_PRESUPUESTO_GUARDADO}: nº ${r.referencia} (identificador ${r.identificador}).`
         : `${AVISO_PRESUPUESTO_GUARDADO}: identificador ${r.identificador} (el portal no enseñó número).`
       : r.estado === 'sin_confirmar'
-        ? `Se pulsó «Guardar presupuesto» (identificador ${r.identificador}) pero el portal no lo confirmó: compruébalo en Allianz.`
+        ? `Se pulsó «Guardar presupuesto» (identificador ${r.identificador}) pero el portal no lo confirmó: compruébalo en Allianz.${r.diagnostico ? ` Diagnóstico: ${r.diagnostico}.` : ''}`
         : `Presupuesto NO guardado en Allianz: ${r.motivo}.`
   const ref = r.estado === 'guardado' ? (r.referencia ?? r.identificador) : null
   return ofertas.map((o) => ({ ...o, referenciaPortal: ref ?? o.referenciaPortal, avisos: [...o.avisos, aviso] }))
@@ -2968,7 +3058,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.21' : '0.6.29',
+    version: ramo === 'moto' ? '0.7.23' : '0.6.41',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo

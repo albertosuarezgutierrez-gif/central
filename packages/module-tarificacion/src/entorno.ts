@@ -26,7 +26,7 @@ export function variablesProhibidas(env: Record<string, string | undefined>): st
 }
 
 /** Las ÚNICAS variables que el orquestador pone en la config de la máquina (no son secretos). */
-export const ENV_MAQUINA_PERMITIDAS = ['JOB_ID', 'TARIFICADOR_API_URL', 'TARIFICADOR_EXPLORADOR_VISTA'] as const
+export const ENV_MAQUINA_PERMITIDAS = ['JOB_ID', 'TARIFICADOR_API_URL', 'TARIFICADOR_EXPLORADOR_VISTA', 'MAPFRE_HOGAR_ACTIVO'] as const
 
 /** Valores de `TARIFICADOR_EXPLORADOR_VISTA` que se reenvían a la máquina (EXACTOS, sin recortar ni pasar a minúsculas). */
 export const VISTAS_EXPLORADOR = ['dom', 'aria', 'ambas'] as const
@@ -36,7 +36,7 @@ export const VISTAS_EXPLORADOR = ['dom', 'aria', 'ambas'] as const
  * y las credenciales de portal son fly secrets de la app `asegura-tarificador`: no viajan en la
  * config de la máquina (que se lee por la API de Fly).
  */
-export function envDeMaquina(entrada: { jobId: string; apiUrl: string; vistaExplorador?: string | null }): Record<'JOB_ID' | 'TARIFICADOR_API_URL', string> & { TARIFICADOR_EXPLORADOR_VISTA?: string } {
+export function envDeMaquina(entrada: { jobId: string; apiUrl: string; vistaExplorador?: string | null; mapfreHogarActivo?: string | null }): Record<'JOB_ID' | 'TARIFICADOR_API_URL', string> & { TARIFICADOR_EXPLORADOR_VISTA?: string; MAPFRE_HOGAR_ACTIVO?: 'true' } {
   const jobId = String(entrada.jobId ?? '').trim()
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(jobId)) {
     throw new Error('envDeMaquina: jobId no es un uuid')
@@ -51,7 +51,10 @@ export function envDeMaquina(entrada: { jobId: string; apiUrl: string; vistaExpl
   if (url.username || url.password) throw new Error('envDeMaquina: apiUrl no puede llevar credenciales')
   // Interruptor no secreto del explorador: solo con un valor válido EXACTO; ausente o inválido → no viaja (el worker cae a `dom`).
   const vista = (VISTAS_EXPLORADOR as readonly unknown[]).includes(entrada.vistaExplorador) ? { TARIFICADOR_EXPLORADOR_VISTA: entrada.vistaExplorador as string } : {}
-  return { JOB_ID: jobId, TARIFICADOR_API_URL: url.origin, ...vista }
+  // Interruptor BOOLEANO no secreto del adaptador Mapfre Hogar: viaja SOLO si en el entorno de asegura vale exactamente 'true'
+  // (sin recortar ni minúsculas); cualquier otro valor no se pasa y el worker lo lee como apagado. Nunca un valor arbitrario.
+  const mapfreHogar = entrada.mapfreHogarActivo === 'true' ? { MAPFRE_HOGAR_ACTIVO: 'true' as const } : {}
+  return { JOB_ID: jobId, TARIFICADOR_API_URL: url.origin, ...vista, ...mapfreHogar }
 }
 
 /** Nombre de las variables de credencial de un portal: `CRED_ALLIANZ_EPAC_USER` / `_PASS`. */
