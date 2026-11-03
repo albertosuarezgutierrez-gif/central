@@ -226,6 +226,11 @@ import {
   decidirNeutroPasoGenerali,
   avisoNeutroPasoGenerali,
   errorPasoIncompletoGenerali,
+  candidatosNeutroPasoGenerali,
+  diagnosticoPasoIncompletoGenerali,
+  errorPasoSinCampoGenerali,
+  type CampoSenaladoGenerali,
+  type ObligatorioPasoGenerali,
   type PasoBarraGenerali,
   type VehiculoBuscado,
 } from './reglas.ts'
@@ -491,6 +496,9 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * dato, la siniestralidad más favorable (aviso «supuesto» → precio estimado). Un obligatorio vacío sin regla (p. ej. una fecha) para con su nombre. Si la
  * pestaña no existe se anota y se sigue como antes; el atasco final trae el inventario (etiquetas, sin valores) de esa pestaña.
  *
+ * 0.2.73 (03/11/2026, trabajo 44b44608): «Datos de Valoración» sin obligatorios vacíos detectados, vuelta y «Recalcular» siguió en «datos incompletos». La barra
+ *   no marca pasos; el portal señala el campo con su aviso (`setError`). Ahora: obligatorios del DOM vivo (desplegable con valor vacío, ocultos, de botón), se pulsa
+ *   el aviso y se lee el campo enfocado; sin campo que rellenar y con el aviso vivo → atasco con paso + diagnóstico (≤300) y sin «Recalcular».
  * 0.2.72 (03/11/2026, trabajo 9aa12762): tras completar «Datos de Valoración» la vuelta por «Siguiente» no cambió de paso (sin navegación en 8 s) y no se probó
  *   la barra: ahora se vuelve PRIMERO por la barra de pasos (`#secundario > li` con `pedirPaso`, el mismo control que llevó al paso) y «Siguiente» queda de respaldo.
  * 0.2.71 (03/11/2026, trabajo 1a88445a): «Garantías y Resultados» sin obligatorios vacíos pero «Paso con datos incompletos» / «El paso anterior…»: antes del único
@@ -504,7 +512,7 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * 0.2.65 (02/11/2026): el panel de «Versión» con columnas lista las opciones como `tr[data-label]` (no `li`): «Otras versiones ...» se localiza también ahí.
  * 0.2.64 (02/11/2026): «Garantías y Resultados» no se vuelve a pulsar si ya se pulsó en el trabajo (el guard solo lo permite una vez); solo espera al bloque.
  */
-export const VERSION_GENERALI_AUTO = '0.2.72'
+export const VERSION_GENERALI_AUTO = '0.2.73'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -1382,6 +1390,128 @@ async function irAPasoGenerali(page: Page, ctx: ContextoPortal, texto: string, e
 }
 
 /**
+ * v0.2.73: control (input/select/textarea) → tipo y si está vacío con el DOM VIVO. Desplegable vacío = sin opción, texto vacío, «Seleccione…» o VALOR vacío (la
+ * opción de cabecera de Genernet lleva `value=""`, p. ej. «Seleccione una compañía»). Nunca devuelve valores.
+ */
+const JS_VACIO_CONTROL_GENERALI = `
+  const TEXTO = ['text', 'password', 'email', 'tel', 'number', 'date', 'search', 'url', ''];
+  const NO_CTRL = ['hidden', 'button', 'submit', 'image', 'reset'];
+  const tipoDe = (ctrls) => ctrls.some((x) => x.tagName === 'INPUT' && !TEXTO.includes((x.getAttribute('type') || '').toLowerCase())) ? 'opciones' : (ctrls[0] && ctrls[0].tagName === 'SELECT' ? 'select' : 'texto');
+  const vacioDe = (ctrls) => {
+    const marcables = ctrls.filter((x) => x.tagName === 'INPUT' && !TEXTO.includes((x.getAttribute('type') || '').toLowerCase()));
+    if (marcables.length > 0) return !marcables.some((x) => x.checked);
+    return ctrls.every((x) => {
+      if (x.tagName === 'SELECT') {
+        const o = x.selectedIndex >= 0 ? x.options[x.selectedIndex] : null;
+        const t = o ? T(o) : '';
+        return !o || t === '' || /^seleccione/i.test(t) || String(x.value || '') === '';
+      }
+      return String(x.value || '').trim() === '';
+    });
+  };
+  const rotuloDe = (caja) => {
+    const col = caja ? (caja.firstElementChild || caja) : null;
+    if (!col) return '';
+    const c = col.cloneNode(true);
+    c.querySelectorAll('.required,input,select,textarea').forEach((x) => x.remove());
+    return T(c).replace(/\\*\\s*$/, '').trim().slice(0, 80);
+  };`
+
+/** v0.2.73: TODOS los bloques obligatorios (`.required`) del marco, visibles u ocultos, también los de solo un botón. Solo lee; nunca valores. */
+const JS_OBLIGATORIOS_PASO_GENERALI = `(() => {${JS_COMUN}${JS_VACIO_CONTROL_GENERALI}
+  const out = [];
+  const cajas = [];
+  for (const req of Array.from(document.querySelectorAll('.required'))) {
+    const caja = req.closest('.simple') || (req.parentElement && req.parentElement.parentElement);
+    if (caja && !cajas.includes(caja)) cajas.push(caja);
+  }
+  for (const caja of cajas) {
+    const todos = Array.from(caja.querySelectorAll('input,select,textarea'));
+    const ctrls = todos.filter((x) => !NO_CTRL.includes((x.getAttribute('type') || '').toLowerCase()));
+    const botones = todos.filter((x) => ['button', 'submit'].includes((x.getAttribute('type') || '').toLowerCase()));
+    if (ctrls.length === 0 && botones.length === 0) continue;
+    const etiqueta = rotuloDe(caja);
+    if (ctrls.length === 0) {
+      out.push({ etiqueta, name: botones[0].getAttribute('name') || '', tipo: 'boton', opciones: [], vacio: false, visible: VIS(caja), editable: false });
+    } else {
+      const tipo = tipoDe(ctrls);
+      const el = ctrls[0];
+      out.push({ etiqueta, name: el.getAttribute('name') || '', tipo, opciones: tipo === 'select' ? Array.from(el.options).map((o) => (String(o.value) === '' ? '' : T(o).slice(0, 60))) : [], vacio: vacioDe(ctrls), visible: VIS(caja) && ctrls.some((x) => VIS(x)), editable: ctrls.some((x) => !x.disabled && !x.readOnly) });
+    }
+    if (out.length >= 120) break;
+  }
+  return out;
+})()`
+
+/** v0.2.73: el campo que tiene el foco (tras pulsar el aviso `setError` del portal). null = ningún control enfocado. Solo lee; nunca valores. */
+const JS_CAMPO_ENFOCADO_GENERALI = `(() => {${JS_COMUN}${JS_VACIO_CONTROL_GENERALI}
+  const el = document.activeElement;
+  if (!el || !/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName) || NO_CTRL.includes((el.getAttribute('type') || '').toLowerCase())) return null;
+  const caja = el.closest('.simple') || el.parentElement;
+  const nm = el.getAttribute('name') || '';
+  const ctrls = nm && caja ? Array.from(caja.querySelectorAll('input,select,textarea')).filter((x) => x.getAttribute('name') === nm) : [el];
+  const tipo = tipoDe(ctrls);
+  return { etiqueta: rotuloDe(caja), name: nm, tipo, opciones: tipo === 'select' ? Array.from(el.options).map((o) => (String(o.value) === '' ? '' : T(o).slice(0, 60))) : [], vacio: vacioDe(ctrls), visible: VIS(el), editable: !el.disabled && !el.readOnly, obligatorio: !!(caja && caja.querySelector('.required')) };
+})()`
+
+/** v0.2.73: obligatorios del paso (DOM vivo). Solo lee. */
+export async function leerObligatoriosPasoGenerali(raiz: Raiz): Promise<ObligatorioPasoGenerali[]> {
+  const r = (await raiz.evaluate(JS_OBLIGATORIOS_PASO_GENERALI).catch(() => null)) as ObligatorioPasoGenerali[] | null
+  return Array.isArray(r) ? r : []
+}
+
+/** v0.2.73: aviso de datos incompletos de `#areaErrores` que el portal hace pulsable (`setError`) para ir al campo que lo genera. */
+const RE_AVISO_SENALA_CAMPO_GENERALI = /datos\s+incompletos|paso\s+anterior\s+no\s+tiene/i
+
+/**
+ * v0.2.73: pulsa (por `ctx.pulsar`, guard incluido) el PRIMER aviso de datos incompletos de `#areaErrores` que el portal hace enlace `setError(this)` y lee el
+ * campo que queda enfocado. `undefined` = no hay aviso pulsable; `null` = se pulsó y no enfocó ningún control. Solo cambia el foco; nunca escribe.
+ */
+export async function campoSenaladoPorAvisoGenerali(page: Page, ctx: ContextoPortal, pausaMs = 400): Promise<{ campo: CampoSenaladoGenerali | null; marco: Frame } | undefined> {
+  for (const f of page.frames()) {
+    if (f.isDetached()) continue
+    const l = f.locator('#areaErrores a[onclick*="setError"]').filter({ hasText: RE_AVISO_SENALA_CAMPO_GENERALI }).filter({ visible: true })
+    if ((await l.count().catch(() => 0)) === 0) continue
+    await ctx.pausaAccion()
+    await ctx.pulsar(l.first())
+    await page.waitForTimeout(pausaMs)
+    for (const g of [f, ...page.frames().filter((x) => x !== f && !x.isDetached())]) {
+      const c = (await g.evaluate(JS_CAMPO_ENFOCADO_GENERALI).catch(() => null)) as CampoSenaladoGenerali | null
+      if (c) return { campo: c, marco: g }
+    }
+    return { campo: null, marco: f }
+  }
+  return undefined
+}
+
+/** v0.2.73: pone en valor neutro UN obligatorio vacío del paso (`decidirNeutroPasoGenerali`). Devuelve el aviso «Supuesto» o la falta (paso + campo). */
+async function neutroBloquePasoGenerali(
+  marco: Frame,
+  ctx: ContextoPortal,
+  destino: string,
+  b: { etiqueta: string; name: string; tipo: 'select' | 'texto' | 'opciones'; opciones: string[] },
+): Promise<{ aviso: string } | { falta: string }> {
+  const rotulo = sanearFragmentoGenerali(b.etiqueta).slice(0, 60) || '(sin rótulo)'
+  if (!b.name || b.name.includes('"')) return { falta: `${rotulo} (control sin nombre)` }
+  const selBloque = `#${b.name.replace(/[^A-Za-z0-9_-]/g, '_')}Identification`
+  let textos = b.opciones
+  if (b.tipo === 'opciones') textos = ((await marco.evaluate(jsEstadoNeutroGenerali(selBloque, b.name)).catch(() => null)) as EstadoNeutroGarantiasGenerali | null)?.opciones.map((o) => o.texto) ?? []
+  const d = decidirNeutroPasoGenerali(b.tipo, textos)
+  if (d.accion === 'sinRegla') return { falta: `${rotulo} (${d.motivo})` }
+  if (d.accion === 'marcar') {
+    const l = marco.locator(`${selBloque} input[name="${b.name}"]:not([type="text"])`)
+    if ((await l.count()) !== textos.length) return { falta: `${rotulo} (opciones no localizables)` }
+    await ctx.pausaAccion()
+    await ctx.pulsar(l.nth(d.indice))
+  } else {
+    const sel = marco.locator(`select[name="${b.name}"]`)
+    if ((await sel.count()) !== 1) return { falta: `${rotulo} (desplegable no único)` }
+    await elegirIndice(sel, d.indice, ctx)
+  }
+  return { aviso: avisoNeutroPasoGenerali(destino, b.etiqueta, d.valor) }
+}
+
+/**
  * v0.2.71 (03/11/2026, trabajo 1a88445a con 0.2.70): tras «Recalcular» el portal seguía con «datos incompletos» y «Garantías y Resultados» SIN obligatorios vacíos;
  * los avisos eran «Paso con datos incompletos» / «El paso anterior no tiene los datos completos»: el hueco está en OTRO paso. ANTES del único «Recalcular»:
  * 1) se lee la barra de pasos y los avisos (`#areaErrores` + `avisosExtra`); destino = paso marcado por el portal o, con el aviso, el anterior al actual
@@ -1389,6 +1519,8 @@ async function irAPasoGenerali(page: Page, ctx: ContextoPortal, texto: string, e
  * y cada obligatorio VACÍO editable se pone en valor NEUTRO (`decidirNeutroPasoGenerali`: «No» exacto o la única opción real), con aviso «Supuesto» (precio
  * `estimado`). 4) Lo que siga vacío (o sea de solo lectura) → `ErrorMapaIncompletoGenerali` con paso + campo (`errorPasoIncompletoGenerali`). 5) Se vuelve al
  * paso de origen: v0.2.72, primero el paso de la barra por `ctx.pulsar`; si no vuelve, «Siguiente» por su puerta guardada. Nunca emite, graba ni recalcula.
+ * v0.2.73: en 3) también los obligatorios del DOM vivo (`leerObligatoriosPasoGenerali`) y el campo que el portal enfoca al pulsar su aviso
+ * (`campoSenaladoPorAvisoGenerali`); si no se rellena nada y el aviso de paso incompleto sigue → atasco con paso + diagnóstico (`errorPasoSinCampoGenerali`).
  */
 export async function completarPasoIncompletoGenerali(
   page: Page,
@@ -1413,25 +1545,31 @@ export async function completarPasoIncompletoGenerali(
   avisos.push(...hist.avisos)
   const marco = (await leerBarraPasosGenerali(page))?.marco ?? llegada.marco
   const faltan: string[] = []
-  for (const b of (await leerBloquesHistorialGenerali(marco)).filter((x) => x.vacio && x.obligatorio)) {
-    const rotulo = sanearFragmentoGenerali(b.etiqueta).slice(0, 60) || '(sin rótulo)'
-    if (!b.name || b.name.includes('"')) { faltan.push(`${rotulo} (control sin nombre)`); continue }
-    const selBloque = `#${b.name.replace(/[^A-Za-z0-9_-]/g, '_')}Identification`
-    let textos = b.opciones
-    if (b.tipo === 'opciones') textos = ((await marco.evaluate(jsEstadoNeutroGenerali(selBloque, b.name)).catch(() => null)) as EstadoNeutroGarantiasGenerali | null)?.opciones.map((o) => o.texto) ?? []
-    const d = decidirNeutroPasoGenerali(b.tipo, textos)
-    if (d.accion === 'sinRegla') { faltan.push(`${rotulo} (${d.motivo})`); continue }
-    if (d.accion === 'marcar') {
-      const l = marco.locator(`${selBloque} input[name="${b.name}"]:not([type="text"])`)
-      if ((await l.count()) !== textos.length) { faltan.push(`${rotulo} (opciones no localizables)`); continue }
-      await ctx.pausaAccion()
-      await ctx.pulsar(l.nth(d.indice))
-    } else {
-      const sel = marco.locator(`select[name="${b.name}"]`)
-      if ((await sel.count()) !== 1) { faltan.push(`${rotulo} (desplegable no único)`); continue }
-      await elegirIndice(sel, d.indice, ctx)
+  const tratados: string[] = []
+  const neutro = async (b: { etiqueta: string; name: string; tipo: 'select' | 'texto' | 'opciones'; opciones: string[] }) => {
+    if (b.name) tratados.push(b.name)
+    const r = await neutroBloquePasoGenerali(marco, ctx, destino, b)
+    if ('aviso' in r) avisos.push(r.aviso)
+    else faltan.push(r.falta)
+  }
+  for (const b of (await leerBloquesHistorialGenerali(marco)).filter((x) => x.vacio && x.obligatorio)) await neutro(b)
+  // v0.2.73 (trabajo 44b44608): el lector anterior daba por puesto un desplegable con la cabecera de valor vacío y no veía nada más; aquí el DOM vivo.
+  for (const b of candidatosNeutroPasoGenerali(await leerObligatoriosPasoGenerali(marco), tratados)) await neutro(b as typeof b & { tipo: 'select' | 'texto' | 'opciones' })
+  // v0.2.73: el aviso del portal es un enlace que lleva «al campo que lo genera» (`setError`): se pulsa y se lee el campo enfocado.
+  const avisosPaso = await avisosAreaErroresGenerali(page)
+  let senalado: CampoSenaladoGenerali | null | undefined
+  if (avisosPaso.some((a) => RE_AVISO_SENALA_CAMPO_GENERALI.test(a))) {
+    const s = await campoSenaladoPorAvisoGenerali(page, ctx)
+    senalado = s?.campo ?? (s ? null : undefined)
+    const c = s?.campo
+    if (s && c && c.vacio && !tratados.includes(c.name)) {
+      if (c.visible && c.editable) {
+        if (c.name) tratados.push(c.name)
+        const r = await neutroBloquePasoGenerali(s.marco, ctx, destino, { ...c, opciones: c.opciones ?? [] })
+        if ('aviso' in r) avisos.push(r.aviso)
+        else faltan.push(`${r.falta} [señalado por el aviso del portal]`)
+      } else faltan.push(`${sanearFragmentoGenerali(c.etiqueta || c.name).slice(0, 60) || '(sin rótulo)'} (señalado por el aviso del portal; ${c.visible ? 'solo lectura' : 'oculto'})`)
     }
-    avisos.push(avisoNeutroPasoGenerali(destino, b.etiqueta, d.valor))
   }
   // Lo que el portal sigue dando por obligatorio y vacío (también de solo lectura, que el bot no teclea).
   const siguen = (await leerEstadoBloquesGenerali(marco))?.obligatoriosVacios ?? []
@@ -1440,6 +1578,16 @@ export async function completarPasoIncompletoGenerali(
     if (r && !faltan.some((y) => y.startsWith(r))) faltan.push(`${r} (sigue vacío)`)
   }
   if (faltan.length > 0) throw new ErrorMapaIncompletoGenerali(errorPasoIncompletoGenerali(destino, faltan))
+  // v0.2.73 (trabajo 44b44608): nada que rellenar y el portal sigue diciendo que el paso está incompleto → «Recalcular» volvería a fallar (dos veces visto):
+  // atasco con el paso y el diagnóstico para la próxima vuelta (pasos, avisos, campo señalado, obligatorios ocultos vacíos, bloques de botón).
+  if (avisos.length === 0) {
+    const avisosAhora = await avisosAreaErroresGenerali(page)
+    if (avisoPasoIncompletoGenerali(avisosAhora)) {
+      const barraAhora = await leerBarraPasosGenerali(page)
+      const diag = diagnosticoPasoIncompletoGenerali({ pasos: barraAhora?.pasos ?? barra.pasos, avisos: avisosAhora, senalado, obligatorios: await leerObligatoriosPasoGenerali(barraAhora?.marco ?? marco) })
+      throw new ErrorMapaIncompletoGenerali(errorPasoSinCampoGenerali(destino, diag))
+    }
+  }
   // Vuelta al paso de origen. v0.2.72 (trabajo 9aa12762): PRIMERO la barra de pasos (`pedirPaso`, el control que acaba de llevar al destino); en el volcado,
   // «Siguiente» (`eventAndSubmit('NEXT')`) desde «Datos de Valoración» no cambió de paso. «Siguiente» (puerta guardada) queda de respaldo; el atasco dice qué se probó.
   const probado: string[] = []
