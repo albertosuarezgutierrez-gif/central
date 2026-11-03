@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { hashPassword } from '@/lib/auth'
 import { operadorAutorizado } from '@/lib/operador'
+import { normalizaHex } from '@/lib/branding'
+import { guardarLogoEmpresa } from '@/lib/logo-empresa'
 
 // GET — lista de empresas rrhh para el god-panel (nº empleados + email del responsable).
 export async function GET(req: Request) {
@@ -18,7 +20,7 @@ export async function GET(req: Request) {
   return NextResponse.json({ empresas: JSON.parse(JSON.stringify(empresas)) })
 }
 
-// POST { empresa, color?, responsable_nombre, responsable_email } — alta empresa+responsable.
+// POST { empresa, color?, logo_base64? + logo_mime? (se recorta/normaliza y sube al bucket; si no hay color, se deriva del logo), logo_url? (legado: ruta local /logos/x.png), responsable_nombre, responsable_email } — alta empresa+responsable.
 // 26/10/2026: el responsable entra por CÓDIGO al correo (/login), sin contraseña. `password` se
 // IGNORA si llega (el adaptador de plataforma aún la manda); `pass_hash` es NOT NULL en BD y se
 // rellena con el hash de un valor aleatorio que nadie conoce.
@@ -28,6 +30,9 @@ export async function POST(req: Request) {
   const empresa = String(b.empresa ?? '').trim()
   const color = b.color ? String(b.color).trim() : null
   const logoUrl = b.logo_url ? String(b.logo_url).trim() : null
+  const logoB64 = b.logo_base64 ? String(b.logo_base64).replace(/^data:[^,]*,/, '') : null
+  const logoMime = b.logo_mime ? String(b.logo_mime) : 'image/png'
+  if (color && !normalizaHex(color)) return NextResponse.json({ error: 'Color no válido (usa #rrggbb)' }, { status: 400 })
   const responsableNombre = String(b.responsable_nombre ?? '').trim()
   const email = String(b.responsable_email ?? '').trim().toLowerCase()
   if (!empresa || !responsableNombre || !email) {
@@ -39,12 +44,18 @@ export async function POST(req: Request) {
 
   const pass_hash = await hashPassword(crypto.randomUUID() + crypto.randomUUID())
   const id = await prisma.$transaction(async (tx) => {
-    const er = await tx.$queryRaw<any[]>(Prisma.sql`INSERT INTO rrhh.empresas (nombre, marca_color, logo_path) VALUES (${empresa}, ${color}, ${logoUrl}) RETURNING id`)
+    const er = await tx.$queryRaw<any[]>(Prisma.sql`INSERT INTO rrhh.empresas (nombre, marca_color, color_primario, logo_path) VALUES (${empresa}, ${color}, ${color ? normalizaHex(color) : null}, ${logoUrl}) RETURNING id`)
     const empresaId = er[0].id as string
     const ur = await tx.$queryRaw<any[]>(Prisma.sql`INSERT INTO rrhh.usuarios_rrhh (empresa_id, email, pass_hash, nombre) VALUES (${empresaId}::uuid, ${email}, ${pass_hash}, ${responsableNombre}) RETURNING id`)
     // `usuario_empresas` es la ÚNICA fuente de autorización (login y `getSesion` en cada petición): sin esta fila no entra.
     await tx.$executeRaw(Prisma.sql`INSERT INTO rrhh.usuario_empresas (usuario_id, empresa_id) VALUES (${ur[0].id}::uuid, ${empresaId}::uuid) ON CONFLICT DO NOTHING`)
     return empresaId
   })
-  return NextResponse.json({ id, responsable_email: email }, { status: 201 })
+  // Logo subido: el alta ya existe; un logo ilegible no la tumba (se avisa y se sube luego desde Cuenta).
+  let aviso_logo: string | undefined
+  if (logoB64) {
+    const r = await guardarLogoEmpresa(id, Buffer.from(logoB64, 'base64'), logoMime).catch(() => ({ ok: false as const, error: 'No se pudo guardar el logo' }))
+    if (!r.ok) aviso_logo = r.error
+  }
+  return NextResponse.json({ id, responsable_email: email, ...(aviso_logo ? { aviso_logo } : {}) }, { status: 201 })
 }

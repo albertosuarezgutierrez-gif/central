@@ -1,7 +1,9 @@
 'use client'
 import { useState } from 'react'
-import { CoMarca, PieAsegura } from '@/components/MarcaAsegura'
+import { IconoCandado, MarcaEmpresa, MarcaGenerica, PieAsegura } from '@/components/MarcaAsegura'
+import { RUTA_PRIVACIDAD } from '@/lib/marca-asegura'
 import Boton from '@/components/ui/Boton'
+import { marcaCabecera } from '@/lib/marca-empresa'
 
 type Branding = { nombre: string; color_primario: string | null; logo_url: string | null }
 
@@ -18,17 +20,29 @@ export default function LoginEmpleado({ token, branding }: { token: string; bran
     else { if (j.necesita_pin) setNecesitaPin(true); setErr(j.error ?? 'Error') }
   }
 
-  // Co-marca: logo del cliente + «con Grupo ASegura».
+  // Se sabe la empresa por el token: su logo y color mandan; «con Grupo ASegura» pequeño. Sin logo/color, marca genérica.
+  const marca = marcaCabecera({ nombre: branding?.nombre, logoUrl: branding?.logo_url, color: branding?.color_primario })
   return (
-    <main className="flex min-h-screen flex-col items-center p-4">
-      <div className="my-auto w-full max-w-sm rounded-card border border-line bg-card p-6 text-center sm:p-7">
-        <CoMarca logoUrl={branding?.logo_url} nombre={branding?.nombre} alto={26} />
-        <h1 className="mt-4 text-xl">Acceso empleado</h1>
-        <form onSubmit={entrar} className="mt-5 grid gap-2.5">
-          {necesitaPin && <input placeholder="PIN" inputMode="numeric" value={pin} onChange={e => setPin(e.target.value)} />}
-          <Boton type="submit" ancho>Entrar</Boton>
-          {err && <p role="alert" className="text-sm text-alert">{err}</p>}
-        </form>
+    <main className="flex min-h-screen flex-col items-center p-4" style={marca.estilo}>
+      <div className="my-auto w-full max-w-sm overflow-hidden rounded-card border border-line bg-card text-center">
+        <div aria-hidden="true" className="h-1.5 bg-accent" />
+        <div className="p-6 sm:p-7">
+          {marca.modo === 'empresa' ? <MarcaEmpresa marca={marca} centrada /> : <MarcaGenerica />}
+          <h1 className="mt-5 text-xl">Entra en tu portal</h1>
+          <p className="mt-1 text-sm text-ink-2">Tus nóminas, documentos y vacaciones, en un solo sitio.</p>
+          <form onSubmit={entrar} className="mt-5 grid gap-2.5 text-left">
+            {necesitaPin && (
+              <label className="grid gap-1 text-xs font-semibold text-ink-2">Tu PIN
+                <input inputMode="numeric" autoComplete="one-time-code" value={pin} onChange={e => setPin(e.target.value)} className="text-center text-lg tracking-widest" />
+              </label>
+            )}
+            <Boton type="submit" ancho>Entrar</Boton>
+            {err && <p role="alert" className="text-center text-sm text-alert">{err}</p>}
+          </form>
+          <a href={RUTA_PRIVACIDAD} className="mt-3 inline-flex min-h-[44px] items-center gap-1.5 text-xs text-ink-3 no-underline hover:text-accent hover:underline">
+            <IconoCandado />Acceso seguro y privado
+          </a>
+        </div>
       </div>
       <div className="mt-auto w-full"><PieAsegura /></div>
     </main>

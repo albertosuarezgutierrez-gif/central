@@ -54,7 +54,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     // Notificar al empleado si hubo cambios
     if (cambios.length > 0) {
       try {
-        await pushEmpleado(empresa_id, prev.empleado_id, '📋 Fichaje corregido', `Un responsable ha modificado tu fichaje. Motivo: ${motivo}`, '/e')
+        await pushEmpleado(empresa_id, prev.empleado_id, '📋 Fichaje corregido', `Un responsable ha modificado tu fichaje. Motivo: ${motivo}`, '/e#fichaje')
       } catch { /* push no crítico */ }
     }
 

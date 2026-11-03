@@ -24,11 +24,11 @@ export default async function Page() {
   // Correo: la sesión del empleado (`SesionEmpleado`: empleado_id, empresa_id, v) NO guarda el correo con el que verificó
   // el código, así que va el de la ficha (en la entrada por código casa con él: `candidatosPorEmail` busca por ese correo).
   // El portal vuelve a verificarlo con su propio código: el enlace solo lo rellena.
-  const r = await prisma.$queryRaw<{ email: string | null }[]>(Prisma.sql`
-    SELECT email FROM rrhh.empleados WHERE id = ${s.empleado_id}::uuid AND empresa_id = ${s.empresa_id}::uuid LIMIT 1`).catch(() => [])
+  const r = await prisma.$queryRaw<{ email: string | null; nombre: string | null }[]>(Prisma.sql`
+    SELECT email, nombre FROM rrhh.empleados WHERE id = ${s.empleado_id}::uuid AND empresa_id = ${s.empresa_id}::uuid LIMIT 1`).catch(() => [])
   const urlSeguros = urlPortalAsegura(r[0]?.email, process.env.ASEGURA_PORTAL_URL)
   // Carpetas donde el empleado puede subir (datos personales, partes médicos).
   const subibles = CARPETAS.filter(c => c.titularPuedeSubir).map(c => ({ id: c.id, etiqueta: c.etiqueta }))
   const visibles = carpetasVisibles(CARPETAS, ACTOR_TITULAR).map(c => ({ id: c.id, etiqueta: c.etiqueta }))
-  return <ExpedienteEmpleado visibles={visibles} subibles={subibles} inicial={JSON.parse(JSON.stringify(documentos))} branding={branding} tieneFichaje={branding.tiene_fichaje} urlSeguros={urlSeguros} avisosIniciales={avisos ? JSON.parse(JSON.stringify(avisos)) : null} />
+  return <ExpedienteEmpleado visibles={visibles} subibles={subibles} inicial={JSON.parse(JSON.stringify(documentos))} branding={branding} tieneFichaje={branding.tiene_fichaje} urlSeguros={urlSeguros} nombreEmpleado={r[0]?.nombre ?? null} avisosIniciales={avisos ? JSON.parse(JSON.stringify(avisos)) : null} />
 }

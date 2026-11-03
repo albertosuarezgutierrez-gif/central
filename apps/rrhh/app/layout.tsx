@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   title: TITULO_ASEGURA,
   manifest: MANIFEST_PORTAL,
   icons: { icon: "/brand/icono-asegura.svg", apple: ICONO_APPLE_ASEGURA },
-  appleWebApp: { capable: true, title: "Grupo ASegura", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "Empleado", statusBarStyle: "default" },
   // Datos personales: no indexar (ver también app/robots.ts y X-Robots-Tag en next.config.ts).
   robots: { index: false, follow: false },
 }

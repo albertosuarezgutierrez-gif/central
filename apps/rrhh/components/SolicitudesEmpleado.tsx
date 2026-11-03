@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import Boton from '@/components/ui/Boton'
 import { tiposPorGrupo, tipoEtiqueta, pistaTipo } from '@/lib/solicitudes-tipos'
 
 type S = { id: string; tipo: string; fecha_inicio: string | null; fecha_fin: string | null; estado: string; tiene_justificante?: boolean }
@@ -32,6 +33,7 @@ export default function SolicitudesEmpleado() {
   const [tipo, setTipo] = useState('vacaciones'); const [ini, setIni] = useState(''); const [fin, setFin] = useState(''); const [motivo, setMotivo] = useState('')
   const [archivo, setArchivo] = useState<File | null>(null); const [formKey, setFormKey] = useState(0)
   const [error, setError] = useState('')
+  const [pidiendo, setPidiendo] = useState(false)
 
   async function recargar(a = anio) {
     const r = await fetch(`/api/e/solicitudes?anio=${a}`)
@@ -49,7 +51,7 @@ export default function SolicitudesEmpleado() {
     if (motivo) fd.set('motivo', motivo)
     if (archivo) fd.set('justificante', archivo)
     const r = await fetch('/api/e/solicitudes', { method: 'POST', body: fd })
-    if (r.ok) { setIni(''); setFin(''); setMotivo(''); setArchivo(null); setFormKey(k => k + 1); await recargar() }
+    if (r.ok) { setIni(''); setFin(''); setMotivo(''); setArchivo(null); setFormKey(k => k + 1); setPidiendo(false); await recargar() }
     else setError((await r.json()).error ?? 'Error')
   }
 
@@ -68,7 +70,29 @@ export default function SolicitudesEmpleado() {
         </select>
       </div>
 
-      {/* Contador de vacaciones */}
+      {/* Resumen grande: lo que el empleado quiere saber primero. `null` = convenio sin cargar → no se inventa. */}
+      {resumen && (
+        <div className="mb-4 rounded-card border border-accent/20 bg-accent-soft px-4 py-4 text-center">
+          {resumen.pendientes != null ? (
+            <>
+              <p className="text-sm text-ink-2">Vacaciones {anio}</p>
+              <p className="mt-1 text-4xl font-bold leading-tight text-accent-ink">Te quedan {resumen.pendientes} {Math.abs(resumen.pendientes) === 1 ? 'día' : 'días'}</p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-ink-2">Vacaciones {anio}</p>
+              <p className="mt-1 text-xl font-bold text-accent-ink">Saldo no disponible</p>
+              <p className="mt-1 text-xs text-ink-2">Llevas {resumen.aprobados} {resumen.aprobados === 1 ? 'día aprobado' : 'días aprobados'}{resumen.en_tramite > 0 ? ` y ${resumen.en_tramite} en trámite` : ''}.</p>
+            </>
+          )}
+          <Boton onClick={() => setPidiendo(v => !v)} aria-expanded={pidiendo} ancho className="mt-3">{pidiendo ? 'Cancelar' : 'Pedir vacaciones'}</Boton>
+        </div>
+      )}
+      {!resumen && (
+        <Boton onClick={() => setPidiendo(v => !v)} aria-expanded={pidiendo} ancho className="mb-3">{pidiendo ? 'Cancelar' : 'Pedir vacaciones'}</Boton>
+      )}
+
+      {/* Detalle del contador */}
       {resumen && (
         <div className="mb-4">
           <div className="mb-1.5 flex items-center justify-between text-xs text-ink-3">
@@ -104,7 +128,7 @@ export default function SolicitudesEmpleado() {
         </div>
       )}
 
-      <form onSubmit={enviar} className="mb-3 grid gap-1.5">
+      {pidiendo && <form onSubmit={enviar} className="mb-3 grid gap-1.5 rounded-[12px] border border-line bg-paper-2 p-3">
         <select value={tipo} onChange={e => setTipo(e.target.value)}>
           {GRUPOS.map(g => (
             <optgroup key={g.grupo.id} label={g.grupo.etiqueta}>
@@ -124,7 +148,7 @@ export default function SolicitudesEmpleado() {
         </label>
         <button type="submit">Enviar solicitud</button>
         {error && <p className="text-alert text-sm">{error}</p>}
-      </form>
+      </form>}
       <ul className="grid gap-1">
         {lista.map(s => (
           <li key={s.id} className="text-sm">{tipoEtiqueta(s.tipo)} {[s.fecha_inicio, s.fecha_fin].filter(Boolean).map(f => f!.slice(0, 10)).join(' → ')}

@@ -123,7 +123,12 @@ El god-panel de plataforma crea empresas vía HTTP:
   empresa (≥2, `<select>` de 44 px) · botones «Herramientas» (esta app, activa) y «Seguros» (`urlPortalAsegura`: SOLO el correo +
   `origen=rrhh`; los datos de RR.HH. no se usan comercialmente) · Salir. Se recuerda la última empresa en la cookie
   `rrhh_ultima_empresa` (`lib/sesion-responsable-reglas.ts`, siempre revalidada contra `usuario_empresas`).
-- **Marca ÚNICA Grupo ASegura (26/10/2026):** `app/layout.tsx` inyecta `emitirRootCss(MARCA_ASEGURA)` de `@central/brand`; Tailwind lee
+- **Marca intermedia (27/10/2026, «algo intermedio»):** dentro de la app (cabecera, `/admin`, `/e`, `/e/[token]`) mandan el logo, el nombre y el
+  `color_primario` de la EMPRESA (`lib/marca-empresa.ts`: `marcaCabecera`/`paletaEmpresa` sobreescriben `--brand*` en el contenedor, oscureciendo
+  el color hasta AA 4,5:1 con texto blanco; sin logo ni color → cara Grupo ASegura de antes) y Grupo ASegura es la línea pequeña «con Grupo ASegura».
+  Login/portada/`/e/entrar` (empresa desconocida): «Portal del Empleado» (`MarcaGenerica`). Pie: `PIE_ASEGURA` + «Privacidad y seguridad» →
+  página pública `/privacidad-seguridad` (solo afirmaciones verificadas). Manifest/título neutros («Portal del Empleado»/«Empleado»).
+- **Base de la marca ÚNICA Grupo ASegura (26/10/2026):** `app/layout.tsx` inyecta `emitirRootCss(MARCA_ASEGURA)` de `@central/brand`; Tailwind lee
   esas variables (`tailwind.config.ts`, con canal alfa vía `color-mix`). Sin beige/teal/serif ni hex a mano. 🚨 La env
   `RRHH_EMPRESAS_MARCA_ASEGURA` YA NO SE LEE (puede seguir puesta sin efecto). El color de la empresa solo pinta sus PDF; la UI
   cambia solo el logo. Cepos: `lib/tema-tailwind.test.ts` (compila el tema; falla con clases sin CSS, paleta cruda, `italic`,
@@ -145,7 +150,7 @@ El build de Vercel ignora errores de tipos (`typescript.ignoreBuildErrors: true`
 real es el job `typecheck` de `.github/workflows/tests.yml`.
 
 ## Comportamientos establecidos
-- **Login:** nunca muestra branding de EMPRESA (aún no se sabe cuál); siempre la marca Grupo ASegura (pantalla y correo del código).
+- **Login:** nunca muestra branding de EMPRESA (aún no se sabe cuál): «Portal del Empleado» con Grupo ASegura pequeño (el correo del código sigue con marca Grupo ASegura).
   `/api/auth/acceso/solicitar` deja en el log un `console.warn` (correo ENMASCARADO) si no casa con ningún responsable y un
   `console.error` si el envío falla; la respuesta al usuario es siempre la misma.
 - **Multi-empresa:** `rrhh.usuario_empresas` (N:N). Código con 1 empresa → sesión directa. Login con N → selector. Ya autenticado → selector en `CabeceraApp`.
@@ -169,3 +174,6 @@ real es el job `typecheck` de `.github/workflows/tests.yml`.
 - API keys de servicios externos → pueden caer a `|| ''` (falla la llamada saliente, no la app).
 - Scope npm: `@central/*` (nunca `@iarest/*`).
 - No poner `apps/` en `.vercelignore` de la raíz.
+
+## Alta de marca de un cliente nuevo
+Subir logo (Cuenta o `logo_base64`+`logo_mime` en `POST /api/operador/empresas`) → `lib/logo-empresa.ts` recorta márgenes, limita a 600 px, guarda PNG en el bucket (`branding/<empresa>/…`) y, si no hay `color_primario`, lo deriva del logo (`lib/logo-pixeles.ts`; gris/blanco → null = look ASegura). `public/logos/*` es solo legado. Revisar el contraste en la vista previa de Cuenta (`paletaEmpresa` oscurece lo claro). El operador escribe `color_primario` (la columna `marca_color` es heredada).

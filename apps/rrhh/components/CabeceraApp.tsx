@@ -1,18 +1,18 @@
 'use client'
 // Cabecera COMÚN de las dos ventanas (26/10/2026), la misma en /e (empleado) y en /admin (responsable):
-//   [logo de la empresa] con Grupo ASegura · [selector de empresa, solo si hay ≥2] · [Herramientas] [Seguros] [Salir]
+//   [logo y nombre de la empresa] + «con Grupo ASegura» pequeño · [selector de empresa, solo si hay ≥2] · [Herramientas] [Seguros] [Salir]
 // «Herramientas» es esta app (activa); «Seguros» lleva al portal de clientes con SOLO el correo (`urlPortalAsegura`):
 // los datos de RR.HH. nunca se usan comercialmente. Acceder a una herramienta no abre los seguros: es un enlace.
 import { useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { CoMarca } from '@/components/MarcaAsegura'
+import { MarcaEmpresa } from '@/components/MarcaAsegura'
+import type { MarcaCabecera } from '@/lib/marca-empresa'
 
 type Empresa = { id: string; nombre: string }
 
-export default function CabeceraApp({ perfil, logoUrl, nombreEmpresa, urlSeguros, empresas = [], empresaActualId }: {
+export default function CabeceraApp({ perfil, marca, urlSeguros, empresas = [], empresaActualId }: {
   perfil: 'empleado' | 'responsable'
-  logoUrl?: string | null
-  nombreEmpresa?: string | null
+  marca: MarcaCabecera
   urlSeguros: string
   empresas?: Empresa[]
   empresaActualId?: string
@@ -38,10 +38,19 @@ export default function CabeceraApp({ perfil, logoUrl, nombreEmpresa, urlSeguros
     else { await fetch('/api/auth/logout', { method: 'POST' }); location.href = '/login' }
   }
 
+  const salirTexto = perfil === 'empleado' ? 'Salir de este dispositivo' : 'Salir'
   return (
-    <header className="border-b border-line bg-card">
+    // Raya superior con el color de la empresa: el acento de marca va aquí y en los CTA, no en todo.
+    <header className="border-b border-t-4 border-line border-t-accent bg-card">
       <div className="mx-auto flex w-full max-w-[1280px] flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3">
-        <CoMarca logoUrl={logoUrl} nombre={nombreEmpresa} alto={20} className="!flex-row !items-center !gap-3 min-w-0 max-w-full" />
+        <MarcaEmpresa marca={marca} className="flex-1 sm:flex-none" />
+
+        {/* En móvil «Salir» va en la fila del logo (corto); en escritorio, al final de la fila. */}
+        <button type="button" onClick={salir} aria-label={salirTexto}
+          className="inline-flex min-h-[44px] shrink-0 items-center gap-1.5 bg-transparent px-2 text-sm text-ink-3 hover:bg-transparent hover:text-ink sm:order-last">
+          <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></svg>
+          <span>Salir{perfil === 'empleado' && <span className="hidden lg:inline"> de este dispositivo</span>}</span>
+        </button>
 
         {empresas.length > 1 && (
           <label className="flex min-w-0 basis-full flex-col gap-1 text-xs text-ink-3 sm:basis-auto sm:flex-row sm:items-center sm:gap-2">
@@ -54,14 +63,11 @@ export default function CabeceraApp({ perfil, logoUrl, nombreEmpresa, urlSeguros
         )}
 
         <nav aria-label="Herramientas y seguros" className="flex w-full flex-wrap gap-2 sm:ml-auto sm:w-auto">
-          <a href={inicio} aria-current={enInicio ? 'page' : undefined} className={`${base} bg-accent text-card`}>Herramientas</a>
-          <a href={urlSeguros} target="_blank" rel="noopener noreferrer" className={`${base} border border-line-2 bg-card text-accent hover:bg-accent-soft`}>
+          <a href={inicio} aria-current={enInicio ? 'page' : undefined} className={`${base} bg-accent text-card hover:bg-accent-ink`}>Herramientas</a>
+          <a href={urlSeguros} target="_blank" rel="noopener noreferrer" className={`${base} border border-line-2 bg-card text-ink-2 hover:bg-paper-2`}>
             Seguros
             <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3" /></svg>
           </a>
-          <button type="button" onClick={salir} className="min-h-[44px] flex-1 bg-transparent px-3 text-sm text-ink-3 underline hover:bg-transparent hover:text-ink sm:flex-none">
-            {perfil === 'empleado' ? 'Salir de este dispositivo' : 'Salir'}
-          </button>
         </nav>
         {error && <p role="alert" className="basis-full text-sm text-alert">{error}</p>}
       </div>

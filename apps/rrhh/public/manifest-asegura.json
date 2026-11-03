@@ -1,6 +1,6 @@
 {
-  "name": "Grupo ASegura · Portal del Empleado",
-  "short_name": "Grupo ASegura",
+  "name": "Portal del Empleado",
+  "short_name": "Empleado",
   "description": "Tu portal del empleado, herramienta gratuita de Grupo ASegura.",
   "lang": "es",
   "start_url": "/e/entrar?m=asegura",

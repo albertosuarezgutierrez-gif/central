@@ -985,6 +985,9 @@ importers:
       react-dom:
         specifier: ^19.0.0
         version: 19.2.4(react@19.2.4)
+      sharp:
+        specifier: ^0.35.3
+        version: 0.35.3(@types/node@20.19.42)
       web-push:
         specifier: ^3.6.7
         version: 3.6.7

@@ -4,7 +4,7 @@
 // 90 días siempre, por eso aquí no hay casilla «Recordar este dispositivo».
 import { useState } from 'react'
 import AccesoOtp, { mensajeError, post, type ContextoElegir } from '@/components/AccesoOtp'
-import { CoMarca, PieAsegura } from '@/components/MarcaAsegura'
+import { MarcaGenerica, PieAsegura } from '@/components/MarcaAsegura'
 import Boton from '@/components/ui/Boton'
 
 const ERRORES = {
@@ -58,7 +58,7 @@ export default function EntrarEmpleado() {
   return (
     <main className="flex min-h-screen flex-col items-center p-4">
       <div className="my-auto w-full max-w-sm rounded-card border border-line bg-card p-6 text-center sm:p-7">
-        <CoMarca alto={30} />
+        <MarcaGenerica />
         <h1 className="mt-3 text-xl">Acceso empleado</h1>
         <AccesoOtp
           solicitarUrl="/api/e/acceso/solicitar"

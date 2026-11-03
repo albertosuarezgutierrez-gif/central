@@ -28,7 +28,7 @@ export async function GET(req: Request) {
 
   let enviados = 0
   for (const { empresa_id, suscriptor_id } of pendientes) {
-    await pushEmpleado(empresa_id, suscriptor_id, '⏰ Recordatorio de fichaje', 'No olvides registrar tu entrada de hoy.', '/e')
+    await pushEmpleado(empresa_id, suscriptor_id, '⏰ Recordatorio de fichaje', 'No olvides registrar tu entrada de hoy.', '/e#fichaje')
     enviados++
   }
 

@@ -10,27 +10,28 @@ function base64ToUint8Array(b64: string): Uint8Array {
   return arr
 }
 
+/** Pide permiso y suscribe este dispositivo. Devuelve el texto de estado para mostrar. */
+export async function suscribirPush(endpoint: string): Promise<string> {
+  const clave = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+  if (!clave) return 'Push no configurado'
+  try {
+    const reg = await navigator.serviceWorker.ready
+    const perm = await Notification.requestPermission()
+    if (perm !== 'granted') return 'Permiso denegado'
+    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64ToUint8Array(clave) as BufferSource })
+    const j = sub.toJSON()
+    const r = await fetch(endpoint, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ endpoint: j.endpoint, p256dh: j.keys?.p256dh, auth: j.keys?.auth }),
+    })
+    return r.ok ? '✅ Notificaciones activadas' : 'Error al guardar'
+  } catch { return 'No se pudo activar' }
+}
+
 /** Botón para activar las notificaciones push. `endpoint` = ruta de suscripción del lado actual. */
 export default function ActivarPush({ endpoint }: { endpoint: string }) {
   const [estado, setEstado] = useState('')
-  const clave = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-
-  async function activar() {
-    setEstado('')
-    if (!clave) { setEstado('Push no configurado'); return }
-    try {
-      const reg = await navigator.serviceWorker.ready
-      const perm = await Notification.requestPermission()
-      if (perm !== 'granted') { setEstado('Permiso denegado'); return }
-      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64ToUint8Array(clave) as BufferSource })
-      const j = sub.toJSON()
-      const r = await fetch(endpoint, {
-        method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ endpoint: j.endpoint, p256dh: j.keys?.p256dh, auth: j.keys?.auth }),
-      })
-      setEstado(r.ok ? '✅ Notificaciones activadas' : 'Error al guardar')
-    } catch { setEstado('No se pudo activar') }
-  }
+  async function activar() { setEstado(''); setEstado(await suscribirPush(endpoint)) }
 
   return (
     <span className="inline-flex items-center gap-2">

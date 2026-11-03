@@ -16,7 +16,8 @@ export default function AsistentePanelAdmin() {
   const [cargando, setCargando] = useState(false)
   const finRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => { finRef.current?.scrollIntoView() }, [mensajes.length, cargando])
+  // Solo al conversar: al montar, scrollIntoView arrastraba la página hasta el asistente (ahora está al final de la lista).
+  useEffect(() => { if (mensajes.length > 0) finRef.current?.scrollIntoView({ block: 'nearest' }) }, [mensajes.length, cargando])
 
   async function preguntar(pregunta: string) {
     const t = pregunta.trim()
