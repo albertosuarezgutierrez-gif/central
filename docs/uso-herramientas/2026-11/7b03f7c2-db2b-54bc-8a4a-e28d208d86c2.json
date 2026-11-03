@@ -1,31 +1,31 @@
 {
  "sesion": "7b03f7c2-db2b-54bc-8a4a-e28d208d86c2",
  "inicio": "2026-11-01T05:03:33.366Z",
- "fin": "2026-11-03T20:19:44.744Z",
- "llamadas": 5920,
+ "fin": "2026-11-03T21:07:58.218Z",
+ "llamadas": 6043,
  "categorias": {
   "agente:agente-architect": {
-   "llamadas": 7,
-   "chars_in": 22815,
-   "chars_out": 24291,
+   "llamadas": 8,
+   "chars_in": 26226,
+   "chars_out": 27889,
    "errores": 0,
-   "archivos_citados": 2,
-   "chars_citados": 23440,
+   "archivos_citados": 3,
+   "chars_citados": 43190,
    "tools": {
-    "Agent": 7
+    "Agent": 8
    }
   },
   "otro": {
-   "llamadas": 661,
-   "chars_in": 78743,
-   "chars_out": 1376483,
+   "llamadas": 664,
+   "chars_in": 81408,
+   "chars_out": 1377871,
    "errores": 0,
    "archivos_citados": 5,
    "chars_citados": 3508537,
    "tools": {
-    "ToolSearch": 117,
-    "SendMessage": 19,
-    "TaskStop": 21,
+    "ToolSearch": 118,
+    "SendMessage": 20,
+    "TaskStop": 22,
     "ReadNotifications": 221,
     "Monitor": 276,
     "SendUserFile": 5,
@@ -33,26 +33,26 @@
    }
   },
   "bash": {
-   "llamadas": 3403,
-   "chars_in": 1809969,
-   "chars_out": 9209520,
+   "llamadas": 3496,
+   "chars_in": 1881941,
+   "chars_out": 9396644,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 3403
+    "Bash": 3496
    }
   },
   "lectura-directa": {
-   "llamadas": 254,
-   "chars_in": 36435,
-   "chars_out": 1330673,
+   "llamadas": 266,
+   "chars_in": 38154,
+   "chars_out": 1530120,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 195,
-    "Grep": 59
+    "Read": 205,
+    "Grep": 61
    }
   },
   "sql": {
@@ -110,15 +110,15 @@
    }
   },
   "escritura": {
-   "llamadas": 388,
-   "chars_in": 1152600,
-   "chars_out": 47618990,
+   "llamadas": 401,
+   "chars_in": 1185617,
+   "chars_out": 49583955,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Write": 136,
-    "Edit": 252
+    "Write": 141,
+    "Edit": 260
    }
   },
   "agente:agente-mecanico": {
@@ -168,14 +168,14 @@
    }
   },
   "agente:verificador-esceptico": {
-   "llamadas": 1,
-   "chars_in": 1541,
-   "chars_out": 1748,
+   "llamadas": 2,
+   "chars_in": 3047,
+   "chars_out": 3461,
    "errores": 0,
-   "archivos_citados": 1,
-   "chars_citados": 11524,
+   "archivos_citados": 2,
+   "chars_citados": 31274,
    "tools": {
-    "Agent": 1
+    "Agent": 2
    }
   }
  }
