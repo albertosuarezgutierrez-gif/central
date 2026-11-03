@@ -8,6 +8,7 @@ import { chatConDirector } from '@/lib/pasarela'
 import { openrouterConfigPasarela } from '@/lib/ia-director'
 import { registrarUso, estimarTokens, costeEur } from '@/lib/ai-gateway'
 import { parsearJsonIa } from '@/lib/agente-facturas/parsear-json-ia'
+import { recortarTextoDocumento } from '@/lib/agente-facturas/recorte-texto'
 
 // `NVIDIA_TEXT` se borró el 28/08/2026: era una constante MUERTA (cero usos en el repo) que
 // arrastraba el id `meta/llama-3.1-70b-instruct`, muerto por EOL el 26/08. El texto de esta app
@@ -181,15 +182,17 @@ export async function aiTranscribe(
 // ─── Invoice extraction ───────────────────────────────────────────────
 
 const INVOICE_SYSTEM = `Eres un extractor de datos de facturas españolas.
-Analiza el texto o imagen de la factura y devuelve SOLO JSON sin markdown:
+Analiza el texto o imagen del documento COMPLETO y devuelve SOLO JSON sin markdown:
 {
+  "tipo_documento": "factura|recibo|ticket|justificante_pago|presupuesto|proforma|solicitud_inscripcion|liquidacion_comisiones|resumen_pagos|aviso_circular|certificado_donativo|otro",
   "fecha": "YYYY-MM-DD",
-  "proveedor": "nombre empresa EMISORA (quien cobra)",
+  "proveedor": "nombre de la empresa EMISORA (quien emite y cobra)",
   "nif_proveedor": "NIF/CIF de la empresa EMISORA si aparece",
   "cliente": "nombre del DESTINATARIO de la factura (quien paga), si aparece",
   "nif_cliente": "NIF/CIF del DESTINATARIO si aparece",
   "concepto": "descripción del servicio/producto",
-  "numero_factura": "número de factura si aparece",
+  "numero_factura": "número de FACTURA si aparece",
+  "numero_albaran": "número de albarán, pedido o referencia si aparece (NO es el de factura)",
   "fecha_cargo": "YYYY-MM-DD: fecha en que se cobra/domicilia, si la factura la indica",
   "domiciliado": true,
   "base_imponible": 0.00,
@@ -199,15 +202,24 @@ Analiza el texto o imagen de la factura y devuelve SOLO JSON sin markdown:
   "irpf": 0.00,
   "total": 0.00,
   "divisa": "código ISO 4217 de la moneda del campo total (EUR, USD, GBP...)",
-  "tipo_documento": "factura|recibo|justificante_pago|presupuesto|proforma|circular_informativa|formulario_inscripcion|certificado_donativo|otro",
   "categoria": "ALQUILER|LIMPIEZA|MANTENIMIENTO|SUMINISTROS|COMUNIDAD|SEGURO|IMPUESTOS|PLATAFORMAS|MOBILIARIO|REFORMAS|OTRO"
 }
+Lee el documento ENTERO antes de responder, no solo el encabezado: el pie, las condiciones y las
+páginas siguientes cambian a menudo qué tipo de documento es (un "recibo" que en el pie dice que es
+una liquidación al mediador, una "factura" que es en realidad un presupuesto).
 Reglas: fecha formato YYYY-MM-DD. Números decimales con punto. categoria según el tipo de gasto.
-Una factura tiene DOS partes: quien la emite (proveedor, normalmente con logo y cuenta bancaria
-de cobro) y a quién se la emite (cliente/destinatario, bajo etiquetas como "Cliente", "Nombre",
-"Facturar a", "Razón social"). NO los mezcles: "nif_proveedor" es SIEMPRE el del emisor y
-"nif_cliente" SIEMPRE el del destinatario. Si solo hay un NIF y no puedes decidir de quién es,
-pon el otro a null en vez de repetirlo.
+EMISOR y DESTINATARIO: una factura tiene DOS partes: quien la emite (proveedor, normalmente con logo,
+razón social, NIF, dirección fiscal y cuenta bancaria de cobro) y a quién se la emite (cliente /
+destinatario, bajo etiquetas como "Cliente", "Nombre", "Facturar a", "Razón social", "Datos del
+cliente", "Dirección de entrega"). NO los mezcles: "proveedor" y "nif_proveedor" son SIEMPRE los del
+emisor y "cliente" y "nif_cliente" SIEMPRE los del destinatario. El nombre del cliente, la dirección
+de entrega, el nombre de una calle o de un piso/inmueble NUNCA es el proveedor. Si no sabes quién
+emite el documento, pon "proveedor": null en vez de copiar el cliente o una dirección. Si solo hay un
+NIF y no puedes decidir de quién es, pon el otro a null en vez de repetirlo.
+NÚMEROS: "numero_factura" es SOLO el número que el documento rotula como factura ("Factura nº",
+"Nº factura", "Invoice number", "Número de factura" o la serie de la factura). Un número de albarán,
+pedido, presupuesto, referencia, cliente, póliza, recibo bancario o id de pago va en "numero_albaran"
+o se omite, NUNCA en "numero_factura". Si no hay número de factura, "numero_factura": null.
 Si es un recibo o adeudo de ALQUILER de local/vivienda con retención de IRPF, rellena "irpf" con el
 importe RETENIDO en positivo (p.ej. 57.63) e "irpf_porcentaje" (p.ej. 19); normalmente
 total = base_imponible + iva - irpf. Si no hay retención, irpf=0 e irpf_porcentaje=0.
@@ -216,19 +228,34 @@ total = base_imponible + iva - irpf. Si no hay retención, irpf=0 e irpf_porcent
 — NO la inventes copiando la fecha de emisión: son cosas distintas y de eso depende que no se
 reclame un cobro que aún no ha vencido. "domiciliado" es true solo si la forma de pago es
 domiciliación/adeudo SEPA/recibo bancario; si se paga por transferencia, tarjeta o no consta, false.
-"tipo_documento" clasifica el DOCUMENTO, no el importe que mencione. "factura" = factura con emisor,
-destinatario y desglose; "recibo" = recibo/adeudo de un servicio ya prestado; "justificante_pago" =
-comprobante de un pago ya hecho. Una circular, boletín, comunicado o formulario de inscripción que
-MENCIONA una cuota o precio NO es una factura (circular_informativa / formulario_inscripcion); un
-donativo o aportación a una fundación/asociación es "certificado_donativo"; un presupuesto, oferta,
-reserva de compra o proforma NO es un gasto devengado (presupuesto / proforma). Liquidaciones de
-siniestro, certificaciones de cuentas y similares son "otro". Si dudas entre factura y otra cosa
-porque falta número de factura y desglose de IVA, NO elijas "factura".
+"tipo_documento" es OBLIGATORIO (nunca null) y SOLO puede ser uno de estos valores; clasifica el
+DOCUMENTO, no las palabras sueltas que contenga:
+- "factura": factura con emisor, destinatario, número de factura y desglose de IVA.
+- "recibo": recibo o adeudo de un servicio ya prestado (luz, alquiler, cuota, prima de un seguro PROPIO).
+- "ticket": ticket o factura simplificada de compra en tienda, gasolinera o restaurante.
+- "justificante_pago": comprobante de un pago ya hecho (recibo de Stripe/PayPal, confirmación de cargo).
+- "presupuesto": presupuesto, oferta, cotización, proyecto o tarificación de una póliza, reserva de
+  compra. Aunque mencione "recibo", "prima" o "factura", si propone un precio que aún no se ha
+  contratado es presupuesto.
+- "proforma": factura proforma o pro forma.
+- "solicitud_inscripcion": solicitud, formulario o boletín de inscripción/alta en una asociación,
+  colegio, curso o servicio, aunque indique la cuota a pagar.
+- "liquidacion_comisiones": liquidación, extracto de cuenta o resumen de comisiones que una
+  aseguradora, banco o plataforma rinde a un MEDIADOR, corredor, agente o comisionista (lleva "código
+  de mediador", "comisiones", "liquidación", "extracto de cuenta"). El destinatario cobra, no paga.
+  Un recibo de prima a nombre del tomador sigue siendo "recibo" aunque lleve el código del mediador.
+- "resumen_pagos": resumen o listado anual/mensual de facturas, pagos, cargos o movimientos (no es
+  una factura en sí).
+- "aviso_circular": aviso, circular, comunicado, boletín, notificación o recordatorio informativo.
+- "certificado_donativo": certificado o recibo de un donativo o aportación a una fundación/ONG.
+- "otro": cualquier otra cosa (liquidaciones de siniestro, certificaciones de cuentas, contratos…).
+Si dudas entre "factura" y otra cosa porque falta número de factura y desglose de IVA, NO elijas
+"factura".
 "divisa" es la moneda EN LA QUE ESTÁ EXPRESADO "total" (el importe a pagar de la factura), como código
 ISO 4217 en mayúsculas. Si la factura está en USD y además muestra una conversión a EUR, "total" y
 "divisa" son los del importe PRINCIPAL en USD, no los de la conversión; mantén siempre la pareja
 coherente (total y divisa del mismo importe). Si no consta la moneda, pon null: NO asumas EUR.
-Si no encuentras un campo, pon null. Solo JSON, sin texto adicional.`
+Si no encuentras un campo, pon null (salvo "tipo_documento", que siempre lleva valor). Solo JSON, sin texto adicional.`
 
 
 /**
@@ -295,7 +322,7 @@ export async function aiExtractInvoiceDetallado(input: {
     const multiPagina = images.length > 1
     let txt: string
     try {
-      txt = await aiVision(INVOICE_SYSTEM, images, 'Extrae los datos de esta factura en JSON:', {
+      txt = await aiVision(INVOICE_SYSTEM, images, 'Lee el documento completo (todas las páginas) y extrae sus datos en JSON:', {
         endpoint: 'extraer-factura',
         model: multiPagina ? VISION_MULTIPAGINA : VISION_UNA_PAGINA,
         multiPagina,
@@ -328,7 +355,8 @@ export async function aiExtractInvoiceDetallado(input: {
   // en `ai_usos` con `endpoint='extraer-factura'` → lo que cuesta leer las
   // facturas se ve en el panel de gasto de IA en vez de ser invisible.
   if (input.text) {
-    const user = `Factura:\n${input.text.slice(0, 4000)}`
+    // Documento COMPLETO (hasta 12.000 caracteres; si no cabe, principio + final): ver recorte-texto.ts.
+    const user = `Documento:\n${recortarTextoDocumento(input.text)}`
     let raw: string
     try {
       const res = await chatConDirector([{ role: 'user', content: user }], {

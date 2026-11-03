@@ -36,6 +36,10 @@ const RE_MEDIACION =
   /\bliquidaci[oó]n(?:es)?\b|\bcomisi[oó]n(?:es)?\b|\bmediador\b|\bcorredor(?:[ií]a)?\b|\bagente\b|\bextracto\b|\bresumen\s+(?:de\s+)?operaciones\b|\bresumen\b|\bc[oó]d(?:igo|\.)?\s+(?:de\s+)?mediador\b/i
 /** Lista blanca de seguros PROPIOS (Occident de los pisos, ASISA de salud). Ampliable con `polizasPropias`. */
 const RE_PROPIA_BLANCA = /\b(occident|asisa)\b/i
+/** ¿El texto nombra una aseguradora de la lista blanca de seguros PROPIOS? (lo usa `procesar.ts`). */
+export function mencionaAseguradoraPropia(texto: string): boolean {
+  return RE_PROPIA_BLANCA.test(texto)
+}
 const RE_DOC_POLIZA =
   /\bp[oó]liza\b|\brecibo\s+(?:de\s+)?(?:prima|seguro)|\bliquidaci[oó]n\s+(?:de\s+)?prima|\baviso\s+de\s+cobro\b|\bprima\s+(?:neta|total|pendiente)/i
 

@@ -66,6 +66,11 @@ Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; ti
 original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados revisado/falta_roto/devuelto + bloque en ficha. `rrhh.material_empleado`
 (0028, aplicada). Pendiente fase 2: revisión periódica mensual.
 
+## (03/11/2026) Facturas · auditoría del lector: tipo de documento obligatorio y documento completo
+- Causa raíz de los errores básicos: `tipo_documento` salía null en 28/51 y `procesar.ts` no lo miraba; el texto se cortaba a 4.000 car. (la IA solo veía el encabezado). Ahora: prompt con vocabulario cerrado (presupuesto/solicitud/liquidación/resumen/aviso → omitido; null/otro → bandeja con aviso), emisor≠cliente≠dirección del piso, `numero_albaran` aparte, hasta 12.000 car. (inicio+final). Helpers `tipo-documento.ts`, `revision-lectura.ts`, `recorte-texto.ts`; dedupe por nº de factura sin separadores.
+- Bandeja revisada con Alberto: Netflix → pisos compartidos; PEPEMOBILE → correduría; Anthropic 170 € = bonos reales; TotalEnergies 310,01 € = Monte Carmelo (personal); Vercel B2DRQ0QS-0007 duplicado descartado.
+- EMASESA 2026 completo (15/15, 3 contratos). **Dúplex: el agua va en la comunidad (76,18 €/mes), sin contrato EMASESA** (Alberto).
+- Pendiente: lecturas sin tipo ni importe se releen a diario (distinguir «falló la IA» de «nada que leer»); nombres de pisos a mano en `NOMBRES_INMUEBLES`; vigilar facturas reales clasificadas como aviso/liquidación (van a `agente_log`, no a bandeja).
 ## (03/11/2026) Captación · parado el mailing en frío de ia-rest/ialimp; foco 100% correduría
 - Quitados 9 crons de outreach de `apps/ia-rest/vercel.json` (se dejan crm-recordatorios y pipeline-comercial: solo Telegram a Alberto).
 - BD: 2 campañas ialimp pausadas, 10 envíos pendientes → `omitido`; 277 borradores de `iarest.leads` borrados (los 142 enviados intactos).

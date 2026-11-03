@@ -22,6 +22,10 @@ export interface FacturaExtraida {
   nif_cliente?: string | null
   concepto?: string | null
   numero_factura?: string | null
+  /** Nº de albarán o pedido: NO es el nº de factura (caso El Giraldillo, 03/11/2026). Solo informativo. */
+  numero_albaran?: string | null
+  /** Vocabulario cerrado de `tipo-documento.ts`; `null` = la IA no lo clasificó (va a revisión). */
+  tipo_documento?: string | null
   /** Cuándo se COBRA (domiciliación/vencimiento), distinto de `fecha` (emisión). */
   fecha_cargo?: string | null
   /** La factura se cobra por domiciliación/adeudo SEPA (y por tanto debe aparecer en cuenta). */
