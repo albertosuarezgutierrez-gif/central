@@ -18,6 +18,7 @@
 //  - `null` = «sin dato», nunca 0.
 
 import { mediaMensualOSinDato, proyectarNetoActividad } from './media-actividad.ts'
+import { proyectarRecurrentes, normalizarProveedor, type GastoHist } from './gastos-recurrentes-detectados.ts'
 import { cuotaTarifa, type ImportesAnio } from './fiscal-deducciones.ts'
 
 // ── Parámetros de amortización (ÚNICO sitio) ────────────────────────────────────────────────
@@ -165,6 +166,13 @@ export type EntradaBase = {
   costes?: CostesUnitarios
   /** Estancias del tramo hoy→31/12 del año ANTERIOR (escenario de ocupación tipo). */
   referencia?: FilaIngreso[]
+  /**
+   * Histórico de gastos de PISO con proveedor (año en curso + anterior, `ambito` = propertyId). Con él, los
+   * recurrentes que nada más cubre se proyectan a 31/12 por su calendario. Requiere `recurrentesCubiertos`.
+   */
+  historicoGastos?: GastoHist[] | null
+  /** Plantillas activas de `gastos_fijos` (ya van en `fijosMes`): no se proyectan dos veces. Sin esta lista NO se proyecta. */
+  recurrentesCubiertos?: { ambito: string; proveedor: string }[]
 }
 
 // ── Utilidades ──────────────────────────────────────────────────────────────────────────────
@@ -452,6 +460,11 @@ export type CostesUnitarios = {
   aguaMes: Record<string, number | null>
   /** €/mes del resto de `gastos_fijos` activos del piso. */
   fijosMes: Record<string, number | null>
+  /**
+   * € de plantilla que AÚN no se han apuntado hasta el 31/12 (Σ total × meses cuyo día de cargo es posterior a `hoy`).
+   * Los meses ya apuntados entran en «hasta hoy»: no se cuentan otra vez. Ausente (o piso sin `dia`) = se usa `fijosMes × mesesRestantes`.
+   */
+  fijosRestante?: Record<string, number | null>
   comisionBooking: number
 }
 export type EntradaCostes = {
@@ -465,7 +478,21 @@ export type EntradaCostes = {
   /** Estancias del año (con huéspedes y fechas). */
   estancias: FilaIngreso[]
   suministros: { propertyId: string; mes: string; importe: number; tipo: 'luz' | 'agua' }[]
-  fijos: { propertyId: string; total: number }[]
+  fijos: { propertyId: string; total: number; /** Día del mes del cargo (`gastos_fijos.dia_mes`). */ dia?: number | null }[]
+}
+
+/**
+ * Cargos de una plantilla mensual (día `dia`) que quedan por apuntar: meses de `anio` cuya fecha de cargo es POSTERIOR a `hoy`.
+ * (`calcularPeriodo` cuenta como real todo lo fechado ≤ hoy; lo posterior hay que estimarlo, ni más ni menos.)
+ */
+export function mesesPlantillaPendientes(hoy: string, anio: number, dia: number): number {
+  let n = 0
+  for (let m = 1; m <= 12; m++) {
+    const ult = new Date(Date.UTC(anio, m, 0)).getUTCDate()
+    const f = `${anio}-${String(m).padStart(2, '0')}-${String(Math.min(Math.max(1, Math.trunc(dia)), ult)).padStart(2, '0')}`
+    if (f > hoy) n++
+  }
+  return n
 }
 
 function mesesCompletosHasta(anio: number, hoy: string): string[] {
@@ -479,6 +506,7 @@ export function calcularCostesUnitarios(x: EntradaCostes): CostesUnitarios {
   const luzMes: CostesUnitarios['luzMes'] = {}
   const aguaMes: CostesUnitarios['aguaMes'] = {}
   const fijosMes: CostesUnitarios['fijosMes'] = {}
+  const fijosRestante: NonNullable<CostesUnitarios['fijosRestante']> = {}
 
   // Limpieza: tarifa con IVA de la tarifa habitual (la de más sesiones) → excluye extras puntuales.
   for (const id of ids) {
@@ -521,8 +549,10 @@ export function calcularCostesUnitarios(x: EntradaCostes): CostesUnitarios {
     const agua = x.suministros.filter(s => s.propertyId === id && s.tipo === 'agua' && ventana.includes(s.mes))
     aguaMes[id] = agua.length ? redondear(suma(agua.map(s => s.importe)) / agua.length / MESES_POR_CARGO_AGUA) : null
     fijosMes[id] = redondear(suma(x.fijos.filter(f => f.propertyId === id).map(f => f.total)))
+    const pl = x.fijos.filter(f => f.propertyId === id)
+    if (pl.every(f => f.dia != null)) fijosRestante[id] = redondear(suma(pl.map(f => f.total * mesesPlantillaPendientes(x.hoy, x.anio, f.dia as number))))
   }
-  return { limpiezaPorEstancia, lavanderiaPorEstancia, luzMes, aguaMes, fijosMes, comisionBooking: COMISION_BOOKING_DEFECTO }
+  return { limpiezaPorEstancia, lavanderiaPorEstancia, luzMes, aguaMes, fijosMes, fijosRestante, comisionBooking: COMISION_BOOKING_DEFECTO }
 }
 
 // ── Coste variable por reserva ──────────────────────────────────────────────────────────────
@@ -592,7 +622,7 @@ function escalar(a: Agregado, k: number): Agregado {
 // ── Estimación de cierre de año ─────────────────────────────────────────────────────────────
 export type EscenarioId = 'base' | 'ocupacion' | 'pesimista'
 export type ConceptoSinDato = {
-  concepto: 'comision' | 'limpieza' | 'lavanderia' | 'luz' | 'agua' | 'fijos'
+  concepto: 'comision' | 'limpieza' | 'lavanderia' | 'luz' | 'agua' | 'fijos' | 'recurrentes'
   propertyId: string
   nombre: string
   /** Solo comisión: reservas del escenario sin comisión conocida y su bruto. */
@@ -604,6 +634,8 @@ export type DesglosePiso = {
   reservas: number; bruto: number
   comision: number | null; limpieza: number | null; lavanderia: number | null
   luz: number | null; agua: number | null; fijos: number | null
+  /** Recurrentes del piso (seguros, suscripciones…) no cubiertos por fijos/luz/agua; ausente = sin histórico. */
+  recurrentes?: number | null
   compartidos: number; amortizacion: number | null
   /** Con los conceptos sin dato contados como 0 (ver `sinDato`). */
   neto: number
@@ -622,6 +654,7 @@ export type EscenarioEst = {
     reservas: number; bruto: number
     comision: number | null; limpieza: number | null; lavanderia: number | null
     luz: number | null; agua: number | null; fijos: number | null
+    recurrentes?: number
     compartidos: number; amortizacion: number
     correduriaNeto: number | null; pilarNeto: number | null
     /** Cómo se estimó la correduría: recibos pendientes de CIMA (ingresos nov-dic = `correduriaIngresosPendientes`) o media bancaria. */
@@ -646,6 +679,15 @@ export function estimarCierre(e: EntradaBase, hastaHoy: Periodo): Estimacion {
   const c: CostesUnitarios = e.costes ?? { limpiezaPorEstancia: {}, lavanderiaPorEstancia: {}, luzMes: {}, aguaMes: {}, fijosMes: {}, comisionBooking: COMISION_BOOKING_DEFECTO }
   const amort = e.amortizacion ?? AMORTIZACION_INMUEBLES
   const denom = diasDelAnio(e.anio)
+
+  // Recurrentes de piso por calendario (IBI semestral, seguros anuales, suscripciones…) que NADA más proyecta.
+  // Fuera: luz/agua (media propia), limpieza/lavandería (por estancia), plantillas de gastos_fijos y lo que no es de un piso.
+  const ids = new Set(e.propiedades.map(p => p.id))
+  const cubiertos = new Set((e.recurrentesCubiertos ?? []).map(x => `${x.ambito}|${normalizarProveedor(x.proveedor)}`))
+  const recurrentes = e.historicoGastos && e.recurrentesCubiertos
+    ? proyectarRecurrentes(e.historicoGastos.filter(g => ids.has(g.ambito)), e.hoy, e.anio, r =>
+      cubiertos.has(`${r.ambito}|${r.clave}`) || /emasesa|endesa|totalenergies|iberdrola|naturgy|brilla|lavander/.test(r.clave)).porAmbito
+    : null
 
   // Gasto compartido medio mensual (meses completos con dato; la lavandería ya va por estancia).
   const medio = (filas: { mes: string; importe: number }[]) => {
@@ -722,15 +764,19 @@ export function estimarCierre(e: EntradaBase, hastaHoy: Periodo): Estimacion {
       const peso = brutoReal > 0 ? (hastaHoy.lineas.find(x => x.propertyId === p.id)?.bruto ?? 0) / brutoReal : 1 / Math.max(1, e.propiedades.length)
       const compartidos = medioComp * peso * mesesRestantes
       const fijo = (m: Record<string, number | null>) => { const u = m[p.id] ?? null; return u == null ? null : u * mesesRestantes }
-      const luz = fijo(c.luzMes), agua = fijo(c.aguaMes), fijos = fijo(c.fijosMes)
+      const luz = fijo(c.luzMes), agua = fijo(c.aguaMes)
+      // Plantillas: solo los meses aún NO apuntados (noviembre ya apuntado el 01/11 va en «hasta hoy»); sin día de cargo, el cálculo antiguo.
+      const fijos = c.fijosRestante?.[p.id] ?? fijo(c.fijosMes)
+      const recur = recurrentes == null ? null : (recurrentes[p.id] ?? 0)
       const par = amort[p.id]
       const amortizacion = p.bloque === 'capital_inmobiliario' && par ? (par.anual * a.dias) / denom : null
-      const neto = a.bruto - (a.comision ?? 0) - (a.limpieza ?? 0) - (a.lavanderia ?? 0) - (luz ?? 0) - (agua ?? 0) - (fijos ?? 0) - compartidos - (amortizacion ?? 0)
+      const neto = a.bruto - (a.comision ?? 0) - (a.limpieza ?? 0) - (a.lavanderia ?? 0) - (luz ?? 0) - (agua ?? 0) - (fijos ?? 0) - (recur ?? 0) - compartidos - (amortizacion ?? 0)
       estimadoPorPiso[p.id] = neto
       diasPorPiso[p.id] = Math.min(diasRest, a.dias)
       bl[p.bloque].estimado = (bl[p.bloque].estimado ?? 0) + neto
-      desglose.push({ propertyId: p.id, nombre: p.nombre, reservas: a.reservas, bruto: a.bruto, comision: a.comision, limpieza: a.limpieza, lavanderia: a.lavanderia, luz, agua, fijos, compartidos, amortizacion, neto })
+      desglose.push({ propertyId: p.id, nombre: p.nombre, reservas: a.reservas, bruto: a.bruto, comision: a.comision, limpieza: a.limpieza, lavanderia: a.lavanderia, luz, agua, fijos, ...(recur == null ? {} : { recurrentes: recur }), compartidos, amortizacion, neto })
       fut.reservas += a.reservas; fut.bruto += a.bruto; fut.compartidos += compartidos; fut.amortizacion += amortizacion ?? 0
+      if (recur != null) fut.recurrentes = (fut.recurrentes ?? 0) + recur
       acum('comision', a.comision); acum('limpieza', a.limpieza); acum('lavanderia', a.lavanderia); acum('luz', luz); acum('agua', agua); acum('fijos', fijos)
       const sd = (concepto: ConceptoSinDato['concepto'], extra: Partial<ConceptoSinDato> = {}) => sinDato.push({ concepto, propertyId: p.id, nombre: p.nombre, ...extra })
       if (a.reservas > 0 && a.limpieza == null) sd('limpieza')
@@ -739,6 +785,8 @@ export function estimarCierre(e: EntradaBase, hastaHoy: Periodo): Estimacion {
       if (mesesRestantes > 0 && luz == null) sd('luz')
       if (mesesRestantes > 0 && agua == null) sd('agua')
       if (mesesRestantes > 0 && fijos == null) sd('fijos')
+      // Se pidió proyectar recurrentes (hay lista de cubiertos) y el histórico no llegó: sin dato, no 0.
+      if (mesesRestantes > 0 && e.recurrentesCubiertos && e.historicoGastos == null) sd('recurrentes')
     }
     let baseGeneral = 0, baseEstimada = 0
     for (const b of BLOQUES) {

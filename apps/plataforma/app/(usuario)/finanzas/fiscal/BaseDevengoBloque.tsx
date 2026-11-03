@@ -26,7 +26,7 @@ const fecha = (iso: string) => iso.split('-').reverse().join('/')
 const mesCorto = (m: string) => ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'][Number(m.slice(5, 7)) - 1]
 
 function etiquetaSinDato(d: ConceptoSinDato): string {
-  const nombre = { comision: 'comisión', limpieza: 'limpieza', lavanderia: 'lavandería', luz: 'luz', agua: 'agua', fijos: 'gastos fijos' }[d.concepto]
+  const nombre = { comision: 'comisión', limpieza: 'limpieza', lavanderia: 'lavandería', luz: 'luz', agua: 'agua', fijos: 'gastos fijos', recurrentes: 'recurrentes (sin histórico)' }[d.concepto]
   return d.concepto === 'comision'
     ? `${nombre} de ${d.reservas?.toLocaleString('es-ES', { maximumFractionDigits: 1 })} reservas de ${d.nombre} (${eur(d.bruto ?? 0)} brutos)`
     : `${nombre} de ${d.nombre}`
@@ -211,11 +211,11 @@ export default function BaseDevengoBloque({ data }: { data: BaseDevengo | null }
         </div>
         <div style={{ ...h, marginBottom: '6px' }}>Futuro por piso (escenario base) · coste variable</div>
         <TablaScroll>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '860px', marginBottom: '12px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '940px', marginBottom: '12px' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
                 <th style={{ ...th, textAlign: 'left' }}>Piso</th><th style={th}>Reservas</th><th style={th}>Bruto</th><th style={th}>Comisión</th>
-                <th style={th}>Limpieza</th><th style={th}>Lavandería</th><th style={th}>Luz</th><th style={th}>Agua</th><th style={th}>Fijos</th>
+                <th style={th}>Limpieza</th><th style={th}>Lavandería</th><th style={th}>Luz</th><th style={th}>Agua</th><th style={th}>Fijos</th><th style={th}>Recurrentes</th>
                 <th style={th}>Compartidos</th><th style={th}>Amortización</th><th style={th}>Neto</th>
               </tr>
             </thead>
@@ -227,6 +227,7 @@ export default function BaseDevengoBloque({ data }: { data: BaseDevengo | null }
                   {([l.comision, l.limpieza, l.lavanderia, l.luz, l.agua, l.fijos] as (number | null)[]).map((v, i) => (
                     <td key={i} style={{ ...td, color: v == null ? 'var(--muted)' : undefined }}>{money(v)}</td>
                   ))}
+                  <td style={{ ...td, color: l.recurrentes == null ? 'var(--muted)' : undefined }}>{money(l.recurrentes ?? null)}</td>
                   <td style={td}>{eur(l.compartidos)}</td><td style={td}>{l.amortizacion == null ? 'n/a' : eur(l.amortizacion)}</td>
                   <td style={{ ...td, fontWeight: 700 }} title={esProvisional(est.escenarios[0], l.propertyId) ? PROV_TITLE : undefined}>
                     {estimada(l.neto, esProvisional(est.escenarios[0], l.propertyId))}

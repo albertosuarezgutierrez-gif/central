@@ -71,10 +71,16 @@ original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados
 - BD: 2 campañas ialimp pausadas, 10 envíos pendientes → `omitido`; 277 borradores de `iarest.leads` borrados (los 142 enviados intactos).
 - Estrategia propuesta (pendiente de OK de Alberto): empresa MEDIANA familiar (20-250 emp.), no grande; canales: cartera propia (LSSI 21.2) > gestorías socias > LinkedIn > asociaciones; NO mailing en frío (LSSI art. 21).
 - Pendiente antes de captar: landing `/empresas` en asegura-web, cuenta demo del portal, contrato de encargo RRHH del abogado.
+## (03/11/2026) Fiscal · gastos recurrentes a 31/12 + alerta Telegram de subidas
+- `lib/gastos-recurrentes-detectados.ts`: detección genérica proveedor+ámbito (mensual…anual), proyecta cargos pendientes a 31/12; recurrente con un cargo esperado ausente (>10 d de cortesía) = BAJA, no se proyecta (PriceLabs). Excluye lo ya cubierto (luz, agua, limpieza, lavandería, `gastos_fijos`).
+- Alerta `avisosGastosRecurrentes` (cron fiscal-avisos): ≥30 % y ≥20 € sobre media de 6 recibos; no avisa si el mismo mes del año anterior era parecido. Correduría = banco `seguros` (sin ingresos/traspasos/Bizum).
+- Bug arreglado: plantillas `gastos_fijos` del mes en curso ya apuntadas se volvían a proyectar (`mesesPlantillaPendientes`): base pisos +~730 € a 03/11.
+- Correduría detectada: autónomos 388,95 €, ASISA 180,99 €, Anthropic ~520 €, Vercel 95,44 €, IONOS 19,61 €. Limpieza/lavandería (Si Que Brilla, que desde hace meses también hace la lavandería, y El Giraldillo) quedan FUERA del aviso: varían con las reservas (Alberto).
+- ⚠️ Cobro PriceLabs 30,09 € el 08/09/2026 tras la baja del 09/08: reclamar. El Giraldillo sin facturas desde julio = sustituido por Si Que Brilla.
 
 ## (03/11/2026) Fiscal · Pilar, correduría (proyección), IBI y Booking
 - Motor: la media mensual de actividad (Pilar y correduría) divide entre MESES COMPLETOS TRANSCURRIDOS, no entre meses con dato (helper `lib/media-actividad.ts` + test). Pilar 2026: solo 2 facturas (29/05, 2.100€ brutos / 1.981,13€ netos); prestación SS ene-mar 2.835€ (nacimiento, exenta, no cargada). Faltan sus CARGOS (autónomos real, plan pensiones). Bizum = personal.
-- IBI cuenta común (4×171,55€) = Monte Carmelo (ref. 4707007TG3440N0003TR), personal. Socorro es CASA sin comunidad; su IBI ya está prorrateado en `gastos`. ¿Desde qué cuenta se paga? pendiente.
+- IBI 2026 (confirmado con extracto BBVA 03/11): Socorro 2×242,93€ = 485,86€/año (1 recibo por semestre, BBVA ···1175, piso entero 50/50) y Dúplex 2×130,46€ = 260,92€ — cuadran con `gastos_fijos` (falta solo la fila de diciembre). Monte Carmelo (cuenta común) 4×171,55€ = personal. Socorro es CASA sin comunidad. Cargos del 03/11 aún no sincronizados en BD: asignar con factura_ref `ibi:<piso>:2026-plazo2`.
 - Booking: 33 facturas = Dúplex (2888928), Luxury Busto (4340072) y Busto Reform (4771238): cuadran con bruto−neto del motor (±19€). FALTAN las de House Sevillana (2039943): motor 20.246,20€ ene-oct (28,2% del bruto, ~5.400€ sin explicar) → localizar facturas (¿otra cuenta/email o a nombre de la SL?). El motor incluye comisión de reservas nov-dic futuras (3.720€): criterio a decidir. Mapa de IDs corregido en skills/agentes.
 
 ## (03/11/2026) Fiscal · estudios de pisos y correduría (docs/fiscal/2026-11-*.md)
