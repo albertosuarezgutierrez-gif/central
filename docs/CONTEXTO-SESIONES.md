@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 
+## (03/11/2026) PR #5412 MERGEADO · facturas de plataforma: «✅ Pagar» hace pago REAL
+- «✅ Pagar» de la alerta 🧾 lanza pago real (PIS Enable Banking o SEPA), no marca pagada. Ahora no se ofrece si la factura ya casa con un cargo (fail-closed). Sin pago para Si Que Brilla (se paga a mano; alerta de verificación: limpiezas por piso × LIMPIEZA_TARIFAS vs salidas, lavandería por huésped-noche ±15 %, sin histórico → «sin referencia»). Tarjeta (Fly/Vercel: débito Kutxabank en cuenta corriente, detectado por concepto): casa al importar extracto o PSD2, ±8 % divisa con cambio aproximado; aviso «sin cargo» solo lunes.
+- Un cargo cierra una sola factura (`conciliar-par.ts` marca el movimiento `factura_ref='fp:<id>'`); doble pulsación bloqueada con estado `pago_iniciando`.
+- BD: factura SQB 2025/444 (1.889,06€) conciliada con transferencia del 02/11; movimiento pasado a `turistico_pisos`. Octubre SQB: 1 limpieza menos en Dúplex y 2 menos en Luxury que salidas (posible paso a noviembre).
+- Pendiente: probar en vivo que `tgEditMessage` quita botones del 🧾 anterior; histórico de lavandería solo 3 meses (la banda saltará a menudo).
+
 ## (02/11/2026) Auditoría lote 2 (rama `claude/auditoria-lote2`, PR por abrir)
 - Hecho: vista de corredor con `usadoEn` atómico; `/api/acceso/solicitar` valida email; asegura-portal sin `devFallback`; bajas campana/recaptacion GET=botón, POST=ejecuta; ruta `subastas/fase3-debug` retirada; helper `secretoCoincide`/`autorizacionBearerValida` (core-identity, apto edge) en 10 crons plataforma, 5 rrhh, transporte, sivra y middleware (`?secret=` se mantiene, ahora en tiempo constante).
 - Cepos: asegura-aislamiento reescrito (SQL sobre `seguros` con correduria_id o `correduriaUnica()`); nuevo rrhh `empresa_id`. Hook Stop timeout 30; `persist-memoria.sh` no empuja en main. ialimp `fetchSeguro` (SSRF); ia-rest `renderMd` escapa.
