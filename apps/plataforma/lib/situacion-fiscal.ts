@@ -139,7 +139,7 @@ export function armarSituacion(e: EntradaSituacion): Seccion[] {
   const actividades: Dato[] = [
     { id: 'correduria', etiqueta: 'Correduría (Grupo ASegura)', valor: 'Actividad económica de Alberto', formato: 'texto', fuente: 'base-fiscal-devengo.ts · bloque actividad_correduria (banco destino seguros)', actualizado: null, edicion: 'solo_lectura' },
     perfilD('pilar_autonoma', 'Pilar: actividad (autónoma)', p ? Boolean(p.conyuge_es_autonomo) : null, 'si_no', 'conyuge_es_autonomo'),
-    apiD('pilar_cuota', 'Pilar: cuota de autónomos MENSUAL', num(p?.conyuge_cuota_autonomos), 'eur', 'conyuge_cuota_autonomos', 'conyuge_cuota_autonomos',
+    apiD('pilar_cuota', 'Pilar: cotizaciones RETA del año (anual; 2026 parcialmente estimada)', num(p?.conyuge_cuota_autonomos), 'eur', 'conyuge_cuota_autonomos', 'conyuge_cuota_autonomos',
       'Tope de maternidad (art. 81 LIRPF): sin este dato la maternidad sale «sin dato».'),
     apiD('pilar_exonerados', 'Pilar: meses de cuota exonerados', num(p?.conyuge_meses_exonerados), 'entero', 'conyuge_meses_exonerados', 'conyuge_meses_exonerados',
       'Meses de la prestación por nacimiento sin cuota. Necesita prisma/sql/2026-10-31_situacion_fiscal.sql aplicado.'),

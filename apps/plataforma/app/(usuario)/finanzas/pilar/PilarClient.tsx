@@ -158,7 +158,7 @@ export default function PilarClient({ initialData, year, quarter }: Props) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '20px' }}>
             <KpiCard label="Cobros clientes" value={d.cobros} color="#9f7aea" sub={periodoLabel} />
             <KpiCard label="Gastos profesionales" value={d.gastosProfesionales} color="var(--negative)" />
-            <KpiCard label="Cuota autónomos" value={d.cuotaAutonomos} color="var(--negative)" />
+            <KpiCard label="Cuota autónomos" value={d.cuotaAutonomos} color="var(--negative)" sub={d.cuotaAutonomosEtiqueta || undefined} />
             <KpiCard label="Rendimiento neto" value={d.rendimientoNeto} color={d.rendimientoNeto >= 0 ? 'var(--positive)' : 'var(--negative)'} sub={`Ret. est. 15%: ${fmt(d.retenciones)}`} />
           </div>
 

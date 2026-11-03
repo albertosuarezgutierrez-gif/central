@@ -16,7 +16,6 @@ import {
   deduccionesAplicablesNoMarcadas,
   transicionesEdad,
   importesDe,
-  cuotasAnualesDesdeMensual,
   PLAZOS_FISCALES,
   type PerfilFiscal,
   type Descendiente,
@@ -339,8 +338,8 @@ async function getDeducciones(
         ascendientesMayores75: perfilRows[0].ascendientes_mayores_75,
         donativosAnual: Number(perfilRows[0].donativos_anual),
         gastoDeportivoAnual: Number(perfilRows[0].gasto_deportivo_anual ?? 0),
-        // La columna es la cuota RETA MENSUAL de la madre; el tope art. 81 usa las cotizaciones del año (×12). NULL = sin dato ⇒ maternidad «sin dato», nunca 0.
-        cuotasSSMadreAnual: cuotasAnualesDesdeMensual(perfilRows[0].conyuge_cuota_autonomos == null ? null : Number(perfilRows[0].conyuge_cuota_autonomos)),
+        // La columna es la cotización RETA ANUAL de la madre (2026: 661,49 €, parcialmente estimada; ver NOTA_COTIZACIONES_MADRE). NULL = sin dato ⇒ maternidad «sin dato», nunca 0.
+        cuotasSSMadreAnual: perfilRows[0].conyuge_cuota_autonomos == null ? null : Number(perfilRows[0].conyuge_cuota_autonomos),
         // Fecha de inicio del título de FN (prorrateo por meses); sin columna/valor ⇒ FN estatal «sin dato».
         familiaNumerosaDesde: fechaIso(perfilRows[0].familia_numerosa_desde),
         abonoAnticipadoMaternidad: perfilRows[0].abono_anticipado_maternidad == null ? null : Number(perfilRows[0].abono_anticipado_maternidad),
@@ -1049,6 +1048,7 @@ export type ResumenPilar = {
   yearsDisponibles: number[]
   tieneExtracto: boolean
   notas: string[]
+  cuotaAutonomosEtiqueta: string
 }
 
 const RETENCION_AUTONOMO = 0.15
@@ -1058,6 +1058,8 @@ const PLAZOS_130: Record<number, { fecha: string; label: string }> = {
   3: { fecha: `${new Date().getFullYear()}-10-20`, label: '20 oct' },
   4: { fecha: `${new Date().getFullYear() + 1}-01-30`, label: '30 ene' },
 }
+
+import { cuotaRetaPilar } from './cuota-reta-pilar'
 
 export async function getResumenPilar(cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string): Promise<ResumenPilar> {
   // Periodo principal (KPIs/clientes/evolución) acepta rango libre; el Modelo 130 por trimestre
@@ -1123,6 +1125,13 @@ export async function getResumenPilar(cuentaId: string, year: number, quarter = 
     else if (r.subcategoria === 'cuota_autonomos') cuotaAutonomos += Math.abs(imp)
     else gastosProfesionales += Math.abs(imp)
   }
+  // Cuota RETA: manda el valor ANUAL del perfil (cuenta de Pilar no conectada); el banco solo si el perfil es null.
+  const perfilCuotaRows = await prisma.$queryRaw<Array<{ c: unknown }>>`
+    SELECT conyuge_cuota_autonomos AS c FROM fiscal_perfil WHERE cuenta_id = ${cuentaId}::uuid LIMIT 1`
+  const cuotaPerfil = perfilCuotaRows[0]?.c == null ? null : Number(perfilCuotaRows[0].c)
+  const fraccion = (desde && hasta) ? null : quarter === 0 ? 1 : 0.25
+  const cuotaReta = cuotaRetaPilar(cuotaPerfil, cuotaAutonomos, fraccion)
+  cuotaAutonomos = cuotaReta.importe
   const retenciones = cobros * RETENCION_AUTONOMO
   const rendimientoNeto = cobros - gastosProfesionales - cuotaAutonomos
 
@@ -1152,6 +1161,7 @@ export async function getResumenPilar(cuentaId: string, year: number, quarter = 
       else if (r.subcategoria === 'cuota_autonomos') qCuota += Math.abs(imp)
       else qGastos += Math.abs(imp)
     }
+    if (cuotaPerfil != null) qCuota = cuotaRetaPilar(cuotaPerfil, qCuota, 0.25).importe
     const qRet = qCobros * RETENCION_AUTONOMO
     const qNeto = qCobros - qGastos - qCuota
     const pagoFraccionado = Math.max(0, qNeto * 0.20 - qRet)
@@ -1194,6 +1204,7 @@ export async function getResumenPilar(cuentaId: string, year: number, quarter = 
     yearsDisponibles: yearsDisponibles.length ? yearsDisponibles : [year],
     tieneExtracto: movRows.length > 0,
     notas,
+    cuotaAutonomosEtiqueta: cuotaReta.fuente === 'perfil' ? cuotaReta.etiqueta : '',
   }
 }
 

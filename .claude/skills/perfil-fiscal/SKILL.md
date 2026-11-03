@@ -18,13 +18,18 @@ description: Router de contexto FISCAL y PATRIMONIAL de Alberto (persona física
 - **Socorro 24 es una CASA (no piso): NO tiene comunidad de propietarios** — no buscar ni esperar cuotas de comunidad. Los IBI 4707007TG3440N0003TR (cuenta común Kutxabank) son de Monte Carmelo (vivienda habitual, no deducible); el de Socorro (5732032TG3453B0001PK) ya está prorrateado en `gastos` (≈40,49€/mes). Bizum de Pilar/Alberto = personal, no cuentan para la renta.
 - **Bustos Tavera 22 (dos bajos):** subarriendo, capital mobiliario, titular Alberto, cobra en Kutxa; el alquiler a la propietaria es gasto.
 - **Correduría Grupo ASegura:** persona física, estimación directa. Codeoscopic es gasto de la correduría, no de los pisos.
-- **Pilar:** autónoma (RETA), actividad pequeña. Cobró prestación por nacimiento en 2026 (exenta, art. 7.h). Su cuota de autónomos: `fiscal_perfil.conyuge_cuota_autonomos` (pendiente confirmar si es anual o mensual).
+- **Pilar:** autónoma (RETA), actividad pequeña. Cobró prestación por nacimiento en 2026 (exenta, art. 7.h). Estuvo de BAJA POR MATERNIDAD a principios de 2026 (prestación ene-mar 2.835 €, exenta, no es rendimiento). Cotizaciones RETA reales 2026 (banco Pilar Kutxabank …5420, fuera de la BD): ene 121,83, feb 72,12, mar 90,78, abr 118,04, may-oct 32,34/mes = 596,81 € hasta oct; anual estimado 661,49 € (nov-dic a 32,34). `fiscal_perfil.conyuge_cuota_autonomos` es la cifra ANUAL (661,49, parcialmente estimada), NO mensual; el 467,45 anterior era erróneo (03/11/2026).
+- **Abonos AEAT maternidad (modelo 140, titular Pilar):** los ingresos «DEVOLUCIONES TRIBUTARIAS AEAT … SOLICITUD DEDUCCION MATERNIDAD 26MOD140…» son abonos anticipados de 100 €/hijo/mes; el mes va en la etiqueta y se cobran ~día 20 del mes siguiente; prorrateo parcial (93,20 € jul) cuando un hijo cumple 3 años. 2026: 1.393,20 € cobrados (feb–sep) + ~300 € previstos oct–dic. **NO son devolución de renta.**
+- **Maternidad y cotizaciones (Pilar):** limitar la maternidad por cotizaciones queda «revisar con asesoría»; los abonos 140 cobrados sugieren que no aplica. No afirmarlo sin Asecon.
+- **Seguro de salud ASISA (tomador Alberto, cubre cónyuge + 2 hijos, baja dic 2026):** 2026 = 211,60 € ene + 10 × 180,99 € = 2.021,50 €; deducible tope 500 € × 3 = 1.500 €. Concepto bancario: «RECIBO POLIZAS GIP» o «RECIBO PRIMAS POLIZAS CO».
+- **Guardería 2026:** Escuela Infantil Ratón de Los Remedios (ene–jul) + Grupo Workandlife «EI Estrella Polar» (desde jul); 3.312,14 € hasta oct. Detalle en `references/reglas-gasto-y-finanzas.md`.
 - **Familia numerosa general, 3 hijos.** Las fechas de nacimiento están solo en `fiscal_perfil` (fuente de verdad); no copiarlas a docs.
 - **Decisiones:**
   - Televisor El Corte Inglés 1.749€ (Socorro, pagado con tarjeta) = gasto íntegro 2026, por decisión de Alberto.
   - TotalEnergies = electricidad deducible.
   - Vía sociedad **DESCARTADA** para los pisos. Punto y Coma está inactiva (~200€/mes de asesoría) y hay un requerimiento AEAT 2024 abierto: no mover nada en ella hasta cerrarlo.
   - Criterio rector: «lo más sencillo y claro posible».
+  - Plan de pensiones: Alberto prefiere hacer reparaciones en pisos antes que aportar (dictado 03/11/2026). Simulador «¿y si…?» en el panel fiscal.
   - Declaración individual sale ≈5.000€ más barata que la conjunta en 2026 [Probable, validar con asesoría].
 - **Fuente viva:** panel `/finanzas/fiscal` «Mi situación fiscal» (editable) + tablas `fiscal_perfil` y `propiedad_titularidad`.
 
@@ -151,6 +156,6 @@ Decisiones de Alberto sobre clasificación de gastos por negocio. Guardianas del
   datos vivos y relación con otras skills. Léelo para: clasificar facturas/movimientos, `facturas-correo`,
   `fiscal-novedades`, o cualquier cálculo del módulo `/finanzas`.
   - Guardería 2026 (dato Alberto 03/11/2026): Escuela Infantil Ratón de Los Remedios ene–jul (últ. recibo 12/07, julio = vacaciones) y desde el curso 2026-27 Grupo Workandlife «EI Estrella Polar» (recibos jul matrícula, sep, oct…). Banco hasta oct: 3.312,14 € (abr–jun duplicados marcados ‘ignorado’). Cuota RETA de Pilar 467,45 € = MENSUAL (confirmado).
-  - Seguro de salud ASISA (dato Alberto 03/11/2026): lo paga Alberto desde la correduría y cubre a su MUJER y 2 HIJOS (3 asegurados; Alberto no). Baja en diciembre de 2026. Banco 2026: 8 × 180,99 € = 1.447,92 €. Deducible art. 30.2.5ª LIRPF hasta 500 € × 3 = 1.500 € (`lib/seguro-salud-deducible.ts`, aplicado en `base-fiscal-devengo-db.ts`); nota: la proyección a 31/12 usa media mensual y aún supondría cargo de diciembre.
+  - Seguro de salud ASISA (dato Alberto 03/11/2026): lo paga Alberto desde la correduría y cubre a su MUJER y 2 HIJOS (3 asegurados; Alberto no). Baja en diciembre de 2026. 2026: 211,60 € ene + 10 × 180,99 € = 2.021,50 €. Deducible art. 30.2.5ª LIRPF hasta 500 € × 3 = 1.500 € (`lib/seguro-salud-deducible.ts`, aplicado en `base-fiscal-devengo-db.ts`); nota: la proyección a 31/12 usa media mensual y aún supondría cargo de diciembre.
 
 <!-- verificado: 2026-07-20 -->
