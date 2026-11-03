@@ -219,3 +219,98 @@ export function peticionRegularizacionDesdeEvento(ev: EventoRegularizacionMinimo
  */
 export const ESTADOS_REGULARIZACION = ['borrador', 'enviando', 'pendiente', 'completada', 'anulada'] as const
 export type EstadoRegularizacion = (typeof ESTADOS_REGULARIZACION)[number]
+
+// ─── Fase 3: responder a la COMPAÑÍA con la cifra (03/11/2026) ───────────────
+//
+// Cuando el cliente ha contestado (`completada`), se prepara el BORRADOR de la respuesta a la compañía y va a Alberto por
+// Telegram con ✅ Enviar / ✏️ Modificar / 🏁 Resuelta. 🚨 NUNCA se elige el buzón de la compañía solo: Occident escribe
+// desde `occidentinforma.com` (avisos sin buzón de respuesta) y su canal oficial es «ingresar el suplemento» en su portal
+// de mediadores. Sin buzón elegido por Alberto (de los contactos ACTIVOS de esa compañía en el Directorio) el borrador
+// queda con destinatario PENDIENTE y el ✅ no aparece.
+
+/** `null` = aún no se ha preparado respuesta a la compañía. */
+export const ESTADOS_RESPUESTA_COMPANIA = ['borrador', 'enviando', 'enviada'] as const
+export type EstadoRespuestaCompania = (typeof ESTADOS_RESPUESTA_COMPANIA)[number]
+
+/**
+ * Borrador del correo a la compañía con el dato real. La cifra en formato español (`2.162,49€`). Empleados y masa salarial
+ * solo si el cliente los puso (`null` = no lo indicó: no se escribe ni «0»). Sin DNI ni contacto del cliente.
+ */
+export function borradorRespuestaCompania(a: {
+  compania: string | null
+  numeroPoliza: string | null
+  tomador: string | null
+  periodo: PeriodoRegularizacion
+  respuesta: RespuestaRegularizacion
+  conDocumento: boolean
+  claveMediador: string | null
+  firmante: string
+}): { asunto: string; texto: string } {
+  const periodo = textoPeriodo(a.periodo)
+  const poliza = a.numeroPoliza?.trim() || null
+  const tomador = a.tomador?.trim() || null
+  const r = a.respuesta
+  const datos = [
+    `· Facturación del periodo (sin IVA): ${eurDeCentimos(r.facturacionCent)}`,
+    ...(r.empleados === null ? [] : [`· Nº de empleados: ${r.empleados}`]),
+    ...(r.masaSalarialCent === null ? [] : [`· Masa salarial: ${eurDeCentimos(r.masaSalarialCent)}`]),
+  ]
+  return {
+    asunto: `Regularización RC${poliza ? ` · póliza ${poliza}` : ''}${tomador ? ` · ${tomador}` : ''} · periodo ${periodo}`.slice(0, 200),
+    texto: [
+      'Buenos días:',
+      '',
+      `En relación con la regularización de la póliza de Responsabilidad Civil${poliza ? ` nº ${poliza}` : ''}${tomador ? ` (tomador: ${tomador})` : ''}, periodo ${periodo}, os comunicamos el dato real declarado por el asegurado:`,
+      '',
+      ...datos,
+      '',
+      ...(a.conDocumento ? ['Adjuntamos la documentación aportada por el asegurado.', ''] : []),
+      'Quedamos a la espera del suplemento de regularización. Cualquier duda, contestad a este correo.',
+      '',
+      'Un saludo,',
+      a.firmante,
+      ...(a.claveMediador?.trim() ? [`Mediador ${a.claveMediador.trim()}`] : []),
+    ].join('\n'),
+  }
+}
+
+export type EdicionRespuestaCompania = {
+  /** `undefined` = no ha puesto «Para:» (se queda el que hubiera); string = el correo que ha escrito (sin validar aún). */
+  para: string | undefined
+  /** `null` = solo ha cambiado el destinatario (el texto se queda). */
+  texto: string | null
+}
+
+const RE_PARA = /^\s*para\s*:\s*(\S+)\s*$/i
+const RE_EMAIL = /^[^\s@<>"',;]+@[^\s@<>"',;]+\.[a-z]{2,}$/i
+
+/**
+ * Lo que contesta Alberto al ✏️ de la respuesta a la compañía. Primera línea opcional «Para: correo»; el resto, el texto
+ * nuevo (o nada, si solo cambia el destinatario). `null` = no vale (vacío, «Para:» sin correo, texto corto o enorme).
+ */
+export function leerEdicionRespuestaCompania(entrada: string | null | undefined): EdicionRespuestaCompania | null {
+  const t = (entrada ?? '').trim()
+  if (!t) return null
+  const [primera, ...resto] = t.split(/\r?\n/)
+  const m = RE_PARA.exec(primera)
+  if (/^\s*para\s*:/i.test(primera) && !m) return null
+  const para = m ? m[1].replace(/^<|>$/g, '').toLowerCase() : undefined
+  if (para !== undefined && !RE_EMAIL.test(para)) return null
+  const cuerpo = (m ? resto.join('\n') : t).trim()
+  if (!cuerpo) return para === undefined ? null : { para, texto: null }
+  const texto = borradorEditadoRegularizacion(cuerpo)
+  if (!texto) return null
+  return { para, texto }
+}
+
+export type BuzonCompaniaRegularizacion = { id: string; nombre: string; email: string | null; activo: boolean }
+
+/**
+ * El buzón que ha escrito Alberto, SOLO si es un contacto ACTIVO de esa compañía en el Directorio (comparación exacta del
+ * correo, sin mayúsculas). Un correo tecleado que no está ahí → `null`: no se manda la cifra a una dirección sin verificar.
+ */
+export function buzonElegido(buzones: readonly BuzonCompaniaRegularizacion[], para: string): BuzonCompaniaRegularizacion | null {
+  const objetivo = para.trim().toLowerCase()
+  if (!objetivo) return null
+  return buzones.find((b) => b.activo && (b.email ?? '').trim().toLowerCase() === objetivo) ?? null
+}

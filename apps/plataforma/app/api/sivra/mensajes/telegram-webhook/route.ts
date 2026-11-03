@@ -41,7 +41,7 @@ import { PREFIJO_CLP, decidirBotonClp, idDeEdicion } from '@/lib/correo/lead-cor
 import { guardarEdicionClp, resolverBotonClp } from '@/lib/correo/lead-correduria-pendiente'
 import { PREFIJO_CSG, decidirBotonCsg } from '@/lib/correo/contacto-sugerido'
 import { PREFIJO_FEX, decidirBotonFex, decidirFexEnAsegura, lineaTrasPulsarFex } from '@/lib/felicitaciones-exclientes-asegura'
-import { PREFIJO_RRC, decidirBotonRrc, decidirRrcEnAsegura, editarRrcEnAsegura, idDeEdicionRrc, lineaTrasPulsarRrc, textoPedirEdicionRrc } from '@/lib/regularizacion-rc-asegura'
+import { PREFIJO_RRC, decidirBotonRrc, decidirRrcCompaniaEnAsegura, decidirRrcEnAsegura, editarRrcCompaniaEnAsegura, editarRrcEnAsegura, idDeEdicionRrc, idDeEdicionRrcCompania, lineaTrasPulsarRrc, textoPedirEdicionRrc, textoPedirEdicionRrcCompania } from '@/lib/regularizacion-rc-asegura'
 import { resolverBotonCsg } from '@/lib/correo/contacto-sugerido-pendiente'
 import { PREFIJO_FACTURA_HUESPED, decidirBotonFactura } from '@/lib/sivra/facturas/telegram'
 import { resolverBotonFactura } from '@/lib/sivra/facturas/telegram-acciones'
@@ -1050,17 +1050,23 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
         await tgAnswerCallback(cb.id, d.toast)
         return NextResponse.json({ ok: true })
       }
-      await tgAnswerCallback(cb.id, d.accion === 'env' ? '⏳ Enviando al cliente…' : d.accion === 'mod' ? '✏️ Escribe el texto nuevo' : 'Descartando…')
+      const toastRrc: Record<string, string> = {
+        env: '⏳ Enviando al cliente…', mod: '✏️ Escribe el texto nuevo', no: 'Descartando…',
+        cenv: '⏳ Enviando a la compañía…', cmod: '✏️ Escribe el texto o «Para:»', res: '🏁 Cerrando…',
+      }
+      await tgAnswerCallback(cb.id, toastRrc[d.accion] ?? '…')
       const original = escapeHtml(cb.message?.text ?? '')
       const mensajeId: number | undefined = cb.message?.message_id
-      if (d.accion === 'mod') {
+      if (d.accion === 'mod' || d.accion === 'cmod') {
         // No se toca la fila: el ✅ de este mensaje sigue valiendo hasta que llegue el texto nuevo (que sube la versión).
-        await tgAskForReply(textoPedirEdicionRrc(d.id)).catch(() => null)
+        await tgAskForReply(d.accion === 'mod' ? textoPedirEdicionRrc(d.id) : textoPedirEdicionRrcCompania(d.id)).catch(() => null)
         return NextResponse.json({ ok: true })
       }
       if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n⏳ <i>Pulsado…</i>`).catch(() => {})
       after(async () => {
-        const estado = await decidirRrcEnAsegura({ accion: d.accion as 'env' | 'no', id: d.id, version: d.version })
+        const estado = d.accion === 'cenv' || d.accion === 'res'
+          ? await decidirRrcCompaniaEnAsegura({ accion: d.accion, id: d.id, version: d.version })
+          : await decidirRrcEnAsegura({ accion: d.accion as 'env' | 'no', id: d.id, version: d.version })
         const linea = lineaTrasPulsarRrc(estado)
         if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${linea}`).catch(() => {})
         else await tgSend(linea).catch(() => {})
@@ -1439,6 +1445,16 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
       const estado = await editarRrcEnAsegura(rrcEdit, String(msg.text ?? ''))
       if (estado === 'invalida') await tgSend('<i>Ese texto no vale (vacío o demasiado largo): no he cambiado nada.</i>').catch(() => {})
       else if (estado !== 'editada') await tgSend(`<i>Ese borrador ya no espera edición (enviado, descartado) o no he podido guardarlo (${escapeHtml(estado.slice(0, 60))}): no he cambiado nada.</i>`).catch(() => {})
+      return NextResponse.json({ ok: true })
+    }
+    // «Para:»/texto nuevo de la respuesta de una regularización de RC a la COMPAÑÍA (✏️ de `rrc_cmod`, marca «[rrcc <uuid>]»).
+    // Solo del chat autorizado.
+    const rrccEdit = idDeEdicionRrcCompania(String(msg.reply_to_message.text))
+    if (rrccEdit !== null && String(msg.from?.id ?? '') === String(process.env.TELEGRAM_CHAT_ID ?? '')) {
+      const estado = await editarRrcCompaniaEnAsegura(rrccEdit, String(msg.text ?? ''))
+      if (estado === 'invalida') await tgSend('<i>Eso no vale: «Para: correo» en la primera línea y/o un texto de 20 a 4.000 caracteres. No he cambiado nada.</i>').catch(() => {})
+      else if (estado === 'buzon_desconocido') await tgSend('<i>Ese correo no es un contacto ACTIVO de la compañía en el Directorio: no lo uso. Añádelo allí o elige uno de la lista. No he cambiado nada.</i>').catch(() => {})
+      else if (estado !== 'editada') await tgSend(`<i>Esa respuesta ya no espera edición (enviada o resuelta) o no he podido guardarla (${escapeHtml(estado.slice(0, 60))}): no he cambiado nada.</i>`).catch(() => {})
       return NextResponse.json({ ok: true })
     }
     // Nota a un 👎 del asistente de la correduría («asistente seguros · turno N»).

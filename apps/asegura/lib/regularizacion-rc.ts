@@ -7,7 +7,8 @@
  *      enlace `/datos/<token>`. Sin proveedor → vuelve a borrador, 503 `canal_no_disponible`; rechazado → borrador, 502
  *      `envio_fallido`. Nunca dos correos por un doble clic (la reclamación es una sentencia condicionada).
  *   3. El cliente contesta en el portal (`regularizacion-rc-portal.ts`, por el puente) → cifrada en la fila (póliza +
- *      periodo), historial y aviso a Alberto por Telegram. NO se responde a la compañía (fase 3).
+ *      periodo), historial y aviso a Alberto por Telegram. La respuesta a la COMPAÑÍA es fase 3
+ *      (`regularizacion-rc-compania.ts`): borrador a Alberto con ✅/✏️/🏁; nada sale sin su ✅.
  *
  * 🚨 Nada sale al cliente sin el ✅ de Alberto para ESE envío. El SQL crudo NO prefija `seguros.` (la conexión ya lo trae)
  * y toda sentencia filtra `correduria_id` (cepo `test/regression-asegura-aislamiento.test.ts`).
@@ -258,7 +259,7 @@ export async function editarRegularizacion(correduriaId: string, id: string, tex
   })
 }
 
-async function anotarHistorial(correduriaId: string, clienteId: string, polizaId: string, texto: string): Promise<void> {
+export async function anotarHistorial(correduriaId: string, clienteId: string, polizaId: string, texto: string): Promise<void> {
   try {
     await prismaAsegura().$executeRaw(Prisma.sql`
       insert into historial_interno (correduria_id, cliente_id, poliza_id, tipo, texto)
@@ -314,6 +315,9 @@ export async function responderRegularizacion(token: string, entrada: unknown) {
   await anotarHistorial(f.correduriaId, f.clienteId, f.polizaId,
     `Regularización de RC (${f.compania}, periodo ${f.periodoDesde} a ${f.periodoHasta}): el cliente ha declarado la facturación por el enlace.`)
   await avisarRespuesta(f.correduriaId, f.id).catch((e) => console.error('[regularizacion-rc] aviso no enviado:', e instanceof Error ? e.message : e))
+  // Fase 3: borrador de la respuesta a la COMPAÑÍA a Alberto (✅/✏️/🏁). Nunca lanza; nada sale sin su ✅.
+  const { trasRespuestaCliente } = await import('./regularizacion-rc-compania')
+  await trasRespuestaCliente(f.correduriaId, f.id)
   return { ok: true as const }
 }
 

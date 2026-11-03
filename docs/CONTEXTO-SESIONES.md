@@ -74,6 +74,11 @@ Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; ti
 original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados revisado/falta_roto/devuelto + bloque en ficha. `rrhh.material_empleado`
 (0028, aplicada). Pendiente fase 2: revisión periódica mensual.
 
+## (03/11/2026) Correduría · regularización RC fase 3 (respuesta a Occident + cierre manual)
+- Al completar el cliente: borrador a la compañía → Telegram ✏️/🏁 (✅ solo cuando hay buzón elegido de contactos activos del Directorio; anti-replay `compania_version`). 🏁 Resuelta cierra solicitud + tarea (también clave antigua `suplemento:<póliza>` del mismo periodo).
+- 🚨 Occident no tiene dirección de respuesta: avisos desde occidentinforma.com y el canal oficial es el PORTAL de mediadores. Pendiente decidir buzón fijo (posible `recibe_regularizaciones` en Directorio).
+- Cierre automático NO: no hay ningún correo real de Occident de «suplemento emitido». SQL pendiente: `2026-11-03c_regularizacion_rc_compania.sql`.
+
 ## (03/11/2026) Correduría · regularización RC de Occident automatizada (fases 1-2)
 - F1: parser saca periodo/fecha carta/recordatorio; clave tarea póliza+periodo; vence carta+15d (mín. hoy+2); 2º aviso → prioridad alta + ⚠️ en Telegram.
 - F2: al crear la tarea, petición de facturación al cliente: borrador → Telegram ✅/✏️ → enlace `/datos/[token]` del portal → cifra guardada + aviso. Nada sale sin ✅.
