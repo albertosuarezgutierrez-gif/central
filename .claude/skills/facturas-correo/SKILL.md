@@ -86,6 +86,7 @@ Flujo: Paso 0 (salud+backlog) → 1/1-bis (candidatos Gmail + subidas manuales D
 - **Descartar** documentos de clientes de la correduría (p. ej. pólizas): `descartado_at` + motivo, no son gasto.
   - El agente ya lo hace solo (`poliza-cliente.ts`): aseguradora/póliza/recibo de prima con tomador que NO es Alberto ni Pilar
     → omitido «Póliza de cliente de la correduría: no es gasto»; tomador desconocido → bandeja «Posible póliza de cliente». Propias (Occident pisos, ASISA) = gasto.
+    Alberto aparece como comisionista en las liquidaciones (ej. Allianz Moto): su nombre NO convierte la póliza en propia; solo Occident de pisos, ASISA o pólizas de `gastos_fijos` activos lo son, el resto va a duda.
     Ej. real: «Póliza 061145138» 659,43 €, SEGURO, sin proveedor.
 - **Comisión de portal** (Booking.com B.V., Airbnb, Expedia, Vrbo; p. ej. «Cargo por servicio de los pagos, Reservas» 312,35 €): NO es gasto,
   el portal paga neto y el motor resta bruto−neto. `portal-comision.ts` la omite conservando el enlace de Drive. Smoobu/PriceLabs SÍ son gasto.

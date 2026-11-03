@@ -89,7 +89,7 @@ Si la sesión NO te da un criterio específico, busca por **remitente + fecha re
   (Vía C) con compañía, ejercicio, bruto y retención; son pago a cuenta, no ingreso ni gasto.
 - **Documentos de CLIENTES** de la correduría (p. ej. una póliza) no son gastos de Alberto: márcalos en el informe
   como «cliente, descartar» (el descarte en BD lo hace otro agente con OK de Alberto).
-  Si el tomador es Alberto o Pilar (Occident de pisos, ASISA) sí es gasto; si no consta el tomador, di «posible póliza de cliente, confirmar».
+  Alberto aparece como comisionista en las liquidaciones: su nombre NO convierte la póliza en propia. Solo Occident de pisos y ASISA (o `gastos_fijos` activos) son gasto; si no consta el tomador, di «posible póliza de cliente, confirmar».
 - **Comisión de portal** (Booking.com B.V., Airbnb, Expedia, Vrbo: comisión o «cargo por servicio de los pagos») = justificante, no gasto
   (el portal paga neto; la comisión ya va como bruto−neto). Dilo en el informe; Smoobu/PriceLabs sí son gasto.
 - **Carpeta Drive «Amazon deducible»**: facturas emitidas a Punto y Coma Gestión (B90446683) por compras de pisos;

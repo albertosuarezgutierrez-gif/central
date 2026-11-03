@@ -69,7 +69,7 @@ original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados
 ## (03/11/2026) Facturas · pólizas de clientes y comisiones de portal NO son gasto + bandeja de pendientes
 - Regla Alberto: recibo/liquidación de póliza de un CLIENTE (tomador ≠ Alberto/Pilar) NO es gasto (la comisión entra neta por banco); factura de comisión de Booking/Airbnb/Expedia/Vrbo = justificante, la comisión ya va como bruto−neto en `incomes`. Helpers `lib/agente-facturas/{poliza-cliente,portal-comision}.ts` (tomador dudoso → bandeja con aviso). Skills/agentes actualizados.
 - Bug: `/expenses/pendientes` (`lib/agente-facturas/pendientes.ts`) no filtraba `descartado_at` → enseñaba 9 ya descartados (50→41). Cepo `pendientes-vigente.test.ts`.
-- Dudas abiertas: 307,11 € del 18/09 (póliza 061048939) tiene tomador Pilar (¿liquidación o propio?); Allianz Moto 113,33 € del 07/10 tomador tercero (¿cliente?); Allianz Moto 251,47 € = moto de Alberto (gasto real).
+- Alberto (03/11): las aseguradoras le mandan liquidaciones/resúmenes A SU NOMBRE como COMISIONISTA; su nombre NO hace la póliza propia. Pólizas propias = lista blanca (Occident pisos, ASISA salud); resto de aseguradora → no gasto/duda. Descartados 307,11 € (×2), Allianz Moto 251,47 € y 113,33 €.
 
 ## (03/11/2026) Facturas · el agente de correo duplicaba adjuntos sin proveedor
 - Causa: `fingerprint` vacío cuando la factura no trae proveedor/NIF (foto de WhatsApp) + Gmail relee la ventana de 36 h → mismo adjunto metido dos días seguidos (644,81 € lavandería Socorro; copia descartada en BD con OK de Alberto).

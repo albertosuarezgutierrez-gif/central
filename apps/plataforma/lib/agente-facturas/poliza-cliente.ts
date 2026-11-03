@@ -31,6 +31,11 @@ const NIF_ALBERTO = '28823484E'
 
 const RE_ASEGURADORA =
   /\b(allianz|mapfre|occident|asisa|axa|generali|mutua\s+madrile[nñ]a|sanitas|adeslas|segurcaixa|zurich|catalana\s+occidente|reale|plus\s*ultra|ergo|liberty|hdi|helvetia|santalucia|santa\s+luc[ií]a|aegon|nn\s+seguros|dkv|fiatc|pelayo|l[ií]nea\s+directa|aseguradora|compa[ñn][ií]a\s+de\s+seguros|seguros)\b/i
+/** Vocabulario de la relación de MEDIACIÓN: Alberto figura como corredor/comisionista, no como tomador. */
+const RE_MEDIACION =
+  /\bliquidaci[oó]n(?:es)?\b|\bcomisi[oó]n(?:es)?\b|\bmediador\b|\bcorredor(?:[ií]a)?\b|\bagente\b|\bextracto\b|\bresumen\s+(?:de\s+)?operaciones\b|\bresumen\b|\bc[oó]d(?:igo|\.)?\s+(?:de\s+)?mediador\b/i
+/** Lista blanca de seguros PROPIOS (Occident de los pisos, ASISA de salud). Ampliable con `polizasPropias`. */
+const RE_PROPIA_BLANCA = /\b(occident|asisa)\b/i
 const RE_DOC_POLIZA =
   /\bp[oó]liza\b|\brecibo\s+(?:de\s+)?(?:prima|seguro)|\bliquidaci[oó]n\s+(?:de\s+)?prima|\baviso\s+de\s+cobro\b|\bprima\s+(?:neta|total|pendiente)/i
 
@@ -43,20 +48,36 @@ function nombreEsPropio(nombre: string, titulares: Titular[]): boolean {
 
 const NOMBRE_VACIO = /^(varios|cliente|cliente varios|particular|contado|s n|sn|na|n a|-+)$/
 
-export function esDocumentoPolizaCliente(e: ExtraccionPoliza, titulares: Titular[] = []): boolean | 'duda' {
-  // Sin señal de seguros ni categoría SEGURO: no es asunto de este filtro.
+/**
+ * @param polizasPropias números de póliza de `gastos_fijos` activos (ampliación de la lista blanca).
+ * El nombre/NIF de Alberto NO convierte una póliza en propia: en las liquidaciones de las
+ * aseguradoras figura como comisionista (caso «Allianz Moto» 251,47 € y 113,33 €, 03/11/2026).
+ */
+export function esDocumentoPolizaCliente(e: ExtraccionPoliza, titulares: Titular[] = [], polizasPropias: string[] = []): boolean | 'duda' {
   const categoriaSeguro = /^seguro$/i.test((e.categoria ?? '').trim())
-  const senal = RE_ASEGURADORA.test(e.proveedor ?? '') || RE_DOC_POLIZA.test(`${e.concepto ?? ''} ${e.numero_factura ?? ''}`) || RE_ASEGURADORA.test(e.concepto ?? '')
+  const textoDoc = `${e.concepto ?? ''} ${e.numero_factura ?? ''}`
+  const senal = RE_ASEGURADORA.test(e.proveedor ?? '') || RE_DOC_POLIZA.test(textoDoc) || RE_ASEGURADORA.test(e.concepto ?? '')
   if (!senal && !categoriaSeguro) return false
   if (!senal && categoriaSeguro) return 'duda'
 
+  // 1) Liquidación/comisión/mediador…: no es gasto aunque lleve el nombre de Alberto.
+  if (RE_MEDIACION.test(`${e.proveedor ?? ''} ${textoDoc}`)) return true
+
   const nif = normalizaNifReceptor(e.nif_cliente)
   const nifsPropios = [NIF_ALBERTO, ...titulares.map((t) => normalizaNifReceptor(t.nif))].filter(Boolean)
-  // NIF del cliente igual al del proveedor = el extractor los confundió: dato inservible.
-  if (nif && nif !== normalizaNifReceptor(e.nif_proveedor)) return nifsPropios.includes(nif) ? false : true
-
   const nombre = normalizaNombreReceptor(e.cliente)
-  if (nombre && !NOMBRE_VACIO.test(nombre)) return nombreEsPropio(nombre, titulares) ? false : true
+  let tomador: 'propio' | 'ajeno' | 'desconocido' = 'desconocido'
+  if (nif && nif !== normalizaNifReceptor(e.nif_proveedor)) tomador = nifsPropios.includes(nif) ? 'propio' : 'ajeno'
+  else if (nombre && !NOMBRE_VACIO.test(nombre)) tomador = nombreEsPropio(nombre, titulares) ? 'propio' : 'ajeno'
 
+  // 2) Tomador claramente de un tercero → póliza de cliente.
+  if (tomador === 'ajeno') return true
+
+  // 3) Solo la lista blanca es gasto propio.
+  const blanca = RE_PROPIA_BLANCA.test(`${e.proveedor ?? ''} ${e.concepto ?? ''}`)
+    || polizasPropias.some((n) => n && textoDoc.replace(/\s/g, '').includes(n.replace(/\s/g, '')))
+  if (blanca) return false
+
+  // 4) Cualquier otro documento de aseguradora (aunque lleve el nombre de Alberto) → duda.
   return 'duda'
 }

@@ -20,3 +20,13 @@ test('tomador desconocido o null → duda (no se descarta)', () => {
 test('un gasto cualquiera sin relación con seguros → false', () => {
   assert.equal(esDocumentoPolizaCliente({ proveedor: 'IONOS', concepto: 'Hosting', categoria: 'SOFTWARE', cliente: 'Otro' }), false)
 })
+
+test('Allianz Moto a nombre de Alberto como comisionista («liquidación») → NO es gasto', () => {
+  assert.equal(esDocumentoPolizaCliente({ proveedor: 'Allianz', concepto: 'Liquidación Allianz Moto', total: 251.47, cliente: 'Alberto Suárez Gutiérrez', nif_cliente: '28823484E' } as never), true)
+  assert.equal(esDocumentoPolizaCliente({ proveedor: 'Allianz', concepto: 'Resumen de operaciones', cliente: 'Alberto Suárez Gutiérrez' }), true)
+})
+
+test('aseguradora fuera de la lista blanca con nombre de Alberto → duda; gastos_fijos la amplía', () => {
+  assert.equal(esDocumentoPolizaCliente({ proveedor: 'Allianz', concepto: 'Recibo de prima póliza 777', cliente: 'Alberto Suárez Gutiérrez', nif_cliente: '28823484E' }), 'duda')
+  assert.equal(esDocumentoPolizaCliente({ proveedor: 'Allianz', concepto: 'Recibo de prima póliza 777', cliente: 'Alberto Suárez Gutiérrez' }, [], ['777']), false)
+})
