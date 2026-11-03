@@ -12,7 +12,7 @@ import {
   confirmarVehiculoMapfre, ErrorSelectorComercialAlteradoMapfre, instalarGuardEmision, leerOpcionesComercialesMapfre, pulsarContinuarMapfre, type GuardEmision,
 } from '../src/guard.ts'
 
-test('v0.8.49 · versión', () => assert.equal(mapfreAuto.version, '0.8.57'))
+test('v0.8.49 · versión', () => assert.equal(mapfreAuto.version, '0.8.58'))
 
 const MATRICULA = '1234BCD'
 type Mutar = 'ninguna' | 'valor' | 'prima' | 'sinCierre'

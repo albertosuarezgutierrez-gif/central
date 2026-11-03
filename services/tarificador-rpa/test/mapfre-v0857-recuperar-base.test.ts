@@ -7,7 +7,7 @@ import { test } from 'node:test'
 import { avisoDialogoVarianteMapfre, clasificarDialogoVarianteMapfre, mapfreAuto, tarificarVariantesComercialesMapfre, type ProductoVistoMapfre, type TarjetaLeidaMapfre } from '../src/adapters/mapfre/auto.ts'
 import { ErrorSelectorComercialAlteradoMapfre } from '../src/guard.ts'
 
-test('v0.8.57 · versión', () => assert.equal(mapfreAuto.version, '0.8.57'))
+test('v0.8.57 · versión', () => assert.equal(mapfreAuto.version, '0.8.58'))
 
 const OPC = ['TERCEROS', 'TERCEROS AMPLIADO', 'BASICar TERCEROS AMPLIADO']
 const vistos = (): ProductoVistoMapfre[] => [
