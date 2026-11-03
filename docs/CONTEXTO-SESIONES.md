@@ -71,6 +71,11 @@ original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados
 - Bandeja revisada con Alberto: Netflix → pisos compartidos; PEPEMOBILE → correduría; Anthropic 170 € = bonos reales; TotalEnergies 310,01 € = Monte Carmelo (personal); Vercel B2DRQ0QS-0007 duplicado descartado.
 - EMASESA 2026 completo (15/15, 3 contratos). **Dúplex: el agua va en la comunidad (76,18 €/mes), sin contrato EMASESA** (Alberto).
 - Pendiente: lecturas sin tipo ni importe se releen a diario (distinguir «falló la IA» de «nada que leer»); nombres de pisos a mano en `NOMBRES_INMUEBLES`; vigilar facturas reales clasificadas como aviso/liquidación (van a `agente_log`, no a bandeja).
+## (03/11/2026) Captación · parado el mailing en frío de ia-rest/ialimp; foco 100% correduría
+- Quitados 9 crons de outreach de `apps/ia-rest/vercel.json` (se dejan crm-recordatorios y pipeline-comercial: solo Telegram a Alberto).
+- BD: 2 campañas ialimp pausadas, 10 envíos pendientes → `omitido`; 277 borradores de `iarest.leads` borrados (los 142 enviados intactos).
+- Estrategia propuesta (pendiente de OK de Alberto): empresa MEDIANA familiar (20-250 emp.), no grande; canales: cartera propia (LSSI 21.2) > gestorías socias > LinkedIn > asociaciones; NO mailing en frío (LSSI art. 21).
+- Pendiente antes de captar: landing `/empresas` en asegura-web, cuenta demo del portal, contrato de encargo RRHH del abogado.
 
 ## (03/11/2026) Facturas · pólizas de clientes y comisiones de portal NO son gasto + bandeja de pendientes
 - Regla Alberto: recibo/liquidación de póliza de un CLIENTE (tomador ≠ Alberto/Pilar) NO es gasto (la comisión entra neta por banco); factura de comisión de Booking/Airbnb/Expedia/Vrbo = justificante, la comisión ya va como bruto−neto en `incomes`. Helpers `lib/agente-facturas/{poliza-cliente,portal-comision}.ts` (tomador dudoso → bandeja con aviso). Skills/agentes actualizados.

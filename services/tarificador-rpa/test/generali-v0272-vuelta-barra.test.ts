@@ -55,6 +55,8 @@ const pantalla = `
     document.querySelectorAll('#secundario > li').forEach((li, i) => { li.className = i === n ? 'current' : '' });
     document.getElementById('paso0').style.display = n === 0 ? 'block' : 'none';
     document.getElementById('paso1').style.display = n === 1 ? 'block' : 'none';
+    // v0.2.73: «Datos de Valoración» completo → el portal no lo da por incompleto (con el aviso vivo y nada que rellenar el bot para con diagnóstico).
+    if (n === 0) document.querySelector('#areaErrores ol').innerHTML = '';
   }
   function eventAndSubmit(ev) { /* en el volcado, «Siguiente» desde «Datos de Valoración» no cambió de paso */ }
 </script>
@@ -73,7 +75,7 @@ const pantalla = `
 <div id="paso1" style="display:block;"><h2>Garantías y Capitales opcionales</h2></div>
 <input type="button" name="siguiente" id="siguiente" value="Siguiente ›" onclick="eventAndSubmit('NEXT');">`
 
-test('v0.2.72 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.72'))
+test('v0.2.72 · versión (vigente 0.2.73)', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.73'))
 
 test('volcado 9aa12762: tras «Datos de Valoración» vuelve a «Garantías y Resultados» por la barra (`pedirPaso`) aunque «Siguiente» no navegue, sin gastar «Siguiente»', async () => {
   const r: Registro = { pulsados: [], siguiente: 0 }

@@ -193,16 +193,16 @@ export function remapearGarantiasLectura<V extends { estado: 'incluida' | 'exclu
   const genericas = new Set(GENERICO.map((x) => x.clave))
   const out: Record<string, V> = {}
   const sinEquivalencia: string[] = []
-  let previo: string | null = null
   for (const [k, v] of Object.entries(garantias)) {
     let destino: string | null
     if (propias.has(k)) destino = k
     else if (genericas.has(k)) destino = GENERICO_A_VEHICULO[k] ?? null
     else destino = normalizarGarantia(ramo, k) ?? k
     if (destino === null) { sinEquivalencia.push(k); continue }
-    // Sub-garantía sin nombre canónico («*Indemnización» del PDF de Mapfre): cuelga de la anterior, no crea fila propia.
-    if (destino === k && !propias.has(k) && /^\s*[*\-–]/.test(k) && previo !== null) continue
-    previo = destino
+    // Sub-garantía sin nombre canónico («*Indemnización» del PDF de Mapfre): es detalle de otra, NUNCA crea fila propia.
+    // 03/11/2026 (AS-26-0067): antes solo si había una «anterior», pero el jsonb de Postgres NO conserva el orden de las claves (ordena
+    // por longitud): «*Indemnización» salía la primera y creaba la fila «*Indemnización» con 4 celdas vacías en el cuadro.
+    if (destino === k && !propias.has(k) && /^\s*[*\-–]/.test(k)) continue
     const ya = out[destino]
     if (ya && !(v.estado === 'incluida' && ya.estado !== 'incluida')) continue
     out[destino] = v
