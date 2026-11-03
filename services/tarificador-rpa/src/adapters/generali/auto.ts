@@ -1276,11 +1276,11 @@ const jsEstadoNeutroGenerali = (selBloque: string, name: string) => `(() => {
   const col = b.firstElementChild ? b.firstElementChild.cloneNode(true) : null;
   if (col) col.querySelectorAll('.required').forEach((x) => x.remove());
   const ctrls = Array.from(b.querySelectorAll('input[name="${name}"]'));
-  const radios = ctrls.filter((el) => (el.getAttribute('type') || '').toLowerCase() === 'radio');
+  const marcables = ctrls.filter((el) => (el.getAttribute('type') || 'text').toLowerCase() !== 'text');
   const texto = ctrls.find((el) => (el.getAttribute('type') || 'text').toLowerCase() === 'text');
   return {
     rotulo: T(col).replace(/\\*\\s*$/, '').trim(),
-    opciones: radios.map((el) => ({ texto: T(el.nextElementSibling), marcada: el.checked === true })),
+    opciones: marcables.map((el) => ({ texto: T(el.nextElementSibling), marcada: el.checked === true })),
     vacio: texto ? String(texto.value || '').trim() === '' : false,
     soloLectura: ctrls.length > 0 && ctrls.every((el) => el.readOnly || el.disabled),
   };
