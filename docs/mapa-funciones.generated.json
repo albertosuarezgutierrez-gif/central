@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-03T11:33:43Z",
-  "sha": "2791f2dd61e3b8c79bee4e7fc114f33fac7b09c6",
+  "generadoEn": "2026-11-03T12:38:31Z",
+  "sha": "0670d937077064ab48b10f72a9dbdf48bebfce86",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -176678,7 +176678,7 @@
         "properties"
       ],
       "rutaApi": null,
-      "hash": "b43bfd2c005d"
+      "hash": "db13b1e3c653"
     },
     {
       "ruta": "apps/plataforma/lib/fiscal-alertas-db.ts",

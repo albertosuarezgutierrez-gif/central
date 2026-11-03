@@ -171,22 +171,22 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 420 | 76.702 | 66.326.713 | 0 | 0 |
-| `otro` | 414 | 18.066 | 36.979.376 | 21.480.658 | 0 |
-| `lectura-directa` | 355 | 11.789 | 33.497.631 | 0 | 0 |
-| `mcp:github` | 354 | 8.801 | 6.433.957 | 58.212.794 | 119 |
-| `sql` | 270 | 8.593 | 4.872.408 | 3.040.710 | 34 |
-| `escritura` | 257 | 6.673 | 106.406.432 | 0 | 0 |
+| `bash` | 420 | 76.779 | 66.385.080 | 0 | 0 |
+| `otro` | 414 | 18.099 | 37.047.853 | 21.480.658 | 0 |
+| `lectura-directa` | 355 | 11.809 | 33.524.924 | 0 | 0 |
+| `mcp:github` | 354 | 8.806 | 6.434.079 | 58.212.794 | 119 |
+| `sql` | 270 | 8.658 | 4.922.721 | 3.040.710 | 34 |
+| `escritura` | 257 | 6.683 | 106.423.277 | 0 | 0 |
 | `mcp:Vercel` | 90 | 1.538 | 1.335.201 | 237.328 | 49 |
+| `mcp:Gmail` | 71 | 1.513 | 1.634.672 | 0 | 101 |
 | `mcp:Booking-com` | 53 | 1.505 | 6.179.360 | 0 | 0 |
-| `mcp:Gmail` | 71 | 1.500 | 1.619.951 | 0 | 101 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
-| `agente:general-purpose` | 154 | 1.422 | 840.574 | 27.925.276 | 0 |
-| `mcp:claude-code-remote` | 89 | 1.356 | 196.848 | 2.984.731 | 0 |
+| `agente:general-purpose` | 154 | 1.426 | 843.410 | 27.925.276 | 0 |
+| `mcp:claude-code-remote` | 89 | 1.363 | 197.603 | 2.984.731 | 0 |
+| `mcp:Google_Drive` | 27 | 780 | 811.364 | 0 | 58 |
 | `mcp:Interactive-Brokers--IBKR-` | 17 | 711 | 831.624 | 0 | 0 |
-| `mcp:Google_Drive` | 27 | 570 | 685.420 | 0 | 54 |
 | `mcp:Supabase` | 157 | 525 | 166.611 | 23.840 | 9 |
-| `agente:agente-architect` | 91 | 516 | 358.968 | 12.944.779 | 0 |
+| `agente:agente-architect` | 92 | 517 | 359.989 | 12.955.196 | 0 |
 | `mcp:Google-Drive` | 37 | 178 | 185.960 | 0 | 2 |
 | `mcp:Booking_com` | 5 | 166 | 443.032 | 0 | 0 |
 | `agente:agente-mecanico` | 64 | 159 | 85.709 | 8.187.207 | 0 |
@@ -197,12 +197,12 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `agente:Explore` | 41 | 90 | 43.546 | 2.217.721 | 0 |
 | `mcp:Trivago` | 3 | 53 | 8.707.439 | 0 | 1 |
 | `mcp:posthog` | 5 | 47 | 64.610 | 0 | 1 |
-| `agente:jefe-contabilidad` | 5 | 40 | 18.033 | 579.584 | 0 |
+| `agente:jefe-contabilidad` | 5 | 42 | 19.839 | 582.539 | 0 |
 | `agente:verificador-esceptico` | 18 | 35 | 11.159 | 133.263 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
 | `agente:general` | 15 | 27 | 17.921 | 1.297.222 | 0 |
+| `agente:lector-correo` | 8 | 22 | 7.711 | 0 | 0 |
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
-| `agente:lector-correo` | 8 | 21 | 7.462 | 0 | 0 |
 | `mcp:Claude_Docs` | 1 | 18 | 11.559 | 0 | 0 |
 | `mcp:Supabase_asegura` | 14 | 15 | 3.939 | 0 | 0 |
 | `mcp:Expedia` | 1 | 12 | 29.795 | 0 | 0 |
