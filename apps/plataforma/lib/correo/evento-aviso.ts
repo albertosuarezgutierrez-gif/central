@@ -61,6 +61,9 @@ export function eventoConfirmado(resultados: readonly ResultadoPuertoEvento[] | 
   return resultados !== null && resultados.some((r) => r.estado === 'aplicado' || r.estado === 'duplicado_cima')
 }
 
+/** Misma marca que `MARCA_SEGUNDO_AVISO` de asegura (otra app: no se importa). */
+const SEGUNDO_AVISO = '⚠️ 2º aviso'
+
 const COMPANIA: Record<string, string> = { reale: 'Reale', occident: 'Occident', mapfre: 'Mapfre', allianz: 'Allianz' }
 
 /** Lo leído del correo, elemento a elemento (con la MISMA clave que usa asegura). */
@@ -108,7 +111,7 @@ function leidos(e: EventoAseguradora): Leido[] {
       linea: `Póliza nueva emitida: ${esc(p.numeroPoliza)}${p.producto ? ` · ${esc(p.producto)}` : ''}${p.fechaEfecto ? ` · efecto ${fechaEs(p.fechaEfecto)}` : ''}${p.prima !== null ? ` · ${eur(p.prima)}` : ''}`,
     }))
   }
-  return [{ clave: e.numeroPoliza, linea: `Póliza ${esc(e.numeroPoliza)}${e.descripcion ? ` · ${esc(e.descripcion.slice(0, 120))}` : ''}` }]
+  return [{ clave: e.numeroPoliza, linea: `${e.esRecordatorio ? `${SEGUNDO_AVISO} · ` : ''}Póliza ${esc(e.numeroPoliza)}${e.descripcion ? ` · ${esc(e.descripcion.slice(0, 120))}` : ''}${e.fechaEnvioCompania ? ` · carta del ${fechaEs(e.fechaEnvioCompania)}` : ''}` }]
 }
 
 function titulo(e: EventoAseguradora): string {
@@ -119,6 +122,7 @@ function titulo(e: EventoAseguradora): string {
   if (e.tipo === 'anulacion') return 'Póliza ANULADA por la compañía'
   if (e.tipo === 'emision') return e.polizas.length === 1 ? 'Póliza nueva emitida' : `${e.polizas.length} pólizas nuevas emitidas`
   if (e.tipo === 'solicitud') return 'Solicitud en la compañía'
+  if (e.subtipo === 'regularizacion_rc') return e.esRecordatorio ? `${SEGUNDO_AVISO}: regularización de RC` : 'Regularización de RC'
   return 'Suplemento'
 }
 

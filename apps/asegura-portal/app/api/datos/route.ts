@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getIp, rateLimit } from '@/lib/rate-limit'
-import { llamarPuenteSolicitud } from '@/lib/solicitud-datos'
+import { enviarRegularizacionPuente, llamarPuenteSolicitud } from '@/lib/solicitud-datos'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,7 +15,10 @@ export async function POST(req: Request) {
   const b = (await req.json().catch(() => null)) as Record<string, unknown> | null
   const token = typeof b?.token === 'string' ? b.token.trim() : ''
   if (!/^[A-Za-z0-9_-]{40,60}$/.test(token)) return NextResponse.json({ estado: 'muerta' }, { status: 410 })
-  const r = await llamarPuenteSolicitud({ metodo: 'POST', token, respuestas: b?.respuestas ?? {}, consentimiento: b?.consentimiento === true })
+  // Regularización de RC (03/11/2026): mismo enlace, otro motivo. Asegura valida y guarda cifrado, ligado a póliza+periodo.
+  const r = b?.motivo === 'regularizacion_rc'
+    ? await enviarRegularizacionPuente(token, b.regularizacion)
+    : await llamarPuenteSolicitud({ metodo: 'POST', token, respuestas: b?.respuestas ?? {}, consentimiento: b?.consentimiento === true })
   if (!r) return NextResponse.json({ error: 'sin_puente' }, { status: 503 })
   return NextResponse.json(r.json ?? { error: `HTTP ${r.status}` }, { status: r.status })
 }

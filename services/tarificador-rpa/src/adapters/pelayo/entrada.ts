@@ -47,12 +47,14 @@ export const ROTULOS_RAMO_PELAYO: Readonly<Record<'auto' | 'hogar', readonly str
 export const RE_BOTON_ENTRAR_PELAYO = /^\s*(acceder|entrar|iniciar\s+sesi[oó]n|log\s*in|conectar|continuar|identificarse)\s*$/i
 export const RE_TEXTO_PROHIBIDO_LOGIN_PELAYO = /cambiar\s+(la\s+)?contrase|olvid|recuper|restablec|registr/i
 
-export type EsperasPelayo = { loginMs?: number; menuMs?: number; paginaMs?: number; formularioMs?: number }
-const ESPERAS: Required<EsperasPelayo> = { loginMs: 60_000, menuMs: 20_000, paginaMs: 45_000, formularioMs: 30_000 }
+export type EsperasPelayo = { loginMs?: number; menuMs?: number; paginaMs?: number; formularioMs?: number; reintentoMs?: number }
+const ESPERAS: Required<EsperasPelayo> = { loginMs: 60_000, menuMs: 20_000, paginaMs: 45_000, formularioMs: 30_000, reintentoMs: 8_000 }
 
 export type CtxEntradaPelayo = Pick<ContextoPortal, 'credenciales' | 'pausa' | 'pulsar' | 'exigirSinCaptcha' | 'log'> & {
   /** Menú, «Nuevo Presupuesto» y ramo pulsable: SOLO por la puerta exacta del guard (`pulsarEnlaceEntradaAutorizado`). */
-  pulsarEnlaceEntrada: (boton: Locator) => Promise<void>
+  pulsarEnlaceEntrada: (boton: Locator, opciones?: { reintento?: boolean }) => Promise<void>
+  /** 0.3.33: nota de diagnóstico de la elección del ramo (forma CERRADA `RE_NOTA_ENTRADA_PELAYO`, solo contadores); el worker la lleva al mapa (huecos). */
+  diagnostico?: (nota: string) => void
 }
 
 const sinTildes = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase()
@@ -266,6 +268,44 @@ export function cambioPantallaPelayo(antes: EstructuraPelayo, despues: Estructur
   return huellaPantallaPelayo(antes) !== huellaPantallaPelayo(despues)
 }
 
+/** 0.3.33: lo que se observó al elegir el ramo (solo contadores y 0/1; nunca texto del portal). */
+export type DiagnosticoRamoPelayo = { tarjetas: number; clic: boolean; cambio: boolean; pestana: boolean; dialogo: number; modal: number; reintento: boolean }
+
+/** 0.3.33: forma CERRADA de la nota de diagnóstico (la misma que acepta asegura en `notaFin`). */
+export const RE_NOTA_ENTRADA_PELAYO = /^entrada pelayo: tarjetas=\d{1,2} clic=[01] cambio=[01] pestana=[01] dialogo=\d{1,2} modal=\d{1,2} reintento=[01]$/
+
+/** 0.3.33: la nota de diagnóstico (tarjeta encontrada, clic dado, cambio detectado, pestaña nueva, diálogo, modal, reintento). Pura. */
+export function notaDiagnosticoRamoPelayo(d: DiagnosticoRamoPelayo): string {
+  const n = (x: number) => Math.max(0, Math.min(99, Math.trunc(x) || 0))
+  const b = (x: boolean) => (x ? 1 : 0)
+  return `entrada pelayo: tarjetas=${n(d.tarjetas)} clic=${b(d.clic)} cambio=${b(d.cambio)} pestana=${b(d.pestana)} dialogo=${n(d.dialogo)} modal=${n(d.modal)} reintento=${b(d.reintento)}`
+}
+
+const SCRIPT_MODALES = `(() => {
+  const vis = (el) => { const r = el.getBoundingClientRect(); const cs = getComputedStyle(el); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none'; };
+  return Array.from(document.querySelectorAll('[role="dialog"],[role="alertdialog"],[aria-modal="true"],.modal.show,.modal.in,.modal-dialog,.swal2-popup,.ui-dialog,.lfr-alert-modal')).filter(vis).length;
+})()`
+
+/** 0.3.33: nº de diálogos/modales VISIBLES (página y marcos). Solo cuenta. */
+export async function contarModalesPelayo(page: Page): Promise<number> {
+  let n = 0
+  for (const r of raices(page)) n += Number((await r.evaluate(SCRIPT_MODALES).catch(() => 0)) || 0)
+  return n
+}
+
+/** 0.3.33: el elemento INTERIOR con el texto exacto del ramo (el más profundo que casa: p. ej. el título dentro de la tarjeta), visible, hoja exacta. */
+async function interioresRamo(page: Page, rotulos: readonly string[]): Promise<Locator[]> {
+  const out: Locator[] = []
+  for (const r of raices(page)) {
+    for (const t of rotulos) {
+      const c = r.getByText(etiquetaExactaPelayo(t)).locator('visible=true')
+      const n = Math.min(await contar(c), 10)
+      for (let i = 0; i < n; i++) if (await esHojaExacta(c.nth(i), t)) out.push(c.nth(i))
+    }
+  }
+  return out
+}
+
 async function volcar(page: Page, ctx: CtxEntradaPelayo, que: string): Promise<EstructuraPelayo> {
   const e = await estructuraPantallaPelayo(page)
   ctx.log(`pelayo_estructura ${que} ${JSON.stringify(e)}`)
@@ -379,7 +419,7 @@ export async function abrirPresupuestosPelayo(page: Page, ctx: CtxEntradaPelayo,
   throw new ErrorTarificador('portal', `pelayo/entrada: no se localiza el enlace «${RUTA_MENU_PELAYO[1]}» en el desplegable de «${RUTA_MENU_PELAYO[0]}» (${motivo}) (hueco)`)
 }
 
-export type ResultadoRamoPelayo ={ estado: 'select' | 'pulsado' | 'no_elegido'; motivo?: string }
+export type ResultadoRamoPelayo = { estado: 'select' | 'pulsado' | 'no_elegido'; motivo?: string; /** 0.3.33: controles (tarjetas o desplegables) del ramo que se vieron. */ controles?: number }
 
 type RamoLocalizado = { selects: { sel: Locator; indice: number }[]; pulsables: Locator[] }
 
@@ -416,18 +456,18 @@ async function esperarRamo(page: Page, rotulos: readonly string[], ms: number): 
  */
 export async function elegirRamoPelayo(page: Page, ctx: CtxEntradaPelayo, ramo: string, ms = 0): Promise<ResultadoRamoPelayo> {
   const { selects, pulsables } = await esperarRamo(page, rotulosRamoPelayo(ramo), ms)
-  if (selects.length > 1) return { estado: 'no_elegido', motivo: `${selects.length} desplegables con la opción del ramo` }
+  if (selects.length > 1) return { estado: 'no_elegido', motivo: `${selects.length} desplegables con la opción del ramo`, controles: selects.length }
   if (selects.length === 1) {
     await ctx.pausa()
     await selects[0].sel.selectOption({ index: selects[0].indice })
     await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined)
-    return { estado: 'select' }
+    return { estado: 'select', controles: 1 }
   }
-  if (pulsables.length === 0) return { estado: 'no_elegido', motivo: 'sin control del ramo' }
-  if (pulsables.length > 1) return { estado: 'no_elegido', motivo: `${pulsables.length} controles del ramo` }
+  if (pulsables.length === 0) return { estado: 'no_elegido', motivo: 'sin control del ramo', controles: 0 }
+  if (pulsables.length > 1) return { estado: 'no_elegido', motivo: `${pulsables.length} controles del ramo`, controles: pulsables.length }
   await ctx.pulsarEnlaceEntrada(pulsables[0])
   await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined)
-  return { estado: 'pulsado' }
+  return { estado: 'pulsado', controles: 1 }
 }
 
 /**
@@ -457,15 +497,35 @@ export async function abrirNuevoPresupuestoPelayo(page: Page, ctx: CtxEntradaPel
   const abiertas: Page[] = []
   const alAbrir = (p: Page) => { abiertas.push(p) }
   contexto.on('page', alAbrir)
+  // 0.3.33: solo se CUENTAN los diálogos nativos (alert/confirm); no se aceptan ni se descartan aquí (lo hace el worker, que los descarta).
+  let dialogos = 0
+  const alDialogo = () => { dialogos++ }
+  destino.on('dialog', alDialogo)
   const r = await elegirRamoPelayo(destino, ctx, ramo)
   ctx.log(`pelayo_ramo ${JSON.stringify({ ramo, ...r })}`)
-  if (r.estado === 'no_elegido') {
+  const diag: DiagnosticoRamoPelayo = { tarjetas: r.controles ?? 0, clic: r.estado !== 'no_elegido', cambio: false, pestana: false, dialogo: 0, modal: 0, reintento: false }
+  const cierra = async (actual: Page): Promise<void> => {
     contexto.off('page', alAbrir)
+    destino.off('dialog', alDialogo)
+    diag.dialogo = dialogos
+    diag.pestana = abiertas.some((p) => p !== destino)
+    diag.modal = await contarModalesPelayo(actual)
+    diag.cambio = actual !== destino || cambioPantallaPelayo(antes, await estructuraPantallaPelayo(actual))
+    const nota = notaDiagnosticoRamoPelayo(diag)
+    ctx.log(`pelayo_diagnostico_ramo ${nota}`)
+    // Solo se lleva al mapa cuando algo no fue como se esperaba (sin clic, o sin cambio de pantalla ni pestaña nueva).
+    if (!diag.clic || (!diag.cambio && !diag.pestana)) ctx.diagnostico?.(nota)
+  }
+  if (r.estado === 'no_elegido') {
+    await cierra(destino)
     return destino
   }
   // El primer formulario (0.3.32): la tarjeta del ramo puede abrir una PESTAÑA nueva (sin href: `window.open`) o repintar la misma página (incl. iframe).
   // Se espera a una pestaña nueva o a que la pantalla CAMBIE (no solo el nº de campos), se deja asentar y se vuelca. No se rellena ni se avanza.
+  // 0.3.33: si pasada la primera espera NO ha cambiado nada (ni pestaña, ni pantalla), UN reintento sobre el elemento interior de texto exacto
+  // (el manejador de la tarjeta puede colgar de un hijo, o no estar enlazado aún al primer clic), por la misma puerta del guard.
   const fin = Date.now() + e.formularioMs
+  const finPrimera = Date.now() + Math.min(e.reintentoMs, e.formularioMs)
   let actual: Page = destino
   for (;;) {
     const nuevaPestana = abiertas.find((p) => p !== destino && !p.isClosed())
@@ -477,9 +537,18 @@ export async function abrirNuevoPresupuestoPelayo(page: Page, ctx: CtxEntradaPel
       break
     }
     if (cambioPantallaPelayo(antes, await estructuraPantallaPelayo(destino)) || Date.now() >= fin) break
+    if (!diag.reintento && r.estado === 'pulsado' && Date.now() >= finPrimera && (await contarModalesPelayo(destino)) === 0 && dialogos === 0) {
+      diag.reintento = true
+      await destino.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => undefined)
+      const interior = (await interioresRamo(destino, rotulosRamoPelayo(ramo)))[0]
+      if (interior) {
+        await ctx.pulsarEnlaceEntrada(interior, { reintento: true }).catch((err) => ctx.log(`pelayo_reintento_ramo_rechazado ${String((err as Error)?.constructor?.name ?? 'Error').slice(0, 40)}`))
+        await destino.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined)
+      }
+      continue
+    }
     await destino.waitForTimeout(500)
   }
-  contexto.off('page', alAbrir)
   await actual.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined)
   // Asentar: el formulario se pinta por trozos; se espera a dos lecturas seguidas iguales (tope ~5 s).
   let previa = huellaPantallaPelayo(await estructuraPantallaPelayo(actual))
@@ -489,6 +558,7 @@ export async function abrirNuevoPresupuestoPelayo(page: Page, ctx: CtxEntradaPel
     if (h === previa) break
     previa = h
   }
+  await cierra(actual)
   await volcar(actual, ctx, 'formulario_ramo')
   return actual
 }

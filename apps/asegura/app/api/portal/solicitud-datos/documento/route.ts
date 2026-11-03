@@ -7,6 +7,7 @@ import { aseguraConfigurada } from '@/lib/asegura-db'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { puentePortalAutorizado } from '@/lib/puente-portal'
 import { subirDocumentoSolicitud } from '@/lib/solicitud-datos'
+import { subirDocumentoRegularizacion } from '@/lib/regularizacion-rc'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -29,6 +30,12 @@ async function POSTSin(req: Request) {
     const fichero = form?.get('documento')
     if (!(fichero instanceof File)) return NextResponse.json({ estado: 'invalido', motivo: 'No llegó ningún fichero.' }, { status: 400 })
     if (fichero.size > MAX_BYTES_DOCUMENTO) return NextResponse.json({ estado: 'invalido', motivo: 'El fichero es demasiado grande.' }, { status: 413 })
+    // Regularización de RC (03/11/2026): el adjunto opcional (modelo 390, cuentas). Se archiva sin leerlo con IA.
+    if (form?.get('motivo') === 'regularizacion_rc') {
+      const rr = await subirDocumentoRegularizacion(token, { nombre: fichero.name || 'documento', mime: fichero.type, contenido: Buffer.from(await fichero.arrayBuffer()) })
+      if (rr.ok) return NextResponse.json({ ok: true, etiqueta: 'Documento', valores: {}, aviso: null })
+      return NextResponse.json(rr, { status: rr.estado === 'tope' ? 409 : rr.estado === 'invalido' ? 415 : rr.estado === 'error' ? 503 : 410 })
+    }
     const r = await subirDocumentoSolicitud(token, {
       nombre: fichero.name || 'documento',
       mime: fichero.type,

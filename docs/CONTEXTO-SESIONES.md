@@ -80,6 +80,12 @@ original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados
 - Escritura del apellido por SQL bloqueada por permisos; Alberto lo edita a mano (a las 1ª no quedó guardado: revisar). Sincro CIMA (`sincro-cima.ts` caso 'nombre') puede reescribir nombre: no hay blindaje de edición manual.
 - 698 lápidas fusionadas conservan `tipo='cliente'`/`activo=true` (pendiente normalizar).
 
+## (03/11/2026) Correduría · regularización RC de Occident automatizada (fases 1-2)
+- F1: parser saca periodo/fecha carta/recordatorio; clave tarea póliza+periodo; vence carta+15d (mín. hoy+2); 2º aviso → prioridad alta + ⚠️ en Telegram.
+- F2: al crear la tarea, petición de facturación al cliente: borrador → Telegram ✅/✏️ → enlace `/datos/[token]` del portal → cifra guardada + aviso. Nada sale sin ✅.
+- 🚨 PENDIENTE OK Alberto: aplicar `apps/asegura/prisma/sql/2026-11-03b_solicitud_regularizacion_rc.sql` (tabla `seguros.solicitud_regularizacion`); sin él, 503 `sin_migracion` y todo sigue como antes.
+- Fase 3 (responder a Occident con la cifra + cierre automático) sin hacer. Subtipo filtrable en bandeja exigiría migración del CHECK.
+
 ## (03/11/2026) Sivra · mensajes de huésped de Agoda por correo
 - Agoda ya NO es de una sola dirección: manda 1 correo por mensaje desde `@agoda-messaging.com` («Reply from …») y responder a ese correo le llega al huésped. El detector solo conocía el digest de `@agoda.com` → los mensajes de Nicolas Iha (Luxury) quedaron sin contestar.
 - Ahora el parser reconoce ambos formatos, el mensaje entra al agente de huéspedes (misma política auto/botón que Booking) y la respuesta sale por correo (In-Reply-To) en vez de Smoobu. Tabla nueva `agoda_hilos_correo` (aplicada en central).

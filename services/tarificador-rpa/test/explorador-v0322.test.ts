@@ -72,7 +72,7 @@ function contexto(page: Page, guard: GuardEmision, entrada: string, ramo: string
   }
 }
 
-test('versión del explorador 0.3.32', () => assert.equal(EXPLORADOR_VERSION, '0.3.32'))
+test('versión del explorador 0.3.33', () => assert.equal(EXPLORADOR_VERSION, '0.3.33'))
 
 // ─── 1) Allianz VMP: opción de elegir en forma inequívoca ───────────────────────────────────────────────────────────────────────────
 const MP = 'allianz:autos:movilidad_personal'

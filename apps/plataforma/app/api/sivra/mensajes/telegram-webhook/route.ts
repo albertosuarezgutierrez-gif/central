@@ -41,6 +41,7 @@ import { PREFIJO_CLP, decidirBotonClp, idDeEdicion } from '@/lib/correo/lead-cor
 import { guardarEdicionClp, resolverBotonClp } from '@/lib/correo/lead-correduria-pendiente'
 import { PREFIJO_CSG, decidirBotonCsg } from '@/lib/correo/contacto-sugerido'
 import { PREFIJO_FEX, decidirBotonFex, decidirFexEnAsegura, lineaTrasPulsarFex } from '@/lib/felicitaciones-exclientes-asegura'
+import { PREFIJO_RRC, decidirBotonRrc, decidirRrcEnAsegura, editarRrcEnAsegura, idDeEdicionRrc, lineaTrasPulsarRrc, textoPedirEdicionRrc } from '@/lib/regularizacion-rc-asegura'
 import { resolverBotonCsg } from '@/lib/correo/contacto-sugerido-pendiente'
 import { PREFIJO_FACTURA_HUESPED, decidirBotonFactura } from '@/lib/sivra/facturas/telegram'
 import { resolverBotonFactura } from '@/lib/sivra/facturas/telegram-acciones'
@@ -1040,6 +1041,33 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
       return NextResponse.json({ ok: true })
     }
 
+    // ── 📑 Regularización de RC de Grupo ASegura: ✅ enviar / ✏️ modificar / ❌ descartar (rrc_*, 03/11/2026) ──
+    // Sale a un TERCERO (el cliente): solo la PERSONA autorizada (from.id = TELEGRAM_CHAT_ID). ✅/❌ van a asegura en after()
+    // (reclama la fila y comprueba la versión: doble clic o mensaje viejo = nada); ✏️ pide el texto nuevo con force_reply.
+    if (prefix === PREFIJO_RRC) {
+      const d = decidirBotonRrc(cb, action, args, process.env.TELEGRAM_CHAT_ID)
+      if (!d.ok) {
+        await tgAnswerCallback(cb.id, d.toast)
+        return NextResponse.json({ ok: true })
+      }
+      await tgAnswerCallback(cb.id, d.accion === 'env' ? '⏳ Enviando al cliente…' : d.accion === 'mod' ? '✏️ Escribe el texto nuevo' : 'Descartando…')
+      const original = escapeHtml(cb.message?.text ?? '')
+      const mensajeId: number | undefined = cb.message?.message_id
+      if (d.accion === 'mod') {
+        // No se toca la fila: el ✅ de este mensaje sigue valiendo hasta que llegue el texto nuevo (que sube la versión).
+        await tgAskForReply(textoPedirEdicionRrc(d.id)).catch(() => null)
+        return NextResponse.json({ ok: true })
+      }
+      if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n⏳ <i>Pulsado…</i>`).catch(() => {})
+      after(async () => {
+        const estado = await decidirRrcEnAsegura({ accion: d.accion as 'env' | 'no', id: d.id, version: d.version })
+        const linea = lineaTrasPulsarRrc(estado)
+        if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${linea}`).catch(() => {})
+        else await tgSend(linea).catch(() => {})
+      })
+      return NextResponse.json({ ok: true })
+    }
+
     // ── Posible contacto nuevo de aseguradora: ✅ añadir al Directorio / 🚫 ignorar (csg_ok / csg_no; csg_u = ↩️ deshacer el alta automática, 19/10/2026) ──
     // Solo la PERSONA autorizada (from.id = TELEGRAM_CHAT_ID); el id corto apunta a `correduria_pendiente_tg`, un solo uso.
     if (prefix === PREFIJO_CSG) {
@@ -1403,6 +1431,14 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
     if (clpEdit !== null && String(msg.from?.id ?? '') === String(process.env.TELEGRAM_CHAT_ID ?? '')) {
       const hecho = await guardarEdicionClp(clpEdit, String(msg.text ?? ''))
       if (!hecho) await tgSend('<i>Ese borrador ya no espera edición (enviado, descartado o caducado): no he cambiado nada.</i>').catch(() => {})
+      return NextResponse.json({ ok: true })
+    }
+    // Texto nuevo del correo de una regularización de RC (✏️ de `rrc_mod`, marca «[rrc <uuid>]»). Solo del chat autorizado.
+    const rrcEdit = idDeEdicionRrc(String(msg.reply_to_message.text))
+    if (rrcEdit !== null && String(msg.from?.id ?? '') === String(process.env.TELEGRAM_CHAT_ID ?? '')) {
+      const estado = await editarRrcEnAsegura(rrcEdit, String(msg.text ?? ''))
+      if (estado === 'invalida') await tgSend('<i>Ese texto no vale (vacío o demasiado largo): no he cambiado nada.</i>').catch(() => {})
+      else if (estado !== 'editada') await tgSend(`<i>Ese borrador ya no espera edición (enviado, descartado) o no he podido guardarlo (${escapeHtml(estado.slice(0, 60))}): no he cambiado nada.</i>`).catch(() => {})
       return NextResponse.json({ ok: true })
     }
     // Nota a un 👎 del asistente de la correduría («asistente seguros · turno N»).

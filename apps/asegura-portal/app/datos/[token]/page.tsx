@@ -1,6 +1,7 @@
 import { tituloSolicitud } from '@central/module-seguros'
 import { leerSolicitud } from '@/lib/solicitud-datos'
 import Formulario from './Formulario'
+import FormularioRegularizacion from './FormularioRegularizacion'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,6 +11,8 @@ export const dynamic = 'force-dynamic'
  * correo. Por eso aquí NO se enseña nada suyo —ni nombre, ni DNI, ni dirección—:
  * solo se piden los datos que faltan. Lo que mande vale para presupuestar y se
  * verifica al emitir. Enlace inexistente, anulado o caducado → la misma página.
+ * El mismo enlace sirve para la REGULARIZACIÓN de RC (03/11/2026): pide la facturación del periodo. Tampoco enseña nada
+ * del cliente: solo el periodo y la compañía.
  */
 export default async function DatosPresupuesto({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
@@ -42,10 +45,23 @@ export default async function DatosPresupuesto({ params }: { params: Promise<{ t
             <Formulario token={token} campos={s.campos} ramo={s.ramo} tercero={s.tercero} borrador={s.borrador} />
           </>
         )}
+        {s.estado === 'regularizacion' && (
+          <>
+            <h1 className="caratula-titulo">Regularización de tu seguro de Responsabilidad Civil</h1>
+            <p className="suave" style={{ marginTop: 0 }}>
+              {s.compania === 'tu aseguradora' ? 'Tu aseguradora' : s.compania} nos pide la facturación real de tu actividad en el periodo para ajustar la prima. Te lleva un minuto.
+            </p>
+            <FormularioRegularizacion token={token} periodo={s.periodo} documentoYaSubido={s.documento} />
+          </>
+        )}
         {s.estado === 'completada' && (
           <>
             <h1 className="caratula-titulo">¡Recibido!</h1>
-            <p className="suave" style={{ marginTop: 0 }}>Ya tenemos tus datos. Te escribimos en cuanto tengamos el precio.</p>
+            <p className="suave" style={{ marginTop: 0 }}>
+              {s.motivo === 'regularizacion_rc'
+                ? 'Ya tenemos la facturación del periodo. La revisamos y te contamos.'
+                : 'Ya tenemos tus datos. Te escribimos en cuanto tengamos el precio.'}
+            </p>
           </>
         )}
         {s.estado === 'muerta' && (

@@ -22,6 +22,8 @@ import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
 import { abrirSiniestro } from './cartera-siniestros'
 import { crearTarea } from './oportunidad-seguimiento'
+import { crearRegularizacion } from './regularizacion-rc'
+import { engancharRegularizacion } from './regularizacion-rc-enganche'
 import { esTablaInexistente } from './correo-avisos-intranet'
 import { anotarSolicitudCompania } from './solicitud-compania-bd'
 import { asignarDocumentosDeMensaje } from './correo-documento-bd'
@@ -148,6 +150,27 @@ async function hayTareaAbierta(db: Db, correduriaId: string, claveTarea: string)
 }
 
 /**
+ * Refuerza la tarea abierta de esa clave (2º aviso): prioridad `alta` y vencimiento adelantado SOLO si el nuevo es
+ * anterior. Devuelve cuántas tareas tocó. `fecha_limite` se guarda a las 23:59:59 de Madrid, como al crearla.
+ */
+async function reforzarTareaAbierta(
+  db: Db, correduriaId: string, claveTarea: string, r: NonNullable<Plan['reforzarTarea']>,
+): Promise<number> {
+  const filas = await db.$queryRaw<{ id: string }[]>(Prisma.sql`
+    update gestiones g set
+      prioridad = cast(${r.prioridad} as gestion_prioridad),
+      fecha_limite = case when g.fecha_limite is null or (${r.fechaLimite}::date + time '23:59:59') at time zone 'Europe/Madrid' < g.fecha_limite
+                          then (${r.fechaLimite}::date + time '23:59:59') at time zone 'Europe/Madrid' else g.fecha_limite end,
+      updated_at = now()
+    from (select distinct e.gestion_id from correo_evento_entrante e
+          where e.correduria_id = ${correduriaId}::uuid and e.clave_tarea = ${claveTarea} and e.gestion_id is not null) x
+    where g.id = x.gestion_id and g.correduria_id = ${correduriaId}::uuid and g.estado::text <> 'cerrada'
+    returning g.id::text as id`)
+  for (const g of filas) anotarCambio({ entidad: 'gestion', id: g.id, campo: 'prioridad', antes: null, despues: r.prioridad })
+  return filas.length
+}
+
+/**
  * ¿Ya se anotó ESTE aviso? Fila `aplicado` de la misma clave de tarea (póliza/recibo) con la misma fecha de la
  * compañía. El resumen diario de Occident («próximos a la anulación») repite el mismo recibo cada día con otro
  * Message-ID: la idempotencia por correo no lo para, y la ficha se llenaba de la misma nota.
@@ -259,8 +282,9 @@ async function procesarItem(
     // La clave de «una tarea por póliza/recibo» se guarda en toda fila con póliza (también la de solo nota),
     // para que el mismo aviso repetido otro día la encuentre.
     const claveGuardada = plan.claveTarea ?? claveProvisional
-    const campoFecha = campoFechaDedupe(item.tipo)
-    const fechaAviso = campoFecha ? ((item as Record<string, unknown>)[campoFecha] as string | null | undefined) ?? null : null
+    const campoFecha = campoFechaDedupe(item.tipo, item)
+    const valorAviso = campoFecha ? (item as Record<string, unknown>)[campoFecha] : null
+    const fechaAviso = valorAviso === null || valorAviso === undefined ? null : String(valorAviso)
 
     if (plan.estado !== 'sin_resolver' && clienteId) {
       if (plan.abrirSiniestro && polizaId) {
@@ -289,11 +313,18 @@ async function procesarItem(
         && await notaYaAnotada(db, correduriaId, filaId, claveGuardada, campoFecha, fechaAviso)
       if (notaRepetida) resumen = 'el mismo aviso ya está anotado en la ficha: nada nuevo'
       if (plan.nota && !notaRepetida) await anotar(db, correduriaId, clienteId, polizaId, plan.tipoNota, plan.nota)
+      // 2º aviso con la tarea ya abierta: prioridad alta y, si el nuevo plazo es anterior, se adelanta (nunca se retrasa).
+      if (plan.reforzarTarea && claveGuardada && !notaRepetida) {
+        const n = await reforzarTareaAbierta(db, correduriaId, claveGuardada, plan.reforzarTarea)
+        if (n === 0) resumen = `${resumen} (no se encontró la tarea abierta para reforzarla)`
+      }
       if (plan.tarea && polizaId) {
         const v = tareaValida(plan.tarea, new Date(`${hoy}T12:00:00Z`))
         if (v.ok) {
           gestionId = await crearTareaCorreo(db, correduriaId, clienteId, polizaId, plan.tarea)
           fechaLimite = plan.tarea.fechaLimite
+          // Regularización de RC: la tarea recién creada abre su petición al cliente (borrador + Telegram; no rompe el evento).
+          await engancharRegularizacion(crearRegularizacion, correduriaId, entrada.compania, item as Record<string, unknown>, polizaId, ACTOR_CORREO)
         } else {
           resumen = `nota en la ficha; tarea NO creada (${v.motivo})`
         }
