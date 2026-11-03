@@ -65,20 +65,8 @@
       "schedule": "0 8 * * 1"
     },
     {
-      "path": "/api/cron/prospeccion-leads",
-      "schedule": "0 9 * * 1"
-    },
-    {
-      "path": "/api/cron/prospeccion-apify",
-      "schedule": "*/30 * * * *"
-    },
-    {
       "path": "/api/cron/backfill-leads-sevilla",
       "schedule": "0 5 * * *"
-    },
-    {
-      "path": "/api/cron/crm-followup-sevilla",
-      "schedule": "0 11 * * 1-5"
     },
     {
       "path": "/api/cron/instagram",
@@ -117,22 +105,6 @@
       "schedule": "0 7 * * 1"
     },
     {
-      "path": "/api/cron/crm-lead-hunter-sevilla",
-      "schedule": "0 6 * * 1-5"
-    },
-    {
-      "path": "/api/cron/crm-emails-catering",
-      "schedule": "30 7 * * 1-5"
-    },
-    {
-      "path": "/api/cron/crm-emails-restaurantes",
-      "schedule": "45 7 * * 1-5"
-    },
-    {
-      "path": "/api/cron/crm-recordatorio-dia2",
-      "schedule": "0 8 * * *"
-    },
-    {
       "path": "/api/cron/pipeline-comercial",
       "schedule": "0 8 * * 1-5"
     },
@@ -155,14 +127,6 @@
     {
       "path": "/api/cron/seo-agent",
       "schedule": "0 7 * * 5"
-    },
-    {
-      "path": "/api/cron/crm-envio-auto",
-      "schedule": "*/30 7-17 * * 1-5"
-    },
-    {
-      "path": "/api/cron/lead-onboarding",
-      "schedule": "*/30 7-17 * * 1-5"
     }
   ]
 }
