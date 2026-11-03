@@ -68,7 +68,7 @@ original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados
 
 ## (03/11/2026) Fiscal · Pilar, correduría (proyección), IBI y Booking
 - Motor: la media mensual de actividad (Pilar y correduría) divide entre MESES COMPLETOS TRANSCURRIDOS, no entre meses con dato (helper `lib/media-actividad.ts` + test). Pilar 2026: solo 2 facturas (29/05, 2.100€ brutos / 1.981,13€ netos); prestación SS ene-mar 2.835€ (nacimiento, exenta, no cargada). Faltan sus CARGOS (autónomos real, plan pensiones). Bizum = personal.
-- IBI cuenta común (4×171,55€) = Monte Carmelo (ref. 4707007TG3440N0003TR), personal. Socorro es CASA sin comunidad; su IBI ya está prorrateado en `gastos`. ¿Desde qué cuenta se paga? pendiente.
+- IBI 2026 (confirmado con extracto BBVA 03/11): Socorro 2×242,93€ = 485,86€/año (1 recibo por semestre, BBVA ···1175, piso entero 50/50) y Dúplex 2×130,46€ = 260,92€ — cuadran con `gastos_fijos` (falta solo la fila de diciembre). Monte Carmelo (cuenta común) 4×171,55€ = personal. Socorro es CASA sin comunidad. Cargos del 03/11 aún no sincronizados en BD: asignar con factura_ref `ibi:<piso>:2026-plazo2`.
 - Booking: 33 facturas = Dúplex (2888928), Luxury Busto (4340072) y Busto Reform (4771238): cuadran con bruto−neto del motor (±19€). FALTAN las de House Sevillana (2039943): motor 20.246,20€ ene-oct (28,2% del bruto, ~5.400€ sin explicar) → localizar facturas (¿otra cuenta/email o a nombre de la SL?). El motor incluye comisión de reservas nov-dic futuras (3.720€): criterio a decidir. Mapa de IDs corregido en skills/agentes.
 
 ## (03/11/2026) Fiscal · estudios de pisos y correduría (docs/fiscal/2026-11-*.md)
