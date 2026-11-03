@@ -1,9 +1,12 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import SolicitudesEmpleado from '@/components/SolicitudesEmpleado'
 import FichajeEmpleado from '@/components/FichajeEmpleado'
 import MaterialEmpleado from '@/components/MaterialEmpleado'
 import ActivarPush from '@/components/ActivarPush'
+import AvisoPushEmpleado from '@/components/AvisoPushEmpleado'
+import NavEmpleado from '@/components/NavEmpleado'
+import { seccionDeUrl, seccionDisponible, type Seccion } from '@/lib/seccion-empleado'
 import { PieAsegura } from '@/components/MarcaAsegura'
 import CabeceraApp from '@/components/CabeceraApp'
 import { marcaCabecera } from '@/lib/marca-empresa'
@@ -41,6 +44,18 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
   const [otp, setOtp] = useState<{ enviado: boolean; email_parcial?: string } | null>(null)
   const [firmando, setFirmando] = useState(false)
   const [firmaError, setFirmaError] = useState('')
+  const [seccion, setSeccion] = useState<Seccion>('inicio')
+  // La sección vive en la URL (#documentos / ?seccion=documentos): enlaces y push siguen funcionando.
+  useEffect(() => {
+    const leer = () => setSeccion(seccionDisponible(seccionDeUrl(location.hash, location.search), !!tieneFichaje))
+    leer(); window.addEventListener('hashchange', leer)
+    return () => window.removeEventListener('hashchange', leer)
+  }, [tieneFichaje])
+  function irA(s: Seccion) {
+    setSeccion(s)
+    try { history.replaceState(null, '', s === 'inicio' ? location.pathname : `#${s}`) } catch { /* solo cambia la vista */ }
+    window.scrollTo({ top: 0 })
+  }
   const etiqueta = (id: string) => visibles.find(c => c.id === id)?.etiqueta ?? id
 
   // Abrir un documento marca sus avisos como vistos (y la primera apertura, que ve RR.HH.).
@@ -91,29 +106,50 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
   }
 
   const marca = marcaCabecera({ nombre: branding?.nombre, logoUrl: branding?.logo_url, color: branding?.color_primario })
-  const porFirmar = docs.filter(puedeFirmar).length
+  const porFirmarLista = docs.filter(puedeFirmar)
+  const porFirmar = porFirmarLista.length
+  const secciones: Seccion[] = tieneFichaje ? ['inicio', 'documentos', 'vacaciones', 'fichaje'] : ['inicio', 'documentos', 'vacaciones']
   return (
-    <div className="min-h-screen" style={marca.estilo}>
+    <div className="min-h-screen pb-[calc(72px+env(safe-area-inset-bottom))] lg:pb-0" style={marca.estilo}>
       <CabeceraApp perfil="empleado" marca={marca} urlSeguros={urlSeguros} />
     <main className="mx-auto max-w-[520px] lg:max-w-5xl">
       <div className="p-4">
 
+      <NavEmpleado activa={seccion} secciones={secciones} onCambiar={irA} insignias={{ documentos: porFirmar }} />
+
+      {seccion === 'inicio' && (
+      <>
       <section aria-labelledby="saludo" className="mb-1 mt-2 rounded-card border border-accent/20 bg-accent-soft px-4 py-4 sm:px-5">
         <h1 id="saludo" className="text-2xl text-accent-ink">{saludoEmpleado(nombreEmpleado)}</h1>
         <p className="mt-1 text-sm text-ink-2">
-          {branding?.nombre ? <>Tu portal en <strong className="font-semibold text-ink">{branding.nombre}</strong>: nóminas, documentos y vacaciones.</> : 'Tus nóminas, documentos y vacaciones, en un solo sitio.'}
+          {branding?.nombre ? <>Tu portal en <strong className="font-semibold text-ink">{branding.nombre}</strong>.</> : 'Tu portal del empleado.'}
         </p>
-        {porFirmar > 0 && (
-          <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-card px-3 py-1 text-sm font-semibold text-accent-ink">
-            {porFirmar === 1 ? 'Tienes 1 documento por firmar' : `Tienes ${porFirmar} documentos por firmar`}
-          </p>
-        )}
       </section>
 
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-x-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:grid-rows-[auto_1fr]">
-      <div className="contents lg:col-start-1 lg:block">
       <AvisoSeguros />
-      <p className="mb-2"><ActivarPush endpoint="/api/e/push/subscribe" /></p>
+      <AvisoPushEmpleado endpoint="/api/e/push/subscribe" hayAlgoQueFirmar={porFirmar > 0} />
+
+      {/* Arriba, SOLO lo que pide acción: documentos por firmar y fichar. */}
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-x-6 lg:grid-cols-2">
+      <div>
+      {porFirmar > 0 && (
+        <section aria-labelledby="por-firmar" className="my-3 rounded-card border border-accent/40 bg-card p-4">
+          <h2 id="por-firmar" className="text-base">{porFirmar === 1 ? 'Tienes 1 documento por firmar' : `Tienes ${porFirmar} documentos por firmar`}</h2>
+          <ul className="mt-2 divide-y divide-line">
+            {porFirmarLista.slice(0, 5).map(d => (
+              <li key={d.id} className="flex items-center gap-3 py-2 first:pt-0 last:pb-0">
+                <span aria-hidden="true" className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-accent-soft text-accent"><IconoDoc /></span>
+                <span className="min-w-0 flex-1 break-words text-sm font-semibold">{d.nombre}</span>
+                <Boton onClick={() => abrirFirma(d)} className="shrink-0">Firmar</Boton>
+              </li>
+            ))}
+          </ul>
+          {porFirmar > 5 && <button type="button" onClick={() => irA('documentos')} className="mt-2 min-h-[44px] bg-transparent px-0 text-sm text-accent hover:bg-transparent hover:underline">Ver los {porFirmar} en Documentos</button>}
+        </section>
+      )}
+      {porFirmar === 0 && (
+        <p className="my-3 rounded-[12px] border border-ok/30 bg-ok/10 px-3 py-2 text-sm text-ink">No tienes nada pendiente de firmar.</p>
+      )}
 
       {avisos && avisos.avisos.length > 0 && (
         <section className="my-3 rounded-card border border-line bg-card p-4">
@@ -148,17 +184,22 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
         </section>
       )}
 
+
+      </div>
+      <div>
+      {tieneFichaje && <FichajeEmpleado compacto />}
+      </div>
       </div>
 
-      <div className="contents lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:block">
-      {tieneFichaje && <FichajeEmpleado />}
+      <details className="mt-4 text-sm text-ink-3">
+        <summary className="inline-flex min-h-[44px] cursor-pointer items-center">Ajustes</summary>
+        <div className="pb-2"><ActivarPush endpoint="/api/e/push/subscribe" /></div>
+      </details>
+      </>
+      )}
 
-      <MaterialEmpleado />
-
-      <SolicitudesEmpleado />
-      </div>
-
-      <div className="contents lg:col-start-1 lg:block">
+      {seccion === 'documentos' && (
+      <div className="mt-2">
       <section className="my-3 rounded-card border border-line bg-card p-4">
         <h2 className="text-base">Enviar un documento a RR.HH.</h2>
         <p className="mt-0.5 text-xs text-ink-3">Por ejemplo, un parte médico o un cambio de cuenta bancaria. Solo lo ve RR.HH. de tu empresa.</p>
@@ -175,6 +216,7 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
         {subiendo && <p role="status" className="mt-2 text-sm text-ink-3">Subiendo…</p>}
         {error && <p role="alert" className="mt-2 text-sm text-alert">{error}</p>}
       </section>
+
 
       <section className="my-3 rounded-card border border-line bg-card p-4">
         <div className="flex items-baseline justify-between gap-2">
@@ -217,8 +259,19 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
         </ul>
         )}
       </section>
+
       </div>
-      </div>
+      )}
+
+      {seccion === 'documentos' && <MaterialEmpleado />}
+
+      {seccion === 'vacaciones' && <div className="mt-2"><SolicitudesEmpleado /></div>}
+
+      {seccion === 'fichaje' && tieneFichaje && (
+        <div className="mt-2">
+          <FichajeEmpleado />
+        </div>
+      )}
 
       {firmarDoc && (
         <Modal titulo="Firmar documento" ancho="sm" onCerrar={() => setFirmarDoc(null)}

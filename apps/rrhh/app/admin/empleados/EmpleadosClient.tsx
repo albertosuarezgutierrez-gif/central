@@ -8,7 +8,9 @@ import AsistentePanelAdmin from '@/components/AsistentePanelAdmin'
 import Tabla from '@/components/ui/Tabla'
 
 type Vac = { aprobados: number; en_tramite: number; pendientes: number | null }
-type E = { id: string; nombre: string; apellidos: string | null; dni: string | null; nss: string | null; email: string | null; puesto: string | null; estado: string; vacaciones?: Vac; fecha_reconocimiento_medico?: string | null }
+type E = { id: string; nombre: string; apellidos: string | null; dni: string | null; nss: string | null; email: string | null; puesto: string | null; estado: string; sin_firmar?: number; solic_pend?: number; vacaciones?: Vac; fecha_reconocimiento_medico?: string | null }
+
+const LOTE = 50
 
 function diasParaCaducarReconocimiento(fecha: string | null | undefined): number | null {
   if (!fecha) return null
@@ -16,6 +18,17 @@ function diasParaCaducarReconocimiento(fecha: string | null | undefined): number
   expiry.setFullYear(expiry.getFullYear() + 1)
   const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
   return Math.floor((expiry.getTime() - hoy.getTime()) / 86400000)
+}
+
+function ChipsPendientes({ e }: { e: E }) {
+  // `undefined` = no se sabe (consulta fallida): no se pinta nada; solo se avisa de lo que de verdad hay.
+  if (e.estado === 'baja') return null
+  return (
+    <>
+      {!!e.sin_firmar && <Chip tono="aviso" className="ml-0 md:ml-2">{e.sin_firmar === 1 ? '1 documento sin firmar' : `${e.sin_firmar} documentos sin firmar`}</Chip>}
+      {!!e.solic_pend && <Chip tono="marca" className="ml-0 md:ml-2">{e.solic_pend === 1 ? '1 solicitud pendiente' : `${e.solic_pend} solicitudes pendientes`}</Chip>}
+    </>
+  )
 }
 
 export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa }: { inicial: E[]; nombreUsuario: string; nombreEmpresa: string }) {
@@ -27,8 +40,12 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa 
   const [busy, setBusy] = useState(false)
   const [q, setQ] = useState('')
   const [filtro, setFiltro] = useState<'activos' | 'baja' | 'todos'>('activos')
+  const [verAlta, setVerAlta] = useState(false)
+  const [limite, setLimite] = useState(LOTE)
   async function refrescar() {
-    const g = await (await fetch('/api/admin/empleados')).json(); setLista(g.empleados)
+    const g = await (await fetch('/api/admin/empleados')).json()
+    // El listado de la API no trae los pendientes: se conservan los de la carga de la página.
+    setLista(l => { const m = new Map(l.map(x => [x.id, x])); return (g.empleados as E[]).map(e => ({ ...e, sin_firmar: m.get(e.id)?.sin_firmar, solic_pend: m.get(e.id)?.solic_pend })) })
   }
 
   const visibles = useMemo(() => {
@@ -40,12 +57,13 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa 
       return [e.nombre, e.apellidos, e.email, e.dni, e.nss].some(v => (v ?? '').toLowerCase().includes(t))
     })
   }, [lista, q, filtro])
+  const mostrados = visibles.slice(0, limite)
 
   async function crear(ev: React.FormEvent) {
     ev.preventDefault(); setAltaErr(''); setBusy(true)
     const r = await fetch('/api/admin/empleados', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(alta) })
     setBusy(false)
-    if (r.ok) { setAlta({ apellidos: '', nombre: '', email: '', dni: '', telefono: '', puesto: '' }); await refrescar() }
+    if (r.ok) { setAlta({ apellidos: '', nombre: '', email: '', dni: '', telefono: '', puesto: '' }); setVerAlta(false); await refrescar() }
     else setAltaErr((await r.json()).error ?? 'No se pudo crear')
   }
 
@@ -76,9 +94,12 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa 
       acciones={<ActivarPush endpoint="/api/admin/push/subscribe" />}
     >
 
-      <AsistentePanelAdmin />
+      <div className="mb-3">
+        <Boton onClick={() => setVerAlta(v => !v)} aria-expanded={verAlta} ancho className="sm:w-auto">{verAlta ? 'Cerrar' : '+ Añadir empleado'}</Boton>
+      </div>
 
-      {/* Alta */}
+      {/* Alta: oculta tras «+ Añadir empleado» */}
+      {verAlta && (
       <form onSubmit={crear} className="mb-4 rounded-[12px] border border-line bg-card p-3">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
           <input placeholder="Apellidos *" value={alta.apellidos} onChange={e => setAlta(s => ({ ...s, apellidos: e.target.value }))} />
@@ -91,13 +112,14 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa 
         </div>
         {altaErr && <p role="alert" className="text-alert mt-2 text-sm">{altaErr}</p>}
       </form>
+      )}
 
       {/* Buscador + filtro */}
       <div className="mb-3 grid grid-cols-1 items-center gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        <input placeholder="Buscar por nombre, DNI o Nº SS…" value={q} onChange={e => setQ(e.target.value)} className="min-w-0 sm:col-span-2 lg:col-span-3" />
+        <input type="search" aria-label="Buscar empleado" placeholder="Buscar por nombre, DNI o Nº SS…" value={q} onChange={e => { setQ(e.target.value); setLimite(LOTE) }} className="min-w-0 sm:col-span-2 lg:col-span-3" />
         <div className="flex flex-wrap gap-1 sm:col-span-2 lg:col-span-1 lg:justify-end">
           {(['activos', 'baja', 'todos'] as const).map(f => (
-            <button key={f} onClick={() => setFiltro(f)}
+            <button key={f} onClick={() => { setFiltro(f); setLimite(LOTE) }}
               className={filtro === f ? '' : 'bg-paper-2 text-ink-2 hover:bg-line'}>
               {f === 'activos' ? 'Activos' : f === 'baja' ? 'Baja' : 'Todos'}
             </button>
@@ -105,7 +127,47 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa 
         </div>
       </div>
 
-      <Tabla fija>
+      {/* Móvil: una tarjeta por empleado */}
+      <ul className="grid gap-2 md:hidden">
+        {mostrados.map(e => (
+          <li key={e.id} className="rounded-card border border-line bg-card p-3">
+            {editId === e.id ? (
+              <div className="grid gap-2">
+                <input placeholder="Apellidos" value={edit.apellidos} onChange={ev => setEdit(s => ({ ...s, apellidos: ev.target.value }))} />
+                <input placeholder="Nombre" value={edit.nombre} onChange={ev => setEdit(s => ({ ...s, nombre: ev.target.value }))} />
+                <input placeholder="Email" value={edit.email} onChange={ev => setEdit(s => ({ ...s, email: ev.target.value }))} />
+                <input placeholder="Puesto" value={edit.puesto} onChange={ev => setEdit(s => ({ ...s, puesto: ev.target.value }))} />
+                <select value={edit.estado} onChange={ev => setEdit(s => ({ ...s, estado: ev.target.value }))}>
+                  <option value="activo">Activo</option>
+                  <option value="baja">Baja</option>
+                </select>
+                <div className="flex gap-2">
+                  <Boton disabled={busy || (!edit.nombre.trim() && !edit.apellidos.trim())} onClick={() => guardar(e.id)}>Guardar</Boton>
+                  <Boton variante="secundario" onClick={() => setEditId(null)}>Cancelar</Boton>
+                </div>
+              </div>
+            ) : (
+              <>
+                <a href={`/admin/empleados/${e.id}`} className="block min-h-[44px] break-words text-base font-semibold text-ink no-underline hover:text-accent">
+                  {e.apellidos ? `${e.apellidos}, ${e.nombre}` : e.nombre}
+                  {e.puesto && <span className="block text-xs font-normal text-ink-3">{e.puesto}</span>}
+                </a>
+                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                  {e.estado === 'baja' ? <Chip tono="neutro">Baja</Chip> : <Chip tono="ok">Activo</Chip>}
+                  <ChipsPendientes e={e} />
+                </div>
+                <div className="mt-2 flex gap-2">
+                  <Boton variante="secundario" aria-label={`Editar a ${e.nombre}`} onClick={() => abrirEdicion(e)}>Editar</Boton>
+                  <Boton variante="peligroSuave" aria-label={`Borrar a ${e.nombre}`} onClick={() => borrar(e)}>Borrar</Boton>
+                </div>
+              </>
+            )}
+          </li>
+        ))}
+        {visibles.length === 0 && <li className="rounded-card border border-line bg-card p-3 text-sm text-ink-3">{lista.length === 0 ? 'Sin empleados todavía' : 'Ningún empleado coincide'}</li>}
+      </ul>
+
+      <Tabla fija className="hidden md:block">
           <thead>
             <tr className="border-b border-line bg-paper-2">
               <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-ink-3">Nombre</th>
@@ -117,7 +179,7 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa 
             </tr>
           </thead>
           <tbody>
-            {visibles.map(e => (
+            {mostrados.map(e => (
               <tr key={e.id} className="border-b border-line last:border-b-0 hover:bg-paper-2/50">
                 {editId === e.id ? (
                   <td colSpan={6} className="px-4 py-2.5">
@@ -141,6 +203,7 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa 
                         {e.apellidos ? `${e.apellidos}, ${e.nombre}` : e.nombre}
                       </a>
                       {(() => { const d = diasParaCaducarReconocimiento(e.fecha_reconocimiento_medico); return d !== null && d <= 15 ? <Chip tono={d < 0 ? 'alerta' : 'aviso'} className="ml-2"><span title="Reconocimiento médico">{d < 0 ? `Reconoc. caducado (${Math.abs(d)}d)` : `Reconoc. caduca en ${d}d`}</span></Chip> : null })()}
+                      <ChipsPendientes e={e} />
                     </td>
                     <td data-label="DNI / NIE" className="px-4 py-2.5 font-mono text-xs text-ink-2">{e.dni ?? <span className="text-ink-3">—</span>}</td>
                     <td data-label="Nº SS" className="px-4 py-2.5 font-mono text-xs text-ink-3">{e.nss ?? <span className="text-ink-3">—</span>}</td>
@@ -181,6 +244,14 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa 
             )}
           </tbody>
       </Tabla>
+
+      {visibles.length > limite && (
+        <div className="mt-3 text-center">
+          <Boton variante="secundario" onClick={() => setLimite(l => l + LOTE)}>Ver más ({visibles.length - limite} restantes)</Boton>
+        </div>
+      )}
+
+      <div className="mt-6"><AsistentePanelAdmin /></div>
     </Page>
   )
 }

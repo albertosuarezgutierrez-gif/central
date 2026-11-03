@@ -6,6 +6,7 @@ import Card from '@/components/ui/Card'
 import Tabla from '@/components/ui/Tabla'
 import Boton from '@/components/ui/Boton'
 import { COBALTO_ASEGURA } from '@/lib/marca-asegura'
+import { paletaEmpresa } from '@/lib/marca-empresa'
 
 type Analisis = { resumen?: string; dias_permisos?: Record<string, number | string>; jornada_anual_horas?: number | string | null; vacaciones?: number | string | null; fuente?: string | null; _meta?: { aviso?: string; con_busqueda?: boolean } }
 type Branding = { nombre: string; color_primario: string | null; logo_url: string | null; tiene_fichaje?: boolean }
@@ -23,6 +24,8 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
   const [convMsg, setConvMsg] = useState('')
 
   const [color, setColor] = useState(branding.color_primario ?? COBALTO_ASEGURA)
+  // El color solo se envía si el responsable lo toca: así el que se deriva del logo no se pisa con el cobalto por defecto.
+  const [colorTocado, setColorTocado] = useState(false)
   const [logoUrl, setLogoUrl] = useState(branding.logo_url)
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [brandMsg, setBrandMsg] = useState('')
@@ -31,11 +34,11 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
   async function guardarMarca(e: React.FormEvent) {
     e.preventDefault(); setBrandMsg(''); setGuardandoBrand(true)
     const fd = new FormData()
-    fd.set('color', color)
+    if (colorTocado) fd.set('color', color)
     if (logoFile) fd.set('file', logoFile)
     const r = await fetch('/api/admin/cuenta/branding', { method: 'POST', body: fd })
     const j = await r.json().catch(() => ({}))
-    if (r.ok) { setBrandMsg('Marca guardada'); setLogoFile(null); if (j.branding?.logo_url) setLogoUrl(j.branding.logo_url) }
+    if (r.ok) { setBrandMsg('Marca guardada'); setLogoFile(null); if (j.branding?.logo_url) setLogoUrl(j.branding.logo_url); if (j.branding?.color_primario) setColor(j.branding.color_primario); setColorTocado(false) }
     else setBrandMsg(j.error ?? 'Error al guardar')
     setGuardandoBrand(false)
   }
@@ -123,12 +126,27 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
           <label className="text-ink-2 text-sm">Color corporativo (para los PDF que generes, p. ej. PRL)</label>
           <div className="flex items-center gap-2">
             <input type="color" value={/^#[0-9a-fA-F]{6}$/.test(color) ? color : COBALTO_ASEGURA}
-              onChange={e => setColor(e.target.value)} className="h-10 w-12 p-1" aria-label="Color corporativo" />
-            <input value={color} onChange={e => setColor(e.target.value)} placeholder={COBALTO_ASEGURA} className="min-w-0 flex-1" />
+              onChange={e => { setColor(e.target.value); setColorTocado(true) }} className="h-10 w-12 p-1" aria-label="Color corporativo" />
+            <input value={color} onChange={e => { setColor(e.target.value); setColorTocado(true) }} placeholder={COBALTO_ASEGURA} className="min-w-0 flex-1" />
             <span className="inline-block h-9 w-9 shrink-0 rounded-lg border border-line" style={{ background: color }} aria-hidden />
           </div>
 
-          <label className="text-ink-2 mt-1 text-sm">Logo (PNG, JPG, SVG o WebP · máx. 2 MB)</label>
+          {(() => {
+            const p = paletaEmpresa(color)
+            if (!p) return <p className="text-warn text-xs">Color no válido: usa #rrggbb.</p>
+            return (
+              <div className="rounded-lg border border-line p-2" aria-label="Vista previa de la marca">
+                <div className="flex items-center gap-2 rounded-md p-2" style={{ background: p.brandSoft }}>
+                  {logoUrl && <img src={logoUrl} alt="" className="max-h-8 w-auto max-w-[100px] object-contain" />}
+                  <span className="text-xs font-semibold" style={{ color: p.brand }}>Cabecera</span>
+                  <span className="ml-auto rounded-md px-3 py-1.5 text-xs font-semibold text-white" style={{ background: p.brand }}>Botón</span>
+                </div>
+                {p.brand !== color.toLowerCase() && <p className="text-ink-3 mt-1 text-xs">Se oscurece a {p.brand} para que el texto blanco se lea bien.</p>}
+              </div>
+            )
+          })()}
+
+          <label className="text-ink-2 mt-1 text-sm">Logo (PNG, JPG, SVG o WebP · máx. 2 MB; se recortan los márgenes solos y, si no hay color, se toma el del logo)</label>
           {logoUrl && (
             <div className="flex items-center gap-3">
               <img src={logoUrl} alt="Logo actual" className="max-h-10 w-auto max-w-[160px] object-contain" />

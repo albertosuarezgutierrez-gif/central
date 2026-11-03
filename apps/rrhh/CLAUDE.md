@@ -174,3 +174,6 @@ real es el job `typecheck` de `.github/workflows/tests.yml`.
 - API keys de servicios externos → pueden caer a `|| ''` (falla la llamada saliente, no la app).
 - Scope npm: `@central/*` (nunca `@iarest/*`).
 - No poner `apps/` en `.vercelignore` de la raíz.
+
+## Alta de marca de un cliente nuevo
+Subir logo (Cuenta o `logo_base64`+`logo_mime` en `POST /api/operador/empresas`) → `lib/logo-empresa.ts` recorta márgenes, limita a 600 px, guarda PNG en el bucket (`branding/<empresa>/…`) y, si no hay `color_primario`, lo deriva del logo (`lib/logo-pixeles.ts`; gris/blanco → null = look ASegura). `public/logos/*` es solo legado. Revisar el contraste en la vista previa de Cuenta (`paletaEmpresa` oscurece lo claro). El operador escribe `color_primario` (la columna `marca_color` es heredada).

@@ -103,7 +103,7 @@ function registrarIncidencia(causa: CausaUbicacion, plataforma: Plataforma, esta
   } catch { /* nada: no bloquea */ }
 }
 
-export default function FichajeEmpleado() {
+export default function FichajeEmpleado({ compacto = false }: { compacto?: boolean }) {
   const [activo, setActivo] = useState<Fichaje | null>(null)
   const [historial, setHistorial] = useState<Fichaje[]>([])
   const [cargando, setCargando] = useState(true)
@@ -284,7 +284,7 @@ export default function FichajeEmpleado() {
         </button>
       )}
 
-      <CalendarioMes fichajes={historial} />
+      {!compacto && <CalendarioMes fichajes={historial} />}
     </section>
   )
 }
