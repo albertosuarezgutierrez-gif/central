@@ -1993,6 +1993,8 @@ const GRACIA_AUTORECALCULO_MS = 1_500
 const RE_ROTULO_CALCULAR = /^\s*(?:calculate\s*)?Calcular\s*$/i
 const ESPERA_RECALCULO_COMERCIAL_MS = 15_000
 const MIN_RECALCULO_COMERCIAL_MS = 1_200
+/** v0.8.58: un diálogo desconocido que desaparece solo antes de este plazo es el del recálculo (sin pulsar nada en él). */
+const ESPERA_DIALOGO_TRANSITORIO_MS = 4_000
 const CAMBIOS_COMERCIALES = new WeakMap<GuardEmision, number>()
 const SEL_DIALOGOS_COMERCIAL = 'mat-dialog-container, [role="dialog"], [role="alertdialog"]'
 const SEL_OCUPADO_COMERCIAL = 'mat-spinner, mat-progress-spinner, mat-progress-bar, .mat-progress-spinner, .mat-spinner, .mat-progress-bar'
@@ -2037,13 +2039,17 @@ export async function elegirOpcionComercialMapfre(page: Page, guard: GuardEmisio
   })))
   const antes = await leerTodas()
   if (antes.length <= indice) throw new ErrorTarificador('portal', 'la tarjeta no está')
-  if (antes[indice]!.valor === texto) return { valor: texto, textoPrima: antes[indice]!.prima, textoTarjeta: antes[indice]!.texto, bloqueada: !RE_PRIMA_RESUELTA.test(antes[indice]!.prima) && RE_TARJETA_BLOQUEADA.test(antes[indice]!.texto), recalculo: 'ninguno' }
-  comprobarBoton(await descripcion(select))
-  CAMBIOS_COMERCIALES.set(guard, hechos + 1)
-  await clicSinDialogoNativo(page, guard, select, 'selector comercial de Mapfre (elegir variante)')
+  // v0.8.58 (run real 457d81a4): la tarjeta YA muestra la opción pero SIN importe (recálculo interrumpido) → no se vuelve a elegir: se va directo a la espera, que pulsa
+  // «Calcular» (tarificación, tope propio) si el portal no recalcula. Con importe o bloqueada, como antes: no se toca nada.
+  const yaElegida = antes[indice]!.valor === texto
+  if (yaElegida && (RE_PRIMA_RESUELTA.test(antes[indice]!.prima) || RE_TARJETA_BLOQUEADA.test(antes[indice]!.texto))) return { valor: texto, textoPrima: antes[indice]!.prima, textoTarjeta: antes[indice]!.texto, bloqueada: !RE_PRIMA_RESUELTA.test(antes[indice]!.prima) && RE_TARJETA_BLOQUEADA.test(antes[indice]!.texto), recalculo: 'ninguno' }
   const porId = ctrl ? page.locator(`[id="${ctrl.replace(/"/g, '')}"]`) : null
   const ambito = porId && (await porId.count().catch(() => 0)) > 0 ? porId : page.locator('.cdk-overlay-container')
   const filas = ambito.locator('mat-option, [role="option"]')
+  if (!yaElegida) {
+  comprobarBoton(await descripcion(select))
+  CAMBIOS_COMERCIALES.set(guard, hechos + 1)
+  await clicSinDialogoNativo(page, guard, select, 'selector comercial de Mapfre (elegir variante)')
   const hastaPanel = Date.now() + ESPERA_PANEL_COMERCIAL_MS
   while ((await filas.locator('visible=true').count().catch(() => 0)) === 0 && Date.now() < hastaPanel) {
     guard.comprobar()
@@ -2067,6 +2073,7 @@ export async function elegirOpcionComercialMapfre(page: Page, guard: GuardEmisio
   if (await fila.first().evaluate((e) => e.getAttribute('aria-disabled') === 'true' || /\bmat-(?:mdc-)?option-disabled\b|\bmdc-list-item--disabled\b/.test(e.className)).catch(() => true)) { await cerrarPanel(); throw new ErrorTarificador('portal', 'la opción está deshabilitada') }
   comprobarBoton(await descripcion(fila))
   await clicSinDialogoNativo(page, guard, fila, 'opción comercial de Mapfre')
+  }
   // Espera del recálculo: diálogo/spinner «Calculando» → esperar; «Controles técnicos» → cerrar y marcar bloqueada; cualquier otro diálogo → ALTERADO.
   let inicio = Date.now()
   let hasta = inicio + ESPERA_RECALCULO_COMERCIAL_MS
@@ -2074,11 +2081,13 @@ export async function elegirOpcionComercialMapfre(page: Page, guard: GuardEmisio
   let firmaPrevia: string | null = null
   let recalculoVisto = false
   let calcularPulsado = false
+  let desconocidoDesde: number | null = null
   for (;;) {
     guard.comprobar()
     const dialogos = await page.locator(SEL_DIALOGOS_COMERCIAL).locator('visible=true').evaluateAll((els) => els.map((e) => ((e as HTMLElement).innerText || e.textContent || '').replace(/\s+/g, ' ').trim())).catch(() => [] as string[])
     let ocupado = (await page.locator(SEL_OCUPADO_COMERCIAL).locator('visible=true').count().catch(() => 0)) > 0
     if (ocupado) recalculoVisto = true
+    let desconocido: string | null = null
     for (const d of dialogos) {
       if (esTextoControlesTecnicos(d)) {
         if ((AVANCES_USADOS.get(guard) ?? new Set<string>()).has('mapfre:controles_tecnicos:2')) throw new ErrorSelectorComercialAlteradoMapfre('el diálogo «Controles técnicos» ya se cerró dos veces en este trabajo')
@@ -2086,9 +2095,16 @@ export async function elegirOpcionComercialMapfre(page: Page, guard: GuardEmisio
         bloqueoDialogo = true
         ocupado = true
         recalculoVisto = true
-      } else if (RE_DIALOGO_CALCULANDO.test(d)) { ocupado = true; recalculoVisto = true }
-      else throw new ErrorSelectorComercialAlteradoMapfre('apareció un diálogo desconocido tras elegir la variante')
+      } else if (d === '' || RE_DIALOGO_CALCULANDO.test(d)) { ocupado = true; recalculoVisto = true }
+      else desconocido ??= d
     }
+    // v0.8.58 (run real 457d81a4: el diálogo ya NO estaba al leerlo justo después): un diálogo desconocido que se cierra SOLO en ≤ESPERA_DIALOGO_TRANSITORIO_MS es
+    // el del recálculo (texto que no casa) → cuenta como recálculo. Nada se pulsa en él; si sigue abierto pasada la espera, se aborta como antes, con su texto saneado.
+    if (desconocido !== null) {
+      desconocidoDesde ??= Date.now()
+      ocupado = true
+      if (Date.now() - desconocidoDesde >= ESPERA_DIALOGO_TRANSITORIO_MS) throw new ErrorSelectorComercialAlteradoMapfre(`apareció un diálogo desconocido tras elegir la variante: «${limpiarMensajePortalDiagnosticoHasta(desconocido, 60) || 's/texto'}»`)
+    } else if (desconocidoDesde !== null) { desconocidoDesde = null; recalculoVisto = true; hasta = Math.max(hasta, Date.now() + MIN_RECALCULO_COMERCIAL_MS * 2) }
     if (!ocupado && (await filas.locator('visible=true').count().catch(() => 0)) === 0) {
       const ahora = await leerTodas()
       const t = ahora[indice]

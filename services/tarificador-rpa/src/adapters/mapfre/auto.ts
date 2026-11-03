@@ -1,4 +1,5 @@
 // Mapfre wmediadores · NSEI «Nueva Alta» AUTO y MOTO (13-14/10/2026).
+// v0.8.58 (03/11/2026, run real 457d81a4: 0 garantías y sin BASICar): el «diálogo desconocido» tras elegir la variante era TRANSITORIO (ya no estaba al leerlo) → el guard lo trata como recálculo si se cierra solo en ≤4 s (nada se pulsa en él); y una tarjeta que ya muestra su producto pero SIN importe se recalcula con «Calcular» en la recuperación del estado base (sin importes, «Generar Proyecto» no guardaba → sin PDF → sin garantías).
 // v0.8.57 (03/11/2026): tras un diálogo desconocido al elegir una variante BASICar se anota su título/texto/botones (≤200, sin PII) y la selección base se RECUPERA antes de «Generar Proyecto» (nunca peor que la 0.8.55).
 // v0.8.56 (03/11/2026, Alberto: «todas las opciones»): las variantes «BASICar» se tarifican ANTES de «Generar Proyecto» (después, Coberturas deja de mostrar los selectores: «selector ausente o no visible»); sin restauración verificada no se genera el proyecto.
 // v0.8.55 (02/11/2026, Alberto: «que el bot coja el que haya»): si la matrícula solo devuelve filas de OTRO modelo que la referencia, se tarifica la más parecida con aviso «Modelo distinto del de referencia» (supuesto); se retira la parada ErrorOtroModeloMapfre de la 0.8.53/54.
@@ -753,6 +754,7 @@ export async function tarificarVariantesComercialesMapfre(
         // v0.8.57: se anota QUÉ diálogo es (sin PII). Solo «controles técnicos» tiene puerta autorizada para cerrarlo; cualquier otro aborta solo las variantes.
         const ds = await dialogos.leer(nsei).catch(() => [] as DialogoVistoMapfre[])
         if (ds.length > 0) salida.notas.push(avisoDialogoVarianteMapfre(ds))
+        else salida.notas.push('el diálogo tras elegir la variante ya no estaba al leerlo (transitorio)')
         const tipo = ds.length === 1 ? clasificarDialogoVarianteMapfre(ds[0]!) : 'desconocido'
         if (tipo === 'controles_tecnicos' && dialogos.cerrarControlesTecnicos) {
           try { await dialogos.cerrarControlesTecnicos(nsei); cerrado = true } catch (e2) { if (e2 instanceof EmisionBloqueadaError) throw e2 }
@@ -791,7 +793,11 @@ export async function tarificarVariantesComercialesMapfre(
     let reintentado = false
     for (let intento = 0; intento < 2 && !(cmp.valores && cmp.primas); intento++) {
       reintentado = true
-      for (const h of tocadas) {
+      // v0.8.58 (run real 457d81a4: TERCEROS y TERCEROS AMPLIADO «sin importe» → «Proyecto NO guardado: no hay primas a la vista» → 0 garantías): se repide el
+      // original de las tocadas Y de toda tarjeta con prima base cuyo importe no se ve; con el producto ya a la vista, la puerta solo recalcula («Calcular»).
+      const actuales = (await leer()) ?? []
+      const sinImporte = anfitrionas.filter((a) => !tocadas.includes(a) && importeDePrimaTotal(actuales[a.i]?.prima ?? '') !== a.p.prima)
+      for (const h of [...tocadas, ...sinImporte]) {
         try { await elegir(nsei, h.i, h.original, h.opciones) } catch (e) { if (e instanceof EmisionBloqueadaError && !/tope/i.test(e.message)) throw e }
       }
       cmp = compararBaseMapfre((await leer()) ?? [], productos)
@@ -2656,7 +2662,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.57',
+  version: '0.8.58',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

@@ -221,6 +221,12 @@ import {
   vehiculoBuscadoGenerali,
   desempatarPorOrigenGenerali,
   origenesDesempateGenerali,
+  avisoPasoIncompletoGenerali,
+  destinoPasoIncompletoGenerali,
+  decidirNeutroPasoGenerali,
+  avisoNeutroPasoGenerali,
+  errorPasoIncompletoGenerali,
+  type PasoBarraGenerali,
   type VehiculoBuscado,
 } from './reglas.ts'
 
@@ -485,6 +491,8 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * dato, la siniestralidad más favorable (aviso «supuesto» → precio estimado). Un obligatorio vacío sin regla (p. ej. una fecha) para con su nombre. Si la
  * pestaña no existe se anota y se sigue como antes; el atasco final trae el inventario (etiquetas, sin valores) de esa pestaña.
  *
+ * 0.2.71 (03/11/2026, trabajo 1a88445a): «Garantías y Resultados» sin obligatorios vacíos pero «Paso con datos incompletos» / «El paso anterior…»: antes del único
+ *   «Recalcular» se va al paso marcado (o al anterior) de la barra de pasos, se ponen sus obligatorios vacíos en valor neutro (supuesto) y se vuelve; si no, atasco con paso + campo.
  * 0.2.70 (03/11/2026): obligatorios vacíos de «Garantías y Resultados» en valor neutro antes del ÚNICO «Recalcular» (se quita el 2º) y atasco con los aún vacíos.
  * 0.2.69 (02/11/2026): «Verificación del riesgo» es condicional (no para si falta con la pestaña cargada) y se ofrecen TODAS las modalidades leídas como ofertas separadas.
  * 0.2.68 (02/11/2026, Alberto: «que el bot coja el que haya»): sin modelo/versión de la referencia en el catálogo (tras ampliar) se tarifica el más parecido con aviso «Modelo distinto del de referencia» (supuesto), no requiere_humano.
@@ -494,7 +502,7 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * 0.2.65 (02/11/2026): el panel de «Versión» con columnas lista las opciones como `tr[data-label]` (no `li`): «Otras versiones ...» se localiza también ahí.
  * 0.2.64 (02/11/2026): «Garantías y Resultados» no se vuelve a pulsar si ya se pulsó en el trabajo (el guard solo lo permite una vez); solo espera al bloque.
  */
-export const VERSION_GENERALI_AUTO = '0.2.70'
+export const VERSION_GENERALI_AUTO = '0.2.71'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -1321,6 +1329,123 @@ export async function rellenarNeutrosGarantiasGenerali(page: Page, ctx: Contexto
     avisos.push(n.aviso)
   }
   return avisos
+}
+
+/**
+ * v0.2.71: barra de pasos de «Valoración Riesgo» (`#secundario > li`, cada uno con `pedirPaso(...)`): texto, actual (`.current`) y si el portal lo MARCA
+ * (clase con incompleto/error/rojo en el `li` o dentro). Solo lee; nunca valores. null = este marco no tiene barra.
+ */
+const JS_BARRA_PASOS_GENERALI = `(() => {
+  const T = (n) => (n ? (n.innerText || n.textContent || '') : '').replace(/\\s+/g, ' ').trim();
+  const ul = document.getElementById('secundario');
+  if (!ul) return null;
+  const MARCA = /incomplet|error|rojo|warn/i;
+  return Array.from(ul.children).filter((li) => li.tagName === 'LI').map((li) => ({
+    texto: T(li).slice(0, 60),
+    actual: /(^|\\s)current(\\s|$)/.test(li.className || ''),
+    marcado: MARCA.test(li.className || '') || Array.from(li.querySelectorAll('*')).some((x) => MARCA.test(typeof x.className === 'string' ? x.className : '')),
+  }));
+})()`
+
+/** v0.2.71: el primer marco con barra de pasos y sus pasos. Solo lee. */
+export async function leerBarraPasosGenerali(page: Page): Promise<{ marco: Frame; pasos: PasoBarraGenerali[] } | null> {
+  for (const f of page.frames()) {
+    if (f.isDetached()) continue
+    const r = (await f.evaluate(JS_BARRA_PASOS_GENERALI).catch(() => null)) as PasoBarraGenerali[] | null
+    if (Array.isArray(r) && r.length > 0) return { marco: f, pasos: r }
+  }
+  return null
+}
+
+/** v0.2.71: espera (acotada) a que el paso `texto` sea el actual de la barra. Solo lee. */
+async function esperarPasoActualGenerali(page: Page, texto: string, esperaMs: number): Promise<{ marco: Frame; pasos: PasoBarraGenerali[] } | null> {
+  const fin = Date.now() + esperaMs
+  for (;;) {
+    const b = await leerBarraPasosGenerali(page)
+    if (b && b.pasos.find((p) => p.actual)?.texto === texto) return b
+    if (Date.now() >= fin) return null
+    await new Promise((r) => setTimeout(r, 300))
+  }
+}
+
+/** v0.2.71: pulsa (por `ctx.pulsar`, guard incluido) el paso de la barra cuyo texto es EXACTAMENTE `texto` y espera a que sea el actual. */
+async function irAPasoGenerali(page: Page, ctx: ContextoPortal, texto: string, esperaMs: number): Promise<{ marco: Frame; pasos: PasoBarraGenerali[] } | null> {
+  const b = await leerBarraPasosGenerali(page)
+  if (!b) return null
+  const li = b.marco.locator('#secundario > li').filter({ has: b.marco.getByText(texto, { exact: true }) })
+  if ((await li.count()) !== 1) return null
+  await ctx.pausaAccion()
+  await ctx.pulsar(li)
+  return esperarPasoActualGenerali(page, texto, esperaMs)
+}
+
+/**
+ * v0.2.71 (03/11/2026, trabajo 1a88445a con 0.2.70): tras «Recalcular» el portal seguía con «datos incompletos» y «Garantías y Resultados» SIN obligatorios vacíos;
+ * los avisos eran «Paso con datos incompletos» / «El paso anterior no tiene los datos completos»: el hueco está en OTRO paso. ANTES del único «Recalcular»:
+ * 1) se lee la barra de pasos y los avisos (`#areaErrores` + `avisosExtra`); destino = paso marcado por el portal o, con el aviso, el anterior al actual
+ * (`destinoPasoIncompletoGenerali`); sin destino → null y no se toca nada. 2) Se pulsa ese paso (`ctx.pulsar`). 3) Se repasa «Historial Siniestral» (sus reglas)
+ * y cada obligatorio VACÍO editable se pone en valor NEUTRO (`decidirNeutroPasoGenerali`: «No» exacto o la única opción real), con aviso «Supuesto» (precio
+ * `estimado`). 4) Lo que siga vacío (o sea de solo lectura) → `ErrorMapaIncompletoGenerali` con paso + campo (`errorPasoIncompletoGenerali`). 5) Se vuelve al
+ * paso de origen: «Siguiente» por su puerta guardada si existe, si no el paso de la barra por `ctx.pulsar`. Nunca emite, graba ni recalcula.
+ */
+export async function completarPasoIncompletoGenerali(
+  page: Page,
+  ctx: ContextoPortal,
+  f: { aniosAseguradoAnterior: number; siniestrosUltimos5Anios: number },
+  clavesSupuestas: readonly string[],
+  opciones: { avisosExtra?: readonly string[]; esperaMs?: number } = {},
+): Promise<{ avisos: string[]; nota: string } | null> {
+  const esperaMs = opciones.esperaMs ?? 8_000
+  const avisosPortal = [...(await avisosAreaErroresGenerali(page)), ...(opciones.avisosExtra ?? [])]
+  const barra = await leerBarraPasosGenerali(page)
+  // Sin barra de pasos legible no se navega (el atasco de 0.2.70 ya lleva los avisos del portal).
+  if (!barra) return null
+  const destino = destinoPasoIncompletoGenerali(barra.pasos, avisosPortal)
+  if (!destino) return null
+  const origen = barra.pasos.find((p) => p.actual)?.texto ?? SUBPESTANA_PRECIO_GENERALI
+  const llegada = await irAPasoGenerali(page, ctx, destino, esperaMs)
+  if (!llegada) throw new ErrorMapaIncompletoGenerali(errorPasoIncompletoGenerali(destino, ['(no se pudo abrir el paso desde la barra de pasos)']))
+  const avisos: string[] = []
+  // «Historial Siniestral» (sección de «Datos de Valoración»): sus reglas propias (dato del riesgo o supuesto favorable; certificados/fechas no se inventan).
+  const hist = await completarHistorialSiniestralGenerali(page, ctx, f, clavesSupuestas, Math.min(esperaMs, 2_000))
+  avisos.push(...hist.avisos)
+  const marco = (await leerBarraPasosGenerali(page))?.marco ?? llegada.marco
+  const faltan: string[] = []
+  for (const b of (await leerBloquesHistorialGenerali(marco)).filter((x) => x.vacio && x.obligatorio)) {
+    const rotulo = sanearFragmentoGenerali(b.etiqueta).slice(0, 60) || '(sin rótulo)'
+    if (!b.name || b.name.includes('"')) { faltan.push(`${rotulo} (control sin nombre)`); continue }
+    const selBloque = `#${b.name.replace(/[^A-Za-z0-9_-]/g, '_')}Identification`
+    let textos = b.opciones
+    if (b.tipo === 'opciones') textos = ((await marco.evaluate(jsEstadoNeutroGenerali(selBloque, b.name)).catch(() => null)) as EstadoNeutroGarantiasGenerali | null)?.opciones.map((o) => o.texto) ?? []
+    const d = decidirNeutroPasoGenerali(b.tipo, textos)
+    if (d.accion === 'sinRegla') { faltan.push(`${rotulo} (${d.motivo})`); continue }
+    if (d.accion === 'marcar') {
+      const l = marco.locator(`${selBloque} input[name="${b.name}"]:not([type="text"])`)
+      if ((await l.count()) !== textos.length) { faltan.push(`${rotulo} (opciones no localizables)`); continue }
+      await ctx.pausaAccion()
+      await ctx.pulsar(l.nth(d.indice))
+    } else {
+      const sel = marco.locator(`select[name="${b.name}"]`)
+      if ((await sel.count()) !== 1) { faltan.push(`${rotulo} (desplegable no único)`); continue }
+      await elegirIndice(sel, d.indice, ctx)
+    }
+    avisos.push(avisoNeutroPasoGenerali(destino, b.etiqueta, d.valor))
+  }
+  // Lo que el portal sigue dando por obligatorio y vacío (también de solo lectura, que el bot no teclea).
+  const siguen = (await leerEstadoBloquesGenerali(marco))?.obligatoriosVacios ?? []
+  for (const x of siguen) {
+    const r = sanearFragmentoGenerali(x).slice(0, 60)
+    if (r && !faltan.some((y) => y.startsWith(r))) faltan.push(`${r} (sigue vacío)`)
+  }
+  if (faltan.length > 0) throw new ErrorMapaIncompletoGenerali(errorPasoIncompletoGenerali(destino, faltan))
+  // Vuelta al paso de origen.
+  let vuelta: string
+  if (destino !== origen && /valoraci/i.test(destino) && typeof ctx.pulsarSiguienteGenerali === 'function') {
+    await ctx.pulsarSiguienteGenerali()
+    vuelta = (await esperarPasoActualGenerali(page, origen, esperaMs)) ? 'Siguiente' : ''
+  } else vuelta = (await irAPasoGenerali(page, ctx, origen, esperaMs)) ? 'barra de pasos' : ''
+  if (!vuelta) throw new ErrorMapaIncompletoGenerali(`el paso «${sanearFragmentoGenerali(origen).slice(0, 40)}» tras completar «${sanearFragmentoGenerali(destino).slice(0, 40)}» (no se pudo volver por la barra de pasos ni por «Siguiente»); no se pulsa «Recalcular»`)
+  return { avisos, nota: `Paso incompleto «${sanearFragmentoGenerali(destino).slice(0, 40)}»: ${avisos.length ? `${avisos.length} obligatorio(s) en valor neutro` : 'sin obligatorios vacíos detectados'}; vuelta por ${vuelta}` }
 }
 
 /** v0.2.64: páginas donde ya se pulsó «Garantías y Resultados» en este trabajo (el guard no permite una segunda vez). */
@@ -4367,6 +4492,10 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
       avanceRecalcular.push('Recalcular no intentado: la tabla de modalidades está vacía y el contexto del runner no trae la puerta guardada')
       return null
     }
+    // v0.2.71 (trabajo 1a88445a): con «Paso con datos incompletos» / «El paso anterior…» el hueco está en otro paso: se completa y se vuelve ANTES de los
+    // bloques de esta pestaña y del único «Recalcular» (sin barra ni aviso no se toca nada; sin valor neutro seguro, atasco con paso + campo).
+    const pasoInc = await completarPasoIncompletoGenerali(page, ctx, ant.formulario, ant.claves, { avisosExtra: esperasCortadas })
+    for (const a of pasoInc?.avisos ?? []) if (!avisosFormaPago.includes(a)) avisosFormaPago.push(a)
     // v0.2.42 (decisión de Alberto): «Forma de pago a contratar» es obligatoria para calcular: Anual por defecto (o la del riesgo), opción exacta.
     // v0.2.63: `esperaGarantiasMs: 0` (solo pruebas con páginas sintéticas sin esos bloques) omite la comprobación.
     if (opciones.esperaGarantiasMs !== 0) await asegurarGarantiasYResultadosGenerali(page, ctx, 700, Math.max(1, Math.ceil((opciones.esperaGarantiasMs ?? 5600) / 700)))
@@ -4382,7 +4511,7 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
     const abogado = await elegirSumaAbogadoVisibleGenerali(page, ctx)
     for (const aviso of [envio, verif, ...neutros, abogado]) if (aviso && !avisosFormaPago.includes(aviso)) avisosFormaPago.push(aviso)
     // v0.2.44: que el atasco diga si cada bloque estaba (en dd2067b2 «Verificación del riesgo» no estaba a la vista y no hubo rastro).
-    bloquesDecision = `forma de pago ${fp ? 'marcada' : 'sin bloque a la vista'}, envío e-mail ${envio ? 'Mediador' : 'sin bloque a la vista'}, verificación del riesgo ${verif ? 'No' : 'sin bloque a la vista'}, suma de abogado ${abogado ? 'la más alta' : 'sin cambio'}`
+    bloquesDecision = `forma de pago ${fp ? 'marcada' : 'sin bloque a la vista'}, envío e-mail ${envio ? 'Mediador' : 'sin bloque a la vista'}, verificación del riesgo ${verif ? 'No' : 'sin bloque a la vista'}, suma de abogado ${abogado ? 'la más alta' : 'sin cambio'}${pasoInc ? `, ${pasoInc.nota}` : ''}`
     try {
       const r = await paso('tarificar', async () => puerta())
       avanceRecalcular.push(`Recalcular×1${r && r.dialogo ? ` (diálogo cancelado: ${r.dialogo.slice(0, 120)})` : ''}`)
