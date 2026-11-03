@@ -5,6 +5,8 @@ import { calcularEstadoDeclaracion, type EstadoDeclaracion } from '@/lib/compara
 import { getBaseDevengo, type BaseDevengo } from '@/lib/base-fiscal-devengo-db'
 import { importesDe, minimoPersonalYFamiliar } from '@/lib/fiscal-deducciones'
 import { armarPanel, type PanelDatos } from '@/lib/fiscal-panel'
+import { armarContextoResultado } from '@/lib/resultado-declaracion'
+import { cargarDatosResultado } from '@/lib/resultado-declaracion-db'
 import { listarComprasPrevistas } from '@/lib/fiscal-compras-db'
 import { getSituacionFiscal } from '@/lib/situacion-fiscal-db'
 import type { Seccion } from '@/lib/situacion-fiscal'
@@ -63,10 +65,14 @@ export default async function FiscalPage({
   let compras = null
   if (baseDevengo && data) {
     try {
-      panel = armarPanel(baseDevengo, {
-        descendientes: data.deducciones.descendientes.map(h => ({ nombre: h.nombre, fechaNacimiento: h.fechaNacimiento, gradoDiscapacidad: h.gradoDiscapacidad, computoCompleto: h.computoCompleto })),
-        conyugeTrabaja: data.deducciones.perfil.conyugeTrabaja,
+      const descendientes = data.deducciones.descendientes.map(h => ({ nombre: h.nombre, fechaNacimiento: h.fechaNacimiento, gradoDiscapacidad: h.gradoDiscapacidad, computoCompleto: h.computoCompleto }))
+      // Resultado de la declaración: retenciones reales de comisiones (libro), retenciones de Pilar (perfil) y perfil familiar.
+      const extra = await cargarDatosResultado(session.id, year)
+      const contexto = armarContextoResultado({
+        anio: year, hoy: baseDevengo.hoy, perfil: data.deducciones.perfil, descendientes,
+        retencionesCorreduria: quarter === 0 ? data.correduria.retenciones : null, retencionesPilar: extra.retencionesPilar, ingresosPilar: extra.ingresosPilar,
       })
+      panel = armarPanel(baseDevengo, { descendientes, conyugeTrabaja: data.deducciones.perfil.conyugeTrabaja, contexto })
       compras = await listarComprasPrevistas(session.id)
     } catch (e) {
       console.error('[fiscal/page] panel', e)

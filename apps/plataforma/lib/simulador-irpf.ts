@@ -292,6 +292,8 @@ export type Palancas = {
   donativos: PorTitular<number>
   compras: CompraPrevista[]
   reasignar?: Record<string, Titular>
+  /** Gasto hipotético de la correduría (€, simulación «¿y si…?»): resta de la actividad de Alberto. Ausente = 0. */
+  gastoCorreduria?: number
 }
 export const SIN_PALANCAS: Palancas = { planPropio: { alberto: 0, pilar: 0 }, planConyuge: 0, donativos: { alberto: 0, pilar: 0 }, compras: [] }
 
@@ -348,6 +350,10 @@ function aplicar(e: EntradaSimulador, pal: Palancas): Aplicado {
       if (t.titular === 'alberto' && a != null) a -= (g * t.porcentaje) / 100
       if (t.titular === 'pilar' && p != null) p -= (g * t.porcentaje) / 100
     }
+  }
+  if (pal.gastoCorreduria && pal.gastoCorreduria > 0) {
+    if (total != null) total -= pal.gastoCorreduria
+    if (a != null) a -= pal.gastoCorreduria
   }
   // Planes: limitados por ley y por la propia base (no la hacen negativa).
   const lim = limitesPlanes(e)

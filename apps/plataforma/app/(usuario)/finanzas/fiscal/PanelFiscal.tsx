@@ -20,6 +20,9 @@ import ListaAcciones from './ListaAcciones'
 import TablaTramos from './TablaTramos'
 import AvisoCalidadDato from './AvisoCalidadDato'
 import { hayAvisos } from '@/lib/fiscal-panel'
+import { calcularResultadoDeclaracion } from '@/lib/resultado-declaracion'
+import ResultadoDeclaracion from './ResultadoDeclaracion'
+import SimuladorHipotetico from './SimuladorHipotetico'
 
 export default function PanelFiscal({ datos, compras }: { datos: PanelDatos; compras: CompraGuardada[] | null }) {
   const [sel, setSel] = useState<Seleccion>('conjunta')
@@ -54,6 +57,7 @@ export default function PanelFiscal({ datos, compras }: { datos: PanelDatos; com
     const rangoGeneral = rangoDe(datos.cierres.map(c => c.entrada.periodo.baseGeneral))
     const serie = serieAcumulada(datos.porMes, eBase.periodo.baseGeneral, rangoGeneral, datos.anio)
     const hayPalancas = Object.values(activas).some(Boolean)
+    const resultado = datos.contexto ? calcularResultadoDeclaracion(eBase, SIN_PALANCAS, datos.contexto) : null
     const tramos = tablaTramos(hayPalancas ? [cHoy, cCierre, cCon] : [cHoy, cCierre])
     const filas: FilaPalanca[] = res.palancas
       .filter(p => (PALANCAS_SIMULABLES as string[]).includes(p.id) && (p.id !== 'compras' || motor.length > 0))
@@ -64,7 +68,7 @@ export default function PanelFiscal({ datos, compras }: { datos: PanelDatos; com
     const resultadosCompra: Record<string, ResultadoCompra> = Object.fromEntries(res.compras.map(c => [c.id, c]))
     const baseCon = cCon?.baseLiquidable ?? null
     return {
-      cHoy, cCierre, cCon, rango, ahorroMax, resHoy, resCierre, serie, tramos, filas, resultadosCompra, hayPalancas,
+      resultado, cHoy, cCierre, cCon, rango, ahorroMax, resHoy, resCierre, serie, tramos, filas, resultadosCompra, hayPalancas,
       acciones: construirAcciones(res, ahorros, datos.hoy, datos.anio),
       nivel: nivelUmbral(cCierre?.baseLiquidable ?? null, rango?.max ?? null),
       sim: { baseLiquidable: baseCon, margen: baseCon == null ? null : UMBRAL - baseCon, cuotaSin, cuotaCon: cCon?.cuotaLiquida ?? null,
@@ -82,6 +86,8 @@ export default function PanelFiscal({ datos, compras }: { datos: PanelDatos; com
       <UmbralTermometro sel={sel} onSel={setSel} hoy={m.cHoy?.baseLiquidable ?? null} cierre={m.cCierre?.baseLiquidable ?? null} rango={m.rango}
         conPalancas={m.hayPalancas ? m.sim.baseLiquidable : null} nivel={m.nivel} provisional={provisional} ahorroMax={m.ahorroMax} />
       <ComparativaModalidad hoy={m.resHoy} cierre={m.resCierre} />
+      <ResultadoDeclaracion r={m.resultado} sinContexto={datos.contexto == null} />
+      {datos.contexto && <SimuladorHipotetico entrada={datos.cierres[0].entrada} ctx={datos.contexto} propiedades={datos.propiedades} />}
       <GraficaAcumulada serie={m.serie} />
       <SimuladorEscenarios filas={m.filas} activas={activas} onToggle={alternar} onReset={() => setActivas({})} resultado={m.sim} etiquetaSel={etiquetaSel} />
       <ComprasPrevistas compras={compras} resultados={m.resultadosCompra} propiedades={datos.propiedades} />
