@@ -43,6 +43,7 @@ import {
   type RepoRegularizacionToken,
   type VistaPublicaRegularizacion,
 } from './regularizacion-rc-portal'
+import { enviarYConfirmar, MINUTOS_ENVIANDO_ATASCADA } from './regularizacion-rc-envio'
 import { botonesRegularizacion, textoAvisoRespuestaRegularizacion, textoPropuestaRegularizacion } from './regularizacion-rc-telegram'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -128,6 +129,14 @@ export async function crearRegularizacion(
         where correduria_id = ${correduriaId}::uuid and poliza_id = ${p.id}::uuid
           and periodo_desde = ${periodo.desde} and periodo_hasta = ${periodo.hasta}
           and estado = 'pendiente' and caduca_at <= now()`)
+      // Una `enviando` ATASCADA (el correo salió pero no se pudo confirmar, o el proceso murió) también deja sitio: se anula,
+      // NUNCA se reenvía sola; la nueva propuesta pasa otra vez por el ✅ de Alberto. La reclamación puso caduca_at = ahora + N días.
+      await tx.$executeRaw(Prisma.sql`
+        update solicitud_regularizacion set estado = 'anulada'
+        where correduria_id = ${correduriaId}::uuid and poliza_id = ${p.id}::uuid
+          and periodo_desde = ${periodo.desde} and periodo_hasta = ${periodo.hasta}
+          and estado = 'enviando'
+          and caduca_at - make_interval(days => ${DIAS_SOLICITUD_REGULARIZACION}::int) <= now() - make_interval(mins => ${MINUTOS_ENVIANDO_ATASCADA}::int)`)
       const [ya] = await tx.$queryRaw<{ id: string; estado: string }[]>(Prisma.sql`
         select id::text as id, estado from solicitud_regularizacion
         where correduria_id = ${correduriaId}::uuid and poliza_id = ${p.id}::uuid
@@ -176,7 +185,7 @@ export async function proponerEnTelegram(correduriaId: string, id: string, edita
 
 export type ResultadoDecision =
   | { estado: 'enviada' | 'descartada' | 'sin_cambios' | 'obsoleta' | 'sin_destino' | 'no_encontrada' | 'sin_migracion' }
-  | { estado: 'canal_no_disponible' | 'envio_fallido' }
+  | { estado: 'canal_no_disponible' | 'envio_fallido' | 'confirmacion_fallida' }
 
 export async function decidirRegularizacion(correduriaId: string, d: { accion: 'env' | 'no'; id: string; version: number }): Promise<ResultadoDecision> {
   return conMigracion(async (): Promise<ResultadoDecision> => {
@@ -215,17 +224,21 @@ export async function decidirRegularizacion(correduriaId: string, d: { accion: '
       return { estado: 'envio_fallido' }
     }
     const { enviarCorreoCliente } = await import('./correo-envio')
-    const res = await enviarCorreoCliente({
-      correduriaId, clienteId: f.clienteId, polizaId: f.polizaId, tipo: TIPO_CORREO_REGULARIZACION, to: destino,
-      asunto: f.asunto ?? 'Regularización de tu seguro de Responsabilidad Civil', texto,
-      // Por TOKEN (no por versión): un reintento tras un fallo lleva enlace nuevo y no puede devolver el correo viejo.
-      idempotencia: `regularizacion-rc:${f.id}:${hash.slice(0, 16)}`,
+    const r = await enviarYConfirmar({
+      enviar: () => enviarCorreoCliente({
+        correduriaId, clienteId: f.clienteId, polizaId: f.polizaId, tipo: TIPO_CORREO_REGULARIZACION, to: destino,
+        asunto: f.asunto ?? 'Regularización de tu seguro de Responsabilidad Civil', texto,
+        // Por TOKEN (no por versión): un reintento tras un fallo lleva enlace nuevo y no puede devolver el correo viejo.
+        idempotencia: `regularizacion-rc:${f.id}:${hash.slice(0, 16)}`,
+      }),
+      confirmar: () => db.$executeRaw(Prisma.sql`
+        update solicitud_regularizacion set estado = 'pendiente', enviada_at = now()
+        where id = ${f.id}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'enviando'`),
+      volverABorrador,
+      log: (m) => console.error(`[regularizacion-rc] ${f.id}: ${m}`),
     })
-    if (res === 'sin_proveedor') { await volverABorrador(); return { estado: 'canal_no_disponible' } }
-    if (res !== 'enviado') { await volverABorrador(); return { estado: 'envio_fallido' } }
-    await db.$executeRaw(Prisma.sql`
-      update solicitud_regularizacion set estado = 'pendiente', enviada_at = now()
-      where id = ${f.id}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'enviando'`)
+    if (r === 'canal_no_disponible' || r === 'envio_fallido' || r === 'confirmacion_fallida') return { estado: r }
+    if (r === 'sin_cambios') return { estado: 'sin_cambios' }
     await anotarHistorial(correduriaId, f.clienteId, f.polizaId,
       `Regularización de RC (${f.compania}, periodo ${f.periodoDesde} a ${f.periodoHasta}): pedida la facturación al cliente por correo con enlace.`)
     return { estado: 'enviada' }

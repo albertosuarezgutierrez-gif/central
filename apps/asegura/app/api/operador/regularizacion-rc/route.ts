@@ -7,6 +7,8 @@ import { auditado } from '@/lib/auditoria'
 import { crearRegularizacion, decidirRegularizacion, editarRegularizacion, regularizacionesDePoliza } from '@/lib/regularizacion-rc'
 import { leerBotonRrc } from '@/lib/regularizacion-rc-telegram'
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
@@ -25,7 +27,7 @@ export const dynamic = 'force-dynamic'
  */
 const STATUS: Record<string, number> = {
   creada: 201, invalida: 422, no_encontrada: 404, ambigua: 409, no_viva: 409, sin_migracion: 503,
-  canal_no_disponible: 503, envio_fallido: 502, sin_cambios: 200,
+  canal_no_disponible: 503, envio_fallido: 502, confirmacion_fallida: 502, sin_cambios: 200,
 }
 
 export async function GET(req: Request) {
@@ -63,7 +65,7 @@ export const POST = auditado(async (req: Request) => {
     }
     if (b?.accion === 'editar') {
       const id = typeof b.id === 'string' ? b.id : ''
-      if (!/^[0-9a-f-]{36}$/i.test(id)) return NextResponse.json({ estado: 'invalida' }, { status: 422 })
+      if (!UUID.test(id)) return NextResponse.json({ estado: 'invalida' }, { status: 422 })
       const r = await editarRegularizacion(correduria.id, id, b.texto)
       return NextResponse.json(r, { status: r.estado === 'sin_cambios' ? 409 : STATUS[r.estado] ?? 200 })
     }
