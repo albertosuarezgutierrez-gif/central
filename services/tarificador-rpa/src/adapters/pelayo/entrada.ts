@@ -106,10 +106,12 @@ const raices = (page: Page): (Page | Frame)[] => [page, ...page.frames().filter(
 const contar = (l: Locator) => l.count().catch(() => 0)
 
 /** Controles clicables cuyo texto/nombre accesible es EXACTAMENTE `texto` (visibles), en una raíz. */
-function candidatos(raiz: Page | Frame, texto: string): Locator {
+function candidatos(raiz: Page | Frame, texto: string, tarjetas = false): Locator {
   const re = etiquetaExactaPelayo(texto)
+  // 0.3.32: el selector de ramo son TARJETAS (`<a class="card">` sin href ni rol; también `<div class="card">`): solo para el ramo se admite la clase `card`.
+  const extra = tarjetas ? ' or contains(concat(" ", normalize-space(@class), " "), " card ")' : ''
   const porRol = raiz.getByRole('menuitem', { name: re }).or(raiz.getByRole('link', { name: re })).or(raiz.getByRole('button', { name: re })).or(raiz.getByRole('tab', { name: re }))
-  const porTexto = raiz.getByText(re).locator('xpath=ancestor-or-self::*[self::a or self::button or self::label or @role="menuitem" or @role="button" or @role="link" or @role="tab" or @role="option" or @onclick][1]')
+  const porTexto = raiz.getByText(re).locator(`xpath=ancestor-or-self::*[self::a or self::button or self::label or @role="menuitem" or @role="button" or @role="link" or @role="tab" or @role="option" or @onclick${extra}][1]`)
   return porRol.or(porTexto).locator('visible=true')
 }
 
@@ -126,10 +128,10 @@ async function esHojaExacta(l: Locator, texto: string): Promise<boolean> {
 }
 
 /** Todos los controles exactos visibles de `texto` en la página y sus marcos (ya filtrados a hoja exacta). */
-async function exactos(page: Page, texto: string): Promise<Locator[]> {
+async function exactos(page: Page, texto: string, tarjetas = false): Promise<Locator[]> {
   const out: Locator[] = []
   for (const r of raices(page)) {
-    const c = candidatos(r, texto)
+    const c = candidatos(r, texto, tarjetas)
     const n = Math.min(await contar(c), 10)
     for (let i = 0; i < n; i++) if (await esHojaExacta(c.nth(i), texto)) out.push(c.nth(i))
   }
@@ -252,6 +254,16 @@ export async function estructuraPantallaPelayo(page: Page): Promise<EstructuraPe
     ruta = new URL(page.url()).pathname.slice(0, 80)
   } catch { /* sin ruta */ }
   return { ruta: rotulosSeguros([ruta], 1)[0] ?? '', titulos: rotulosSeguros(titulos, 10), acciones: rotulosSeguros(acciones, 30), campos, selects }
+}
+
+/** 0.3.32: huella de la pantalla (ruta + títulos + acciones + nº de campos + desplegables) para saber si el clic del ramo la CAMBIÓ. Sin valores. Pura. */
+export function huellaPantallaPelayo(e: EstructuraPelayo): string {
+  return JSON.stringify([e.ruta, e.titulos, e.acciones, e.campos, e.selects.map((x) => [x.etiqueta, x.opciones.length])])
+}
+
+/** 0.3.32: ¿la pantalla de después es otra que la de antes? (otra ruta, otros títulos/acciones, otro nº de campos o de desplegables). Pura. */
+export function cambioPantallaPelayo(antes: EstructuraPelayo, despues: EstructuraPelayo): boolean {
+  return huellaPantallaPelayo(antes) !== huellaPantallaPelayo(despues)
 }
 
 async function volcar(page: Page, ctx: CtxEntradaPelayo, que: string): Promise<EstructuraPelayo> {
@@ -384,7 +396,7 @@ async function localizarRamo(page: Page, rotulos: readonly string[]): Promise<Ra
     }
   }
   const pulsables: Locator[] = []
-  if (selects.length === 0) for (const t of rotulos) pulsables.push(...(await exactos(page, t)))
+  if (selects.length === 0) for (const t of rotulos) pulsables.push(...(await exactos(page, t, true)))
   return { selects, pulsables }
 }
 
@@ -441,16 +453,42 @@ export async function abrirNuevoPresupuestoPelayo(page: Page, ctx: CtxEntradaPel
   // La pantalla de ramo llega lenta: se espera a ver el control del ramo (o se agota el tope) ANTES de volcarla.
   await esperarRamo(destino, rotulosRamoPelayo(ramo), e.paginaMs)
   const antes = await volcar(destino, ctx, 'seleccion_ramo')
+  const contexto = destino.context()
+  const abiertas: Page[] = []
+  const alAbrir = (p: Page) => { abiertas.push(p) }
+  contexto.on('page', alAbrir)
   const r = await elegirRamoPelayo(destino, ctx, ramo)
   ctx.log(`pelayo_ramo ${JSON.stringify({ ramo, ...r })}`)
-  if (r.estado === 'no_elegido') return destino
-  // El primer formulario: se espera a que cambie el nº de campos (o a que pase el tope); no se rellena ni se avanza.
+  if (r.estado === 'no_elegido') {
+    contexto.off('page', alAbrir)
+    return destino
+  }
+  // El primer formulario (0.3.32): la tarjeta del ramo puede abrir una PESTAÑA nueva (sin href: `window.open`) o repintar la misma página (incl. iframe).
+  // Se espera a una pestaña nueva o a que la pantalla CAMBIE (no solo el nº de campos), se deja asentar y se vuelca. No se rellena ni se avanza.
   const fin = Date.now() + e.formularioMs
+  let actual: Page = destino
   for (;;) {
-    const d = await estructuraPantallaPelayo(destino)
-    if (d.campos !== antes.campos || Date.now() >= fin) break
+    const nuevaPestana = abiertas.find((p) => p !== destino && !p.isClosed())
+    if (nuevaPestana) {
+      actual = nuevaPestana
+      await actual.waitForLoadState('domcontentloaded', { timeout: 15_000 }).catch(() => undefined)
+      await exigirSinVerificacion(actual, 'pelayo')
+      await ctx.exigirSinCaptcha()
+      break
+    }
+    if (cambioPantallaPelayo(antes, await estructuraPantallaPelayo(destino)) || Date.now() >= fin) break
     await destino.waitForTimeout(500)
   }
-  await volcar(destino, ctx, 'formulario_ramo')
-  return destino
+  contexto.off('page', alAbrir)
+  await actual.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined)
+  // Asentar: el formulario se pinta por trozos; se espera a dos lecturas seguidas iguales (tope ~5 s).
+  let previa = huellaPantallaPelayo(await estructuraPantallaPelayo(actual))
+  for (let i = 0; i < 10; i++) {
+    await actual.waitForTimeout(500)
+    const h = huellaPantallaPelayo(await estructuraPantallaPelayo(actual))
+    if (h === previa) break
+    previa = h
+  }
+  await volcar(actual, ctx, 'formulario_ramo')
+  return actual
 }
