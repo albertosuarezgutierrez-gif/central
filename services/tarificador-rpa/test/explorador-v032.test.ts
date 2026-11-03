@@ -801,7 +801,7 @@ test('0.3.5b · solo los descriptores URL se neutralizan: posiciones de href/for
 
 // ─── 0.3.6 (real 28/10/2026 15:17, main-301931b) ────────────────────────────────────────────────────────────
 
-test('versión 0.3.27', () => assert.equal(EXPLORADOR_VERSION, '0.3.27'))
+test('versión 0.3.28', () => assert.equal(EXPLORADOR_VERSION, '0.3.28'))
 
 /** ePAC valida el NIF al SALIR del campo (change → petición asíncrona → campo oculto); «Aceptar» en el mismo lote llegaba antes. */
 const FIGURAS_NIF = PAGINA(`

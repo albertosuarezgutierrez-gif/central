@@ -175,6 +175,8 @@ export const OPCIONES_NUEVA = [
   { entrada: 'mapfre:patrimoniales:hogar', compania: 'Mapfre', producto: 'Hogar' },
   { entrada: 'occident:productos:hogar', compania: 'Occident', producto: 'Hogar' },
   { entrada: 'fidelidade:particulares:vivienda', compania: 'Fidelidade', producto: 'Vivienda (hogar)' },
+  { entrada: 'pelayo:presupuestos:auto', compania: 'Pelayo', producto: 'Auto (solo lectura)' },
+  { entrada: 'pelayo:presupuestos:hogar', compania: 'Pelayo', producto: 'Hogar (solo lectura)' },
 ] as const
 export const ENTRADA_POR_DEFECTO = 'allianz:particulares:hogar'
 

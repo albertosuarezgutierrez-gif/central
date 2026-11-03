@@ -176,6 +176,11 @@ export type EntradaExploracion = {
    * de `MEDIADOR` (`@central/module-seguros`) y los pone en `riesgo.tomador` al encolar; el resolver los lee de ahí.
    */
   tomadorMediador?: true
+  /**
+   * SOLO LECTURA (Pelayo, 03/11/2026, primera exploración): el bucle inventaría la PRIMERA pantalla tras la entrada, la manda a
+   * asegura (queda en el mapa) y PARA con `tope` SIN ejecutar el lote de la IA: ni rellenar, ni elegir, ni avanzar. Sin la clave = bucle normal.
+   */
+  soloLectura?: true
 }
 
 /**
@@ -407,7 +412,26 @@ export const ENTRADAS_EXPLORACION: Readonly<Record<string, EntradaExploracion>> 
     // 0.3.18: el botón de avance de «Simulación» no tiene rótulo (input submit de OutSystems): regla estrecha, ver `AvanceSinTexto`.
     avancesSinTexto: Object.freeze([SIMULACION_FIDELIDADE_SIN_TEXTO]),
   }),
+  // Pelayo (portal de mediadores, Alberto 03/11/2026): login › menú «Contratación» › «Presupuestos» › «Nuevo Presupuesto» › selector de
+  // RAMO (Auto / Hogar) › primer formulario de datos. El recorrido va fijo en el código de Pelayo (`pelayo/entrada.ts`) y sus clics por la
+  // puerta EXACTA del guard (`ENLACES_ENTRADA_AUTORIZADOS.pelayo`, origen https://mediadores.pelayo.com, en orden, una vez). Primera
+  // exploración en SOLO LECTURA: se vuelca la pantalla a la que se llega y se para, sin rellenar ni avanzar (sin avances autorizados).
+  'pelayo:presupuestos:auto': Object.freeze({
+    compania: 'pelayo', ramo: 'auto', producto: 'auto', pestana: 'Contratación', productoMenu: 'Auto',
+    avancesAutorizados: Object.freeze([]),
+    soloLectura: true,
+  }),
+  'pelayo:presupuestos:hogar': Object.freeze({
+    compania: 'pelayo', ramo: 'hogar', producto: 'hogar', pestana: 'Contratación', productoMenu: 'Hogar',
+    avancesAutorizados: Object.freeze([]),
+    soloLectura: true,
+  }),
 })
+
+/** ¿La entrada es de SOLO LECTURA (ver `EntradaExploracion.soloLectura`)? Desconocida = no. Pura. */
+export function entradaSoloLectura(entrada: string): boolean {
+  return Object.hasOwn(ENTRADAS_EXPLORACION, entrada) && ENTRADAS_EXPLORACION[entrada].soloLectura === true
+}
 
 export function esEntradaExploracion(v: unknown): v is keyof typeof ENTRADAS_EXPLORACION {
   return typeof v === 'string' && Object.hasOwn(ENTRADAS_EXPLORACION, v)

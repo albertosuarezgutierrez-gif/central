@@ -33,3 +33,6 @@ if (MAPFRE_HOGAR_ACTIVO) adaptadores.registrar(mapfreHogar)
 // selector, tomador, antecedentes y PRECIO) es hueco con inventario. Se registra SOLO con su flag (generali/auto.ts, ENCENDIDO por
 // Alberto el 18/10/2026). La fila `seguros.companias_integracion` generali/auto sigue siendo la puerta de BD: sin ella no corre nada.
 if (GENERALI_AUTO_ACTIVO) adaptadores.registrar(generaliAuto)
+// Pelayo (03/11/2026): solo la ENTRADA del explorador (`pelayo/entrada.ts`). Auto y hogar SIN implementar (`pelayo/ramos.ts`: `tarificar`
+// lanza «Pelayo: ramo X aún no implementado», flag `PELAYO_ACTIVO` apagado) y SIN registrar aquí: se registran bajo su flag cuando haya
+// adaptador real (un registro hoy exigiría la capa de respaldo IA y los obligatorios, que un esqueleto no tiene).

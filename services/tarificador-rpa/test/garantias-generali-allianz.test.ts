@@ -35,7 +35,7 @@ function pdfSintetico(contenido: string): Buffer {
 
 // ─────────────────────────── Generali auto 0.2.59 ───────────────────────────
 test('versiones: Generali auto 0.2.59, Allianz hogar 0.1.14, Allianz auto 0.6.39', () => {
-  assert.equal(VERSION_GENERALI_AUTO, '0.2.73')
+  assert.equal(VERSION_GENERALI_AUTO, '0.2.74')
   assert.equal(allianzHogar.version, '0.1.14')
   assert.equal(allianzAuto.version, '0.6.41')
 })

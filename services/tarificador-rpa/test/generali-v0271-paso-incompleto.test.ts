@@ -73,7 +73,7 @@ const pantalla = (aviso: string, valoracion: string, marcaValoracion = '') => `
 <div id="paso0" style="display:none;">${valoracion}</div>
 <div id="paso1" style="display:block;"><h2>Garantías y Capitales opcionales</h2></div>`
 
-test('v0.2.71 · versión (vigente 0.2.73)', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.73'))
+test('v0.2.71 · versión (vigente 0.2.74)', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.74'))
 
 test('puras: aviso de paso incompleto, destino (marcado > anterior al actual), valor neutro y error con paso + campo', () => {
   assert.equal(avisoPasoIncompletoGenerali(['Paso con datos incompletos']), true)
