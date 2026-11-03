@@ -229,6 +229,10 @@ import {
   candidatosNeutroPasoGenerali,
   diagnosticoPasoIncompletoGenerali,
   errorPasoSinCampoGenerali,
+  obligatorioHistorialObtenidoGenerali,
+  NAME_BOTON_HISTORIAL_OBTENIDO_GENERALI,
+  resumenObligatoriosHistorialGenerali,
+  resumenPantallaHistorialObtenidoGenerali,
   type CampoSenaladoGenerali,
   type ObligatorioPasoGenerali,
   type PasoBarraGenerali,
@@ -496,6 +500,11 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * dato, la siniestralidad más favorable (aviso «supuesto» → precio estimado). Un obligatorio vacío sin regla (p. ej. una fecha) para con su nombre. Si la
  * pestaña no existe se anota y se sigue como antes; el atasco final trae el inventario (etiquetas, sin valores) de esa pestaña.
  *
+ * 0.2.74 (03/11/2026, trabajo b1c5363f): sin vacíos en ningún paso y «Recalcular» en «datos incompletos». En «Garantías y Resultados» › «Bonus-Malus» el
+ *   obligatorio «Historial siniestral obtenido» es un BOTÓN (`reg1063E.bonusMalus.zhsdet`, `link('histsin')`) que ningún lector contaba: ahora, antes de los
+ *   bloques de la pestaña y del único «Recalcular», se pulsa por su puerta del guard, se completa la pantalla del historial (dato del riesgo o neutro, supuesto)
+ *   y se sale por la puerta de salida del guard (lista blanca exacta); sin salida conocida, atasco con el inventario de esa pantalla. El resumen del Historial
+ *   lista TODOS sus obligatorios (sin cortar). La vuelta por la barra espera 20 s (el portal tardó ~10 s) y se relee antes de gastar «Siguiente».
  * 0.2.73 (03/11/2026, trabajo 44b44608): «Datos de Valoración» sin obligatorios vacíos detectados, vuelta y «Recalcular» siguió en «datos incompletos». La barra
  *   no marca pasos; el portal señala el campo con su aviso (`setError`). Ahora: obligatorios del DOM vivo (desplegable con valor vacío, ocultos, de botón), se pulsa
  *   el aviso y se lee el campo enfocado; sin campo que rellenar y con el aviso vivo → atasco con paso + diagnóstico (≤300) y sin «Recalcular».
@@ -512,7 +521,7 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * 0.2.65 (02/11/2026): el panel de «Versión» con columnas lista las opciones como `tr[data-label]` (no `li`): «Otras versiones ...» se localiza también ahí.
  * 0.2.64 (02/11/2026): «Garantías y Resultados» no se vuelve a pulsar si ya se pulsó en el trabajo (el guard solo lo permite una vez); solo espera al bloque.
  */
-export const VERSION_GENERALI_AUTO = '0.2.73'
+export const VERSION_GENERALI_AUTO = '0.2.74'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -1101,7 +1110,10 @@ export async function completarHistorialSiniestralGenerali(
   if (faltan.length > 0) {
     throw new ErrorMapaIncompletoGenerali(`«Historial Siniestral» con obligatorios vacíos que el bot no puede rellenar con el riesgo (certificados y fechas no se inventan; Genernet no calcularía: «El paso anterior no tiene los datos completos»): ${faltan.join(' · ')}. Bloques: ${resumenHistorialSiniestralGenerali(despues)}`)
   }
-  return { avisos, nota: `Historial Siniestral: ${resumenHistorialSiniestralGenerali(despues, 220)}${avisos.length ? ` · rellenados ${avisos.length}` : ''}` }
+  // v0.2.74 (trabajo b1c5363f): la nota cortaba a 220 caracteres («Nº años asegurado durante …»); ahora TODOS los obligatorios de la sección (DOM vivo, también
+  // ocultos y de solo lectura) con su estado, por rótulo corto o código. Sin valores.
+  const todos = resumenObligatoriosHistorialGenerali(await leerObligatoriosPasoGenerali(raiz))
+  return { avisos, nota: `Historial Siniestral: ${todos.startsWith('(') ? resumenHistorialSiniestralGenerali(despues, 400) : todos}${avisos.length ? ` · rellenados ${avisos.length}` : ''}` }
 }
 
 /** v0.2.42: estado del cálculo de TODOS los marcos de «Valoración Riesgo» + si algún marco seguía cargando (`loading.html` visible o documento sin terminar). Solo lee. */
@@ -1529,7 +1541,8 @@ export async function completarPasoIncompletoGenerali(
   clavesSupuestas: readonly string[],
   opciones: { avisosExtra?: readonly string[]; esperaMs?: number } = {},
 ): Promise<{ avisos: string[]; nota: string } | null> {
-  const esperaMs = opciones.esperaMs ?? 8_000
+  // v0.2.74 (trabajo b1c5363f): cada cambio de paso tardó ~10-12 s en el portal; con 8 s la barra «no volvía» y se gastaba «Siguiente» ya en el destino.
+  const esperaMs = opciones.esperaMs ?? ESPERA_PANTALLA_MS
   const avisosPortal = [...(await avisosAreaErroresGenerali(page)), ...(opciones.avisosExtra ?? [])]
   const barra = await leerBarraPasosGenerali(page)
   // Sin barra de pasos legible no se navega (el atasco de 0.2.70 ya lleva los avisos del portal).
@@ -1594,6 +1607,9 @@ export async function completarPasoIncompletoGenerali(
   let vuelta = ''
   if (await irAPasoGenerali(page, ctx, origen, esperaMs)) vuelta = 'barra de pasos'
   else probado.push('barra de pasos')
+  // v0.2.74 (trabajo b1c5363f): la barra SÍ había cambiado de paso, pero tarde (el volcado muestra «Garantías y Resultados» justo antes de «Siguiente»). Antes de
+  // gastar «Siguiente» se relee la barra otra espera: si ya está en el origen, la vuelta fue por la barra (tardía) y «Siguiente» no se pulsa.
+  if (!vuelta && (await esperarPasoActualGenerali(page, origen, esperaMs))) vuelta = 'barra de pasos (tardía)'
   if (!vuelta && destino !== origen && /valoraci/i.test(destino) && typeof ctx.pulsarSiguienteGenerali === 'function') {
     const r = await ctx.pulsarSiguienteGenerali()
     if (await esperarPasoActualGenerali(page, origen, esperaMs)) vuelta = 'Siguiente'
@@ -1629,6 +1645,125 @@ export async function asegurarGarantiasYResultadosGenerali(page: Page, ctx: Cont
     await page.waitForTimeout(pausaMs)
   }
   throw new ErrorMapaIncompletoGenerali(`la pestaña «${SUBPESTANA_PRECIO_GENERALI}» (no cargó: ni «Modalidades de Seguro», ni «Envío e-mail», ni la suma de abogado, ni «Verificación del riesgo» aparecieron en ${Math.round((intentos * pausaMs) / 1000)} s; el bot no marca forma de pago, envío ni abogado a ciegas)`)
+}
+
+/** v0.2.74: encabezados y controles pulsables VISIBLES de un marco (solo rótulos; nunca valores). Solo lee. */
+const JS_INVENTARIO_PANTALLA_HISTORIAL_GENERALI = `(() => {${JS_COMUN}
+  const enc = Array.from(document.querySelectorAll('h1,h2,h3,legend')).filter((e) => VIS(e)).map((e) => T(e).slice(0, 60)).filter(Boolean);
+  const bot = Array.from(document.querySelectorAll('input[type=button],input[type=submit],button,a,li[onclick]')).filter((e) => VIS(e))
+    .map((e) => (e.tagName === 'INPUT' ? String(e.value || '') : T(e)).replace(/\\s+/g, ' ').trim().slice(0, 40)).filter(Boolean);
+  return { encabezados: enc.slice(0, 20), botones: bot.slice(0, 40) };
+})()`
+
+/**
+ * v0.2.74 (03/11/2026, trabajo b1c5363f con 0.2.73): en «Garantías y Resultados» › «Bonus-Malus» el obligatorio «Historial siniestral obtenido» es un BOTÓN
+ * («Historial Siniestral», `reg1063E.bonusMalus.zhsdet`, `link('histsin')`) que abre la pantalla del historial; sin pasar por ella el portal no calcula
+ * («No se puede calcular con datos incompletos») aunque ningún campo esté vacío. Antes de los bloques de la pestaña y del único «Recalcular»:
+ * 1) se localiza ese bloque (DOM vivo); sin él → null y no se toca nada. 2) Se pulsa SOLO por la puerta del guard (`ctx.obtenerHistorialSiniestralGenerali`:
+ * name + onclick exactos, una vez). 3) En la pantalla que abre: los obligatorios vacíos con regla del riesgo (años asegurado, siniestros) o, sin regla, en
+ * valor neutro («No» exacto o la única opción real), cada uno anotado (supuesto → precio estimado); lo que no tenga valor seguro → atasco con el inventario
+ * (encabezados, botones, obligatorios; sin valores). 4) Se sale SOLO por la puerta de salida del guard (`ctx.salirHistorialSiniestralGenerali`: lista blanca
+ * exacta de rótulos en esa pantalla); sin salida conocida → atasco con el inventario. 5) Se espera a «Garantías y Resultados». Nunca emite, graba ni recalcula.
+ */
+export async function completarHistorialObtenidoGenerali(
+  page: Page,
+  ctx: ContextoPortal,
+  f: { aniosAseguradoAnterior: number; siniestrosUltimos5Anios: number },
+  clavesSupuestas: readonly string[],
+  esperaMs = ESPERA_PANTALLA_MS,
+): Promise<{ avisos: string[]; nota: string } | null> {
+  let marco: Frame | null = null
+  for (const fr of page.frames()) {
+    if (fr.isDetached()) continue
+    if (obligatorioHistorialObtenidoGenerali(await leerObligatoriosPasoGenerali(fr))) { marco = fr; break }
+  }
+  if (!marco) return null
+  const m = marco
+  const puerta = ctx.obtenerHistorialSiniestralGenerali
+  if (typeof puerta !== 'function') return { avisos: [], nota: 'Historial siniestral obtenido: el botón está a la vista pero el contexto del runner no trae su puerta guardada (no se pulsa)' }
+  const selBoton = `input[name="${NAME_BOTON_HISTORIAL_OBTENIDO_GENERALI}"]`
+  const pausa = (ms: number) => new Promise((r) => setTimeout(r, ms))
+  const leerInventario = async () => ({
+    ...(((await m.evaluate(JS_INVENTARIO_PANTALLA_HISTORIAL_GENERALI).catch(() => null)) as { encabezados: string[]; botones: string[] } | null) ?? { encabezados: [], botones: [] }),
+    obligatorios: await leerObligatoriosPasoGenerali(m),
+  })
+  const r = await puerta()
+  const dlg = r?.dialogo ? ` (diálogo cancelado: ${sanearFragmentoGenerali(r.dialogo).slice(0, 120)})` : ''
+  // La pantalla cambió cuando el botón ya no está y el documento terminó de cargar.
+  let fin = Date.now() + esperaMs
+  let cambio = false
+  for (;;) {
+    const sigue = (await m.locator(selBoton).count().catch(() => 1)) > 0
+    const listo = (await m.evaluate(() => document.readyState === 'complete').catch(() => false)) === true
+    if (!sigue && listo) { cambio = true; break }
+    if (Date.now() >= fin) break
+    await pausa(300)
+  }
+  if (!cambio) return { avisos: [], nota: `Historial siniestral obtenido: «Historial Siniestral» pulsado${dlg}; la pantalla no cambió en ${Math.round(esperaMs / 1000)} s` }
+  await pausa(400)
+  let inv = await leerInventario()
+  const avisos: string[] = []
+  const faltan: string[] = []
+  const tratados: string[] = []
+  const destino = 'Historial Siniestral'
+  // 3a) Con regla del riesgo (mismas reglas que la sección de «Datos de Valoración»; certificados/fechas no se inventan).
+  const plan = planHistorialSiniestralGenerali(await leerBloquesHistorialGenerali(m), f, clavesSupuestas)
+  for (const a of plan.acciones) {
+    const b = a.bloque
+    const rotulo = sanearFragmentoGenerali(b.etiqueta).slice(0, 60)
+    if (!b.name || b.name.includes('"')) continue
+    if (b.tipo === 'select') {
+      const sel = m.locator(`select[name="${b.name}"]`)
+      if ((await sel.count()) !== 1) continue
+      await elegirIndice(sel, indiceOpcionNormalizadaGenerali(b.opciones, [a.valor]), ctx)
+    } else {
+      const campo = m.locator(`input[name="${b.name}"], textarea[name="${b.name}"]`)
+      if ((await campo.count()) !== 1) continue
+      await escribir(campo, a.valor, ctx)
+    }
+    tratados.push(b.name)
+    avisos.push(`Historial Siniestral (pantalla) · ${rotulo}: ${a.valor} (${a.supuesto ? 'siniestralidad más favorable; supuesto' : 'dato de la ficha'})`)
+  }
+  // 3b) El resto de obligatorios vacíos editables: valor neutro (supuesto).
+  for (const b of candidatosNeutroPasoGenerali(await leerObligatoriosPasoGenerali(m), tratados)) {
+    tratados.push(b.name)
+    const x = await neutroBloquePasoGenerali(m, ctx, destino, b as typeof b & { tipo: 'select' | 'texto' | 'opciones' })
+    if ('aviso' in x) avisos.push(x.aviso)
+    else faltan.push(x.falta)
+  }
+  inv = await leerInventario()
+  for (const o of inv.obligatorios) {
+    if (!o.vacio || !o.visible || o.tipo === 'boton') continue
+    const rot = sanearFragmentoGenerali(o.etiqueta || o.name).slice(0, 60) || '(sin rótulo)'
+    if (!faltan.some((y) => y.startsWith(rot))) faltan.push(`${rot} (sigue vacío${o.editable ? '' : '; solo lectura'})`)
+  }
+  if (faltan.length > 0) {
+    throw new ErrorMapaIncompletoGenerali(`la pantalla «Historial Siniestral» (abierta desde «Historial siniestral obtenido» de «${SUBPESTANA_PRECIO_GENERALI}»${dlg}) con obligatorios sin valor seguro: ${[...new Set(faltan)].slice(0, 10).join(' · ')}. No se sale ni se pulsa «Recalcular». Pantalla: ${resumenPantallaHistorialObtenidoGenerali(inv)}`)
+  }
+  // 4) Salida por la puerta del guard (lista blanca exacta en esa pantalla).
+  const salir = ctx.salirHistorialSiniestralGenerali
+  if (typeof salir !== 'function') throw new ErrorMapaIncompletoGenerali(`la salida de la pantalla «Historial Siniestral» (el contexto del runner no trae su puerta guardada). Pantalla: ${resumenPantallaHistorialObtenidoGenerali(inv)}`)
+  let s: { dialogo: string | null; texto: string }
+  try {
+    s = await salir()
+  } catch (e) {
+    if (e instanceof Error && /Bloqueada/.test(e.constructor.name)) throw e
+    throw new ErrorMapaIncompletoGenerali(`la salida de la pantalla «Historial Siniestral» (${sanearFragmentoGenerali(e instanceof Error ? e.message : String(e)).slice(0, 200)}). Pantalla: ${resumenPantallaHistorialObtenidoGenerali(inv)}`)
+  }
+  // 5) De vuelta en «Garantías y Resultados».
+  fin = Date.now() + esperaMs
+  let vuelta = false
+  for (;;) {
+    if ((await hayEnDomGenerali(page, SEL_PESTANA_GARANTIAS_CARGADA_GENERALI)) && (await m.evaluate(() => document.readyState === 'complete').catch(() => false))) { vuelta = true; break }
+    if (Date.now() >= fin) break
+    await pausa(300)
+  }
+  const sd = s.dialogo ? ` (diálogo cancelado: ${sanearFragmentoGenerali(s.dialogo).slice(0, 120)})` : ''
+  if (!vuelta) throw new ErrorMapaIncompletoGenerali(`«${SUBPESTANA_PRECIO_GENERALI}» tras salir de «Historial Siniestral» por «${sanearFragmentoGenerali(s.texto).slice(0, 30)}»${sd} (no volvió en ${Math.round(esperaMs / 1000)} s); no se pulsa «Recalcular». Pantalla: ${resumenPantallaHistorialObtenidoGenerali(await leerInventario())}`)
+  return {
+    avisos,
+    nota: `Historial siniestral obtenido: «Historial Siniestral» pulsado${dlg}; pantalla: ${resumenPantallaHistorialObtenidoGenerali(inv, 300)}; ${avisos.length} obligatorio(s) rellenado(s); salida por «${sanearFragmentoGenerali(s.texto).slice(0, 30)}»${sd}; de vuelta en «${SUBPESTANA_PRECIO_GENERALI}»`,
+  }
 }
 
 /** Pantalla leída de TODOS los marcos de la página (la vista tras la subpestaña puede estar en otro marco). */
@@ -4548,7 +4683,7 @@ export async function probarTipoVehiculoGenerali(page: Page, marco: Raiz, form: 
   return { intentos, valor: (await leer()) || null }
 }
 
-export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supuestos: string[], ctx: ContextoPortal, opciones: { esperaPrecioMs?: number; esperaModalidadesMs?: number; graciaBloqueoMs?: number; estableBloqueoMs?: number; esperaProtegidosMs?: number; esperaHistorialMs?: number; esperaGarantiasMs?: number; pruebasTipo?: EsperasPruebasTipoGenerali } = {}): Promise<ResultadoAdaptador> {
+export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supuestos: string[], ctx: ContextoPortal, opciones: { esperaPrecioMs?: number; esperaModalidadesMs?: number; graciaBloqueoMs?: number; estableBloqueoMs?: number; esperaProtegidosMs?: number; esperaHistorialMs?: number; esperaHistorialObtenidoMs?: number; esperaGarantiasMs?: number; pruebasTipo?: EsperasPruebasTipoGenerali } = {}): Promise<ResultadoAdaptador> {
   const paso = <T>(n: Parameters<ContextoPortal['paso']>[0], fn: () => Promise<T>): Promise<T> => (typeof ctx.paso === 'function' ? ctx.paso(n, fn) : fn())
   const ant = conAntecedentesFavorables(form)
   for (const x of ant.supuestos) if (!supuestos.includes(x)) supuestos.push(x)
@@ -4639,6 +4774,7 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   const avisosFormaPago: string[] = [...avisosDatosValoracion]
   let recalcularIntentado = false
   let bloquesDecision: string | null = null
+  let notaHistorialObtenido = ''
   const recalcularSiHaceFalta = async (): Promise<Awaited<ReturnType<typeof esperarPrecioGenerali>> | null> => {
     if (recalcularIntentado || !modalidadesSinCalcularGenerali(await volcarModalidadesGenerali(page))) return null
     recalcularIntentado = true
@@ -4654,7 +4790,11 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
     // v0.2.42 (decisión de Alberto): «Forma de pago a contratar» es obligatoria para calcular: Anual por defecto (o la del riesgo), opción exacta.
     // v0.2.63: `esperaGarantiasMs: 0` (solo pruebas con páginas sintéticas sin esos bloques) omite la comprobación.
     if (opciones.esperaGarantiasMs !== 0) await asegurarGarantiasYResultadosGenerali(page, ctx, 700, Math.max(1, Math.ceil((opciones.esperaGarantiasMs ?? 5600) / 700)))
-    const fp = await elegirFormaPagoGenerali(page, ant.formulario, ctx)
+    // v0.2.74 (trabajo b1c5363f): «Historial siniestral obtenido» (obligatorio de BOTÓN de «Bonus-Malus») ANTES de los bloques de la pestaña: su pantalla recarga el marco.
+    const histObt = await paso('formulario', () => completarHistorialObtenidoGenerali(page, ctx, ant.formulario, ant.claves, opciones.esperaHistorialObtenidoMs))
+    for (const a of histObt?.avisos ?? []) if (!avisosFormaPago.includes(a)) avisosFormaPago.push(a)
+    notaHistorialObtenido = histObt?.nota ?? 'Historial siniestral obtenido: sin el bloque a la vista'
+    const fp =await elegirFormaPagoGenerali(page, ant.formulario, ctx)
     if (fp && !avisosFormaPago.includes(fp)) avisosFormaPago.push(fp)
     // v0.2.43 (decisión de Alberto, 28/10/2026): «Envío e-mail» = «Mediador» y «Verificación del riesgo» = «No», opción EXACTA, antes de «Recalcular».
     const envio = await elegirEnvioEmailGenerali(page, ctx)
@@ -4746,7 +4886,7 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   // importes/modalidades, la navegación, el resto y la pantalla, con presupuesto decreciente hasta que todo quepa. Lo primero que se recorta es el inventario del tomador
   // y el mapa provisional (v0.2.36); la estructura de la tabla se recorta dentro del bloque de marcos antes que la lista.
   const compuesto = (nav: number, res: number, pan: number, imp: number, amp: number, tom: number, mapa: number, dImp: number, dMod: number): string =>
-    `${prefijoDecision}el PRECIO de «${SUBPESTANA_PRECIO_GENERALI}» (${que}). Recalcular: ${avanceRecalcular.join(' · ')}. ${esperasCortadas.length ? `Esperas: ${esperasCortadas.join(' · ')}. ` : ''}${estadoCalculo}. ${bloquesDecision ? `Bloques antes de Recalcular: ${bloquesDecision}.` : ''} ${historial.nota.slice(0, 260)}. ${obligatorios.length ? `Avisos del portal: ${obligatorios.join(' · ')}. ` : ''}${resumenDiagnosticoModalidadesGenerali(diagModalidades, amp)}. ${avanceSiguiente.length ? `Avance: ${avanceSiguiente.join(' · ')}. ` : ''}${resumenDiagnosticoImportesGenerali(volImportes, dImp)}. ${resumenModalidadesGenerali(volModalidades, dMod)}. ${nav > 0 ? `Navegación: ${resumenNavegacionGenerali(navegacionMarcos, nav)}. ` : ''}${tom > 0 ? `${tomador.slice(0, tom)}. ` : ''}${mapa > 0 ? `Mapa provisional: ${(hechos.join(',') || 'nada').slice(0, mapa)}. ` : ''}Textos con «€»: ${importes.length ? importes.slice(0, imp).map((f) => `«${f}»`).join(' ') : 'ninguno'}${texto ? `; ${texto}` : ''}. Resultados: ${resumenVolcadoResultadosGenerali(volcado, res)}. Pantalla: ${resumenPantallaGenerali(despues, pan)}`
+    `${prefijoDecision}el PRECIO de «${SUBPESTANA_PRECIO_GENERALI}» (${que}). Recalcular: ${avanceRecalcular.join(' · ')}. ${historial.nota.slice(0, 760)}. ${notaHistorialObtenido ? `${notaHistorialObtenido.slice(0, 420)}. ` : ''}${esperasCortadas.length ? `Esperas: ${esperasCortadas.join(' · ')}. ` : ''}${estadoCalculo}. ${bloquesDecision ? `Bloques antes de Recalcular: ${bloquesDecision}.` : ''}${obligatorios.length ? `Avisos del portal: ${obligatorios.join(' · ')}. ` : ''}${resumenDiagnosticoModalidadesGenerali(diagModalidades, amp)}. ${avanceSiguiente.length ? `Avance: ${avanceSiguiente.join(' · ')}. ` : ''}${resumenDiagnosticoImportesGenerali(volImportes, dImp)}. ${resumenModalidadesGenerali(volModalidades, dMod)}. ${nav > 0 ? `Navegación: ${resumenNavegacionGenerali(navegacionMarcos, nav)}. ` : ''}${tom > 0 ? `${tomador.slice(0, tom)}. ` : ''}${mapa > 0 ? `Mapa provisional: ${(hechos.join(',') || 'nada').slice(0, mapa)}. ` : ''}Textos con «€»: ${importes.length ? importes.slice(0, imp).map((f) => `«${f}»`).join(' ') : 'ninguno'}${texto ? `; ${texto}` : ''}. Resultados: ${resumenVolcadoResultadosGenerali(volcado, res)}. Pantalla: ${resumenPantallaGenerali(despues, pan)}`
   const LIMITE = 1_900 - 'generali/auto: mapa incompleto: faltan '.length
   let mensaje = compuesto(300, 360, 450, 8, 1_500, 120, 80, 260, 620)
   for (const [nav, res, pan, imp, amp, tom, mapa, dImp, dMod] of [

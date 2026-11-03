@@ -29,6 +29,8 @@ import {
 import {
   ID_CONFIRMAR_DATOS_PERSONAS_GENERALI,
   MEDIADOR_GENERALI,
+  NAME_BOTON_HISTORIAL_OBTENIDO_GENERALI,
+  ONCLICK_BOTON_HISTORIAL_OBTENIDO_GENERALI,
   PREFIJO_ID_DATOS_PERSONAS_GENERALI,
   esPantallaGarantiasCapitalesGenerali,
   leerPrecioGenerali,
@@ -5943,6 +5945,154 @@ export async function pulsarRecalcularGenerali(page: Page, guard: GuardEmision):
   }
   guard.comprobar()
   return { dialogo }
+}
+
+// ─────────── v0.2.74: «Historial siniestral obtenido» de «Garantías y Resultados» de Generali (pantalla `histsin`) ───────────
+// Volcado b1c5363f (0.2.73): «Recalcular» sigue en «No se puede calcular con datos incompletos» sin ningún campo vacío; en «Bonus-Malus» el obligatorio
+// «Historial siniestral obtenido *» es un botón `input[type=button][name="reg1063E.bonusMalus.zhsdet"]` «Historial Siniestral» con `onclick="link('histsin');"`
+// (abre la pantalla del historial siniestral para la TARIFICACIÓN; no emite). Dos puertas ESTRECHAS:
+//  · ENTRADA (`pulsarHistorialObtenidoGenerali`): marco `emiAutosGenB028.do` único, exactamente un botón visible con ese `name`, `onclick` y texto EXACTOS, sin
+//    textos de emisión en la página, `comprobarBoton`, UNA vez por trabajo. Arma la salida.
+//  · SALIDA (`pulsarSalidaHistorialObtenidoGenerali`): solo armada por la entrada y UNA vez; marco único de `www.generali.es/emi_genAutosFormWeb/` SIN el formulario
+//    de «Garantías y Resultados» ni el de «Datos de Valoración» (es la pantalla del historial); control visible de rótulo EXACTO de la lista blanca
+//    (`SALIDAS_HISTORIAL_OBTENIDO_GENERALI`, por orden de preferencia), exactamente uno; ni su texto ni su descripción ni su onclick (también de su contenedor)
+//    hablan de guardar/grabar/emitir/contratar/pagar/firmar/póliza/IBAN; sin textos de emisión en la página; `comprobarBoton` con «Aceptar» permitido SOLO aquí.
+//  Los topes de emisión no se relajan: «Aceptar» solo vale dentro de la pantalla del historial abierta por la entrada en este mismo trabajo.
+
+/** v0.2.74: rótulos EXACTOS (sin tildes ni mayúsculas) con los que se puede salir de la pantalla del historial, por orden de preferencia. Nada más. */
+export const SALIDAS_HISTORIAL_OBTENIDO_GENERALI = Object.freeze(['Aceptar', 'Volver'] as const)
+/** v0.2.74: lo que nunca puede llevar el control de salida ni su contenedor (sin tildes, sin mayúsculas). */
+const RE_SALIDA_HISTORIAL_PELIGROSA_GENERALI = /guard|grab|emit|emisi|contrat|firm|pag(a|o|ar)|formaliz|suplement|anul|calcrap|poliza|iban|cuenta|tarjet|domicil/i
+/** v0.2.74: formularios de «Garantías y Resultados» / «Datos de Valoración»: si están en el marco, NO es la pantalla del historial. */
+const SEL_FORMULARIOS_PASOS_GENERALI = '#reg1063EIdentification,#reg1063AIdentification,[name="reg1063E.bonusMalus.zhsdet"]'
+
+/** v0.2.74: ¿es `texto` (rótulo de un control) una salida permitida de la pantalla del historial? Exacto tras normalizar. PURA. */
+export function salidaHistorialObtenidoGeneraliPermitida(texto: string | null | undefined): boolean {
+  const t = textoMenu(String(texto ?? '').replace(/ /g, ' '))
+  if (t === '' || RE_SALIDA_HISTORIAL_PELIGROSA_GENERALI.test(sinTildesNi(t))) return false
+  return SALIDAS_HISTORIAL_OBTENIDO_GENERALI.some((s) => textoMenu(s) === t)
+}
+
+/** v0.2.74: ¿es `onclick` EXACTAMENTE el del botón «Historial Siniestral» (`link('histsin');`, `;` final y espacios opcionales)? PURA. */
+export function onclickHistorialObtenidoGenerali(onclick: string | null | undefined): boolean {
+  const n = (x: string) => String(x ?? '').replace(/\s+/g, '').replace(/;+$/, '')
+  return onclick != null && n(onclick) === n(ONCLICK_BOTON_HISTORIAL_OBTENIDO_GENERALI)
+}
+
+/** Diálogo nativo cancelado durante `fn` (saneado), con espera corta tras el clic y carga acotada del marco. */
+async function conDialogoCanceladoGenerali(page: Page, marco: Frame, fn: () => Promise<void>): Promise<string | null> {
+  let dialogo: string | null = null
+  const alDialogo = (d: Dialog) => {
+    dialogo ??= `${d.type()}: ${mensajesValidacionGenerali([d.message()])[0] ?? '(sin texto)'}`
+    d.dismiss().catch(() => {})
+  }
+  page.on('dialog', alDialogo)
+  try {
+    await fn()
+    const fin = Date.now() + 1_500
+    while (dialogo === null && Date.now() < fin) await page.waitForTimeout(150)
+    await marco.waitForLoadState('load', { timeout: 10_000 }).catch(() => undefined)
+  } finally {
+    page.off('dialog', alDialogo)
+  }
+  return dialogo
+}
+
+/** v0.2.74: ¿algún marco muestra textos de emisión/contratación/pago/firma (con las excusas de siempre de «Garantías y Capitales opcionales»)? */
+async function casaEmisionEnPaginaGenerali(page: Page): Promise<string | null> {
+  for (const f of marcosVivos(page)) {
+    const casa = casaEmisionGenerali(sinRotulosInformativosGenerali(sinSeccionPrecontractualGenerali((await f.evaluate(JS_TEXTOS_AVISO_GENERALI).catch(() => '')) as string)))
+    if (casa !== null) return casa
+  }
+  return null
+}
+
+export async function pulsarHistorialObtenidoGenerali(page: Page, guard: GuardEmision): Promise<{ dialogo: string | null }> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', '«Historial Siniestral» de Generali con una ventana de red abierta')
+  const marcos = marcosVivos(page).filter((f) => urlDatosPersonasGenerali(f.url()))
+  if (marcos.length !== 1) throw new EmisionBloqueadaError('fase', `«Historial Siniestral» de Generali fuera de emiAutosGenB028.do (${marcos.length} marcos; hace falta exactamente uno)`)
+  const marco = marcos[0]!
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (usados.has('generali:historial-obtenido')) throw new EmisionBloqueadaError('fase', '«Historial Siniestral» de Generali ya se pulsó en este trabajo')
+  await exigirSinCuentaBancaria(page)
+  const casa = await casaEmisionEnPaginaGenerali(page)
+  if (casa !== null) throw new EmisionBloqueadaError('fase', `«Historial Siniestral» de Generali: casó ${casa.slice(0, 200)} (textos de emisión/contratación/pago/firma en la página o en un diálogo)`)
+  const boton = marco.locator(`input[type="button"][name="${NAME_BOTON_HISTORIAL_OBTENIDO_GENERALI}"]`).filter({ visible: true })
+  if ((await boton.count()) !== 1) throw new ErrorMapaGuardGenerali('el botón «Historial Siniestral» de «Historial siniestral obtenido» (no hay exactamente uno visible)')
+  const desc = await descripcion(boton)
+  if (textoMenu(textoControl(desc)) !== textoMenu('Historial Siniestral')) throw new EmisionBloqueadaError('boton', textoControl(desc).slice(0, 80))
+  if (!onclickHistorialObtenidoGenerali(desc[7])) throw new EmisionBloqueadaError('boton', `«Historial Siniestral» con un onclick distinto de ${ONCLICK_BOTON_HISTORIAL_OBTENIDO_GENERALI}`)
+  comprobarBoton(desc)
+  usados.add('generali:historial-obtenido')
+  AVANCES_USADOS.set(guard, usados)
+  const dialogo = await conDialogoCanceladoGenerali(page, marco, async () => {
+    await boton.click({ timeout: MS_CLIC_NORMAL_CONFIRMAR_GENERALI })
+    guard.comprobar()
+  })
+  guard.comprobar()
+  return { dialogo }
+}
+
+export async function pulsarSalidaHistorialObtenidoGenerali(page: Page, guard: GuardEmision): Promise<{ dialogo: string | null; texto: string }> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'salida del historial de Generali con una ventana de red abierta')
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (!usados.has('generali:historial-obtenido')) throw new EmisionBloqueadaError('fase', 'salida del historial de Generali sin haberlo abierto por su puerta en este trabajo')
+  if (usados.has('generali:historial-obtenido:salida')) throw new EmisionBloqueadaError('fase', 'la salida del historial de Generali ya se pulsó en este trabajo')
+  await exigirSinCuentaBancaria(page)
+  const casa = await casaEmisionEnPaginaGenerali(page)
+  if (casa !== null) throw new EmisionBloqueadaError('fase', `salida del historial de Generali: casó ${casa.slice(0, 200)} (textos de emisión/contratación/pago/firma en la página o en un diálogo)`)
+  const rotulos = new RegExp(`^\\s*(${SALIDAS_HISTORIAL_OBTENIDO_GENERALI.join('|')})\\s*$`, 'i')
+  const candidatos: { marco: Frame; texto: string; control: Locator }[] = []
+  for (const f of marcosVivos(page)) {
+    if (!urlEmiAutosGenerali(f.url())) continue
+    if ((await f.locator(SEL_FORMULARIOS_PASOS_GENERALI).count().catch(() => 1)) > 0) continue
+    for (const s of SALIDAS_HISTORIAL_OBTENIDO_GENERALI) {
+      const porTexto = f.getByText(new RegExp(`^\\s*${s}\\s*$`, 'i')).filter({ visible: true })
+      const porValor = f.locator('input[type="button"],input[type="submit"]').filter({ visible: true })
+      const n = await porTexto.count()
+      for (let i = 0; i < n; i++) candidatos.push({ marco: f, texto: s, control: porTexto.nth(i) })
+      const m = await porValor.count()
+      for (let i = 0; i < m; i++) {
+        const v = await porValor.nth(i).getAttribute('value').catch(() => null)
+        if (v !== null && rotulos.test(v) && textoMenu(v) === textoMenu(s)) candidatos.push({ marco: f, texto: s, control: porValor.nth(i) })
+      }
+    }
+  }
+  const marcosCand = [...new Set(candidatos.map((c) => c.marco))]
+  if (marcosCand.length !== 1) throw new ErrorMapaGuardGenerali(`la salida de la pantalla del historial (${marcosCand.length} marcos con ${SALIDAS_HISTORIAL_OBTENIDO_GENERALI.join('/')} fuera de los formularios de pasos; hace falta exactamente uno)`)
+  // Por orden de preferencia: el primer rótulo de la lista blanca con EXACTAMENTE un control.
+  let elegido: { marco: Frame; texto: string; control: Locator } | null = null
+  for (const s of SALIDAS_HISTORIAL_OBTENIDO_GENERALI) {
+    const xs = candidatos.filter((c) => c.texto === s)
+    if (xs.length === 1) { elegido = xs[0]!; break }
+    if (xs.length > 1) throw new ErrorMapaGuardGenerali(`la salida «${s}» de la pantalla del historial (${xs.length} controles visibles con ese rótulo; hace falta exactamente uno)`)
+  }
+  if (!elegido) throw new ErrorMapaGuardGenerali('la salida de la pantalla del historial (ningún control con rótulo de la lista blanca)')
+  const desc = await descripcion(elegido.control, true)
+  if (!salidaHistorialObtenidoGeneraliPermitida(textoControl(desc))) throw new EmisionBloqueadaError('boton', textoControl(desc).slice(0, 80))
+  if (desc.some((d) => d !== null && RE_SALIDA_HISTORIAL_PELIGROSA_GENERALI.test(sinTildesNi(d)))) throw new EmisionBloqueadaError('boton', desc.filter(Boolean).join(' | ').slice(0, 120))
+  comprobarBoton(desc, { permitirAceptar: true })
+  usados.add('generali:historial-obtenido:salida')
+  AVANCES_USADOS.set(guard, usados)
+  const control = elegido.control
+  const dialogo = await conDialogoCanceladoGenerali(page, elegido.marco, async () => {
+    await control.click({ timeout: MS_CLIC_NORMAL_CONFIRMAR_GENERALI })
+    guard.comprobar()
+  })
+  guard.comprobar()
+  return { dialogo, texto: elegido.texto }
+}
+
+/** v0.2.74: ¿marco de la aplicación de autos de Generali (`https://www.generali.es/emi_genAutosFormWeb/…`)? PURA. */
+export function urlEmiAutosGenerali(url: string | null | undefined): boolean {
+  try {
+    const u = new URL(String(url ?? ''))
+    return u.origin === 'https://www.generali.es' && !u.username && !u.password && /^\/(?:[a-z0-9]+\/)?emi_genAutosFormWeb\//.test(u.pathname)
+  } catch {
+    return false
+  }
 }
 
 // ─────────── v0.2.14: potencia y fila de versión del selector de vehículos ───────────

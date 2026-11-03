@@ -12,7 +12,7 @@ import { validarFormularioAuto, type FormularioAuto } from '@central/module-tari
 import type { ContextoPortal } from '../src/adaptador.ts'
 
 test('v0.2.42 · versión', () => {
-  assert.equal(VERSION_GENERALI_AUTO, '0.2.73')
+  assert.equal(VERSION_GENERALI_AUTO, '0.2.74')
 })
 
 let browser: Browser
@@ -111,7 +111,8 @@ test('v0.2.42 · atasco: tras «Recalcular» el mensaje trae el aviso del portal
     } as unknown as ContextoPortal
     await assert.rejects(hastaPrecioGenerali(page, formulario(), [], ctx, { esperaGarantiasMs: 0, esperaPrecioMs: 200 }), (e: unknown) => {
       if (!(e instanceof ErrorMapaIncompletoGenerali)) return false
-      assert.match(e.message, /Recalcular: Recalcular×1 · tras «Recalcular» el portal sigue con «datos incompletos»; obligatorios aún vacíos en «Garantías y Resultados»: «Forma de pago a contratar» · «Suma asegurada abogado»[^.]*\. Estado del cálculo: Avisos del portal \(areaErrores\): «No se puede calcular con datos incompletos»; el portal da los datos por INCOMPLETOS/, e.message.slice(0, 600))
+      // v0.2.74: el resumen del Historial Siniestral (y el de «Historial siniestral obtenido») va justo tras «Recalcular», antes del estado, para no cortarse.
+      assert.match(e.message, /Recalcular: Recalcular×1 · tras «Recalcular» el portal sigue con «datos incompletos»; obligatorios aún vacíos en «Garantías y Resultados»: «Forma de pago a contratar» · «Suma asegurada abogado»[^.]*\. (?:Historial [Ss]iniestral[^.]*\. ){0,2}Estado del cálculo: Avisos del portal \(areaErrores\): «No se puede calcular con datos incompletos»; el portal da los datos por INCOMPLETOS/, e.message.slice(0, 600))
       assert.match(e.message, /obligatorios vacíos en «Garantías y Resultados»: Forma de pago a contratar · Suma asegurada abogado;/)
       assert.match(e.message, /cargando: no; botones\/enlaces del marco: [^;]*Recalcular/)
       assert.ok(e.message.length <= 1_900, String(e.message.length))

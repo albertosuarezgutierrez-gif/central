@@ -2547,3 +2547,57 @@ export function diagnosticoPasoIncompletoGenerali(
 export function errorPasoSinCampoGenerali(paso: string, diagnostico: string): string {
   return `el paso «${sanearFragmentoGenerali(paso).slice(0, 40)}» sigue con «Paso con datos incompletos» y no se localiza el campo (ningún obligatorio vacío editable; el aviso del portal no lo resuelve). No se pulsa «Recalcular». Diagnóstico: ${diagnostico}`
 }
+
+// ─── v0.2.74 (03/11/2026, trabajo b1c5363f con 0.2.73): «Recalcular» sigue en «datos incompletos» y ni «Datos de Valoración» ni «Garantías y Resultados» tienen vacíos ───
+// Volcado fallo-b1c5363f: en «Garantías y Resultados» › «Bonus-Malus» hay un obligatorio «Historial siniestral obtenido *» cuyo ÚNICO control es el botón
+// `input[type=button][name="reg1063E.bonusMalus.zhsdet"]` «Historial Siniestral» con `onclick="link('histsin');"`: abre la pantalla del historial (SINCO) y el
+// lector de obligatorios no lo contaba (no es un campo). La sección «Historial Siniestral» de «Datos de Valoración» (18 campos `reg1063A.histSiniestral.*`)
+// estaba completa en lo visible. Aquí la parte PURA: localizar ese obligatorio de botón y resumir TODOS los obligatorios del historial sin cortar.
+
+/** v0.2.74: `name` EXACTO del botón «Historial Siniestral» del bloque obligatorio «Historial siniestral obtenido» (volcado b1c5363f). */
+export const NAME_BOTON_HISTORIAL_OBTENIDO_GENERALI = 'reg1063E.bonusMalus.zhsdet'
+/** v0.2.74: `onclick` EXACTO de ese botón (volcado b1c5363f). La puerta del guard solo pulsa un botón con este manejador. */
+export const ONCLICK_BOTON_HISTORIAL_OBTENIDO_GENERALI = "link('histsin');"
+
+/** v0.2.74: el obligatorio de botón «Historial siniestral obtenido» (por `name` exacto o, si no, por rótulo), visible. null = no está. PURA. */
+export function obligatorioHistorialObtenidoGenerali(obligatorios: readonly ObligatorioPasoGenerali[]): ObligatorioPasoGenerali | null {
+  const rot = (o: ObligatorioPasoGenerali) => normalizarOpcionGenerali(o.etiqueta)
+  return obligatorios.find((o) => o.tipo === 'boton' && o.visible && (o.name === NAME_BOTON_HISTORIAL_OBTENIDO_GENERALI || /^historial siniestral obtenido/.test(rot(o)))) ?? null
+}
+
+/**
+ * v0.2.74: TODOS los obligatorios de la sección «Historial Siniestral» (`…histSiniestral.*`) con su estado, sin cortar a media etiqueta: los visibles con rótulo
+ * (≤ 40 caracteres) y estado (`puesto` / `VACÍO`, `bloqueado` si es de solo lectura), los ocultos por código de campo. Solo rótulos y códigos (sin valores, sin PII).
+ * Si no cabe en `max`, se quitan rótulos (queda el código) antes que obligatorios. PURA.
+ */
+export function resumenObligatoriosHistorialGenerali(obligatorios: readonly ObligatorioPasoGenerali[], max = 700): string {
+  const hs = obligatorios.filter((o) => esBloqueHistorialGenerali(o))
+  if (hs.length === 0) return '(sin obligatorios legibles)'
+  const codigo = (o: ObligatorioPasoGenerali) => (String(o.name).split('.').pop() ?? '').replace(/[^A-Za-z0-9_]/g, '').slice(0, 12) || '?'
+  const estado = (o: ObligatorioPasoGenerali) => (o.vacio ? 'VACÍO' : 'puesto') + (!o.editable && o.tipo !== 'boton' ? ',bloqueado' : '')
+  const vis = hs.filter((o) => o.visible)
+  const ocu = hs.filter((o) => !o.visible)
+  const armar = (conRotulo: boolean) => {
+    const v = vis.map((o) => `${conRotulo ? sanearFragmentoGenerali(o.etiqueta).trim().slice(0, 40).trim() || codigo(o) : codigo(o)}=${estado(o)}`).join('; ')
+    const h = ocu.map((o) => `${codigo(o)}=${o.vacio ? 'vacío' : 'puesto'}`).join(' ')
+    return `${hs.length} obligatorios (${vis.length} a la vista): ${v || '(ninguno a la vista)'}${ocu.length ? ` | ocultos: ${h}` : ''}`
+  }
+  const t = armar(true)
+  if (t.length <= max) return t
+  const c = armar(false)
+  return c.length <= max ? c : `${c.slice(0, max - 1)}…`
+}
+
+/** v0.2.74: inventario saneado (≤ `max`) de la pantalla que abre «Historial Siniestral» (`histsin`): encabezados, controles pulsables y obligatorios. Sin valores. PURA. */
+export function resumenPantallaHistorialObtenidoGenerali(
+  p: { encabezados: readonly string[]; botones: readonly string[]; obligatorios: readonly ObligatorioPasoGenerali[] },
+  max = 600,
+): string {
+  const s = (t: string, n: number) => sanearFragmentoGenerali(String(t ?? '')).replace(/\s+/g, ' ').trim().slice(0, n)
+  const uniq = (xs: string[]) => [...new Set(xs.filter(Boolean))]
+  const enc = uniq(p.encabezados.map((e) => s(e, 40))).slice(0, 6).join(' · ') || '(sin encabezados)'
+  const bot = uniq(p.botones.map((b) => s(b, 30))).slice(0, 12).join(' · ') || '(sin botones)'
+  const obl = p.obligatorios.map((o) => `${s(o.etiqueta, 30) || s(o.name, 30) || '(sin rótulo)'}[${o.tipo}]=${o.tipo === 'boton' ? 'botón' : o.vacio ? 'VACÍO' : 'puesto'}${o.visible ? '' : ',oculto'}`).join('; ') || '(ninguno)'
+  const t = `encabezados: ${enc}; botones: ${bot}; obligatorios: ${obl}`
+  return t.length <= max ? t : `${t.slice(0, max - 1)}…`
+}
