@@ -110,6 +110,17 @@ export type EventoSuplemento = Base & {
   /** `YYYY-MM-DD`, o `YYYY-MM` cuando la compañía da solo mes/año. */
   periodoDesde: string | null
   periodoHasta: string | null
+  /**
+   * Solo la regularización de RC de Occident (03/11/2026). Van en el JSON del evento (`detalle`), sin tocar el CHECK de
+   * `subtipo` de la tabla (no hay migración). Ausentes = suplemento genérico.
+   */
+  subtipo?: 'regularizacion_rc'
+  /** Periodo normalizado a meses, `aaaa-mm_aaaa-mm` (los dos correos lo escriben distinto y salen con la MISMA clave). */
+  periodo?: string | null
+  /** `YYYY-MM-DD`: «Enviada en fecha» del recordatorio (la carta de la compañía al mediador). */
+  fechaEnvioCompania?: string | null
+  /** La compañía vuelve a insistir / «Aviso Recordatorio»: es un 2º aviso. */
+  esRecordatorio?: boolean
 }
 
 /** Una póliza NUEVA que la compañía dice haber emitido (Allianz «Rel. Emisión Producción»). */
@@ -531,19 +542,28 @@ function mesAnio(m: string, a: string): string | null {
   return mes >= 1 && mes <= 12 ? `${a}-${String(mes).padStart(2, '0')}` : null
 }
 
+/** `aaaa-mm_aaaa-mm` (o null si falta un extremo): clave estable del periodo, igual venga en m/aaaa o dd.mm.aaaa. */
+function periodoMeses(desde: string | null, hasta: string | null): string | null {
+  return desde && hasta ? `${desde.slice(0, 7)}_${hasta.slice(0, 7)}` : null
+}
+
 function leerOccidentSuplemento(c: CorreoEventoAseguradora): EventoSuplemento | null {
   if (!esDe(c.remitente, 'occidentinforma.com')) return null
   const t = plano(c.cuerpoTexto)
+  const envio = isoDeFecha(/enviada\s+en\s+fecha\s+(\d{2}\.\d{2}\.\d{4})/i.exec(t)?.[1])
   if (/regularizaci[oó]n\s+responsabilidad\s+civil\s*$/i.test(c.asunto.trim())) {
     const poliza = /p[oó]liza\s+de\s+responsabilidad\s+civil\s+n[ºo°.]*\s*([A-Z0-9]{6,})/i.exec(t)?.[1]
     if (!poliza) return null
     const per = /per[ií]odo\s+de\s+regularizaci[oó]n:\s*(\d{1,2})\/(\d{4})\s+a\s+(\d{1,2})\/(\d{4})/i.exec(t)
     const insiste = /volvemos\s+a\s+insistir|nuevamente/i.test(t)
+    const desde = per ? mesAnio(per[1], per[2]) : null
+    const hasta = per ? mesAnio(per[3], per[4]) : null
     return {
       ...base('occident'), tipo: 'suplemento', numeroPoliza: poliza,
       descripcion: `Regularización de RC: la compañía ${insiste ? 'vuelve a pedir' : 'pide'} al asegurado los datos de facturación`,
-      periodoDesde: per ? mesAnio(per[1], per[2]) : null,
-      periodoHasta: per ? mesAnio(per[3], per[4]) : null,
+      periodoDesde: desde,
+      periodoHasta: hasta,
+      subtipo: 'regularizacion_rc', periodo: periodoMeses(desde, hasta), fechaEnvioCompania: envio, esRecordatorio: insiste,
       ilegibles: per ? 0 : 1,
     }
   }
@@ -551,11 +571,14 @@ function leerOccidentSuplemento(c: CorreoEventoAseguradora): EventoSuplemento | 
   if (!asunto) return null
   const recordatorio = /aviso\s+recordatorio\s+regularizaci[oó]n/i.test(t) && /no\s+han\s+ingresado\s+suplemento\s+de\s+regularizaci[oó]n/i.test(t)
   const per = /periodo:\s*(\d{2}\.\d{2}\.\d{4})\s+a\s+(\d{2}\.\d{2}\.\d{4})/i.exec(t)
+  const desde = per ? isoDeFecha(per[1]) : null
+  const hasta = per ? isoDeFecha(per[2]) : null
   return {
     ...base('occident'), tipo: 'suplemento', numeroPoliza: asunto[1],
     descripcion: recordatorio ? 'Recordatorio: suplemento de regularización de RC sin ingresar (falta el dato real de facturación)' : null,
-    periodoDesde: per ? isoDeFecha(per[1]) : null,
-    periodoHasta: per ? isoDeFecha(per[2]) : null,
+    periodoDesde: desde,
+    periodoHasta: hasta,
+    ...(recordatorio ? { subtipo: 'regularizacion_rc' as const, periodo: periodoMeses(desde, hasta), fechaEnvioCompania: envio, esRecordatorio: true } : {}),
     ilegibles: recordatorio && per ? 0 : 1,
   }
 }

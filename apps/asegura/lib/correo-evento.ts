@@ -72,6 +72,13 @@ export type ItemEvento =
   | {
       tipo: 'suplemento'; clave: string
       numeroPoliza: string; descripcion: string | null; periodoDesde: string | null; periodoHasta: string | null
+      /** Regularización de RC de Occident (03/11/2026). Solo viven en `detalle` (JSON): sin migración. */
+      subtipo?: 'regularizacion_rc'
+      /** `aaaa-mm_aaaa-mm`. */
+      periodo?: string | null
+      fechaEnvioCompania?: string | null
+      /** 2º aviso de la compañía. */
+      esRecordatorio?: boolean
     }
   | {
       tipo: 'emision'; clave: string
@@ -111,6 +118,7 @@ export type EntradaEvento = {
 
 const ISO_DIA = /^\d{4}-\d{2}-\d{2}$/
 const ISO_MES = /^\d{4}-\d{2}$/
+const PERIODO_MESES = /^\d{4}-\d{2}_\d{4}-\d{2}$/
 const ID = /^[A-Z0-9][A-Z0-9.\-/]{2,40}$/i
 
 function obj(v: unknown): Record<string, unknown> | null {
@@ -229,9 +237,16 @@ export function validarEntradaEvento(b: unknown): { ok: true; entrada: EntradaEv
     } : null)
   } else {
     const poliza = id(e.numeroPoliza)
+    const regulariza = e.subtipo === 'regularizacion_rc'
     meter(poliza ? {
       tipo, clave: poliza, numeroPoliza: poliza, descripcion: libre(e.descripcion),
       periodoDesde: periodo(e.periodoDesde), periodoHasta: periodo(e.periodoHasta),
+      ...(regulariza ? {
+        subtipo: 'regularizacion_rc' as const,
+        periodo: typeof e.periodo === 'string' && PERIODO_MESES.test(e.periodo) ? e.periodo : null,
+        fechaEnvioCompania: dia(e.fechaEnvioCompania),
+        esRecordatorio: e.esRecordatorio === true,
+      } : {}),
     } : null)
   }
   return { ok: true, entrada: { mensajeId, compania, codigoDgs: cia.codigo, tipo, ilegibles, items } }
@@ -363,10 +378,17 @@ export function fechaCorreoMadrid(v: unknown): string | null {
  * La fecha del aviso que distingue «la compañía repite lo mismo» de «dice algo nuevo» (para no anotar cada
  * día el mismo resumen de Occident, que llega con otro Message-ID). `null` = el tipo no se deduplica así.
  */
-export function campoFechaDedupe(tipo: TipoEventoCorreo): 'fechaLimite' | 'fechaEfecto' | 'periodoHasta' | null {
+export function campoFechaDedupe(
+  tipo: TipoEventoCorreo, item?: ItemEvento,
+): 'fechaLimite' | 'fechaEfecto' | 'periodoHasta' | 'fechaEnvioCompania' | 'esRecordatorio' | null {
   if (tipo === 'pre_anulacion' || tipo === 'impago') return 'fechaLimite'
   if (tipo === 'anulacion') return 'fechaEfecto'
-  if (tipo === 'suplemento') return 'periodoHasta'
+  if (tipo === 'suplemento') {
+    // Un 2º aviso comparte póliza y periodo con el 1º: no puede deduplicarse contra él. Se distingue por la fecha de
+    // envío de la carta; sin ella, «ya hay un 2º aviso anotado» (el 1º no lleva esRecordatorio).
+    if (item?.tipo === 'suplemento' && item.esRecordatorio) return item.fechaEnvioCompania ? 'fechaEnvioCompania' : 'esRecordatorio'
+    return 'periodoHasta'
+  }
   return null
 }
 export type ExpedienteAbierto = { id: string; estado: string; fechaEfecto: string | null }
@@ -405,6 +427,8 @@ export type Plan = {
   /** Llave de «una tarea por póliza/recibo». */
   claveTarea: string | null
   siniestroId: string | null
+  /** Tarea ABIERTA ya existente que el aviso refuerza (2º aviso): sube a alta y adelanta el vencimiento si es anterior. */
+  reforzarTarea: { prioridad: 'alta'; fechaLimite: string } | null
   /** Lo que se hizo, en corto, para el aviso y la bandeja. */
   resumen: string
 }
@@ -423,6 +447,21 @@ export function venceTarea(fecha: string | null, hoy: string, porDefecto: number
   return fecha ? hoy : sumarDias(hoy, porDefecto)
 }
 
+/** Días que la compañía da, desde que envía su carta, para ingresar el suplemento de regularización de RC. */
+export const DIAS_PLAZO_REGULARIZACION = 15
+/** Margen mínimo: aunque la carta sea vieja, la tarea nunca vence antes de hoy + esto. */
+export const DIAS_MARGEN_MINIMO_REGULARIZACION = 2
+/** Marca del 2º aviso en la nota, el resumen y el aviso de Telegram. */
+export const MARCA_SEGUNDO_AVISO = '⚠️ 2º aviso de la compañía'
+
+/** Vencimiento de la tarea de regularización: envío + plazo, nunca antes de hoy + margen; sin envío, hoy + 7. */
+export function venceRegularizacion(fechaEnvio: string | null, hoy: string): string {
+  if (!fechaEnvio) return sumarDias(hoy, 7)
+  const plazo = sumarDias(fechaEnvio, DIAS_PLAZO_REGULARIZACION)
+  const minimo = sumarDias(hoy, DIAS_MARGEN_MINIMO_REGULARIZACION)
+  return plazo < minimo ? minimo : plazo
+}
+
 const MOTIVO_RESOLUCION: Record<'sin_numero' | 'no_encontrada' | 'ambigua', string> = {
   sin_numero: 'el correo no trae nº de póliza',
   no_encontrada: 'ninguna póliza viva de esa compañía con ese nº',
@@ -430,7 +469,7 @@ const MOTIVO_RESOLUCION: Record<'sin_numero' | 'no_encontrada' | 'ambigua', stri
 }
 
 function base(resumen: string): Plan {
-  return { estado: 'aplicado', motivo: null, nota: null, tipoNota: 'gestion', abrirSiniestro: null, notaSiDuplicado: null, tarea: null, claveTarea: null, siniestroId: null, resumen }
+  return { estado: 'aplicado', motivo: null, nota: null, tipoNota: 'gestion', abrirSiniestro: null, notaSiDuplicado: null, tarea: null, claveTarea: null, siniestroId: null, reforzarTarea: null, resumen }
 }
 
 function sinResolver(motivo: string): Plan {
@@ -463,6 +502,8 @@ export function claveTareaDe(item: ItemEvento, polizaId: string): string {
   if (item.tipo === 'pre_anulacion' || item.tipo === 'impago') return `recibo:${polizaId}:${claveNumero(item.idRecibo) ?? '-'}`
   // Un recibo anulado por impago: una tarea por RECIBO (otro recibo de la misma póliza, meses después, es otro aviso).
   if (item.tipo === 'anulacion' && item.idRecibo) return `anulacion-recibo:${polizaId}:${claveNumero(item.idRecibo) ?? '-'}`
+  // Regularización de RC: una tarea por póliza Y periodo (la del año siguiente es otra). Sin periodo, la clave de siempre.
+  if (item.tipo === 'suplemento' && item.subtipo === 'regularizacion_rc' && item.periodo) return `suplemento:regularizacion:${polizaId}:${item.periodo}`
   return `${item.tipo}:${polizaId}`
 }
 
@@ -592,13 +633,24 @@ export function planItem(item: ItemEvento, compania: string, ctx: ContextoItem):
   if (r.estado === 'sin_resolver') return sinResolver(MOTIVO_RESOLUCION[r.motivo])
   if (r.estado === 'no_en_vigor') return sinResolver('la póliza no está en vigor según CIMA')
   const per = item.periodoDesde || item.periodoHasta ? ` (periodo ${item.periodoDesde ?? '?'} a ${item.periodoHasta ?? '?'})` : ''
-  const nota = `${cia} por correo${delCorreo}: suplemento${item.descripcion ? ` — ${item.descripcion}` : ''}${per}.`
-  if (ctx.tareaAbierta) return { ...base('ya había tarea de revisar ese suplemento: solo nota'), nota }
-  const fecha = venceTarea(null, ctx.hoy, 7)
+  const regulariza = item.subtipo === 'regularizacion_rc'
+  const segundo = regulariza && item.esRecordatorio === true
+  const marca = segundo ? `${MARCA_SEGUNDO_AVISO}: ` : ''
+  const nota = `${marca}${cia} por correo${delCorreo}: suplemento${item.descripcion ? ` — ${item.descripcion}` : ''}${per}.`
+  const fecha = regulariza ? venceRegularizacion(item.fechaEnvioCompania ?? null, ctx.hoy) : venceTarea(null, ctx.hoy, 7)
+  if (ctx.tareaAbierta) {
+    if (segundo) {
+      return {
+        ...base(`${MARCA_SEGUNDO_AVISO}: ya había tarea abierta; nota y tarea subida a prioridad alta (vence ${fechaEs(fecha)} si es antes)`),
+        nota, reforzarTarea: { prioridad: 'alta', fechaLimite: fecha },
+      }
+    }
+    return { ...base('ya había tarea de revisar ese suplemento: solo nota'), nota }
+  }
   return {
-    ...base(`tarea «revisar suplemento» creada, vence ${fechaEs(fecha)}`),
+    ...base(`${marca}tarea «revisar suplemento» creada, vence ${fechaEs(fecha)}`),
     nota,
-    tarea: { tipo: 'tarea', prioridad: 'media', fechaLimite: fecha, observaciones: `${PREFIJO_TAREA_CORREO} Revisar suplemento ${cia}${item.descripcion ? `: ${item.descripcion}` : ''}${per}.` },
+    tarea: { tipo: 'tarea', prioridad: segundo ? 'alta' : 'media', fechaLimite: fecha, observaciones: `${PREFIJO_TAREA_CORREO} ${marca}Revisar suplemento ${cia}${item.descripcion ? `: ${item.descripcion}` : ''}${per}.` },
     claveTarea: claveTareaDe(item, r.poliza.id),
   }
 }
