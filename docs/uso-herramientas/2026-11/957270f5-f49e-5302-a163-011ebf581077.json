@@ -1,0 +1,87 @@
+{
+ "sesion": "957270f5-f49e-5302-a163-011ebf581077",
+ "inicio": "2026-11-03T08:56:45.765Z",
+ "fin": "2026-11-03T09:00:13.985Z",
+ "llamadas": 29,
+ "categorias": {
+  "otro": {
+   "llamadas": 3,
+   "chars_in": 10081,
+   "chars_out": 2663,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 1,
+    "SubagentHandback": 1,
+    "AskUserQuestion": 1
+   }
+  },
+  "bash": {
+   "llamadas": 14,
+   "chars_in": 4551,
+   "chars_out": 68061,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 14
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 1,
+   "chars_in": 2,
+   "chars_out": 391,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 1,
+   "chars_in": 88,
+   "chars_out": 16347,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Vercel__filter_project_envs": 1
+   }
+  },
+  "sql": {
+   "llamadas": 7,
+   "chars_in": 2134,
+   "chars_out": 6052,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 7
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 2,
+   "chars_in": 7797,
+   "chars_out": 5067,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 15116,
+   "tools": {
+    "Agent": 2
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 1,
+   "chars_in": 54,
+   "chars_out": 15131,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 1
+   }
+  }
+ }
+}
