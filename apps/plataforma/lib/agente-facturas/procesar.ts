@@ -7,7 +7,7 @@ import { getRegla, existeDuplicado, insertarGasto, reforzarRegla, escribirTitula
 import { asignarTitular } from './asignar-titular'
 import { contextoTitularSiAplicado } from './contexto-titular'
 import { esBooking, parseBooking, bookingFingerprint } from './booking'
-import { esPresupuesto } from './clasificar'
+import { esPresupuesto, esPresupuestoExtraido } from './clasificar'
 import { pareceIngresoDeCorreduria } from './no-es-gasto'
 import { esDocumentoPolizaCliente, MOTIVO_POLIZA_CLIENTE, MOTIVO_POLIZA_DUDA } from './poliza-cliente'
 import { esFacturaComisionPortal, MOTIVO_COMISION_PORTAL } from './portal-comision'
@@ -31,7 +31,7 @@ export function clasificarDocumento(data: FacturaExtraida, texto: string, etique
       return { factura, fingerprintOverride: bookingFingerprint(establishmentId), esPresupuesto: false, archivar: true, esBooking: true }
     }
   }
-  const presup = esPresupuesto(texto, etiqueta)
+  const presup = esPresupuestoExtraido(data as { tipo_documento?: unknown; concepto?: string | null }) || esPresupuesto(texto, etiqueta)
   return { factura: data, esPresupuesto: presup, archivar: !presup, esBooking: false }
 }
 
