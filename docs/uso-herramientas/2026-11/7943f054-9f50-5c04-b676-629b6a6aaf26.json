@@ -1,8 +1,8 @@
 {
  "sesion": "7943f054-9f50-5c04-b676-629b6a6aaf26",
  "inicio": "2026-11-03T15:51:44.953Z",
- "fin": "2026-11-03T19:40:54.112Z",
- "llamadas": 505,
+ "fin": "2026-11-03T20:18:46.881Z",
+ "llamadas": 549,
  "categorias": {
   "lectura-directa": {
    "llamadas": 41,
@@ -18,16 +18,16 @@
    }
   },
   "otro": {
-   "llamadas": 100,
-   "chars_in": 39206,
-   "chars_out": 769493,
+   "llamadas": 129,
+   "chars_in": 39393,
+   "chars_out": 1015699,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "SubagentHandback": 11,
-    "ToolSearch": 12,
-    "ReadNotifications": 77
+    "ToolSearch": 14,
+    "ReadNotifications": 104
    }
   },
   "agente:rastreador-codigo": {
@@ -42,33 +42,33 @@
    }
   },
   "bash": {
-   "llamadas": 283,
-   "chars_in": 204579,
-   "chars_out": 1284742,
+   "llamadas": 293,
+   "chars_in": 207391,
+   "chars_out": 1316966,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 283
+    "Bash": 293
    }
   },
   "mcp:github": {
-   "llamadas": 19,
-   "chars_in": 10189,
-   "chars_out": 65595,
+   "llamadas": 22,
+   "chars_in": 11059,
+   "chars_out": 102546,
    "errores": 1,
    "archivos_citados": 2,
    "chars_citados": 9097,
    "tools": {
     "mcp__github__list_pull_requests": 1,
-    "mcp__github__create_pull_request": 3,
+    "mcp__github__create_pull_request": 4,
     "mcp__github__get_job_logs": 1,
-    "mcp__github__actions_list": 2,
+    "mcp__github__actions_list": 3,
     "mcp__github__add_issue_comment": 1,
     "mcp__github__actions_run_trigger": 1,
     "mcp__github__pull_request_read": 4,
     "mcp__github__update_pull_request": 4,
-    "mcp__github__merge_pull_request": 2
+    "mcp__github__merge_pull_request": 3
    }
   },
   "agente:general-purpose": {
@@ -106,17 +106,17 @@
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 11,
-   "chars_in": 1102,
-   "chars_out": 3519,
+   "llamadas": 13,
+   "chars_in": 1221,
+   "chars_out": 5034,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__claude-code-remote__subscribe_pr_activity": 3,
     "mcp__claude-code-remote__send_later": 4,
-    "mcp__claude-code-remote__unsubscribe_pr_activity": 2,
-    "mcp__claude-code-remote__delete_trigger": 2
+    "mcp__claude-code-remote__unsubscribe_pr_activity": 3,
+    "mcp__claude-code-remote__delete_trigger": 3
    }
   },
   "mcp:Supabase": {
