@@ -1,12 +1,13 @@
 // Avisos fiscales a ALBERTO por Telegram (puro: sin BD, sin red, sin reloj; `node --test lib/fiscal-alertas.test.ts`).
 //
-// Cuatro avisos: (1) previsión de base liquidable a 31/12 cerca de / por encima del umbral de 60.000€,
+// Cinco avisos (el quinto, gastos recurrentes al alza, solo si se le pasa el histórico): (1) previsión de base liquidable a 31/12 cerca de / por encima del umbral de 60.000€,
 // (2) cuentas sin movimientos hace +30 días, (3) meses CERRADOS sin factura de limpieza/suministros,
 // (4) recordatorio de diciembre de acciones antes del 31/12. Más el anti-spam (`decidirEnvios`).
 // Regla NULL: un dato que no se sabe sale como «sin dato»; nunca como 0 ni como «todo bien».
 import { createHash } from 'node:crypto'
 import { eur } from './dinero.ts'
 import type { AvisosDatos } from './base-fiscal-devengo.ts'
+import { detectarSubidas, esVariablePorOcupacion, UMBRAL_SUBIDA, VENTANA_RECIBOS, type GastoHist } from './gastos-recurrentes-detectados.ts'
 import { MARGEN_CERCA, PALANCAS_SIMULABLES, ahorroPorPalanca, contribuyenteDe, type PalancaSimulable } from './fiscal-panel.ts'
 import {
   CATALOGO_PALANCAS, SIN_PALANCAS, declarar, palancasPorDefecto,
@@ -103,6 +104,27 @@ export function avisoFacturasMeses(a: AvisosDatos, hoy: string, anio: number): A
   return { clave: `facturas-meses-${anio}`, texto: lineas.join('\n') }
 }
 
+// ── 5. Gasto recurrente que sube ─────────────────────────────────────────────────────────────
+/**
+ * Un aviso por gasto recurrente (cualquier piso/negocio, detección genérica por proveedor) cuyo cargo del mes
+ * supera en ≥30 % y ≥20 € la media de sus últimos 6 recibos (cadencia semestral/anual: el ciclo anterior).
+ * Fuera los gastos variables por ocupación (limpieza, lavandería, Si Que Brilla, El Giraldillo).
+ * `nombres` traduce el ámbito (id de piso, 'correduria'…) a texto; sin nombre se muestra «Otro ámbito» (nunca el id crudo).
+ */
+export function avisosGastosRecurrentes(hist: GastoHist[], hoy: string, nombres: Record<string, string> = {}): Alerta[] {
+  return detectarSubidas(hist.filter(g => !esVariablePorOcupacion(g)), hoy).map(s => {
+    const r = s.recurrente
+    const base = r.cadaMeses >= 6 ? 'el cargo anterior' : `media de ${s.recibos} recibos`
+    return {
+      clave: `gasto-sube-${s.mes}-${r.ambito}-${r.clave}`, soloUnaVez: true,
+      texto: [
+        `📈 Gasto recurrente al alza: ${nombres[r.ambito] ?? 'Otro ámbito'}`,
+        `${r.proveedor} (${r.periodicidad}): ${dinero(s.importe)} este mes frente a ${dinero(s.media)} (${base}), +${s.porcentaje} % (umbral ${Math.round(UMBRAL_SUBIDA * 100)} %, ventana ${VENTANA_RECIBOS}).`,
+      ].join('\n'),
+    }
+  })
+}
+
 // ── 4. Diciembre ────────────────────────────────────────────────────────────────────────────
 /** Del 1 al 31 de diciembre (`hoy` = 'YYYY-MM-DD'). Un recordatorio único por año. */
 export function avisoDiciembre(e: EntradaSimulador, compras: CompraPrevista[], hoy: string, anio: number): Alerta | null {
@@ -123,11 +145,14 @@ export function avisoDiciembre(e: EntradaSimulador, compras: CompraPrevista[], h
 /** Los cuatro avisos (los que no apliquen, fuera). `avisos` y `e` salen del panel (`armarPanel`). */
 export function construirAlertas(p: {
   hoy: string; anio: number; entrada: EntradaSimulador | null; avisos: AvisosDatos | null; compras: CompraPrevista[]
+  /** Histórico de gastos con proveedor (pisos y negocios) y nombres de ámbito: activa el aviso de recurrentes al alza. */
+  gastosHist?: GastoHist[]; nombres?: Record<string, string>
 }): Alerta[] {
   const out: (Alerta | null)[] = []
   if (p.entrada) { out.push(avisoUmbral(p.entrada, p.compras, p.anio), avisoDiciembre(p.entrada, p.compras, p.hoy, p.anio)) }
   if (p.avisos) { out.push(avisoCuentas(p.avisos, p.anio), avisoFacturasMeses(p.avisos, p.hoy, p.anio)) }
-  return out.filter((a): a is Alerta => a != null)
+  const fijas = out.filter((a): a is Alerta => a != null)
+  return p.gastosHist ? [...fijas, ...avisosGastosRecurrentes(p.gastosHist, p.hoy, p.nombres)] : fijas
 }
 
 // ── Anti-spam ───────────────────────────────────────────────────────────────────────────────

@@ -109,3 +109,47 @@ test('dedupe: el recordatorio de diciembre es único aunque cambie el texto', ()
   const d = { clave: 'diciembre-2026', texto: 'nuevo', soloUnaVez: true }
   assert.equal(decidirEnvios([d], [{ clave: 'diciembre-2026', hash: hashTexto('viejo'), enviadoAt: dias(20) }], AHORA).length, 0)
 })
+
+// ── 5. Gastos recurrentes al alza ───────────────────────────────────────────────────────────
+import { avisosGastosRecurrentes } from './fiscal-alertas.ts'
+const recSerie = (prov: string, meses: number[], imp: number, ambito = 'prop_a') =>
+  meses.map(m => ({ ambito, proveedor: prov, fecha: `2026-${String(m).padStart(2, '0')}-05`, importe: imp }))
+test('gasto recurrente al alza: un aviso por gasto con piso, proveedor, importe y media', () => {
+  const hist = [
+    ...recSerie('Endesa', [4, 5, 6, 7, 8, 9], 100), { ambito: 'prop_a', proveedor: 'Endesa', fecha: '2026-10-05', importe: 160 },
+    ...recSerie('Occident', [4, 5, 6, 7, 8, 9], 50), { ambito: 'prop_a', proveedor: 'Occident', fecha: '2026-10-05', importe: 50 },
+    ...recSerie('Digi', [4, 5, 6, 7, 8, 9], 76, 'prop_b'), { ambito: 'prop_b', proveedor: 'Digi', fecha: '2026-10-05', importe: 120 },
+  ]
+  const a = avisosGastosRecurrentes(hist, '2026-10-31', { prop_a: 'Socorro', prop_b: 'Dúplex' })
+  assert.equal(a.length, 2)
+  const e = a.find(x => /Endesa/.test(x.texto))!
+  assert.match(e.texto, /Socorro/); assert.match(e.texto, /160,00€/); assert.match(e.texto, /100,00€/); assert.match(e.texto, /\+60 %/)
+  assert.match(a.find(x => /Digi/.test(x.texto))!.texto, /Dúplex/)
+  assert.notEqual(a[0].clave, a[1].clave)
+})
+test('gasto recurrente al alza: construirAlertas solo lo incluye con histórico; dedupe una vez por gasto y mes', () => {
+  const hist = [...recSerie('Endesa', [4, 5, 6, 7, 8, 9], 100), { ambito: 'prop_a', proveedor: 'Endesa', fecha: '2026-10-05', importe: 160 }]
+  const base = { hoy: '2026-10-31', anio: 2026, entrada: null, avisos: null, compras: [] }
+  assert.equal(construirAlertas(base).length, 0)
+  const al = construirAlertas({ ...base, gastosHist: hist })
+  assert.equal(al.length, 1)
+  assert.equal(decidirEnvios(al, [{ clave: al[0].clave, hash: 'otro', enviadoAt: new Date('2026-10-20') }], new Date('2026-10-31')).length, 0)
+})
+
+test('gasto recurrente al alza: Si Que Brilla / El Giraldillo / limpieza / lavandería (variables por ocupación) no avisan', () => {
+  const brilla = [...recSerie('SI QUE BRILLA SOCIEDAD LIMITADA', [4, 5, 6, 7, 8, 9], 1000, 'prop_multi'), { ambito: 'prop_multi', proveedor: 'SI QUE BRILLA SOCIEDAD LIMITADA', fecha: '2026-10-05', importe: 1640 }]
+  assert.equal(avisosGastosRecurrentes(brilla, '2026-10-31').length, 0) // +64 %
+  const giraldillo = [...recSerie('Lavandería El Giraldillo', [4, 5, 6, 7, 8, 9], 400, 'prop_multi'), { ambito: 'prop_multi', proveedor: 'Lavandería El Giraldillo', fecha: '2026-10-05', importe: 700 }]
+  assert.equal(avisosGastosRecurrentes(giraldillo, '2026-10-31').length, 0)
+  const porCategoria = [...recSerie('Otra Empresa', [4, 5, 6, 7, 8, 9], 100), { ambito: 'prop_a', proveedor: 'Otra Empresa', fecha: '2026-10-05', importe: 200 }].map(g => ({ ...g, categoria: 'LIMPIEZA' }))
+  assert.equal(avisosGastosRecurrentes(porCategoria, '2026-10-31').length, 0)
+  // Control: el mismo patrón en un proveedor fijo SÍ avisa.
+  assert.equal(avisosGastosRecurrentes(porCategoria.map(g => ({ ...g, categoria: 'SUMINISTROS' })), '2026-10-31').length, 1)
+})
+
+test('gasto recurrente al alza: ámbito sin nombre → «Otro ámbito», nunca el id crudo', () => {
+  const hist = [...recSerie('Endesa', [4, 5, 6, 7, 8, 9], 100, 'prop_xyz'), { ambito: 'prop_xyz', proveedor: 'Endesa', fecha: '2026-10-05', importe: 160 }]
+  const a = avisosGastosRecurrentes(hist, '2026-10-31', {})
+  assert.equal(a.length, 1)
+  assert.match(a[0].texto, /Otro ámbito/); assert.doesNotMatch(a[0].texto, /prop_xyz/)
+})
