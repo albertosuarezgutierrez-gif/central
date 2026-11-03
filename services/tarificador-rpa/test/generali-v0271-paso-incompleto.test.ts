@@ -73,7 +73,7 @@ const pantalla = (aviso: string, valoracion: string, marcaValoracion = '') => `
 <div id="paso0" style="display:none;">${valoracion}</div>
 <div id="paso1" style="display:block;"><h2>Garantías y Capitales opcionales</h2></div>`
 
-test('v0.2.71 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.71'))
+test('v0.2.71 · versión (vigente 0.2.72)', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.72'))
 
 test('puras: aviso de paso incompleto, destino (marcado > anterior al actual), valor neutro y error con paso + campo', () => {
   assert.equal(avisoPasoIncompletoGenerali(['Paso con datos incompletos']), true)
@@ -117,14 +117,16 @@ test('aviso «El paso anterior…»: va a «Datos de Valoración», marca «No»
   })
 })
 
-test('con la puerta de «Siguiente» en el contexto, la vuelta desde «Datos de Valoración» es por «Siguiente» (no por la barra)', async () => {
+// v0.2.72: la barra va PRIMERO; «Siguiente» (puerta guardada) solo si la barra no devuelve al paso de origen.
+test('con la puerta de «Siguiente» en el contexto y la barra sin efecto hacia «Garantías y Resultados», la vuelta es por «Siguiente»', async () => {
   const r: Registro = { pulsados: [], siguiente: 0 }
   await conPagina(pantalla('Paso con datos incompletos', opcionesSiNo('reg1063A.general.zprueba', '¿Pregunta obligatoria?')), async (p) => {
     ;(globalThis as { __pagina?: Page }).__pagina = p
+    await p.evaluate(() => { (document.querySelectorAll('#secundario > li')[1] as HTMLElement).onclick = () => false })
     const res = await completarPasoIncompletoGenerali(p, ctxCon(r, true), FICHA, [], { esperaMs: 1_500 })
     assert.equal(r.siguiente, 1)
     assert.match(res!.nota, /vuelta por Siguiente/)
-    assert.ok(!r.pulsados.includes('Garantías y Resultados'))
+    assert.deepEqual(r.pulsados, ['Datos de Valoración', 'reg1063A.general.zprueba', 'Garantías y Resultados'], 'la barra se probó antes')
   })
 })
 
