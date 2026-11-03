@@ -1,4 +1,5 @@
 // Mapfre wmediadores · NSEI «Nueva Alta» AUTO y MOTO (13-14/10/2026).
+// v0.8.57 (03/11/2026): tras un diálogo desconocido al elegir una variante BASICar se anota su título/texto/botones (≤200, sin PII) y la selección base se RECUPERA antes de «Generar Proyecto» (nunca peor que la 0.8.55).
 // v0.8.56 (03/11/2026, Alberto: «todas las opciones»): las variantes «BASICar» se tarifican ANTES de «Generar Proyecto» (después, Coberturas deja de mostrar los selectores: «selector ausente o no visible»); sin restauración verificada no se genera el proyecto.
 // v0.8.55 (02/11/2026, Alberto: «que el bot coja el que haya»): si la matrícula solo devuelve filas de OTRO modelo que la referencia, se tarifica la más parecida con aviso «Modelo distinto del de referencia» (supuesto); se retira la parada ErrorOtroModeloMapfre de la 0.8.53/54.
 // v0.8.54 (02/11/2026): la `eleccionVersion` ya puesta en el riesgo NO salta la comprobación de modelo: una fila de otro modelo que la referencia se descarta aunque la hayan elegido.
@@ -642,6 +643,55 @@ export type TarjetaLeidaMapfre = { valor: string; prima: string }
 /** Pura (v0.8.51): importes de «PRIMA TOTAL» → «1.234,50€»; vacío si no hay. Solo importes y nombres de catálogo: sin PII. */
 const importeVisto = (t: string): string => { const n = importeDePrimaTotal(t); return n === null ? 'sin importe' : eurTexto(n) }
 
+/** v0.8.57: diálogo visible (solo lectura) tras elegir una variante: título, texto y rótulos de botones. */
+export type DialogoVistoMapfre = { titulo: string; texto: string; botones: string[] }
+/** v0.8.57: puertas para el diálogo inesperado. `leer` es de solo lectura; `cerrarControlesTecnicos` es la puerta ya autorizada del guard (única que existe: no hay otra para cerrar diálogos). */
+export type PuertasDialogoVarianteMapfre = { leer: (pagina: Page) => Promise<DialogoVistoMapfre[]>; cerrarControlesTecnicos?: (pagina: Page) => Promise<string> }
+export type TipoDialogoVarianteMapfre = 'controles_tecnicos' | 'verificacion_vehiculo' | 'informacion' | 'desconocido'
+
+const planoDialogo = (t: string) => t.normalize('NFD').replace(/\p{M}/gu, '').replace(/\s+/g, ' ').trim().toLowerCase()
+
+/** Pura (v0.8.57): clasifica un diálogo por su texto. Solo los tipos conocidos y seguros; el resto es «desconocido». */
+export function clasificarDialogoVarianteMapfre(d: DialogoVistoMapfre): TipoDialogoVarianteMapfre {
+  const t = planoDialogo(`${d.titulo} ${d.texto}`)
+  if (esTextoControlesTecnicos(`${d.titulo} ${d.texto}`)) return 'controles_tecnicos'
+  if (/verificacion (de|del) vehiculo|verifique el vehiculo|verificar (el )?vehiculo/.test(t)) return 'verificacion_vehiculo'
+  if (/^(informacion|aviso informativo|informativo)\b/.test(planoDialogo(d.titulo)) || /^informacion\b/.test(t)) return 'informacion'
+  return 'desconocido'
+}
+
+/** Pura (v0.8.57): aviso de diagnóstico del diálogo, sin PII y de ≤200 caracteres: título, texto y botones. */
+export function avisoDialogoVarianteMapfre(d: readonly DialogoVistoMapfre[]): string {
+  const una = (x: DialogoVistoMapfre) => `«${limpiarMensajePortalDiagnosticoHasta(x.titulo, 40) || 's/t'}» «${limpiarMensajePortalDiagnosticoHasta(x.texto, 70) || 's/texto'}» botones [${x.botones.slice(0, 4).map((b) => limpiarMensajePortalDiagnosticoHasta(b, 14)).join('|')}]`
+  const t = `diálogo tras elegir variante: ${d.slice(0, 2).map(una).join(' + ')}`
+  return t.length > 200 ? `${t.slice(0, 199)}…` : t
+}
+
+/** v0.8.57 (solo lectura): diálogos visibles ahora mismo. */
+export async function leerDialogosMapfre(nsei: Page): Promise<DialogoVistoMapfre[]> {
+  return nsei.locator('mat-dialog-container, [role="dialog"], [role="alertdialog"]').locator('visible=true').evaluateAll((els) => els.map((e) => {
+    const lim = (x: string | null | undefined) => (x ?? '').replace(/\s+/g, ' ').trim()
+    return {
+      titulo: lim(e.querySelector('h1, h2, h3, h4, .mat-dialog-title, .mat-mdc-dialog-title, [mat-dialog-title]')?.textContent),
+      texto: lim((e as HTMLElement).innerText || e.textContent),
+      botones: Array.from(e.querySelectorAll('button, [role="button"]')).map((b) => lim((b as HTMLElement).innerText || b.textContent)).filter((x) => x !== ''),
+    }
+  }))
+}
+
+/** Pura (v0.8.57): ¿las tarjetas releídas coinciden con las leídas al principio? `valores` = mismos productos; `primas` = además mismos importes. */
+function compararBaseMapfre(t: readonly TarjetaLeidaMapfre[], productos: readonly ProductoVistoMapfre[]): { valores: boolean; primas: boolean } {
+  if (t.length < productos.length) return { valores: false, primas: false }
+  let primas = true
+  for (let i = 0; i < productos.length; i++) {
+    const c = productos[i]!.comercial
+    if (c && !('error' in c) && c.seleccionada !== null && limpiar(t[i]!.valor) !== limpiar(c.seleccionada)) return { valores: false, primas: false }
+    const p = productos[i]!.prima
+    if (p !== null && importeDePrimaTotal(t[i]!.prima) !== p) primas = false
+  }
+  return { valores: true, primas }
+}
+
 export async function tarificarVariantesComercialesMapfre(
   nsei: Page,
   productos: ProductoVistoMapfre[],
@@ -649,6 +699,7 @@ export async function tarificarVariantesComercialesMapfre(
   elegir: (pagina: Page, indice: number, opcion: string, permitidas: readonly string[]) => Promise<{ valor: string; textoPrima: string; textoTarjeta: string; bloqueada: boolean; recalculo?: 'auto' | 'calcular' | 'ninguno'; otrasPrimas?: string[] }>,
   ahora: () => number = Date.now,
   releer?: (pagina: Page) => Promise<TarjetaLeidaMapfre[]>,
+  dialogos?: PuertasDialogoVarianteMapfre,
 ): Promise<ResultadoVariantesMapfre> {
   const salida: ResultadoVariantesMapfre = { primas: [], garantias: new Map(), restaurado: true, notas: [] }
   const tarificadas = new Set(primas.map((p) => claveProducto(p.producto)))
@@ -668,6 +719,7 @@ export async function tarificarVariantesComercialesMapfre(
   const sinProbar = candidatas.slice(MAX_VARIANTES_COMERCIALES_MAPFRE)
   if (sinProbar.length > 0) salida.notas.push(`${sinProbar.length} variante(s) comercial(es) sin tarificar por el tope de ${MAX_VARIANTES_COMERCIALES_MAPFRE} por trabajo`)
   const inicio = ahora()
+  const tocadas: typeof anfitrionas = []
   for (const opcion of candidatas.slice(0, MAX_VARIANTES_COMERCIALES_MAPFRE)) {
     if (ahora() - inicio > MAX_MS_VARIANTES_MAPFRE) { salida.notas.push('variantes comerciales restantes sin tarificar por el tiempo máximo'); break }
     const base = claveProducto(opcion.replace(/^BASICar\s+/i, ''))
@@ -677,6 +729,7 @@ export async function tarificarVariantesComercialesMapfre(
     const registrar = (v: VarianteVistaMapfre) => { (host.p.variantes ??= []).push(v) }
     let cambiada = false
     let abortar = false
+    if (!tocadas.includes(host)) tocadas.push(host)
     try {
       const e = await elegir(nsei, host.i, opcion, host.opciones)
       cambiada = true
@@ -695,8 +748,19 @@ export async function tarificarVariantesComercialesMapfre(
       }
     } catch (e) {
       if (e instanceof EmisionBloqueadaError) throw e
-      registrar({ opcion, estado: 'no_leida', prima: null, motivo: e instanceof Error ? e.message : 'error' })
-      if (e instanceof ErrorSelectorComercialAlteradoMapfre) { cambiada = true; abortar = true; salida.notas.push('variantes comerciales ABORTADAS por una anomalía del portal; se devuelve lo ya leído') }
+      let cerrado = false
+      if (e instanceof ErrorSelectorComercialAlteradoMapfre && /di[aá]logo desconocido/i.test(e.message) && dialogos) {
+        // v0.8.57: se anota QUÉ diálogo es (sin PII). Solo «controles técnicos» tiene puerta autorizada para cerrarlo; cualquier otro aborta solo las variantes.
+        const ds = await dialogos.leer(nsei).catch(() => [] as DialogoVistoMapfre[])
+        if (ds.length > 0) salida.notas.push(avisoDialogoVarianteMapfre(ds))
+        const tipo = ds.length === 1 ? clasificarDialogoVarianteMapfre(ds[0]!) : 'desconocido'
+        if (tipo === 'controles_tecnicos' && dialogos.cerrarControlesTecnicos) {
+          try { await dialogos.cerrarControlesTecnicos(nsei); cerrado = true } catch (e2) { if (e2 instanceof EmisionBloqueadaError) throw e2 }
+        } else if (ds.length > 0) salida.notas.push(`diálogo de tipo «${tipo.replace('_', ' ')}» sin botón autorizado para cerrarlo`)
+        if (cerrado) registrar({ opcion, estado: 'bloqueada', prima: null, motivo: 'controles técnicos' })
+      }
+      if (!cerrado) registrar({ opcion, estado: 'no_leida', prima: null, motivo: e instanceof Error ? e.message : 'error' })
+      if (e instanceof ErrorSelectorComercialAlteradoMapfre) { cambiada = true; if (!cerrado) { abortar = true; salida.notas.push('variantes comerciales ABORTADAS por una anomalía del portal; se devuelve lo ya leído') } }
     }
     if (cambiada) {
       try {
@@ -718,6 +782,22 @@ export async function tarificarVariantesComercialesMapfre(
       }
     }
     if (abortar) break
+  }
+  // v0.8.57 · RECUPERACIÓN del estado base antes de «Generar Proyecto»: si alguna tarjeta quedó tocada y las tarjetas no muestran sus productos E importes originales,
+  // se vuelve a pedir el producto original por la puerta de elección (que pulsa «Calcular» si hace falta) y se relee. Nunca peor que la 0.8.55: con los productos originales a la vista se genera el proyecto aunque falte algún importe.
+  if (releer && tocadas.length > 0) {
+    const leer = async () => { try { return await releer(nsei) } catch { return null } }
+    let cmp = compararBaseMapfre((await leer()) ?? [], productos)
+    let reintentado = false
+    for (let intento = 0; intento < 2 && !(cmp.valores && cmp.primas); intento++) {
+      reintentado = true
+      for (const h of tocadas) {
+        try { await elegir(nsei, h.i, h.original, h.opciones) } catch (e) { if (e instanceof EmisionBloqueadaError && !/tope/i.test(e.message)) throw e }
+      }
+      cmp = compararBaseMapfre((await leer()) ?? [], productos)
+    }
+    if (cmp.valores && cmp.primas) { if (!salida.restaurado || reintentado) salida.notas.push('estado base recuperado: productos e importes originales confirmados por relectura'); salida.restaurado = true }
+    else if (cmp.valores) { salida.notas.push('estado base recuperado en productos pero NO en importes (tarjetas sin importe o distinto); se genera el proyecto igualmente'); salida.restaurado = true }
   }
   if (!salida.restaurado) salida.notas.push('selección original NO verificada tras las variantes; el proyecto y las garantías de las ofertas base ya estaban a salvo')
   return salida
@@ -2459,7 +2539,7 @@ export async function precioDesdeObjetoAsegurado(
   nsei: Page,
   form: FormularioAuto,
   vehiculo: VehiculoConfirmado,
-  ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirMatSelect' | 'cerrarClubMapfre'> & Partial<Pick<ContextoPortal, 'pulsar' | 'leerOpcionesComercialesMapfre' | 'elegirOpcionComercialMapfre' | 'generarProyectoMapfre' | 'adjuntarPdf' | 'log' | 'buscarDescargaProyectoAuto' | 'pulsarDescargaProyectoAuto'>>,
+  ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirMatSelect' | 'cerrarClubMapfre'> & Partial<Pick<ContextoPortal, 'pulsar' | 'leerOpcionesComercialesMapfre' | 'elegirOpcionComercialMapfre' | 'generarProyectoMapfre' | 'cerrarControlesTecnicosMapfre' | 'adjuntarPdf' | 'log' | 'buscarDescargaProyectoAuto' | 'pulsarDescargaProyectoAuto'>>,
   esperaPrimasMs = ESPERA_PRIMAS_MS,
   supuestos: string | null = null,
 ): Promise<ResultadoAdaptador> {
@@ -2515,7 +2595,7 @@ export async function precioDesdeObjetoAsegurado(
     try {
       const inaccesible = await coberturasAccesiblesMapfre(nsei, v.productos)
       if (inaccesible) { variantes = { primas: [], garantias: new Map(), restaurado: true, notas: [`variantes comerciales no probadas: «Coberturas» ya no está a la vista como se leyó (${inaccesible})`] }; return }
-      variantes = await tarificarVariantesComercialesMapfre(nsei, v.productos, primas, (pg, i, o, perm) => elegirCom(pg, i, o, perm), Date.now, leerTarjetasMapfre)
+      variantes = await tarificarVariantesComercialesMapfre(nsei, v.productos, primas, (pg, i, o, perm) => elegirCom(pg, i, o, perm), Date.now, leerTarjetasMapfre, { leer: leerDialogosMapfre, ...(ctx.cerrarControlesTecnicosMapfre ? { cerrarControlesTecnicos: (pg: Page) => ctx.cerrarControlesTecnicosMapfre!(pg) } : {}) })
     } catch (e) {
       if (e instanceof EmisionBloqueadaError) throw e
       variantes = { primas: [], garantias: new Map(), restaurado: false, notas: [`variantes comerciales: error inesperado (${e instanceof Error ? limpiarMensajePortalDiagnosticoHasta(e.message, 80) : 'error'}); selección original NO verificada`] }
@@ -2576,7 +2656,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.56',
+  version: '0.8.57',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada
