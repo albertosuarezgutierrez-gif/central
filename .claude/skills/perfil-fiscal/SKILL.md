@@ -13,7 +13,7 @@ description: Router de contexto FISCAL y PATRIMONIAL de Alberto (persona física
 - **Datos sensibles NO aquí:** viven en BD `fiscal_perfil`/`fiscal_descendientes` (Supabase, por `cuenta_id`) y en el borrador AEAT. Asesoría: Asecon Consultores (Marta).
 
 ## Hechos confirmados por Alberto (31/10/2026) — no volver a preguntar
-- **Socorro 24:** 50 % Alberto / 50 % Pilar, capital inmobiliario, una sola unidad (smoobuId 352007), **SIN hipoteca**. Amortización: coste 374.412,20€ × 60,58 % construcción (catastro 2015 / IRPF 2023; valor catastral 75.274,63€ sin revisión) × 3 %, prorrateo por días con reserva cobrada (las de 0€ no cuentan).
+- **Socorro 24:** 50 % Alberto / 50 % Pilar, capital inmobiliario, una sola unidad (smoobuId 352007), **SIN hipoteca**. Amortización: coste 374.412,20€ × 60,58 % construcción (valor catastral 2026 del PISO ENTERO 150.549,25€: suelo 59.348,80€ + construcción 91.200,45€ = 60,58 %; cada titular declara 75.274,63€; confirmado por Alberto con el Catastro el 03/11/2026) × 3 %, prorrateo por días con reserva cobrada (las de 0€ no cuentan).
 - **Dúplex:** 100 % Alberto, **SIN hipoteca**, ≈1.914€/año de amortización.
 - **Bustos Tavera 22 (dos bajos):** subarriendo, capital mobiliario, titular Alberto, cobra en Kutxa; el alquiler a la propietaria es gasto.
 - **Correduría Grupo ASegura:** persona física, estimación directa. Codeoscopic es gasto de la correduría, no de los pisos.
