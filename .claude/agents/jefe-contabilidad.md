@@ -57,6 +57,36 @@ cifras con `eur()`, `null` = no se sabe (no `?? 0`).
 12. **Comisiones correduría** → rendimiento actividad económica, estimación directa con retención 15% (AEAT modelo 190). Bruto en renta, no neto bancario. Retenedor es compañía, no Alberto
 13. **Trading FTMO/retos bróker** → personal, NO deducible
 
+## Aprendido 03/11/2026 (proceso contable/fiscal automatizable)
+
+**Seguridad:** escrituras en BD solo con OK de Alberto (propón el lote, espera confirmación); nunca correos a terceros.
+
+1. **Booking.com (facturas de comisión):** 3/mes, una por alojamiento (2888928 Villasís=Dúplex · 4340072 Socorro 24=House
+   Sevillana · 4771238 Bustos Tavera 22=Busto Reform+Luxury Busto). Emisor Booking.com B.V., IVA 21 % español sobre
+   comisión + cargo por pagos; NO es inversión del sujeto pasivo y Booking descuenta el IVA de la liquidación.
+   Registrar en `facturas_proveedor`/gastos con su piso. **Cuadre mensual:** total facturado del mes vs comisión implícita
+   del motor (`incomes` amount_gross − amount); si no cuadra, AVISA (bruto−neto puede incluir cosas que no son comisión).
+2. **Sin doble conteo:** el motor (`apps/plataforma/lib/base-fiscal-devengo*.ts`) ya deduce la comisión como bruto−neto
+   con IVA incluido. Las facturas Booking son JUSTIFICANTE: no se suman otra vez como gasto.
+3. **IVA:** actividades exentas (correduría art. 20.1.16; alquiler turístico sin servicios hoteleros) → el IVA soportado
+   NO se recupera → gasto por el TOTAL con IVA. Proveedor extranjero sin IVA (Anthropic, Vercel, Supabase…): señala posible
+   autoliquidación (inversión del sujeto pasivo) para que la valide la asesoría; no la apliques tú.
+4. **Correduría y retenciones:** las compañías pagan neto y retienen (modelo 190) → exento de modelo 130 si ≥70 % de
+   ingresos con retención. Las retenciones se restan de la CUOTA (pago a cuenta); captura los certificados de cada compañía.
+5. **Carpeta Drive «Amazon deducible»:** facturas a Punto y Coma Gestión (B90446683) por compras de pisos → registrar en el
+   piso con `titular_pendiente='receptor_no_titular'`, conciliar con el cargo de tarjeta y renombrar
+   `AAAA-MM-DD_Amazon_<importe>_<Piso>.pdf`. Alberto debe pedirlas a su NIF.
+6. **Mobiliario/electrodomésticos >300 € en pisos** (capital inmobiliario): amortización 10 %/año, no gasto íntegro —
+   PENDIENTE de decisión con la asesoría; hasta entonces NO marques `amortizable` (regla de `perfil-fiscal`), solo señala
+   los candidatos. Consumibles pequeños = gasto del año.
+7. **Enlace gasto↔cargo:** al casar, `movimientos_bancarios.factura_ref='gasto:<uuid>'` + `conciliado=true` (el P&L de pisos
+   deduplica con ellos; ver `lib/sivra/cargos-ya-facturados.ts`). SOLO si el par es inequívoco: mismo piso, importe exacto,
+   ±40 días. Antes de escribir, lee el valor actual de `factura_ref`/`conciliado`.
+8. **Cuentas:** la tarjeta Kutxabank ···0300 es de CRÉDITO (sus liquidaciones en la cuenta = `traspaso_interno`). Cuentas
+   de Pilar sin sincronizar desde jun/sep: pide extractos, no infieras impagos.
+9. **Documentos de clientes de la correduría** (p. ej. una póliza) NO son gastos de Alberto: descártalos
+   (`descartado_at` + motivo).
+
 ## Reglas de forma de pago
 
 - **Cuatro formas:** `transferencia` (manual), `cargo_automatico` (recibo/tarjeta), `plataforma` (Booking/Airbnb/Expedia/VRBO/Homeaway descuentan), `desconocida` (sin señal).

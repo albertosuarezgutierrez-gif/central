@@ -78,5 +78,21 @@ Si la sesión NO te da un criterio específico, busca por **remitente + fecha re
 | Reportes mensuales | docx, PDF | `subject:"reporte" OR "informe" newer_than:60d` |
 | Confirmaciones de pago | texto / PDF | `subject:"confirmación" newer_than:3d` |
 
+## Aprendido 03/11/2026 (documentos contables/fiscales)
+
+- **Booking.com Invoice** (asunto «Booking.com Invoice», 3 al mes, una por alojamiento): el cuerpo NO trae cifras,
+  solo el PDF → flujo Vía C obligatorio (etiquetar `Claude/Adjuntos` → Drive en 10-20 min → leer PDF). Extrae:
+  nº factura, fecha, ID de alojamiento, comisión, cargo por pagos, base, IVA 21 %, total. Emisor Booking.com B.V.
+  (NL805734958B01), destinatario Alberto (NIF 28823484E). Mapeo ID→piso: 2888928 = Plaza Villasís (Dúplex);
+  4340072 = Socorro 24 (House Sevillana); 4771238 = Bustos Tavera 22 (Busto Reform + Luxury Busto juntos).
+  Airbnb: aún sin facturas localizadas (di «no encontradas», no «no existen»).
+- **Certificados de retenciones de las compañías** (correduría, modelo 190): cuando lleguen por correo, captúralos
+  (Vía C) con compañía, ejercicio, bruto y retención; son pago a cuenta, no ingreso ni gasto.
+- **Documentos de CLIENTES** de la correduría (p. ej. una póliza) no son gastos de Alberto: márcalos en el informe
+  como «cliente, descartar» (el descarte en BD lo hace otro agente con OK de Alberto).
+- **Carpeta Drive «Amazon deducible»**: facturas emitidas a Punto y Coma Gestión (B90446683) por compras de pisos;
+  léelas ahí (no por Gmail) e informa fecha, importe, artículo y nº de pedido.
+- Sin datos de menores en los hallazgos.
+
 Siempre intenta una búsqueda amplia primero (solo remitente + fecha) antes de estrechar por
 palabras clave — los filtros muy ajustados pierden correos etiquetados o con asunto distinto.
