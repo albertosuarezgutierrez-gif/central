@@ -3,6 +3,7 @@ import { smoobuFetch } from '@/lib/smoobu'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { motivoFalloEnvio, type MotivoFallo } from './motivo-envio'
+import { hiloAgodaDe, responderCorreoAgoda } from '@/lib/correo/agoda-hilo'
 
 export type ResultadoEnvio = { ok: true } | { ok: false; status: number; motivo: MotivoFallo }
 
@@ -15,7 +16,24 @@ export async function enviarAlHuespedDetallado(
   reservationId: string,
   messageBody: string,
   subject = '',
+  opts: { smoobuSolo?: boolean } = {},
 ): Promise<ResultadoEnvio> {
+  // AGODA (03/11/2026): si la reserva tiene un hilo de correo vivo de Agoda, la respuesta sale
+  // RESPONDIENDO a ese correo (le llega al huésped; el hilo de Smoobu en Agoda, no). Es solo un cambio
+  // de transporte: la política de envío (auto / botón) la decide el agente igual que para Booking.
+  // Los mensajes que NO son una respuesta (programados, recordatorios de pago) piden `smoobuSolo`.
+  if (!opts.smoobuSolo) {
+    const hilo = await hiloAgodaDe(reservationId)
+    if (hilo) {
+      const r = await responderCorreoAgoda(hilo, messageBody)
+      if (r.ok) {
+        await registrarEnviado(reservationId, messageBody, '')
+        return { ok: true }
+      }
+      console.error(`[enviarAlHuesped] reserva ${reservationId} → correo Agoda: ${r.motivo}`)
+      return { ok: false, status: 0, motivo: { clase: 'rechazo', reintentable: r.reintentable, texto: `No se pudo responder al correo de Agoda: ${r.motivo}.` } }
+    }
+  }
   try {
     const payload: Record<string, string> = { messageBody }
     if (subject) payload.subject = subject
@@ -54,6 +72,6 @@ async function registrarEnviado(bookingId: string, cuerpo: string, asunto: strin
 }
 
 /** Envoltura booleana para los llamadores automáticos (crons, guardias) que solo reintentan. */
-export async function enviarAlHuesped(reservationId: string, messageBody: string, subject = ''): Promise<boolean> {
-  return (await enviarAlHuespedDetallado(reservationId, messageBody, subject)).ok
+export async function enviarAlHuesped(reservationId: string, messageBody: string, subject = '', opts: { smoobuSolo?: boolean } = {}): Promise<boolean> {
+  return (await enviarAlHuespedDetallado(reservationId, messageBody, subject, opts)).ok
 }

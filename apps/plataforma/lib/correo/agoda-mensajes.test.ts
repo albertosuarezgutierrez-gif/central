@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { esAvisoMensajesAgoda, parsearAvisoMensajesAgoda, textoAvisoAgoda } from './agoda-mensajes.ts'
+import { esAvisoMensajesAgoda, parsearAvisoMensajesAgoda, textoAvisoAgoda, esMensajeIndividualAgoda, fechasDeAsunto, mensajeNuevoIndividual } from './agoda-mensajes.ts'
+import { AGODA_WIFI, AGODA_MALETAS } from './agoda-mensajes.fixture.ts'
 
 // Copiado LITERAL del correo real de Agoda del 14/04/2026 (hilo 19d8b155af07a86b), incluidos los
 // BYTES DE CONTROL que Agoda mete dentro del enlace de tracking (0x15 tras `templateid`, 0x12 tras
@@ -65,4 +66,84 @@ test('sin texto del mensaje se declara el hueco, no se calla', () => {
   assert.equal(a.huesped, 'Maria Lopez')
   assert.equal(a.mensaje, null)
   assert.match(textoAvisoAgoda(a), /no tra/)
+})
+
+// ─── Formato B: correo individual (visto 03/11/2026). Fixture reconstruido del correo real con el
+// nombre del huésped y los textos anonimizados; la ESTRUCTURA (tabla con `|`, traducción + «mensaje
+// original», pie «Replying to this email…» e historial después) es la observada.
+const CUERPO_INDIVIDUAL = [
+  '| [](www.agoda.com) |',
+  '| Hola Luxury, |',
+  '| Nueva solicitud de Nicolas Iha |',
+  '| ID de reserva: 1053955690 |',
+  '| Hello, what time can we check in tomorrow? We arrive early from the airport. El texto anterior es una traducción automática (realizada a través del Traductor de Google) del siguiente mensaje original: Hola, ¿a qué hora podemos entrar mañana? Llegamos temprano del aeropuerto. |',
+  '| Replying to this email, will be sent directly to the guest |',
+  '| Simplemente responde a este correo electrónico y se lo reenviaremos directamente al huésped. |',
+  '| Historial de la conversación |',
+  '| Luxury | Nov 1, 10:00 AM |',
+  '| Welcome, the check-in is from 15:00. |',
+  '| Nicolas Iha | Nov 1, 11:00 AM |',
+  '| Thanks, see you soon! |',
+].join('\n')
+
+const INDIVIDUAL = {
+  from: 'notifications@agoda-messaging.com',
+  subject: 'Reply from Nicolas Iha (Nov 3-5, 2026)',
+  body: CUERPO_INDIVIDUAL,
+}
+
+test('B: reconoce el correo individual y sus variantes de asunto', () => {
+  assert.equal(esAvisoMensajesAgoda(INDIVIDUAL), true)
+  assert.equal(esMensajeIndividualAgoda(INDIVIDUAL), true)
+  for (const subject of ['New message from Nicolas Iha (Nov 3-5, 2026)', 'Mensaje de Nicolas Iha (Nov 3-5, 2026)', 'Nuevo mensaje de Nicolas Iha']) {
+    assert.equal(esAvisoMensajesAgoda({ from: 'notifications@agoda-messaging.com', subject }), true, subject)
+  }
+})
+
+test('B: extrae huésped, piso, reserva, fechas y el mensaje ORIGINAL sin historial', () => {
+  const a = parsearAvisoMensajesAgoda(INDIVIDUAL)!
+  assert.equal(a.formato, 'individual')
+  assert.equal(a.respondePorCorreo, true)
+  assert.equal(a.huesped, 'Nicolas Iha')
+  assert.equal(a.nombrePisoAgoda, 'Luxury')
+  assert.equal(a.propertyId, 'prop_luxury_busto')
+  assert.equal(a.reservaAgoda, '1053955690')
+  assert.equal(a.llegada, '2026-11-03')
+  assert.equal(a.salida, '2026-11-05')
+  assert.equal(a.mensaje, 'Hola, ¿a qué hora podemos entrar mañana? Llegamos temprano del aeropuerto.')
+  assert.doesNotMatch(a.mensaje!, /Welcome|Thanks|Translat|traducción/)
+})
+
+test('B: sin traducción, el mensaje es el texto tal cual', () => {
+  const sinTrad = CUERPO_INDIVIDUAL.replace(/\| Hello, what.*\n/, '| Where do we leave the keys? |\n')
+  assert.equal(mensajeNuevoIndividual(sinTrad), 'Where do we leave the keys?')
+})
+
+test('B: solo el dominio de mensajería de Agoda; nada de remitentes parecidos', () => {
+  assert.equal(esAvisoMensajesAgoda({ ...INDIVIDUAL, from: 'notifications@agoda-messaging.com.evil.example' }), false)
+  assert.equal(esAvisoMensajesAgoda({ ...INDIVIDUAL, from: 'x@agoda-messaging.example' }), false)
+  assert.equal(esAvisoMensajesAgoda({ ...INDIVIDUAL, subject: 'Your booking is confirmed' }), false)
+})
+
+test('fechas del asunto: mes cruzado y año cruzado', () => {
+  assert.deepEqual(fechasDeAsunto('Reply from X (Nov 30-Dec 2, 2026)'), { llegada: '2026-11-30', salida: '2026-12-02' })
+  assert.deepEqual(fechasDeAsunto('Reply from X (Dec 30, 2026-Jan 2, 2027)'), { llegada: '2026-12-30', salida: '2027-01-02' })
+  assert.equal(fechasDeAsunto('Reply from X'), null)
+})
+
+test('B real (03/11/2026): el wifi — mensaje ORIGINAL, sin traducción ni historial', () => {
+  const a = parsearAvisoMensajesAgoda(AGODA_WIFI)!
+  assert.equal(a.huesped, 'Nicolas Iha')
+  assert.equal(a.nombrePisoAgoda, 'Luxury')
+  assert.equal(a.propertyId, 'prop_luxury_busto')
+  assert.equal(a.reservaAgoda, '1053955690')
+  assert.equal(a.llegada, '2026-11-03')
+  assert.equal(a.mensaje, 'Hola , me estoy pudiendo conectar al wifi proporcionado sin embargo obtengo un memsaje de que no hay internet')
+})
+
+test('B real (03/11/2026): las maletas — y nada del historial (ni del mensaje previo ni de los nuestros)', () => {
+  const a = parsearAvisoMensajesAgoda(AGODA_MALETAS)!
+  assert.equal(a.reservaAgoda, '1053955690')
+  assert.equal(a.mensaje, 'Gracias! Perfecto, lo tendremos en cuenta. Consulta, cual seria el horario mas temprano en que podamos ir por lo menos a dejar las valijas? Gracias!')
+  assert.doesNotMatch(a.mensaje!, /Bienvenido|check in|Did you know|Replying/)
 })

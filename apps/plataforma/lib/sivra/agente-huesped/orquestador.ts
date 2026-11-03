@@ -30,11 +30,19 @@ import { proponerSiCompleta, rellenarDesdeChat, solicitudVivaDe } from '@/lib/si
 // y /api/reservations/{id}/messages puede no etiquetar al emisor.
 export async function procesarMensajeHuesped(
   bookingId: string,
-  opts: { pregunta?: string; msgId?: string } = {},
+  opts: { pregunta?: string; msgId?: string; fecha?: Date } = {},
 ): Promise<{ accion: string }> {
   // 1) Contexto (reserva + guía + historial si lo hay).
   const ctx0 = await construirContexto(bookingId, 'en')
   if (!ctx0) return { accion: 'sin_contexto' }
+
+  // AGODA POR CORREO (03/11/2026): el mensaje del huésped llega en el correo de Agoda y NO está en el
+  // hilo de Smoobu (allí solo constan nuestros mensajes). Se añade al historial como del huésped para
+  // que el resto del flujo (guard «último = host», anti-duplicado, prompt) vea la conversación real.
+  // La respuesta sale respondiendo a ese correo (`enviar.ts`); la política auto/botón es la de siempre.
+  if (opts.msgId?.startsWith('agoda-correo:') && opts.pregunta?.trim()) {
+    ctx0.historial.push({ id: opts.msgId, from: 'guest', text: opts.pregunta.trim(), ts: (opts.fecha ?? new Date()).toISOString() })
+  }
 
   // El agente SOLO responde al huésped. El sondeo (/api/threads) no trae `sent_by_owner`, así que
   // puede traernos como "pregunta" el ÚLTIMO mensaje del hilo aunque sea del HOST (p.ej. el mensaje
@@ -54,7 +62,7 @@ export async function procesarMensajeHuesped(
   // del anfitrión escrito fuera de Smoobu se procesa como del huésped.
   const enHilo = [...ctx0.historial].reverse().find(h => normalizarTexto(h.text) === normalizarTexto(pregunta))
   const emisorDiag = {
-    origen: opts.msgId?.startsWith('correo:') ? 'correo' : opts.pregunta ? 'sondeo' : 'historial',
+    origen: opts.msgId?.startsWith('agoda-correo:') ? 'agoda-correo' : opts.msgId?.startsWith('correo:') ? 'correo' : opts.pregunta ? 'sondeo' : 'historial',
     en_hilo: enHilo ? { from: enHilo.from, ...(enHilo.emisor || {}) } : null,
     ultimo_del_hilo: ctx0.historial.at(-1)?.from ?? null,
   }

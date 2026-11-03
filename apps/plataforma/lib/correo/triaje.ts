@@ -14,6 +14,7 @@ import { esRemitenteDeCanal } from './num-confirmacion'
 import { parsearAvisoBooking } from './reserva-booking'
 import { registrarAvisoBooking, registrarReservaHuesped } from '@/lib/sivra/reservas-booking-vigia'
 import { parsearAvisoMensajesAgoda, textoAvisoAgoda } from './agoda-mensajes'
+import { enrutarMensajeAgoda } from './agoda-enrutar'
 import { parsearNotificacionSmoobu } from './smoobu-notificacion'
 import { ACCESO } from '@/lib/sivra/acceso'
 import { rutaDe, ETIQUETAS_INTOCABLES } from './rutas'
@@ -235,8 +236,9 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
           }
 
           // Aviso inmediato. El de Agoda lleva texto PROPIO: el correo trae el mensaje del huésped
-          // dentro, así que se manda tal cual en vez del resumen genérico — y sobre todo dice que
-          // NO se contesta desde Smoobu (para Agoda el hilo no llega al huésped) y da el enlace de YCS.
+          // dentro, así que se manda tal cual en vez del resumen genérico. El correo INDIVIDUAL va al agente
+          // de huéspedes (abajo); este aviso queda para el resumen diario antiguo (solo YCS) y como red si
+          // el agente no pudo cogerlo.
           let devolucion: LecturaCorreoDevolucion | null = null
           let evento: EventoAseguradora | null = null
           // El texto de los PDF se saca UNA vez por correo y solo si algún lector lo pide (devolución, o un
@@ -257,11 +259,24 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
             // `extracto` es asunto+cuerpo truncado a 1500 chars: el nombre y el texto del mensaje van
             // al PRINCIPIO y siempre sobreviven; el enlace de YCS va al final y puede caerse. El parser
             // devuelve null en lo que no ve y el aviso lo declara — nunca se inventa el piso.
-            ? parsearAvisoMensajesAgoda({ from: correo.from, subject: correo.subject, body: correo.extracto })
+            ? parsearAvisoMensajesAgoda({ from: correo.from, subject: correo.subject, body: correo.texto || correo.extracto })
             : null
-          if (avisoAgoda) {
+          // Correo INDIVIDUAL de Agoda (03/11/2026): entra al agente de huéspedes como cualquier mensaje y
+          // la respuesta sale respondiendo a ese correo. Solo si el agente lo coge se omite el aviso suelto;
+          // si no (reserva sin identificar, texto ilegible), cae al aviso de siempre diciendo por qué.
+          let agodaEnrutado = false
+          let agodaMotivo: string | null = null
+          if (avisoAgoda?.respondePorCorreo) {
+            const r = await enrutarMensajeAgoda(correo, avisoAgoda)
+            agodaEnrutado = r.enrutado
+            if (!r.enrutado) agodaMotivo = r.motivo
+          }
+          if (agodaEnrutado) {
+            stats.avisados++
+          } else if (avisoAgoda) {
             const nombre = avisoAgoda.propertyId ? (ACCESO[avisoAgoda.propertyId]?.nombre ?? null) : null
-            await tgAviso('correo.agoda', textoAvisoAgoda(avisoAgoda, nombre ?? undefined))
+            await tgAviso('correo.agoda', textoAvisoAgoda(avisoAgoda, nombre ?? undefined)
+              + (agodaMotivo ? `\n\n⚠️ El agente de huéspedes NO lo ha cogido (${escapeHtml(agodaMotivo)}). ${/dkim/i.test(agodaMotivo) ? 'El correo NO viene firmado por Agoda y puede ser falso: NO lo respondas por correo, contesta desde el buzón de YCS.' : 'Contéstalo tú respondiendo al correo de Agoda (le llega al huésped).'}` : ''))
             stats.avisados++
           } else if (c.categoria === 'correduria-recibo' && (devolucion = leerCorreoDevolucion({ remitente: correo.from, asunto: correo.subject, texto: conPdfs(correo, await textoPdfs()), fecha: correo.fecha.toISOString() })) !== null) {
             // Correo de DEVOLUCIÓN que se sabe leer: se registra en la cartera (marca el recibo,

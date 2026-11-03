@@ -70,6 +70,12 @@ Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; ti
 original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados revisado/falta_roto/devuelto + bloque en ficha. `rrhh.material_empleado`
 (0028, aplicada). Pendiente fase 2: revisión periódica mensual.
 
+## (03/11/2026) Sivra · mensajes de huésped de Agoda por correo
+- Agoda ya NO es de una sola dirección: manda 1 correo por mensaje desde `@agoda-messaging.com` («Reply from …») y responder a ese correo le llega al huésped. El detector solo conocía el digest de `@agoda.com` → los mensajes de Nicolas Iha (Luxury) quedaron sin contestar.
+- Ahora el parser reconoce ambos formatos, el mensaje entra al agente de huéspedes (misma política auto/botón que Booking) y la respuesta sale por correo (In-Reply-To) en vez de Smoobu. Tabla nueva `agoda_hilos_correo` (aplicada en central).
+- Regla nueva en `mensajes_hechos` (ids 55-58, un piso cada una): wifi sin internet → pedir FOTO DE LAS LUCES DEL ROUTER (la pide el proveedor). Un piso nuevo necesita su fila.
+- Pendiente: primera prueba real del envío SMTP a Agoda (que acepte el From y enlace el hilo).
+
 ## (03/11/2026) Correduría · cuadre de comisiones por compañía + Drive reorganizado
 - Comisiones 2026 en BBVA (neto) ≈ 6.239 €: Occident 2.193, Mapfre 1.268, Generali 987, Allianz 705, Asisa 409 (`M1454`, 45,15 €/mes), Caser 351 (`-FRA-COMIS-` 12,66 €/mes + `PD005 SALDO`), Pelayo, Reale, Aegon, AXA. Asisa/Caser/Pelayo/Aegon/AXA NO están en CIMA → el cuadre `/correduria?s=comisiones` no los ve; para renta el bruto ≥ banco. `finanzas.ts` ya nombra M1454=Asisa y PD005=Caser. «MBI» (47,06 € 13/03) = compañía de seguros (simulación de riesgo; comisión por la póliza de RC de corredor) — Alberto.
 - Drive: estructura `02 · CONTABILIDAD/Contabilidad/2026/{Pisos/<piso>/{Facturas gastos,Booking,…},Correduría,Personal,Pilar}`; payouts Socorro renombrados `2026-MM_Booking_resumen-pago_HouseSevillana.pdf`; 71 sueltos a `_revisar`, 29 a `_PARA_BORRAR (revisar Alberto)`. Deshacer: listado `drive-antes.md` (scratchpad de la sesión). Pendiente: script Drive con año 2026 fijo (parametrizar antes del 01/01/2027).
