@@ -1,6 +1,6 @@
 -- 2026-11-03c — Regularización de RC, FASE 3: responder a la COMPAÑÍA con la cifra del cliente y cerrar a mano.
 -- Código: apps/asegura/lib/regularizacion-rc-compania.ts (+ reglas puras en packages/module-seguros/src/regularizacion-rc.ts).
--- SIN APLICAR (pendiente de OK de Alberto).
+-- APLICADO en central el 03/11/2026 (OK de Alberto; verificado: 9 columnas, CHECKs, sin DELETE para prisma_seguros).
 --
 --  · `compania_estado`: NULL (aún no se ha preparado) → `borrador` (en Telegram con ✅/✏️/🏁) → `enviando` (reclamada por
 --    ✅) → `enviada`. Solo con la solicitud `completada` (hay cifra del cliente).

@@ -4,7 +4,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
-  clavesTareaRegularizacion, decidirRespuestaCompaniaConRepo, editarRespuestaCompaniaConRepo, resolverRegularizacionConRepo,
+  clavesTareaRegularizacion, decidirRespuestaCompaniaConRepo, enviandoAtascada, editarRespuestaCompaniaConRepo, resolverRegularizacionConRepo,
   type FilaCompania, type RepoCompania,
 } from './regularizacion-rc-compania.ts'
 import { claveTareaDe } from './correo-evento.ts'
@@ -17,7 +17,7 @@ function fila(o: Partial<FilaCompania> = {}): FilaCompania {
     id: ID, clienteId: 'c', polizaId: POL, compania: 'occident', numero: 'BIDS000002', dgs: 'C0468',
     periodoDesde: '2025-07', periodoHasta: '2026-07', estado: 'completada', documentoId: null,
     companiaEstado: 'borrador', companiaVersion: 1, asunto: 'Regularización RC', textoCifrado: 'cif:texto con la cifra 2.162,49€',
-    para: 'soporte@occident.com', resueltaAt: null, ...o,
+    para: 'soporte@occident.com', resueltaAt: null, companiaEnviadaAt: null, ...o,
   }
 }
 
@@ -36,10 +36,10 @@ function repo(inicial: FilaCompania, o: { enviar?: () => Promise<string>; docume
     reclamar: async ({ version }) => {
       const f = st.f
       if (f.estado !== 'completada' || f.resueltaAt || f.companiaEstado !== 'borrador' || f.companiaVersion !== version || !f.para) return 0
-      f.companiaEstado = 'enviando'; return 1
+      f.companiaEstado = 'enviando'; f.companiaEnviadaAt = new Date(); return 1
     },
     confirmar: async () => (st.f.companiaEstado === 'enviando' ? ((st.f.companiaEstado = 'enviada'), 1) : 0),
-    volverABorrador: async () => { if (st.f.companiaEstado === 'enviando') st.f.companiaEstado = 'borrador' },
+    volverABorrador: async () => { if (st.f.companiaEstado === 'enviando') { st.f.companiaEstado = 'borrador'; st.f.companiaEnviadaAt = null } },
     enviar: async (x) => { st.envios.push({ to: x.to, texto: x.texto, adjuntos: x.adjuntos.length, idem: x.idempotencia }); return o.enviar ? o.enviar() : 'enviado' },
     guardarEdicion: async ({ textoCifrado, para }) => {
       if (st.f.companiaEstado !== 'borrador' || st.f.resueltaAt) return 0
@@ -48,7 +48,8 @@ function repo(inicial: FilaCompania, o: { enviar?: () => Promise<string>; docume
       st.f.companiaVersion++; return 1
     },
     resolver: async () => {
-      if (st.f.estado !== 'completada' || st.f.resueltaAt || st.f.companiaEstado === 'enviando') return 0
+      if (st.f.estado !== 'completada' || st.f.resueltaAt) return 0
+      if (st.f.companiaEstado === 'enviando' && !enviandoAtascada(st.f, new Date())) return 0
       st.f.resueltaAt = new Date(); return 1
     },
     cerrarTareas: async () => { const c = st.tareas.splice(0); st.cerradas.push(...c); return c },
@@ -141,9 +142,29 @@ test('🏁 no cierra lo que no toca: sin respuesta del cliente, o con un correo 
   const a = repo(fila({ estado: 'pendiente', companiaEstado: null }), { tareas: ['g1'] })
   assert.deepEqual(await resolverRegularizacionConRepo(a.r, { id: ID, actor: 'x' }), { estado: 'no_completada' })
   assert.deepEqual(a.st.cerradas, [])
-  const b = repo(fila({ companiaEstado: 'enviando' }), { tareas: ['g1'] })
+  const b = repo(fila({ companiaEstado: 'enviando', companiaEnviadaAt: new Date(Date.now() - 60_000) }), { tareas: ['g1'] })
   assert.deepEqual(await resolverRegularizacionConRepo(b.r, { id: ID, actor: 'x' }), { estado: 'enviando' })
   assert.deepEqual(b.st.cerradas, [])
+})
+
+test('🚨 «enviando» ATASCADA (correo salido sin confirmar, o el proceso murió): pasado el plazo el 🏁 la cierra; nunca se reenvía', async () => {
+  const hace = (min: number) => new Date(Date.now() - min * 60_000)
+  assert.equal(enviandoAtascada({ companiaEstado: 'enviando', companiaEnviadaAt: hace(5) }, new Date()), false)
+  assert.equal(enviandoAtascada({ companiaEstado: 'enviando', companiaEnviadaAt: hace(16) }, new Date()), true)
+  assert.equal(enviandoAtascada({ companiaEstado: 'enviando', companiaEnviadaAt: null }, new Date()), true, 'sin sello de reclamación = de antes del sello: atascada')
+  assert.equal(enviandoAtascada({ companiaEstado: 'enviada', companiaEnviadaAt: hace(60) }, new Date()), false)
+  const { r, st } = repo(fila({ companiaEstado: 'enviando', companiaEnviadaAt: hace(16) }), { tareas: ['g1'] })
+  const res = await resolverRegularizacionConRepo(r, { id: ID, actor: 'x' })
+  assert.equal(res.estado, 'resuelta')
+  assert.deepEqual(st.cerradas, ['g1'])
+  assert.match(st.historial[0], /sin confirmar/)
+  // Y el ✅ viejo ya no puede mandar nada.
+  assert.equal((await decidirRespuestaCompaniaConRepo(r, descifrar, { id: ID, version: 1 })).estado, 'ya_resuelta')
+  // La reclamación deja sello (el plazo se mide desde ahí) y volver a borrador lo borra.
+  const src = readFileSync(new URL('./regularizacion-rc-compania.ts', import.meta.url), 'utf8')
+  assert.match(src, /set compania_estado = 'enviando', compania_enviada_at = now\(\)/)
+  assert.match(src, /set compania_estado = 'borrador', compania_enviada_at = null/)
+  assert.match(src, /compania_estado is distinct from 'enviando'\s+or coalesce\(compania_enviada_at, '-infinity'\) <= now\(\) - make_interval\(mins => \$\{MINUTOS_ENVIANDO_ATASCADA\}::int\)/)
 })
 
 test('la clave de tarea que cierra el 🏁 es EXACTAMENTE la que crea el agente de correo para esa póliza + periodo', () => {

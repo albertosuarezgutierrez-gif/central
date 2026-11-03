@@ -26,7 +26,7 @@ import {
   type BuzonCompaniaRegularizacion,
   type PeriodoRegularizacion,
 } from '@central/module-seguros/regularizacion-rc'
-import { enviarYConfirmar } from './regularizacion-rc-envio.ts'
+import { enviarYConfirmar, MINUTOS_ENVIANDO_ATASCADA } from './regularizacion-rc-envio.ts'
 
 export const TIPO_CORREO_REGULARIZACION_COMPANIA = 'regularizacion_rc_compania'
 
@@ -40,6 +40,19 @@ export type FilaCompania = {
   periodoDesde: string; periodoHasta: string; estado: string; documentoId: string | null
   companiaEstado: string | null; companiaVersion: number; asunto: string | null; textoCifrado: string | null
   para: string | null; resueltaAt: Date | null
+  /** En `enviando`: cuándo se RECLAMÓ (sello de la reclamación); en `enviada`: cuándo se confirmó. */
+  companiaEnviadaAt: Date | null
+}
+
+/**
+ * ¿Un `enviando` que ya no avanza? (el correo salió pero no se pudo confirmar —`confirmacion_fallida`, que NO vuelve a
+ * borrador para no mandar dos—, o el proceso murió a mitad). Pasado `MINUTOS_ENVIANDO_ATASCADA` desde la reclamación, el
+ * 🏁 puede cerrarla (cerrar no envía nada); sin esto se quedaría en 409 `enviando` para siempre. Sin sello = atascada.
+ */
+export function enviandoAtascada(f: { companiaEstado: string | null; companiaEnviadaAt: Date | null }, ahora: Date): boolean {
+  if (f.companiaEstado !== 'enviando') return false
+  if (!f.companiaEnviadaAt) return true
+  return ahora.getTime() - f.companiaEnviadaAt.getTime() >= MINUTOS_ENVIANDO_ATASCADA * 60_000
 }
 
 export type AdjuntoRegularizacion = { nombre: string; contenido: Buffer; tipo: string }
@@ -135,17 +148,19 @@ export type ResultadoResolver = { estado: 'resuelta' | 'ya_resuelta'; tareasCerr
  * 🏁 Regularización resuelta. Idempotente: la segunda vez es `ya_resuelta` y solo vuelve a cerrar alguna tarea que se
  * hubiera quedado abierta (sin nota ni historial nuevos). No envía nada a nadie.
  */
-export async function resolverRegularizacionConRepo(repo: RepoCompania, d: { id: string; actor: string }): Promise<ResultadoResolver> {
+export async function resolverRegularizacionConRepo(repo: RepoCompania, d: { id: string; actor: string }, ahora = new Date()): Promise<ResultadoResolver> {
   const f = await repo.leer(d.id)
   if (!f) return { estado: 'no_encontrada' }
   if (f.estado !== 'completada') return { estado: 'no_completada' }
   // Un correo a medio salir: se espera a que acabe (si no, el sello y el «enviando» se pisarían).
-  if (!f.resueltaAt && f.companiaEstado === 'enviando') return { estado: 'enviando' }
+  // Atascada (ver `enviandoAtascada`): se deja cerrar; el ✅ ya no podrá reenviar (exige `resuelta_at is null`).
+  const atascada = !f.resueltaAt && enviandoAtascada(f, ahora)
+  if (!f.resueltaAt && f.companiaEstado === 'enviando' && !atascada) return { estado: 'enviando' }
   const periodo = normalizarPeriodoRegularizacion(f.periodoDesde, f.periodoHasta)
   const n = f.resueltaAt ? 0 : await repo.resolver({ id: f.id, actor: d.actor })
   const cerradas = periodo ? await repo.cerrarTareas({ polizaId: f.polizaId, periodo }) : []
   if (n === 1) {
-    await repo.historial(f, `Regularización de RC (${f.compania}, periodo ${f.periodoDesde} a ${f.periodoHasta}): marcada como RESUELTA${cerradas.length ? ` y cerrada su tarea` : ''}.`)
+    await repo.historial(f, `Regularización de RC (${f.compania}, periodo ${f.periodoDesde} a ${f.periodoHasta}): marcada como RESUELTA${cerradas.length ? ` y cerrada su tarea` : ''}.${atascada ? ' El envío a la compañía quedó sin confirmar: mira «Enviados» antes de darlo por comunicado.' : ''}`)
     return { estado: 'resuelta', tareasCerradas: cerradas.length }
   }
   if (f.resueltaAt) return { estado: 'ya_resuelta', tareasCerradas: cerradas.length }
@@ -185,7 +200,8 @@ export async function repoCompania(correduriaId: string): Promise<RepoCompania> 
         select s.id::text as id, s.cliente_id::text as "clienteId", s.poliza_id::text as "polizaId", s.compania,
                p.numero_poliza as numero, p.codigo_entidad_dgs as dgs, s.periodo_desde as "periodoDesde", s.periodo_hasta as "periodoHasta",
                s.estado, s.documento_id::text as "documentoId", s.compania_estado as "companiaEstado", s.compania_version as "companiaVersion",
-               s.compania_asunto as asunto, s.compania_texto as "textoCifrado", s.compania_para as para, s.resuelta_at as "resueltaAt"
+               s.compania_asunto as asunto, s.compania_texto as "textoCifrado", s.compania_para as para, s.resuelta_at as "resueltaAt",
+               s.compania_enviada_at as "companiaEnviadaAt"
         from solicitud_regularizacion s join polizas p on p.id = s.poliza_id and p.correduria_id = s.correduria_id
         where s.id = ${id}::uuid and s.correduria_id = ${correduriaId}::uuid`)
       return f ?? null
@@ -203,14 +219,14 @@ export async function repoCompania(correduriaId: string): Promise<RepoCompania> 
       return d ? { nombre: d.nombre, contenido: d.contenido, tipo: d.mime } : null
     },
     reclamar: ({ id, version }) => db.$executeRaw(Prisma.sql`
-      update solicitud_regularizacion set compania_estado = 'enviando'
+      update solicitud_regularizacion set compania_estado = 'enviando', compania_enviada_at = now()
       where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'completada' and resuelta_at is null
         and compania_estado = 'borrador' and compania_version = ${version} and compania_para is not null`),
     confirmar: (id) => db.$executeRaw(Prisma.sql`
       update solicitud_regularizacion set compania_estado = 'enviada', compania_enviada_at = now()
       where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid and compania_estado = 'enviando'`),
     volverABorrador: (id) => db.$executeRaw(Prisma.sql`
-      update solicitud_regularizacion set compania_estado = 'borrador'
+      update solicitud_regularizacion set compania_estado = 'borrador', compania_enviada_at = null
       where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid and compania_estado = 'enviando'`),
     async enviar({ fila, to, asunto, texto, adjuntos, idempotencia }) {
       const { enviarCorreoCliente } = await import('./correo-envio')
@@ -229,7 +245,8 @@ export async function repoCompania(correduriaId: string): Promise<RepoCompania> 
     resolver: ({ id, actor }) => db.$executeRaw(Prisma.sql`
       update solicitud_regularizacion set resuelta_at = now(), resuelta_por = ${actor.slice(0, 200)}
       where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'completada' and resuelta_at is null
-        and compania_estado is distinct from 'enviando'`),
+        and (compania_estado is distinct from 'enviando'
+             or coalesce(compania_enviada_at, '-infinity') <= now() - make_interval(mins => ${MINUTOS_ENVIANDO_ATASCADA}::int))`),
     async cerrarTareas({ polizaId, periodo }) {
       const { nueva, vieja } = clavesTareaRegularizacion(polizaId, periodo)
       const nota = `\n[Cerrada: regularización de RC resuelta (${textoPeriodo(periodo)})]`
