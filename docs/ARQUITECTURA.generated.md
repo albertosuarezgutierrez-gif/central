@@ -281,6 +281,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (03/11/2026) 03/11/2026) Fiscal · tarjeta Kutxabank 0300 importada + catastro Socorro cerrado
 - (03/11/2026) 03/11/2026) PR #5412 MERGEADO · facturas de plataforma: «✅ Pagar» hace pago REAL
 - (02/11/2026) 02/11/2026) Auditoría lote 2 (rama `claude/auditoria-lote2`, PR por abrir)
 - (02/11/2026) 02/11/2026) PR #5396 MERGEADO · `@central/module-cima` fase 2 (lógica pura)
@@ -290,5 +291,4 @@
 - (02/11/2026) 02/11/2026) Control 2026 pisos: expenses retirada · métrica «Gastos mes» sivra
 - (01/11/2026) 01/11/2026) Factura Sique Brilla octubre · cuadre por correo: lavandería redondeada
 - (01/11/2026) 01/11/2026) Tarificador RPA · vehículo de referencia y presupuestos (#5321, #5326, #5332, #5337)
-- (01/11/2026) 01/11/2026) Agente huésped: «ready before 15?» → compuerta de horarios · PR #5334 MERGEADO (`7d7c971`)
 

@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-03T07:41:34Z",
-  "sha": "8dcba7345a2683933584e2a8c7cb3bd33b2d7828",
+  "generadoEn": "2026-11-03T08:35:09Z",
+  "sha": "a9532a14640c279e1d088b939a3c9e8f5af57b05",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -176458,7 +176458,6 @@
         "mejorPalanca",
         "avisoUmbral",
         "soloCerrados",
-        "estaCubierta",
         "esPorExtracto",
         "avisoCuentas",
         "avisoFacturasMeses",
@@ -176520,21 +176519,13 @@
           "resumen": "Meses con `YYYY-MM` estrictamente anteriores al de `hoy`: el mes en curso aún no se puede dar por «sin factura»."
         },
         {
-          "nombre": "estaCubierta",
-          "kind": "arrow",
-          "exportada": true,
-          "params": "nombre: string",
-          "retorno": null,
-          "linea": 85
-        },
-        {
           "nombre": "esPorExtracto",
           "kind": "arrow",
           "exportada": true,
           "params": "nombre: string",
           "retorno": null,
-          "linea": 87,
-          "resumen": "BBVA (Dúplex y correduría) y las de Pilar no sincronizan: se pide el extracto; el resto, reconectar."
+          "linea": 83,
+          "resumen": "BBVA (Dúplex y correduría), las de Pilar y la tarjeta de CRÉDITO Kutxabank (4662032019750300) no sincronizan: se pide el extracto; el resto, reconectar. La cuenta Kutxabank solo trae la liquidación me"
         },
         {
           "nombre": "avisoCuentas",
@@ -176542,7 +176533,7 @@
           "exportada": true,
           "params": "a: AvisosDatos, anio: number",
           "retorno": "Alerta | null",
-          "linea": 89
+          "linea": 85
         },
         {
           "nombre": "avisoFacturasMeses",
@@ -176550,7 +176541,7 @@
           "exportada": true,
           "params": "a: AvisosDatos, hoy: string, anio: number",
           "retorno": "Alerta | null",
-          "linea": 100
+          "linea": 96
         },
         {
           "nombre": "avisoDiciembre",
@@ -176558,7 +176549,7 @@
           "exportada": true,
           "params": "e: EntradaSimulador, compras: CompraPrevista[], hoy: string, anio: number",
           "retorno": "Alerta | null",
-          "linea": 112,
+          "linea": 108,
           "resumen": "Del 1 al 31 de diciembre (`hoy` = 'YYYY-MM-DD'). Un recordatorio único por año."
         },
         {
@@ -176567,7 +176558,7 @@
           "exportada": true,
           "params": "p: { hoy: string; anio: number; entrada: EntradaSimulador | null; avisos: AvisosDatos | null; compras: CompraPrevista[] }",
           "retorno": "Alerta[]",
-          "linea": 128,
+          "linea": 124,
           "resumen": "Los cuatro avisos (los que no apliquen, fuera). `avisos` y `e` salen del panel (`armarPanel`)."
         },
         {
@@ -176576,7 +176567,7 @@
           "exportada": true,
           "params": "t: string",
           "retorno": null,
-          "linea": 138,
+          "linea": 134,
           "resumen": "── Anti-spam ───────────────────────────────────────────────────────────────────────────────"
         },
         {
@@ -176585,13 +176576,13 @@
           "exportada": true,
           "params": "alertas: Alerta[], previos: EnvioPrevio[], ahora: Date, ventanaDias = VENTANA_DEDUPE_DIAS",
           "retorno": "Alerta[]",
-          "linea": 145,
+          "linea": 141,
           "resumen": "No repetir el mismo aviso (clave + contenido) en `ventanaDias` días; los `soloUnaVez` no se repiten en 365 días aunque cambie el contenido. Contenido distinto = aviso nuevo (la situación ha cambiado)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e56cec050a0c"
+      "hash": "ecaffad4dc70"
     },
     {
       "ruta": "apps/plataforma/lib/fiscal-compras-db.ts",
@@ -269308,6 +269299,6 @@
   ],
   "resumen": {
     "archivos": 5540,
-    "funciones": 21757
+    "funciones": 21756
   }
 }
