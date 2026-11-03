@@ -74,6 +74,12 @@ Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; ti
 original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados revisado/falta_roto/devuelto + bloque en ficha. `rrhh.material_empleado`
 (0028, aplicada). Pendiente fase 2: revisión periódica mensual.
 
+## (03/11/2026) Correduría · buscador de cartera tolerante (caso Antonio Villegas)
+- Cliente no aparecía: DNI mal dado por él + apellido en BD «Villega» (sin s) + póliza dictada «G-H-R» vs «HR-G-410001512».
+- `cartera-busqueda.ts`: póliza también por solo dígitos (≥6); nombre con `word_similarity ≥ 0,7` (pg_trgm) en palabras ≥5 letras, exactas primero. ~31→68 ms. Cepo en `busqueda.test.ts`.
+- Escritura del apellido por SQL bloqueada por permisos; Alberto lo edita a mano (a las 1ª no quedó guardado: revisar). Sincro CIMA (`sincro-cima.ts` caso 'nombre') puede reescribir nombre: no hay blindaje de edición manual.
+- 698 lápidas fusionadas conservan `tipo='cliente'`/`activo=true` (pendiente normalizar).
+
 ## (03/11/2026) Correduría · regularización RC de Occident automatizada (fases 1-2)
 - F1: parser saca periodo/fecha carta/recordatorio; clave tarea póliza+periodo; vence carta+15d (mín. hoy+2); 2º aviso → prioridad alta + ⚠️ en Telegram.
 - F2: al crear la tarea, petición de facturación al cliente: borrador → Telegram ✅/✏️ → enlace `/datos/[token]` del portal → cifra guardada + aviso. Nada sale sin ✅.
