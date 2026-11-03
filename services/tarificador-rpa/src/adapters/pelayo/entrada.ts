@@ -268,7 +268,106 @@ async function pulsarExacto(page: Page, ctx: CtxEntradaPelayo, texto: string, ms
   await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined)
 }
 
-export type ResultadoRamoPelayo = { estado: 'select' | 'pulsado' | 'no_elegido'; motivo?: string }
+/** 0.3.31: ¿`href` (ya absoluto) es EXACTAMENTE la página de presupuestos (https://mediadores.pelayo.com + ruta, con o sin barra final; sin credenciales ni puerto)? Pura. */
+export function esUrlPresupuestosPelayo(href: string | null | undefined): boolean {
+  try {
+    const u = new URL(String(href ?? ''))
+    const ruta = u.pathname.replace(/\/+$/, '/')
+    return u.protocol === 'https:' && u.hostname === 'mediadores.pelayo.com' && !u.username && !u.password && !u.port && (ruta === RUTA_PRESUPUESTOS_PELAYO || `${ruta}/` === RUTA_PRESUPUESTOS_PELAYO)
+  } catch {
+    return false
+  }
+}
+
+/** 0.3.31: lo que se sabe de un control con rótulo exacto «Presupuestos» del mega-menú (sin valores; solo estructura). */
+export type ControlMenuPelayo = { href: string | null; visible: boolean; enlace: boolean }
+
+/**
+ * 0.3.31 (exploración real 03/11/2026 con 0.3.29: «no se localiza «Presupuestos» en el desplegable de «Contratación»»): el desplegable es un MEGA-MENÚ con
+ * una columna cuyo ENCABEZADO en negrita es «Presupuestos» y debajo el ENLACE «Presupuestos» (destino `/portalmediador-presupuestos/`). Elige qué pulsar:
+ * 1) el enlace visible con el href EXACTO de la página de presupuestos (el primero; todos llevan al mismo sitio); 2) si NO hay ninguno con ese href en el
+ * DOM, el primer control visible que sea de verdad pulsable (`enlace`: href real u onclick o rol/botón), nunca un encabezado; 3) si el enlace con ese href
+ * está en el DOM pero oculto, nada (`esperar`: el panel aún no se abrió). La puerta del guard (texto exacto + origen + orden + una vez) decide igual. Pura.
+ */
+export function elegirControlPresupuestosPelayo(cs: readonly ControlMenuPelayo[]): { indice: number } | { esperar: string } {
+  const exacto = cs.findIndex((c) => c.visible && esUrlPresupuestosPelayo(c.href))
+  if (exacto >= 0) return { indice: exacto }
+  const enDom = cs.filter((c) => esUrlPresupuestosPelayo(c.href)).length
+  if (enDom > 0) return { esperar: `${enDom} enlace(s) a ${RUTA_PRESUPUESTOS_PELAYO} en el DOM, ninguno visible (panel cerrado)` }
+  const otro = cs.findIndex((c) => c.visible && c.enlace)
+  if (otro >= 0) return { indice: otro }
+  const vis = cs.filter((c) => c.visible).length
+  return { esperar: `${vis} rótulo(s) «${RUTA_MENU_PELAYO[1]}» visibles sin enlace (encabezado de columna) y ninguno a ${RUTA_PRESUPUESTOS_PELAYO}` }
+}
+
+/** 0.3.31: controles con rótulo EXACTO «Presupuestos» (visibles u ocultos) y los `a[href]` a la página de presupuestos, en la página y sus marcos. Solo lee. */
+async function controlesPresupuestosPelayo(page: Page): Promise<{ l: Locator; c: ControlMenuPelayo }[]> {
+  const out: { l: Locator; c: ControlMenuPelayo }[] = []
+  const texto = RUTA_MENU_PELAYO[1]
+  for (const r of raices(page)) {
+    const porHref = r.locator(`a[href*="${RUTA_PRESUPUESTOS_PELAYO.replace(/\//g, '')}"]`)
+    const porTexto = r.getByText(etiquetaExactaPelayo(texto)).locator('xpath=ancestor-or-self::*[self::a or self::button or @role="menuitem" or @role="button" or @role="link" or @onclick][1]')
+    const todos = porHref.or(porTexto)
+    const n = Math.min(await contar(todos), 20)
+    for (let i = 0; i < n; i++) {
+      const l = todos.nth(i)
+      if (!(await esHojaExacta(l, texto))) continue
+      const d = (await l
+        .evaluate((el) => {
+          const a = el as HTMLAnchorElement
+          const crudo = el.getAttribute('href')
+          const href = el.tagName === 'A' && crudo ? a.href : null
+          const real = !!crudo && crudo.trim() !== '#' && !/^javascript:\s*(void\s*\(?\s*0?\s*\)?\s*;?)?$/i.test(crudo.trim())
+          const enlace = real || el.hasAttribute('onclick') || el.tagName === 'BUTTON' || ['menuitem', 'button', 'link'].includes(el.getAttribute('role') || '')
+          return { href, enlace }
+        })
+        .catch(() => null)) as { href: string | null; enlace: boolean } | null
+      if (!d) continue
+      out.push({ l, c: { ...d, visible: await l.isVisible().catch(() => false) } })
+    }
+  }
+  return out
+}
+
+/**
+ * 0.3.31: «Contratación» › «Presupuestos». Tras el clic en «Contratación» (puerta del guard) se ESPERA a que el panel muestre el enlace; si no se ve, se
+ * aparta el ratón y se vuelve a pasar por encima de «Contratación» (un clic sobre un menú de hover lo cierra; un hover no es un clic), cada ~1,5 s. Se pulsa
+ * el ENLACE «Presupuestos» (href exacto `/portalmediador-presupuestos/` si existe), nunca el encabezado de la columna. Sin él → hueco con lo visto (recuentos).
+ */
+export async function abrirPresupuestosPelayo(page: Page, ctx: CtxEntradaPelayo, esperas: EsperasPelayo = {}): Promise<void> {
+  const e = { ...ESPERAS, ...esperas }
+  await pulsarExacto(page, ctx, RUTA_MENU_PELAYO[0], e.menuMs, 'en el menú superior')
+  const fin = Date.now() + e.menuMs
+  // Sin ningún enlace a la página de presupuestos en el DOM, el control pulsable de rótulo exacto vale tras una espera corta (portales sin href).
+  const gracia = Date.now() + Math.min(1_500, e.menuMs)
+  let ultimoHover = Date.now()
+  let motivo = 'sin controles'
+  for (;;) {
+    const cs = await controlesPresupuestosPelayo(page)
+    const d = elegirControlPresupuestosPelayo(cs.map((x) => x.c))
+    const hayHref = cs.some((x) => esUrlPresupuestosPelayo(x.c.href))
+    if ('indice' in d && (hayHref || Date.now() >= gracia)) {
+      await ctx.pulsarEnlaceEntrada(cs[d.indice]!.l)
+      await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined)
+      return
+    }
+    motivo = 'esperar' in d ? d.esperar : motivo
+    if (Date.now() >= fin) break
+    if (!('indice' in d) && Date.now() - ultimoHover >= 1_500) {
+      const menu = await exactos(page, RUTA_MENU_PELAYO[0])
+      if (menu[0]) {
+        await page.mouse.move(0, 0).catch(() => undefined)
+        await page.waitForTimeout(150)
+        await menu[0].hover({ timeout: 2_000 }).catch(() => undefined)
+      }
+      ultimoHover = Date.now()
+    }
+    await page.waitForTimeout(300)
+  }
+  throw new ErrorTarificador('portal', `pelayo/entrada: no se localiza el enlace «${RUTA_MENU_PELAYO[1]}» en el desplegable de «${RUTA_MENU_PELAYO[0]}» (${motivo}) (hueco)`)
+}
+
+export type ResultadoRamoPelayo ={ estado: 'select' | 'pulsado' | 'no_elegido'; motivo?: string }
 
 type RamoLocalizado = { selects: { sel: Locator; indice: number }[]; pulsables: Locator[] }
 
@@ -327,13 +426,8 @@ export async function elegirRamoPelayo(page: Page, ctx: CtxEntradaPelayo, ramo: 
 export async function abrirNuevoPresupuestoPelayo(page: Page, ctx: CtxEntradaPelayo, ramo: string, esperas: EsperasPelayo = {}): Promise<Page> {
   const e = { ...ESPERAS, ...esperas }
   rotulosRamoPelayo(ramo)
-  await pulsarExacto(page, ctx, RUTA_MENU_PELAYO[0], e.menuMs, 'en el menú superior')
-  // Desplegable: si «Presupuestos» no se ve tras el clic, se pasa el ratón por encima de «Contratación» (hover no es un clic).
-  if ((await exactos(page, RUTA_MENU_PELAYO[1])).length === 0) {
-    const menu = await exactos(page, RUTA_MENU_PELAYO[0])
-    if (menu[0]) await menu[0].hover().catch(() => undefined)
-  }
-  await pulsarExacto(page, ctx, RUTA_MENU_PELAYO[1], e.menuMs, 'en el desplegable de «Contratación»')
+  // 0.3.31: mega-menú de «Contratación» (encabezado «Presupuestos» + enlace «Presupuestos»): espera al panel (hover/clic) y pulsa el ENLACE.
+  await abrirPresupuestosPelayo(page, ctx, esperas)
   // Página de presupuestos: el botón «Nuevo Presupuesto» (lento: se espera con generosidad).
   const nueva = page.context().waitForEvent('page', { timeout: 5_000 }).catch(() => null)
   await pulsarExacto(page, ctx, RUTA_MENU_PELAYO[2], e.paginaMs, `en la página de presupuestos (${RUTA_PRESUPUESTOS_PELAYO})`)
