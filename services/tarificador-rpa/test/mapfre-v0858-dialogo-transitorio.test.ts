@@ -12,7 +12,7 @@ import {
   pulsarContinuarMapfre, type GuardEmision,
 } from '../src/guard.ts'
 
-test('v0.8.58 · versión', () => assert.equal(mapfreAuto.version, '0.8.58'))
+test('v0.8.58 · versión', () => assert.equal(mapfreAuto.version, '0.8.59'))
 
 const MATRICULA = '1234BCD'
 const OPCIONES = ['TERCEROS', 'TERCEROS AMPLIADO', 'BASICar TERCEROS AMPLIADO']

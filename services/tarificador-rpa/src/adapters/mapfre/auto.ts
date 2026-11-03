@@ -1,4 +1,5 @@
 // Mapfre wmediadores · NSEI «Nueva Alta» AUTO y MOTO (13-14/10/2026).
+// v0.8.59 (03/11/2026, run real c380133b: variante sin recálculo a tiempo → tarjetas sin importe → proyecto NO guardado → 0 garantías): ORDEN invertido otra vez — primero el flujo base completo (proyecto → PDF → garantías) con los productos originales y DESPUÉS las variantes BASICar (`baseYLuegoVariantesMapfre`); las variantes salen sin proyecto ni PDF propios (aviso) y su recálculo espera hasta 30 s en el guard.
 // v0.8.58 (03/11/2026, run real 457d81a4: 0 garantías y sin BASICar): el «diálogo desconocido» tras elegir la variante era TRANSITORIO (ya no estaba al leerlo) → el guard lo trata como recálculo si se cierra solo en ≤4 s (nada se pulsa en él); y una tarjeta que ya muestra su producto pero SIN importe se recalcula con «Calcular» en la recuperación del estado base (sin importes, «Generar Proyecto» no guardaba → sin PDF → sin garantías).
 // v0.8.57 (03/11/2026): tras un diálogo desconocido al elegir una variante BASICar se anota su título/texto/botones (≤200, sin PII) y la selección base se RECUPERA antes de «Generar Proyecto» (nunca peor que la 0.8.55).
 // v0.8.56 (03/11/2026, Alberto: «todas las opciones»): las variantes «BASICar» se tarifican ANTES de «Generar Proyecto» (después, Coberturas deja de mostrar los selectores: «selector ausente o no visible»); sin restauración verificada no se genera el proyecto.
@@ -198,7 +199,7 @@ import {
 } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
-import { descargarProyectoAuto, esperarSinCapaOverlay, ofertasConPdfProyecto } from '../../descarga-proyecto-auto.ts'
+import { descargarProyectoAuto, esperarSinCapaOverlay, ofertasConPdfProyecto, type ResultadoDescargaProyecto } from '../../descarga-proyecto-auto.ts'
 import { filasDePdf, textoDePdf } from '../../pdf-texto.ts'
 import { coberturasDeLineas, coberturasPorProducto, diagnosticoGarantiasMapfre, estructuraPdfMapfre, ofertasConGarantiasMapfre, textoALineas, type CoberturasPorProducto } from './garantias.ts'
 import { CONCEPTOS_LECTURA, regexEtiquetaExacta } from '../../vocabulario.ts'
@@ -701,6 +702,8 @@ export async function tarificarVariantesComercialesMapfre(
   ahora: () => number = Date.now,
   releer?: (pagina: Page) => Promise<TarjetaLeidaMapfre[]>,
   dialogos?: PuertasDialogoVarianteMapfre,
+  /** v0.8.59: `recuperarBase: false` = sin la recuperación final del estado base (el adaptador ya guardó el proyecto antes de las variantes). */
+  opciones: { recuperarBase?: boolean } = {},
 ): Promise<ResultadoVariantesMapfre> {
   const salida: ResultadoVariantesMapfre = { primas: [], garantias: new Map(), restaurado: true, notas: [] }
   const tarificadas = new Set(primas.map((p) => claveProducto(p.producto)))
@@ -787,8 +790,8 @@ export async function tarificarVariantesComercialesMapfre(
   }
   // v0.8.57 · RECUPERACIÓN del estado base antes de «Generar Proyecto»: si alguna tarjeta quedó tocada y las tarjetas no muestran sus productos E importes originales,
   // se vuelve a pedir el producto original por la puerta de elección (que pulsa «Calcular» si hace falta) y se relee. Nunca peor que la 0.8.55: con los productos originales a la vista se genera el proyecto aunque falte algún importe.
-  if (releer && tocadas.length > 0) {
-    const leer = async () => { try { return await releer(nsei) } catch { return null } }
+  if (releer && tocadas.length > 0 && opciones.recuperarBase !== false) {
+    const leer =async () => { try { return await releer(nsei) } catch { return null } }
     let cmp = compararBaseMapfre((await leer()) ?? [], productos)
     let reintentado = false
     for (let intento = 0; intento < 2 && !(cmp.valores && cmp.primas); intento++) {
@@ -805,7 +808,7 @@ export async function tarificarVariantesComercialesMapfre(
     if (cmp.valores && cmp.primas) { if (!salida.restaurado || reintentado) salida.notas.push('estado base recuperado: productos e importes originales confirmados por relectura'); salida.restaurado = true }
     else if (cmp.valores) { salida.notas.push('estado base recuperado en productos pero NO en importes (tarjetas sin importe o distinto); se genera el proyecto igualmente'); salida.restaurado = true }
   }
-  if (!salida.restaurado) salida.notas.push('selección original NO verificada tras las variantes; el proyecto y las garantías de las ofertas base ya estaban a salvo')
+  if (!salida.restaurado) salida.notas.push(opciones.recuperarBase === false ? 'selección original NO verificada tras las variantes (sin efecto: el proyecto, su PDF y las garantías base se leyeron antes)' : 'selección original NO verificada tras las variantes; el proyecto y las garantías de las ofertas base ya estaban a salvo')
   return salida
 }
 
@@ -2367,6 +2370,57 @@ export function ofertasConProyectoMapfre(ofertas: readonly OfertaNormalizada[], 
   const ref = r.estado === 'generado' ? r.numero : null
   return ofertas.map((o) => ({ ...o, referenciaPortal: ref ?? o.referenciaPortal, avisos: [...o.avisos, aviso, ...(r.estado === 'no_generado' ? [] : (r.avisos ?? []))] }))
 }
+
+// ───────────────────────── v0.8.59 · ORDEN: flujo base completo → variantes ─────────────────────────
+// Run real c380133b (0.8.58): la variante «BASICar TERCEROS AMPLIADO» no terminó su recálculo y, al restaurar, las tarjetas quedaron SIN importe →
+// «Proyecto NO guardado: no hay primas a la vista» → PDF no descargado → 0 garantías. Antes de la 0.8.56 (variantes después) sí había 18-19 garantías del PDF.
+
+/** v0.8.59: aviso de cada oferta de variante «BASICar»: el proyecto y su PDF son de los productos base. */
+export const AVISO_VARIANTE_SIN_PROYECTO_MAPFRE = 'Variante comercial tarificada DESPUÉS de guardar el proyecto: el proyecto de Mapfre y su PDF son de los productos base; esta variante no tiene proyecto ni PDF propios'
+/** v0.8.59: por qué una variante queda sin garantías (no se copian las del producto base). */
+export const AVISO_VARIANTE_SIN_GARANTIAS_MAPFRE = 'Garantías de la variante: sin PDF propio y sin lectura de pantalla con la variante elegida (no se copian las del producto base)'
+
+/**
+ * v0.8.59 · ORDEN del cierre de la tarificación: PRIMERO el flujo base completo (`base`: «Generar Proyecto» → PDF → garantías, con los productos originales)
+ * y SOLO DESPUÉS las variantes (`variantes`). Un fallo de las variantes no toca lo ya leído: se devuelve una nota. Una violación del guard (EmisionBloqueadaError)
+ * se relanza (fail-closed: tarificar ≠ emitir).
+ */
+export async function baseYLuegoVariantesMapfre<B>(base: () => Promise<B>, variantes: () => Promise<ResultadoVariantesMapfre>): Promise<{ base: B; variantes: ResultadoVariantesMapfre }> {
+  const b = await base()
+  let v: ResultadoVariantesMapfre
+  try { v = await variantes() } catch (e) {
+    if (e instanceof EmisionBloqueadaError) throw e
+    v = { primas: [], garantias: new Map(), restaurado: false, notas: [`variantes comerciales no leídas (${e instanceof Error ? limpiarMensajePortalDiagnosticoHasta(e.message, 80) || 'error' : 'error'}); las ofertas base, el proyecto y sus garantías ya estaban leídos`] }
+  }
+  return { base: b, variantes: v }
+}
+
+/**
+ * v0.8.59 · ofertas finales. PURA. Base: garantías PDF > pantalla, proyecto y PDF del proyecto. Variantes «BASICar»: oferta propia con su prima, SIN el proyecto
+ * ni el PDF (son de los productos base) y con las garantías de la pantalla leídas con la variante elegida si las hubo; si no, sin garantías + aviso.
+ */
+export function ofertasFinalesMapfre(d: {
+  primas: readonly PrimaProductoMapfre[]
+  variantes: ResultadoVariantesMapfre
+  avisosExtra: readonly string[]
+  supuestos: string | null
+  diagnosticoPoliza: string | null
+  usados: Parameters<typeof conDatosUsados>[1]
+  garantiasPantalla: CoberturasPorProducto
+  proyecto: ResultadoProyecto
+  pdfProyecto: ResultadoDescargaProyecto
+  garantiasPdf: CoberturasPorProducto
+  lineasTextoPdf: readonly string[]
+  pdfBytes: number | null
+}): OfertaNormalizada[] {
+  const nombres = d.primas.map((p) => p.producto)
+  const lineas = [...d.lineasTextoPdf]
+  const diag = diagnosticoGarantiasMapfre({ pdfBytes: d.pdfBytes, pdfLineas: lineas.length, deLaPdf: d.garantiasPdf, deLaPantalla: d.garantiasPantalla, productos: nombres, lineasPdf: lineas })
+  const base = ofertasConPdfProyecto(ofertasConProyectoMapfre(ofertasConGarantiasMapfre(conDatosUsados(ofertasDesdePrimasMapfre(d.primas, null, d.supuestos, d.diagnosticoPoliza, d.avisosExtra), d.usados), d.garantiasPdf, d.garantiasPantalla, diag, lineas.length > 0 ? estructuraPdfMapfre(lineas, nombres) : undefined), d.proyecto), d.pdfProyecto)
+  if (d.variantes.primas.length === 0) return base
+  const deVariantes = ofertasConGarantiasMapfre(conDatosUsados(ofertasDesdePrimasMapfre(d.variantes.primas, null, d.supuestos, d.diagnosticoPoliza, d.avisosExtra), d.usados), new Map(), d.variantes.garantias, AVISO_VARIANTE_SIN_GARANTIAS_MAPFRE)
+  return [...base, ...deVariantes.map((o) => ({ ...o, avisos: [...o.avisos, AVISO_VARIANTE_SIN_PROYECTO_MAPFRE] }))]
+}
 const SEL_DIALOGO_OCUPADO = 'mat-dialog-container, [role="dialog"], [role="alertdialog"]'
 
 /** Texto VISIBLE de Coberturas (o de la página) recortado y REDACTADO, para el atasco cuando no hay prima legible. */
@@ -2584,7 +2638,6 @@ export async function precioDesdeObjetoAsegurado(
   // v0.8.48: diagnóstico de TODAS las tarjetas vistas (también las no ofertadas). Solo lectura; si falla, el aviso lo dice y el precio sigue.
   let vistos: Awaited<ReturnType<typeof leerProductosVistosMapfre>> | null = null
   let errorVistos = false
-  let variantes: ResultadoVariantesMapfre = { primas: [], garantias: new Map(), restaurado: true, notas: [] }
   const leerCom = ctx.leerOpcionesComercialesMapfre
   const elegirCom = ctx.elegirOpcionComercialMapfre
   try {
@@ -2593,18 +2646,21 @@ export async function precioDesdeObjetoAsegurado(
     if (e instanceof EmisionBloqueadaError || e instanceof ErrorSelectorComercialAlteradoMapfre) throw e
     errorVistos = true
   }
-  // v0.8.51 · ORDEN: las variantes «BASICar» se prueban DESPUÉS de leer las primas, generar el proyecto, bajar el PDF y leer las garantías de las ofertas base, para que un fallo de
-  // variantes nunca cuente contra el proyecto ni las garantías (run real 49569458: una restauración sin verificar abortó el proyecto → TERCEROS sin garantías). Una violación del guard se relanza.
-  const probarVariantes = async (): Promise<void> => {
-    if (!vistos || !leerCom || !elegirCom) return
+  // v0.8.59 · ORDEN (run real c380133b: la variante dejó TERCEROS y TERCEROS AMPLIADO sin importe → «Proyecto NO guardado» → 0 garantías): el flujo base COMPLETO
+  // (proyecto → PDF → garantías) va primero y las variantes «BASICar» DESPUÉS (`baseYLuegoVariantesMapfre`). Un fallo de variantes nunca cuenta contra lo ya leído;
+  // si tras el proyecto Coberturas ya no deja elegir, la variante sale «no leída» con aviso. Una violación del guard se relanza (fail-closed).
+  const probarVariantes = async (): Promise<ResultadoVariantesMapfre> => {
+    const vacio: ResultadoVariantesMapfre = { primas: [], garantias: new Map(), restaurado: true, notas: [] }
+    if (!vistos || !leerCom || !elegirCom) return vacio
     const v = vistos
     try {
       const inaccesible = await coberturasAccesiblesMapfre(nsei, v.productos)
-      if (inaccesible) { variantes = { primas: [], garantias: new Map(), restaurado: true, notas: [`variantes comerciales no probadas: «Coberturas» ya no está a la vista como se leyó (${inaccesible})`] }; return }
-      variantes = await tarificarVariantesComercialesMapfre(nsei, v.productos, primas, (pg, i, o, perm) => elegirCom(pg, i, o, perm), Date.now, leerTarjetasMapfre, { leer: leerDialogosMapfre, ...(ctx.cerrarControlesTecnicosMapfre ? { cerrarControlesTecnicos: (pg: Page) => ctx.cerrarControlesTecnicosMapfre!(pg) } : {}) })
+      if (inaccesible) return { ...vacio, notas: [`variantes comerciales no probadas tras guardar el proyecto: «Coberturas» ya no está a la vista como se leyó (${inaccesible})`] }
+      // v0.8.59: sin RECUPERACIÓN final del estado base: el proyecto ya está guardado y las ofertas base leídas.
+      return await tarificarVariantesComercialesMapfre(nsei, v.productos, primas, (pg, i, o, perm) => elegirCom(pg, i, o, perm), Date.now, leerTarjetasMapfre, { leer: leerDialogosMapfre, ...(ctx.cerrarControlesTecnicosMapfre ? { cerrarControlesTecnicos: (pg: Page) => ctx.cerrarControlesTecnicosMapfre!(pg) } : {}) }, { recuperarBase: false })
     } catch (e) {
       if (e instanceof EmisionBloqueadaError) throw e
-      variantes = { primas: [], garantias: new Map(), restaurado: false, notas: [`variantes comerciales: error inesperado (${e instanceof Error ? limpiarMensajePortalDiagnosticoHasta(e.message, 80) : 'error'}); selección original NO verificada`] }
+      return { ...vacio, restaurado: false, notas: [`variantes comerciales: error inesperado (${e instanceof Error ? limpiarMensajePortalDiagnosticoHasta(e.message, 80) : 'error'}); las ofertas base, el proyecto y sus garantías ya estaban leídos`] }
     }
   }
   // La siniestralidad se lee ya (pantalla de Coberturas intacta), antes de cualquier clic posterior.
@@ -2617,39 +2673,35 @@ export async function precioDesdeObjetoAsegurado(
   const cpPortal = await nsei.locator(SEL_OBJETO.cpCirculacion).first().inputValue({ timeout: 2_000 }).catch(() => null)
   const usados = { codigoPostal: cpPortal, localidad: null, vehiculo: { marca: null, modelo: null, version: null, denominacion: vehiculo?.denominacion ?? null } }
   // v0.8.14: «Generar Proyecto» DESPUÉS de leer (el precio ya está a salvo). Una violación del guard se relanza (fail-closed).
-  // v0.8.51: ya NO se condiciona a las variantes (van después); un fallo al restaurar solo deja un aviso.
-  // v0.8.56: las variantes «BASICar» van AQUÍ (tras leer base y garantías de pantalla, antes del proyecto): tras «Generar Proyecto» los selectores ya no están visibles (run 62b16ad0 y siguientes).
-  await probarVariantes()
-  const proyecto: ResultadoProyecto = !variantes.restaurado
-    ? { estado: 'no_generado', motivo: 'no se generó el proyecto: no se pudo verificar la selección original de las tarjetas tras probar variantes comerciales' }
-    : ctx.generarProyectoMapfre
-    ? await ctx.generarProyectoMapfre(nsei, (p) => completarFormularioProyectoMapfre(p, form, ctx))
-    : { estado: 'no_generado', motivo: 'el runner no trae la puerta de «Generar Proyecto»' }
-  ctx.formador?.log('mapfre_generar_proyecto', { estado: proyecto.estado })
-  // v0.8.23: PDF del proyecto guardado (botón «Imprimir/Descargar proyecto»); si no llega, aviso y el precio/proyecto se devuelven igual.
-  // v0.8.39: se guardan los bytes del PDF para leer de él las garantías (el contrato de salida no cambia: `PdfRef` en `oferta.pdf`).
-  let bytesPdf: Uint8Array | null = null
-  const adjuntar = ctx.adjuntarPdf
-  const ctxPdf = { ...ctx, adjuntarPdf: adjuntar ? (nombre: string, contenido: Uint8Array) => { bytesPdf = contenido; return adjuntar(nombre, contenido) } : undefined }
-  // v0.8.43: con el diálogo de alta ya respondido, se espera a que desaparezca su capa (cdk-overlay-backdrop) antes de buscar «picture_as_pdf».
-  const capaLibre = await esperarSinCapaOverlay(nsei)
-  if (!capaLibre) ctx.log?.('mapfre: la capa cdk-overlay-backdrop sigue visible tras la espera; se intenta la descarga igualmente')
-  const pdfProyecto = await descargarProyectoAuto(nsei, ctxPdf, 'mapfre', 'proyecto-mapfre-auto.pdf', proyecto.estado === 'generado')
+  // v0.8.59: el proyecto ya NO depende de las variantes: se genera con los productos ORIGINALES, antes de tocar ningún selector comercial.
   const nombresProductos = primas.map((p) => p.producto)
-  const nombresConVariantes = [...nombresProductos, ...variantes.primas.map((p) => p.producto)]
-  let garantiasPdf: CoberturasPorProducto = new Map()
-  let lineasPdf = 0
-  let lineasTextoPdf: string[] = []
-  try { if (bytesPdf) { const lineas = textoALineas(textoDePdf(Buffer.from(bytesPdf))).filter((l) => l.trim() !== ''); lineasPdf = lineas.length; lineasTextoPdf = lineas; garantiasPdf = coberturasPorProducto(lineas, nombresProductos, filasDePdf(Buffer.from(bytesPdf))) } } catch { /* PDF ilegible: queda la pantalla */ }
-  ctx.log?.(`mapfre: garantías ${garantiasPdf.size} producto(s) del PDF, ${garantiasPantalla.size} de la pantalla`)
-  // v0.8.51: variantes comerciales AL FINAL (proyecto, PDF y garantías base ya a salvo), en la misma pantalla de Coberturas si sigue a la vista.
-  for (const [k, v] of variantes.garantias) if (!garantiasPantalla.has(k)) garantiasPantalla.set(k, v)
+  const flujoBase = async () => {
+    const proyecto: ResultadoProyecto = ctx.generarProyectoMapfre
+      ? await ctx.generarProyectoMapfre(nsei, (p) => completarFormularioProyectoMapfre(p, form, ctx))
+      : { estado: 'no_generado', motivo: 'el runner no trae la puerta de «Generar Proyecto»' }
+    ctx.formador?.log('mapfre_generar_proyecto', { estado: proyecto.estado })
+    // v0.8.23: PDF del proyecto guardado (botón «Imprimir/Descargar proyecto»); si no llega, aviso y el precio/proyecto se devuelven igual.
+    // v0.8.39: se guardan los bytes del PDF para leer de él las garantías (el contrato de salida no cambia: `PdfRef` en `oferta.pdf`).
+    let bytesPdf: Uint8Array | null = null
+    const adjuntar = ctx.adjuntarPdf
+    const ctxPdf = { ...ctx, adjuntarPdf: adjuntar ? (nombre: string, contenido: Uint8Array) => { bytesPdf = contenido; return adjuntar(nombre, contenido) } : undefined }
+    // v0.8.43: con el diálogo de alta ya respondido, se espera a que desaparezca su capa (cdk-overlay-backdrop) antes de buscar «picture_as_pdf».
+    const capaLibre = await esperarSinCapaOverlay(nsei)
+    if (!capaLibre) ctx.log?.('mapfre: la capa cdk-overlay-backdrop sigue visible tras la espera; se intenta la descarga igualmente')
+    const pdfProyecto = await descargarProyectoAuto(nsei, ctxPdf, 'mapfre', 'proyecto-mapfre-auto.pdf', proyecto.estado === 'generado')
+    let garantiasPdf: CoberturasPorProducto = new Map()
+    let lineasTextoPdf: string[] = []
+    const b = bytesPdf as Uint8Array | null
+    try { if (b) { lineasTextoPdf = textoALineas(textoDePdf(Buffer.from(b))).filter((l) => l.trim() !== ''); garantiasPdf = coberturasPorProducto(lineasTextoPdf, nombresProductos, filasDePdf(Buffer.from(b))) } } catch { /* PDF ilegible: queda la pantalla */ }
+    ctx.log?.(`mapfre: garantías ${garantiasPdf.size} producto(s) del PDF, ${garantiasPantalla.size} de la pantalla`)
+    return { proyecto, pdfProyecto, garantiasPdf, lineasTextoPdf, pdfBytes: b ? b.length : null }
+  }
+  const { base, variantes } = await baseYLuegoVariantesMapfre(flujoBase, probarVariantes)
   const avisoVistos = vistos ? avisoProductosVistosMapfre(vistos.productos, vistos.controles, variantes.notas) : errorVistos ? 'Productos vistos en Coberturas: no se pudo leer la lista de tarjetas (diagnóstico no disponible).' : ''
-  const avisosExtra = [avisoVistos, ...(sinControlCompania ? [AVISO_COMPANIA_ANTERIOR_NO_PEDIDA] : []),...(avisoSiniestro ? [avisoSiniestro] : [])]
-  // v0.8.43: si algún producto queda sin garantías, el aviso dice POR QUÉ (PDF no bajado / sin texto / sin sección del producto / pantalla vacía).
-  const diagGarantias = diagnosticoGarantiasMapfre({ pdfBytes: bytesPdf ? (bytesPdf as Uint8Array).length : null, pdfLineas: lineasPdf, deLaPdf: garantiasPdf, deLaPantalla: garantiasPantalla, productos: nombresConVariantes, lineasPdf: lineasTextoPdf })
+  const avisosExtra = [avisoVistos, ...(sinControlCompania ? [AVISO_COMPANIA_ANTERIOR_NO_PEDIDA] : []), ...(avisoSiniestro ? [avisoSiniestro] : [])]
   // v0.8.36: señal «nº de póliza anterior tecleado» en cada oferta (asegura decide la firmeza; el valor nunca viaja).
-  return { ofertas: conPolizaAnteriorTecleada(ofertasConPdfProyecto(ofertasConProyectoMapfre(ofertasConGarantiasMapfre(conDatosUsados(ofertasDesdePrimasMapfre([...primas, ...variantes.primas], null, supuestos, diagnosticoPoliza, avisosExtra), usados), garantiasPdf, garantiasPantalla, diagGarantias, lineasTextoPdf.length > 0 ? estructuraPdfMapfre(lineasTextoPdf, nombresProductos) : undefined), proyecto), pdfProyecto), historial.polizaTecleada), vehiculoConfirmado: vehiculo }
+  const ofertas = ofertasFinalesMapfre({ primas, variantes, avisosExtra, supuestos, diagnosticoPoliza, usados, garantiasPantalla, ...base })
+  return { ofertas: conPolizaAnteriorTecleada(ofertas, historial.polizaTecleada), vehiculoConfirmado: vehiculo }
 }
 
 /**
@@ -2662,7 +2714,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.58',
+  version: '0.8.59',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada
