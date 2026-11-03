@@ -6,11 +6,13 @@
 // Toda la decisión vive en el helper puro; aquí solo hay SQL, el guardado y Telegram.
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
-import { tgAviso } from '@/lib/telegram'
+import { tgAviso, tgAvisoBotones, tgEditMessage } from '@/lib/telegram'
 import { eur } from '@/lib/dinero'
 import { textoPdfPorFilas } from '@/lib/correo/pdf-filas'
 import { guardarFactura, PROVEEDOR_LIMPIEZA } from './factura-limpieza-lectura'
 import { LIMPIEZA_TARIFAS } from './pl-mensual'
+import { botonesVerificacionSqb, mensajeVerificacionSqb } from './factura-verificacion'
+import { facturaAgenteSqb, marcarVerificacionAvisada, verificarSqbDesdeDatos } from './factura-verificacion-db'
 import {
   PISOS_FACTURADOS,
   cuadrarFactura,
@@ -114,6 +116,7 @@ export async function procesarCorreoFacturaSique(correo: {
   }
 
   let guardada = false
+  let cuentaGuardada: string | null = null
   if (resultado.leida && esGuardable(resultado)) {
     try {
       const cuentaId = await cuentaDeFacturas()
@@ -132,6 +135,7 @@ export async function procesarCorreoFacturaSique(correo: {
           limpieza, lavanderia: Math.round(lavanderia * 100) / 100,
         }, 'correo_pdf', avisos)
         guardada = true
+        cuentaGuardada = cuentaId
       } else {
         nota += '\n(No la he guardado: no sé a qué cuenta pertenece.)'
       }
@@ -143,6 +147,49 @@ export async function procesarCorreoFacturaSique(correo: {
     nota += '\n(No la he guardado en la BD: la aritmética o las líneas no son fiables.)'
   }
 
+  // Guardada y leída → aviso de VERIFICACIÓN (limpiezas por piso, lavandería, total), único por factura.
+  if (guardada && cuentaGuardada && resultado.leida) {
+    const avisado = await avisarVerificacion(cuentaGuardada, resultado, periodo, nota)
+    if (avisado !== null) return { resultado, guardada, avisado }
+  }
+
   const enviado = await tgAviso('facturas.siquebrilla-cuadre', mensajeCuadre(resultado) + nota)
   return { resultado, guardada, avisado: enviado !== null }
+}
+
+/**
+ * Aviso de verificación de SQB, UNO por factura. Si el agente de facturas ya creó la factura y mandó su
+ * 🧾 (sin verificar, porque aún no estaba el PDF), este aviso lo SUSTITUYE (con los botones Aplazar/
+ * Rechazar y sin «Pagar»); si aún no existe, sale informativo y deja marca para que el 🧾 posterior no
+ * repita el desglose. `null` = no se pudo verificar (quien llama manda el cuadre de siempre).
+ */
+async function avisarVerificacion(cuentaId: string, resultado: ResultadoCuadre, periodo: string, nota: string): Promise<boolean | null> {
+  const f = resultado.leida
+  if (!f) return null
+  try {
+    const lineas = f.lineas.filter((l) => l.tipo === 'limpieza' && l.propertyId)
+      .map((l) => ({ propertyId: l.propertyId as string, sesiones: l.unidades, importe: l.total }))
+    const lavanderia = Math.round(f.lineas.filter((l) => l.tipo === 'lavanderia').reduce((s, l) => s + l.total, 0) * 100) / 100
+    const v = await verificarSqbDesdeDatos(cuentaId, {
+      periodo, numero: f.numero, total: f.total, lineas, lavanderia,
+      aritmetica: resultado.aritmetica, desconocidas: resultado.desconocidas,
+    })
+    if (!v) return null
+    const texto = mensajeVerificacionSqb(v) + nota
+    const previa = await facturaAgenteSqb(cuentaId, f.numero)
+    if (previa && ['nueva', 'pendiente_revision'].includes(previa.estado)) {
+      const msgId = await tgAvisoBotones('facturas.pago-aprobar', texto, botonesVerificacionSqb(previa.id))
+      if (msgId) {
+        await prisma.$executeRaw(Prisma.sql`UPDATE facturas_proveedor SET telegram_msg_id = ${msgId} WHERE id = ${previa.id}::uuid`)
+        if (previa.telegramMsgId) await tgEditMessage(previa.telegramMsgId, '🧾 Si Que Brilla — verificación actualizada más abajo.').catch(() => false)
+      }
+      return msgId !== null && msgId !== undefined
+    }
+    const enviado = await tgAviso('facturas.siquebrilla-cuadre', texto)
+    if (enviado !== null) await marcarVerificacionAvisada(cuentaId, f.numero)
+    return enviado !== null
+  } catch (e) {
+    console.error('[factura-sique] verificación', e instanceof Error ? e.message : 'error')
+    return null
+  }
 }

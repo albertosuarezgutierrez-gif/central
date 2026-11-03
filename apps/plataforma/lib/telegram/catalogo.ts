@@ -274,6 +274,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Todos los días a las 08:15',
   },
   {
+    id: 'facturas.tarjeta-sin-cargo', categoria: 'facturas',
+    titulo: 'Facturas de tarjeta sin cargo',
+    que: 'Facturas que se cobran con tarjeta y a los 10 días no tienen cargo en el banco.',
+    cuando: 'Todos los días a las 08:15',
+  },
+  {
     id: 'facturas.resumen-agente', categoria: 'facturas',
     titulo: 'Resumen del agente de facturas',
     que: 'Qué ha hecho el agente en su pasada: leídas, imputadas, archivadas.',
