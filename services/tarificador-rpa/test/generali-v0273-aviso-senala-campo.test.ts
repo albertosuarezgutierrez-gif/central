@@ -79,7 +79,7 @@ const pantalla = (valoracion: string, campoSenalado: string) => `
 
 const AVISOS_44B44608 = ['espera del precio cortada a 9 s: el portal avisa «Paso con datos incompletos»']
 
-test('v0.2.73 · versión (vigente 0.2.75)', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.75'))
+test('v0.2.73 · versión (vigente 0.2.76)', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.76'))
 
 test('trabajo 44b44608: desplegable obligatorio con cabecera `value=""` (no «Seleccione…») se ve vacío y va a su única opción real', async () => {
   const r: Registro = { pulsados: [] }

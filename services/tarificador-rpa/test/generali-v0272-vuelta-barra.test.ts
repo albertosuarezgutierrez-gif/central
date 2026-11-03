@@ -75,7 +75,7 @@ const pantalla = `
 <div id="paso1" style="display:block;"><h2>Garantías y Capitales opcionales</h2></div>
 <input type="button" name="siguiente" id="siguiente" value="Siguiente ›" onclick="eventAndSubmit('NEXT');">`
 
-test('v0.2.72 · versión (vigente 0.2.75)', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.75'))
+test('v0.2.72 · versión (vigente 0.2.76)', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.76'))
 
 test('volcado 9aa12762: tras «Datos de Valoración» vuelve a «Garantías y Resultados» por la barra (`pedirPaso`) aunque «Siguiente» no navegue, sin gastar «Siguiente»', async () => {
   const r: Registro = { pulsados: [], siguiente: 0 }
