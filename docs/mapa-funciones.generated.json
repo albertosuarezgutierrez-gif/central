@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-03T15:27:28Z",
-  "sha": "370ee33e545078a120f2d80ea48418be2660b95b",
+  "generadoEn": "2026-11-03T16:26:41Z",
+  "sha": "01bd706fa265cb77fcf6db1eb014fbc405d732f1",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -130087,7 +130087,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 19
+          "linea": 20
         },
         {
           "nombre": "TramoBar",
@@ -130095,7 +130095,7 @@
           "exportada": false,
           "params": "{ tramosIRPF, base }: { tramosIRPF: ResumenFinanciero['fiscal']['tramosIRPF']; base: number }",
           "retorno": null,
-          "linea": 24,
+          "linea": 25,
           "resumen": "── Barra visual de tramos IRPF ──────────────────────────────────────────────"
         },
         {
@@ -130104,7 +130104,7 @@
           "exportada": false,
           "params": "{ ded, onClose, onSaved }: { ded: ResumenFinanciero['deducciones']; onClose: () => void; onSaved: () => void }",
           "retorno": null,
-          "linea": 70
+          "linea": 71
         },
         {
           "nombre": "FiscalPageClient",
@@ -130112,7 +130112,7 @@
           "exportada": true,
           "params": "{ initialData, initialComparativa, baseDevengo, panel, compras, situacion, year: initYear, quarter: initQuarter }: Props",
           "retorno": null,
-          "linea": 141
+          "linea": 142
         },
         {
           "nombre": "MomentoCard",
@@ -130120,7 +130120,7 @@
           "exportada": false,
           "params": "{ titulo, sub, c }: { titulo: string; sub: string; c: ComparativaDecl }",
           "retorno": null,
-          "linea": 407
+          "linea": 411
         },
         {
           "nombre": "DeclaracionBlock",
@@ -130128,7 +130128,7 @@
           "exportada": false,
           "params": "{ year, initial, initialYear }: { year: number; initial: EstadoDeclaracion | null; initialYear: number }",
           "retorno": null,
-          "linea": 431
+          "linea": 435
         }
       ],
       "tablas": [
@@ -130137,7 +130137,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "24e381ba2078"
+      "hash": "e9bf89f5145d"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/fiscal/GraficaAcumulada.tsx",
@@ -130197,7 +130197,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "22f6b50bf762"
+      "hash": "d9bd97c92897"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/fiscal/PanelFiscal.tsx",
@@ -130691,7 +130691,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "d7e6826b8a71"
+      "hash": "63c99ae145d4"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/proyeccion/page.tsx",
@@ -150265,6 +150265,55 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "cf8cc9901827"
+    },
+    {
+      "ruta": "apps/plataforma/lib/abonos-anticipados.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Abonos anticipados AEAT (modelos 140 maternidad / 143 familia numerosa) leídos del banco. PURO: sin BD ni reloj (`hoy` se inyecta). Detección por CONCEPTO: «DEDUCCION MATERNIDAD» o «MOD140» → 140 (cualquier importe: prorrateos como 93,20 €); «MOD143» o «FAMILIA NUMEROSA» → 143; «DEVOLUCIONES TRIBUTA",
+      "exporta": [
+        "clasificarAbono",
+        "esAbonoAnticipado",
+        "detectarAbonosAnticipados"
+      ],
+      "funciones": [
+        {
+          "nombre": "r2",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 37
+        },
+        {
+          "nombre": "clasificarAbono",
+          "kind": "function",
+          "exportada": true,
+          "params": "m: MovAbono",
+          "retorno": "ClasificacionAbono | null",
+          "linea": 40,
+          "resumen": "Clasifica un movimiento: modelo, si es supuesto y mes/año imputado; null si no es un abono anticipado."
+        },
+        {
+          "nombre": "esAbonoAnticipado",
+          "kind": "function",
+          "exportada": true,
+          "params": "m: MovAbono",
+          "retorno": "boolean",
+          "linea": 56
+        },
+        {
+          "nombre": "detectarAbonosAnticipados",
+          "kind": "function",
+          "exportada": true,
+          "params": "movs: MovAbono[], anio: number, hoy: string",
+          "retorno": "AbonosBanco",
+          "linea": 59,
+          "resumen": "`hoy` = YYYY-MM-DD. La proyección solo aplica al año en curso con el último mes cubierto (ETIQUETADO, no fecha de cobro) ≥ mes actual − 1."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "42996819e743"
     },
     {
       "ruta": "apps/plataforma/lib/acciones-contacto.ts",
@@ -173876,6 +173925,28 @@
       "hash": "221d59ed500f"
     },
     {
+      "ruta": "apps/plataforma/lib/cuota-reta-pilar.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Gasto RETA (cuota de autónomos) de la actividad de Pilar. `fiscal_perfil.conyuge_cuota_autonomos` es la cotización ANUAL real (cuenta …5420, no conectada a la BD; 2026: 661,49 €, baja de maternidad). El banco de la BD solo ve una parte (467,45 €): si hay perfil manda el perfil y solo se cae al banco",
+      "exporta": [
+        "cuotaRetaPilar"
+      ],
+      "funciones": [
+        {
+          "nombre": "cuotaRetaPilar",
+          "kind": "function",
+          "exportada": true,
+          "params": "perfilAnual: number | null | undefined, bancoPeriodo: number, fraccionAnio: number | null",
+          "retorno": "CuotaRetaPilar",
+          "linea": 17,
+          "resumen": "@param perfilAnual conyuge_cuota_autonomos (anual) o null @param bancoPeriodo suma de movimientos `cuota_autonomos` del periodo @param fraccionAnio 1 = año completo, 0.25 = trimestre; null = rango lib"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9eb8be17224a"
+    },
+    {
       "ruta": "apps/plataforma/lib/dato.ts",
       "ambito": "apps/plataforma",
       "resumen": "apps/plataforma/lib/dato.ts Los TRES estados de un valor, como función pura y testeable. El componente <Dato> de `components/ui.tsx` es solo la piel de esto. ─── Por qué existe ────────────────────────────────────────────────────────────────────────── Regla fundacional del CLAUDE.md raíz: «dato que ",
@@ -177280,7 +177351,7 @@
           "exportada": false,
           "params": "base: number, tramos: Tramo[]",
           "retorno": null,
-          "linea": 261
+          "linea": 260
         },
         {
           "nombre": "mesRange",
@@ -177288,7 +177359,7 @@
           "exportada": false,
           "params": "year: number, quarter: number",
           "retorno": "",
-          "linea": 288
+          "linea": 287
         },
         {
           "nombre": "shiftYearStr",
@@ -177296,7 +177367,7 @@
           "exportada": false,
           "params": "fecha: string, delta: number",
           "retorno": "string",
-          "linea": 303,
+          "linea": 302,
           "resumen": "Desplaza el año de una fecha 'YYYY-MM-DD' (para la comparativa \"mismo periodo del año anterior\" cuando el periodo es un rango libre). Solo toca los 4 primeros caracteres."
         },
         {
@@ -177305,7 +177376,7 @@
           "exportada": false,
           "params": "v: Date | string | null | undefined",
           "retorno": "string | null",
-          "linea": 309,
+          "linea": 308,
           "resumen": "── Deducciones fiscales (perfil familiar + motor puro) ──────────────────────"
         },
         {
@@ -177314,7 +177385,7 @@
           "exportada": false,
           "params": "cuentaId: string, year: number, baseImponible: number, retenciones: number,",
           "retorno": "Promise<DeduccionesView>",
-          "linea": 311
+          "linea": 310
         },
         {
           "nombre": "getResumenFinanciero",
@@ -177322,7 +177393,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string,",
           "retorno": "Promise<ResumenFinanciero>",
-          "linea": 435
+          "linea": 434
         },
         {
           "nombre": "getGastosControl",
@@ -177330,7 +177401,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string,",
           "retorno": "Promise<GastosControl>",
-          "linea": 886,
+          "linea": 885,
           "resumen": "── Control de gastos: lista de cargos del periodo agrupada por bucket de deducibilidad ──────── Alimenta la pestaña «Gastos» de /finanzas. Excluye traspasos del cómputo de totales y las cuentas del có"
         },
         {
@@ -177339,7 +177410,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string",
           "retorno": "Promise<ResumenPilar>",
-          "linea": 1062
+          "linea": 1064
         },
         {
           "nombre": "bancoCond",
@@ -177347,7 +177418,7 @@
           "exportada": true,
           "params": "banco?: string",
           "retorno": null,
-          "linea": 1212,
+          "linea": 1223,
           "resumen": "Filtro por cuenta para el eje personal: BBVA (100% de Alberto) vs \"familiar\" (el resto, p.ej. Kutxabank). Coherente con la separación de `getResumenFinanciero.personal.bbva/.kutxa`."
         },
         {
@@ -177356,7 +177427,7 @@
           "exportada": true,
           "params": "cuentaId: string, categoria: string, desde: string, hasta: string, banco?: string,",
           "retorno": "Promise<MerchantRow[]>",
-          "linea": 1218
+          "linea": 1229
         }
       ],
       "tablas": [
@@ -177377,7 +177448,7 @@
         "properties"
       ],
       "rutaApi": null,
-      "hash": "5aec5ef8b6a8"
+      "hash": "93e39017b90f"
     },
     {
       "ruta": "apps/plataforma/lib/fiscal-alertas-db.ts",
@@ -177630,7 +177701,6 @@
       "exporta": [
         "parametrosDonativo",
         "importesDe",
-        "cuotasAnualesDesdeMensual",
         "esMenor3",
         "mesesMenor3",
         "calcularMaternidadGuarderia",
@@ -177665,21 +177735,12 @@
           "linea": 121
         },
         {
-          "nombre": "cuotasAnualesDesdeMensual",
-          "kind": "function",
-          "exportada": true,
-          "params": "mensual: number | null | undefined",
-          "retorno": "number | null",
-          "linea": 172,
-          "resumen": "La columna `fiscal_perfil.conyuge_cuota_autonomos` guarda la cuota RETA MENSUAL de Pilar (dato de Alberto, 03/11/2026: 467,45 €/mes). El tope del art. 81 LIRPF se mide con las cotizaciones del ejercic"
-        },
-        {
           "nombre": "anioNacimiento",
           "kind": "arrow",
           "exportada": false,
           "params": "fecha: string",
           "retorno": null,
-          "linea": 218
+          "linea": 221
         },
         {
           "nombre": "esMenor3",
@@ -177687,7 +177748,7 @@
           "exportada": true,
           "params": "fechaNacimiento: string, anio: number",
           "retorno": "boolean",
-          "linea": 221,
+          "linea": 224,
           "resumen": "Menor de 3 años a efectos del incremento del mínimo y de la maternidad."
         },
         {
@@ -177696,7 +177757,7 @@
           "exportada": true,
           "params": "fechaNacimiento: string, anio: number",
           "retorno": "number",
-          "linea": 231,
+          "linea": 234,
           "resumen": "Meses del ejercicio `anio` en los que el hijo es menor de 3 años (base de la maternidad). Cuenta desde el mes de nacimiento (inclusive) y deja de contar EL MES en que cumple 3 años [Probable: criterio"
         },
         {
@@ -177705,7 +177766,7 @@
           "exportada": false,
           "params": "perfil: PerfilFiscal, hijos: { d: Descendiente }[]",
           "retorno": "",
-          "linea": 258,
+          "linea": 261,
           "resumen": "Gasto de guardería de cada hijo con derecho (mismo orden que `hijos`). Si algún hijo trae su `gastoGuarderia`, manda el desglose por hijo (los que no lo traen = 0). Si solo hay el total del perfil: co"
         },
         {
@@ -177714,7 +177775,7 @@
           "exportada": true,
           "params": "perfil: PerfilFiscal, descendientes: Descendiente[], anio: number, imp: ImportesAnio = importesDe(anio),",
           "retorno": "ResultadoMaternidad",
-          "linea": 275,
+          "linea": 278,
           "resumen": "la guardería usa lo que quede del límite."
         },
         {
@@ -177723,7 +177784,7 @@
           "exportada": true,
           "params": "fechaNacimiento: string, anio: number",
           "retorno": "number",
-          "linea": 314,
+          "linea": 317,
           "resumen": "Edad cumplida a 31-dic del año fiscal."
         },
         {
@@ -177732,7 +177793,7 @@
           "exportada": true,
           "params": "base: number, tramos: ImportesAnio['tramos']",
           "retorno": "number",
-          "linea": 324,
+          "linea": 327,
           "resumen": "Tarifa progresiva: cuota acumulada para una base dada."
         },
         {
@@ -177741,7 +177802,7 @@
           "exportada": true,
           "params": "perfil: PerfilFiscal, descendientes: Descendiente[], anio: number, imp: ImportesAnio = importesDe(anio),",
           "retorno": "number",
-          "linea": 334,
+          "linea": 337,
           "resumen": "Mínimo personal y familiar (contribuyente + descendientes + discapacidad + ascendientes)."
         },
         {
@@ -177750,7 +177811,7 @@
           "exportada": true,
           "params": "perfil: PerfilFiscal, descendientes: Descendiente[], anio: number, imp: ImportesAnio = importesDe(anio), baseParaLimites?: number,",
           "retorno": "LineaDeduccion[]",
-          "linea": 368,
+          "linea": 371,
           "resumen": "Deducciones de cuota: estatales (maternidad, familia numerosa) + Andalucía + donativos. `baseParaLimites` = base imponible (suma general+ahorro) para las deducciones autonómicas con límite de renta; s"
         },
         {
@@ -177759,7 +177820,7 @@
           "exportada": true,
           "params": "perfil: Pick<PerfilFiscal, 'gastoDeportivoAnual' | 'gastoDeportivoPorDeclarante' | 'declaracionConjunta'>",
           "retorno": "",
-          "linea": 461,
+          "linea": 464,
           "resumen": "15 % del gasto por declarante con tope de 100 € cada uno. Sin desglose: el total a partes iguales (estimado)."
         },
         {
@@ -177768,7 +177829,7 @@
           "exportada": true,
           "params": "desde: string | null | undefined, anio: number",
           "retorno": "number | null",
-          "linea": 475,
+          "linea": 478,
           "resumen": "Meses del ejercicio con título de familia numerosa vigente EL ÚLTIMO DÍA DEL MES (art. 81 bis LIRPF y RIRPF art. 60 bis). Título desde el 18/11/2025 ⇒ 2025: 2 meses (nov, dic) ⇒ 200 € (renta 2025, 066"
         },
         {
@@ -177777,7 +177838,7 @@
           "exportada": true,
           "params": "baseImponible: number, retenciones: number, perfil: PerfilFiscal, descendientes: Descendiente[], anio: number, imp: ImportesAnio = importesDe(anio),",
           "retorno": "ResultadoFiscal",
-          "linea": 495,
+          "linea": 498,
           "resumen": "cada cuota líquida ≥ 0. Resultado = cuota líquida − retenciones − deducciones reembolsables (maternidad, guardería, familia numerosa) + abonos anticipados cobrados en el año (modelos 140/143). `baseIm"
         },
         {
@@ -177786,7 +177847,7 @@
           "exportada": true,
           "params": "perfil: PerfilFiscal, baseImponible: number, anio: number, imp: ImportesAnio = importesDe(anio),",
           "retorno": "string[]",
-          "linea": 536,
+          "linea": 539,
           "resumen": "Avisos de oportunidad antes del cierre del ejercicio."
         },
         {
@@ -177795,7 +177856,7 @@
           "exportada": true,
           "params": "perfil: PerfilFiscal, descendientes: Descendiente[], anio: number,",
           "retorno": "",
-          "linea": 557,
+          "linea": 560,
           "resumen": "Deducciones que APLICAN según el perfil pero podrían no estar reflejadas."
         },
         {
@@ -177804,7 +177865,7 @@
           "exportada": true,
           "params": "descendientes: Descendiente[], anio: number,",
           "retorno": "",
-          "linea": 577,
+          "linea": 580,
           "resumen": "Hijos que cambian de tramo de edad el año siguiente (afecta a las deducciones)."
         },
         {
@@ -177813,13 +177874,13 @@
           "exportada": true,
           "params": "baseTitular: number, retencionesTitular: number, rendimientoNetoConyuge: number, retencionesConyuge: number, perfil: PerfilFiscal, descendientes: Descendiente[], anio: number, imp: ImportesAnio = importesDe(anio),",
           "retorno": "ComparativaDeclaracion",
-          "linea": 615,
+          "linea": 618,
           "resumen": "Compara si conviene declaración conjunta o separada. Para la conjunta: suma las bases, aplica reducción €3.400, usa deducciones comunes. Para la separada: cada cónyuge con su propia base e mínimo indi"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f5aaf6d5728a"
+      "hash": "1e1fbca39b16"
     },
     {
       "ruta": "apps/plataforma/lib/fiscal-panel.ts",
@@ -185029,7 +185090,7 @@
           "exportada": true,
           "params": "cuentaId: string, anio: number",
           "retorno": "Promise<",
-          "linea": 6
+          "linea": 7
         }
       ],
       "tablas": [
@@ -185038,7 +185099,7 @@
         "movimientos_bancarios"
       ],
       "rutaApi": null,
-      "hash": "f629efed0240"
+      "hash": "36366ee80ec9"
     },
     {
       "ruta": "apps/plataforma/lib/resultado-declaracion.fixture.ts",
@@ -185086,6 +185147,7 @@
       "exporta": [
         "retencionCierre",
         "notaOrigenGuarderia",
+        "abonosBancoIndividual",
         "cerrarContribuyente",
         "calcularResultadoDeclaracion",
         "avisoPrestacionExenta",
@@ -185099,7 +185161,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 15
+          "linea": 16
         },
         {
           "nombre": "retencionCierre",
@@ -185107,7 +185169,7 @@
           "exportada": true,
           "params": "r: RetencionCorreduria | null, mesesTranscurridos: number",
           "retorno": "Partida",
-          "linea": 92,
+          "linea": 95,
           "resumen": "Anualiza la retención de comisiones a 31/12 (run-rate). Siempre estimada."
         },
         {
@@ -185116,7 +185178,7 @@
           "exportada": false,
           "params": "v: number | null",
           "retorno": "Partida",
-          "linea": 102
+          "linea": 105
         },
         {
           "nombre": "partidaPf",
@@ -185124,7 +185186,7 @@
           "exportada": false,
           "params": "t: 'alberto' | 'pilar', v: number | null",
           "retorno": "Partida",
-          "linea": 104
+          "linea": 107
         },
         {
           "nombre": "aPartida",
@@ -185132,7 +185194,7 @@
           "exportada": false,
           "params": "l: LineaDeduccion, factor = 1, nota?: string",
           "retorno": "DeduccionPartida",
-          "linea": 108,
+          "linea": 111,
           "resumen": "── Deducciones: líneas del motor → partidas ────────────────────────────────────────────────"
         },
         {
@@ -185141,7 +185203,7 @@
           "exportada": false,
           "params": "p: DeduccionPartida",
           "retorno": "DeduccionPartida",
-          "linea": 112
+          "linea": 115
         },
         {
           "nombre": "eur2",
@@ -185149,7 +185211,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 114
+          "linea": 117
         },
         {
           "nombre": "notaOrigenGuarderia",
@@ -185157,7 +185219,7 @@
           "exportada": true,
           "params": "perfil: PerfilFiscal, banco: number | null | undefined",
           "retorno": "string",
-          "linea": 116,
+          "linea": 119,
           "resumen": "Origen del importe de guardería (perfil) y contraste con el banco: avisa si difieren."
         },
         {
@@ -185166,7 +185228,7 @@
           "exportada": false,
           "params": "perfil: PerfilFiscal, desc: Descendiente[], anio: number, baseLiq: number | undefined",
           "retorno": "LineaDeduccion[]",
-          "linea": 122
+          "linea": 125
         },
         {
           "nombre": "notaTope",
@@ -185174,7 +185236,7 @@
           "exportada": false,
           "params": "l: LineaDeduccion, perfil: PerfilFiscal, banco?: number | null",
           "retorno": "string | undefined",
-          "linea": 128,
+          "linea": 131,
           "resumen": "Maternidad+guardería con tope: la guardería y la maternidad dependen de la cuota RETA (sin confirmar anual/mensual)."
         },
         {
@@ -185183,8 +185245,26 @@
           "exportada": false,
           "params": "perfil: PerfilFiscal, parteMat: number, parteFn: number",
           "retorno": "Partida[]",
-          "linea": 140,
+          "linea": 143,
           "resumen": "Partidas de abonos anticipados (modelos 140/143): sin dato ⇒ pendiente."
+        },
+        {
+          "nombre": "abonosDelBanco",
+          "kind": "function",
+          "exportada": false,
+          "params": "b: AbonosBanco, p140: number, p143: number",
+          "retorno": "Partida[]",
+          "linea": 154,
+          "resumen": "Abonos del banco (real + proyección a 31/12): una partida por contribuyente. `p140`/`p143` = fracción de cada modelo que le toca."
+        },
+        {
+          "nombre": "abonosBancoIndividual",
+          "kind": "function",
+          "exportada": true,
+          "params": "b: AbonosBanco, titular: 'alberto' | 'pilar', perfil: PerfilFiscal",
+          "retorno": "Partida[]",
+          "linea": 170,
+          "resumen": "Reparto individual de los abonos del banco: el modelo 140 (maternidad) va a Pilar; el 143 (familia numerosa) 50/50 (todo Alberto si Pilar no trabaja)."
         },
         {
           "nombre": "sumaP",
@@ -185192,7 +185272,7 @@
           "exportada": false,
           "params": "ps: Partida[]",
           "retorno": null,
-          "linea": 151,
+          "linea": 176,
           "resumen": "── Cuenta final de un contribuyente ────────────────────────────────────────────────────────"
         },
         {
@@ -185201,7 +185281,7 @@
           "exportada": true,
           "params": "titular: ContribuyenteFinal['titular'], c: ResultadoContribuyente | null, deducciones: DeduccionPartida[], retenciones: Partida[], pagosFraccionados: Partida[], abonosAnt: Partida[],",
           "retorno": "ContribuyenteFinal",
-          "linea": 153
+          "linea": 178
         },
         {
           "nombre": "cerrarModalidad",
@@ -185209,7 +185289,7 @@
           "exportada": false,
           "params": "modalidad: ResultadoModalidad['modalidad'], cs: ContribuyenteFinal[]",
           "retorno": "ResultadoModalidad",
-          "linea": 175
+          "linea": 200
         },
         {
           "nombre": "calcularResultadoDeclaracion",
@@ -185217,7 +185297,7 @@
           "exportada": true,
           "params": "e: EntradaSimulador, palIn: Palancas, ctx: ContextoResultado",
           "retorno": "ResultadoFinal",
-          "linea": 186,
+          "linea": 211,
           "resumen": "── Resultado completo ──────────────────────────────────────────────────────────────────────"
         },
         {
@@ -185226,7 +185306,7 @@
           "exportada": true,
           "params": "ingresos: IngresoPilar[]",
           "retorno": "string | null",
-          "linea": 261,
+          "linea": 289,
           "resumen": "Texto de aviso si algún ingreso tipificado como actividad de Pilar parece una prestación exenta; null si ninguno. NO cambia datos."
         },
         {
@@ -185235,7 +185315,7 @@
           "exportada": true,
           "params": "anio: number, hoy: string",
           "retorno": "number",
-          "linea": 270,
+          "linea": 298,
           "resumen": "Meses transcurridos del ejercicio a fecha `hoy` (YYYY-MM-DD): año distinto del actual ⇒ 12 (ejercicio cerrado)."
         },
         {
@@ -185244,12 +185324,12 @@
           "exportada": true,
           "params": "e: { anio: number; hoy: string; perfil: PerfilFiscal; descendientes: Descendiente[] retencionesCorreduria: RetencionCorreduria | null; retencionesPilar: number | null; ingresosPilar: IngresoPilar[] | null pagosFraccionados?: PorTitular<numb",
           "retorno": "ContextoResultado",
-          "linea": 276
+          "linea": 304
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8f35ff4be9f7"
+      "hash": "45ff5baec4e8"
     },
     {
       "ruta": "apps/plataforma/lib/resumen-mensual.ts",
@@ -189244,7 +189324,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d329b118e246"
+      "hash": "fbcbfa7d7022"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/acceso.ts",
@@ -271237,7 +271317,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5575,
-    "funciones": 21920
+    "archivos": 5577,
+    "funciones": 21926
   }
 }
