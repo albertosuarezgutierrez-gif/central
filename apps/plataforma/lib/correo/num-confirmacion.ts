@@ -31,7 +31,7 @@
 const DOMINIOS_CANAL = [
   'booking.com',        // guest.booking.com, mailrouter-*.prod.booking.com, admin.booking.com
   'expedia.com', 'expediapartnercentral.com', 'expediamail.com',
-  'agoda.com', 'agoda.net',
+  'agoda.com', 'agoda.net', 'agoda-messaging.com',
   'airbnb.com',
   'vrbo.com', 'homeaway.com',
   'hostelworld.com',

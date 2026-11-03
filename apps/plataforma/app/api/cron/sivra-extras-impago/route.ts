@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
 
     if (accion === 'recordar') {
       const texto = RECORDATORIO[lang](nombre, eur(p.precio_cents / 100))
-      const ok = await enviarAlHuesped(ctx?.reservationId || p.booking_id, texto)
+      const ok = await enviarAlHuesped(ctx?.reservationId || p.booking_id, texto, '', { smoobuSolo: true })
       if (ok) { await marcarRecordatorio(p.id); recordados++ }
       continue
     }

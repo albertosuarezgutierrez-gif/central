@@ -96,3 +96,8 @@ mapa para entenderlo y tocarlo con seguridad.
 - El dedupe canónico es `correo_triaje.gmail_message_id` (Message-ID): sobrevive a resets de UIDVALIDITY.
 
 <!-- verificado: 2026-07-10 -->
+
+## Agoda (03/11/2026)
+- Agoda manda ahora UN correo por mensaje de huésped (`…@agoda-messaging.com`, asunto «Reply from <huésped> (fechas)»); **responder a ese correo llega al huésped**. El triaje (`lib/correo/agoda-enrutar.ts`) lo pasa al agente de huéspedes de siempre (misma política auto/botón que Booking); solo cambia el transporte: `enviarAlHuespedDetallado` responde al correo (`agoda-hilo.ts`, tabla `agoda_hilos_correo`, migración `apps/plataforma/prisma/sql/2026-11-03_agoda_hilos_correo.sql`) en vez de Smoobu. Mensajes programados/recordatorios de pago siguen por Smoobu (`smoobuSolo`).
+- El resumen diario antiguo («New messages from your guests», `@agoda.com`) sigue siendo solo aviso con enlace a YCS.
+

@@ -12,7 +12,7 @@ import {
 } from './rutas'
 import { CATEGORIA_EXCLUIDA, asuntoExcluido, clasificarPorKeyword, exclusionSeguridad } from './keywords'
 import { parsearAvisoBooking } from './reserva-booking'
-import { esAvisoMensajesAgoda } from './agoda-mensajes'
+import { esAvisoMensajesAgoda, esMensajeIndividualAgoda } from './agoda-mensajes'
 import type { CorreoNuevo } from './imap'
 import { RE_CODIGO_POSTAL, esDestinoCorreduria, esEcoPropioCorreduria, esLeadCorreduria } from './lead-correduria'
 import { esRespuestaDeLeadBD } from './lead-correduria-hilo'
@@ -108,7 +108,7 @@ export async function clasificar(correo: CorreoNuevo): Promise<Clasificacion> {
   // que una regla aprendida hacia 'contabilidad' se llevaría por delante el único aviso que existe
   // de que un huésped ha escrito. El detector exige remitente de agoda.com + su asunto exacto.
   if (esAvisoMensajesAgoda(correo)) {
-    return { categoria: 'agoda-huespedes', confianza: 1, via: 'regla', resumen: correo.subject.slice(0, 140), accionSugerida: 'Responder en el buzón de YCS (Smoobu no llega)', fechaLimite: null }
+    return { categoria: 'agoda-huespedes', confianza: 1, via: 'regla', resumen: correo.subject.slice(0, 140), accionSugerida: esMensajeIndividualAgoda(correo) ? 'Responder al correo de Agoda (le llega al huésped; lo gestiona el agente de huéspedes)' : 'Responder en el buzón de YCS (el resumen diario no admite respuesta por correo)', fechaLimite: null }
   }
 
   // (0-ter-a) ECO de nuestra respuesta a un lead (19/10/2026): la copia oculta a hola@ de lo que sale por Resend vuelve

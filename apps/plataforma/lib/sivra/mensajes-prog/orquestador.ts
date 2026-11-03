@@ -370,7 +370,7 @@ export async function pasadaMensajesProgramados(deadline = Date.now() + 280_000)
       }
 
       const asunto = renderAsunto(deb.tipo, datos)
-      const okEnvio = await enviarAlHuesped(bookingId, texto, asunto)
+      const okEnvio = await enviarAlHuesped(bookingId, texto, asunto, { smoobuSolo: true })
       if (okEnvio) {
         res.enviados++
         await prisma.$executeRaw(Prisma.sql`
@@ -415,7 +415,7 @@ export async function pasadaMensajesProgramados(deadline = Date.now() + 280_000)
     if (Date.now() > deadline) break
     if (!activos.has(p.property_id)) continue
     const f = p.fecha_objetivo instanceof Date ? p.fecha_objetivo.toISOString().slice(0, 10) : String(p.fecha_objetivo).slice(0, 10)
-    const okEnvio = await enviarAlHuesped(p.booking_id, p.cuerpo)
+    const okEnvio = await enviarAlHuesped(p.booking_id, p.cuerpo, '', { smoobuSolo: true })
     await prisma.$executeRaw(Prisma.sql`
       UPDATE mensajes_programados
       SET estado = ${okEnvio ? 'enviado' : 'fallo'}, intentos = intentos + 1,

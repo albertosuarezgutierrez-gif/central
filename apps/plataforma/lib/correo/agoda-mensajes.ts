@@ -1,22 +1,15 @@
-// lib/correo/agoda-mensajes.ts — parser PURO del aviso «New messages from your guests» de Agoda.
+// lib/correo/agoda-mensajes.ts — parser PURO de los avisos de mensaje de huésped de Agoda.
 //
-// POR QUÉ EXISTE (medido el 31/08/2026 contra Smoobu, 8 reservas de Agoda del histórico):
-// el canal de Agoda es de UNA SOLA DIRECCIÓN. Smoobu ENTREGA nuestros mensajes al huésped por el
-// alias `…@agoda-messaging.com` (los 7 automáticos salieron en todas), pero lo que el huésped
-// contesta NO vuelve: en las 8 reservas hay CERO mensajes de huésped. Y no es que no escribieran —
-// de `atul bhatt` (abril 2026) hay prueba independiente: este mismo correo de Agoda recoge su
-// mensaje del 14/04 a las 16:17, y el hilo de Smoobu de esa reserva termina esa misma mañana.
-// (Control: el hilo de Booking de la reserva viva de House tiene 16 mensajes, 6 del huésped.)
+// DOS FORMATOS (los dos se reconocen):
+//  A. DIGEST antiguo (`…@agoda.com`, «New messages from your guests»): una dirección, sin respuesta
+//     posible por correo; el huésped se contesta en el extranet YCS. (Medido 31/08/2026: Smoobu entrega
+//     nuestros mensajes por el alias `…@agoda-messaging.com` pero lo que el huésped contesta no vuelve.)
+//  B. CORREO INDIVIDUAL (visto 03/11/2026, `notifications@agoda-messaging.com`, asunto «Reply from
+//     <huésped> (Nov 3-5, 2026)»): UN correo por mensaje, y RESPONDER a ese correo llega al huésped.
+//     Por eso este formato entra al agente de huéspedes y la respuesta sale como respuesta al correo
+//     (`agoda-hilo.ts`), no por Smoobu.
 //
-// O sea: al huésped de Agoda se le puede hablar, pero su respuesta vive SOLO en el extranet YCS.
-// Este correo es la única señal que llega al buzón — de ahí que el triaje lo cace.
-//
-// 🚨 DOS COSAS QUE NO SON OBVIAS:
-//  1. **NO se enruta al agente de huéspedes de SIVRA.** Ese agente contesta en el hilo de Smoobu, y
-//     para Agoda el hilo es un buzón sin salida hacia el huésped: la respuesta no llegaría y
-//     quedaría constancia de haber contestado. Se responde por YCS, y por eso el aviso lleva el enlace.
-//  2. Es un **digest DIARIO** de Agoda (su propia URL lo llama `PropertyDailyDigest`), así que el
-//     aviso puede llegar hasta un día tarde. No se promete inmediatez que la fuente no da.
+// Es un digest DIARIO solo en el formato A; en B el aviso es inmediato.
 //
 // El fixture del test se copia del correo REAL (regla del repo), incluidos sus caracteres raros:
 // el HTML de Agoda mete bytes de control en los enlaces de tracking.
@@ -34,6 +27,17 @@ export interface AvisoMensajesAgoda {
   propertyId: string | null
   /** Enlace al buzón de YCS donde SÍ se puede contestar. null = no legible. */
   urlYcs: string | null
+  /** 'individual' = correo por mensaje, se contesta respondiendo al correo. 'digest' = solo YCS. */
+  formato: 'digest' | 'individual'
+  /** ¿Se puede contestar respondiendo al propio correo? (solo el formato individual) */
+  respondePorCorreo: boolean
+  /** ID de reserva de Agoda («ID de reserva: 1053955690»). null = no legible. */
+  reservaAgoda: string | null
+  /** Nombre del piso tal como lo llama Agoda en el saludo («Hola Luxury,» → 'Luxury'). */
+  nombrePisoAgoda: string | null
+  /** Fechas de la estancia del asunto «(Nov 3-5, 2026)», ISO. null = no legibles. */
+  llegada: string | null
+  salida: string | null
 }
 
 // Property IDs de Agoda vistos en correos REALES del buzón. Solo se mapea lo confirmado:
@@ -52,11 +56,82 @@ const RE_FILA_HUESPED = /\|\s*([^|\n]{2,60}?)\s*\|\s*([A-Z][a-z]{2}\s+\d{1,2},\s
 const RE_YCS_ID = /hermes(?:%2F|\/)inbox(?:%2F|\/)ycs(?:%2F|\/)(\d{6,})/i
 const RE_URL_YCS = /(https?:\/\/[^\s)|]*ycs\.agoda\.com[^\s)|]*)/i
 
-/** ¿Es este correo el aviso de mensajes de huésped de Agoda? Exige remitente Agoda + su asunto. */
+// Remitente del correo individual: el dominio EXACTO (o subdominio) de mensajería de Agoda. El `from`
+// del triaje es la dirección en minúsculas; el nombre visible (= el huésped) no cuenta para nada.
+const RE_FROM_MENSAJERIA = /@(?:[\w-]+\.)*agoda-messaging\.com\s*>?\s*$/i
+// «Reply from X (…)», «New message from X», «Mensaje de X», «Respuesta de X», «Nuevo mensaje de X».
+const RE_ASUNTO_INDIVIDUAL = /^\s*(?:re:\s*)?(?:reply from|new message from|message from|nuevo mensaje de|mensaje nuevo de|mensaje de|respuesta de)\s+(.+?)\s*(?:\([^)]*\))?\s*$/i
+
+/** Correo individual (formato B): remitente de mensajería + asunto de mensaje de huésped. */
+export function esMensajeIndividualAgoda(correo: { from: string; subject: string }): boolean {
+  return RE_FROM_MENSAJERIA.test((correo.from || '').trim()) && RE_ASUNTO_INDIVIDUAL.test(correo.subject || '')
+}
+
+/** ¿Es este correo un aviso de mensaje de huésped de Agoda (digest antiguo o correo individual)? */
 export function esAvisoMensajesAgoda(correo: { from: string; subject: string }): boolean {
+  if (esMensajeIndividualAgoda(correo)) return true
   if (!/@agoda\.com/i.test(correo.from || '')) return false
   const s = correo.subject || ''
   return /new messages from your guests|mensajes nuevos de sus hu[eé]spedes/i.test(s)
+}
+
+const MESES: Record<string, number> = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 }
+const iso = (y: number, m: number, d: number) => `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+
+/** «(Nov 3-5, 2026)», «(Nov 30-Dec 2, 2026)», «(Dec 30, 2026-Jan 2, 2027)» → fechas ISO. PURO. */
+export function fechasDeAsunto(asunto: string): { llegada: string; salida: string } | null {
+  const mes = (t: string) => MESES[t.slice(0, 3).toLowerCase()]
+  const m1 = asunto.match(/\(\s*([A-Za-z]{3,9})\.?\s+(\d{1,2})\s*[-–]\s*(?:([A-Za-z]{3,9})\.?\s+)?(\d{1,2})\s*,\s*(\d{4})\s*\)/)
+  if (m1) {
+    const a = mes(m1[1]); const b = m1[3] ? mes(m1[3]) : a
+    if (!a || !b) return null
+    const y = Number(m1[5])
+    return { llegada: iso(y, a, Number(m1[2])), salida: iso(y, b, Number(m1[4])) }
+  }
+  const m2 = asunto.match(/\(\s*([A-Za-z]{3,9})\.?\s+(\d{1,2})\s*,\s*(\d{4})\s*[-–]\s*([A-Za-z]{3,9})\.?\s+(\d{1,2})\s*,\s*(\d{4})\s*\)/)
+  if (m2) {
+    const a = mes(m2[1]); const b = mes(m2[4])
+    if (!a || !b) return null
+    return { llegada: iso(Number(m2[3]), a, Number(m2[2])), salida: iso(Number(m2[6]), b, Number(m2[5])) }
+  }
+  return null
+}
+
+/** Piso (nombre que usa Agoda en el saludo) → slug prop_*. Solo lo confirmado; lo demás, null. */
+export function propiedadPorNombreAgoda(nombre: string | null): string | null {
+  const n = (nombre || '').toLowerCase()
+  if (!n) return null
+  if (n.includes('luxury')) return 'prop_luxury_busto'
+  if (n.includes('house') || n.includes('sevillana')) return 'prop_house_sevillana'
+  return null
+}
+
+// Marcadores que separan la traducción automática del texto ORIGINAL del huésped.
+const RE_MARCA_ORIGINAL = /(?:del siguiente mensaje original|of the following original message|del mensaje original|of the original message)\s*:/i
+// Donde acaba el mensaje nuevo y empieza el pie / el historial.
+const RE_FIN_MENSAJE = /Did you know\?|Sab[ií]as que|Replying to this email|Responder a este correo|Simplemente responde|Just reply to this email|Reply to this email/i
+
+/** Quita el marco de tabla `| … |` y junta las líneas. */
+function sinTabla(t: string): string {
+  return t.split('\n').map((l) => l.replace(/^[\s|]+/, '').replace(/[\s|]+$/, '')).filter(Boolean).join('\n')
+}
+
+/**
+ * Del cuerpo del correo individual saca el mensaje NUEVO del huésped: lo que va tras «ID de reserva» y
+ * antes de «Replying to this email». Si trae traducción automática se queda con el ORIGINAL (es lo que
+ * escribió; el agente detecta su idioma). El historial (después del pie) se descarta. PURO.
+ */
+export function mensajeNuevoIndividual(cuerpo: string): string | null {
+  const limpio = sinTabla(cuerpo.replace(/\r/g, ''))
+  const ini = limpio.search(/ID de reserva\s*:|Booking ID\s*:|Reservation ID\s*:|Reserva\s*ID\s*:/i)
+  if (ini < 0) return null
+  const tras = limpio.slice(ini).replace(/^[^\n]*\n?/, '')   // salta la propia línea del ID
+  const fin = tras.search(RE_FIN_MENSAJE)
+  let bloque = (fin >= 0 ? tras.slice(0, fin) : tras)
+  const marca = bloque.match(RE_MARCA_ORIGINAL)
+  if (marca && marca.index !== undefined) bloque = bloque.slice(marca.index + marca[0].length)
+  const texto = bloque.replace(/\s+/g, ' ').trim()
+  return texto || null
 }
 
 /** Extrae lo aprovechable del aviso. Devuelve null si el correo no es de este tipo. */
@@ -65,6 +140,7 @@ export function parsearAvisoMensajesAgoda(
 ): AvisoMensajesAgoda | null {
   if (!esAvisoMensajesAgoda(correo)) return null
   const cuerpo = correo.body || ''
+  if (esMensajeIndividualAgoda(correo)) return parsearIndividual(correo, cuerpo)
 
   const mSinLeer = cuerpo.match(RE_SIN_LEER)
   const mFila = cuerpo.match(RE_FILA_HUESPED)
@@ -89,17 +165,42 @@ export function parsearAvisoMensajesAgoda(
     propertyIdAgoda: idAgoda,
     propertyId: idAgoda ? (PISO_POR_ID_AGODA[idAgoda] ?? null) : null,
     urlYcs: cuerpo.match(RE_URL_YCS)?.[0] ?? null,
+    formato: 'digest',
+    respondePorCorreo: false,
+    reservaAgoda: null, nombrePisoAgoda: null, llegada: null, salida: null,
   }
 }
 
-/** Texto del aviso de Telegram. Dice qué se sabe, qué no, y POR DÓNDE se contesta. */
+function parsearIndividual(correo: { subject: string }, cuerpo: string): AvisoMensajesAgoda {
+  const huesped = correo.subject.match(RE_ASUNTO_INDIVIDUAL)?.[1]?.trim() ?? null
+  const plano = sinTabla(cuerpo)
+  const nombrePiso = plano.match(/(?:^|\n|\|)\s*(?:Hola|Hello|Hi|Dear)\s+([^,|\n]{1,80}),/i)?.[1]?.trim() ?? null
+  const reserva = plano.match(/(?:ID de reserva|Booking ID|Reservation ID)\s*:\s*(\d{6,})/i)?.[1] ?? null
+  const f = fechasDeAsunto(correo.subject)
+  return {
+    sinLeer: 1,
+    huesped,
+    mensaje: mensajeNuevoIndividual(cuerpo),
+    propertyIdAgoda: null,
+    propertyId: propiedadPorNombreAgoda(nombrePiso),
+    urlYcs: cuerpo.match(RE_URL_YCS)?.[0] ?? null,
+    formato: 'individual',
+    respondePorCorreo: true,
+    reservaAgoda: reserva,
+    nombrePisoAgoda: nombrePiso,
+    llegada: f?.llegada ?? null,
+    salida: f?.salida ?? null,
+  }
+}
+
+/** Texto del aviso de Telegram del DIGEST (formato A). Dice qué se sabe, qué no, y POR DÓNDE se contesta. */
 export function textoAvisoAgoda(a: AvisoMensajesAgoda, nombrePiso?: string): string {
   const quien = a.huesped ? `<b>${a.huesped}</b>` : 'un huésped'
   const donde = nombrePiso || a.propertyId || (a.propertyIdAgoda ? `alojamiento ${a.propertyIdAgoda}` : 'piso sin identificar')
   const partes = [`📩 <b>Agoda</b> · ${donde}: ${quien} ha escrito.`]
   if (a.mensaje) partes.push(`\n«${a.mensaje}»`)
   else partes.push('\n(El aviso no traía el texto del mensaje.)')
-  partes.push('\n🚨 Agoda NO devuelve las respuestas del huésped a Smoobu: esto NO se contesta desde el hilo, hay que hacerlo en YCS.')
+  partes.push('\n🚨 Agoda NO devuelve las respuestas del huésped a Smoobu y este resumen diario no admite respuesta por correo: hay que contestar en YCS.')
   // Si el enlace exacto se perdió con el truncado del extracto, se da la puerta de YCS igual: el
   // aviso tiene que terminar SIEMPRE en un sitio al que ir, no en «míralo en algún sitio».
   partes.push(`👉 ${a.urlYcs ?? 'https://ycs.agoda.com/'}`)

@@ -123,11 +123,11 @@ export const RUTAS: RutaCorreo[] = [
     etiqueta: 'Triaje/Agoda',
     archivar: false,
     aviso: 'inmediato',
-    // 🚨 enrutarSivra NO: el agente de huéspedes contesta en el hilo de Smoobu, y para Agoda ese
-    // hilo NO llega al huésped (medido 31/08/2026: 8 reservas, 0 mensajes entrantes). Contestar ahí
-    // dejaría constancia de una respuesta que nadie recibe. Se responde en YCS, y el aviso lo dice.
-    descripcion: 'Aviso de Agoda de que un huésped ha escrito por el buzón de la propiedad («New messages from your guests»). Agoda NO devuelve esas respuestas a Smoobu, así que este correo es la única señal. NO es un voucher de reserva (contabilidad) ni un OTP.',
-    ejemplos: ['New messages from your guests', 'Mensajes nuevos de sus huéspedes'],
+    // enrutarSivra NO aquí a propósito: el enrutado de Agoda es PROPIO (`agoda-enrutar.ts`, el triaje lo llama
+    // para el correo individual «Reply from <huésped>»), porque la reserva se resuelve por su ID/huésped+fechas
+    // y la respuesta sale respondiendo al correo, no por Smoobu. El resumen diario antiguo sigue siendo solo aviso (YCS).
+    descripcion: 'Mensaje de un huésped de Agoda: correo individual de agoda-messaging.com («Reply from <huésped> (fechas)»; responder al correo llega al huésped) o el resumen diario antiguo («New messages from your guests», solo YCS). NO es un voucher de reserva (contabilidad) ni un OTP.',
+    ejemplos: ['Reply from Nicolas Iha (Nov 3-5, 2026)', 'New messages from your guests', 'Mensajes nuevos de sus huéspedes'],
   },
   {
     // 🛡️ El lead de la CORREDURÍA (19/10/2026): una persona escribe a hola@grupoasegura.es pidiendo un

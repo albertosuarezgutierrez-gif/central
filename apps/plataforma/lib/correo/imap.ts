@@ -41,6 +41,8 @@ export interface CorreoNuevo {
    * cualquier otro correo del mismo buzón (19/10/2026). `[]` = no se pudo leer ninguna cabecera.
    */
   destinatarios?: string[]
+  /** Dirección de `Reply-To` (minúsculas), si la trae. Agoda responde al huésped a través de ella. */
+  replyTo?: string
   /** Message-IDs de los que este correo es respuesta (In-Reply-To + References), para casar el hilo. */
   referencias?: string[]
   /** Lista, autorespuesta o envío masivo (`List-Unsubscribe`, `Auto-Submitted`, `Precedence`): nunca un lead. */
@@ -231,6 +233,7 @@ export async function abrirTriaje(): Promise<SesionTriaje> {
           pdfs: excluido ? undefined : pdfsDe(from, parsed.attachments),
           destinatarios,
           referencias,
+          ...(parsed.replyTo?.value?.[0]?.address ? { replyTo: parsed.replyTo.value[0].address.toLowerCase() } : {}),
           automatico,
           ...(adjLead ? { adjuntosLead: adjLead.adjuntos, adjuntosLeadOmitidos: adjLead.omitidos } : {}),
           ...(adjCia ? { adjuntosCompania: adjCia.adjuntos, adjuntosCompaniaOmitidos: adjCia.omitidos } : {}),
