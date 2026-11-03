@@ -533,7 +533,7 @@ export function bloqueaDuplicado(
   ahora: Date,
   maxIntentos: number,
 ): boolean {
-  if (f.modo === 'emision' || f.modo === 'exploracion' || f.modo === 'humo') return false
+  if (f.modo === 'emision' || f.modo === 'exploracion' || f.modo === 'humo' || f.modo === 'pilotaje') return false
   if (f.estado === 'pendiente') return true
   if (f.estado === 'en_curso') return !leaseVencido(f.leaseHasta, ahora)
   if (f.estado === 'error_reintentable') return Number.isInteger(f.intentos) && f.intentos < maxIntentos

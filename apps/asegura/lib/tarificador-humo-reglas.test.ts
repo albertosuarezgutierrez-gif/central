@@ -204,7 +204,7 @@ test('deduplicación: un humo ni bloquea un trabajo real ni es bloqueado por él
   const vivo = { estado: 'pendiente', leaseHasta: null, intentos: 0 }
   assert.equal(bloqueaDuplicado({ ...vivo, modo: 'tarificar' }, ahora, 2), true, 'control: un pendiente real sí bloquea')
   assert.equal(bloqueaDuplicado({ ...vivo, modo: 'humo' }, ahora, 2), false)
-  assert.match(leer('lib/tarificador.ts'), /coalesce\(to_jsonb\(t\)->>'modo', 'tarificar'\) not in \('exploracion', 'humo'\)/, 'la consulta de duplicados excluye el humo')
+  assert.match(leer('lib/tarificador.ts'), /coalesce\(to_jsonb\(t\)->>'modo', 'tarificar'\) not in \('exploracion', 'humo', 'pilotaje'\)/, 'la consulta de duplicados excluye el humo')
 })
 
 test('SQL e inserción: un humo vivo por COMPAÑÍA (índice y consulta de encolar)', () => {
@@ -218,7 +218,7 @@ test('cola: el humo solo se sirve a un worker que lo declara y solo se reclama c
   assert.equal(modoParaWorker('humo', ['tarificar', 'humo']), 'humo')
   assert.deepEqual(modosReclamables({}), ['tarificar', 'emision'])
   assert.deepEqual(modosReclamables({ TARIFICADOR_HUMO_ACTIVO: '1' }), ['tarificar', 'emision', 'humo'])
-  assert.deepEqual(modosReclamables({ TARIFICADOR_HUMO_ACTIVO: '1', TARIFICADOR_EXPLORADOR_ACTIVO: '1' }).sort(), ['emision', 'exploracion', 'humo', 'tarificar'])
+  assert.deepEqual(modosReclamables({ TARIFICADOR_HUMO_ACTIVO: '1', TARIFICADOR_EXPLORADOR_ACTIVO: '1' }).sort(), ['emision', 'exploracion', 'humo', 'pilotaje', 'tarificar'])
 })
 
 test('el humo no cuenta como tarificación: estadísticas, bandeja, panel y avisos lo dejan fuera', () => {
@@ -227,7 +227,7 @@ test('el humo no cuenta como tarificación: estadísticas, bandeja, panel y avis
   assert.equal(filtros.length, 3, 'las tres consultas de estadísticas filtran modo = tarificar (el humo queda fuera de éxitos y fallos)')
   assert.ok(!/humo/.test(est.replace(/\/\/.*$/gm, '')), 'estadísticas no trata el humo como un modo más: lo excluye por NO ser tarificar')
   for (const [fichero, n] of [['lib/tarificador-bandeja.ts', 3], ['lib/tarificador-ops.ts', 2], ['lib/tarificador-verificacion.ts', 1]] as const) {
-    const veces = (leer(fichero).match(/not in \('exploracion', 'humo'\)/g) ?? []).length
+    const veces = (leer(fichero).match(/not in \('exploracion', 'humo', 'pilotaje'\)/g) ?? []).length
     assert.equal(veces, n, `${fichero}: el filtro «no es exploración ni humo» tiene que estar en ${n} consulta(s)`)
   }
 })

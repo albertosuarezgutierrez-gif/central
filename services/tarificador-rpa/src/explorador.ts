@@ -125,7 +125,7 @@ const azar = (min: number, max: number) => min + Math.random() * (max - min)
 const TOPE_PASO_MS = 30_000
 /** Margen sobre el tope de tiempo del explorador para cerrar y mandar el resultado. */
 const MARGEN_CIERRE_MS = 90_000
-const ATRIBUTO_MARCA = 'data-explorador-ref'
+export const ATRIBUTO_MARCA = 'data-explorador-ref'
 /** Re-localizaciones de un `rellenar` tras acciones hechas del mismo lote (repintado OsAjax de Fidelidade): máximo por lote. */
 export const MAX_RELOCALIZACIONES_LOTE = 3
 
@@ -1081,7 +1081,7 @@ async function relocalizar(page: Page, el: ElementoInventario, marco: MarcoInven
 }
 
 /** Resultado de {@link localizar}: el Locator, o POR QUÉ no (lista cerrada; nunca valores). */
-type Localizado = { loc: Locator } | { motivo: MotivoNoLocalizado; visibilidad?: VisibilidadNoVisible }
+export type Localizado = { loc: Locator } | { motivo: MotivoNoLocalizado; visibilidad?: VisibilidadNoVisible }
 type NodoInv = InventarioExploracion['nodos'] extends Map<string, infer N> ? N : never
 
 /** Cuánto se espera, tras traer el nodo a la vista, a que el portal lo pinte (NDBX perezoso, animaciones). */
@@ -1312,7 +1312,7 @@ export async function elegirNxDropdown(marco: Frame, loc: Locator, texto: string
  * tag/id/name/type/texto iguales. Devuelve un Locator único (marca temporal en el nodo) para `ctx.pulsar()`/`fill`/
  * `selectOption`, o el MOTIVO por el que no (desconectado | no_coincide_<campo> | no_visible | error_evaluate | no_unico).
  */
-async function localizar(nodo: NodoInv, el: ElementoInventario): Promise<Localizado> {
+export async function localizar(nodo: NodoInv, el: ElementoInventario): Promise<Localizado> {
   const comprobar = async (): Promise<MotivoNoLocalizado | null> => {
     let vivo: NodoVivo | null
     try {

@@ -70,6 +70,7 @@ import { prepararTrabajo, type AdaptadorRegistrado } from './ramo.ts'
 import { ejecutarEmision } from './emision.ts'
 import { ejecutarExploracion } from './explorador.ts'
 import { ejecutarHumo } from './humo.ts'
+import { ejecutarPilotaje } from './pilotaje.ts'
 import { crearCapturadorRecorrido, type CapturadorRecorrido } from './recorrido.ts'
 
 const TOPE_GLOBAL_MS = 4 * 60_000
@@ -602,6 +603,8 @@ async function main(): Promise<number> {
   // PRUEBA DE HUMO nocturna (15/10/2026, src/humo.ts): login + pantalla de inicio del tarificador, sin riesgo ni datos de nadie.
   // Otro flujo: sin adaptador de tarificación (usa sus login y entradas), sin formador ni reintento. Un trabajo de humo nunca se tarifica.
   if (trabajo.modo === 'humo') return ejecutarHumo({ cfg, trabajo, env, log, redactar })
+  // MODO PILOTADO (03/11/2026, src/pilotaje.ts): login + entrada y comandos de una persona/agente, todos por el guard.
+  if (trabajo.modo === 'pilotaje') return ejecutarPilotaje({ cfg, trabajo, env, log, redactar })
 
   // Documento del tomador (Mapfre: lo pone asegura desde la ficha, 14/10/2026): SECRETO DEL TRABAJO. Fuera de mensajes,
   // URL y HTML de evidencia, y sin captura de pantalla (una imagen no se redacta). Nunca se loguea.

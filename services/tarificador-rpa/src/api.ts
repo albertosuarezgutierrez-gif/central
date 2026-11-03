@@ -30,14 +30,16 @@ export type ExploracionTrabajo = { entrada: string; conDatosReales: boolean }
 /** `leaseHasta` (ISO): hasta cuándo asegura acepta el resultado; el runner no reintenta si no cabe. */
 export type Trabajo = {
   id: string; compania: string; ramo: string; riesgo: unknown; leaseHasta?: string
-  modo?: 'tarificar' | 'emision' | 'exploracion' | 'humo'; emision?: EmisionTrabajo; exploracion?: ExploracionTrabajo
+  modo?: 'tarificar' | 'emision' | 'exploracion' | 'humo' | 'pilotaje'; emision?: EmisionTrabajo; exploracion?: ExploracionTrabajo
+  /** MODO PILOTADO (03/11/2026): la entrada cerrada; la sesión es siempre sintética (riesgo `{}`). */
+  pilotaje?: { entrada: string }
 }
 
 /**
  * Modos que ESTA imagen sabe ejecutar. Viajan en la cabecera `X-Tarificador-Modos` al pedir el trabajo: asegura solo
  * sirve un trabajo de exploración a un worker que lo declara (una imagen vieja lo trataría como `tarificar`).
  */
-export const MODOS_SOPORTADOS = ['tarificar', 'emision', 'exploracion', 'humo'] as const
+export const MODOS_SOPORTADOS = ['tarificar', 'emision', 'exploracion', 'humo', 'pilotaje'] as const
 export const CABECERA_MODOS = 'X-Tarificador-Modos'
 
 const ESPERAS_PEDIR_MS = [2_000, 4_000, 8_000]
@@ -283,6 +285,90 @@ export async function cerrarExploracion(c: Config, cuerpo: CuerpoCierre, esperar
       // Ocupado tras los reintentos = NO cerrada (0): un 409 final no debe confundirse con «ya estaba cerrada».
       ultimo = ocupado ? 0 : res.status
       if (res.status < 500 && !ocupado) return res.status
+    } catch {
+      ultimo = 0
+    }
+    await esperar(2_000 * (i + 1))
+  }
+  return ultimo
+}
+
+// ─── Modo pilotado (03/11/2026) ──────────────────────────────────────────────
+
+/** Resultado de un comando del operador (sin valores: códigos y motivos; asegura lo redacta otra vez antes de guardarlo). */
+export type ResultadoComandoPilotaje = { estado: 'hecho' | 'rechazado'; motivo: string; detalle?: string[] }
+
+export type CuerpoEstadoPilotaje = {
+  trabajoId: string
+  n: number
+  inventario: InventarioDom
+  capturaBase64?: string
+  url?: string
+  resultadoAnterior?: ResultadoComandoPilotaje
+  final?: boolean
+}
+
+/** `POST /api/tarificador/pilotaje/estado`: 2 intentos ante red/5xx. `perdido` (404) = la sesión ya no está viva. */
+export async function publicarEstadoPilotaje(c: Config, cuerpo: CuerpoEstadoPilotaje, esperar: (ms: number) => Promise<void> = dormir): Promise<'ok' | 'perdido' | 'error'> {
+  for (let i = 0; i < 2; i++) {
+    try {
+      const res = await fetch(`${c.apiUrl}/api/tarificador/pilotaje/estado`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${c.secreto}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(cuerpo),
+        signal: AbortSignal.timeout(30_000),
+      })
+      if (res.status === 200) return 'ok'
+      if (res.status === 404) return 'perdido'
+      if (res.status < 500) return 'error'
+    } catch {
+      // red: un reintento
+    }
+    await esperar(2_000)
+  }
+  return 'error'
+}
+
+/** `POST /api/tarificador/pilotaje/comando`: el comando CRUDO (sin validar) de la pantalla `n`, o `null` si aún no hay. */
+export async function pedirComandoPilotaje(c: Config, trabajoId: string, n: number): Promise<{ estado: 'ok'; comando: unknown | null } | { estado: 'perdido' } | { estado: 'error' }> {
+  try {
+    const res = await fetch(`${c.apiUrl}/api/tarificador/pilotaje/comando`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${c.secreto}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trabajoId, n }),
+      signal: AbortSignal.timeout(15_000),
+    })
+    if (res.status === 404) return { estado: 'perdido' }
+    if (res.status !== 200) return { estado: 'error' }
+    const j = (await res.json().catch(() => null)) as { comando?: unknown } | null
+    return { estado: 'ok', comando: j?.comando ?? null }
+  } catch {
+    return { estado: 'error' }
+  }
+}
+
+export type CuerpoCierrePilotaje = {
+  trabajoId: string
+  motivoFin: string
+  nUltimo?: number
+  resultadoUltimo?: ResultadoComandoPilotaje
+  error?: { tipo: string; mensaje: string }
+  botVersion?: string
+}
+
+/** `POST /api/tarificador/pilotaje/cierre`: hasta 3 intentos ante red/5xx. */
+export async function cerrarPilotaje(c: Config, cuerpo: CuerpoCierrePilotaje, esperar: (ms: number) => Promise<void> = dormir): Promise<number> {
+  let ultimo = 0
+  for (let i = 0; i < 3; i++) {
+    try {
+      const res = await fetch(`${c.apiUrl}/api/tarificador/pilotaje/cierre`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${c.secreto}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(cuerpo),
+        signal: AbortSignal.timeout(30_000),
+      })
+      ultimo = res.status
+      if (res.status < 500) return res.status
     } catch {
       ultimo = 0
     }
