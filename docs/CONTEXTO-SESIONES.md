@@ -66,6 +66,12 @@ Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; ti
 original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados revisado/falta_roto/devuelto + bloque en ficha. `rrhh.material_empleado`
 (0028, aplicada). Pendiente fase 2: revisión periódica mensual.
 
+## (03/11/2026) Captación · parado el mailing en frío de ia-rest/ialimp; foco 100% correduría
+- Quitados 9 crons de outreach de `apps/ia-rest/vercel.json` (se dejan crm-recordatorios y pipeline-comercial: solo Telegram a Alberto).
+- BD: 2 campañas ialimp pausadas, 10 envíos pendientes → `omitido`; 277 borradores de `iarest.leads` borrados (los 142 enviados intactos).
+- Estrategia propuesta (pendiente de OK de Alberto): empresa MEDIANA familiar (20-250 emp.), no grande; canales: cartera propia (LSSI 21.2) > gestorías socias > LinkedIn > asociaciones; NO mailing en frío (LSSI art. 21).
+- Pendiente antes de captar: landing `/empresas` en asegura-web, cuenta demo del portal, contrato de encargo RRHH del abogado.
+
 ## (03/11/2026) Facturas · pólizas de clientes y comisiones de portal NO son gasto + bandeja de pendientes
 - Regla Alberto: recibo/liquidación de póliza de un CLIENTE (tomador ≠ Alberto/Pilar) NO es gasto (la comisión entra neta por banco); factura de comisión de Booking/Airbnb/Expedia/Vrbo = justificante, la comisión ya va como bruto−neto en `incomes`. Helpers `lib/agente-facturas/{poliza-cliente,portal-comision}.ts` (tomador dudoso → bandeja con aviso). Skills/agentes actualizados.
 - Bug: `/expenses/pendientes` (`lib/agente-facturas/pendientes.ts`) no filtraba `descartado_at` → enseñaba 9 ya descartados (50→41). Cepo `pendientes-vigente.test.ts`.
