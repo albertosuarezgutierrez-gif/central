@@ -77,7 +77,7 @@ original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados
 ## (03/11/2026) Correduría · regularización RC de Occident automatizada (fases 1-2)
 - F1: parser saca periodo/fecha carta/recordatorio; clave tarea póliza+periodo; vence carta+15d (mín. hoy+2); 2º aviso → prioridad alta + ⚠️ en Telegram.
 - F2: al crear la tarea, petición de facturación al cliente: borrador → Telegram ✅/✏️ → enlace `/datos/[token]` del portal → cifra guardada + aviso. Nada sale sin ✅.
-- 🚨 PENDIENTE OK Alberto: aplicar `apps/asegura/prisma/sql/2026-11-03b_solicitud_regularizacion_rc.sql` (tabla `seguros.solicitud_regularizacion`); sin él, 503 `sin_migracion` y todo sigue como antes.
+- ✅ PR #5460 mergeado; SQL `2026-11-03b_solicitud_regularizacion_rc.sql` APLICADO en central (RLS on, solo `prisma_seguros` S/I/U, verificado). Revisión architect sin bloqueantes; arreglados atasco en `enviando` y 422 en editar.
 - Fase 3 (responder a Occident con la cifra + cierre automático) sin hacer. Subtipo filtrable en bandeja exigiría migración del CHECK.
 
 ## (03/11/2026) Sivra · mensajes de huésped de Agoda por correo
