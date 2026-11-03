@@ -88,7 +88,7 @@ const ctxCon = (r: Registro, page: () => Page, conPuertas = true) => ({
   } : {}),
 }) as unknown as ContextoPortal
 
-test('v0.2.74 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.74'))
+test('v0.2.74 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.75'))
 
 test('puras: el obligatorio de BOTÓN «Historial siniestral obtenido» se localiza (por name exacto) y solo a la vista', () => {
   const o = (x: Partial<ObligatorioPasoGenerali>): ObligatorioPasoGenerali => ({ etiqueta: '', name: '', tipo: 'boton', opciones: [], vacio: false, visible: true, editable: false, ...x })

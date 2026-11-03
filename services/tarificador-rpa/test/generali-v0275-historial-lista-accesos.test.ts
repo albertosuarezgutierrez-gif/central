@@ -1,0 +1,183 @@
+// Generali auto v0.2.75 (trabajo real 03/11/2026 con 0.2.74, volcado fallo-12142ffe): tras pulsar «Historial Siniestral» el MISMO marco `emiAutosGenB028.do`
+// enseña la pantalla del historial (`form#profile` con acción `/emi_genAutosFormWeb/histSiniestral.do`, encabezados «Lista de Accesos» / «Lista de Resultados»,
+// pestaña `#secundario` «Historial Siniestral» con `pedirPaso('0','0');return false;`) y UN solo «Volver»: `#navegacion input#cancelar[name=cancelar]`,
+// `eventAndSubmit('CANCEL');`. La salida lo contaba DOS veces (getByText casa los `input[type=button]` por su value, y `porValor` también) → atasco
+// «2 controles visibles con ese rótulo». Ahora: los `<input>` solo entran por valor; un empate real solo se resuelve por ESE «Volver» de la barra; y la
+// pestaña «Historial Siniestral» de «Lista de Accesos» se pulsa UNA vez por su puerta. Fixtures SINTÉTICAS con la forma del volcado (sin valores reales).
+import assert from 'node:assert/strict'
+import { existsSync, readdirSync } from 'node:fs'
+import { join } from 'node:path'
+import { after, before, test } from 'node:test'
+import { chromium, type Browser, type Page } from 'playwright'
+import { completarHistorialObtenidoGenerali, VERSION_GENERALI_AUTO } from '../src/adapters/generali/auto.ts'
+import { EmisionBloqueadaError } from '@central/module-tarificacion'
+import {
+  instalarGuardEmision, onclickExactoGenerali, pulsarHistorialObtenidoGenerali, pulsarPestanaHistorialObtenidoGenerali, pulsarSalidaHistorialObtenidoGenerali,
+  ONCLICK_PESTANA_HISTORIAL_GENERALI, ONCLICK_VOLVER_HISTORIAL_GENERALI, type GuardEmision,
+} from '../src/guard.ts'
+import type { ContextoPortal } from '../src/adaptador.ts'
+
+let browser: Browser
+before(async () => {
+  try {
+    browser = await chromium.launch({ headless: true })
+  } catch (e) {
+    const base = process.env.PLAYWRIGHT_BROWSERS_PATH ?? '/opt/pw-browsers'
+    const dir = existsSync(base) ? readdirSync(base).filter((d) => /^chromium-\d+$/.test(d)).sort().pop() : undefined
+    const exe = dir ? join(base, dir, 'chrome-linux', 'chrome') : null
+    if (!exe || !existsSync(exe)) throw e
+    browser = await chromium.launch({ headless: true, executablePath: exe })
+  }
+})
+after(async () => { await browser?.close() })
+
+const PORTAL_G = 'https://www.generali.es/arq_genernetPortalFormWeb/CorredorPortal.po'
+const B028_G = 'https://www.generali.es/emi_genAutosFormWeb/emiAutosGenB028.do'
+
+const req = '<div class="trueInline required"><span> * </span></div>'
+/** «Garantías y Resultados» con «Envío e-mail» y «Bonus-Malus» › «Historial siniestral obtenido» (botón), como en 0.2.74. */
+const GARANTIAS = `<div id="reg1063EIdentification">
+  <h2>Garantías y Capitales opcionales</h2>
+  <div id="reg1063E_opcEnvioIdentification"><h2>Envío Documentación Precontractual</h2></div>
+  <h2>Bonus-Malus</h2>
+  <div class="falseInline simple" id="reg1063E_bonusMalus_zhsdetIdentification"><div class="falseInline column1"><span> Historial siniestral obtenido </span>${req}</div>
+  <div class="falseInline column2"><input type="button" name="reg1063E.bonusMalus.zhsdet" value="Historial Siniestral" onclick="link('histsin');" id="reg1063E_bonusMalus_zhsdet"></div></div>
+</div>`
+
+/** Pantalla del historial con la forma del volcado 12142ffe (tablas vacías, botones de mantenimiento, barra de navegación con UN «Volver»). */
+const tabla = (id: string, titulo: string) => `<div class="falseBlock maintenanceTableSummary" id="reg1098_${id}Identification"><h2 class="falseBlock headline"><span> ${titulo} </span></h2>
+  <table><thead><tr><th><span> Figura </span></th></tr></thead><tbody class="maintenanceTableSummaryBody"></tbody><tfoot><tr><td>
+  <button onclick="TratarMaintenanceTable('','reg1098_${id}Value','altaMT','/maintenanceTableServiceBonus.do',false,true);"> Alta </button>
+  <button onclick="TratarMaintenanceTable('','reg1098_${id}Value','consultarMT','/maintenanceTableServiceBonus.do',false,true);"> Consulta </button>
+  </td></tr></tfoot></table></div>`
+const histsin = (o: { pestana?: string; volver?: string; extraVolver?: string; lista?: string } = {}) => `
+<div id="pestanyas">
+  <ul id="principal"><li class="currentPst mclick"><span class="opc"><a class="current">Historial Siniestral</a></span>
+    <ul style="display:none"><li onclick="pedirPaso('0','0');return false;"><a>Historial Siniestral</a></li></ul></li></ul>
+  <ul id="secundario"><li onclick="${o.pestana ?? "pedirPaso('0','0');return false;"}" class="current"><a><span>Historial Siniestral</span></a></li></ul>
+</div>
+<div id="cuerpo"><div id="areaNegocio">
+  <form id="profile" name="profile" onsubmit="return false;" action="/emi_genAutosFormWeb/histSiniestral.do" method="post">
+    <div class="falseBlock form" id="reg1098Identification">${tabla('tabfig', o.lista ?? 'Lista de Accesos')}${tabla('polisin', 'Lista de Resultados')}</div>
+  </form>${o.extraVolver ?? ''}
+</div></div>
+<div id="navegacion"><div class="izq"><ul><li><input type="button" name="cancelar" id="cancelar" value="Volver" onclick="${o.volver ?? "eventAndSubmit('CANCEL');"}" class="falseHidden"></li></ul></div></div>`
+
+/** Marco B028: `link('histsin')` pinta la pantalla del historial en el MISMO documento (misma URL); «Volver» devuelve «Garantías y Resultados». */
+const b028 = (h: string) => `<script>
+  const G = ${JSON.stringify(GARANTIAS)}; const H = ${JSON.stringify(h)};
+  function link(x) { if (x === 'histsin') setTimeout(() => { document.getElementById('cont').innerHTML = H; }, 100); }
+  function pedirPaso(a, b) { parent.__paso = (parent.__paso || 0) + 1; }
+  function eventAndSubmit(ev) { parent.__cancel = (parent.__cancel || 0) + 1; setTimeout(() => { document.getElementById('cont').innerHTML = G; }, 100); }
+  function TratarMaintenanceTable() { parent.__mt = (parent.__mt || 0) + 1; }
+</script><div id="cont">${GARANTIAS}</div>`
+
+async function abrirGuard(cuerpoB028: string): Promise<{ page: Page; guard: GuardEmision; cerrar: () => Promise<void> }> {
+  const context = await browser.newContext()
+  const guard = await instalarGuardEmision(context)
+  await context.route('https://www.generali.es/**', async (rr) => {
+    const u = rr.request().url()
+    const cuerpo = u.startsWith(PORTAL_G) ? `<iframe name="mainFrame" src="${B028_G}" style="width:1000px;height:700px"></iframe>` : cuerpoB028
+    await rr.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: `<!doctype html><body>${cuerpo}</body>` })
+  })
+  const page = await context.newPage()
+  page.setDefaultTimeout(2_000)
+  await page.goto(PORTAL_G)
+  for (let i = 0; i < 40 && !page.frames().some((f) => f.url().startsWith(B028_G)); i++) await new Promise((x) => setTimeout(x, 100))
+  await page.frames().find((f) => f.name() === 'mainFrame')!.locator('input[name="reg1063E.bonusMalus.zhsdet"]').waitFor()
+  return { page, guard, cerrar: () => context.close() }
+}
+const marco = (page: Page) => page.frames().find((f) => f.name() === 'mainFrame')!
+const contador = (page: Page, k: string) => page.evaluate((c) => (window as unknown as Record<string, number>)[c] ?? 0, k)
+const bloqueaG = (re: RegExp) => (e: unknown) => e instanceof EmisionBloqueadaError && re.test((e as Error).message)
+async function entrar(page: Page, guard: GuardEmision) {
+  await pulsarHistorialObtenidoGenerali(page, guard)
+  await marco(page).locator('#navegacion input#cancelar').waitFor()
+}
+
+test('v0.2.75 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.75'))
+
+test('puras: onclick exacto (salvo espacios) del «Volver» de la barra y de la pestaña del historial', () => {
+  assert.equal(onclickExactoGenerali("eventAndSubmit('CANCEL');", ONCLICK_VOLVER_HISTORIAL_GENERALI), true)
+  assert.equal(onclickExactoGenerali(" eventAndSubmit( 'CANCEL' ); ", ONCLICK_VOLVER_HISTORIAL_GENERALI), true)
+  for (const x of ["eventAndSubmit('EMITIR');", "eventAndSubmit('CANCEL');emitir();", '', null]) assert.equal(onclickExactoGenerali(x, ONCLICK_VOLVER_HISTORIAL_GENERALI), false, String(x))
+  assert.equal(onclickExactoGenerali("pedirPaso('0','0');return false;", ONCLICK_PESTANA_HISTORIAL_GENERALI), true)
+  for (const x of ["pedirPaso('1','0');return false;", "pedirPaso('0','0');", "link('emitir');"]) assert.equal(onclickExactoGenerali(x, ONCLICK_PESTANA_HISTORIAL_GENERALI), false, x)
+})
+
+test('volcado 12142ffe: la salida encuentra UN solo «Volver» (el `input#cancelar` ya no se cuenta dos veces) y lo pulsa', async () => {
+  const { page, guard, cerrar } = await abrirGuard(b028(histsin()))
+  try {
+    await entrar(page, guard)
+    const s = await pulsarSalidaHistorialObtenidoGenerali(page, guard)
+    assert.equal(s.texto, 'Volver')
+    assert.equal(await contador(page, '__cancel'), 1)
+    assert.equal(await contador(page, '__mt'), 0, 'ningún botón de mantenimiento (Alta/Consulta…)')
+  } finally { await cerrar() }
+})
+
+test('empate REAL de «Volver»: solo desempata el de la barra `#navegacion` con onclick exacto; si no es exacto, sigue el atasco', async () => {
+  const extra = '<p><a href="#" onclick="parent.__otro=1;return false;">Volver</a></p>'
+  {
+    const { page, guard, cerrar } = await abrirGuard(b028(histsin({ extraVolver: extra })))
+    try {
+      await entrar(page, guard)
+      await pulsarSalidaHistorialObtenidoGenerali(page, guard)
+      assert.equal(await contador(page, '__cancel'), 1)
+      assert.equal(await contador(page, '__otro'), 0)
+    } finally { await cerrar() }
+  }
+  {
+    // El de la barra con OTRO onclick: no desempata → «2 controles visibles» y no se pulsa nada.
+    const { page, guard, cerrar } = await abrirGuard(b028(histsin({ extraVolver: extra, volver: "eventAndSubmit('OTRO');" })))
+    try {
+      await entrar(page, guard)
+      await assert.rejects(() => pulsarSalidaHistorialObtenidoGenerali(page, guard), /2 controles visibles con ese rótulo/)
+      assert.equal(await contador(page, '__cancel'), 0)
+      assert.equal(await contador(page, '__otro'), 0)
+    } finally { await cerrar() }
+  }
+})
+
+test('pestaña «Historial Siniestral» de «Lista de Accesos»: solo tras la entrada, UNA vez, onclick exacto; tras salir, bloqueada', async () => {
+  {
+    const { page, guard, cerrar } = await abrirGuard(b028(histsin()))
+    try {
+      await assert.rejects(() => pulsarPestanaHistorialObtenidoGenerali(page, guard), bloqueaG(/sin haberlo abierto por su puerta/))
+      await entrar(page, guard)
+      await pulsarPestanaHistorialObtenidoGenerali(page, guard)
+      assert.equal(await contador(page, '__paso'), 1)
+      await assert.rejects(() => pulsarPestanaHistorialObtenidoGenerali(page, guard), bloqueaG(/ya se pulsó/))
+      assert.equal(await contador(page, '__paso'), 1, 'la 2.ª no llega al portal')
+      await pulsarSalidaHistorialObtenidoGenerali(page, guard)
+      await assert.rejects(() => pulsarPestanaHistorialObtenidoGenerali(page, guard), bloqueaG(/tras haber salido/))
+    } finally { await cerrar() }
+  }
+  for (const o of [{ pestana: "pedirPaso('1','0');return false;" }, { lista: 'Lista de Pólizas' }]) {
+    const { page, guard, cerrar } = await abrirGuard(b028(histsin(o)))
+    try {
+      await entrar(page, guard)
+      await assert.rejects(() => pulsarPestanaHistorialObtenidoGenerali(page, guard), /0 visibles con rótulo y onclick exactos/)
+      assert.equal(await contador(page, '__paso'), 0)
+    } finally { await cerrar() }
+  }
+})
+
+test('flujo con las puertas REALES: entrada → pestaña «Historial Siniestral» (una vez) → salida por el «Volver» de la barra → de vuelta en «Garantías y Resultados»', async () => {
+  const { page, guard, cerrar } = await abrirGuard(b028(histsin()))
+  try {
+    const ctx = {
+      pausaAccion: async () => undefined,
+      pulsar: async (l: { click: () => Promise<void> }) => { await l.click() },
+      obtenerHistorialSiniestralGenerali: () => pulsarHistorialObtenidoGenerali(page, guard),
+      pestanaHistorialSiniestralGenerali: () => pulsarPestanaHistorialObtenidoGenerali(page, guard),
+      salirHistorialSiniestralGenerali: () => pulsarSalidaHistorialObtenidoGenerali(page, guard),
+    } as unknown as ContextoPortal
+    const res = await completarHistorialObtenidoGenerali(page, ctx, { aniosAseguradoAnterior: 5, siniestrosUltimos5Anios: 0 }, [], 2_000)
+    assert.ok(res)
+    assert.equal(await contador(page, '__paso'), 1, 'pestaña pulsada una vez')
+    assert.equal(await contador(page, '__cancel'), 1, 'salida por el «Volver» de la barra')
+    assert.equal(await contador(page, '__mt'), 0)
+    assert.match(res.nota, /pestaña «Historial Siniestral» de «Lista de Accesos» pulsada; .*salida por «Volver»; de vuelta en «Garantías y Resultados»/)
+  } finally { await cerrar() }
+})
