@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-03T21:38:33Z",
-  "sha": "ea917b28c6a7e95cd7495b6e17d1177283f21370",
+  "generadoEn": "2026-11-03T22:22:43Z",
+  "sha": "ea3988ec0a6a06e599a69b4ae3459522ed3a8abd",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -33305,6 +33305,36 @@
       "hash": "19eefef604de"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/tarificador/pilotaje/[id]/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 19,
+          "resumen": "`GET /api/operador/tarificador/pilotaje/[id]?limite=3` — estado de una sesión pilotada: cabecera y los últimos pasos (inventario saneado y redactado, comando, resultado) con la URL FIRMADA (10 min) de"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/tarificador/pilotaje/[id]",
+      "hash": "392081b522d2"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/tarificador/pilotaje/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [],
+      "rutaApi": "/api/operador/tarificador/pilotaje",
+      "hash": "6ea2407f92c1"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/tarificador/presupuesto-rpa/route.ts",
       "ambito": "apps/asegura",
       "exporta": [],
@@ -34281,6 +34311,69 @@
       "tablas": [],
       "rutaApi": "/api/tarificador/formador/sugerir",
       "hash": "d276d76607fc"
+    },
+    {
+      "ruta": "apps/asegura/app/api/tarificador/pilotaje/cierre/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 15,
+          "resumen": "`POST /api/tarificador/pilotaje/cierre` `{ trabajoId, motivoFin, nUltimo?, resultadoUltimo?, error?, botVersion? }` — el worker cierra la sesión: la cabecera queda cerrada y el trabajo termina `ok` (o"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/tarificador/pilotaje/cierre",
+      "hash": "1dfa7ad03c6f"
+    },
+    {
+      "ruta": "apps/asegura/app/api/tarificador/pilotaje/comando/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 18,
+          "resumen": "`POST /api/tarificador/pilotaje/comando` `{ trabajoId, n }` — el worker sondea (cada 2 s) si hay comando para la pantalla `n`. 200 `{ comando: {...} | null, leaseHasta }`. Al servirlo, la fila pasa a "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/tarificador/pilotaje/comando",
+      "hash": "74147a465e90"
+    },
+    {
+      "ruta": "apps/asegura/app/api/tarificador/pilotaje/estado/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 18,
+          "resumen": "`POST /api/tarificador/pilotaje/estado` — el worker, en MODO PILOTADO, publica la pantalla `n`: inventario saneado (se REDACTA aquí otra vez con `redactarValoresInventario` antes de guardarlo), captur"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/tarificador/pilotaje/estado",
+      "hash": "7de5da99c62f"
     },
     {
       "ruta": "apps/asegura/app/api/tarificador/resultado/route.ts",
@@ -51211,6 +51304,7 @@
         "hayEmision",
         "hayIpidHuella",
         "hayExplorador",
+        "hayPilotaje",
         "hayConfianzaAprendido",
         "hayPausas",
         "hayAtascos",
@@ -51270,12 +51364,21 @@
           "resumen": "Explorador IA (SQL 2026-10-13_tarificador_explorador): sin él, `/api/tarificador/explorador/*` responde 503."
         },
         {
+          "nombre": "hayPilotaje",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 26,
+          "resumen": "Modo pilotado (SQL 2026-11-03c_tarificador_pilotaje): sin él, las rutas /api/tarificador/pilotaje/* responden 503."
+        },
+        {
           "nombre": "hayConfianzaAprendido",
           "kind": "arrow",
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 27,
+          "linea": 29,
           "resumen": "F2 del plan de robustez (SQL 2026-10-14e_tarificador_robustez_f2): sin él, lo aprendido sigue sin confianza, no hay corte por compañía/ramo y un atasco cae a `error_definitivo` como antes."
         },
         {
@@ -51284,7 +51387,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 28
+          "linea": 30
         },
         {
           "nombre": "hayAtascos",
@@ -51292,7 +51395,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 29
+          "linea": 31
         },
         {
           "nombre": "hayAnulacionConfirmada",
@@ -51300,7 +51403,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 32,
+          "linea": 34,
           "resumen": "«Anulación confirmada por la compañía» (SQL 2026-10-17_poliza_anulacion_confirmada): sin él, el sello responde 503 `sin_migracion` y el seguimiento de sustituciones no lo tiene en cuenta (sí el «vence"
         },
         {
@@ -51309,7 +51412,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 35,
+          "linea": 37,
           "resumen": "Imagen del bot desde la BD (SQL 2026-10-27_tarificador_imagen): sin él, la imagen sale de la env `TARIFICADOR_FLY_IMAGE` como antes y `probar` con `imagen` responde 403."
         },
         {
@@ -51318,14 +51421,14 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 36
+          "linea": 38
         }
       ],
       "tablas": [
         "information_schema"
       ],
       "rutaApi": null,
-      "hash": "0bf9e5d7fafa"
+      "hash": "b401af1c123d"
     },
     {
       "ruta": "apps/asegura/lib/esquema-opcional.ts",
@@ -65180,7 +65283,7 @@
         "seguros"
       ],
       "rutaApi": null,
-      "hash": "17ef0a07bdba"
+      "hash": "a62b78bfb69d"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-codigo-sms-reglas.ts",
@@ -66627,7 +66730,7 @@
           "kind": "function",
           "exportada": true,
           "params": "modo: string | null, modosWorker: readonly string[] = ['tarificar', 'emision']",
-          "retorno": "'tarificar' | 'emision' | 'exploracion' | 'humo' | null",
+          "retorno": "'tarificar' | 'emision' | 'exploracion' | 'humo' | 'pilotaje' | null",
           "linea": 81,
           "resumen": "Qué `modo` se le sirve al worker por `/api/tarificador/trabajo/[id]`. Un modo que el worker no conoce NO se sirve (`null`): una imagen anterior a la fase B trata todo lo que no es `emision` como `tari"
         },
@@ -66637,7 +66740,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined>",
           "retorno": "string[]",
-          "linea": 95,
+          "linea": 97,
           "resumen": "Modos que el lanzador puede RECLAMAR de la cola. `exploracion` solo con el interruptor encendido (y Alberto lo enciende cuando `TARIFICADOR_FLY_IMAGE` ya es una imagen con el explorador): así una expl"
         },
         {
@@ -66646,7 +66749,7 @@
           "exportada": true,
           "params": "iniciadoAt: Date | null, primerPasoAt: Date | null",
           "retorno": "Date | null",
-          "linea": 107,
+          "linea": 110,
           "resumen": "Inicio ACUMULADO de la exploración: el más antiguo entre el reclamo actual (`iniciado_at`) y el primer paso guardado (un reintento tras un fallo de infra NO pone el reloj a cero). `null` = aún no cons"
         },
         {
@@ -66655,7 +66758,7 @@
           "exportada": true,
           "params": "p: { ahora: Date; inicio: Date | null; leaseMs: number; maxMs: number }",
           "retorno": "Date",
-          "linea": 116,
+          "linea": 119,
           "resumen": "Lease RENOVADO en cada paso de exploración (el de 6 min no basta si cada paso va a la IA): ahora + `leaseMs`, pero NUNCA más allá del tope de tiempo acumulado + margen de cierre. Si el tope ya pasó, d"
         },
         {
@@ -66664,7 +66767,7 @@
           "exportada": true,
           "params": "estadoPolitica: E, cabeceraCerrada: boolean",
           "retorno": "E | 'error_definitivo'",
-          "linea": 128,
+          "linea": 131,
           "resumen": "Estado del trabajo de EXPLORACIÓN tras un fallo (13/10/2026). Un `error_reintentable` con la cabecera YA cerrada (el worker cierra antes de reportar) no se reintenta: el reintento recibiría 404 de `tr"
         },
         {
@@ -66673,7 +66776,7 @@
           "exportada": true,
           "params": "estado: string",
           "retorno": "boolean",
-          "linea": 133,
+          "linea": 136,
           "resumen": "Un fallo que NO se reintenta deja la cabecera cerrada (la pantalla no la muestra «abierta» para siempre)."
         },
         {
@@ -66682,7 +66785,7 @@
           "exportada": true,
           "params": "cabeceraCerrada: boolean | null | undefined",
           "retorno": "boolean",
-          "linea": 138,
+          "linea": 141,
           "resumen": "Un `explorado` solo vale si la cabecera está cerrada (el mapa guardado); sin cabecera = no cerrada."
         },
         {
@@ -66691,7 +66794,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 143
+          "linea": 146
         },
         {
           "nombre": "sanearVistaAria",
@@ -66699,7 +66802,7 @@
           "exportada": true,
           "params": "v: unknown, valoresSensibles: readonly string[] = []",
           "retorno": "string | undefined",
-          "linea": 163,
+          "linea": 166,
           "resumen": "Vista aria opcional del worker → texto seguro para el prompt, o `undefined`. NO se fía de que llegue redactada: valores de campos fuera, datos personales y valores conocidos del cliente fuera, tope de"
         },
         {
@@ -66708,7 +66811,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "",
-          "linea": 184,
+          "linea": 187,
           "resumen": "Cuerpo de `POST /api/tarificador/explorador/paso`: `{ trabajoId, inventario, avancesFallidos? }`. El inventario se RE-SANEA aquí (defensa en profundidad) conservando las refs del worker. Sin elementos"
         },
         {
@@ -66717,7 +66820,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "",
-          "linea": 212,
+          "linea": 215,
           "resumen": "Cuerpo de `POST /api/operador/tarificador/exploracion`: `{ entrada, trabajoOrigenId? | oportunidadId? }`. La entrada tiene que ser de la lista CERRADA (`ENTRADAS_EXPLORACION`: nada de URLs). Las dos a"
         },
         {
@@ -66726,7 +66829,7 @@
           "exportada": true,
           "params": "motivoFin: MotivoFin, detalle: DetalleFinExploracion | null",
           "retorno": "string | null",
-          "linea": 253,
+          "linea": 256,
           "resumen": "El hueco que deja en el mapa el DETALLE de la parada del worker (14/10/2026): qué comprobación cortó, sin valores. `null` si no hay detalle. No hay columna propia: va a `mapa.huecos`, que es lo que se"
         },
         {
@@ -66735,7 +66838,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 259,
+          "linea": 262,
           "resumen": "0.3.11: nota de fin del worker. SOLO «frontera bancaria: campo «<nombre de CAMPOS_BANCARIOS>»»; cualquier otra se ignora."
         },
         {
@@ -66744,7 +66847,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "",
-          "linea": 268
+          "linea": 271
         },
         {
           "nombre": "faseLoginPermitida",
@@ -66752,7 +66855,7 @@
           "exportada": true,
           "params": "fase: 'normal' | 'login', entrada: string",
           "retorno": "boolean",
-          "linea": 332,
+          "linea": 335,
           "resumen": "¿Se admite un paso de fase `login` para esta entrada? Solo si su compañía está en `LOGIN_ASISTIDO` (módulo; hoy Occident). La fase normal, siempre. Pura."
         },
         {
@@ -66761,7 +66864,7 @@
           "exportada": true,
           "params": "inv: InventarioDom",
           "retorno": "string",
-          "linea": 358,
+          "linea": 361,
           "resumen": "El inventario como JSON para el prompt, con `<` y `>` neutralizados (→ ‹ ›): el texto del portal (no confiable) no puede cerrar `</inventario>` ni abrir otra etiqueta del prompt. El JSON sigue siendo "
         },
         {
@@ -66770,7 +66873,7 @@
           "exportada": true,
           "params": "inv: InventarioDom",
           "retorno": "InventarioDom",
-          "linea": 364
+          "linea": 367
         },
         {
           "nombre": "promptLoginExplorador",
@@ -66778,7 +66881,7 @@
           "exportada": true,
           "params": "e: { entrada: string; inventario: InventarioDom; historial: string[]; avancesFallidos: number; pantallasLogin: number }",
           "retorno": "string",
-          "linea": 380,
+          "linea": 383,
           "resumen": "El mensaje de usuario de la fase de login: entrada, claves (sin valores), pasos anteriores y el inventario como DATOS."
         },
         {
@@ -66787,7 +66890,7 @@
           "exportada": true,
           "params": "pasos: readonly { respuesta: RespuestaExplorador | null }[]",
           "retorno": "string[]",
-          "linea": 391,
+          "linea": 394,
           "resumen": "Una línea por paso anterior: pantalla y acciones por CLAVE/ref (nunca valores)."
         },
         {
@@ -66796,7 +66899,7 @@
           "exportada": true,
           "params": "e: EntradaPrompt",
           "retorno": "string",
-          "linea": 418,
+          "linea": 421,
           "resumen": "El mensaje de usuario. El texto del portal va DELIMITADO como datos (`<inventario>`), en JSON: un intento de inyección desde el DOM se queda en una cadena dentro de un objeto. El catálogo va sin valor"
         },
         {
@@ -66805,7 +66908,7 @@
           "exportada": true,
           "params": "pasos: readonly PasoGuardado[], iniciadoAt: Date | null, ahora: Date",
           "retorno": "",
-          "linea": 450,
+          "linea": 453,
           "resumen": "Lo gastado hasta ahora por la exploración (para `comprobarTopes`). `iniciadoAt` null = ahora (0 ms)."
         },
         {
@@ -66814,13 +66917,13 @@
           "exportada": true,
           "params": "mapas: readonly { estado: string; mapa: unknown }[], huella: string",
           "retorno": "PantallaMapaExploracion | null",
-          "linea": 464,
+          "linea": 467,
           "resumen": "MEMORIA: la pantalla con esa huella en los mapas guardados (válidos) de la compañía/producto. Gana un mapa REVISADO por una persona; entre iguales, el primero de la lista (la consulta los trae del más"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c48bcd9fdae2"
+      "hash": "138548702e57"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-explorador.ts",
@@ -69182,7 +69285,298 @@
         "seguros"
       ],
       "rutaApi": null,
-      "hash": "c1c1ce2b1d27"
+      "hash": "72a9e18f6687"
+    },
+    {
+      "ruta": "apps/asegura/lib/tarificador-pilotaje-reglas.ts",
+      "ambito": "apps/asegura",
+      "resumen": "MODO PILOTADO del tarificador RPA (03/11/2026) — reglas PURAS de asegura. La parte con BD/Storage está en `tarificador-pilotaje.ts`; las rutas en app/api/tarificador/pilotaje/* (worker) y app/api/operador/tarificador/pilotaje* (operador). Una sesión = un trabajo `modo = 'pilotaje'` SINTÉTICO (sin cl",
+      "exporta": [
+        "leerComandoPilotaje",
+        "leerResultadoComando",
+        "redactarTextoPilotaje",
+        "redactarResultadoPilotaje",
+        "leerPeticionEncolarPilotaje",
+        "leerPeticionEstado",
+        "urlSinQuery",
+        "esPngBase64",
+        "rutaCapturaPilotaje",
+        "leasePilotaje",
+        "leerPeticionCierre",
+        "estadoPasoTrasResultado"
+      ],
+      "funciones": [
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 12
+        },
+        {
+          "nombre": "leerComandoPilotaje",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "",
+          "linea": 40,
+          "resumen": "Forma de un comando (operador → BD → worker). Fail-closed: clave desconocida o acción fuera de lista → error. PURA."
+        },
+        {
+          "nombre": "leerResultadoComando",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "ResultadoComando | null",
+          "linea": 87
+        },
+        {
+          "nombre": "redactarTextoPilotaje",
+          "kind": "function",
+          "exportada": true,
+          "params": "t: string, valores: readonly string[]",
+          "retorno": "string",
+          "linea": 100,
+          "resumen": "Campos de DIAGNÓSTICO nuevos (motivo/detalle del resultado, URL): la misma barrera que `redactarValoresInventario` aplica a cada texto del inventario (`contieneValorSensible` con los valores sensibles"
+        },
+        {
+          "nombre": "redactarResultadoPilotaje",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ResultadoComando | null, valores: readonly string[]",
+          "retorno": "ResultadoComando | null",
+          "linea": 103
+        },
+        {
+          "nombre": "leerPeticionEncolarPilotaje",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: unknown",
+          "retorno": "",
+          "linea": 110,
+          "resumen": "Cuerpo de `POST /api/operador/tarificador/pilotaje`: `{ entrada }` y nada más (sintética siempre). PURA."
+        },
+        {
+          "nombre": "leerPeticionEstado",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: unknown",
+          "retorno": "",
+          "linea": 135,
+          "resumen": "Cuerpo de `POST /api/tarificador/pilotaje/estado` (worker). PURA."
+        },
+        {
+          "nombre": "urlSinQuery",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 162,
+          "resumen": "Solo origen + ruta (la query puede llevar tokens o datos): nunca se guarda entera. PURA."
+        },
+        {
+          "nombre": "esPngBase64",
+          "kind": "function",
+          "exportada": true,
+          "params": "b64: string",
+          "retorno": "boolean",
+          "linea": 174,
+          "resumen": "¿Es un PNG (firma de 8 bytes) en base64 y cabe en el tope? PURA."
+        },
+        {
+          "nombre": "rutaCapturaPilotaje",
+          "kind": "function",
+          "exportada": true,
+          "params": "sesionId: string, n: number",
+          "retorno": "string",
+          "linea": 181,
+          "resumen": "Ruta del objeto en el bucket: `pilotaje/<sesion>/<n>.png` (la misma forma que exige el CHECK de la tabla). PURA."
+        },
+        {
+          "nombre": "leasePilotaje",
+          "kind": "function",
+          "exportada": true,
+          "params": "k: { ahora: Date; inicio: Date | null; leaseMs: number }",
+          "retorno": "Date",
+          "linea": 187,
+          "resumen": "Lease renovado de una sesión: `ahora + leaseMs`, nunca más allá de inicio + 30 min + margen. PURA."
+        },
+        {
+          "nombre": "leerPeticionCierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: unknown",
+          "retorno": "",
+          "linea": 200,
+          "resumen": "Cuerpo de `POST /api/tarificador/pilotaje/cierre` (worker). PURA."
+        },
+        {
+          "nombre": "estadoPasoTrasResultado",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ResultadoComando | null",
+          "retorno": "'hecho' | 'rechazado' | null",
+          "linea": 216,
+          "resumen": "Estado de una fila tras el resultado de su comando. PURA."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "22ee475fe490"
+    },
+    {
+      "ruta": "apps/asegura/lib/tarificador-pilotaje.ts",
+      "ambito": "apps/asegura",
+      "resumen": "MODO PILOTADO del tarificador RPA (03/11/2026) — la parte con BD y Storage. Reglas puras en `tarificador-pilotaje-reglas.ts`; SQL en prisma/sql/2026-11-03c_tarificador_pilotaje.sql. 🛡️ Las rutas del worker solo conocen el id del trabajo: correduría, compañía, entrada… salen SIEMPRE de las filas (tr",
+      "exporta": [
+        "sesionViva",
+        "entradaDePilotaje",
+        "valoresPilotaje",
+        "redactarEstadoPilotaje",
+        "configStorage",
+        "subirCaptura",
+        "firmarCaptura",
+        "publicarEstado",
+        "recogerComando",
+        "cerrarSesion",
+        "encolarPilotaje",
+        "pasosParaOperador",
+        "ponerComando"
+      ],
+      "funciones": [
+        {
+          "nombre": "sesionViva",
+          "kind": "function",
+          "exportada": true,
+          "params": "trabajoId: string",
+          "retorno": "Promise<SesionViva | null>",
+          "linea": 17,
+          "resumen": "Solo una sesión cuyo trabajo está `en_curso` con lease vivo y su cabecera abierta."
+        },
+        {
+          "nombre": "entradaDePilotaje",
+          "kind": "function",
+          "exportada": true,
+          "params": "trabajoId: string, correduriaId: string",
+          "retorno": "Promise<string | null>",
+          "linea": 27,
+          "resumen": "La entrada de una sesión abierta (para servir el trabajo al worker)."
+        },
+        {
+          "nombre": "valoresPilotaje",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: string, env: Record<string, string | undefined>",
+          "retorno": "string[] | null",
+          "linea": 35,
+          "resumen": "Valores sensibles de una sesión (los de una exploración SINTÉTICA: contacto de entorno y, con tomador mediador, los suyos)."
+        },
+        {
+          "nombre": "redactarEstadoPilotaje",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PeticionEstado, entrada: string, env: Record<string, string | undefined>",
+          "retorno": "",
+          "linea": 44,
+          "resumen": "Redacción de TODO lo que el worker publica antes de guardarlo: inventario (`redactarValoresInventario`), URL y resultado del comando anterior (`redactarTextoPilotaje`). `null` = no se sabe qué quitar "
+        },
+        {
+          "nombre": "configStorage",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: Record<string, string | undefined>",
+          "retorno": "CfgStorage | null",
+          "linea": 57,
+          "resumen": "Sin URL o sin clave de servicio = sin Storage (el paso se publica sin captura). Nunca un literal por defecto."
+        },
+        {
+          "nombre": "subirCaptura",
+          "kind": "function",
+          "exportada": true,
+          "params": "cfg: CfgStorage | null, sesionId: string, n: number, png: Buffer, f: typeof fetch = fetch",
+          "retorno": "Promise<string | null>",
+          "linea": 65,
+          "resumen": "Sube el PNG (upsert). Devuelve la ruta o `null` (no lanza: la captura es un extra)."
+        },
+        {
+          "nombre": "firmarCaptura",
+          "kind": "function",
+          "exportada": true,
+          "params": "cfg: CfgStorage | null, ruta: string, f: typeof fetch = fetch",
+          "retorno": "Promise<string | null>",
+          "linea": 87,
+          "resumen": "URL firmada (10 min) de una captura. `null` = sin Storage o falló."
+        },
+        {
+          "nombre": "renovarLease",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: SesionViva",
+          "retorno": "Promise<string | null>",
+          "linea": 108,
+          "resumen": "Renueva el lease (nunca más allá de 30 min + margen desde el inicio; nunca lo acorta)."
+        },
+        {
+          "nombre": "publicarEstado",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: SesionViva, p: PeticionEstado, inventario: InventarioDom, capturaRuta: string | null",
+          "retorno": "Promise<ResultadoPublicar>",
+          "linea": 123,
+          "resumen": "Publica la pantalla `n`: anota el resultado del comando de `n-1` (solo si esa fila estaba `ejecutando`) e inserta `n`. `n` tiene que ser exactamente el siguiente (sin huecos ni repeticiones: un reinte"
+        },
+        {
+          "nombre": "recogerComando",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: SesionViva, n: number",
+          "retorno": "Promise<",
+          "linea": 148,
+          "resumen": "El worker RECOGE el comando de la fila `n` (si hay): `esperando` → `ejecutando`, atómico. Desde ese momento el comando queda congelado (el operador ya no puede cambiarlo). Sin comando, `null` (y se re"
+        },
+        {
+          "nombre": "cerrarSesion",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: SesionViva, p: PeticionCierre, botVersion: string | null",
+          "retorno": "Promise<void>",
+          "linea": 157,
+          "resumen": "Cierre: anota el último resultado, cierra la cabecera y termina el trabajo (`ok`, o `error_definitivo` con error)."
+        },
+        {
+          "nombre": "encolarPilotaje",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: { correduriaId: string; entrada: string; solicitadoPor: string }",
+          "retorno": "Promise<ResultadoEncolarPilotaje>",
+          "linea": 187,
+          "resumen": "Encola una sesión SINTÉTICA (sin cliente, riesgo `{}`): mismos cerrojos de integración que el explorador; una viva por compañía."
+        },
+        {
+          "nombre": "pasosParaOperador",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, sesionId: string, limite: number, cfg: CfgStorage | null",
+          "retorno": "Promise<",
+          "linea": 219,
+          "resumen": "Pasos de una sesión (los últimos `limite`, del más reciente al más antiguo) con la URL FIRMADA de cada captura."
+        },
+        {
+          "nombre": "ponerComando",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, sesionId: string, n: number, c: ComandoPilotaje",
+          "retorno": "Promise<boolean>",
+          "linea": 242,
+          "resumen": "Pone (o cambia) el comando de la fila `n` mientras ESPERA. `false` = la fila no espera (ya recogida, final o no existe)."
+        }
+      ],
+      "tablas": [
+        "seguros"
+      ],
+      "rutaApi": null,
+      "hash": "67d9c6acf0f9"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-purga-evidencia-reglas.ts",
@@ -69741,7 +70135,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "944816133964"
+      "hash": "9911afd10d52"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-relanzar-reglas.ts",
@@ -70594,7 +70988,7 @@
         "seguros"
       ],
       "rutaApi": null,
-      "hash": "bf62b5b5cbbf"
+      "hash": "6aa713800e98"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-worker-auth.ts",
@@ -70640,7 +71034,7 @@
           "exportada": true,
           "params": "correduriaId: string, compania: string, ramo: string",
           "retorno": "Promise<Integracion | null>",
-          "linea": 105
+          "linea": 106
         },
         {
           "nombre": "encolarTrabajo",
@@ -70648,7 +71042,7 @@
           "exportada": true,
           "params": "e: EntradaEncolar",
           "retorno": "Promise<ResultadoEncolar>",
-          "linea": 145
+          "linea": 146
         },
         {
           "nombre": "leerTomadorFicha",
@@ -70656,7 +71050,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<FilaTomadorFicha | null>",
-          "linea": 275,
+          "linea": 276,
           "resumen": "Nombre, apellidos, nacimiento y tipo de persona de la ficha TAL CUAL están en BD (lo cifrado, cifrado), de ESTA correduría. Los abre `lecturaTomadorFicha`. `null` = no hay ficha de esta correduría con"
         },
         {
@@ -70665,7 +71059,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<FilaFichaTomadorAuto | null>",
-          "linea": 289,
+          "linea": 290,
           "resumen": "Tomador de la ficha para `fichaTomador` (Allianz auto/moto, 17/10/2026): las columnas que lee Codeoscopic (`clienteOrigenDe`) más `ciudad`/`provincia` y los carnés, TAL CUAL (lo cifrado, cifrado), de "
         },
         {
@@ -70674,7 +71068,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<string | null>",
-          "linea": 321,
+          "linea": 322,
           "resumen": "DNI de la ficha TAL CUAL está en BD (cifrado `v1:` o legado), de ESTA correduría. Lo descifra `lecturaNifFicha`."
         },
         {
@@ -70683,7 +71077,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<string | null>",
-          "linea": 328,
+          "linea": 329,
           "resumen": "Como `leerCompaniaActualCliente` pero ESTRICTA (`companiaActualUnica`): solo con exactamente una póliza de auto en vigor. Para «probar»."
         },
         {
@@ -70692,7 +71086,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string | null, oportunidadId: string | null, decidir: (competencia: unknown, polizas: readonly PolizaParaCompaniaActual[] | null) => string | null = companiaActualDeCliente,",
           "retorno": "Promise<string | null>",
-          "linea": 333,
+          "linea": 334,
           "resumen": "Compañía con la que está asegurado hoy el cliente (columnas NO personales). `null` = no se sabe o la lectura falló."
         },
         {
@@ -70701,7 +71095,7 @@
           "exportada": false,
           "params": "correduriaId: string, oportunidadId: string | null, db: Db = prisma",
           "retorno": "Promise<string | null>",
-          "linea": 357,
+          "linea": 358,
           "resumen": "Número de la póliza actual declarado en la oportunidad (SOLO esa clave, de ESTA correduría). Dato sensible: nunca se registra. `null` = no hay o la lectura falló."
         },
         {
@@ -70710,7 +71104,7 @@
           "exportada": true,
           "params": "correduriaId: string, compania: string, modos: readonly string[] = ['tarificar', 'emision']",
           "retorno": "Promise<ReclamoCola>",
-          "linea": 389,
+          "linea": 390,
           "resumen": "uno de emisión → `requiere_humano`), así un trabajo colgado no bloquea la cola hasta el siguiente barrido."
         },
         {
@@ -70719,7 +71113,7 @@
           "exportada": false,
           "params": "",
           "retorno": "DepsLanzador",
-          "linea": 446
+          "linea": 447
         },
         {
           "nombre": "lanzarPendientes",
@@ -70727,7 +71121,7 @@
           "exportada": true,
           "params": "correduriaId: string, compania: string, deps: DepsLanzador = depsReales()",
           "retorno": "Promise<ResumenLanzar>",
-          "linea": 451,
+          "linea": 452,
           "resumen": "Lanza tantos trabajos como quepan para (correduría, compañía). Uno por máquina."
         },
         {
@@ -70736,7 +71130,7 @@
           "exportada": false,
           "params": "cfg: ConfigFly, jobId: string, f: typeof fetch",
           "retorno": "Promise<",
-          "linea": 496
+          "linea": 497
         },
         {
           "nombre": "destruirMaquina",
@@ -70744,7 +71138,7 @@
           "exportada": false,
           "params": "cfg: ConfigFly, machineId: string, f: typeof fetch",
           "retorno": "Promise<void>",
-          "linea": 510,
+          "linea": 511,
           "resumen": "Mejor esfuerzo: una máquina colgada se destruye (auto_destroy la quita sola si el proceso sale)."
         },
         {
@@ -70753,7 +71147,7 @@
           "exportada": true,
           "params": "id: string, modosWorker: readonly string[] = ['tarificar', 'emision']",
           "retorno": "Promise<TrabajoParaWorker | null>",
-          "linea": 536,
+          "linea": 539,
           "resumen": "Solo un trabajo `en_curso` con lease vivo. Ni cliente, ni póliza, ni correduría: solo el riesgo. `modo` por to_jsonb (sin el SQL de emisión la columna no existe: null = tarificar). Lo de la emisión lo"
         },
         {
@@ -70762,7 +71156,7 @@
           "exportada": true,
           "params": "r: ResultadoWorker",
           "retorno": "Promise<ResultadoRegistro>",
-          "linea": 636
+          "linea": 645
         },
         {
           "nombre": "notasPresupuestoExplorado",
@@ -70770,7 +71164,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string, referencia: string | null",
           "retorno": "string",
-          "linea": 802,
+          "linea": 813,
           "resumen": "Notas del documento del presupuesto guardado por el explorador. La referencia es del portal (no es un dato personal)."
         },
         {
@@ -70779,7 +71173,7 @@
           "exportada": false,
           "params": "tx: Db, t: FilaTrabajo, ofertas: OfertaNormalizada[], docs: string[], numeroPolizaActual: string | null",
           "retorno": "Promise<string>",
-          "linea": 806
+          "linea": 817
         },
         {
           "nombre": "guardarAdjunto",
@@ -70787,7 +71181,7 @@
           "exportada": false,
           "params": "tx: Db, t: Pick<FilaTrabajo, 'correduria_id' | 'cliente_id' | 'poliza_id'>, a: { nombre: string; mime: string; contenido: Buffer; notas: string },",
           "retorno": "Promise<string>",
-          "linea": 872
+          "linea": 883
         },
         {
           "nombre": "guardarPasos",
@@ -70795,7 +71189,7 @@
           "exportada": false,
           "params": "tx: Db, t: Pick<FilaTrabajo, 'id' | 'correduria_id' | 'intentos'>, pasos: PasoTraza[], captura: 'con_captura' | null",
           "retorno": "Promise<void>",
-          "linea": 894,
+          "linea": 905,
           "resumen": "Traza (08/10/2026): una fila por paso en `tarificacion_trabajo_pasos`. Los pasos ya vienen validados (solo cinco claves, nombres de una lista cerrada). Si el trabajo falló con captura, el ÚLTIMO paso "
         },
         {
@@ -70804,7 +71198,7 @@
           "exportada": false,
           "params": "db: Db, id: string, intentos: number, error: { tipo: TipoError; mensaje: string; url: string | null; atasco?: AtascoWorker }, evidencia: { trabajo: FilaTrabajo; captura: Buffer | null; capturaConDatos?: boolean; html: string | null } | null",
           "retorno": "Promise<",
-          "linea": 913,
+          "linea": 924,
           "resumen": "Marca el fallo de un trabajo `en_curso` según la política (1 reintento, solo infra)."
         },
         {
@@ -70813,7 +71207,7 @@
           "exportada": true,
           "params": "correduriaId: string, deps: DepsLanzador = depsReales()",
           "retorno": "Promise<ResumenBarrido>",
-          "linea": 1057,
+          "linea": 1075,
           "resumen": "4. lanza lo que quepa por compañía."
         },
         {
@@ -70822,7 +71216,7 @@
           "exportada": false,
           "params": "db: Db, correduriaId: string, oportunidadId: string",
           "retorno": "Promise<FilaOrigen[]>",
-          "linea": 1142,
+          "linea": 1160,
           "resumen": "Los `ok` de Allianz/Mapfre AUTO de la oportunidad (de ESTA correduría), los más recientes primero."
         },
         {
@@ -70831,7 +71225,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<FilaOrigen[]>",
-          "linea": 1155,
+          "linea": 1173,
           "resumen": "Los últimos `ok` de Allianz/Mapfre AUTO del CLIENTE (de ESTA correduría), para «probar» Generali sin oportunidad. Fallo de lectura = sin origen."
         },
         {
@@ -70840,7 +71234,7 @@
           "exportada": false,
           "params": "db: Db, correduriaId: string, oportunidadId: string, v: VehiculoEncadenado",
           "retorno": "Promise<number>",
-          "linea": 1172,
+          "linea": 1190,
           "resumen": "Inyecta `v` en los trabajos `pendiente` en espera de la oportunidad (de ESTA correduría). Devuelve cuántos."
         },
         {
@@ -70849,7 +71243,7 @@
           "exportada": false,
           "params": "correduriaId: string",
           "retorno": "Promise<",
-          "linea": 1193,
+          "linea": 1211,
           "resumen": "Barrido de los trabajos en espera del vehículo: con un `ok` de origen en la oportunidad → se inyecta. Sin vehículo: · Generali (no busca por matrícula): sin ningún origen vivo o pasadas 24 h → `cancel"
         }
       ],
@@ -70860,7 +71254,7 @@
         "toc"
       ],
       "rutaApi": null,
-      "hash": "6f72da272379"
+      "hash": "9fadfe33e4ef"
     },
     {
       "ruta": "apps/asegura/lib/tenant-ambito.ts",
@@ -272600,7 +272994,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5591,
-    "funciones": 22042
+    "archivos": 5598,
+    "funciones": 22074
   }
 }

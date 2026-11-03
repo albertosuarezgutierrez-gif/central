@@ -171,18 +171,18 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 422 | 78.445 | 67.795.738 | 0 | 0 |
-| `otro` | 417 | 18.482 | 37.727.725 | 21.502.739 | 0 |
-| `lectura-directa` | 358 | 12.036 | 33.873.621 | 0 | 0 |
-| `sql` | 272 | 8.947 | 5.120.430 | 3.040.710 | 36 |
-| `mcp:github` | 356 | 8.911 | 6.502.050 | 58.215.068 | 120 |
-| `escritura` | 258 | 6.850 | 110.173.158 | 0 | 0 |
+| `bash` | 422 | 78.513 | 67.867.970 | 0 | 0 |
+| `otro` | 417 | 18.488 | 37.732.582 | 21.502.739 | 0 |
+| `lectura-directa` | 358 | 12.039 | 33.879.017 | 0 | 0 |
+| `sql` | 272 | 8.956 | 5.128.323 | 3.040.710 | 36 |
+| `mcp:github` | 356 | 8.924 | 6.510.435 | 58.215.068 | 120 |
+| `escritura` | 258 | 6.852 | 110.206.495 | 0 | 0 |
 | `mcp:Vercel` | 91 | 1.541 | 1.337.805 | 237.328 | 49 |
 | `mcp:Gmail` | 72 | 1.521 | 1.643.142 | 0 | 101 |
 | `mcp:Booking-com` | 53 | 1.505 | 6.179.360 | 0 | 0 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
-| `agente:general-purpose` | 157 | 1.456 | 859.799 | 28.108.365 | 0 |
-| `mcp:claude-code-remote` | 91 | 1.431 | 202.620 | 2.985.432 | 0 |
+| `agente:general-purpose` | 157 | 1.457 | 860.484 | 28.117.199 | 0 |
+| `mcp:claude-code-remote` | 91 | 1.436 | 202.760 | 2.985.432 | 0 |
 | `mcp:Google_Drive` | 27 | 953 | 1.025.962 | 0 | 62 |
 | `mcp:Interactive-Brokers--IBKR-` | 17 | 711 | 831.624 | 0 | 0 |
 | `mcp:Supabase` | 159 | 537 | 195.912 | 31.787 | 9 |
@@ -198,7 +198,7 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:Trivago` | 3 | 53 | 8.707.439 | 0 | 1 |
 | `mcp:posthog` | 5 | 47 | 64.610 | 0 | 1 |
 | `agente:jefe-contabilidad` | 5 | 46 | 21.986 | 584.358 | 0 |
-| `agente:verificador-esceptico` | 19 | 37 | 12.024 | 141.081 | 0 |
+| `agente:verificador-esceptico` | 19 | 38 | 12.435 | 147.055 | 0 |
 | `agente:general` | 15 | 36 | 25.304 | 1.456.441 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
 | `agente:lector-correo` | 8 | 24 | 8.569 | 0 | 0 |
