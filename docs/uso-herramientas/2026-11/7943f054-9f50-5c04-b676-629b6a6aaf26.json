@@ -1,64 +1,64 @@
 {
  "sesion": "7943f054-9f50-5c04-b676-629b6a6aaf26",
  "inicio": "2026-11-03T15:51:44.953Z",
- "fin": "2026-11-03T19:09:33.285Z",
- "llamadas": 366,
+ "fin": "2026-11-03T19:33:15.435Z",
+ "llamadas": 472,
  "categorias": {
   "lectura-directa": {
-   "llamadas": 22,
-   "chars_in": 3332,
-   "chars_out": 74188,
+   "llamadas": 41,
+   "chars_in": 6508,
+   "chars_out": 237815,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Grep": 13,
-    "Read": 8,
-    "Glob": 1
+    "Grep": 27,
+    "Read": 11,
+    "Glob": 3
    }
   },
   "otro": {
-   "llamadas": 74,
-   "chars_in": 28047,
-   "chars_out": 459770,
+   "llamadas": 95,
+   "chars_in": 35200,
+   "chars_out": 696217,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "SubagentHandback": 8,
-    "ToolSearch": 11,
-    "ReadNotifications": 55
+    "SubagentHandback": 10,
+    "ToolSearch": 12,
+    "ReadNotifications": 73
    }
   },
   "agente:rastreador-codigo": {
-   "llamadas": 1,
-   "chars_in": 1266,
-   "chars_out": 148,
+   "llamadas": 2,
+   "chars_in": 2136,
+   "chars_out": 296,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Agent": 1
+    "Agent": 2
    }
   },
   "bash": {
-   "llamadas": 207,
-   "chars_in": 155009,
-   "chars_out": 964393,
+   "llamadas": 256,
+   "chars_in": 190138,
+   "chars_out": 1152941,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 207
+    "Bash": 256
    }
   },
   "mcp:github": {
-   "llamadas": 15,
-   "chars_in": 6968,
-   "chars_out": 61848,
+   "llamadas": 18,
+   "chars_in": 10102,
+   "chars_out": 65504,
    "errores": 1,
-   "archivos_citados": 1,
-   "chars_citados": 4903,
+   "archivos_citados": 2,
+   "chars_citados": 9097,
    "tools": {
     "mcp__github__list_pull_requests": 1,
     "mcp__github__create_pull_request": 3,
@@ -66,8 +66,8 @@
     "mcp__github__actions_list": 2,
     "mcp__github__add_issue_comment": 1,
     "mcp__github__actions_run_trigger": 1,
-    "mcp__github__pull_request_read": 2,
-    "mcp__github__update_pull_request": 2,
+    "mcp__github__pull_request_read": 4,
+    "mcp__github__update_pull_request": 3,
     "mcp__github__merge_pull_request": 2
    }
   },
@@ -83,62 +83,63 @@
    }
   },
   "agente:agente-architect": {
-   "llamadas": 3,
-   "chars_in": 8268,
-   "chars_out": 8947,
+   "llamadas": 5,
+   "chars_in": 13589,
+   "chars_out": 14738,
    "errores": 0,
-   "archivos_citados": 10,
-   "chars_citados": 219569,
+   "archivos_citados": 15,
+   "chars_citados": 273476,
    "tools": {
-    "Agent": 3
+    "Agent": 5
    }
   },
   "escritura": {
-   "llamadas": 14,
-   "chars_in": 126393,
-   "chars_out": 257483,
+   "llamadas": 19,
+   "chars_in": 141329,
+   "chars_out": 363238,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Write": 14
+    "Write": 17,
+    "Edit": 2
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 10,
-   "chars_in": 950,
-   "chars_out": 3411,
+   "llamadas": 11,
+   "chars_in": 1102,
+   "chars_out": 3519,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__claude-code-remote__subscribe_pr_activity": 3,
-    "mcp__claude-code-remote__send_later": 3,
+    "mcp__claude-code-remote__send_later": 4,
     "mcp__claude-code-remote__unsubscribe_pr_activity": 2,
     "mcp__claude-code-remote__delete_trigger": 2
    }
   },
   "mcp:Supabase": {
-   "llamadas": 3,
-   "chars_in": 2531,
-   "chars_out": 798,
+   "llamadas": 4,
+   "chars_in": 4553,
+   "chars_out": 814,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Supabase__list_projects": 2,
-    "mcp__Supabase__apply_migration": 1
+    "mcp__Supabase__apply_migration": 2
    }
   },
   "sql": {
-   "llamadas": 8,
-   "chars_in": 3904,
-   "chars_out": 10080,
+   "llamadas": 12,
+   "chars_in": 5561,
+   "chars_out": 12814,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 8
+    "mcp__Supabase__execute_sql": 12
    }
   },
   "mcp:Gmail": {
