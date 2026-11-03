@@ -16,7 +16,7 @@ import {
 import { EmisionBloqueadaError } from '@central/module-tarificacion'
 import type { CoberturasPorProducto } from '../src/adapters/mapfre/garantias.ts'
 
-test('v0.8.59 · versión', () => assert.equal(mapfreAuto.version, '0.8.59'))
+test('v0.8.59 · versión', () => assert.equal(mapfreAuto.version, '0.8.60'))
 
 const cob = (literal: string) => ({ clave: literal.toLowerCase(), literal, estado: 'incluida' as const, capital: null, limite: null, franquicia: null })
 const PRIMAS = [
