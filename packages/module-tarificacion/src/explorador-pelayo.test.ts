@@ -1,4 +1,4 @@
-// Pelayo (03/11/2026) · entradas del explorador: lista cerrada, SOLO LECTURA, sin avances ni excepciones de ningún tipo.
+// Pelayo (03/11/2026) · entradas del explorador: lista cerrada, explorables (0.3.36: ya no de solo lectura), sin avances ni excepciones de ningún tipo.
 import { describe, expect, it } from 'vitest'
 import { ENTRADAS_EXPLORACION, entradaSoloLectura, esEntradaExploracion, loginAsistidoDe } from './index.ts'
 
@@ -10,12 +10,12 @@ describe('Pelayo · entradas del explorador', () => {
     expect(ENTRADAS_EXPLORACION['pelayo:presupuestos:auto']).toMatchObject({ compania: 'pelayo', ramo: 'auto', producto: 'auto' })
     expect(ENTRADAS_EXPLORACION['pelayo:presupuestos:hogar']).toMatchObject({ compania: 'pelayo', ramo: 'hogar', producto: 'hogar' })
   })
-  it('SOLO LECTURA, sin avances ni excepciones; sin login asistido', () => {
+  it('explorables (no solo lectura), sin avances ni excepciones; sin login asistido', () => {
     for (const k of PELAYO) {
       const e = ENTRADAS_EXPLORACION[k]
       expect(esEntradaExploracion(k)).toBe(true)
-      expect(e.soloLectura).toBe(true)
-      expect(entradaSoloLectura(k)).toBe(true)
+      expect(e.soloLectura).toBeUndefined()
+      expect(entradaSoloLectura(k)).toBe(false)
       expect([...e.avancesAutorizados]).toEqual([])
       expect(e.avancesPorId ?? []).toEqual([])
       expect(e.avancesSinTexto ?? []).toEqual([])
@@ -27,8 +27,8 @@ describe('Pelayo · entradas del explorador', () => {
       expect(k).toMatch(/^[a-z_]+:[a-z_]+:[a-z_]+$/)
     }
   })
-  it('ninguna otra entrada es de solo lectura; una desconocida tampoco', () => {
-    expect(Object.keys(ENTRADAS_EXPLORACION).filter(entradaSoloLectura).sort()).toEqual(PELAYO)
+  it('ninguna entrada es de solo lectura hoy; una desconocida tampoco', () => {
+    expect(Object.keys(ENTRADAS_EXPLORACION).filter(entradaSoloLectura)).toEqual([])
     expect(entradaSoloLectura('pelayo:presupuestos:vida')).toBe(false)
     expect(entradaSoloLectura('__proto__')).toBe(false)
   })

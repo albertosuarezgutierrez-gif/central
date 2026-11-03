@@ -418,17 +418,15 @@ export const ENTRADAS_EXPLORACION: Readonly<Record<string, EntradaExploracion>> 
   }),
   // Pelayo (portal de mediadores, Alberto 03/11/2026): login › menú «Contratación» › «Presupuestos» › «Nuevo Presupuesto» › selector de
   // RAMO (Auto / Hogar) › primer formulario de datos. El recorrido va fijo en el código de Pelayo (`pelayo/entrada.ts`) y sus clics por la
-  // puerta EXACTA del guard (`ENLACES_ENTRADA_AUTORIZADOS.pelayo`, origen https://mediadores.pelayo.com, en orden, una vez). Primera
-  // exploración en SOLO LECTURA: se vuelca la pantalla a la que se llega y se para, sin rellenar ni avanzar (sin avances autorizados).
+  // puerta EXACTA del guard (`ENLACES_ENTRADA_AUTORIZADOS.pelayo`, origen https://mediadores.pelayo.com, en orden, una vez). 0.3.36: ya NO es
+  // de solo lectura: tras el ramo la IA explora con la navegación libre del guard (la emisión sigue bloqueada).
   'pelayo:presupuestos:auto': Object.freeze({
     compania: 'pelayo', ramo: 'auto', producto: 'auto', pestana: 'Contratación', productoMenu: 'Auto',
     avancesAutorizados: Object.freeze([]),
-    soloLectura: true,
   }),
   'pelayo:presupuestos:hogar': Object.freeze({
     compania: 'pelayo', ramo: 'hogar', producto: 'hogar', pestana: 'Contratación', productoMenu: 'Hogar',
     avancesAutorizados: Object.freeze([]),
-    soloLectura: true,
   }),
 })
 
