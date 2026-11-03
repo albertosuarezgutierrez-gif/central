@@ -16,6 +16,8 @@
 // (`TERMINOS_BLOQUEO_SOLO_GUARD`) y el guard lo suma a la lista de aquí. Este fichero no las nombra ni en cadenas.
 // Cómo crece: a mano al dar de alta un bot (MANUAL-NUEVO-BOT.md) y por PROPUESTA con `scripts/vocabulario-candidatos.ts`, que nunca aplica nada solo.
 
+import { normalizarFuerte, unirDeletreo } from '@central/module-tarificacion'
+
 /** Ramo al que se restringe un término. Sin ramo = común. */
 export type Ramo = 'auto' | 'moto' | 'hogar' | 'comunidades' | 'comercio'
 
@@ -64,6 +66,7 @@ const DESCARGA_BLOQUEO = o('allianz+mapfre+generali', '26/10/2026', 'lista negra
 const GUARD_OCULTO = o('allianz+mapfre+generali', '26/10/2026', 'lista negra de atributos internos (id, name, href, manejadores)')
 const NAV_LIBRE = o('comun', '03/11/2026', 'navegación libre del explorador: lo que nunca se pulsa como navegación (Alberto)')
 const NAV_ADV = o('comun', '03/11/2026', 'navegación libre: verbos de acción final que la revisión adversarial coló (Finalizar, Comprar, Submit…)')
+const NAV_ADV2 = o('comun', '03/11/2026', 'navegación libre: verbos de acción sobre terceros que la 2.ª revisión adversarial coló con addEventListener (Delete, Transferir…)')
 
 // ───────────────────────── CONCEPTOS ─────────────────────────
 
@@ -315,6 +318,13 @@ export const BLOQUEO = congelarProfundo({
     t('complete', NAV_ADV, { prefijo: true }), t('sign', NAV_ADV, { prefijo: true }), t('apply', NAV_ADV), t('place order', NAV_ADV), t('order', NAV_ADV),
     t('subscribe', NAV_ADV, { prefijo: true }), t('register', NAV_ADV, { prefijo: true }), t('activate', NAV_ADV, { prefijo: true }), t('approve', NAV_ADV, { prefijo: true }),
     t('validate', NAV_ADV, { prefijo: true }), t('done', NAV_ADV), t('accept', NAV_ADV, { prefijo: true }), t('proceed', NAV_ADV), t('pay', NAV_ADV), t('save', NAV_ADV),
+    // 0.3.36, 2.ª revisión adversarial (03/11/2026): acción sobre terceros (ES + EN). Cepo en navegacion-libre-v0336.test.ts.
+    t('delete', NAV_ADV2, { prefijo: true }), t('remove', NAV_ADV2, { prefijo: true }), t('transferir', NAV_ADV2), t('transfiere', NAV_ADV2), t('transferencia', NAV_ADV2, { plural: true }),
+    t('transfer', NAV_ADV2, { prefijo: true }), t('traspas', NAV_ADV2, { prefijo: true }), t('reservar', NAV_ADV2), t('reserva', NAV_ADV2, { plural: true }), t('reserve', NAV_ADV2),
+    t('book', NAV_ADV2, { prefijo: true }), t('autoriz', NAV_ADV2, { prefijo: true }), t('authoriz', NAV_ADV2, { prefijo: true }), t('authoris', NAV_ADV2, { prefijo: true }),
+    t('liquidar', NAV_ADV2), t('liquida', NAV_ADV2), t('liquidacion', NAV_ADV2, { prefijo: true }), t('settle', NAV_ADV2, { prefijo: true }), t('ejecutar', NAV_ADV2), t('ejecuta', NAV_ADV2),
+    t('execute', NAV_ADV2, { prefijo: true }), t('procesar', NAV_ADV2), t('procesa', NAV_ADV2), t('process', NAV_ADV2), t('renovar', NAV_ADV2), t('renueva', NAV_ADV2),
+    t('renovacion', NAV_ADV2, { prefijo: true }), t('renew', NAV_ADV2, { prefijo: true }), t('request', NAV_ADV2, { prefijo: true }), t('charge', NAV_ADV2), t('cobrar', NAV_ADV2),
   ],
   /** Texto de emisión visible en la página o en un diálogo (Generali). Palabra entera, sobre texto sin tildes y en minúsculas. */
   emision_pagina: [
@@ -407,19 +417,24 @@ export const GRUPOS_BLOQUEO_NAVEGACION: readonly GrupoBloqueo[] = Object.freeze(
  * grupo y el término, o `null`. Pura.
  */
 export function casaBloqueoNavegacion(texto: string | null | undefined, extra: readonly Termino[] = []): { grupo: GrupoBloqueo | 'solo_guard'; termino: string } | null {
-  const n = normalizarRotulo(texto)
-  if (n === '') return null
-  for (const g of GRUPOS_BLOQUEO_NAVEGACION) {
-    const m = regexPalabras(BLOQUEO[g]).exec(n)
-    if (m) return { grupo: g, termino: m[0] }
+  // 2.ª revisión adversarial (03/11/2026): la MISMA normalización fuerte que `comprobarBoton`/`pulsar()`/el módulo (NFKC, invisibles,
+  // confundibles) y la forma con las letras sueltas unidas; antes, solo sin tildes.
+  const p = normalizarFuerte(texto)
+  if (p === '') return null
+  for (const n of p === unirDeletreo(p) ? [p] : [p, unirDeletreo(p)]) {
+    for (const g of GRUPOS_BLOQUEO_NAVEGACION) {
+      const m = regexPalabras(BLOQUEO[g]).exec(n)
+      if (m) return { grupo: g, termino: m[0] }
+    }
+    const m = extra.length > 0 ? regexPalabras(extra).exec(n) : null
+    if (m) return { grupo: 'solo_guard', termino: m[0] }
   }
-  const m = extra.length > 0 ? regexPalabras(extra).exec(n) : null
-  return m ? { grupo: 'solo_guard', termino: m[0] } : null
+  return null
 }
 
 /** NAVEGACIÓN LIBRE: ¿un atributo INTERNO (id, name, clase, onclick, href, acción del formulario) contiene, por subcadena, un término oculto prohibido? Pura. */
 export function casaAtributoInternoNavegacion(texto: string | null | undefined): string | null {
-  const n = normalizarRotulo(texto).replace(/\s+/g, '')
+  const n = normalizarFuerte(texto).replace(/\s+/g, '')
   if (n === '') return null
   return regexPalabras(BLOQUEO.atributo_interno, { limites: false }).exec(n)?.[0] ?? null
 }

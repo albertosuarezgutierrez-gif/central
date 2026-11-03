@@ -15,8 +15,8 @@ import {
   type ControlNavegacion,
   type InventarioDom,
 } from '@central/module-tarificacion'
-import { rotuloNombraAccionFinal } from '@central/module-tarificacion'
-import { ErrorFronteraEmision, instalarGuardEmision, MAX_PULSACIONES_NAVEGACION_TOTAL, motivoNoNavegacionLibreVivo, pulsar, pulsarNavegacionLibre, topeNavegacionLibre, type GuardEmision } from '../src/guard.ts'
+import { comprobarBoton, motivoRotuloPulsar, rotuloNombraAccionFinal, tieneLetraAjena, unirDeletreo } from '@central/module-tarificacion'
+import { ErrorFronteraEmision, instalarGuardEmision, MAX_PULSACIONES_NAVEGACION_TOTAL, motivoNoNavegacionLibreVivo, oyentesAccionVivos, pulsar, pulsarNavegacionLibre, topeNavegacionLibre, type GuardEmision } from '../src/guard.ts'
 import { casaBloqueoNavegacion } from '../src/vocabulario.ts'
 
 const PELAYO = 'https://mediadores.pelayo.com'
@@ -211,11 +211,21 @@ test('vivo pasa · «Siguiente» (enlace)', async () => {
   const r = await intentar(URL_P, `<a id="x" href="#" onclick="${marca}">Siguiente</a>`, { tag: 'a', texto: 'Siguiente', onclick: marca })
   assert.deepEqual([r.error, r.n], [null, 1])
 })
-// Manejador por addEventListener (invisible para la regla): una pestaña SIN onclick con acción es navegación permitida.
+// Manejador por addEventListener (invisible para la regla). 2.ª revisión adversarial: una pestaña CON oyente y rótulo no neutro ya NO pasa
+// (cepo abajo, «(R3)»); sin oyentes, sí (se ve por el foco: el clic la enfoca).
 const oyente = (sel: string) => `<script>document.querySelectorAll('${sel}').forEach(function (e) { e.addEventListener('click', function () { var o = document.getElementById('out'); o.textContent = (+o.textContent || 0) + 1 }) })</script>`
-test('vivo pasa · pestaña role=tab', async () => {
-  const r = await intentar(URL_P, `<span role="tab" id="x">Coberturas</span>${oyente('#x')}`, { tag: 'span', role: 'tab', texto: 'Coberturas' })
-  assert.deepEqual([r.error, r.n], [null, 1])
+test('vivo pasa · pestaña role=tab sin oyentes', async () => {
+  const { context, page, guard } = await portal(URL_P, '<span role="tab" tabindex="0" id="x">Coberturas</span>')
+  const i = inv(URL_P, { tag: 'span', role: 'tab', texto: 'Coberturas' })
+  let error: unknown = null
+  try {
+    await pulsarNavegacionLibre(page.locator('#x'), guard, { entrada: E_PELAYO, el: i.marcos[0].elementos[0], marco: i.marcos[0] })
+  } catch (e) {
+    error = e
+  }
+  const foco = await page.evaluate(() => document.activeElement?.id ?? null)
+  await context.close()
+  assert.deepEqual([error, foco], [null, 'x'])
 })
 test('vivo · la 3.ª pulsación del mismo control pasa', async () => {
   const r = await intentar(URL_P, `<a class="card" id="x" onclick="${marca}">AUTOS</a>`, CARD, E_PELAYO, 3)
@@ -375,3 +385,147 @@ for (const t of ['Siguiente', 'Calcular', 'Comprobar']) {
   })
 }
 bloqueaVivo('(3) enlace href="#" «Resumen» con manejador invisible (el inventario lo ve como enlace; vivo, no)', `<a id="x" href="#">Resumen</a>${oyente('#x')}`, { tag: 'a', texto: 'Resumen', hrefRuta: '/portalmediador-nuevo-presupuesto/' })
+
+// ───────────────── 2.ª revisión adversarial (03/11/2026, Chromium real + servidor que escucha POST): R1-R6 ─────────────────
+// Cada brazo se vio en ROJO rompiendo lo que protege y en verde restaurado. Fixtures sintéticas, sin PII.
+
+// (R1) UNA normalización fuerte (`normalizarFuerte` + `unirDeletreo`) en comprobarBoton, pulsar() y la navegación libre.
+const UNICODE_R1: readonly [string, string][] = [
+  ['«Ｅｍｉｔｉｒ» (ancho completo)', 'Ｅｍｉｔｉｒ'],
+  ['«Emi\\u200btir» (ancho cero)', 'Emi​tir'],
+  ['«\\u0415mitir» (E cirílica)', 'Еmitir'],
+  ['«Ｐａｇａｒ»', 'Ｐａｇａｒ'],
+  ['«Ｃｏｎｔｒａｔａｒ»', 'Ｃｏｎｔｒａｔａｒ'],
+  ['«Ｆｉｒｍａｒ»', 'Ｆｉｒｍａｒ'],
+  ['«C o n t r a t a r» (letras sueltas)', 'C o n t r a t a r'],
+]
+for (const [nombre, t] of UNICODE_R1) {
+  test(`(R1) comprobarBoton bloquea · ${nombre}`, () => assert.throws(() => comprobarBoton([t])))
+  test(`(R1) pulsar() bloquea · ${nombre}`, async () => {
+    const r = await pulsarGenerico(`<button type="button" id="x">${t}</button>`)
+    assert.deepEqual([r.error !== null, r.n], [true, 0])
+  })
+  test(`(R1) navegación libre bloquea · ${nombre} como pestaña`, () => assert.equal(ok({ tag: 'li', role: 'tab', texto: t }), false))
+}
+test('(R1) pulsar() bloquea · «Emıtir» (ı sin punto: regla de homoglifos)', async () => {
+  const r = await pulsarGenerico('<button type="button" id="x">Emıtir</button>')
+  assert.deepEqual([r.error !== null, r.n], [true, 0])
+})
+test('(R1) unirDeletreo: une solo tiradas de ≥3 letras sueltas', () => {
+  assert.deepEqual(['c o n t r a t a r', 'e.m.i.t.i.r', 'ir a generar proyecto', 'planta baja', 'a b'].map(unirDeletreo), ['contratar', 'emitir', 'ir a generar proyecto', 'planta baja', 'a b'])
+})
+
+// (R2) Nombre accesible: aria-labelledby, alt de <img> hijas, alt de input type=image.
+for (const [nombre, html] of [
+  ['aria-labelledby → «Emitir»', '<button type="button" id="x" aria-labelledby="l">›</button><span id="l">Emitir</span>'],
+  ['<img alt="Emitir"> hija', '<button type="button" id="x"><img alt="Emitir" src="data:,"></button>'],
+  ['input type=image alt «Emitir»', '<input type="image" id="x" alt="Emitir" src="data:,">'],
+  ['input type=image alt «Contratar»', '<input type="image" id="x" alt="Contratar" src="data:,">'],
+] as const) {
+  test(`(R2) pulsar() bloquea · ${nombre}`, async () => {
+    const r = await pulsarGenerico(html)
+    assert.deepEqual([r.error !== null, r.n], [true, 0])
+  })
+}
+// Enlaces del mismo origen SIN manejador (pasarían la lista blanca): solo el nombre accesible los delata.
+bloqueaVivo('(R2) enlace «Presupuestos» con aria-labelledby → «Emitir»', '<a id="x" href="/portalmediador-paso-2/" aria-labelledby="l">Presupuestos</a><span id="l">Emitir</span>', { tag: 'a', texto: 'Presupuestos', hrefRuta: '/portalmediador-paso-2/' })
+bloqueaVivo('(R2) enlace «Presupuestos» con <img alt="Contratar">', '<a id="x" href="/portalmediador-paso-2/">Presupuestos<img alt="Contratar" src="data:,"></a>', { tag: 'a', texto: 'Presupuestos', hrefRuta: '/portalmediador-paso-2/' })
+
+// (R3) Oyentes por addEventListener (CDP): menú/pestaña/enlace con oyente y rótulo no neutro → no, aunque el rótulo no nombre nada.
+const oyenteEn = (expr: string, tipo = 'click') => `<script>(${expr}).addEventListener('${tipo}', function () { var o = document.getElementById('out'); o.textContent = (+o.textContent || 0) + 1 })</script>`
+bloqueaVivo('(R3) pestaña «Coberturas» con oyente click', `<span role="tab" id="x">Coberturas</span>${oyenteEn("document.getElementById('x')")}`, { tag: 'span', role: 'tab', texto: 'Coberturas' })
+bloqueaVivo('(R3) menú «Resumen» con oyente mousedown', `<a role="menuitem" href="#" id="x">Resumen</a>${oyenteEn("document.getElementById('x')", 'mousedown')}`, { tag: 'a', role: 'menuitem', texto: 'Resumen' })
+bloqueaVivo('(R3) enlace mismo origen «Presupuestos» con oyente pointerdown', `<a id="x" href="/portalmediador-paso-2/">Presupuestos</a>${oyenteEn("document.getElementById('x')", 'pointerdown')}`, { tag: 'a', texto: 'Presupuestos', hrefRuta: '/portalmediador-paso-2/' })
+bloqueaVivo('(R3) pestaña con oyente en un HIJO', `<span role="tab" id="x"><b id="h">Coberturas</b></span>${oyenteEn("document.getElementById('h')")}`, { tag: 'span', role: 'tab', texto: 'Coberturas' })
+bloqueaVivo('(R3) pestaña con oyente en un ANCESTRO', `<div id="p"><span role="tab" id="x">Coberturas</span></div>${oyenteEn("document.getElementById('p')")}`, { tag: 'span', role: 'tab', texto: 'Coberturas' })
+bloqueaVivo('(R3) pestaña con oyente delegado en document', `<span role="tab" id="x">Coberturas</span>${oyenteEn('document')}`, { tag: 'span', role: 'tab', texto: 'Coberturas' })
+bloqueaVivo('(R3) pestaña con oyente de la página en window', `<span role="tab" id="x">Coberturas</span>${oyenteEn('window', 'keydown')}`, { tag: 'span', role: 'tab', texto: 'Coberturas' })
+const VERBOS_R3 = ['Delete', 'Transferir', 'Reservar', 'Autorizar', 'Liquidar', 'Ejecutar', 'Procesar', 'Renovar', 'Traspasar', 'Transfer', 'Book', 'Authorize', 'Settle', 'Execute', 'Process', 'Renew', 'Remove']
+for (const v of VERBOS_R3) {
+  bloquea(`(R3) menú «${v}» (lista negra)`, { tag: 'a', role: 'menuitem', texto: v })
+  bloquea(`(R3) enlace mismo origen «${v}» (lista negra)`, { tag: 'a', texto: v, hrefRuta: '/portalmediador-paso-2/' })
+  test(`(R3) vocabulario del worker · «${v}» bloquea en navegación`, () => assert.notEqual(casaBloqueoNavegacion(v), null))
+}
+test('(R3) vivo pasa · «Siguiente» (neutro exacto) aunque tenga oyente', async () => {
+  const r = await intentar(URL_P, `<a id="x" href="#">Siguiente</a>${oyente('#x')}`, { tag: 'a', texto: 'Siguiente', hrefRuta: '/portalmediador-nuevo-presupuesto/' })
+  assert.deepEqual([r.error, r.n], [null, 1])
+})
+test('(R3) vivo pasa · tarjeta de ramo «AUTOS» aunque tenga oyente', async () => {
+  const r = await intentar(URL_P, `<a class="card" id="x">AUTOS</a>${oyente('#x')}`, CARD)
+  assert.deepEqual([r.error, r.n], [null, 1])
+})
+test('(R3) vivo pasa · enlace mismo origen sin oyentes (los del propio Playwright en window no cuentan)', async () => {
+  const { context, page, guard } = await portal(URL_P, '<a id="x" href="/portalmediador-presupuestos/">Presupuestos</a>')
+  const i = inv(URL_P, { tag: 'a', texto: 'Presupuestos', hrefRuta: '/portalmediador-presupuestos/' })
+  let error: unknown = null
+  try {
+    await pulsarNavegacionLibre(page.locator('#x'), guard, { entrada: E_PELAYO, el: i.marcos[0].elementos[0], marco: i.marcos[0] })
+    await page.waitForURL('**/portalmediador-presupuestos/')
+  } catch (e) {
+    error = e
+  }
+  const url = page.url()
+  await context.close()
+  assert.deepEqual([error, url], [null, `${PELAYO}/portalmediador-presupuestos/`])
+})
+test('(R3) oyentesAccionVivos: «ninguno» sin oyentes, «hay» con uno en el control', async () => {
+  const { context, page } = await portal(URL_P, `<a id="x" href="#">A</a><a id="y" href="#">B</a>${oyenteEn("document.getElementById('y')")}`)
+  const r = [await oyentesAccionVivos(page.locator('#x')), await oyentesAccionVivos(page.locator('#y')), await oyentesAccionVivos(page.locator('#x'))]
+  const marcaQuitada = await page.evaluate(() => document.querySelectorAll('[data-guard-oyentes]').length)
+  await context.close()
+  assert.deepEqual([...r, marcaQuitada], ['ninguno', 'hay', 'ninguno', 0])
+})
+test('(R3) CDP que falla (no Chromium) → «error» (quien llama bloquea)', async () => {
+  const falso = {
+    page: () => ({ context: () => ({ newCDPSession: async () => { throw new Error('CDP no disponible') } }), mainFrame: () => null }),
+    elementHandle: async () => ({ ownerFrame: async () => null, evaluate: async () => undefined }),
+    evaluate: async () => undefined,
+  }
+  assert.equal(await oyentesAccionVivos(falso as never), 'error')
+})
+test('(R3) contexto sin newCDPSession → «error»', async () => {
+  const falso = { page: () => ({ context: () => ({}), mainFrame: () => null }), elementHandle: async () => ({ ownerFrame: async () => null, evaluate: async () => undefined }), evaluate: async () => undefined }
+  assert.equal(await oyentesAccionVivos(falso as never), 'error')
+})
+
+// (R4) Homoglifos fuera de CONFUSABLES: fail-closed en navegación libre y en pulsar().
+test('(R4) tieneLetraAjena: ı, ɑ, ᴇ, cirílico sí; ñ, tildes, ç, ª/º, flechas, € no', () => {
+  assert.deepEqual(
+    ['Emıtir', 'Contrɑtar', 'ᴇmitir', 'Рresupuestos', 'Añadir', 'Póliza', 'Açores', 'Nº 1ª', 'Siguiente ›', '10 €', '✓'].map(tieneLetraAjena),
+    [true, true, true, true, false, false, false, false, false, false, false],
+  )
+})
+for (const t of ['Emıtir', 'Contrɑtar', 'ᴇmitir', 'Prеsupuestos']) {
+  bloquea(`(R4) enlace mismo origen «${t}»`, { tag: 'a', texto: t, hrefRuta: '/portalmediador-paso-2/' })
+  test(`(R4) pulsar() bloquea · «${t}»`, async () => {
+    const r = await pulsarGenerico(`<button type="button" id="x">${t}</button>`)
+    assert.deepEqual([r.error !== null, r.n], [true, 0])
+  })
+}
+test('(R4) pulsar() bloquea · «Sıguiente» (ı)', async () => {
+  const r = await pulsarGenerico('<button type="button" id="x">Sıguiente</button>')
+  assert.deepEqual([r.error !== null, r.n], [true, 0])
+})
+
+// (R5) RIESGO ACEPTADO (documentado, no cepo): un submit con rótulo NEUTRO exacto a una ruta neutra del mismo origen que lleva campos OCULTOS
+// de acción (`<input type=hidden name=accion value=emitir>`) pasa la navegación libre; lo para el guard de RED (`parametrosParecenEmision` /
+// `cuerpoLlevaAccionFinal` sobre el cuerpo del POST), no esta regla.
+
+// (R6) pulsar() genérico: verbos que nunca pulsa (salvo las puertas estrechas por compañía, que no pasan por aquí).
+for (const t of ['Enviar', 'Send', 'Solicitar', 'Eliminar', 'Borrar', 'Cobrar', 'Autorizar', 'Save', 'Guardar', 'Reenviar SMS', 'Delete', 'Transferir']) {
+  test(`(R6) pulsar() bloquea · «${t}»`, async () => {
+    const r = await pulsarGenerico(`<button type="button" id="x">${t}</button>`)
+    assert.deepEqual([r.error !== null, r.n], [true, 0])
+  })
+}
+test('(R6) pulsar() pasa · «Cancelar» (lo usa la puerta del diálogo «Atención» de ePAC por pulsar())', async () => {
+  const r = await pulsarGenerico('<button type="button" id="x">Cancelar</button>')
+  assert.deepEqual([r.error, r.n], [null, 1])
+})
+test('(R6) motivoRotuloPulsar: «Avenida de la Reserva» casa verbo (por eso el value de un campo de texto no se mira como rótulo)', () => {
+  assert.equal(motivoRotuloPulsar('Avenida de la Reserva'), 'verbo_prohibido')
+})
+test('(R6) pulsar() pasa un campo de texto cuyo valor tecleado nombra un verbo (el value no es rótulo)', async () => {
+  const r = await pulsarGenerico('<input type="text" id="x" value="Calle Reserva 3">')
+  assert.deepEqual([r.error, r.n], [null, 1])
+})

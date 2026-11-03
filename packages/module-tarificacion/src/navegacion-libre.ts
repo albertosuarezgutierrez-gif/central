@@ -12,8 +12,15 @@
 //      y todo lo demás (id, name, clase, href…) se sigue mirando. «Contratar» (verbo) nunca pasa.
 // El worker repite esta regla sobre el control VIVO (`pulsarNavegacionLibre` de services/tarificador-rpa/src/guard.ts), con el
 // vocabulario del worker, un tope anti-bucle de pulsaciones por control y `comprobarBoton` antes del único clic.
+// 2.ª revisión adversarial (03/11/2026): una sola normalización fuerte (`normalizarFuerte` + `unirDeletreo`, la de `comprobarBoton`), regla
+// fail-closed de homoglifos (`tieneLetraAjena`), nombre accesible (aria-labelledby, alt) como rótulo, verbos de acción sobre terceros, y en el
+// worker los OYENTES por `addEventListener` leídos por CDP (`oyentesAccionVivos`): con oyentes solo pasa un rótulo neutro exacto o una tarjeta
+// de ramo (`rotuloExentoDeOyentes`).
+// RIESGO ACEPTADO (documentado): un submit con rótulo NEUTRO exacto («Siguiente») a una ruta neutra del mismo origen que lleve campos OCULTOS
+// de acción (`<input type=hidden name=accion value=emitir>`) pasa esta regla; lo para el guard de RED (`parametrosParecenEmision` /
+// `cuerpoLlevaAccionFinal` sobre el cuerpo del POST), no la navegación libre.
 
-import { pareceEmision, RE_ACCION_REAL_TRAS_PREFIJO, esTextoBotonProhibido, normalizarFuerte } from './guard-emision.ts'
+import { pareceEmision, RE_ACCION_REAL_TRAS_PREFIJO, esTextoBotonProhibido, normalizarFuerte, unirDeletreo, tieneLetraAjena } from './guard-emision.ts'
 import { clasificarAccionPortal } from './acciones-portal.ts'
 
 /** Lo que describe a un control para la regla (del inventario o del DOM vivo). Todo opcional salvo `tag`. */
@@ -50,6 +57,11 @@ export type ControlNavegacion = {
   descarga?: boolean
   /** Manejadores y href de los ANCESTROS cercanos (un clic burbujea; solo el worker vivo). */
   ancestros?: readonly (string | null | undefined)[]
+  /**
+   * 2.ª revisión adversarial (03/11/2026): NOMBRE ACCESIBLE que no es texto ni aria-label: el texto de los ids de `aria-labelledby`, el
+   * `alt` de las `<img>` hijas y el `alt` de un `input type=image` (solo el worker vivo). Cuenta como un RÓTULO más.
+   */
+  nombreAccesible?: string | null
 }
 
 export type MotivoNoNavegacionLibre =
@@ -110,6 +122,25 @@ export function esRotuloRamoNavegacion(x: string | null | undefined): boolean {
   return RAMOS_COMPACTOS.has(compactoNavegacion(x))
 }
 
+/** Rótulos que DECIDEN la lista blanca (texto, value, aria-label y nombre accesible; el `title` solo pasa por el bloqueo). Pura. */
+function rotulosDecisivos(c: ControlNavegacion): string[] {
+  return [c.texto, c.value, c.ariaLabel, c.nombreAccesible].filter((x): x is string => typeof x === 'string' && x.trim() !== '')
+}
+
+/**
+ * 2.ª revisión adversarial (03/11/2026): ¿puede este control pulsarse AUNQUE tenga oyentes de clic/teclado (`addEventListener`, que el worker
+ * lee por CDP)? Solo si TODOS sus rótulos decisivos son EXACTAMENTE un neutro de la lista cerrada de botones, o es una tarjeta de ramo
+ * (`<a class="card">` cuyo texto es un ramo de la lista cerrada). Cualquier otro control con oyentes → no (lo decide el worker). Pura.
+ */
+export function rotuloExentoDeOyentes(c: ControlNavegacion): boolean {
+  const rotulos = rotulosDecisivos(c)
+  if (rotulos.length === 0 || rotulos.some(tieneLetraAjena)) return false
+  if (rotulos.every(esRotuloNeutroNavegacion)) return true
+  const tag = (c.tag ?? '').toLowerCase()
+  const clases = (c.clase ?? '').toLowerCase().split(/\s+/).filter(Boolean)
+  return tag === 'a' && clases.includes('card') && rotulos.every((x) => esRotuloRamoNavegacion(x) || esRotuloNeutroNavegacion(x))
+}
+
 /** Sustantivos de MENÚ que casan con el bloqueo pero son navegación (solo en un desplegable de menú, ver arriba). Normalizados. */
 export const SUSTANTIVOS_MENU_NAVEGACION: readonly string[] = Object.freeze(['contratacion'])
 
@@ -131,7 +162,21 @@ const RE_FINAL_NAVEGACION = new RegExp(
     'validate\\w*', 'done', 'accept\\w*', 'proceed', 'pay', 'save', 'issue', 'bind', 'enroll\\w*', 'checkout', 'emit\\w*', 'tramit\\w*',
   ].join('|') + ')\\b',
 )
-const RE_FINAL_COMPACTO = /emit|emisi|emiss|contrat|confirm|firm|pagar|pago|formaliz|finaliz|suscrib|adquiri|tramit|domicili|iban|solicit|grabar|guardar|checkout|submit|purchase/
+const RE_FINAL_COMPACTO = /emit|emisi|emiss|contrat|confirm|firm|pagar|pago|formaliz|finaliz|suscrib|adquiri|tramit|domicili|iban|solicit|grabar|guardar|checkout|submit|purchase|transfer|traspas|autoriz|authoriz|authoris|liquidar|ejecutar|procesar|renovar|reservar|enviar|cobrar|delete/
+/**
+ * 0.3.36, 2.ª revisión adversarial (03/11/2026): un menú/pestaña/enlace con un manejador por `addEventListener` (invisible para la regla)
+ * ejecutaba «Delete», «Transferir», «Reservar», «Autorizar», «Liquidar», «Ejecutar», «Procesar», «Renovar», «Traspasar». Verbos de
+ * acción sobre terceros (ES + EN), palabra entera sobre las formas fuertes. Solo AÑADE bloqueo; el worker además mira los oyentes por CDP.
+ */
+const RE_VERBOS_ACCION_NAVEGACION = new RegExp(
+  '\\b(?:' + [
+    'enviar', 'envia', 'envie', 'reenviar', 'send\\w*', 'request\\w*', 'eliminar', 'elimina', 'borrar', 'borra', 'delete\\w*', 'remove\\w*',
+    'cobrar', 'cobra', 'charge', 'autoriz\\w*', 'authori[sz]\\w*', 'transferir', 'transfiere', 'transferencia\\w*', 'transfer\\w*',
+    'traspas\\w*', 'reservar', 'reserva', 'reservas', 'reserve', 'book\\w*', 'liquidar', 'liquida', 'liquidacion\\w*', 'settle\\w*',
+    'ejecutar', 'ejecuta', 'execute\\w*', 'procesar', 'procesa', 'process', 'renovar', 'renueva', 'renovacion\\w*', 'renew\\w*',
+    'cancelar', 'cancela', 'cancel\\w*', 'guardar', 'guarda',
+  ].join('|') + ')\\b',
+)
 
 /** Ruta de CONTRATACIÓN/PAGO de la pantalla (además del patrón del guard). Sobre ruta+query `planoNavegacion`. */
 const RE_RUTA_PAGO = /(?:^|[^a-z])(?:pagos?|payment|checkout|cobros?|iban|firmas?|tpv)(?:[^a-z]|$)/
@@ -180,11 +225,15 @@ export function esDesplegableMenu(c: ControlNavegacion, rutaMarco: string | null
 /** ¿Nombra esta descripción una acción final / prohibida / de guardado / de salida? Normalizada (y en forma compacta). Pura. */
 export function nombraAccionProhibida(d: string | null | undefined): boolean {
   if (typeof d !== 'string' || d.trim() === '') return false
-  const p = neutralizarDomicilioDireccion(planoNavegacion(d))
-  if (pareceEmision(p) || esTextoBotonProhibido(p)) return true
-  const cat = clasificarAccionPortal([p])
-  if (cat.emision || cat.prohibida || cat.guardar) return true
-  if (RE_ACCION_REAL_TRAS_PREFIJO.test(p) || RE_EXTRA_NAVEGACION.test(p) || RE_FINAL_NAVEGACION.test(p)) return true
+  const p0 = neutralizarDomicilioDireccion(planoNavegacion(d))
+  // Las MISMAS formas fuertes que `comprobarBoton` y `pulsar()`: la normalizada y la de letras sueltas unidas («c o n t r a t a r»).
+  for (const p of p0 === unirDeletreo(p0) ? [p0] : [p0, unirDeletreo(p0)]) {
+    if (pareceEmision(p) || esTextoBotonProhibido(p)) return true
+    const cat = clasificarAccionPortal([p])
+    if (cat.emision || cat.prohibida || cat.guardar) return true
+    if (RE_ACCION_REAL_TRAS_PREFIJO.test(p) || RE_EXTRA_NAVEGACION.test(p) || RE_FINAL_NAVEGACION.test(p) || RE_VERBOS_ACCION_NAVEGACION.test(p)) return true
+  }
+  const p = p0
   // «e m i t i r», «E-M-I-T-I-R», «Emi.tir»: la forma sin espacios ni signos (la «direccion» neutralizada no se recompone).
   const k = p.replace(/[^a-z0-9]+/g, '')
   return k !== '' && (pareceEmision(k) || RE_FINAL_COMPACTO.test(k))
@@ -216,8 +265,10 @@ export function navegacionLibre(c: ControlNavegacion, ctx: { urlMarco: string | 
   // La pantalla misma está en una ruta de contratación/pago: ahí no hay navegación libre.
   const rutaPlana = neutralizarDomicilioDireccion(planoNavegacion(marco.resto))
   if (nombraAccionProhibida(marco.resto) || RE_RUTA_PAGO.test(rutaPlana)) return { ok: false, motivo: 'ruta_de_contratacion' }
-  const visibles = [c.texto, c.ariaLabel, c.title, c.value].filter((x): x is string => typeof x === 'string' && x.trim() !== '')
+  const visibles = [c.texto, c.ariaLabel, c.title, c.value, c.nombreAccesible].filter((x): x is string => typeof x === 'string' && x.trim() !== '')
   if (visibles.length === 0) return { ok: false, motivo: 'sin_descripcion' }
+  // Homoglifos FAIL-CLOSED (2.ª revisión adversarial): tras NFKC y sin diacríticos/invisibles, una letra fuera de a-z (ı, ɑ, ᴇ, cirílico…) → no.
+  if (visibles.some(tieneLetraAjena)) return { ok: false, motivo: 'termino_prohibido', detalle: 'letra_ajena' }
   const internas = [c.id, c.name, c.clase, c.onclick, c.hrefRuta, c.hrefLiteral, c.hrefAbsoluto, c.accionFormulario, ...(c.ancestros ?? [])].filter((x): x is string => typeof x === 'string' && x.trim() !== '')
   if ([...visibles, ...internas].some(recortado)) return { ok: false, motivo: 'descripcion_recortada' }
   const menu = esDesplegableMenu(c, marco.ruta)
@@ -270,7 +321,7 @@ export function navegacionLibre(c: ControlNavegacion, ctx: { urlMarco: string | 
   const opaca = !inerte(c.onclick) || (/^javascript:/i.test(lit) && !inerte(lit)) || (/^javascript:/i.test((c.hrefAbsoluto ?? '').trim()) && !inerte(c.hrefAbsoluto)) || (c.ancestros ?? []).some((x) => !inerte(x))
   const esBoton = tag === 'button' || tag === 'input' || role === 'button' || (role === 'link' && tag !== 'a')
   // Rótulos que deciden (el `title` solo pasa por el bloqueo de arriba).
-  const rotulos = [c.texto, c.value, c.ariaLabel].filter((x): x is string => typeof x === 'string' && x.trim() !== '')
+  const rotulos = rotulosDecisivos(c)
   const neutro = rotulos.length > 0 && rotulos.every(esRotuloNeutroNavegacion)
   const conNeutro = (): ResultadoNavegacionLibre => (neutro ? { ok: true, exentoMenu } : { ok: false, motivo: 'rotulo_no_autorizado', detalle: esBoton || envia ? 'boton' : opaca ? 'accion_opaca' : 'tipo' })
   if (esBoton || envia) return conNeutro()

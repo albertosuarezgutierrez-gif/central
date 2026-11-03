@@ -8,6 +8,7 @@
 //      `test/regression-tarificador-rpa.test.ts` en la raíz.)
 
 import type { BrowserContext, Dialog, Frame, Locator, Page, Request } from 'playwright'
+import { randomUUID } from 'node:crypto'
 import { ErrorTarificador } from './errores.ts'
 import { esTextoControlesTecnicos, SEL_DIALOGO_CONTROLES_TECNICOS } from './controles-tecnicos-mapfre.ts'
 import { indiceOpcionGenerica, indicesCompaniaActualCompuesta } from './compania-actual.ts'
@@ -95,6 +96,8 @@ import {
   ORIGEN_FIDELIDADE_MEDIADORES,
   compactoNavegacion,
   comprobarRotulosAccionFinal,
+  comprobarRotulosPulsar,
+  rotuloExentoDeOyentes,
   navegacionLibre,
   navegacionLibreInventario,
   neutralizarDomicilioDireccion,
@@ -869,9 +872,17 @@ export async function pulsar(boton: Locator, guard: GuardEmision): Promise<void>
   // (`pulsarConfirmarVehiculoGenerali`, `pulsarConfirmarDatosPersonasGenerali`). Va antes para que el motivo diga cuál es su puerta.
   if (confirmarDeGenerali(desc, await boton.evaluate(() => location.href).catch(() => ''))) throw new EmisionBloqueadaError('boton', 'Confirmar (Generali: solo por su puerta del guard)')
   comprobarRotulosAccionFinal(desc)
+  // 2.ª revisión adversarial (03/11/2026): homoglifos fail-closed, normalización fuerte, letras sueltas y verbos que `pulsar()` no pulsa
+  // nunca (enviar, solicitar, eliminar, borrar, cobrar, autorizar, guardar/save…) sobre TODOS los rótulos, también el nombre accesible.
+  // El `value` solo es rótulo en un botón (en un campo de texto es el DATO tecleado: no se mira aquí, sí en `comprobarBoton`).
+  const valorEsRotulo = await boton.evaluate((el) => el.tagName === 'BUTTON' || (el.tagName === 'INPUT' && ['submit', 'button', 'image', 'reset'].includes(((el as HTMLInputElement).type || '').toLowerCase()))).catch(() => true)
+  comprobarRotulosPulsar([desc[0], desc[1], desc[2], valorEsRotulo ? desc[3] : null, ...rotulosAccesibles(desc)], NOMBRES_ROTULOS_PULSAR)
   await boton.click()
   guard.comprobar()
 }
+
+/** Nombre de cada rótulo que mira `pulsar()` (para el mensaje: nunca el texto). */
+const NOMBRES_ROTULOS_PULSAR: readonly string[] = Object.freeze(['texto', 'aria-label', 'title', 'value', 'aria-labelledby', 'alt de hijos', 'alt'])
 
 /**
  * 0.3.25 (Fidelidade real 30/10/2026, 56b4b52c…, «Datos Cliente - Nombre y régimen»): el mapa marcó PROPIETARIO ANTES de que la IA rellenara el
@@ -1032,8 +1043,39 @@ async function descripcion(boton: Locator, alContenedor = false): Promise<(strin
         const conValor = c.tagName === 'INPUT' && ['checkbox', 'radio'].includes(tipo)
         return [c.id || null, c.getAttribute('name'), conValor ? c.getAttribute('value') : null, c.getAttribute('onclick'), c.getAttribute('onchange')]
       })(),
+      // NOMBRE ACCESIBLE (2.ª revisión adversarial 03/11/2026): «Emitir» como aria-labelledby, alt de una <img> hija o alt de un
+      // input type=image pasaba. SIEMPRE las TRES ÚLTIMAS posiciones (ver `rotulosAccesibles`): texto de los ids de aria-labelledby,
+      // alt/aria-label/<title> de los descendientes, alt propio (img / input type=image / area).
+      ...(() => {
+        const raiz = base.getRootNode() as Document | ShadowRoot
+        const ids = (base.getAttribute('aria-labelledby') ?? '').split(/\s+/).filter((x) => x !== '').slice(0, 20)
+        const lb = ids
+          .map((id) => {
+            const e = ((typeof (raiz as Document).getElementById === 'function' ? (raiz as Document).getElementById(id) : null) ?? base.ownerDocument.getElementById(id)) as HTMLElement | null
+            return e ? e.innerText || e.textContent || e.getAttribute('aria-label') || e.getAttribute('alt') || '' : ''
+          })
+          .join(' ')
+        const hijos = Array.from(base.querySelectorAll('img,area,input[type=image],[aria-label],[alt],svg title')).slice(0, 50)
+        const alts = hijos.map((e) => (e.tagName.toLowerCase() === 'title' ? e.textContent : e.getAttribute('alt') ?? e.getAttribute('aria-label')) ?? '').join(' ')
+        const propio = ['IMG', 'AREA', 'INPUT'].includes(base.tagName) ? base.getAttribute('alt') : null
+        // Sin funciones con nombre dentro de `evaluate` (tsx les mete `__name`, que no existe en la página).
+        return [lb, alts, propio].map((x) => {
+          const t = (x ?? '').replace(/\s+/g, ' ').trim()
+          return t === '' ? null : t.slice(0, 2000)
+        })
+      })(),
     ]
-  }, alContenedor)
+  }, alContenedor).then((d) => {
+    // Los tres del nombre accesible salen de la PÁGINA (pueden traer un dato del cliente si llegan a un mensaje): tiradas de cifras,
+    // documentos, teléfonos y correos se tapan; las palabras de acción final sobreviven.
+    const n = d.length
+    return d.map((x, i) => (i >= n - 3 && typeof x === 'string' ? redactarDatosPersonales(x) : x))
+  })
+}
+
+/** Las TRES últimas posiciones de `descripcion()`: el nombre accesible (aria-labelledby, alt/aria-label/<title> hijos, alt propio). Pura. */
+export function rotulosAccesibles(desc: readonly (string | null)[]): (string | null)[] {
+  return desc.length >= 3 ? desc.slice(-3) : []
 }
 
 /** Elige la modalidad (radio bajo la fila de opción): Datos Básicos, una vez, pestaña verificada. */
@@ -3794,7 +3836,7 @@ const rotuloSinAdornos = (d: string | null | undefined) => planoNavegacion(d).re
 export function motivoNoNavegacionLibreVivo(c: ControlNavegacion, urlDocumento: string): string | null {
   const r = navegacionLibre(c, { urlMarco: urlDocumento })
   if (!r.ok) return r.motivo
-  for (const v of [c.texto, c.ariaLabel, c.title, c.value]) {
+  for (const v of [c.texto, c.ariaLabel, c.title, c.value, c.nombreAccesible]) {
     if (typeof v !== 'string' || v.trim() === '') continue
     const n = neutralizarDomicilioDireccion(rotuloSinAdornos(v))
     if (r.exentoMenu && SUSTANTIVOS_MENU_NAVEGACION.includes(n)) continue
@@ -3846,6 +3888,21 @@ async function controlNavegacionVivo(boton: Locator): Promise<{ c: ControlNavega
         anc.push(p.getAttribute('onclick'), p.getAttribute('ng-click'), p.getAttribute('data-ng-click'), p.tagName === 'A' ? p.getAttribute('href') : null)
         p = p.parentElement ?? ((p.getRootNode() as ShadowRoot).host ?? null)
       }
+      // Nombre accesible (2.ª revisión adversarial): texto de los ids de aria-labelledby, alt/aria-label/<title> de los hijos, alt propio.
+      const raiz = h.getRootNode() as Document | ShadowRoot
+      const lb = (h.getAttribute('aria-labelledby') ?? '')
+        .split(/\s+/)
+        .filter((x) => x !== '')
+        .slice(0, 20)
+        .map((id) => {
+          const e = ((typeof (raiz as Document).getElementById === 'function' ? (raiz as Document).getElementById(id) : null) ?? h.ownerDocument.getElementById(id)) as HTMLElement | null
+          return e ? e.innerText || e.textContent || e.getAttribute('aria-label') || e.getAttribute('alt') || '' : ''
+        })
+      const alts = Array.from(h.querySelectorAll('img,area,input[type=image],[aria-label],[alt],svg title'))
+        .slice(0, 50)
+        .map((e) => (e.tagName.toLowerCase() === 'title' ? e.textContent : e.getAttribute('alt') ?? e.getAttribute('aria-label')) ?? '')
+      const propio = ['img', 'area', 'input'].includes(tag) ? h.getAttribute('alt') : null
+      const accesible = [...lb, ...alts, propio ?? ''].join(' ').replace(/\s+/g, ' ').trim()
       const oc = [h.getAttribute('onclick'), h.getAttribute('ng-click'), h.getAttribute('data-ng-click'), href !== null && /^\s*javascript:/i.test(href) ? href : null]
         .filter((x): x is string => x !== null && x.trim() !== '')
         .join(' ; ')
@@ -3872,10 +3929,119 @@ async function controlNavegacionVivo(boton: Locator): Promise<{ c: ControlNavega
           target: destino,
           descarga: tag === 'a' && h.hasAttribute('download'),
           ancestros: anc,
+          nombreAccesible: accesible === '' ? null : accesible.slice(0, 2000),
         },
       }
     }, undefined, { timeout: 5_000 })
     .catch(() => null)
+}
+
+/**
+ * Tipos de evento que, registrados por `addEventListener` (o como atributo) en el control, en un descendiente (lo que el clic toca de verdad),
+ * en un ancestro (burbujeo, hasta `document` y `window`, atravesando shadow roots y slots) o en su `<form>`, pueden EJECUTAR algo al pulsar.
+ * `focus`/`focusin`: el clic enfoca. Congelado.
+ */
+export const TIPOS_OYENTE_ACCION: readonly string[] = Object.freeze(['click', 'auxclick', 'dblclick', 'mousedown', 'mouseup', 'pointerdown', 'pointerup', 'touchstart', 'touchend', 'submit', 'keydown', 'keyup', 'keypress', 'focus', 'focusin'])
+/** Tope de descendientes que se revisan; con más, se da por «hay oyentes» (fail-closed). */
+export const MAX_NODOS_OYENTES = 400
+/** Atributo TEMPORAL con el que se marca el control para encontrarlo por CDP (se quita siempre en `finally`). */
+const ATRIBUTO_MARCA_OYENTES = 'data-guard-oyentes'
+
+type SesionCdp = { send(metodo: string, params?: Record<string, unknown>): Promise<any>; detach(): Promise<void> }
+
+/** `backendNodeId` del nodo con `ATRIBUTO_MARCA_OYENTES` = `marca` en el árbol de `DOM.getDocument` (con iframes del mismo proceso y shadow roots). Pura. */
+function buscarNodoMarcado(raiz: any, marca: string): number | null {
+  const pila: any[] = [raiz]
+  while (pila.length > 0) {
+    const n = pila.pop()
+    if (!n || typeof n !== 'object') continue
+    const a: unknown = n.attributes
+    if (Array.isArray(a)) for (let i = 0; i + 1 < a.length; i += 2) if (a[i] === ATRIBUTO_MARCA_OYENTES && a[i + 1] === marca) return typeof n.backendNodeId === 'number' ? n.backendNodeId : null
+    for (const h of [...(n.children ?? []), ...(n.shadowRoots ?? []), n.contentDocument, n.templateContent]) if (h) pila.push(h)
+  }
+  return null
+}
+
+/**
+ * 2.ª revisión adversarial (03/11/2026): ¿tiene el control VIVO oyentes de acción (`TIPOS_OYENTE_ACCION`) que la regla de navegación libre no
+ * ve (los añadidos por `addEventListener`)? Por CDP (`DOMDebugger.getEventListeners`) sobre el control, sus descendientes (≤`MAX_NODOS_OYENTES`),
+ * sus ancestros hasta `document` y `window` (shadow roots y slots incluidos) y su `<form>`. Los oyentes genéricos de `document`/`window` de la
+ * PÁGINA (React, jQuery delegado, analítica) NO se excluyen: sin un portal real que lo exija no hay criterio para distinguirlos, así que también
+ * bloquean (fail-closed; lo que tiene un rótulo neutro o es tarjeta de ramo no llega aquí). Única excepción, imprescindible y medida: los del
+ * PROPIO Playwright en `window` (ver el bucle). `'error'`: no es Chromium, CDP falla o el nodo no
+ * aparece (iframe de otro proceso sin sesión propia) → quien llama BLOQUEA. Solo lee; la marca temporal se quita siempre.
+ */
+export async function oyentesAccionVivos(boton: Locator): Promise<'ninguno' | 'hay' | 'error'> {
+  const page = boton.page()
+  const marca = randomUUID()
+  let sesion: SesionCdp | null = null
+  const grupo = `guard-oyentes-${marca}`
+  try {
+    const handle = await boton.elementHandle({ timeout: 2_000 })
+    if (!handle) return 'error'
+    const frame = await handle.ownerFrame()
+    await handle.evaluate((el, a) => el.setAttribute(a[0]!, a[1]!), [ATRIBUTO_MARCA_OYENTES, marca])
+    const ctx = page.context() as BrowserContext & { newCDPSession?: (x: Page | Frame) => Promise<SesionCdp> }
+    if (typeof ctx.newCDPSession !== 'function') return 'error'
+    // Un iframe de OTRO proceso tiene su propia sesión; el resto vive en la de la página.
+    if (frame && frame !== page.mainFrame()) sesion = await ctx.newCDPSession(frame).catch(() => null)
+    sesion ??= await ctx.newCDPSession(page)
+    const doc = await sesion.send('DOM.getDocument', { depth: -1, pierce: true })
+    const backendNodeId = buscarNodoMarcado(doc?.root, marca)
+    if (backendNodeId === null) return 'error'
+    const { object } = await sesion.send('DOM.resolveNode', { backendNodeId, objectGroup: grupo })
+    if (!object?.objectId) return 'error'
+    const lista = await sesion.send('Runtime.callFunctionOn', {
+      objectId: object.objectId,
+      objectGroup: grupo,
+      returnByValue: false,
+      arguments: [{ value: MAX_NODOS_OYENTES }],
+      functionDeclaration: `function (tope) {
+        var out = [], vistos = new Set();
+        var poner = function (n) { if (n && !vistos.has(n)) { vistos.add(n); out.push(n); } };
+        var bajar = function (r) { var ds = r.querySelectorAll('*'); for (var i = 0; i < ds.length; i++) { poner(ds[i]); if (ds[i].shadowRoot) { poner(ds[i].shadowRoot); bajar(ds[i].shadowRoot); } } };
+        poner(this);
+        if (this.shadowRoot) { poner(this.shadowRoot); bajar(this.shadowRoot); }
+        bajar(this);
+        if (out.length > tope) return null;
+        var p = this;
+        while (p) { var s = p.assignedSlot || p.parentNode || p.host || null; if (!s) break; poner(s); p = s; }
+        if (this.form) poner(this.form);
+        var w = this.ownerDocument && this.ownerDocument.defaultView; if (w) poner(w);
+        return out;
+      }`,
+    })
+    if (lista?.exceptionDetails || !lista?.result) return 'error'
+    if (lista.result.subtype === 'null') return 'hay'
+    if (!lista.result.objectId) return 'error'
+    const props = await sesion.send('Runtime.getProperties', { objectId: lista.result.objectId, ownProperties: true })
+    const nodos = (props?.result ?? []).filter((x: any) => /^\d+$/.test(String(x?.name)) && typeof x?.value?.objectId === 'string')
+    if (nodos.length === 0) return 'error'
+    for (const n of nodos) {
+      const r = await sesion.send('DOMDebugger.getEventListeners', { objectId: n.value.objectId, depth: 0 })
+      if (!Array.isArray(r?.listeners)) return 'error'
+      // EXCEPCIÓN ÚNICA E IMPRESCINDIBLE (medida en Chromium real, 03/11/2026): el PROPIO Playwright, en cuanto usa un locator, deja en
+      // `window` oyentes de CAPTURA (click, mousedown, pointerdown…; los de su interceptor de clic) en el mundo PRINCIPAL, junto a uno de
+      // tipo `__playwright_global_listeners_check__`, todos del MISMO script. Se descuentan SOLO en `window`, SOLO los del script que
+      // registra ese marcador y SOLO si lo registra uno (si hay dos scripts con el marcador, nada se descuenta). Una página no puede
+      // atribuir funciones suyas a ese script; un oyente de la página en `window` (otro script) sigue bloqueando.
+      let propios: string | null = null
+      if (n.value.className === 'Window') {
+        const marcas = new Set(r.listeners.filter((l: any) => l?.type === '__playwright_global_listeners_check__').map((l: any) => String(l?.scriptId)))
+        if (marcas.size === 1) propios = [...marcas][0] as string
+      }
+      if (r.listeners.some((l: any) => TIPOS_OYENTE_ACCION.includes(String(l?.type)) && (propios === null || String(l?.scriptId) !== propios))) return 'hay'
+    }
+    return 'ninguno'
+  } catch {
+    return 'error'
+  } finally {
+    await boton.evaluate((el, a) => el.removeAttribute(a), ATRIBUTO_MARCA_OYENTES).catch(() => undefined)
+    if (sesion) {
+      await sesion.send('Runtime.releaseObjectGroup', { objectGroup: grupo }).catch(() => undefined)
+      await sesion.detach().catch(() => undefined)
+    }
+  }
 }
 
 /**
@@ -3909,6 +4075,12 @@ export async function pulsarNavegacionLibre(boton: Locator, guard: GuardEmision,
   // Posiciones 0-3 de `descripcion` (texto, aria-label, title, value): las ÚNICAS que la excepción del menú puede quitar, y solo el sustantivo exacto.
   comprobarBoton(conRutasTolerables(guard, desc.map((d, i) => (exento && i <= 3 && SUSTANTIVOS_MENU_NAVEGACION.includes(rotuloSinAdornos(d)) ? null : d))))
   comprobarRotulosAccionFinal(desc)
+  // 2.ª revisión adversarial (03/11/2026): un manejador por `addEventListener` (invisible para la regla) en el control, un hijo, un ancestro
+  // o su formulario. Solo pasa con oyentes lo que tiene un rótulo NEUTRO exacto o es tarjeta de ramo; CDP que falla = bloqueo.
+  if (!rotuloExentoDeOyentes(vivo.c)) {
+    const oy = await oyentesAccionVivos(boton)
+    if (oy !== 'ninguno') throw new EmisionBloqueadaError('boton', `navegación libre: ${oy === 'hay' ? 'el control tiene oyentes de clic/teclado (addEventListener) y su rótulo no es neutro' : 'no se pudieron leer los oyentes del control (CDP)'}`)
+  }
   const tope = topeNavegacionLibre(aut.entrada)
   const cuenta = PULSACIONES_NAVEGACION.get(guard) ?? new Map<string, number>()
   const clave = claveControlNavegacion(vivo.c, vivo.url)
