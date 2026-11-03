@@ -12,6 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 
+## (03/11/2026) Pricing · atribución de capas en `pricing_applied`
+- Análisis de la prima vie/sáb de House: sin evidencia aún de efecto → NO ampliar a más pisos; revisión el 24/11/2026.
+- Migración `apps/plataforma/prisma/sql/2026-11-03_pricing_applied_capas.sql`: `prima_finde`, `factor_semana`, `suelo_propietario`, `capa_final` (mercado|prima|suelo_finde|suelo_fecha|suelo_estacional|techo|rail|max_price|min_price).
+- El apply las escribe (helper `lib/sivra/pricing-capa-final.ts` + cepo). ⚠️ Aplicar la migración ANTES del deploy: sin ella el INSERT falla en silencio y se pierde la auditoría (y `ref24`).
+
 ## (03/11/2026) Fiscal · doble conteo P&L pisos + auditoría contable
 - `lib/sivra/pl-mensual.ts`: los cargos de tarjeta con `factura_ref='(sivra:)gasto:<uuid>'` cuyo gasto existe ya no suman (helper `cargos-ya-facturados.ts` + test). 8 pares enlazados en BD (TV 1.749€, Amazon 247,92€ y 6 de Socorro); rollback en scratchpad. El conciliador que debe escribir el enlace al casar es `lib/conciliacion.ts` (`sivra:gasto:`).
 - Póliza 061145138 (659,43€) descartada: era de un cliente (Rafael), no gasto. Correduría: 0 supermercados reales; 3 Asisa mal etiquetados → `seguro_salud`; 14 sin subcategoría clasificados; APROMES 72€ = cuota de la correduría; gasolina 300€ se queda en correduría por decisión de Alberto (riesgo: confirmar con asesoría).
