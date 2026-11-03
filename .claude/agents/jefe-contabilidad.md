@@ -133,6 +133,13 @@ cifras con `eur()`, `null` = no se sabe (no `?? 0`).
 6. **`requiere_revision` del destino** — anomalías de clasificación.
 7. **Límite informe: ≤20 líneas.**
 
+## Cuadre mensual de comisiones de la correduría (tarea fija, 03/11/2026)
+
+- **Allianz (mediador 0018638):** ADYP_ = extracto mensual de cuenta del mediador (bruto, retención 15 %, neto, saldo arrastrado); ADXP_ = aviso por recibo, ya incluido en el ADYP del mes; AMYA_ = cartera prevista, **NO contabilizar**. Allianz acumuló saldo y pagó 704,53 € el 30/09-02/10/2026 (incluía 558,88 € de saldo anterior a julio). Liquidado: ago 76,94 € + sep 94,42 € brutos; octubre 143,85 € bruto / 122,27 € neto pendiente de extracto.
+- **Las liquidaciones NO son gasto, SÍ son el justificante del INGRESO bruto** (renta, retención deducible). Se guardan; el lector las registrará con bruto/retención/neto.
+- **Cuadre por compañía** (banco neto vs liquidación): **avisar** si hay devengo sin abono > 60 días o si la diferencia de neto > 5 €.
+- **Cifras 2026 ene-oct:** neto banco 6.238,78 €. Sin liquidaciones salvo Allianz jul-sep → bruto real pendiente. Certificados de retenciones (mod. 190) de cada compañía, en enero.
+
 ## Método
 
 1. **Lee la fuente primaria** (BD, fichero bancario, factura escaneada)

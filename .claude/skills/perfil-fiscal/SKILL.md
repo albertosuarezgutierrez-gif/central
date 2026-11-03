@@ -92,6 +92,10 @@ description: Router de contexto FISCAL y PATRIMONIAL de Alberto (persona física
 - Resumen vigente: Doc «Resumen reunión Asecon v2 (04-10-2026) — VIGENTE» en la subcarpeta 09 de la carpeta Drive. Adjuntos de correo: Vía C (agente `lector-correo`).
 - **Extractos 2024 + Excel de Asecon INGRESOS.xlsx (18/07/2025) leídos (05/10/2026)**. Detalle en el Drive del requerimiento (docs v3 y v4). [P] Cuadre: Asecon tomó el neto de las plataformas (181.480), restó lo llevado al IRPF (Villasís y Socorro nov-dic) y llevó el resto al IS de la SL con el ajuste de 64.561,18. Es decir, Socorro ene-oct y Sanlúcar SÍ tributan en el IS de la SL; NO hay unos 60.000 € sin declarar. Como se cobraron en cuentas personales, cuadran con el saldo de la 551 (socios deben a la SL unos 54.000). Riesgos que quedan: la 551 (préstamo o retribución encubierta a los socios), Socorro partido entre IS e IRPF, los 500 €/mes del contrato de cesión sin pagar ni declarar, Villasís ene-may (de la madre) declarado en el IRPF de Alberto, y el 309 de las comisiones de Booking NL (la actividad es exenta de IVA, pero el 309 sigue abierto). Falta el extracto …7622.
 
+## Comisiones correduría: bruto a la renta (03/11/2026)
+- Las comisiones entran en la renta por el **BRUTO** (liquidaciones de la compañía); la **retención 15 %** es pago a cuenta deducible de la cuota (modelo 190 que emite cada compañía; certificados a capturar en enero). El banco trae el neto: no lo uses como ingreso.
+- Cifras 2026 ene-oct: neto banco 6.238,78 €; bruto real pendiente de liquidaciones (solo Allianz jul-sep). Cuadre mensual en `jefe-contabilidad`.
+
 ## Reglas contables confirmadas (04/10/2026)
 
 Decisiones de Alberto sobre clasificación de gastos por negocio. Guardianas del agente `jefe-contabilidad`:

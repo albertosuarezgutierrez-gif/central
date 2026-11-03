@@ -85,6 +85,7 @@ Si la sesión NO te da un criterio específico, busca por **remitente + fecha re
   nº factura, fecha, ID de alojamiento, comisión, cargo por pagos, base, IVA 21 %, total. Emisor Booking.com B.V.
   (NL805734958B01), destinatario Alberto (NIF 28823484E). Mapeo ID→piso: 2888928 = Dúplex (Plaza Villasís); 4340072 = Luxury Busto; 4771238 = Busto Reform; 2039943 = House Sevillana/Socorro 24 (OJO: el nombre impreso en la factura NO identifica el piso, usa el ID; mapa oficial en sivra-maestro/references/contexto-y-agente-huesped.md). Las facturas de 2039943 aún no se han localizado en Gmail (ene-oct 2026).
   Airbnb: aún sin facturas localizadas (di «no encontradas», no «no existen»).
+- **Allianz (mediador 0018638):** prefijos ADYP_ = extracto mensual de cuenta (liquidación bruto/retención/neto), ADXP_ = aviso por recibo (ya incluido en el ADYP), AMYA_ = cartera prevista (no contabilizar).
 - **Certificados de retenciones de las compañías** (correduría, modelo 190): cuando lleguen por correo, captúralos
   (Vía C) con compañía, ejercicio, bruto y retención; son pago a cuenta, no ingreso ni gasto.
 - **Documentos de CLIENTES** de la correduría (p. ej. una póliza) no son gastos de Alberto: márcalos en el informe

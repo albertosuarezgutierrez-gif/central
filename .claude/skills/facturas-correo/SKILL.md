@@ -98,6 +98,8 @@ Flujo: Paso 0 (salud+backlog) → 1/1-bis (candidatos Gmail + subidas manuales D
   extranjero sin IVA → señalar posible autoliquidación a la asesoría; certificados de retenciones de compañías → capturar.
   Mobiliario >300 € en pisos: posible amortización 10 %/año, pendiente de decisión (no marcar `amortizable`, ver `perfil-fiscal`).
 - Escrituras en BD solo con OK de Alberto; nunca correos a terceros.
+- **Allianz (mediador 0018638):** ADYP_ = extracto mensual de cuenta (liquidación); ADXP_ = aviso por recibo, ya incluido en el ADYP del mes; AMYA_ = cartera prevista, **no contabilizar**. Las liquidaciones NO son gasto, pero son el justificante del INGRESO bruto: se guardan (el lector las registrará con bruto/retención/neto). Cuadre mensual por compañía en `jefe-contabilidad`.
+- **Apps Script «Procesar Facturas Apartamentos» (Drive):** la versión publicada hasta el 03/11/2026 era la ANTIGUA (archivaba facturas de negocio en «ALBERTO 2026 PERSONAL (SEGUROS)», subcarpetas ENERO/FEBRERO…). Desde el 03/11/2026 la implementación activa (URL en `/exec`) es la Versión 4 = `apps/sivra/scripts/drive-upload.gs` (carpeta 2026 + AAAA automático); se movieron 69 facturas ago-nov a la carpeta 2026. **Tras cambiar `drive-upload.gs` hay que PUBLICAR nueva versión en Apps Script: no se despliega solo.** Para leer el código publicado: Drive export `application/vnd.google-apps.script+json` del fileId `1WsJE_-r8YU2DLJZVJSdzM2VGnnKxZXluTCnDHuFQgx8e8_w6Ao2QJN0c`.
 
 ## Índice de references/ — lee SOLO el archivo que necesite la tarea
 
