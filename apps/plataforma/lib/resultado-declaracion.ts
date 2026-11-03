@@ -150,31 +150,26 @@ function abonos(perfil: PerfilFiscal, parteMat: number, parteFn: number): Partid
   ]
 }
 
-/** Abonos del banco (real + proyección a 31/12): una partida por contribuyente. `parte` = fracción que le toca. */
-function abonosDelBanco(b: AbonosBanco, parte: number): Partida[] {
-  if (parte <= 0) return []
-  const est = b.estimado > 0
+/** Abonos del banco (real + proyección a 31/12): una partida por contribuyente. `p140`/`p143` = fracción de cada modelo que le toca. */
+function abonosDelBanco(b: AbonosBanco, p140: number, p143: number): Partida[] {
+  if (p140 <= 0 && p143 <= 0) return []
+  const t140 = b.real140 + b.estimado140, t143 = b.real143 + b.estimado143
+  const importe = r2(t140 * p140 + t143 * p143)
+  const est = (b.estimado140 > 0 && p140 > 0) || (b.estimado143 > 0 && p143 > 0)
+  const sup = p140 > 0 && b.desglose.some(d => d.supuesto)
+  const real = r2(b.real140 * p140 + b.real143 * p143), futuro = r2(importe - real)
   return [{
-    id: 'abono_banco', etiqueta: 'Abonos anticipados 140/143 (del banco)', importe: r2(b.total * parte), estimada: est,
-    nota: `del banco: ${b.n} abonos de 100,00€ (${eur2(b.real)}€)` + (est ? `; estimado hasta 31/12: +${eur2(b.estimado)}€ al ritmo de los últimos 3 meses` : ''),
+    id: 'abono_banco', etiqueta: 'Abonos anticipados 140/143 (del banco)', importe, estimada: est || sup,
+    nota: `del banco: ${b.n} abonos imputados a ${b.desglose.length ? 'meses ' + [...new Set(b.desglose.map(d => d.mes))].join(', ') : 'ningún mes'} (${eur2(real)}€)`
+      + (futuro > 0 ? `; estimado hasta 31/12: +${eur2(futuro)}€ al ritmo del último mes` : '')
+      + (sup ? '; algún abono de 100,00€ sin etiqueta de modelo se supone 140' : ''),
   }]
 }
 
-/** Reparto individual de los abonos del banco (no distingue 140/143): maternidad → Pilar; familia numerosa → 50/50 (todo Alberto si Pilar no trabaja).
- *  Con desglose en el perfil (mat y fn conocidos y >0 en total) se reparte según él; si no, en proporción a la deducción de cada tipo y se marca «supuesto». */
-export function abonosBancoIndividual(b: AbonosBanco, titular: 'alberto' | 'pilar', perfil: PerfilFiscal, dedMat: number, dedFn: number): Partida[] {
-  const fnPilar = perfil.conyugeTrabaja ? 0.5 : 0
-  const mat = perfil.abonoAnticipadoMaternidad, fn = perfil.abonoAnticipadoFamiliaNumerosa
-  const conDesglose = mat != null && fn != null && mat + fn > 0
-  const wMat = conDesglose ? mat : Math.max(0, dedMat), wFn = conDesglose ? fn : Math.max(0, dedFn)
-  const tot = wMat + wFn
-  const parteMat = tot > 0 ? wMat / tot : 0
-  const parte = tot > 0
-    ? (titular === 'pilar' ? parteMat + (1 - parteMat) * fnPilar : (1 - parteMat) * (1 - fnPilar))
-    : (titular === 'alberto' ? (perfil.conyugeTrabaja ? 0.5 : 1) : fnPilar)
-  const p = abonosDelBanco(b, parte)
-  if (conDesglose || p.length === 0) return p.map(x => ({ ...x, nota: `${x.nota}; reparto según el desglose 140/143 del perfil` }))
-  return p.map(x => ({ ...x, estimada: true, nota: `${x.nota}; reparto supuesto (el banco no distingue 140/143): maternidad a Pilar, familia numerosa 50/50` }))
+/** Reparto individual de los abonos del banco: el modelo 140 (maternidad) va a Pilar; el 143 (familia numerosa) 50/50 (todo Alberto si Pilar no trabaja). */
+export function abonosBancoIndividual(b: AbonosBanco, titular: 'alberto' | 'pilar', perfil: PerfilFiscal): Partida[] {
+  const fn = perfil.conyugeTrabaja ? 0.5 : 0
+  return titular === 'pilar' ? abonosDelBanco(b, 1, fn) : abonosDelBanco(b, 0, 1 - fn)
 }
 
 // ── Cuenta final de un contribuyente ────────────────────────────────────────────────────────
@@ -233,7 +228,7 @@ export function calcularResultadoDeclaracion(e: EntradaSimulador, palIn: Palanca
   const dedConj = lineasDeduccion(perfilConj, ctx.descendientes, anio, cc?.baseLiquidable ?? undefined)
     .map(l => aPartida(l, 1, notaTope(l, ctx.perfil, ctx.guarderiaBancoAnual))).map(MARCA_TOPE)
   const conjunta = cerrarModalidad('conjunta', [
-    cerrarContribuyente('unidad_familiar', cc, dedConj, [retAlb, retPil], [pfA, pfP], banco ? abonosDelBanco(banco, 1) : abonos(ctx.perfil, 1, 1)),
+    cerrarContribuyente('unidad_familiar', cc, dedConj, [retAlb, retPil], [pfA, pfP], banco ? abonosDelBanco(banco, 1, 1) : abonos(ctx.perfil, 1, 1)),
   ])
 
   // ── Individual: cada uno la suya. Reparto de las deducciones familiares ──
@@ -268,7 +263,7 @@ export function calcularResultadoDeclaracion(e: EntradaSimulador, palIn: Palanca
     return cerrarContribuyente(
       titular, c, mias,
       [titular === 'alberto' ? retAlb : retPil], [titular === 'alberto' ? pfA : pfP],
-      banco ? abonosBancoIndividual(banco, titular, ctx.perfil, importeConjunta('maternidad'), importeConjunta('fn_general') + importeConjunta('fn_especial')) : abonos(ctx.perfil, titular === 'pilar' ? 1 : 0, parteFn),
+      banco ? abonosBancoIndividual(banco, titular, ctx.perfil) : abonos(ctx.perfil, titular === 'pilar' ? 1 : 0, parteFn),
     )
   }
   const ind = cerrarModalidad('individual', [individual('alberto', cA), individual('pilar', cP)])

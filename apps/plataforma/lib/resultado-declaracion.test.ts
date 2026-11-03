@@ -134,8 +134,10 @@ test('guardería: la nota dice el origen (perfil) y avisa si difiere del banco (
   assert.match(g(ctxFixture({ guarderiaBancoAnual: null })), /banco: sin dato/)
 })
 
+const BANCO = { real: 1400, n: 14, ultimoMes: 10, estimado: 200, total: 1600, real140: 1400, real143: 0, estimado140: 200, estimado143: 0, supuestos: 0, desglose: [] as Array<{ mes: number; modelo: 140 | 143; importe: number; n: number; supuesto: boolean }> }
+
 test('abonos 140/143 del banco: aparecen «del banco», desaparece «faltan abonos» y suman (real + estimado) en ambas modalidades', () => {
-  const banco = { real: 1400, n: 14, ultimoMes: 10, estimado: 200, total: 1600 }
+  const banco = BANCO
   const base = calcularResultadoDeclaracion(entradaFixture(), SIN_PALANCAS, ctxFixture({ perfil: { ...PERFIL, abonoAnticipadoMaternidad: null, abonoAnticipadoFamiliaNumerosa: null } }))
   const r = calcularResultadoDeclaracion(entradaFixture(), SIN_PALANCAS, ctxFixture({ perfil: { ...PERFIL, abonoAnticipadoMaternidad: null, abonoAnticipadoFamiliaNumerosa: null }, abonosBanco: banco }))
   assert.equal(base.faltanAbonos, true)
@@ -147,7 +149,7 @@ test('abonos 140/143 del banco: aparecen «del banco», desaparece «faltan abon
 })
 
 test('abonos del banco con n=0 no pisan el perfil ni quitan el aviso «faltan abonos»', () => {
-  const cero = { real: 0, n: 0, ultimoMes: null, estimado: 0, total: 0 }
+  const cero = { ...BANCO, real: 0, n: 0, ultimoMes: null, estimado: 0, total: 0, real140: 0, estimado140: 0 }
   const nulo = { perfil: { ...PERFIL, abonoAnticipadoMaternidad: null, abonoAnticipadoFamiliaNumerosa: null } }
   const sin = calcularResultadoDeclaracion(entradaFixture(), SIN_PALANCAS, ctxFixture({ ...nulo, abonosBanco: cero }))
   assert.equal(sin.faltanAbonos, true); assert.ok(sin.avisoAbonos)
@@ -155,15 +157,18 @@ test('abonos del banco con n=0 no pisan el perfil ni quitan el aviso «faltan ab
   assert.deepEqual(conPerfil.conjunta.contribuyentes[0].abonosAnticipados, calcularResultadoDeclaracion(entradaFixture(), SIN_PALANCAS, ctxFixture()).conjunta.contribuyentes[0].abonosAnticipados)
 })
 
-test('abonos del banco en individual: sin desglose, reparto supuesto por deducción (mat→Pilar, fn 50/50); con desglose, el del perfil; suma = conjunta', () => {
-  const banco = { real: 1400, n: 14, ultimoMes: 10, estimado: 200, total: 1600 }
+test('abonos del banco en individual: 140 → Pilar; 143 repartible (50/50); sin «supuesto» si el modelo está identificado; suma = conjunta', () => {
   const imp = (r: ReturnType<typeof calcularResultadoDeclaracion>, t: string) => r.individual.contribuyentes.find(c => c.titular === t)!.abonosAnticipados
-  const sd = calcularResultadoDeclaracion(entradaFixture(), SIN_PALANCAS, ctxFixture({ perfil: { ...PERFIL, abonoAnticipadoMaternidad: null, abonoAnticipadoFamiliaNumerosa: null }, abonosBanco: banco }))
-  const mat = 934.9, fn = 1200, pil = 1600 * (mat + fn / 2) / (mat + fn)
-  cerca(imp(sd, 'pilar')[0].importe, pil); cerca(imp(sd, 'alberto')[0].importe, 1600 - pil)
-  assert.match(imp(sd, 'pilar')[0].nota ?? '', /supuesto/); assert.equal(imp(sd, 'pilar')[0].estimada, true)
-  const cd = calcularResultadoDeclaracion(entradaFixture(), SIN_PALANCAS, ctxFixture({ perfil: { ...PERFIL, abonoAnticipadoMaternidad: 1000, abonoAnticipadoFamiliaNumerosa: 600 }, abonosBanco: banco }))
-  const pil2 = 1600 * (1000 + 300) / 1600
-  cerca(imp(cd, 'pilar')[0].importe, pil2); cerca(imp(cd, 'alberto')[0].importe, 1600 - pil2)
-  assert.doesNotMatch(imp(cd, 'pilar')[0].nota ?? '', /supuesto/)
+  const sinPerfil = { ...PERFIL, abonoAnticipadoMaternidad: null, abonoAnticipadoFamiliaNumerosa: null }
+  const b140 = { ...BANCO, real140: 1400, real143: 0, estimado140: 200, estimado143: 0 }
+  const r1 = calcularResultadoDeclaracion(entradaFixture(), SIN_PALANCAS, ctxFixture({ perfil: sinPerfil, abonosBanco: b140 }))
+  cerca(imp(r1, 'pilar')[0].importe, 1600); cerca(imp(r1, 'alberto').reduce((s, p) => s + (p.importe ?? 0), 0), 0)
+  assert.doesNotMatch(imp(r1, 'pilar')[0].nota ?? '', /supuesto/)
+  const b2 = { ...BANCO, real140: 1000, real143: 400, estimado140: 100, estimado143: 100 }
+  const r2 = calcularResultadoDeclaracion(entradaFixture(), SIN_PALANCAS, ctxFixture({ perfil: sinPerfil, abonosBanco: b2 }))
+  const fnP = PERFIL.conyugeTrabaja ? 0.5 : 0
+  cerca(imp(r2, 'pilar')[0].importe, 1100 + 500 * fnP); cerca(imp(r2, 'alberto').reduce((s, p) => s + (p.importe ?? 0), 0), 500 * (1 - fnP))
+  cerca(r2.individual.contribuyentes.reduce((s, c) => s + c.abonosAnticipados.reduce((x, p) => x + (p.importe ?? 0), 0), 0), 1600)
+  const sup = calcularResultadoDeclaracion(entradaFixture(), SIN_PALANCAS, ctxFixture({ perfil: sinPerfil, abonosBanco: { ...b140, supuestos: 1, desglose: [{ mes: 1, modelo: 140, importe: 100, n: 1, supuesto: true }] } }))
+  assert.match(imp(sup, 'pilar')[0].nota ?? '', /se supone 140/)
 })
