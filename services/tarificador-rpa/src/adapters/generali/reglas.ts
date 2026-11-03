@@ -2493,3 +2493,57 @@ export function errorPasoIncompletoGenerali(paso: string, faltan: readonly strin
   const xs = [...new Set(faltan.map((x) => sanearFragmentoGenerali(String(x ?? '')).trim().slice(0, 90)).filter(Boolean))].slice(0, 10)
   return `el paso «${sanearFragmentoGenerali(paso).slice(0, 40)}» marcado con datos incompletos («Paso con datos incompletos» / «El paso anterior no tiene los datos completos») tiene obligatorios vacíos sin valor neutro seguro: ${xs.length ? xs.join(' · ') : '(ninguno legible)'}. No se pulsa «Recalcular»`
 }
+
+// ─── v0.2.73 (03/11/2026, trabajo 44b44608 con 0.2.72): fue a «Datos de Valoración», no vio obligatorios vacíos, volvió y «Recalcular» siguió en «datos incompletos» ───
+// Volcados 9aa12762/44b44608: la barra (`#secundario`) solo tiene «Datos de Valoración» y «Garantías y Resultados» y NO marca ningún paso; «Vehículo»/«Personas» son
+// botones DENTRO de «Datos de Valoración» (bloques obligatorios cuyo control es un botón, que el lector ignoraba). El portal sí dice dónde está el hueco: cada aviso
+// de `#areaErrores` es un enlace `setError(this)` («Revíselos pulsando el mensaje para ir al campo que lo genera»). Ahora, en el paso incompleto: 1) obligatorios
+// leídos con el DOM vivo (también desplegable con valor vacío, ocultos y de botón); 2) se pulsa el aviso y se lee el campo que el portal enfoca; 3) si con todo
+// no hay campo que rellenar y el aviso sigue, atasco con el diagnóstico (pasos, avisos, campo señalado, ocultos vacíos, botones) en vez de gastar «Recalcular».
+
+/** v0.2.73: un bloque obligatorio (`.required`) del paso, leído del DOM vivo. Nunca valores. `boton` = su único control es un botón (p. ej. «Vehículo», «Personas»). */
+export type ObligatorioPasoGenerali = { etiqueta: string; name: string; tipo: 'select' | 'texto' | 'opciones' | 'boton'; opciones: string[]; vacio: boolean; visible: boolean; editable: boolean }
+/** v0.2.73: el campo que el portal enfoca al pulsar su aviso (`setError`). Nunca valores. */
+export type CampoSenaladoGenerali = { etiqueta: string; name: string; tipo: 'select' | 'texto' | 'opciones'; opciones?: string[]; vacio: boolean; visible: boolean; editable: boolean; obligatorio: boolean }
+
+/**
+ * v0.2.73: qué obligatorios del paso son CANDIDATOS a valor neutro: vacíos, visibles, editables, no de botón y no tratados ya (`yaVistos` por `name`). Los ocultos y
+ * los de botón no se tocan (un 2º conductor oculto no aplica; un botón abre otro flujo): solo van al diagnóstico. PURA.
+ */
+export function candidatosNeutroPasoGenerali(obligatorios: readonly ObligatorioPasoGenerali[], yaVistos: readonly string[]): ObligatorioPasoGenerali[] {
+  const vistos = new Set(yaVistos)
+  const out: ObligatorioPasoGenerali[] = []
+  for (const o of obligatorios) {
+    if (!o.vacio || !o.visible || !o.editable || o.tipo === 'boton' || !o.name || vistos.has(o.name)) continue
+    vistos.add(o.name)
+    out.push(o)
+  }
+  return out
+}
+
+/**
+ * v0.2.73: diagnóstico saneado (≤ `max` caracteres) del paso que el portal da por incompleto sin campo localizable: pasos de la barra (actual/marcado), avisos,
+ * campo señalado por el aviso (`undefined` = no había aviso pulsable; `null` = se pulsó y no enfocó ningún campo), obligatorios vacíos ocultos y bloques
+ * obligatorios de botón. Solo rótulos. PURA.
+ */
+export function diagnosticoPasoIncompletoGenerali(
+  d: { pasos: readonly PasoBarraGenerali[]; avisos: readonly string[]; senalado: CampoSenaladoGenerali | null | undefined; obligatorios: readonly ObligatorioPasoGenerali[] },
+  max = 300,
+): string {
+  const s = (t: string, n: number) => sanearFragmentoGenerali(String(t ?? '')).trim().slice(0, n)
+  const uniq = (xs: string[]) => [...new Set(xs.filter(Boolean))]
+  const pasos = d.pasos.map((p) => `${s(p.texto, 30)}${p.actual ? '(actual)' : ''}${p.marcado ? '(marcado)' : ''}`).join(' · ') || '(sin barra)'
+  const avisos = uniq(d.avisos.map((a) => s(a, 50))).slice(0, 3).map((a) => `«${a}»`).join(' · ') || '(ninguno)'
+  const sen = d.senalado === undefined ? 'sin aviso pulsable'
+    : d.senalado === null ? 'ninguno (el aviso no enfoca campo)'
+    : `${s(d.senalado.etiqueta, 40) || s(d.senalado.name, 40) || '(sin rótulo)'}[${d.senalado.tipo}${d.senalado.obligatorio ? '*' : ''}]=${d.senalado.vacio ? 'vacío' : 'puesto'}${d.senalado.visible ? '' : ',oculto'}${d.senalado.editable ? '' : ',solo lectura'}`
+  const ocultos = uniq(d.obligatorios.filter((o) => o.vacio && !o.visible && o.tipo !== 'boton').map((o) => s(o.etiqueta, 30) || s(o.name, 30))).slice(0, 4)
+  const botones = uniq(d.obligatorios.filter((o) => o.tipo === 'boton' && o.visible).map((o) => s(o.etiqueta, 25) || s(o.name, 25))).slice(0, 4)
+  const t = `pasos: ${pasos}; avisos: ${avisos}; campo señalado: ${sen}; ocultos vacíos: ${ocultos.join(' · ') || '(ninguno)'}; botones obligatorios: ${botones.join(' · ') || '(ninguno)'}`
+  return t.length <= max ? t : `${t.slice(0, max - 1)}…`
+}
+
+/** v0.2.73: atasco cuando el paso sigue «incompleto» para el portal y el bot no localiza ningún campo que rellenar: nombra el PASO y lleva el diagnóstico. PURA. */
+export function errorPasoSinCampoGenerali(paso: string, diagnostico: string): string {
+  return `el paso «${sanearFragmentoGenerali(paso).slice(0, 40)}» sigue con «Paso con datos incompletos» y no se localiza el campo (ningún obligatorio vacío editable; el aviso del portal no lo resuelve). No se pulsa «Recalcular». Diagnóstico: ${diagnostico}`
+}

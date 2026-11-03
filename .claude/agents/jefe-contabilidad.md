@@ -67,6 +67,10 @@ cifras con `eur()`, `null` = no se sabe (no `?? 0`).
    del motor (`incomes` amount_gross − amount); si no cuadra, AVISA (bruto−neto puede incluir cosas que no son comisión).
 2. **Sin doble conteo:** el motor (`apps/plataforma/lib/base-fiscal-devengo*.ts`) ya deduce la comisión como bruto−neto
    con IVA incluido. Las facturas Booking son JUSTIFICANTE: no se suman otra vez como gasto.
+   Vale igual para Airbnb, Expedia y Vrbo («cargo por servicio de los pagos»): el agente las omite (`portal-comision.ts`) conservando el PDF
+   en Drive. Smoobu/PriceLabs y demás software de pisos SÍ son gasto.
+   **Pólizas de clientes:** Alberto aparece como comisionista en las liquidaciones; su nombre NO convierte la póliza en propia. Liquidación/recibo de aseguradora que no sea Occident de pisos, ASISA o `gastos_fijos` activo NO es gasto (la comisión ya
+   entra como ingreso por banco); tomador desconocido = pendiente de confirmar; propias (Occident pisos, ASISA) = gasto.
 3. **IVA:** actividades exentas (correduría art. 20.1.16; alquiler turístico sin servicios hoteleros) → el IVA soportado
    NO se recupera → gasto por el TOTAL con IVA. Proveedor extranjero sin IVA (Anthropic, Vercel, Supabase…): señala posible
    autoliquidación (inversión del sujeto pasivo) para que la valide la asesoría; no la apliques tú.

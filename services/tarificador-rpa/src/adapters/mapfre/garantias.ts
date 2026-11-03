@@ -88,7 +88,19 @@ const RE_VALOR_FINAL = /^(.*\S)\s+(no\s+incluid[oa]s?|no\s+contratad[oa]s?|inclu
 
 function etiquetaValida(e: string): boolean {
   const t = limpiar(e)
-  return t.length >= 3 && t.length <= 90 && /\p{L}{3}/u.test(t) && !RE_NO_GARANTIA.test(t)
+  // v0.8.60 (AS-26-0067): «*Indem. pérdida total» es una garantía; el `\btotal\b` de RE_NO_GARANTIA es para «Total prima/recibo».
+  return t.length >= 3 && t.length <= 90 && /\p{L}{3}/u.test(t) && !RE_NO_GARANTIA.test(t.replace(/p[eé]rdida\s+total/gi, ''))
+}
+
+/**
+ * v0.8.60 (AS-26-0067) · Celda de la TABLA COMPARATIVA con TEXTO de condición en vez de «Incluido»/importe («Mejorada», «Hasta 7 días; máximo 3
+ * accidentes por año»). Solo se usa cuando OTRA columna de la misma fila trae un valor reconocido (es una fila de garantías de la tabla): la compañía
+ * pone «--» donde el producto no la tiene y el texto donde sí → `incluida`, SIN cifra (no se inventa límite). Una negación («No…», «Sin…») no cuenta. PURA.
+ */
+export function valorDescriptivo(texto: string): Valor | null {
+  const t = limpiar(texto)
+  if (t.length < 3 || t.length > 160 || !/\p{L}{3}/u.test(t) || /^(?:no|sin|n\/a)\b|^excluid/i.test(t) || RE_NO_GARANTIA.test(t)) return null
+  return { estado: 'incluida', capital: null, limite: null, franquicia: null, franquiciaTexto: null }
 }
 
 /** ¿La línea es SOLO un valor (el PDF/pantalla pone etiqueta y valor en líneas distintas)? */
@@ -203,21 +215,51 @@ export function coberturasDeColumnasXY(filas: readonly FilaPdf[], claves: readon
     const limite = ord[0]! - gap / 2
     const acc = Array.from({ length: n }, () => nuevoAcumulador())
     const desc: string[] = []
+    type FilaTabla = { y: number; etiqueta: string; celdas: { y: number; t: string }[][]; fundida?: boolean }
+    const tabla: FilaTabla[] = []
     for (let r = ultima + 1; r < filas.length; r++) {
       const fs = filas[r]!.frags
       if (fs.some((f) => todas.includes(esCab(f.t)))) break // cabecera de cualquier producto: acaba la tabla
       const etiqueta = limpiar(fs.filter((f) => f.x < limite).map((f) => f.t).join(' '))
-      const celdas: string[][] = Array.from({ length: n }, () => [])
+      const celdas: { y: number; t: string }[][] = Array.from({ length: n }, () => [])
       for (const f of fs.filter((x) => x.x >= limite)) {
         let j = 0
         for (let c = 1; c < n; c++) if (Math.abs(f.x - cabX[c]!) < Math.abs(f.x - cabX[j]!)) j = c
-        celdas[j]!.push(f.t)
+        celdas[j]!.push({ y: filas[r]!.y, t: f.t })
       }
-      const textos = celdas.map((c) => limpiar(c.join(' ')))
+      if (celdas.every((c) => c.length === 0) && etiqueta === '') continue
+      tabla.push({ y: filas[r]!.y, etiqueta, celdas })
+    }
+    // v0.8.60 (AS-26-0067) · celda de VARIAS líneas («30€/día en el caso de que no se pueda prestar el» / «servicio»): el PDF las pone medio renglón por
+    // encima y por debajo de la etiqueta, así que salen como filas SIN etiqueta. Una fila sin etiqueta y con texto (no un valor suelto) se funde con la
+    // fila etiquetada vecina MÁS CERCANA (anterior o siguiente, estrictamente más cerca que la otra) en las columnas donde esa fila no trae texto propio.
+    const txt = (c: readonly { t: string }[]) => limpiar(c.map((x) => x.t).join(' '))
+    tabla.forEach((o, i) => {
+      if (o.etiqueta !== '') return
+      const textos = o.celdas.map(txt)
+      if (textos.every((t) => t === '') || textos.filter((t) => t !== '').every((t) => esSoloValor(t))) return
+      let a = i - 1; while (a >= 0 && tabla[a]!.etiqueta === '') a--
+      let b = i + 1; while (b < tabla.length && tabla[b]!.etiqueta === '') b++
+      const ant = a >= 0 && tabla[a]!.y > o.y ? tabla[a]! : null
+      const sig = b < tabla.length && tabla[b]!.y < o.y ? tabla[b]! : null
+      if (!ant || !sig) return
+      const dA = ant.y - o.y, dS = o.y - sig.y
+      if (dA === dS) return
+      const dest = dA < dS ? ant : sig
+      if (textos.some((t, j) => t !== '' && dest.celdas[j]!.some((x) => x.y === dest.y))) return
+      textos.forEach((t, j) => { if (t !== '') dest.celdas[j]!.push(...o.celdas[j]!) })
+      o.fundida = true
+    })
+    for (const fila of tabla) {
+      if (fila.fundida) continue
+      const etiqueta = fila.etiqueta
+      const textos = fila.celdas.map((c) => txt([...c].sort((p, q) => q.y - p.y)))
       if (textos.every((t) => t === '')) continue
       if (etiqueta === '') { if (textos.filter((t) => t !== '').every((t) => esSoloValor(t))) desc.push(formaFila('', textos)); continue }
       if (!etiquetaValida(etiqueta)) continue
-      const vs = textos.map((t) => (t === '' ? null : valorDeTextoEnFila(etiqueta, t)))
+      const leidos = textos.map((t) => (t === '' ? null : valorDeTextoEnFila(etiqueta, t)))
+      // Texto de condición en una columna solo si otra columna de la fila trae un valor reconocido (v0.8.60).
+      const vs = leidos.map((v, j) => v ?? (textos[j] !== '' && leidos.some((w, k) => k !== j && w) ? valorDescriptivo(textos[j]!) : null))
       if (textos.some((t, j) => t !== '' && !vs[j])) { desc.push(formaFila(etiqueta, textos)); continue }
       vs.forEach((v, j) => { if (v) acc[j]!.anotar(etiqueta, v) })
     }

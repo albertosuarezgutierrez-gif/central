@@ -7,8 +7,10 @@ import { getRegla, existeDuplicado, insertarGasto, reforzarRegla, escribirTitula
 import { asignarTitular } from './asignar-titular'
 import { contextoTitularSiAplicado } from './contexto-titular'
 import { esBooking, parseBooking, bookingFingerprint } from './booking'
-import { esPresupuesto } from './clasificar'
+import { esPresupuesto, esPresupuestoExtraido } from './clasificar'
 import { pareceIngresoDeCorreduria } from './no-es-gasto'
+import { esDocumentoPolizaCliente, MOTIVO_POLIZA_CLIENTE, MOTIVO_POLIZA_DUDA } from './poliza-cliente'
+import { esFacturaComisionPortal, MOTIVO_COMISION_PORTAL } from './portal-comision'
 import { evaluaReceptor, nifProveedorEsNuestro, type Titular } from './receptor'
 import type { FacturaExtraida } from './extraer'
 
@@ -29,7 +31,7 @@ export function clasificarDocumento(data: FacturaExtraida, texto: string, etique
       return { factura, fingerprintOverride: bookingFingerprint(establishmentId), esPresupuesto: false, archivar: true, esBooking: true }
     }
   }
-  const presup = esPresupuesto(texto, etiqueta)
+  const presup = esPresupuestoExtraido(data as { tipo_documento?: unknown; concepto?: string | null }) || esPresupuesto(texto, etiqueta)
   return { factura: data, esPresupuesto: presup, archivar: !presup, esBooking: false }
 }
 
@@ -54,7 +56,7 @@ export interface ProcesarResult {
 
 export async function procesarFactura(
   data: FacturaExtraida,
-  ctx: { fuente: string; drive?: DriveRef; propiedadPorDefecto?: string | null; esPresupuesto?: boolean; fingerprintOverride?: string; esBooking?: boolean; titulares?: Titular[] },
+  ctx: { fuente: string; drive?: DriveRef; propiedadPorDefecto?: string | null; esPresupuesto?: boolean; fingerprintOverride?: string; esBooking?: boolean; titulares?: Titular[]; huellaDoc?: string },
 ): Promise<ProcesarResult> {
   const total = Number(data.total ?? 0)
   const proveedor = data.proveedor ?? null
@@ -65,11 +67,13 @@ export async function procesarFactura(
   // aprendería regla y el dedup dejaría de distinguirlos. Se ignora y se cae al nombre.
   const nifEmisorFiable = !nifProveedorEsNuestro(data.nif_proveedor, titulares)
   // Huella: la del override (p.ej. Booking por establecimiento) o la calculada.
+  // Sin proveedor ni NIF la huella del proveedor sale '' y el dedup no comparaba nada (caso WhatsApp
+  // 644,81 € ×2, 03/11/2026): entonces se guarda la huella del DOCUMENTO (`huella-documento.ts`).
   const fp = ctx.fingerprintOverride || fingerprint({
     nif_proveedor: nifEmisorFiable ? data.nif_proveedor : null,
     proveedor,
     concepto: data.concepto,
-  })
+  }) || ctx.huellaDoc || ''
 
   // Presupuesto/cotización: no es un gasto → se omite (no se inserta para que no
   // tape a la factura real del mismo importe).
@@ -87,6 +91,26 @@ export async function procesarFactura(
   if (sospecha.esSospechoso) {
     await log({ fuente: ctx.fuente, fingerprint: fp, decision: 'omitido', motivo: `No es un gasto: ${sospecha.motivo}`, payload: { total } })
     return { decision: 'omitido', fingerprint: fp, total, proveedor, motivo: sospecha.motivo ?? undefined }
+  }
+
+  // Factura de comisión de un portal de reservas (Booking, Airbnb, Expedia, Vrbo): justificante, no
+  // gasto (el portal paga en neto y el motor fiscal ya resta bruto−neto). Mismo cauce `omitido`;
+  // el PDF ya está archivado en Drive aguas arriba y `ctx.drive` va en el payload.
+  if (esFacturaComisionPortal({ proveedor, concepto: data.concepto })) {
+    await log({ fuente: ctx.fuente, fingerprint: fp, decision: 'omitido', motivo: MOTIVO_COMISION_PORTAL, payload: { total, drive_url: ctx.drive?.url ?? null } })
+    return { decision: 'omitido', fingerprint: fp, total, proveedor, motivo: MOTIVO_COMISION_PORTAL }
+  }
+
+  // Póliza de un CLIENTE de la correduría: la comisión ya entra como ingreso por el banco → no es
+  // gasto. true = se omite (mismo cauce que arriba); 'duda' (tomador desconocido) = sigue, pero
+  // forzada a la bandeja más abajo con el motivo de revisión.
+  const polizaCliente = esDocumentoPolizaCliente({
+    proveedor, concepto: data.concepto, categoria: data.categoria, numero_factura: data.numero_factura,
+    nif_proveedor: data.nif_proveedor, cliente: data.cliente, nif_cliente: data.nif_cliente,
+  }, titulares)
+  if (polizaCliente === true) {
+    await log({ fuente: ctx.fuente, fingerprint: fp, decision: 'omitido', motivo: MOTIVO_POLIZA_CLIENTE, payload: { total, drive_url: ctx.drive?.url ?? null } })
+    return { decision: 'omitido', fingerprint: fp, total, proveedor, motivo: MOTIVO_POLIZA_CLIENTE }
   }
 
   // Factura de un TERCERO (llega al Gmail de Alberto por un reenvío, pero está a nombre de otro):
@@ -123,7 +147,7 @@ export async function procesarFactura(
   const propiedad = veredicto.propiedad || mapeaPropiedadAlquiler(data.concepto || '') || ctx.propiedadPorDefecto || null
 
   // Duplicado → no imputar.
-  if (await existeDuplicado({ fingerprint: fp, numero_factura: data.numero_factura ?? null, fecha: data.fecha, total, proveedor, nif_proveedor: nifEmisorFiable ? data.nif_proveedor ?? null : null, propiedad })) {
+  if (await existeDuplicado({ fingerprint: fp, huellaDoc: ctx.huellaDoc, numero_factura: data.numero_factura ?? null, fecha: data.fecha, total, proveedor, nif_proveedor: nifEmisorFiable ? data.nif_proveedor ?? null : null, propiedad })) {
     await log({ fuente: ctx.fuente, fingerprint: fp, decision: 'duplicado', payload: { total } })
     return { decision: 'duplicado', fingerprint: fp, total, proveedor }
   }
@@ -136,6 +160,13 @@ export async function procesarFactura(
   if (decision === 'auto' && !conc.ok && (data.base_imponible != null || data.irpf != null)) {
     decision = 'bandeja'
     motivo = `Descuadre: base+IVA−IRPF=${conc.esperado} ≠ total ${total}`
+  }
+
+  if (polizaCliente === 'duda' && decision === 'auto') {
+    decision = 'bandeja'
+    motivo = MOTIVO_POLIZA_DUDA
+  } else if (polizaCliente === 'duda') {
+    motivo = motivo ? `${MOTIVO_POLIZA_DUDA} · ${motivo}` : MOTIVO_POLIZA_DUDA
   }
 
   // Booking: la liquidación NUNCA se auto-imputa en silencio. Trae varias reservas, comisiones
