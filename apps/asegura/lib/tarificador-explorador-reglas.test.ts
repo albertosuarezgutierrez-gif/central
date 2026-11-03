@@ -704,3 +704,29 @@ test('🪤 0.3.25 prompt: orden textos→opciones, re-marcar con el avance desha
   // Las reglas nuevas no abren la puerta a nada final.
   for (const l of [orden!, enlace!]) assert.doesNotMatch(l, /emitir|contratar|firmar|pagar|IBAN|tarjeta/i)
 })
+
+// La nota de diagnóstico de la entrada de Pelayo (la produce `notaDiagnosticoRamoPelayo` del worker) llega a `notaFin` y se acepta EXACTA.
+test('cierre: la nota de diagnóstico de la entrada de Pelayo se conserva; con texto añadido o libre se descarta', () => {
+  const base = { trabajoId: '0c6b8826-32b9-4b20-bea4-4d27979da4a2', motivoFin: 'tope', redNoGet: [], efectosEnPortal: [] }
+  const ok = 'entrada pelayo: tarjetas=1 clic=1 cambio=0 pestana=0 dialogo=0 modal=0 reintento=1'
+  for (const n of [ok, 'entrada pelayo: tarjetas=0 clic=0 cambio=0 pestana=0 dialogo=0 modal=0 reintento=0', 'entrada pelayo: tarjetas=99 clic=1 cambio=1 pestana=1 dialogo=99 modal=99 reintento=1']) {
+    const r = leerPeticionCierre({ ...base, notaFin: n })
+    assert.ok(r.ok && r.p.notaFin === n, n)
+  }
+  for (const n of [`${ok} ES1234`, ` ${ok}`, `${ok}\n`, 'solo lectura: primera pantalla volcada', 'entrada pelayo: tarjetas=100 clic=1 cambio=0 pestana=0 dialogo=0 modal=0 reintento=1']) {
+    const r = leerPeticionCierre({ ...base, notaFin: n })
+    assert.ok(r.ok && r.p.notaFin === null, n)
+  }
+})
+
+test('guardián: la regex de la nota de entrada de asegura es IDÉNTICA a la del worker (RE_NOTA_ENTRADA_PELAYO)', () => {
+  const aqui = path.dirname(fileURLToPath(import.meta.url))
+  const extraer = (f: string, marca: string) => {
+    const linea = readFileSync(path.join(aqui, f), 'utf8').split('\n').find((l) => l.includes(marca) && /\/\^entrada pelayo:/.test(l))
+    return /\/(\^entrada pelayo:.*?\$)\//.exec(linea ?? '')?.[1]
+  }
+  const worker = extraer('../../../services/tarificador-rpa/src/adapters/pelayo/entrada.ts', 'RE_NOTA_ENTRADA_PELAYO =')
+  const asegura = extraer('tarificador-explorador-reglas.ts', 'if (/')
+  assert.ok(worker && asegura)
+  assert.equal(asegura, worker)
+})

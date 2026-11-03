@@ -16,6 +16,8 @@
 // (`TERMINOS_BLOQUEO_SOLO_GUARD`) y el guard lo suma a la lista de aquí. Este fichero no las nombra ni en cadenas.
 // Cómo crece: a mano al dar de alta un bot (MANUAL-NUEVO-BOT.md) y por PROPUESTA con `scripts/vocabulario-candidatos.ts`, que nunca aplica nada solo.
 
+import { normalizarFuerte, unirDeletreo } from '@central/module-tarificacion'
+
 /** Ramo al que se restringe un término. Sin ramo = común. */
 export type Ramo = 'auto' | 'moto' | 'hogar' | 'comunidades' | 'comercio'
 
@@ -62,6 +64,9 @@ const ALZ_PROPUESTA = o('allianz', '26/10/2026', '«Descargar propuesta» tras g
 const DESCARGA = o('allianz+mapfre+generali', '26/10/2026', 'descarga del proyecto/presupuesto guardado, Allianz 0.6.28 / Mapfre 0.8.23 / Generali 0.2.33')
 const DESCARGA_BLOQUEO = o('allianz+mapfre+generali', '26/10/2026', 'lista negra del rótulo de descarga')
 const GUARD_OCULTO = o('allianz+mapfre+generali', '26/10/2026', 'lista negra de atributos internos (id, name, href, manejadores)')
+const NAV_LIBRE = o('comun', '03/11/2026', 'navegación libre del explorador: lo que nunca se pulsa como navegación (Alberto)')
+const NAV_ADV = o('comun', '03/11/2026', 'navegación libre: verbos de acción final que la revisión adversarial coló (Finalizar, Comprar, Submit…)')
+const NAV_ADV2 = o('comun', '03/11/2026', 'navegación libre: verbos de acción sobre terceros que la 2.ª revisión adversarial coló con addEventListener (Delete, Transferir…)')
 
 // ───────────────────────── CONCEPTOS ─────────────────────────
 
@@ -291,6 +296,36 @@ export const BLOQUEO = congelarProfundo({
     t('formaliz', GUARD_OCULTO), t('enviar', GUARD_OCULTO), t('email', GUARD_OCULTO), t('mail', GUARD_OCULTO), t('sms', GUARD_OCULTO), t('anul', GUARD_OCULTO),
     t('elimin', GUARD_OCULTO), t('borrar', GUARD_OCULTO),
   ],
+  /**
+   * NAVEGACIÓN LIBRE del explorador (03/11/2026): lo que, además de los grupos de rótulo, un control de navegación NUNCA puede nombrar
+   * (en su texto, aria-label, title o value): emisión como sustantivo, IBAN/cuenta/SEPA, solicitar, confirmar, tramitar, alta, guardar,
+   * archivar, condiciones, salir/cerrar sesión. Solo lo usa `casaBloqueoNavegacion`; no entra en `GRUPOS_BLOQUEO_ROTULO` (descarga).
+   */
+  navegacion: [
+    t('emisi', NAV_LIBRE, { prefijo: true }), t('emission', NAV_LIBRE), t('iban', NAV_LIBRE), t('bancari', NAV_LIBRE, { prefijo: true }), t('cuenta', NAV_LIBRE, { plural: true }),
+    t('sepa', NAV_LIBRE), t('mandato', NAV_LIBRE, { plural: true }), t('tarjeta', NAV_LIBRE, { plural: true }), t('cobr', NAV_LIBRE, { prefijo: true }),
+    t('solicit', NAV_LIBRE, { prefijo: true }), t('confirm', NAV_LIBRE, { prefijo: true }), t('tramit', NAV_LIBRE, { prefijo: true }), t('suplement', NAV_LIBRE, { prefijo: true }),
+    t('alta', NAV_LIBRE, { plural: true }), t('guardar', NAV_LIBRE), t('archivar', NAV_LIBRE), t('condicion', NAV_LIBRE, { prefijo: true }),
+    t('salir', NAV_LIBRE), t('cerrar sesion', NAV_LIBRE), t('desconect', NAV_LIBRE, { prefijo: true }), t('logout', NAV_LIBRE), t('log out', NAV_LIBRE), t('logoff', NAV_LIBRE),
+    t('sign out', NAV_LIBRE), t('checkout', NAV_LIBRE), t('payment', NAV_LIBRE),
+    // 0.3.36 (revisión adversarial 03/11/2026): verbos de acción FINAL en ES y EN que la lista negra dejaba pasar. «Continuar»,
+    // «Siguiente», «Calcular», «Buscar» no casan (cepo en navegacion-libre-v0336.test.ts).
+    t('finaliz', NAV_ADV, { prefijo: true }), t('terminar', NAV_ADV), t('completar', NAV_ADV), t('comprar', NAV_ADV), t('compra', NAV_ADV, { plural: true }),
+    t('adquiri', NAV_ADV, { prefijo: true }), t('adquisicion', NAV_ADV), t('suscrib', NAV_ADV, { prefijo: true }), t('suscripcion', NAV_ADV),
+    t('registrar', NAV_ADV), t('activar', NAV_ADV), t('aprobar', NAV_ADV), t('validar', NAV_ADV), t('realizar pedido', NAV_ADV), t('pedido', NAV_ADV, { plural: true }),
+    t('abonar', NAV_ADV), t('presentar', NAV_ADV), t('cursar', NAV_ADV), t('efectuar', NAV_ADV), t('ok', NAV_ADV), t('hecho', NAV_ADV),
+    t('submit', NAV_ADV, { prefijo: true }), t('buy', NAV_ADV), t('purchase', NAV_ADV, { prefijo: true }), t('finish', NAV_ADV, { prefijo: true }),
+    t('complete', NAV_ADV, { prefijo: true }), t('sign', NAV_ADV, { prefijo: true }), t('apply', NAV_ADV), t('place order', NAV_ADV), t('order', NAV_ADV),
+    t('subscribe', NAV_ADV, { prefijo: true }), t('register', NAV_ADV, { prefijo: true }), t('activate', NAV_ADV, { prefijo: true }), t('approve', NAV_ADV, { prefijo: true }),
+    t('validate', NAV_ADV, { prefijo: true }), t('done', NAV_ADV), t('accept', NAV_ADV, { prefijo: true }), t('proceed', NAV_ADV), t('pay', NAV_ADV), t('save', NAV_ADV),
+    // 0.3.36, 2.ª revisión adversarial (03/11/2026): acción sobre terceros (ES + EN). Cepo en navegacion-libre-v0336.test.ts.
+    t('delete', NAV_ADV2, { prefijo: true }), t('remove', NAV_ADV2, { prefijo: true }), t('transferir', NAV_ADV2), t('transfiere', NAV_ADV2), t('transferencia', NAV_ADV2, { plural: true }),
+    t('transfer', NAV_ADV2, { prefijo: true }), t('traspas', NAV_ADV2, { prefijo: true }), t('reservar', NAV_ADV2), t('reserva', NAV_ADV2, { plural: true }), t('reserve', NAV_ADV2),
+    t('book', NAV_ADV2, { prefijo: true }), t('autoriz', NAV_ADV2, { prefijo: true }), t('authoriz', NAV_ADV2, { prefijo: true }), t('authoris', NAV_ADV2, { prefijo: true }),
+    t('liquidar', NAV_ADV2), t('liquida', NAV_ADV2), t('liquidacion', NAV_ADV2, { prefijo: true }), t('settle', NAV_ADV2, { prefijo: true }), t('ejecutar', NAV_ADV2), t('ejecuta', NAV_ADV2),
+    t('execute', NAV_ADV2, { prefijo: true }), t('procesar', NAV_ADV2), t('procesa', NAV_ADV2), t('process', NAV_ADV2), t('renovar', NAV_ADV2), t('renueva', NAV_ADV2),
+    t('renovacion', NAV_ADV2, { prefijo: true }), t('renew', NAV_ADV2, { prefijo: true }), t('request', NAV_ADV2, { prefijo: true }), t('charge', NAV_ADV2), t('cobrar', NAV_ADV2),
+  ],
   /** Texto de emisión visible en la página o en un diálogo (Generali). Palabra entera, sobre texto sin tildes y en minúsculas. */
   emision_pagina: [
     t('emitir', GEN_EMISION), t('contratar', GEN_EMISION), t('grabar poliza', GEN_EMISION), t('grabar la poliza', GEN_EMISION),
@@ -371,6 +406,37 @@ export function casaBloqueo(texto: string | null | undefined, opts: { extra?: re
     if (m) return { grupo: 'solo_guard', termino: m[0] }
   }
   return null
+}
+
+/** Grupos que se miran sobre el RÓTULO de un control de NAVEGACIÓN LIBRE (palabra entera): los de rótulo + `navegacion`. */
+export const GRUPOS_BLOQUEO_NAVEGACION: readonly GrupoBloqueo[] = Object.freeze([...GRUPOS_BLOQUEO_ROTULO, 'navegacion'] as const)
+
+/**
+ * NAVEGACIÓN LIBRE (03/11/2026): ¿el rótulo (texto/aria-label/title/value) nombra algo que la navegación libre nunca pulsa? Palabra entera
+ * sobre `normalizarRotulo` (sin tildes ni mayúsculas, `_` → espacio). `extra`: los términos que solo puede nombrar el guard. Devuelve el
+ * grupo y el término, o `null`. Pura.
+ */
+export function casaBloqueoNavegacion(texto: string | null | undefined, extra: readonly Termino[] = []): { grupo: GrupoBloqueo | 'solo_guard'; termino: string } | null {
+  // 2.ª revisión adversarial (03/11/2026): la MISMA normalización fuerte que `comprobarBoton`/`pulsar()`/el módulo (NFKC, invisibles,
+  // confundibles) y la forma con las letras sueltas unidas; antes, solo sin tildes.
+  const p = normalizarFuerte(texto)
+  if (p === '') return null
+  for (const n of p === unirDeletreo(p) ? [p] : [p, unirDeletreo(p)]) {
+    for (const g of GRUPOS_BLOQUEO_NAVEGACION) {
+      const m = regexPalabras(BLOQUEO[g]).exec(n)
+      if (m) return { grupo: g, termino: m[0] }
+    }
+    const m = extra.length > 0 ? regexPalabras(extra).exec(n) : null
+    if (m) return { grupo: 'solo_guard', termino: m[0] }
+  }
+  return null
+}
+
+/** NAVEGACIÓN LIBRE: ¿un atributo INTERNO (id, name, clase, onclick, href, acción del formulario) contiene, por subcadena, un término oculto prohibido? Pura. */
+export function casaAtributoInternoNavegacion(texto: string | null | undefined): string | null {
+  const n = normalizarFuerte(texto).replace(/\s+/g, '')
+  if (n === '') return null
+  return regexPalabras(BLOQUEO.atributo_interno, { limites: false }).exec(n)?.[0] ?? null
 }
 
 /** Un único patrón (palabra entera) con TODOS los grupos de rótulo del bloqueo más `extra` (los términos que solo puede nombrar el guard). */

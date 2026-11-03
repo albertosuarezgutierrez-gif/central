@@ -1,75 +1,75 @@
 {
  "sesion": "7b03f7c2-db2b-54bc-8a4a-e28d208d86c2",
  "inicio": "2026-11-01T05:03:33.366Z",
- "fin": "2026-11-03T19:11:08.513Z",
- "llamadas": 5587,
+ "fin": "2026-11-03T21:07:58.218Z",
+ "llamadas": 6043,
  "categorias": {
   "agente:agente-architect": {
-   "llamadas": 5,
-   "chars_in": 14868,
-   "chars_out": 15970,
+   "llamadas": 8,
+   "chars_in": 26226,
+   "chars_out": 27889,
    "errores": 0,
-   "archivos_citados": 1,
-   "chars_citados": 11916,
+   "archivos_citados": 3,
+   "chars_citados": 43190,
    "tools": {
-    "Agent": 5
+    "Agent": 8
    }
   },
   "otro": {
-   "llamadas": 644,
-   "chars_in": 75974,
-   "chars_out": 1202194,
+   "llamadas": 664,
+   "chars_in": 81408,
+   "chars_out": 1377871,
    "errores": 0,
    "archivos_citados": 5,
    "chars_citados": 3508537,
    "tools": {
-    "ToolSearch": 114,
-    "SendMessage": 17,
-    "TaskStop": 21,
-    "ReadNotifications": 214,
-    "Monitor": 271,
+    "ToolSearch": 118,
+    "SendMessage": 20,
+    "TaskStop": 22,
+    "ReadNotifications": 221,
+    "Monitor": 276,
     "SendUserFile": 5,
     "AskUserQuestion": 2
    }
   },
   "bash": {
-   "llamadas": 3148,
-   "chars_in": 1652414,
-   "chars_out": 8519391,
+   "llamadas": 3496,
+   "chars_in": 1881941,
+   "chars_out": 9396644,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 3148
+    "Bash": 3496
    }
   },
   "lectura-directa": {
-   "llamadas": 237,
-   "chars_in": 34227,
-   "chars_out": 1221298,
+   "llamadas": 266,
+   "chars_in": 38154,
+   "chars_out": 1530120,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 179,
-    "Grep": 58
+    "Read": 205,
+    "Grep": 61
    }
   },
   "sql": {
-   "llamadas": 592,
-   "chars_in": 218085,
-   "chars_out": 1919474,
+   "llamadas": 594,
+   "chars_in": 218492,
+   "chars_out": 1922491,
    "errores": 6,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 592
+    "mcp__Supabase__execute_sql": 594
    }
   },
   "mcp:github": {
-   "llamadas": 315,
-   "chars_in": 101327,
-   "chars_out": 377157,
+   "llamadas": 318,
+   "chars_in": 102868,
+   "chars_out": 378520,
    "errores": 9,
    "archivos_citados": 1,
    "chars_citados": 18398,
@@ -77,10 +77,10 @@
     "mcp__github__actions_run_trigger": 130,
     "mcp__github__actions_list": 50,
     "mcp__github__get_job_logs": 19,
-    "mcp__github__create_pull_request": 44,
+    "mcp__github__create_pull_request": 45,
     "mcp__github__update_pull_request": 11,
-    "mcp__github__pull_request_read": 17,
-    "mcp__github__merge_pull_request": 43,
+    "mcp__github__pull_request_read": 18,
+    "mcp__github__merge_pull_request": 44,
     "mcp__github__add_issue_comment": 1
    }
   },
@@ -96,29 +96,29 @@
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 198,
-   "chars_in": 76205,
-   "chars_out": 26890,
+   "llamadas": 202,
+   "chars_in": 76669,
+   "chars_out": 27489,
    "errores": 0,
    "archivos_citados": 2,
    "chars_citados": 12117,
    "tools": {
-    "mcp__claude-code-remote__send_later": 149,
-    "mcp__claude-code-remote__subscribe_pr_activity": 4,
-    "mcp__claude-code-remote__unsubscribe_pr_activity": 42,
+    "mcp__claude-code-remote__send_later": 150,
+    "mcp__claude-code-remote__subscribe_pr_activity": 5,
+    "mcp__claude-code-remote__unsubscribe_pr_activity": 44,
     "mcp__claude-code-remote__delete_trigger": 3
    }
   },
   "escritura": {
-   "llamadas": 356,
-   "chars_in": 984654,
-   "chars_out": 46750163,
+   "llamadas": 401,
+   "chars_in": 1185617,
+   "chars_out": 49583955,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Write": 116,
-    "Edit": 240
+    "Write": 141,
+    "Edit": 260
    }
   },
   "agente:agente-mecanico": {
@@ -165,6 +165,17 @@
    "chars_citados": 636878,
    "tools": {
     "Agent": 16
+   }
+  },
+  "agente:verificador-esceptico": {
+   "llamadas": 2,
+   "chars_in": 3047,
+   "chars_out": 3461,
+   "errores": 0,
+   "archivos_citados": 2,
+   "chars_citados": 31274,
+   "tools": {
+    "Agent": 2
    }
   }
  }

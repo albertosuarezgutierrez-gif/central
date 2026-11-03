@@ -17,6 +17,7 @@
 
 import { neutralizarRutaTolerable, pareceEmision, type RutaTolerable } from './guard-emision.ts'
 import { clasificarAccionPortal, descripcionesSinExcepcionProyecto, fronteraEmisionPorCampos, MOTIVO_FRONTERA_CUENTA, referenciaPresupuestoValida } from './acciones-portal.ts'
+import { navegacionLibre, type ResultadoNavegacionLibre } from './navegacion-libre.ts'
 import {
   MAX_TITULOS_MARCO,
   conOnclickCompleto,
@@ -417,17 +418,15 @@ export const ENTRADAS_EXPLORACION: Readonly<Record<string, EntradaExploracion>> 
   }),
   // Pelayo (portal de mediadores, Alberto 03/11/2026): login › menú «Contratación» › «Presupuestos» › «Nuevo Presupuesto» › selector de
   // RAMO (Auto / Hogar) › primer formulario de datos. El recorrido va fijo en el código de Pelayo (`pelayo/entrada.ts`) y sus clics por la
-  // puerta EXACTA del guard (`ENLACES_ENTRADA_AUTORIZADOS.pelayo`, origen https://mediadores.pelayo.com, en orden, una vez). Primera
-  // exploración en SOLO LECTURA: se vuelca la pantalla a la que se llega y se para, sin rellenar ni avanzar (sin avances autorizados).
+  // puerta EXACTA del guard (`ENLACES_ENTRADA_AUTORIZADOS.pelayo`, origen https://mediadores.pelayo.com, en orden, una vez). 0.3.36: ya NO es
+  // de solo lectura: tras el ramo la IA explora con la navegación libre del guard (la emisión sigue bloqueada).
   'pelayo:presupuestos:auto': Object.freeze({
     compania: 'pelayo', ramo: 'auto', producto: 'auto', pestana: 'Contratación', productoMenu: 'Auto',
     avancesAutorizados: Object.freeze([]),
-    soloLectura: true,
   }),
   'pelayo:presupuestos:hogar': Object.freeze({
     compania: 'pelayo', ramo: 'hogar', producto: 'hogar', pestana: 'Contratación', productoMenu: 'Hogar',
     avancesAutorizados: Object.freeze([]),
-    soloLectura: true,
   }),
 })
 
@@ -1861,6 +1860,22 @@ export function bloqueoAvance(entrada: string, el: ElementoInventario, marco: Ma
   return null
 }
 
+/** La regla de NAVEGACIÓN LIBRE sobre un elemento del INVENTARIO (lo que el inventario no trae lo repite el worker vivo). Pura. */
+export function navegacionLibreInventario(el: ElementoInventario, marco: MarcoInventario): ResultadoNavegacionLibre {
+  return navegacionLibre({ tag: el.tag, type: el.type, role: el.role, texto: el.texto, ariaLabel: el.ariaLabel, id: el.id, name: el.name, clase: el.clase, onclick: el.onclick, hrefRuta: el.hrefRuta }, { urlMarco: marco.url })
+}
+
+/**
+ * 0.3.36: `true` = el validador aceptó este avance SOLO por la navegación libre (las reglas clásicas lo rechazan: no es botón/pestaña,
+ * o es el sustantivo del desplegable de menú). El worker lo pulsa ENTONCES por `pulsarNavegacionLibre` (guard.ts: regla viva, vocabulario
+ * del worker y tope por control), nunca por el `pulsar` genérico. Pura.
+ */
+export function requiereNavegacionLibre(entrada: string, el: ElementoInventario, marco: MarcoInventario): boolean {
+  if (!navegacionLibreInventario(el, marco).ok) return false
+  const clasico = esAvanzable(el) || esAceptarDivAutorizado(entrada, el, marco) || esEnlaceAvanzable(entrada, el, marco)
+  return !clasico || bloqueoAvance(entrada, el, marco) !== null
+}
+
 export type PantallaGuardado = {
   /** `pantalla.tipo` de la respuesta que lo pide. */
   tipoPantalla: RespuestaExplorador['pantalla']['tipo']
@@ -2062,13 +2077,20 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
         acciones.push({ accion: 'marcar', ref })
       } else {
         if (i !== lista.length - 1) return void errores.push(`${donde}: avanzar va el ÚLTIMO (y solo uno)`)
-        if (!esAvanzable(el) && !esAceptarDivAutorizado(ctx.entrada, el, marco) && !esEnlaceAvanzable(ctx.entrada, el, marco)) return void errores.push(`${donde}: el elemento no es un botón/pestaña`)
+        // 0.3.36 (Alberto, 03/11/2026): NAVEGACIÓN LIBRE (`navegacion-libre.ts`): un control de navegación que las reglas clásicas no
+        // reconocen (`<a>` de menú, tarjeta `a.card` sin href…) vale si NADA de lo que lo describe nombra una acción final. Un guardado sigue
+        // exigiendo `bloqueoGuardadoPresupuesto` entero (la excepción del menú no le aplica).
+        const libre = navegacionLibreInventario(el, marco)
+        if (!esAvanzable(el) && !esAceptarDivAutorizado(ctx.entrada, el, marco) && !esEnlaceAvanzable(ctx.entrada, el, marco) && !libre?.ok) return void errores.push(`${donde}: el elemento no es un botón/pestaña`)
         const efecto = EFECTOS_AVANCE.find((x) => x === a.efectoEsperado)
         if (!efecto) return void errores.push(`${donde}: efectoEsperado fuera de lista`)
         if (a.confianza !== 'alta' && a.confianza !== 'media') return void errores.push(`${donde}: avanzar exige confianza alta o media`)
-        const bloqueo = efecto === 'guardar_presupuesto'
+        const bloqueo0 = efecto === 'guardar_presupuesto'
           ? bloqueoGuardadoPresupuesto(el, { tipoPantalla: pantalla.tipo, hayImportes: importes.size > 0, presupuestoEnCurso: ctx.presupuestoEnCurso === true })
           : bloqueoAvance(ctx.entrada, el, marco)
+        // El ÚNICO bloqueo clásico que la navegación libre levanta: `boton_de_emision` por el sustantivo de un DESPLEGABLE de menú
+        // («Contratación» de Pelayo), con todo lo demás del control limpio (lo exige `navegacionLibre`).
+        const bloqueo = bloqueo0 === 'boton_de_emision' && efecto !== 'guardar_presupuesto' && libre?.ok === true && libre.exentoMenu ? null : bloqueo0
         if (bloqueo) {
           const causa = bloqueo === 'aceptar_no_autorizado' ? motivoNoAvancePorId(ctx.entrada, el, marco)
             : bloqueo === 'sin_descripcion_completa' && el.tag === 'input' && (el.type ?? '').toLowerCase() === 'submit' && (ENTRADAS_EXPLORACION[ctx.entrada as keyof typeof ENTRADAS_EXPLORACION]?.avancesSinTexto?.length ?? 0) > 0 ? motivoNoAvanceSinTexto(ctx.entrada, el, marco)

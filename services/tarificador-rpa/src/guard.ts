@@ -8,12 +8,15 @@
 //      `test/regression-tarificador-rpa.test.ts` en la raíz.)
 
 import type { BrowserContext, Dialog, Frame, Locator, Page, Request } from 'playwright'
+import { randomUUID } from 'node:crypto'
 import { ErrorTarificador } from './errores.ts'
 import { esTextoControlesTecnicos, SEL_DIALOGO_CONTROLES_TECNICOS } from './controles-tecnicos-mapfre.ts'
 import { indiceOpcionGenerica, indicesCompaniaActualCompuesta } from './compania-actual.ts'
 import {
   BLOQUEO,
   CONCEPTOS_ACCION,
+  casaAtributoInternoNavegacion,
+  casaBloqueoNavegacion,
   RE_EXCLUIR_DESCARGA,
   RE_OBJETO_DESCARGA,
   RE_OBJETO_PROPUESTA,
@@ -91,6 +94,16 @@ import {
   type MarcoInventario,
   type PantallaGuardado,
   ORIGEN_FIDELIDADE_MEDIADORES,
+  compactoNavegacion,
+  comprobarRotulosAccionFinal,
+  comprobarRotulosPulsar,
+  rotuloExentoDeOyentes,
+  navegacionLibre,
+  navegacionLibreInventario,
+  neutralizarDomicilioDireccion,
+  planoNavegacion,
+  SUSTANTIVOS_MENU_NAVEGACION,
+  type ControlNavegacion,
 } from '@central/module-tarificacion'
 
 /**
@@ -852,12 +865,24 @@ export async function pulsar(boton: Locator, guard: GuardEmision): Promise<void>
   const desc = await descripcion(boton)
   // 0.3.19: la subcadena exacta del onclick de UN control exacto de la entrada (Mapfre NSE), antes de mirar nada (ver `neutralizarOnclicksEntrada`).
   comprobarBoton(conRutasTolerables(guard, await conOnclickNeutralizado(guard, boton, desc)))
+  // Revisión adversarial (03/11/2026): el guard bloquea POR SÍ SOLO (sin depender del validador del explorador) un RÓTULO de acción
+  // final en ES/EN con normalización fuerte: «Confirmar», «Finalizar», «Comprar», «Submit»… Las puertas estrechas por compañía
+  // (Confirmar de Generali, Aceptar por fase…) no pasan por aquí y siguen exigiendo su texto exacto.
   // Generali (26/10/2026): un «Confirmar» de www.generali.es NUNCA por la vía genérica; solo por sus puertas acotadas
-  // (`pulsarConfirmarVehiculoGenerali`, `pulsarConfirmarDatosPersonasGenerali`).
+  // (`pulsarConfirmarVehiculoGenerali`, `pulsarConfirmarDatosPersonasGenerali`). Va antes para que el motivo diga cuál es su puerta.
   if (confirmarDeGenerali(desc, await boton.evaluate(() => location.href).catch(() => ''))) throw new EmisionBloqueadaError('boton', 'Confirmar (Generali: solo por su puerta del guard)')
+  comprobarRotulosAccionFinal(desc)
+  // 2.ª revisión adversarial (03/11/2026): homoglifos fail-closed, normalización fuerte, letras sueltas y verbos que `pulsar()` no pulsa
+  // nunca (enviar, solicitar, eliminar, borrar, cobrar, autorizar, guardar/save…) sobre TODOS los rótulos, también el nombre accesible.
+  // El `value` solo es rótulo en un botón (en un campo de texto es el DATO tecleado: no se mira aquí, sí en `comprobarBoton`).
+  const valorEsRotulo = await boton.evaluate((el) => el.tagName === 'BUTTON' || (el.tagName === 'INPUT' && ['submit', 'button', 'image', 'reset'].includes(((el as HTMLInputElement).type || '').toLowerCase()))).catch(() => true)
+  comprobarRotulosPulsar([desc[0], desc[1], desc[2], valorEsRotulo ? desc[3] : null, ...rotulosAccesibles(desc)], NOMBRES_ROTULOS_PULSAR)
   await boton.click()
   guard.comprobar()
 }
+
+/** Nombre de cada rótulo que mira `pulsar()` (para el mensaje: nunca el texto). */
+const NOMBRES_ROTULOS_PULSAR: readonly string[] = Object.freeze(['texto', 'aria-label', 'title', 'value', 'aria-labelledby', 'alt de hijos', 'alt'])
 
 /**
  * 0.3.25 (Fidelidade real 30/10/2026, 56b4b52c…, «Datos Cliente - Nombre y régimen»): el mapa marcó PROPIETARIO ANTES de que la IA rellenara el
@@ -873,6 +898,7 @@ export async function redispararCambioMarcado(control: Locator, guard: GuardEmis
   await exigirSinCuentaBancaria(control.page())
   const desc = await descripcion(control)
   comprobarBoton(conRutasTolerables(guard, await conOnclickNeutralizado(guard, control, desc)))
+  comprobarRotulosAccionFinal(desc)
   // Revisión de seguridad (30/10/2026): `input`/`change` BURBUJEAN y `descripcion` solo ve onclick/ng-click/href (3 ancestros). Aquí se leen
   // `onchange`/`oninput` del radio y de TODOS sus ancestros (atravesando shadow hosts) y del <form> (también el de `form=`); cualquiera con acción
   // final LANZA, y un <form> con onchange/oninput/onsubmit LANZA siempre. El mensaje nunca lleva el texto del manejador (podría tener datos).
@@ -1017,8 +1043,39 @@ async function descripcion(boton: Locator, alContenedor = false): Promise<(strin
         const conValor = c.tagName === 'INPUT' && ['checkbox', 'radio'].includes(tipo)
         return [c.id || null, c.getAttribute('name'), conValor ? c.getAttribute('value') : null, c.getAttribute('onclick'), c.getAttribute('onchange')]
       })(),
+      // NOMBRE ACCESIBLE (2.ª revisión adversarial 03/11/2026): «Emitir» como aria-labelledby, alt de una <img> hija o alt de un
+      // input type=image pasaba. SIEMPRE las TRES ÚLTIMAS posiciones (ver `rotulosAccesibles`): texto de los ids de aria-labelledby,
+      // alt/aria-label/<title> de los descendientes, alt propio (img / input type=image / area).
+      ...(() => {
+        const raiz = base.getRootNode() as Document | ShadowRoot
+        const ids = (base.getAttribute('aria-labelledby') ?? '').split(/\s+/).filter((x) => x !== '').slice(0, 20)
+        const lb = ids
+          .map((id) => {
+            const e = ((typeof (raiz as Document).getElementById === 'function' ? (raiz as Document).getElementById(id) : null) ?? base.ownerDocument.getElementById(id)) as HTMLElement | null
+            return e ? e.innerText || e.textContent || e.getAttribute('aria-label') || e.getAttribute('alt') || '' : ''
+          })
+          .join(' ')
+        const hijos = Array.from(base.querySelectorAll('img,area,input[type=image],[aria-label],[alt],svg title')).slice(0, 50)
+        const alts = hijos.map((e) => (e.tagName.toLowerCase() === 'title' ? e.textContent : e.getAttribute('alt') ?? e.getAttribute('aria-label')) ?? '').join(' ')
+        const propio = ['IMG', 'AREA', 'INPUT'].includes(base.tagName) ? base.getAttribute('alt') : null
+        // Sin funciones con nombre dentro de `evaluate` (tsx les mete `__name`, que no existe en la página).
+        return [lb, alts, propio].map((x) => {
+          const t = (x ?? '').replace(/\s+/g, ' ').trim()
+          return t === '' ? null : t.slice(0, 2000)
+        })
+      })(),
     ]
-  }, alContenedor)
+  }, alContenedor).then((d) => {
+    // Los tres del nombre accesible salen de la PÁGINA (pueden traer un dato del cliente si llegan a un mensaje): tiradas de cifras,
+    // documentos, teléfonos y correos se tapan; las palabras de acción final sobreviven.
+    const n = d.length
+    return d.map((x, i) => (i >= n - 3 && typeof x === 'string' ? redactarDatosPersonales(x) : x))
+  })
+}
+
+/** Las TRES últimas posiciones de `descripcion()`: el nombre accesible (aria-labelledby, alt/aria-label/<title> hijos, alt propio). Pura. */
+export function rotulosAccesibles(desc: readonly (string | null)[]): (string | null)[] {
+  return desc.length >= 3 ? desc.slice(-3) : []
 }
 
 /** Elige la modalidad (radio bajo la fila de opción): Datos Básicos, una vez, pestaña verificada. */
@@ -3730,6 +3787,314 @@ export function topeAvancesPaso(entrada: string, porId: boolean, sinTexto: Avanc
   return (clave !== null ? TOPES_AVANCES_POR_REGLA[clave] : undefined) ?? MAX_AVANCES_POR_ID
 }
 
+// ─────────── NAVEGACIÓN LIBRE DEL EXPLORADOR (Alberto, 03/11/2026) ───────────
+// El guard se parte en dos para el EXPLORADOR: (A) navegación libre por regla general (aquí y en `navegacion-libre.ts` del módulo) y
+// (B) emisión bloqueada igual que hoy (`comprobarBoton`, la red, la frontera bancaria y todas las puertas estrechas no cambian). La
+// regla es ADICIONAL: las listas exactas por compañía (`ENLACES_ENTRADA_AUTORIZADOS`, `SIMULACION_FIDELIDADE_SIN_TEXTO`…) siguen igual.
+
+/** Tope ANTI-BUCLE de pulsaciones del MISMO control por navegación libre en un trabajo (la 4.ª se bloquea). */
+export const MAX_PULSACIONES_NAVEGACION_POR_CONTROL = 3
+
+/** Tope de pulsaciones por control de la navegación libre para esta entrada: 6 en la simulación de Vivienda de Fidelidade (como su avance), 3 el resto. Pura. */
+export function topeNavegacionLibre(entrada: string): number {
+  return (entrada === ENTRADA_FIDELIDADE_VIVIENDA ? TOPES_AVANCES_POR_REGLA['fidelidade:vivienda'] : undefined) ?? MAX_PULSACIONES_NAVEGACION_POR_CONTROL
+}
+
+/**
+ * Tope GLOBAL de pulsaciones por navegación libre en un trabajo (revisión adversarial 03/11/2026): el tope por control no frena un
+ * recorrido por N controles distintos. La 41.ª pulsación (cualquier control) se bloquea.
+ */
+export const MAX_PULSACIONES_NAVEGACION_TOTAL = 40
+
+/** Pulsaciones de navegación libre por control y trabajo (clave: documento + tag + id + name + rótulo normalizados). */
+const PULSACIONES_NAVEGACION = new WeakMap<GuardEmision, Map<string, number>>()
+/** Pulsaciones de navegación libre de un trabajo, de cualquier control. */
+const PULSACIONES_NAVEGACION_TOTAL = new WeakMap<GuardEmision, number>()
+
+/** Clave ESTABLE de un control para el tope anti-bucle (sin query de la URL: el cache-buster no lo convierte en otro control). Pura. */
+export function claveControlNavegacion(c: ControlNavegacion, urlDocumento: string): string {
+  let doc = ''
+  try {
+    const u = new URL(urlDocumento)
+    doc = `${u.origin}${u.pathname}`
+  } catch {
+    doc = '?'
+  }
+  const rotulo = [c.texto, c.ariaLabel, c.title, c.value].map(planoNavegacion).find((x) => x !== '') ?? ''
+  return [doc, (c.tag ?? '').toLowerCase(), c.id ?? '', c.name ?? '', rotulo].join('|')
+}
+
+/** Rótulo normalizado sin adornos finales (›, >, », *, :, flechas de desplegable). Pura. */
+const rotuloSinAdornos = (d: string | null | undefined) => planoNavegacion(d).replace(/[\s›>»*:▾▼]+$/u, '')
+
+/**
+ * La regla VIVA de navegación libre: la del módulo (`navegacionLibre`) sobre lo que el DOM dice AHORA y, además, el VOCABULARIO del worker
+ * (`casaBloqueoNavegacion` sobre cada rótulo, más los términos de `TERMINOS_BLOQUEO_SOLO_GUARD`; `casaAtributoInternoNavegacion` sobre id,
+ * name, clase, onclick, href, acción del formulario y ancestros). El sustantivo de un desplegable de menú («Contratación») solo se exime en
+ * el rótulo y solo si el módulo lo reconoce como desplegable. `null` = se puede pulsar; si no, por qué no (sin valores). Pura.
+ */
+export function motivoNoNavegacionLibreVivo(c: ControlNavegacion, urlDocumento: string): string | null {
+  const r = navegacionLibre(c, { urlMarco: urlDocumento })
+  if (!r.ok) return r.motivo
+  for (const v of [c.texto, c.ariaLabel, c.title, c.value, c.nombreAccesible]) {
+    if (typeof v !== 'string' || v.trim() === '') continue
+    const n = neutralizarDomicilioDireccion(rotuloSinAdornos(v))
+    if (r.exentoMenu && SUSTANTIVOS_MENU_NAVEGACION.includes(n)) continue
+    const b = casaBloqueoNavegacion(n, TERMINOS_BLOQUEO_SOLO_GUARD)
+    if (b) return `rotulo_bloqueado (${b.grupo})`
+    // La forma COMPACTA (sin espacios ni signos): «e m i t i r», «E-M-I-T-I-R».
+    const k = compactoNavegacion(neutralizarDomicilioDireccion(planoNavegacion(v)))
+    const bk = k !== '' ? casaBloqueoNavegacion(k, TERMINOS_BLOQUEO_SOLO_GUARD) : null
+    if (bk) return `rotulo_bloqueado (${bk.grupo})`
+  }
+  for (const d of [c.id, c.name, c.clase, c.onclick, c.hrefLiteral, c.hrefAbsoluto, c.accionFormulario, ...(c.ancestros ?? [])]) {
+    if (typeof d !== 'string' || d === '') continue
+    if (casaAtributoInternoNavegacion(neutralizarDomicilioDireccion(planoNavegacion(d)))) return 'atributo_bloqueado'
+  }
+  return null
+}
+
+/** El control VIVO como `ControlNavegacion` + la URL de SU documento. Solo lectura (sin funciones con nombre dentro de `evaluate`). */
+async function controlNavegacionVivo(boton: Locator): Promise<{ c: ControlNavegacion; url: string } | null> {
+  return boton
+    .evaluate((n) => {
+      const h = n as HTMLElement & { value?: unknown; form?: HTMLFormElement | null }
+      const tag = h.tagName.toLowerCase()
+      const tipo = (h.getAttribute('type') ?? (tag === 'button' ? 'submit' : '')).toLowerCase()
+      const form = tag === 'button' || tag === 'input' ? (h.form ?? null) : null
+      const envia = !!form && (tipo === 'submit' || tipo === 'image')
+      const fa = h.getAttribute('formaction')
+      let accion: string | null = null
+      if (envia) {
+        try {
+          accion = new URL(fa ?? form.getAttribute('action') ?? '', h.ownerDocument.baseURI).href
+        } catch {
+          accion = 'invalida:'
+        }
+      } else if (fa) accion = fa
+      const href = tag === 'a' ? h.getAttribute('href') : null
+      const destino = tag === 'a' ? h.getAttribute('target') : envia ? (h.getAttribute('formtarget') ?? form.getAttribute('target')) : null
+      let hrefAbs: string | null = null
+      if (href !== null && href.trim() !== '' && !/^\s*(#|javascript:)/i.test(href)) {
+        try {
+          hrefAbs = new URL(href, h.ownerDocument.baseURI).href
+        } catch {
+          hrefAbs = 'invalida:'
+        }
+      }
+      const anc: (string | null)[] = []
+      let p: Element | null = h.parentElement ?? ((h.getRootNode() as ShadowRoot).host ?? null)
+      for (let i = 0; p && i < 3; i++) {
+        anc.push(p.getAttribute('onclick'), p.getAttribute('ng-click'), p.getAttribute('data-ng-click'), p.tagName === 'A' ? p.getAttribute('href') : null)
+        p = p.parentElement ?? ((p.getRootNode() as ShadowRoot).host ?? null)
+      }
+      // Nombre accesible (2.ª revisión adversarial): texto de los ids de aria-labelledby, alt/aria-label/<title> de los hijos, alt propio.
+      const raiz = h.getRootNode() as Document | ShadowRoot
+      const lb = (h.getAttribute('aria-labelledby') ?? '')
+        .split(/\s+/)
+        .filter((x) => x !== '')
+        .slice(0, 20)
+        .map((id) => {
+          const e = ((typeof (raiz as Document).getElementById === 'function' ? (raiz as Document).getElementById(id) : null) ?? h.ownerDocument.getElementById(id)) as HTMLElement | null
+          return e ? e.innerText || e.textContent || e.getAttribute('aria-label') || e.getAttribute('alt') || '' : ''
+        })
+      const alts = Array.from(h.querySelectorAll('img,area,input[type=image],[aria-label],[alt],svg title'))
+        .slice(0, 50)
+        .map((e) => (e.tagName.toLowerCase() === 'title' ? e.textContent : e.getAttribute('alt') ?? e.getAttribute('aria-label')) ?? '')
+      const propio = ['img', 'area', 'input'].includes(tag) ? h.getAttribute('alt') : null
+      const accesible = [...lb, ...alts, propio ?? ''].join(' ').replace(/\s+/g, ' ').trim()
+      const oc = [h.getAttribute('onclick'), h.getAttribute('ng-click'), h.getAttribute('data-ng-click'), href !== null && /^\s*javascript:/i.test(href) ? href : null]
+        .filter((x): x is string => x !== null && x.trim() !== '')
+        .join(' ; ')
+      return {
+        url: h.ownerDocument.location.href,
+        c: {
+          tag,
+          type: h.getAttribute('type'),
+          role: h.getAttribute('role'),
+          texto: (h.innerText ?? h.textContent ?? '').replace(/\s+/g, ' ').trim() || null,
+          ariaLabel: h.getAttribute('aria-label'),
+          title: h.getAttribute('title'),
+          value: tag === 'input' && typeof h.value === 'string' ? h.value : null,
+          id: h.id || null,
+          name: h.getAttribute('name'),
+          clase: h.getAttribute('class'),
+          onclick: oc || null,
+          hrefLiteral: href,
+          hrefAbsoluto: hrefAbs,
+          accionFormulario: accion,
+          enviaFormulario: envia,
+          ariaHaspopup: h.getAttribute('aria-haspopup'),
+          ariaExpanded: h.getAttribute('aria-expanded'),
+          target: destino,
+          descarga: tag === 'a' && h.hasAttribute('download'),
+          ancestros: anc,
+          nombreAccesible: accesible === '' ? null : accesible.slice(0, 2000),
+        },
+      }
+    }, undefined, { timeout: 5_000 })
+    .catch(() => null)
+}
+
+/**
+ * Tipos de evento que, registrados por `addEventListener` (o como atributo) en el control, en un descendiente (lo que el clic toca de verdad),
+ * en un ancestro (burbujeo, hasta `document` y `window`, atravesando shadow roots y slots) o en su `<form>`, pueden EJECUTAR algo al pulsar.
+ * `focus`/`focusin`: el clic enfoca. Congelado.
+ */
+export const TIPOS_OYENTE_ACCION: readonly string[] = Object.freeze(['click', 'auxclick', 'dblclick', 'mousedown', 'mouseup', 'pointerdown', 'pointerup', 'touchstart', 'touchend', 'submit', 'keydown', 'keyup', 'keypress', 'focus', 'focusin'])
+/** Tope de descendientes que se revisan; con más, se da por «hay oyentes» (fail-closed). */
+export const MAX_NODOS_OYENTES = 400
+/** Atributo TEMPORAL con el que se marca el control para encontrarlo por CDP (se quita siempre en `finally`). */
+const ATRIBUTO_MARCA_OYENTES = 'data-guard-oyentes'
+
+type SesionCdp = { send(metodo: string, params?: Record<string, unknown>): Promise<any>; detach(): Promise<void> }
+
+/** `backendNodeId` del nodo con `ATRIBUTO_MARCA_OYENTES` = `marca` en el árbol de `DOM.getDocument` (con iframes del mismo proceso y shadow roots). Pura. */
+function buscarNodoMarcado(raiz: any, marca: string): number | null {
+  const pila: any[] = [raiz]
+  while (pila.length > 0) {
+    const n = pila.pop()
+    if (!n || typeof n !== 'object') continue
+    const a: unknown = n.attributes
+    if (Array.isArray(a)) for (let i = 0; i + 1 < a.length; i += 2) if (a[i] === ATRIBUTO_MARCA_OYENTES && a[i + 1] === marca) return typeof n.backendNodeId === 'number' ? n.backendNodeId : null
+    for (const h of [...(n.children ?? []), ...(n.shadowRoots ?? []), n.contentDocument, n.templateContent]) if (h) pila.push(h)
+  }
+  return null
+}
+
+/**
+ * 2.ª revisión adversarial (03/11/2026): ¿tiene el control VIVO oyentes de acción (`TIPOS_OYENTE_ACCION`) que la regla de navegación libre no
+ * ve (los añadidos por `addEventListener`)? Por CDP (`DOMDebugger.getEventListeners`) sobre el control, sus descendientes (≤`MAX_NODOS_OYENTES`),
+ * sus ancestros hasta `document` y `window` (shadow roots y slots incluidos) y su `<form>`. Los oyentes genéricos de `document`/`window` de la
+ * PÁGINA (React, jQuery delegado, analítica) NO se excluyen: sin un portal real que lo exija no hay criterio para distinguirlos, así que también
+ * bloquean (fail-closed; lo que tiene un rótulo neutro o es tarjeta de ramo no llega aquí). Única excepción, imprescindible y medida: los del
+ * PROPIO Playwright en `window` (ver el bucle). `'error'`: no es Chromium, CDP falla o el nodo no
+ * aparece (iframe de otro proceso sin sesión propia) → quien llama BLOQUEA. Solo lee; la marca temporal se quita siempre.
+ */
+export async function oyentesAccionVivos(boton: Locator): Promise<'ninguno' | 'hay' | 'error'> {
+  const page = boton.page()
+  const marca = randomUUID()
+  let sesion: SesionCdp | null = null
+  const grupo = `guard-oyentes-${marca}`
+  try {
+    const handle = await boton.elementHandle({ timeout: 2_000 })
+    if (!handle) return 'error'
+    const frame = await handle.ownerFrame()
+    await handle.evaluate((el, a) => el.setAttribute(a[0]!, a[1]!), [ATRIBUTO_MARCA_OYENTES, marca])
+    const ctx = page.context() as BrowserContext & { newCDPSession?: (x: Page | Frame) => Promise<SesionCdp> }
+    if (typeof ctx.newCDPSession !== 'function') return 'error'
+    // Un iframe de OTRO proceso tiene su propia sesión; el resto vive en la de la página.
+    if (frame && frame !== page.mainFrame()) sesion = await ctx.newCDPSession(frame).catch(() => null)
+    sesion ??= await ctx.newCDPSession(page)
+    const doc = await sesion.send('DOM.getDocument', { depth: -1, pierce: true })
+    const backendNodeId = buscarNodoMarcado(doc?.root, marca)
+    if (backendNodeId === null) return 'error'
+    const { object } = await sesion.send('DOM.resolveNode', { backendNodeId, objectGroup: grupo })
+    if (!object?.objectId) return 'error'
+    const lista = await sesion.send('Runtime.callFunctionOn', {
+      objectId: object.objectId,
+      objectGroup: grupo,
+      returnByValue: false,
+      arguments: [{ value: MAX_NODOS_OYENTES }],
+      functionDeclaration: `function (tope) {
+        var out = [], vistos = new Set();
+        var poner = function (n) { if (n && !vistos.has(n)) { vistos.add(n); out.push(n); } };
+        var bajar = function (r) { var ds = r.querySelectorAll('*'); for (var i = 0; i < ds.length; i++) { poner(ds[i]); if (ds[i].shadowRoot) { poner(ds[i].shadowRoot); bajar(ds[i].shadowRoot); } } };
+        poner(this);
+        if (this.shadowRoot) { poner(this.shadowRoot); bajar(this.shadowRoot); }
+        bajar(this);
+        if (out.length > tope) return null;
+        var p = this;
+        while (p) { var s = p.assignedSlot || p.parentNode || p.host || null; if (!s) break; poner(s); p = s; }
+        if (this.form) poner(this.form);
+        var w = this.ownerDocument && this.ownerDocument.defaultView; if (w) poner(w);
+        return out;
+      }`,
+    })
+    if (lista?.exceptionDetails || !lista?.result) return 'error'
+    if (lista.result.subtype === 'null') return 'hay'
+    if (!lista.result.objectId) return 'error'
+    const props = await sesion.send('Runtime.getProperties', { objectId: lista.result.objectId, ownProperties: true })
+    const nodos = (props?.result ?? []).filter((x: any) => /^\d+$/.test(String(x?.name)) && typeof x?.value?.objectId === 'string')
+    if (nodos.length === 0) return 'error'
+    for (const n of nodos) {
+      const r = await sesion.send('DOMDebugger.getEventListeners', { objectId: n.value.objectId, depth: 0 })
+      if (!Array.isArray(r?.listeners)) return 'error'
+      // EXCEPCIÓN ÚNICA E IMPRESCINDIBLE (medida en Chromium real, 03/11/2026): el PROPIO Playwright, en cuanto usa un locator, deja en
+      // `window` oyentes de CAPTURA (click, mousedown, pointerdown…; los de su interceptor de clic) en el mundo PRINCIPAL, junto a uno de
+      // tipo `__playwright_global_listeners_check__`, todos del MISMO script. Se descuentan SOLO en `window`, SOLO los del script que
+      // registra ese marcador y SOLO si lo registra uno (si hay dos scripts con el marcador, nada se descuenta). Una página no puede
+      // atribuir funciones suyas a ese script; un oyente de la página en `window` (otro script) sigue bloqueando.
+      let propios: string | null = null
+      if (n.value.className === 'Window') {
+        const marcas = new Set(r.listeners.filter((l: any) => l?.type === '__playwright_global_listeners_check__').map((l: any) => String(l?.scriptId)))
+        if (marcas.size === 1) propios = [...marcas][0] as string
+      }
+      if (r.listeners.some((l: any) => TIPOS_OYENTE_ACCION.includes(String(l?.type)) && (propios === null || String(l?.scriptId) !== propios))) return 'hay'
+    }
+    return 'ninguno'
+  } catch {
+    return 'error'
+  } finally {
+    await boton.evaluate((el, a) => el.removeAttribute(a), ATRIBUTO_MARCA_OYENTES).catch(() => undefined)
+    if (sesion) {
+      await sesion.send('Runtime.releaseObjectGroup', { objectGroup: grupo }).catch(() => undefined)
+      await sesion.detach().catch(() => undefined)
+    }
+  }
+}
+
+/**
+ * NAVEGACIÓN LIBRE DEL EXPLORADOR IA (0.3.36). El ÚNICO camino para pulsar un control que el validador aceptó SOLO por la regla general
+ * de navegación (`requiereNavegacionLibre` del módulo). Exige, en este orden y sin atajos:
+ *   1. guard limpio y las ventanas de red de emisión, avance y guardado cerradas;
+ *   2. la regla del módulo sobre el INVENTARIO (`navegacionLibreInventario`) y la frontera bancaria (`exigirSinCuentaBancaria`);
+ *   3. EXACTAMENTE un control vivo, con el MISMO rótulo que el inventario;
+ *   4. la regla VIVA (`motivoNoNavegacionLibreVivo`: módulo + vocabulario del worker; href a otro origen, salida, formulario o pantalla
+ *      de contratación/pago → no) y `comprobarBoton` sobre su descripción completa, menos SOLO el rótulo exacto del sustantivo de un
+ *      desplegable de menú si el módulo lo eximió (todo lo demás de emisión, igual que siempre);
+ *   5. el tope anti-bucle por control (`topeNavegacionLibre`: 3; 6 en la simulación de Vivienda de Fidelidade) y el GLOBAL por trabajo
+ *      (`MAX_PULSACIONES_NAVEGACION_TOTAL`: 40, cualquier control).
+ * Solo entonces pulsa UNA vez. Sin ventana de red: la navegación y los POST que provoque pasan por el guard de contexto de siempre.
+ */
+export async function pulsarNavegacionLibre(boton: Locator, guard: GuardEmision, aut: { entrada: string; el: ElementoInventario; marco: MarcoInventario }): Promise<void> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'navegación libre con la ventana de emisión, de avance o de guardado abierta')
+  const inv = navegacionLibreInventario(aut.el, aut.marco)
+  if (!inv.ok) throw new EmisionBloqueadaError('boton', `navegación libre: el control del inventario no es de navegación (${inv.motivo})`)
+  await exigirSinCuentaBancaria(boton.page())
+  if ((await boton.count()) !== 1) throw new EmisionBloqueadaError('boton', 'navegación libre: no hay exactamente un control')
+  const vivo = await controlNavegacionVivo(boton)
+  if (!vivo) throw new EmisionBloqueadaError('boton', 'navegación libre: no se pudo leer el control vivo')
+  if (planoNavegacion(aut.el.texto ?? aut.el.ariaLabel ?? '') !== planoNavegacion(vivo.c.texto ?? vivo.c.ariaLabel ?? '')) throw new EmisionBloqueadaError('boton', 'navegación libre: el control vivo no es el del inventario')
+  const motivo = motivoNoNavegacionLibreVivo(vivo.c, vivo.url)
+  if (motivo !== null) throw new EmisionBloqueadaError('boton', `navegación libre: ${motivo}`)
+  const r = navegacionLibre(vivo.c, { urlMarco: vivo.url })
+  const exento = r.ok && r.exentoMenu
+  const desc = await descripcion(boton)
+  // Posiciones 0-3 de `descripcion` (texto, aria-label, title, value): las ÚNICAS que la excepción del menú puede quitar, y solo el sustantivo exacto.
+  comprobarBoton(conRutasTolerables(guard, desc.map((d, i) => (exento && i <= 3 && SUSTANTIVOS_MENU_NAVEGACION.includes(rotuloSinAdornos(d)) ? null : d))))
+  comprobarRotulosAccionFinal(desc)
+  // 2.ª revisión adversarial (03/11/2026): un manejador por `addEventListener` (invisible para la regla) en el control, un hijo, un ancestro
+  // o su formulario. Solo pasa con oyentes lo que tiene un rótulo NEUTRO exacto o es tarjeta de ramo; CDP que falla = bloqueo.
+  if (!rotuloExentoDeOyentes(vivo.c)) {
+    const oy = await oyentesAccionVivos(boton)
+    if (oy !== 'ninguno') throw new EmisionBloqueadaError('boton', `navegación libre: ${oy === 'hay' ? 'el control tiene oyentes de clic/teclado (addEventListener) y su rótulo no es neutro' : 'no se pudieron leer los oyentes del control (CDP)'}`)
+  }
+  const tope = topeNavegacionLibre(aut.entrada)
+  const cuenta = PULSACIONES_NAVEGACION.get(guard) ?? new Map<string, number>()
+  const clave = claveControlNavegacion(vivo.c, vivo.url)
+  const usadas = cuenta.get(clave) ?? 0
+  if (usadas >= tope) throw new EmisionBloqueadaError('fase', `navegación libre: el mismo control ya se pulsó ${usadas} veces en este trabajo (tope ${tope})`)
+  const total = PULSACIONES_NAVEGACION_TOTAL.get(guard) ?? 0
+  if (total >= MAX_PULSACIONES_NAVEGACION_TOTAL) throw new EmisionBloqueadaError('fase', `navegación libre: ${total} pulsaciones en este trabajo (tope global ${MAX_PULSACIONES_NAVEGACION_TOTAL})`)
+  cuenta.set(clave, usadas + 1)
+  PULSACIONES_NAVEGACION.set(guard, cuenta)
+  PULSACIONES_NAVEGACION_TOTAL.set(guard, total + 1)
+  await boton.click()
+  guard.comprobar()
+}
+
 /**
  * AVANCE AUTORIZADO DEL EXPLORADOR IA (Alberto, 13/10/2026: «Aceptar» de Datos básicos → Tarificar, SOLO en exploración;
  * puede quedar un proyecto en ePAC, nunca una póliza). El ÚNICO camino del explorador para pulsar un control que el guard
@@ -3816,6 +4181,7 @@ export async function pulsarExploracionAutorizada(
     comprobarBoton(desc)
   }
   comprobarBoton(desc, { permitirAceptar: true })
+  comprobarRotulosAccionFinal(desc)
   const destino = await boton.evaluate((el) => {
     const d = el.ownerDocument
     const f = el.closest('form') ?? (d.forms.length === 1 ? d.forms[0] : null)
