@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
           const r = await procesarFactura({ ...doc.factura, fecha }, {
             fuente: 'agente-email', drive: drive || undefined,
             esPresupuesto: doc.esPresupuesto, fingerprintOverride: doc.fingerprintOverride,
-            esBooking: doc.esBooking, titulares,
+            esBooking: doc.esBooking, titulares, nombreArchivo: adj.nombre,
             huellaDoc: huellaDocumento({
               messageId: c.messageId, nombreArchivo: adj.nombre, hashContenido: hashContenido(adj.buffer),
               ...doc.factura, fecha,
@@ -122,7 +122,7 @@ export async function GET(req: NextRequest) {
           fuente: 'agente-drive', drive: { url, carpeta, nombre },
           propiedadPorDefecto: doc.esBooking ? undefined : 'prop_personal',
           esPresupuesto: doc.esPresupuesto, fingerprintOverride: doc.fingerprintOverride,
-          esBooking: doc.esBooking, titulares,
+          esBooking: doc.esBooking, titulares, nombreArchivo: nombre,
           huellaDoc: huellaDocumento({ nombreArchivo: nombre, hashContenido: hashContenido(buffer), ...doc.factura, fecha }),
         })
         acumula(r)

@@ -202,7 +202,8 @@ Analiza el texto o imagen del documento COMPLETO y devuelve SOLO JSON sin markdo
   "irpf": 0.00,
   "total": 0.00,
   "divisa": "código ISO 4217 de la moneda del campo total (EUR, USD, GBP...)",
-  "categoria": "ALQUILER|LIMPIEZA|MANTENIMIENTO|SUMINISTROS|COMUNIDAD|SEGURO|IMPUESTOS|PLATAFORMAS|MOBILIARIO|REFORMAS|OTRO"
+  "categoria": "ALQUILER|LIMPIEZA|MANTENIMIENTO|SUMINISTROS|COMUNIDAD|SEGURO|IMPUESTOS|PLATAFORMAS|MOBILIARIO|REFORMAS|OTRO",
+  "liquidacion": null
 }
 Lee el documento ENTERO antes de responder, no solo el encabezado: el pie, las condiciones y las
 páginas siguientes cambian a menudo qué tipo de documento es (un "recibo" que en el pie dice que es
@@ -244,6 +245,13 @@ DOCUMENTO, no las palabras sueltas que contenga:
   aseguradora, banco o plataforma rinde a un MEDIADOR, corredor, agente o comisionista (lleva "código
   de mediador", "comisiones", "liquidación", "extracto de cuenta"). El destinatario cobra, no paga.
   Un recibo de prima a nombre del tomador sigue siendo "recibo" aunque lleve el código del mediador.
+  SOLO para "liquidacion_comisiones", rellena además "liquidacion" (para cualquier otro tipo, null):
+  {"compania": "aseguradora que liquida", "numero_documento": "nº del extracto/liquidación",
+   "periodo_inicio": "YYYY-MM-DD", "periodo_fin": "YYYY-MM-DD" (el periodo que dice el CUERPO del
+   documento, nunca la fecha del correo), "bruto": comisiones brutas del periodo, "retencion": IRPF
+   retenido en positivo, "otros_descuentos": otros cargos o descuentos del periodo en positivo,
+   "neto": bruto − retención − otros del PERIODO (sin el saldo anterior), "saldo_anterior": saldo
+   arrastrado de periodos anteriores}. Un importe que el documento no trae va a null, NUNCA a 0.
 - "resumen_pagos": resumen o listado anual/mensual de facturas, pagos, cargos o movimientos (no es
   una factura en sí).
 - "aviso_circular": aviso, circular, comunicado, boletín, notificación o recordatorio informativo.

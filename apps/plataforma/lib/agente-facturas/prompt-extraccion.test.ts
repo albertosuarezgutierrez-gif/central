@@ -32,3 +32,12 @@ test('el texto llega entero (no se corta al encabezado)', () => {
   assert.doesNotMatch(fuente, /input\.text\.slice\(0,\s*4000\)/)
   assert.match(fuente, /recortarTextoDocumento\(input\.text\)/)
 })
+
+test('pide el bloque «liquidacion» solo para liquidaciones, con null (no 0) para lo que falte', () => {
+  assert.match(prompt, /"liquidacion": null/)
+  for (const k of ['periodo_inicio', 'periodo_fin', 'bruto', 'retencion', 'otros_descuentos', 'neto', 'saldo_anterior', 'numero_documento']) {
+    assert.ok(prompt.includes(`"${k}"`), `falta «${k}» en el bloque liquidacion`)
+  }
+  assert.match(prompt, /SOLO para "liquidacion_comisiones"/)
+  assert.match(prompt, /NUNCA a 0/)
+})

@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition, type CSSProperties } from 'react'
 import type { ResumenFinanciero } from '@/lib/finanzas'
 import { Landmark } from 'lucide-react'
 import { eur, eurSinDecimales } from '@/lib/dinero'
+import { rotuloRetenciones } from '@/lib/correduria/retenciones-reales'
 import { BtnLink, PageHeader } from '@/components/ui'
 import ConsejoFiscalBox from '../ConsejoFiscalBox'
 import BaseDevengoBloque from './BaseDevengoBloque'
@@ -230,7 +231,7 @@ export default function FiscalPageClient({ initialData, initialComparativa, base
                   <span style={{ color: '#805ad5' }}>{fmt(d.fiscal.baseImponibleEstimada)}</span>
                 </div>
                 <div style={{ fontSize: '11px', padding: '6px 8px', background: 'var(--primary-light)', borderRadius: '4px', color: 'var(--muted)', marginTop: '4px' }}>
-                  Retenciones ya pagadas (correduría 15%): <strong style={{ color: 'var(--text)' }}>{fmt(d.fiscal.retencionesAcumuladas)}</strong>
+                  Retenciones ya pagadas (correduría): <strong style={{ color: 'var(--text)' }}>{rotuloRetenciones(d.correduria.retenciones, d.fiscal.retencionesAcumuladas)}</strong>
                 </div>
                 {(d.fiscal.exento ?? 0) > 0 && (
                   <div style={{ fontSize: '11px', padding: '6px 8px', background: '#e6fffa', borderRadius: '4px', color: '#234e52', marginTop: '6px' }}>

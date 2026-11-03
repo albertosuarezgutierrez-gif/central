@@ -729,8 +729,8 @@ export const AVISOS: AvisoTelegram[] = [
   {
     id: 'correduria.cima-liq', categoria: 'correduria',
     titulo: 'Liquidaciones de comisiones (CIMA)',
-    que: 'Liquidaciones nuevas de las compañías, y los fallos al conectar con CIMA.',
-    cuando: 'Todos los días a las 09:30',
+    que: 'Cuadre de comisiones por compañía: devengadas y sin abono en el banco tras 60 días, neto liquidado (CIMA o PDF por correo) que no casa con el banco por más de 5€, abonos sin liquidación (aviso suave), y los fallos al leer la cartera.',
+    cuando: 'Pasada diaria a las 09:30; el mismo aviso no se repite en 7 días (30 los suaves) salvo que cambie',
   },
   {
     id: 'correduria.siniestro-nuevo', categoria: 'correduria',
