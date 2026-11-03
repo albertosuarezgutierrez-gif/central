@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-03T13:52:38Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-03T15:27:28Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -55,7 +55,7 @@
 ### plataforma _(matriz)_
 - **Módulos que usa:** core-ai, core-catastro, core-consent, core-direccion, core-email, core-fiscal, core-identity, core-payments, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-seguros, module-seguros-portal, module-ses, module-subastas, module-tarificacion, module-trading
 - **Capacidades:** QR / portal cliente, Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
-- **Tablas (163):** agente_latidos, agente_reparaciones, agente_salud, agente_veredicto, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cierres_mes, cima_liquidaciones, comisiones_cobertura, comisiones_devengo, comisiones_liquidacion_docs, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, consentimiento_registro, contable_accion, contable_feedback, contable_log, contable_memoria…
+- **Tablas (164):** agente_latidos, agente_reparaciones, agente_salud, agente_veredicto, agoda_hilos_correo, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cierres_mes, cima_liquidaciones, comisiones_cobertura, comisiones_devengo, comisiones_liquidacion_docs, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, consentimiento_registro, contable_accion, contable_feedback, contable_log…
 - **Rutas API:** 527
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
@@ -281,6 +281,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (03/11/2026) 03/11/2026) Sivra · mensajes de huésped de Agoda por correo
 - (03/11/2026) 03/11/2026) Correduría · cuadre de comisiones por compañía + Drive reorganizado
 - (03/11/2026) 03/11/2026) Facturas · auditoría del lector: tipo de documento obligatorio y documento completo - Causa raíz de los errores básicos: `tipo_documento` salía null en 28/51 y `procesar.ts` no lo miraba; el texto se cortaba a 4.000 car. (la IA solo veía el encabezado). Ahora: prompt con vocabulario cerrado (presupuesto/solicitud/liquidación/resumen/aviso → omitido; null/otro → bandeja con aviso), emisor≠cliente≠dirección del piso, `numero_albaran` aparte, hasta 12.000 car. (inicio+final). Helpers `tipo-documento.ts`, `revision-lectura.ts`, `recorte-texto.ts`; dedupe por nº de factura sin separadores. - Bandeja revisada con Alberto: Netflix → pisos compartidos; PEPEMOBILE → correduría; Anthropic 170 € = bonos reales; TotalEnergies 310,01 € = Monte Carmelo (personal); Vercel B2DRQ0QS-0007 duplicado descartado. - EMASESA 2026 completo
 - (03/11/2026) 03/11/2026) Captación · parado el mailing en frío de ia-rest/ialimp; foco 100% correduría
@@ -290,5 +291,4 @@
 - (03/11/2026) 03/11/2026) Fiscal · Pilar, correduría (proyección), IBI y Booking
 - (03/11/2026) 03/11/2026) Fiscal · estudios de pisos y correduría (docs/fiscal/2026-11-*.md)
 - (03/11/2026) 03/11/2026) Pricing · atribución de capas en `pricing_applied`
-- (03/11/2026) 03/11/2026) Fiscal · doble conteo P&L pisos + auditoría contable
 
