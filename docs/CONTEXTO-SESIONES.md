@@ -66,6 +66,11 @@ Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; ti
 original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados revisado/falta_roto/devuelto + bloque en ficha. `rrhh.material_empleado`
 (0028, aplicada). Pendiente fase 2: revisión periódica mensual.
 
+## (03/11/2026) Facturas · pólizas de clientes y comisiones de portal NO son gasto + bandeja de pendientes
+- Regla Alberto: recibo/liquidación de póliza de un CLIENTE (tomador ≠ Alberto/Pilar) NO es gasto (la comisión entra neta por banco); factura de comisión de Booking/Airbnb/Expedia/Vrbo = justificante, la comisión ya va como bruto−neto en `incomes`. Helpers `lib/agente-facturas/{poliza-cliente,portal-comision}.ts` (tomador dudoso → bandeja con aviso). Skills/agentes actualizados.
+- Bug: `/expenses/pendientes` (`lib/agente-facturas/pendientes.ts`) no filtraba `descartado_at` → enseñaba 9 ya descartados (50→41). Cepo `pendientes-vigente.test.ts`.
+- Dudas abiertas: 307,11 € del 18/09 (póliza 061048939) tiene tomador Pilar (¿liquidación o propio?); Allianz Moto 113,33 € del 07/10 tomador tercero (¿cliente?); Allianz Moto 251,47 € = moto de Alberto (gasto real).
+
 ## (03/11/2026) Facturas · el agente de correo duplicaba adjuntos sin proveedor
 - Causa: `fingerprint` vacío cuando la factura no trae proveedor/NIF (foto de WhatsApp) + Gmail relee la ventana de 36 h → mismo adjunto metido dos días seguidos (644,81 € lavandería Socorro; copia descartada en BD con OK de Alberto).
 - Arreglo: `lib/agente-facturas/huella-documento.ts` (msg:+adjunto › hash › nº factura › fecha+total+nombre de archivo; nunca dedupe solo por fecha+total; huella vacía no compara). Pendiente: deduplicar ANTES de subir a Drive (aún deja copias huérfanas en Drive).

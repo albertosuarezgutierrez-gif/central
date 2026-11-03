@@ -84,6 +84,11 @@ Flujo: Paso 0 (salud+backlog) → 1/1-bis (candidatos Gmail + subidas manuales D
   piso, importe exacto, ±40 días); el P&L de pisos deduplica (`lib/sivra/cargos-ya-facturados.ts`). Tarjeta Kutxabank ···0300 =
   crédito (liquidaciones = `traspaso_interno`).
 - **Descartar** documentos de clientes de la correduría (p. ej. pólizas): `descartado_at` + motivo, no son gasto.
+  - El agente ya lo hace solo (`poliza-cliente.ts`): aseguradora/póliza/recibo de prima con tomador que NO es Alberto ni Pilar
+    → omitido «Póliza de cliente de la correduría: no es gasto»; tomador desconocido → bandeja «Posible póliza de cliente». Propias (Occident pisos, ASISA) = gasto.
+    Ej. real: «Póliza 061145138» 659,43 €, SEGURO, sin proveedor.
+- **Comisión de portal** (Booking.com B.V., Airbnb, Expedia, Vrbo; p. ej. «Cargo por servicio de los pagos, Reservas» 312,35 €): NO es gasto,
+  el portal paga neto y el motor resta bruto−neto. `portal-comision.ts` la omite conservando el enlace de Drive. Smoobu/PriceLabs SÍ son gasto.
 - **Fiscal:** actividades exentas (correduría, alquiler turístico sin servicios hoteleros) → IVA soportado = gasto por el total;
   extranjero sin IVA → señalar posible autoliquidación a la asesoría; certificados de retenciones de compañías → capturar.
   Mobiliario >300 € en pisos: posible amortización 10 %/año, pendiente de decisión (no marcar `amortizable`, ver `perfil-fiscal`).

@@ -9,6 +9,8 @@ import { contextoTitularSiAplicado } from './contexto-titular'
 import { esBooking, parseBooking, bookingFingerprint } from './booking'
 import { esPresupuesto } from './clasificar'
 import { pareceIngresoDeCorreduria } from './no-es-gasto'
+import { esDocumentoPolizaCliente, MOTIVO_POLIZA_CLIENTE, MOTIVO_POLIZA_DUDA } from './poliza-cliente'
+import { esFacturaComisionPortal, MOTIVO_COMISION_PORTAL } from './portal-comision'
 import { evaluaReceptor, nifProveedorEsNuestro, type Titular } from './receptor'
 import type { FacturaExtraida } from './extraer'
 
@@ -91,6 +93,26 @@ export async function procesarFactura(
     return { decision: 'omitido', fingerprint: fp, total, proveedor, motivo: sospecha.motivo ?? undefined }
   }
 
+  // Factura de comisión de un portal de reservas (Booking, Airbnb, Expedia, Vrbo): justificante, no
+  // gasto (el portal paga en neto y el motor fiscal ya resta bruto−neto). Mismo cauce `omitido`;
+  // el PDF ya está archivado en Drive aguas arriba y `ctx.drive` va en el payload.
+  if (esFacturaComisionPortal({ proveedor, concepto: data.concepto })) {
+    await log({ fuente: ctx.fuente, fingerprint: fp, decision: 'omitido', motivo: MOTIVO_COMISION_PORTAL, payload: { total, drive_url: ctx.drive?.url ?? null } })
+    return { decision: 'omitido', fingerprint: fp, total, proveedor, motivo: MOTIVO_COMISION_PORTAL }
+  }
+
+  // Póliza de un CLIENTE de la correduría: la comisión ya entra como ingreso por el banco → no es
+  // gasto. true = se omite (mismo cauce que arriba); 'duda' (tomador desconocido) = sigue, pero
+  // forzada a la bandeja más abajo con el motivo de revisión.
+  const polizaCliente = esDocumentoPolizaCliente({
+    proveedor, concepto: data.concepto, categoria: data.categoria, numero_factura: data.numero_factura,
+    nif_proveedor: data.nif_proveedor, cliente: data.cliente, nif_cliente: data.nif_cliente,
+  }, titulares)
+  if (polizaCliente === true) {
+    await log({ fuente: ctx.fuente, fingerprint: fp, decision: 'omitido', motivo: MOTIVO_POLIZA_CLIENTE, payload: { total, drive_url: ctx.drive?.url ?? null } })
+    return { decision: 'omitido', fingerprint: fp, total, proveedor, motivo: MOTIVO_POLIZA_CLIENTE }
+  }
+
   // Factura de un TERCERO (llega al Gmail de Alberto por un reenvío, pero está a nombre de otro):
   // ni se imputa ni ensucia la bandeja. Se registra en el log y el scan lo canta por Telegram —
   // decisión de Alberto (31/07/2026): "ignorar, pero avisar". Solo descarta con identificación
@@ -138,6 +160,13 @@ export async function procesarFactura(
   if (decision === 'auto' && !conc.ok && (data.base_imponible != null || data.irpf != null)) {
     decision = 'bandeja'
     motivo = `Descuadre: base+IVA−IRPF=${conc.esperado} ≠ total ${total}`
+  }
+
+  if (polizaCliente === 'duda' && decision === 'auto') {
+    decision = 'bandeja'
+    motivo = MOTIVO_POLIZA_DUDA
+  } else if (polizaCliente === 'duda') {
+    motivo = motivo ? `${MOTIVO_POLIZA_DUDA} · ${motivo}` : MOTIVO_POLIZA_DUDA
   }
 
   // Booking: la liquidación NUNCA se auto-imputa en silencio. Trae varias reservas, comisiones

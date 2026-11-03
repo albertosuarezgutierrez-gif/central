@@ -127,6 +127,9 @@ Decisiones de Alberto sobre clasificación de gastos por negocio. Guardianas del
 - **Tarjeta Kutxabank ···0300 = crédito** (sus liquidaciones en la cuenta = `traspaso_interno`). Cuentas de Pilar sin sincronizar
   desde jun/sep: pedir extractos.
 - Documentos de CLIENTES de la correduría no son gastos de Alberto (descartar con motivo).
+- **Seguros propios vs de clientes:** gasto solo si el tomador es Alberto (28823484E) o Pilar (Occident de pisos, ASISA salud). Recibos/liquidaciones
+  de prima de otros tomadores = cartera de la correduría, no gasto; sin tomador legible = confirmar con Alberto.
+- **Comisión/cargo de pagos de portales** (Booking, Airbnb, Expedia, Vrbo) = justificante, no gasto (bruto−neto ya lo resta). Software de pisos sí es gasto.
 
 ## Índice de `references/` — lee SOLO lo que necesite la tarea
 - **`references/entidades-y-propiedades.md`** — quién tributa qué: entidades (Alberto/Pilar/SL dormida),
