@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import type { ResumenFinanciero, MovResumen } from '@/lib/finanzas'
 import { Banknote } from 'lucide-react'
 import { eur } from '@/lib/dinero'
+import { rotuloRetenciones } from '@/lib/correduria/retenciones-reales'
 import { PageHeader } from '@/components/ui'
 
 // Gastos y Fiscal viven en sus páginas propias (/finanzas/gastos y /finanzas/fiscal,
@@ -305,7 +306,7 @@ export default function FinanzasClient({ initialData, year, quarter, embebido }:
                 ))}
               </div>
               <div style={{ fontSize: '11px', color: 'var(--muted)', background: 'var(--primary-light)', borderRadius: '4px', padding: '6px 8px' }}>
-                Bruto para la renta: <strong>{fmt(d.correduria.ingresosBrutos)}</strong> · Retenciones ya pagadas: <strong>{fmt(d.correduria.retencionesEstimadas)}</strong>
+                Bruto para la renta: <strong>{fmt(d.correduria.ingresosBrutos)}</strong> · Retenciones ya pagadas: <strong>{rotuloRetenciones(d.correduria.retenciones, d.correduria.retencionesEstimadas)}</strong>
                 {d.correduria.prestacionesExentas > 0 && (
                   <> · Prestaciones exentas (Art. 7.h LIRPF, <em>no tributan</em>): <strong>{fmt(d.correduria.prestacionesExentas)}</strong></>
                 )}

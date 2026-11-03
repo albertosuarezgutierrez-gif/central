@@ -5,6 +5,7 @@ import { claveComercio } from './correduria'
 import { comercioDe } from './comercio'
 import { REGEX_DEVOLUCION_AEAT } from './devolucion-aeat'
 import { calcularAutoliquidacion, type AutoliquidacionAnual } from './iva-autoliquidacion'
+import { retencionesCorreduria, type PeriodoConRetencion, type RetencionesCorreduria } from './correduria/retenciones-reales'
 
 // Devoluciones AEAT: FUERA de los ingresos y del resultado (no son ingreso del negocio).
 // Valen también para movimientos antiguos sin recategorizar en BD (por concepto).
@@ -99,7 +100,10 @@ export type ResumenFinanciero = {
   correduria: {
     cobradoNeto: number
     prestacionesExentas: number   // cobrado que NO tributa (Art. 7.h LIRPF): fuera de la base imponible
+    /** Retención TOTAL de las comisiones (real + estimada). Nombre histórico: ya no es solo estimación. */
     retencionesEstimadas: number
+    /** Desglose: parte REAL (liquidaciones del libro) y parte ESTIMADA al 15 %. */
+    retenciones: RetencionesCorreduria
     ingresosBrutos: number
     gastosDeducibles: number
     resultado: number
@@ -247,7 +251,6 @@ export type GastosControl = {
   quarter: number
 }
 
-const RETENCION_SEGUROS = 0.15
 const REDUCCION_CONJUNTA = 3400
 
 // Los tramos IRPF ya NO se hardcodean aquí: la FUENTE ÚNICA es `IMPORTES_POR_ANIO[year].tramos`
@@ -625,8 +628,36 @@ export async function getResumenFinanciero(
 
   // Correduría: bruto estimado y retenciones. Sobre el ingreso GRAVABLE (cobrado − exento): las
   // prestaciones exentas (Art. 7.h LIRPF) no tributan ni llevan retención → fuera de la base.
+  // La retención es REAL donde el libro de comisiones (`comisiones_devengo`, CIMA o PDF por correo) trae
+  // la liquidación con su abono casado; el resto del cobrado se estima al 15 % y así se rotula.
   const corrIngGravable = Math.max(0, corrIng - corrExento)
-  const retencionesEstimadas = corrIngGravable * (RETENCION_SEGUROS / (1 - RETENCION_SEGUROS))
+  // Un abono puede pagar VARIOS periodos (Allianz: un saldo de 704,53€ casado a cinco remesas): el
+  // `banco_total` del periodo es SU parte. Por eso lo que cae en el rango se mide como la FRACCIÓN de sus
+  // abonos dentro del rango × su `banco_total`, nunca como la suma de los abonos (que contaría el saldo
+  // entero en cada periodo).
+  const periodosRet = await prisma.$queryRaw<Array<{ retencion: unknown; banco_total: unknown; abonos_rango: unknown; abonos_todos: unknown }>>`
+    SELECT d.liq_retencion AS retencion, d.banco_total,
+           sum(mb.importe) FILTER (WHERE mb.fecha_operacion BETWEEN ${inicio}::date AND ${fin}::date) AS abonos_rango,
+           sum(mb.importe) AS abonos_todos
+    FROM comisiones_devengo d
+    CROSS JOIN LATERAL unnest(d.banco_movimiento_ids) AS m(id)
+    JOIN movimientos_bancarios mb ON mb.id = m.id
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id AND cb.cuenta_id = ${cuentaId}::uuid
+    WHERE d.cuenta_id = ${cuentaId}::uuid
+      AND d.liq_bruto IS NOT NULL AND d.liq_retencion IS NOT NULL AND d.banco_total > 0
+      AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
+      AND coalesce(mb.subcategoria, '') <> 'exento'
+    GROUP BY d.compania_codigo, d.periodo_inicio, d.periodo_fin, d.liq_retencion, d.banco_total
+    HAVING sum(mb.importe) FILTER (WHERE mb.fecha_operacion BETWEEN ${inicio}::date AND ${fin}::date) > 0`
+    .then(rs => rs.map((r): PeriodoConRetencion => {
+      const bancoTotal = Number(r.banco_total)
+      const todos = Number(r.abonos_todos)
+      return { retencion: Number(r.retencion), bancoTotal, bancoEnRango: todos > 0 ? bancoTotal * Math.min(1, Number(r.abonos_rango) / todos) : 0 }
+    }))
+    // Sin poder leer el libro, la parte real es «no se sabe» (null) y todo se estima — rotulado como tal.
+    .catch((e: unknown) => { console.warn('[finanzas] retenciones reales no leídas:', e instanceof Error ? e.message : e); return null })
+  const retenciones = retencionesCorreduria(corrIngGravable, periodosRet)
+  const retencionesEstimadas = retenciones.total
   const ingresosBrutos = corrIngGravable + retencionesEstimadas
   const corrResultado = corrIng - corrGas   // resultado de CAJA (incluye lo exento, es dinero real cobrado)
 
@@ -791,6 +822,7 @@ export async function getResumenFinanciero(
       cobradoNeto: corrIng,
       prestacionesExentas: corrExento,
       retencionesEstimadas,
+      retenciones,
       ingresosBrutos,
       gastosDeducibles: corrGas,
       resultado: corrResultado,

@@ -18,9 +18,16 @@ import { tgAviso } from '@/lib/telegram/avisos'
 import { comisionesAsegura, nombreCompania } from '@/lib/comisiones-asegura'
 import { describirCausaAsegura } from '@/lib/correduria-puerto'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
-import { estadoCuadre, remesaEfectiva, brutoEfectivo, mesEnPeriodo, finDeMes, ESTADOS_PENDIENTES, type EstadoCuadre } from '@/lib/correduria/cuadre'
+import { estadoCuadre, remesaEfectiva, mesEnPeriodo, finDeMes, ESTADOS_PENDIENTES, type EstadoCuadre } from '@/lib/correduria/cuadre'
 import { bancoDePeriodo, casarAbonos, rangoAbonos, type AbonoBanco } from '@/lib/correduria/casar-banco'
-import { ENV_LISTA_CORREDURIA, listaCorreduria } from '@/lib/correduria-acceso'
+import { cuentaDelLibro } from '@/lib/correduria/cuenta-libro'
+import { fusionarExtractosPdf, type FilaLibro } from '@/lib/correduria/liquidacion-doc'
+import { leerLiquidacionDocs } from '@/lib/correduria/liquidacion-doc-db'
+import { hashesPdfVigentes } from '@/lib/correduria/huerfanas-pdf'
+import { alertasCuadreComisiones, type AlertaComisiones, type PeriodoAviso } from '@/lib/correduria/cuadre-avisos'
+import { decidirEnvios, hashTexto } from '@/lib/fiscal-alertas'
+import { enviosPrevios, registrarEnvio } from '@/lib/fiscal-alertas-db'
+import { hoyMadrid } from '@/lib/cierre-mes'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -47,31 +54,18 @@ export async function GET(req: NextRequest) {
   // el libro de Alberto se quedó congelado ese día y nada falló. Ahora: las cuentas con acceso a la
   // correduría (`CORREDURIA_EMAILS`, la misma lista que guarda `/correduria`), y entre ellas la que
   // recibe los abonos de seguros en sus bancos.
-  const lista = listaCorreduria()
   // Sin la lista no se escribe nada (fail-closed, igual que `/correduria`): «no sé de quién es el libro»
-  // no autoriza a escribirlo en una cuenta cualquiera.
-  if (lista === null) {
-    const motivo = `falta ${ENV_LISTA_CORREDURIA}: no se sabe de quién es el libro, no se escribe nada`
-    await registrarLatido(AGENTE, false, motivo)
-    return NextResponse.json({ ok: false, msg: motivo })
+  // no autoriza a escribirlo en una cuenta cualquiera. La regla vive en `lib/correduria/cuenta-libro.ts`
+  // (la comparte el lector de liquidaciones PDF del agente de facturas).
+  const cuenta = await cuentaDelLibro()
+  if (!cuenta.ok) {
+    await registrarLatido(AGENTE, false, cuenta.motivo)
+    return NextResponse.json({ ok: false, msg: cuenta.motivo })
   }
-  const cuenta = await prisma.$queryRaw<Array<{ id: string; abonos: number }>>`
-    SELECT c.id, (SELECT count(*) FROM movimientos_bancarios mb JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
-                  WHERE cb.cuenta_id = c.id AND mb.destino = 'seguros' AND mb.importe > 0
-                    AND coalesce(mb.duplicado_estado, '') <> 'ignorado')::int AS abonos
-    FROM cuentas c
-    WHERE lower(c.email) = ANY(${lista}::text[])
-    ORDER BY abonos DESC, c.created_at, c.id
-    LIMIT 1`
-  if (!cuenta.length) {
-    const motivo = `ninguna cuenta casa con ${ENV_LISTA_CORREDURIA} (¿errata en la lista?): no se ha podido cuadrar nada`
-    await registrarLatido(AGENTE, false, motivo)
-    return NextResponse.json({ ok: false, msg: motivo })
-  }
-  const cuentaId = cuenta[0].id
+  const cuentaId = cuenta.cuentaId
   // Una cuenta sin un solo abono de seguros deja el tramo del banco a «—» en todo el libro: es
   // exactamente el fallo del 20/09, así que el latido no puede quedar verde.
-  const avisoCuenta = cuenta[0].abonos === 0
+  const avisoCuenta = cuenta.abonos === 0
     ? 'la cuenta elegida no tiene abonos de seguros en sus bancos: el tramo del banco no se ha podido cruzar'
     : null
 
@@ -133,16 +127,7 @@ export async function GET(req: NextRequest) {
 
   // ── Un periodo por liquidación, más los meses que SOLO tienen devengo ──────
   // Los segundos son justo el caso Mapfre: devenga comisión y no manda extracto.
-  type Fila = {
-    codigo: string
-    inicio: string
-    fin: string
-    bruto: number | null
-    ret: number | null
-    remesa: number | null
-    hash: string | null
-  }
-  const filas: Fila[] = com.periodos.map(p => ({
+  const filasCima: FilaLibro[] = com.periodos.map(p => ({
     codigo: p.companiaCodigo,
     inicio: p.periodoInicio,
     fin: p.periodoFin,
@@ -150,7 +135,27 @@ export async function GET(req: NextRequest) {
     ret: p.liqRetencion,
     remesa: p.liqRemesa,
     hash: p.liqHash,
+    origen: 'cima' as const,
   }))
+
+  // ── Liquidaciones que llegaron por CORREO (PDF, agente de facturas) ───────
+  // Rellenan el eje LIQUIDADO solo donde CIMA no lo trae (CIMA manda). Va ANTES de las filas de «solo
+  // devengo»: un mes cubierto por un PDF no puede quedar además como fila suelta. `null` = la tabla no
+  // se pudo leer: se sigue solo con CIMA y se dice en el latido.
+  const docs = await leerLiquidacionDocs(cuentaId, `${anio - 1}-12-01`)
+  const manuales = await prisma.$queryRaw<Array<{ codigo: string; inicio: string; fin: string }>>`
+    SELECT compania_codigo AS codigo, to_char(periodo_inicio, 'YYYY-MM-DD') AS inicio, to_char(periodo_fin, 'YYYY-MM-DD') AS fin
+    FROM comisiones_devengo
+    WHERE cuenta_id = ${cuentaId}::uuid AND liq_origen = 'manual' AND liq_bruto IS NOT NULL`
+  const fusion = fusionarExtractosPdf(filasCima, docs ?? [], manuales)
+  const filas = fusion.filas
+  for (const codigo of new Set(fusion.filas.filter(f => f.origen === 'pdf').map(f => f.codigo))) {
+    conCobertura.add(codigo)
+    await prisma.$executeRaw`
+      INSERT INTO comisiones_cobertura (cuenta_id, compania_codigo, compania, tiene_correo_importe, actualizado_at)
+      VALUES (${cuentaId}::uuid, ${codigo}, ${nombreCompania(codigo)}, true, now())
+      ON CONFLICT (cuenta_id, compania_codigo) DO UPDATE SET tiene_correo_importe = true, actualizado_at = now()`
+  }
   for (const d of com.devengos) {
     const yaEsta = filas.some(f => f.codigo === d.companiaCodigo && mesEnPeriodo(d.mes, f.inicio, f.fin))
     if (!yaEsta) {
@@ -162,6 +167,7 @@ export async function GET(req: NextRequest) {
         ret: null,
         remesa: null,
         hash: null,
+        origen: 'cima',
       })
     }
   }
@@ -192,15 +198,19 @@ export async function GET(req: NextRequest) {
     SELECT clave, compania FROM correduria_reglas WHERE cuenta_id = ${cuentaId}::uuid`).map(r => [r.clave, r.compania]))
   const casado = casarAbonos(periodosLiq, abonos, reglas)
 
-  const avisos: string[] = []
+  // Avisos con clave estable: pasan por el dedupe de `fiscal_avisos_enviados` al final.
+  const alertas: AlertaComisiones[] = []
   // Un abono que liquida varias remesas y trae de MÁS: el sobrante no se reparte (no hay columna ni
   // criterio para saber a qué periodo va), se deja constancia aquí.
   for (const e of casado.excedentes) {
-    avisos.push(
-      `${nombreCompania(e.codigo)}: el abono ${e.abonoId.slice(0, 8)} (${eur(e.importe)}) liquida varias remesas por ${eur(e.sumaRemesas)} ` +
-      `y sobran ${eur(e.excedente)} sin repartir. Revísalo.`,
-    )
+    alertas.push({
+      clave: `comisiones-excedente-${e.abonoId}`,
+      suave: false,
+      texto: `🔴 <b>Comisiones · ${nombreCompania(e.codigo)}</b>: el abono ${e.abonoId.slice(0, 8)} (${eur(e.importe)}) liquida varias remesas por ${eur(e.sumaRemesas)} ` +
+        `y sobran ${eur(e.excedente)} sin repartir. Revísalo en <b>/correduria</b>.`,
+    })
   }
+  const periodosAviso: PeriodoAviso[] = []
   let pendientes = 0
 
   for (const f of filas) {
@@ -222,7 +232,7 @@ export async function GET(req: NextRequest) {
               ${f.inicio}::date, ${f.fin}::date,
               ${esperado}, ${recibos > 0 ? recibos : null},
               ${f.bruto}, ${f.ret}, ${f.remesa},
-              ${f.bruto == null ? null : 'cima'}, ${f.hash},
+              ${f.bruto == null ? null : f.origen}, ${f.hash},
               ${bancoTotal}, ${bancoIds}::uuid[], true, now())
       ON CONFLICT (cuenta_id, compania_codigo, periodo_inicio, periodo_fin) DO UPDATE SET
         compania = EXCLUDED.compania,
@@ -251,15 +261,32 @@ export async function GET(req: NextRequest) {
     })
 
     if (ESTADOS_PENDIENTES.includes(estado)) pendientes++
-    if (estado === 'esperado-sin-liquidar' || estado === 'liquidado-sin-cobrar' || estado === 'descuadra') {
-      avisos.push(
-        `• <b>${nombreCompania(f.codigo)}</b> ${f.inicio} → ${f.fin} — <b>${ETIQUETA[estado]}</b>\n` +
-          `  devengado ${esperado == null ? '—' : eur(esperado)} · ` +
-          `liquidado ${f.bruto == null ? '—' : eur(brutoEfectivo(f.bruto, f.remesa) as number)} · ` +
-          `banco ${bancoTotal == null ? '—' : eur(bancoTotal)}`,
-      )
-    }
+    periodosAviso.push({
+      codigo: f.codigo, compania: nombreCompania(f.codigo), inicio: f.inicio, fin: f.fin, leidoOk: true,
+      esperadoBruto: esperado, liqBruto: f.bruto, liqRetencion: f.ret, liqRemesa: f.remesa, bancoTotal,
+      liqOrigen: f.bruto == null ? null : f.origen,
+    })
   }
+
+  // ── PDF huérfanos: filas `pdf` que ningún documento de ESTA pasada respalda ──
+  // (CIMA trajo el periodo con otras fechas, o ganó otro PDF solapado). Se vacía su liquidación y su
+  // banco para que no se sume doble. Solo `pdf`: lo confirmado a mano o de CIMA no se toca. Con `docs`
+  // ilegible (null) no se limpia nada: «no se pudo leer» no autoriza a borrar.
+  if (docs !== null) {
+    await prisma.$executeRaw`
+      UPDATE comisiones_devengo SET
+        liq_bruto = NULL, liq_retencion = NULL, liq_remesa = NULL,
+        liq_origen = NULL, liq_hash = NULL, liq_email_message_id = NULL,
+        banco_total = NULL, banco_movimiento_ids = NULL, actualizado_at = now()
+      WHERE cuenta_id = ${cuentaId}::uuid
+        AND liq_origen = 'pdf'
+        AND coalesce(liq_hash, '') <> ALL(${hashesPdfVigentes(fusion.usados)}::text[])`
+  }
+
+  // ── Cuadre mensual por compañía (lib/correduria/cuadre-avisos.ts) ─────────
+  // (a) devengado sin abono > 60 días · (b) neto vs banco > 5 € · (c) abono sin liquidación (suave).
+  const hoy = hoyMadrid()
+  alertas.push(...alertasCuadreComisiones(periodosAviso, hoy))
 
   // 🚨 Comisiones que la compañía informó y NO se pudieron leer. Van SIEMPRE,
   // aunque todo lo demás cuadre: un devengo calculado sobre recibos ilegibles
@@ -297,25 +324,26 @@ export async function GET(req: NextRequest) {
 
   const sinDato = com.devengos.some(d => d.ilegibles == null)
   const ilegibles = com.devengos.reduce((s, d) => s + (d.ilegibles ?? 0), 0)
-  const lineaIlegibles = sinDato
-    ? '⚪ No se sabe cuántos recibos tienen la comisión ilegible (asegura no lo informa).'
-    : ilegibles > 0
-      ? `⚠️ ${ilegibles} recibo(s) cobrados con la comisión ILEGIBLE: el devengado es un suelo, no el total.`
-      : ''
-
-  if (avisos.length || ilegibles > 0 || sinDato) {
-    const cabecera = avisos.length
-      ? `🔴 <b>Comisiones — hay dinero que no cuadra</b>\n\n${avisos.join('\n\n')}\n\n`
-      : `⚠️ <b>Comisiones</b> — los periodos cuadran, pero el devengado está incompleto.\n\n`
-    await tgAviso(
-      'correduria.cima-liq',
-      cabecera +
-        (lineaIlegibles ? `${lineaIlegibles}\n` : '') +
-        (pendientes ? `⚪ Y ${pendientes} periodo(s) sin dato o sin fuente todavía.\n` : '') +
-        `Revisa en <b>/correduria</b>.`,
-      { html: true },
-    )
+  if (sinDato) {
+    alertas.push({ clave: 'comisiones-ilegibles', suave: true, texto: '⚪ <b>Comisiones</b> — no se sabe cuántos recibos tienen la comisión ilegible (asegura no lo informa): el devengado puede ser un suelo.' })
+  } else if (ilegibles > 0) {
+    alertas.push({ clave: 'comisiones-ilegibles', suave: false, texto: `⚠️ <b>Comisiones</b> — ${ilegibles} recibo(s) cobrados con la comisión ILEGIBLE: el devengado es un suelo, no el total. Revisa en <b>/correduria</b>.` })
   }
+
+  // Sin repetir: el mismo aviso (clave + contenido) no vuelve en 7 días (30 los suaves); si el contenido
+  // cambia, es un aviso nuevo. Mismo mecanismo que los avisos fiscales (`fiscal_avisos_enviados`;
+  // sin la tabla, fail-open: se avisa sin dedupe).
+  const previos = await enviosPrevios(cuentaId)
+  const ahora = new Date()
+  const aEnviar = [
+    ...decidirEnvios(alertas.filter(a => !a.suave), previos, ahora, 7),
+    ...decidirEnvios(alertas.filter(a => a.suave), previos, ahora, 30),
+  ]
+  for (const a of aEnviar) {
+    const id = await tgAviso('correduria.cima-liq', a.texto, { html: true })
+    if (id != null) await registrarEnvio(cuentaId, a.clave, hashTexto(a.texto))
+  }
+  const avisos = alertas.filter(a => !a.suave)
 
   // Una lectura recortada tiñe el latido: el libro de ese año NO está
   // comprobado, y un latido verde diría lo contrario. `null` no lo tiñe (no se
@@ -336,6 +364,10 @@ export async function GET(req: NextRequest) {
       `${filas.length} periodo(s) cuadrados · ${avisos.length} con dinero que no cuadra · ${pendientes} sin dato o sin fuente`,
       sinDato ? 'comisiones ilegibles: no se sabe' : `${ilegibles} recibo(s) con comisión ilegible`,
       casado.sinPeriodo > 0 ? `${casado.sinPeriodo} abono(s) de seguros sin periodo en el libro` : null,
+      docs === null
+        ? 'liquidaciones PDF: no se pudieron leer'
+        : `liquidaciones PDF: ${fusion.usados.length} al libro, ${fusion.noUsados.length} sin usar` +
+          (fusion.informativos.length ? `, ${fusion.informativos.length} mes(es) solo con avisos ADXP (informativo)` : ''),
       notaTecho,
     ].filter(Boolean).join(' · '),
   )
@@ -346,15 +378,11 @@ export async function GET(req: NextRequest) {
     abonosSinPeriodo: casado.sinPeriodo,
     periodos: filas.length,
     avisos: avisos.length,
+    avisosEnviados: aEnviar.map(a => a.clave),
+    liquidacionesPdf: docs === null ? null : { usadas: fusion.usados, sinUsar: fusion.noUsados, informativos: fusion.informativos },
     pendientes,
     // `null` = asegura no lo informa. No es 0. Igual que `recibosComisionIlegible`.
     lecturaTruncada: com.truncado,
     recibosComisionIlegible: sinDato ? null : ilegibles,
   })
-}
-
-const ETIQUETA: Record<string, string> = {
-  'esperado-sin-liquidar': 'devengado y sin liquidar',
-  'liquidado-sin-cobrar': 'liquidado y sin ingresar',
-  descuadra: 'descuadra',
 }

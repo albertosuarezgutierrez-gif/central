@@ -14,6 +14,8 @@ import { esFacturaComisionPortal, MOTIVO_COMISION_PORTAL } from './portal-comisi
 import { evaluaReceptor, nifProveedorEsNuestro, type Titular } from './receptor'
 import { decidirPorTipo } from './tipo-documento'
 import { avisosDeLectura } from './revision-lectura'
+import { leerLiquidacion, claseAllianzPorNombre, esLiquidacionInequivoca, type LiquidacionIA } from '../correduria/liquidacion-doc'
+import { guardarLiquidacionDoc } from '../correduria/liquidacion-doc-db'
 import type { FacturaExtraida } from './extraer'
 
 // Decide cómo tratar un documento ya extraído: Booking (por establecimiento),
@@ -58,7 +60,7 @@ export interface ProcesarResult {
 
 export async function procesarFactura(
   data: FacturaExtraida,
-  ctx: { fuente: string; drive?: DriveRef; propiedadPorDefecto?: string | null; esPresupuesto?: boolean; fingerprintOverride?: string; esBooking?: boolean; titulares?: Titular[]; huellaDoc?: string },
+  ctx: { fuente: string; drive?: DriveRef; propiedadPorDefecto?: string | null; esPresupuesto?: boolean; fingerprintOverride?: string; esBooking?: boolean; titulares?: Titular[]; huellaDoc?: string; nombreArchivo?: string | null },
 ): Promise<ProcesarResult> {
   const total = Number(data.total ?? 0)
   const proveedor = data.proveedor ?? null
@@ -91,13 +93,21 @@ export async function procesarFactura(
   let porTipo = ctx.esBooking ? null : decidirPorTipo(data.tipo_documento, total)
   // Los seguros PROPIOS (lista blanca Occident/ASISA) los media la propia correduría: su recibo lleva
   // código de mediador y la IA podría llamarlo «liquidación». No se omite: a la bandeja con aviso.
+  // Excepción: si el bloque `liquidacion` trae retención de IRPF y su aritmética cuadra, es una
+  // liquidación al mediador sin duda (un recibo de prima propio no lleva retención): sigue omitiéndose.
+  const nombreArchivo = ctx.nombreArchivo ?? ctx.drive?.nombre ?? null
   if (porTipo?.accion === 'omitir' && porTipo.tipo === 'liquidacion_comisiones'
-      && mencionaAseguradoraPropia(`${proveedor ?? ''} ${data.concepto ?? ''}`)) {
+      && mencionaAseguradoraPropia(`${proveedor ?? ''} ${data.concepto ?? ''}`)
+      && !esLiquidacionInequivoca(leerLiquidacion(entradaLiquidacion(data), nombreArchivo))) {
     porTipo = { accion: 'revisar', tipo: porTipo.tipo, aviso: 'La IA lo lee como liquidación de comisiones, pero es de una aseguradora de tus seguros propios: confirma si es gasto' }
   }
   if (porTipo?.accion === 'omitir') {
-    await log({ fuente: ctx.fuente, fingerprint: fp, decision: 'omitido', motivo: porTipo.motivo, payload: { total, tipo_documento: porTipo.tipo, drive_url: ctx.drive?.url ?? null } })
-    return { decision: 'omitido', fingerprint: fp, total, proveedor, motivo: porTipo.motivo }
+    // Liquidación/extracto de comisiones: no es gasto, pero bruto y retención van a la renta → se
+    // GUARDAN (`comisiones_liquidacion_docs`) para el libro de comisiones. Antes se perdían.
+    const liq = porTipo.tipo === 'liquidacion_comisiones' ? await capturarLiquidacion(data, ctx, nombreArchivo) : null
+    const motivo = liq ? `${porTipo.motivo} · ${liq}` : porTipo.motivo
+    await log({ fuente: ctx.fuente, fingerprint: fp, decision: 'omitido', motivo, payload: { total, tipo_documento: porTipo.tipo, drive_url: ctx.drive?.url ?? null } })
+    return { decision: 'omitido', fingerprint: fp, total, proveedor, motivo }
   }
 
   // Documento que NO es un gasto (dictado por Alberto, 29-30/08/2026): la liquidación de un
@@ -107,7 +117,10 @@ export async function procesarFactura(
   // log y en el recuento `omitidos` del parte de Telegram, nunca desaparece en silencio.
   const sospecha = pareceIngresoDeCorreduria({ proveedor, concepto: data.concepto })
   if (sospecha.esSospechoso) {
-    await log({ fuente: ctx.fuente, fingerprint: fp, decision: 'omitido', motivo: `No es un gasto: ${sospecha.motivo}`, payload: { total } })
+    // Un extracto/aviso de Allianz (ADYP/ADXP por el nombre del fichero) que la IA no tipó como
+    // liquidación también se guarda: el prefijo es determinista.
+    const liq = claseAllianzPorNombre(nombreArchivo) ? await capturarLiquidacion(data, ctx, nombreArchivo) : null
+    await log({ fuente: ctx.fuente, fingerprint: fp, decision: 'omitido', motivo: `No es un gasto: ${sospecha.motivo}${liq ? ` · ${liq}` : ''}`, payload: { total } })
     return { decision: 'omitido', fingerprint: fp, total, proveedor, motivo: sospecha.motivo ?? undefined }
   }
 
@@ -262,4 +275,33 @@ export async function procesarFactura(
   await log({ fuente: ctx.fuente, fingerprint: fp, gasto_id: gastoId, decision, confianza: veredicto.confianza, motivo })
 
   return { decision: revisado ? 'auto' : 'bandeja', gastoId, fingerprint: fp, total, proveedor, motivo }
+}
+
+// ── Liquidaciones de comisiones → libro de comisiones ──────────────────────────────────────────────
+
+function entradaLiquidacion(data: FacturaExtraida) {
+  return {
+    liquidacion: (data.liquidacion ?? null) as LiquidacionIA | null,
+    proveedor: data.proveedor, concepto: data.concepto, numero_factura: data.numero_factura, fecha: data.fecha,
+    base_imponible: data.base_imponible, irpf: data.irpf, total: data.total,
+  }
+}
+
+/** Guarda la liquidación y devuelve la frase para el log. Nunca lanza: el escaneo no se rompe por esto. */
+async function capturarLiquidacion(
+  data: FacturaExtraida,
+  ctx: { fuente: string; drive?: DriveRef; huellaDoc?: string },
+  nombreArchivo: string | null,
+): Promise<string> {
+  try {
+    const l = leerLiquidacion(entradaLiquidacion(data), nombreArchivo)
+    if (!l) return 'cartera prevista (AMYA): no se contabiliza'
+    const r = await guardarLiquidacionDoc(l, { fuente: ctx.fuente, driveUrl: ctx.drive?.url ?? null, nombreArchivo, huellaDoc: ctx.huellaDoc ?? null })
+    if (r.estado === 'guardado') return `liquidación guardada para el libro de comisiones (${l.compania ?? '?'} ${r.numeroDocumento}${l.clase === 'aviso_recibo' ? ', informativa' : ''})`
+    if (r.estado === 'duplicado') return `liquidación ya registrada (${r.numeroDocumento})`
+    if (r.estado === 'no_guardado') return `liquidación NO guardada: ${r.motivo}`
+    return 'liquidación NO guardada'
+  } catch (e) {
+    return `liquidación NO guardada: ${String((e as Error)?.message ?? e).slice(0, 120)}`
+  }
 }

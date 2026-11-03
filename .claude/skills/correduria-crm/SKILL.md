@@ -108,6 +108,11 @@ real medido, orden de trabajo). Después, según lo que toques:
    la variante, no en la cabecera. Pendiente de arreglar: el significado de `prima_bruta` no es el mismo
    en todas las oportunidades, así que no se ha tocado sin mirarlo antes.
 
+## Comisiones y cuadre mensual (03/11/2026)
+
+- Allianz (mediador 0018638): los ADYP_ son el extracto mensual de cuenta (bruto, retención 15 %, neto, saldo arrastrado); los ADXP_ son el aviso por recibo ya incluido en el ADYP; los AMYA_ son cartera prevista, **no contabilizar**. Pago de 704,53 € el 30/09-02/10/2026 (incluía 558,88 € de saldo anterior a julio).
+- Liquidaciones = justificante del ingreso bruto (no gasto); cuadre mensual banco neto vs liquidación por compañía, con aviso si devengo sin abono > 60 días o diferencia > 5 €. Detalle y cifras: agente `jefe-contabilidad`.
+
 ## 🎨 La pantalla son CINCO SECCIONES, no un scroll (03/09/2026)
 
 `/correduria` pasó de ocho bloques apilados del mismo peso a **Hoy · Clientes · Cartera · Comisiones ·

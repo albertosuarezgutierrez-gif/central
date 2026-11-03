@@ -79,6 +79,7 @@ export async function archivarEImputar(
       fingerprintOverride: clas.fingerprintOverride,
       esBooking: clas.esBooking,
       titulares: await cargarTitulares(),
+      nombreArchivo: fileName,
     })
     return {
       carpeta: drive?.carpeta ?? null,

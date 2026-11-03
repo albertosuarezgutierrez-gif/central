@@ -39,6 +39,18 @@ export interface FacturaExtraida {
   /** Moneda de `total` (ISO 4217 tras `normalizarDivisa`); null/ausente = no consta. */
   divisa?: string | null
   categoria?: string | null
+  /** Solo si `tipo_documento = liquidacion_comisiones`: importes del extracto al mediador (ver `lib/correduria/liquidacion-doc.ts`). */
+  liquidacion?: {
+    compania?: string | null
+    numero_documento?: string | null
+    periodo_inicio?: string | null
+    periodo_fin?: string | null
+    bruto?: number | null
+    retencion?: number | null
+    otros_descuentos?: number | null
+    neto?: number | null
+    saldo_anterior?: number | null
+  } | null
 }
 
 export interface Extraccion {
