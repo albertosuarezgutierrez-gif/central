@@ -1,8 +1,8 @@
 {
  "sesion": "7943f054-9f50-5c04-b676-629b6a6aaf26",
  "inicio": "2026-11-03T15:51:44.953Z",
- "fin": "2026-11-03T19:40:11.862Z",
- "llamadas": 504,
+ "fin": "2026-11-03T19:40:54.112Z",
+ "llamadas": 505,
  "categorias": {
   "lectura-directa": {
    "llamadas": 41,
@@ -18,16 +18,16 @@
    }
   },
   "otro": {
-   "llamadas": 99,
-   "chars_in": 39204,
-   "chars_out": 723235,
+   "llamadas": 100,
+   "chars_in": 39206,
+   "chars_out": 769493,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "SubagentHandback": 11,
     "ToolSearch": 12,
-    "ReadNotifications": 76
+    "ReadNotifications": 77
    }
   },
   "agente:rastreador-codigo": {
