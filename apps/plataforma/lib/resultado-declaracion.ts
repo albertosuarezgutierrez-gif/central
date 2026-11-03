@@ -41,6 +41,8 @@ export type ContextoResultado = {
   pagosFraccionados: PorTitular<number | null>
   /** Meses transcurridos del año (1..12) para anualizar las retenciones del cierre. */
   mesesTranscurridos: number
+  /** Guardería pagada en banco en el año (sin duplicados ignorados). null = sin dato. Solo para contrastar con el perfil. */
+  guarderiaBancoAnual?: number | null
   /** Avisos de tipificación (p. ej. posible prestación exenta de Pilar). */
   avisos: string[]
 }
@@ -78,6 +80,10 @@ export type ResultadoFinal = {
   ventaja: number | null
   /** true = ninguna partida pendiente en ninguna modalidad. */
   firme: boolean
+  /** true = falta el dato de abonos anticipados 140/143: el resultado puede ser MENOS favorable (no se inventa rango). */
+  faltanAbonos: boolean
+  /** Aviso destacado cuando `faltanAbonos` (null si no). */
+  avisoAbonos: string | null
   avisos: string[]
 }
 
@@ -105,13 +111,25 @@ const aPartida = (l: LineaDeduccion, factor = 1, nota?: string): DeduccionPartid
 })
 const MARCA_TOPE = (p: DeduccionPartida): DeduccionPartida => p
 
+const eur2 = (n: number) => n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: true })
+/** Origen del importe de guardería (perfil) y contraste con el banco: avisa si difieren. */
+export function notaOrigenGuarderia(perfil: PerfilFiscal, banco: number | null | undefined): string {
+  const base = `origen: perfil (${eur2(perfil.gastoGuarderiaAnual)}€)`
+  if (banco == null) return `${base}; banco: sin dato`
+  if (Math.abs(banco - perfil.gastoGuarderiaAnual) <= 0.01) return `${base}; coincide con el banco`
+  return `${base}; ⚠ difiere del banco (${eur2(banco)}€): revisar cuál es el gasto real`
+}
 function lineasDeduccion(perfil: PerfilFiscal, desc: Descendiente[], anio: number, baseLiq: number | undefined): LineaDeduccion[] {
   // Donativos los trata el motor del simulador (palancas): fuera de aquí para no contarlos dos veces.
   return calcularDeducciones(perfil, desc, anio, importesDe(anio), baseLiq).filter(l => l.clave !== 'donativos')
 }
 
 /** Maternidad+guardería con tope: la guardería y la maternidad dependen de la cuota RETA (sin confirmar anual/mensual). */
-function notaTope(l: LineaDeduccion, perfil: PerfilFiscal): string | undefined {
+function notaTope(l: LineaDeduccion, perfil: PerfilFiscal, banco?: number | null): string | undefined {
+  if (l.clave === 'guarderia') {
+    const o = notaOrigenGuarderia(perfil, banco)
+    return perfil.cuotasSSMadreAnual != null ? `con tope por cuotas RETA de Pilar; ${o}` : o
+  }
   if ((l.clave === 'maternidad' || l.clave === 'guarderia') && perfil.cuotasSSMadreAnual != null) {
     return 'con tope por cuotas RETA de Pilar (el dato guardado no está confirmado como anual)'
   }
@@ -165,8 +183,12 @@ function cerrarModalidad(modalidad: ResultadoModalidad['modalidad'], cs: Contrib
 }
 
 // ── Resultado completo ──────────────────────────────────────────────────────────────────────
-export function calcularResultadoDeclaracion(e: EntradaSimulador, pal: Palancas, ctx: ContextoResultado): ResultadoFinal {
+export function calcularResultadoDeclaracion(e: EntradaSimulador, palIn: Palancas, ctx: ContextoResultado): ResultadoFinal {
   const anio = ctx.anio
+  // Donativos reales del perfil (Ley 49/2002): los deduce el motor (palancas), no `lineasDeduccion` (las filtra), así no se cuentan
+  // dos veces. El perfil no dice quién donó: se atribuyen a Alberto (declarante); se SUMAN a los hipotéticos de la palanca.
+  const donReal = Math.max(0, ctx.perfil.donativosAnual || 0)
+  const pal: Palancas = donReal > 0 ? { ...palIn, donativos: { ...palIn.donativos, alberto: palIn.donativos.alberto + donReal } } : palIn
   const retAlb = retencionCierre(ctx.retencionesAlberto, ctx.mesesTranscurridos)
   const retPil = partidaRetPilar(ctx.retencionesPilar)
   const pfA = partidaPf('alberto', ctx.pagosFraccionados.alberto)
@@ -177,7 +199,7 @@ export function calcularResultadoDeclaracion(e: EntradaSimulador, pal: Palancas,
   const cc = dc.contribuyentes[0] ?? null
   const perfilConj: PerfilFiscal = { ...ctx.perfil, declaracionConjunta: true }
   const dedConj = lineasDeduccion(perfilConj, ctx.descendientes, anio, cc?.baseLiquidable ?? undefined)
-    .map(l => aPartida(l, 1, notaTope(l, ctx.perfil))).map(MARCA_TOPE)
+    .map(l => aPartida(l, 1, notaTope(l, ctx.perfil, ctx.guarderiaBancoAnual))).map(MARCA_TOPE)
   const conjunta = cerrarModalidad('conjunta', [
     cerrarContribuyente('unidad_familiar', cc, dedConj, [retAlb, retPil], [pfA, pfP], abonos(ctx.perfil, 1, 1)),
   ])
@@ -191,20 +213,25 @@ export function calcularResultadoDeclaracion(e: EntradaSimulador, pal: Palancas,
   const perfilInd: PerfilFiscal = { ...ctx.perfil, declaracionConjunta: false }
   const cA = di.contribuyentes.find(c => c.titular === 'alberto') ?? null
   const cP = di.contribuyentes.find(c => c.titular === 'pilar') ?? null
-  const reparto = ctx.perfil.conyugeTrabaja ? 0.5 : 1
+  const lineasDe = (c: ResultadoContribuyente | null) => lineasDeduccion(perfilInd, ctx.descendientes, anio, c?.baseLiquidable ?? undefined)
+  const lineasPorTitular = { alberto: lineasDe(cA), pilar: lineasDe(cP) }
+  const conDerecho = (l: LineaDeduccion) => Boolean(l.sinDato) || l.importe > 0
   const individual = (titular: 'alberto' | 'pilar', c: ResultadoContribuyente | null): ContribuyenteFinal => {
-    const lineas = lineasDeduccion(perfilInd, ctx.descendientes, anio, c?.baseLiquidable ?? undefined)
+    const otro = titular === 'alberto' ? 'pilar' : 'alberto'
     const mias: DeduccionPartida[] = []
-    for (const l of lineas) {
+    for (const l of lineasPorTitular[titular]) {
       if (l.clave === 'maternidad' || l.clave === 'guarderia') {
-        if (titular === 'pilar') mias.push(aPartida(l, 1, notaTope(l, ctx.perfil)))
-      } else if (titular === 'alberto') {
-        mias.push(aPartida(l, reparto, reparto === 1 ? undefined : 'reparto 50/50 entre los dos (art. 81 bis)'))
-      } else if (ctx.perfil.conyugeTrabaja) {
-        mias.push(aPartida(l, reparto, 'reparto 50/50 entre los dos (art. 81 bis)'))
+        if (titular === 'pilar') mias.push(aPartida(l, 1, notaTope(l, ctx.perfil, ctx.guarderiaBancoAnual)))
+        continue
       }
+      // Prorrateo SOLO entre quienes tienen derecho (p. ej. límite de renta autonómico propio de cada uno):
+      // si el otro no la tiene (o no hay cónyuge con actividad), me la aplico al 100 %.
+      const otroTiene = ctx.perfil.conyugeTrabaja && lineasPorTitular[otro].some(x => x.clave === l.clave && conDerecho(x))
+      if (titular === 'pilar' && !ctx.perfil.conyugeTrabaja) continue
+      const factor = otroTiene && conDerecho(l) ? 0.5 : 1
+      mias.push(aPartida(l, factor, factor === 1 ? undefined : 'reparto 50/50 entre los dos (art. 81 bis)'))
     }
-    const parteFn = titular === 'alberto' ? reparto : ctx.perfil.conyugeTrabaja ? reparto : 0
+    const parteFn = titular === 'alberto' ? (ctx.perfil.conyugeTrabaja ? 0.5 : 1) : ctx.perfil.conyugeTrabaja ? 0.5 : 0
     return cerrarContribuyente(
       titular, c, mias,
       [titular === 'alberto' ? retAlb : retPil], [titular === 'alberto' ? pfA : pfP],
@@ -215,8 +242,11 @@ export function calcularResultadoDeclaracion(e: EntradaSimulador, pal: Palancas,
 
   const comparables = conjunta.resultado != null && ind.resultado != null
   const recomendada = !comparables ? null : (ind.resultado as number) < (conjunta.resultado as number) ? 'individual' : 'conjunta'
+  const faltanAbonos = [conjunta, ind].some(m => m.contribuyentes.some(c => c.abonosAnticipados.some(a => a.importe == null)))
   return {
     conjunta, individual: ind, recomendada,
+    faltanAbonos,
+    avisoAbonos: faltanAbonos ? 'Resultado provisional: puede ser menos favorable: faltan abonos anticipados 140/143 (se cuentan como 0 hasta tener el dato).' : null,
     ventaja: !comparables ? null : r2(Math.abs((ind.resultado as number) - (conjunta.resultado as number))),
     firme: conjunta.pendientes.length === 0 && ind.pendientes.length === 0,
     avisos: ctx.avisos,
@@ -246,7 +276,7 @@ export function mesesTranscurridos(anio: number, hoy: string): number {
 export function armarContextoResultado(e: {
   anio: number; hoy: string; perfil: PerfilFiscal; descendientes: Descendiente[]
   retencionesCorreduria: RetencionCorreduria | null; retencionesPilar: number | null; ingresosPilar: IngresoPilar[] | null
-  pagosFraccionados?: PorTitular<number | null>
+  pagosFraccionados?: PorTitular<number | null>; guarderiaBanco?: number | null
 }): ContextoResultado {
   const aviso = e.ingresosPilar ? avisoPrestacionExenta(e.ingresosPilar) : null
   return {
@@ -255,6 +285,7 @@ export function armarContextoResultado(e: {
     // Modelo 130: hoy no existe en BD ⇒ «sin dato» (null), no 0.
     pagosFraccionados: e.pagosFraccionados ?? { alberto: null, pilar: null },
     mesesTranscurridos: mesesTranscurridos(e.anio, e.hoy),
+    guarderiaBancoAnual: e.guarderiaBanco ?? null,
     avisos: aviso ? [aviso] : [],
   }
 }

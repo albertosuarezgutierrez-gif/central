@@ -165,6 +165,15 @@ export type PerfilFiscal = {
   cuotasSSMadreAnual?: number | null
 }
 
+/**
+ * La columna `fiscal_perfil.conyuge_cuota_autonomos` guarda la cuota RETA MENSUAL de Pilar (dato de Alberto, 03/11/2026: 467,45 €/mes).
+ * El tope del art. 81 LIRPF se mide con las cotizaciones del ejercicio: mensual × 12 (proyección a 31/12). null = sin dato.
+ */
+export function cuotasAnualesDesdeMensual(mensual: number | null | undefined): number | null {
+  if (mensual == null || !Number.isFinite(mensual)) return null
+  return Math.round(Math.max(0, mensual) * 12 * 100) / 100
+}
+
 export type Descendiente = {
   nombre: string
   fechaNacimiento: string // YYYY-MM-DD

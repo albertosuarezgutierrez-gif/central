@@ -97,9 +97,10 @@ export function palancasDesdePartidas(
   }
 
   // Planes: ordinario ≤ 1.500 €; empleo de autónomos ≤ 4.250 € extra; ambos dentro del 30 % de los rendimientos.
-  const lim = limitesPlanes(e)
+  const lim = limitesPlanes(e, gastoCorreduria)
   const sinTope = { ...e.params, planPropioTope: Number.POSITIVE_INFINITY }
-  const act = { alberto: e.periodo.bloques.actividad_correduria, pilar: e.periodo.bloques.actividad_pilar }
+  const corrNeta = e.periodo.bloques.actividad_correduria
+  const act = { alberto: corrNeta == null ? null : corrNeta - gastoCorreduria, pilar: e.periodo.bloques.actividad_pilar }
   const planPropio = { alberto: 0, pilar: 0 }
   let hayEmpleo = false
   for (const t of ['alberto', 'pilar'] as const) {
@@ -116,17 +117,18 @@ export function palancasDesdePartidas(
     const ordOk = Math.min(ord, lOrd)
     const empOk = Math.min(emp, LIMITE_PLAN_EMPLEO_AUTONOMO)
     const total = Math.min(ordOk + empOk, l30)
-    // Reparto del recorte entre las partidas (ordinario primero), solo para informar.
-    let resto = total
+    // Reparto del recorte entre las partidas (ordinario primero). El tope ordinario y el de empleo son del TOTAL del titular.
+    let restoOrd = Math.min(lOrd, total)
     for (const p of ps.filter(x => x.titular === t && x.tipo === 'plan_pensiones')) {
-      const a = Math.min(p.importe, Math.max(0, Math.min(resto, lOrd)))
-      resto -= a
-      aplicadas.push({ id: p.id, pedido: p.importe, aplicado: a, nota: a < p.importe ? `límite legal ${Math.round(lOrd)}€` : undefined })
+      const a = Math.min(p.importe, Math.max(0, restoOrd))
+      restoOrd -= a
+      aplicadas.push({ id: p.id, pedido: p.importe, aplicado: a, nota: a < p.importe ? `límite legal del plan individual ${Math.round(lOrd)}€ (total de sus aportaciones)` : undefined })
     }
+    let restoEmp = Math.min(LIMITE_PLAN_EMPLEO_AUTONOMO, total - (Math.min(lOrd, total) - restoOrd))
     for (const p of ps.filter(x => x.titular === t && x.tipo === 'plan_empleo_autonomo')) {
-      const a = Math.min(p.importe, Math.max(0, Math.min(resto, LIMITE_PLAN_EMPLEO_AUTONOMO)))
-      resto -= a
-      aplicadas.push({ id: p.id, pedido: p.importe, aplicado: a, nota: a < p.importe ? `límite legal (4.250€ extra, 30 % de rendimientos)` : undefined })
+      const a = Math.min(p.importe, Math.max(0, restoEmp))
+      restoEmp -= a
+      aplicadas.push({ id: p.id, pedido: p.importe, aplicado: a, nota: a < p.importe ? `límite legal (4.250€ extra en total, 30 % de rendimientos)` : undefined })
     }
     if (total < ord + emp) avisos.push(`Plan de pensiones de ${nombre(t)}: se aplican ${Math.round(total)}€ de ${Math.round(ord + emp)}€ por el límite legal.`)
     planPropio[t] = total

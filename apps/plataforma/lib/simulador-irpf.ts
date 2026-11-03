@@ -356,7 +356,7 @@ function aplicar(e: EntradaSimulador, pal: Palancas): Aplicado {
     if (a != null) a -= pal.gastoCorreduria
   }
   // Planes: limitados por ley y por la propia base (no la hacen negativa).
-  const lim = limitesPlanes(e)
+  const lim = limitesPlanes(e, pal.gastoCorreduria ?? 0)
   const red = { alberto: 0, pilar: 0 }
   const recorta = (pedido: number, limite: number | null, quien: string) => {
     if (pedido <= 0) return 0
@@ -389,8 +389,10 @@ function gastoCompra2026(e: EntradaSimulador, c: CompraPrevista, margenUsado: Re
   return g
 }
 
-export function limitesPlanes(e: EntradaSimulador): { propio: PorTitular<number | null>; conyuge: number | null } {
-  const act = { alberto: e.periodo.bloques.actividad_correduria, pilar: e.periodo.bloques.actividad_pilar }
+export function limitesPlanes(e: EntradaSimulador, gastoCorreduria = 0): { propio: PorTitular<number | null>; conyuge: number | null } {
+  // Los límites del 30 % se calculan sobre la actividad YA restado el gasto hipotético de la correduría (null sigue null).
+  const corr = e.periodo.bloques.actividad_correduria
+  const act = { alberto: corr == null ? null : corr - Math.max(0, gastoCorreduria), pilar: e.periodo.bloques.actividad_pilar }
   return {
     propio: {
       alberto: limitePlanPropio(e.rendimientosTrabajo.alberto, act.alberto, e.params),

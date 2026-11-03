@@ -96,3 +96,40 @@ test('contexto: meses transcurridos (año en curso = mes de hoy; ejercicio cerra
   assert.deepEqual(c.pagosFraccionados, { alberto: null, pilar: null })
   assert.equal(c.avisos.length, 1)
 })
+
+test('donativosAnual 250 del perfil: baja ≈200 € el resultado (80 % de 250) en ambas modalidades, sin contarse dos veces', () => {
+  const a = calcularResultadoDeclaracion(entradaFixture(), SIN_PALANCAS, ctxFixture())
+  const b = calcularResultadoDeclaracion(entradaFixture(), SIN_PALANCAS, ctxFixture({ perfil: { ...PERFIL, donativosAnual: 250 } }))
+  cerca(a.conjunta.resultado! - b.conjunta.resultado!, 200)
+  cerca(a.individual.resultado! - b.individual.resultado!, 200)
+  assert.equal(b.conjunta.contribuyentes[0].deducciones.some(d => d.id === 'donativos'), false)
+})
+
+test('abonos 140/143 sin dato (null): faltanAbonos + aviso destacado + no firme; con dato 0 no hay aviso', () => {
+  const sin = calcularResultadoDeclaracion(entradaFixture(), SIN_PALANCAS, ctxFixture({ perfil: { ...PERFIL, abonoAnticipadoMaternidad: null, abonoAnticipadoFamiliaNumerosa: null } }))
+  assert.equal(sin.faltanAbonos, true); assert.equal(sin.firme, false)
+  assert.match(sin.avisoAbonos ?? '', /menos favorable: faltan abonos anticipados 140\/143/)
+  const con = calcularResultadoDeclaracion(entradaFixture(), SIN_PALANCAS, ctxFixture())
+  assert.equal(con.faltanAbonos, false); assert.equal(con.avisoAbonos, null)
+})
+
+test('and_fn individual: si Alberto supera el límite de renta, Pilar se la aplica al 100 % (no 50 %)', () => {
+  const e = entradaFixture()
+  // Alberto base alta (>25.000), Pilar baja (5.000 < 25.000)
+  const r = calcularResultadoDeclaracion(e, SIN_PALANCAS, ctxFixture())
+  const [a, p] = r.individual.contribuyentes
+  const fa = a.deducciones.find(d => d.id === 'and_fn'), fp = p.deducciones.find(d => d.id === 'and_fn')
+  assert.equal(fa, undefined)
+  assert.ok(fp, 'Pilar tiene and_fn')
+  assert.ok(fp!.nota == null, 'sin nota de reparto 50/50')
+  // 100 % = el importe completo de la línea (el de la modalidad conjunta, mismos parámetros)
+  const conj = r.conjunta.contribuyentes[0].deducciones.find(d => d.id === 'and_fn')
+  if (conj?.importe != null) cerca(fp!.importe, conj.importe)
+})
+
+test('guardería: la nota dice el origen (perfil) y avisa si difiere del banco (2.107,50 vs 3.435,50)', () => {
+  const g = (ctx: ReturnType<typeof ctxFixture>) => ded(calcularResultadoDeclaracion(entradaFixture(), SIN_PALANCAS, ctx).conjunta, 'guarderia')[0].nota ?? ''
+  assert.match(g(ctxFixture({ guarderiaBancoAnual: 2107.5 })), /origen: perfil \(3\.435,50€\).*difiere del banco \(2\.107,50€\)/)
+  assert.match(g(ctxFixture({ guarderiaBancoAnual: 3435.5 })), /coincide con el banco/)
+  assert.match(g(ctxFixture({ guarderiaBancoAnual: null })), /banco: sin dato/)
+})

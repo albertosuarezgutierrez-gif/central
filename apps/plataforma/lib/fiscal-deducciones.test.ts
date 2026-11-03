@@ -9,6 +9,7 @@ import assert from 'node:assert/strict'
 
 import {
   esMenor3,
+  cuotasAnualesDesdeMensual,
   mesesMenor3,
   calcularMaternidadGuarderia,
   minimoPersonalYFamiliar,
@@ -231,4 +232,15 @@ test('SIN cuotas ⇒ null («sin dato»), nunca el importe sin tope', () => {
   }
   // Cuotas 0 es un dato (revisado): tope 0, no «sin dato».
   assert.equal(calcularMaternidadGuarderia({ ...PERFIL, cuotasSSMadreAnual: 0 }, [PILAR], 2026).maternidad, 0)
+})
+
+test('cuota RETA de Pilar MENSUAL 467,45 → ×12 = 5.609,40 anual: el tope no recorta (maternidad 2.400 + guardería 2.000)', () => {
+  assert.equal(cuotasAnualesDesdeMensual(467.45), 5609.4)
+  assert.equal(cuotasAnualesDesdeMensual(null), null)
+  const p: PerfilFiscal = { ...PERFIL, familiaNumerosa: null, gastoGuarderiaAnual: 3435.5, cuotasSSMadreAnual: cuotasAnualesDesdeMensual(467.45) }
+  const r = calcularMaternidadGuarderia(p, [PILAR, ALBERTO], 2026)
+  assert.equal(r.maternidad, 2400)
+  assert.equal(r.guarderia, 2000)
+  // Tratarla como anual (error previo) daba 934,90: el tope mensual es 6 veces menos restrictivo.
+  assert.equal(calcularMaternidadGuarderia({ ...p, cuotasSSMadreAnual: 467.45 }, [PILAR, ALBERTO], 2026).maternidad, 934.9)
 })

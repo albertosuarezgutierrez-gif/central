@@ -84,6 +84,11 @@ export default function ResultadoDeclaracion({ r, sinContexto }: { r: ResultadoF
         <p style={{ fontSize: 13, marginTop: 12 }}>{sinContexto ? 'Sin dato: no se pudo cargar el perfil fiscal, las retenciones o la base.' : 'Sin dato.'}</p>
       ) : (
         <>
+          {r.avisoAbonos && (
+            <p role="alert" style={{ fontSize: 13, fontWeight: 700, margin: '10px 0 0', padding: '10px 12px', borderRadius: 8, background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid var(--warning)' }}>
+              Provisional: puede ser menos favorable: faltan abonos anticipados 140/143.
+            </p>
+          )}
           {r.avisos.map(a => (
             <p key={a} role="note" style={{ fontSize: 12, margin: '10px 0 0', padding: '8px 10px', borderRadius: 8, background: 'var(--warning-bg)', color: 'var(--warning)' }}>{a}</p>
           ))}

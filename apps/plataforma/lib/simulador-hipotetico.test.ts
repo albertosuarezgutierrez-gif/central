@@ -1,7 +1,7 @@
 // Runner: `node --test --experimental-strip-types lib/simulador-hipotetico.test.ts`
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { LIMITE_PLAN_EMPLEO_AUTONOMO, normalizarPartidas, simularPartidas, type PartidaHipotetica } from './simulador-hipotetico.ts'
+import { LIMITE_PLAN_EMPLEO_AUTONOMO, normalizarPartidas, palancasDesdePartidas, simularPartidas, type PartidaHipotetica } from './simulador-hipotetico.ts'
 import { ctxFixture, entradaFixture } from './resultado-declaracion.fixture.ts'
 
 const cerca = (a: number | null | undefined, b: number, tol = 0.011) => assert.ok(a != null && Math.abs(a - b) <= tol, `${a} ≉ ${b}`)
@@ -80,4 +80,30 @@ test('normalizarPartidas descarta lo inválido (importe ≤ 0, tipo raro, piso/t
   ])
   assert.deepEqual(out.map(p => p.id), ['a'])
   assert.deepEqual(normalizarPartidas('basura'), [])
+})
+
+test('gasto de correduría 20.000€ (actividad → 0): el plan de empleo de autónomos no reduce nada', () => {
+  const e = entradaFixture(), ctx = ctxFixture()
+  const ps: PartidaHipotetica[] = [
+    { id: 'g', concepto: 'g', importe: 20000, tipo: 'gasto_correduria' },
+    { id: 'e', concepto: 'e', importe: 4250, tipo: 'plan_empleo_autonomo', titular: 'alberto' },
+  ]
+  const solo = simularPartidas(e, ctx, [ps[0]])
+  const con = simularPartidas(e, ctx, ps)
+  assert.equal(con.aplicadas.find(a => a.id === 'e')?.aplicado, 0)
+  assert.equal(con.despues.individual.resultado, solo.despues.individual.resultado)
+  assert.equal(con.despues.conjunta.resultado, solo.despues.conjunta.resultado)
+})
+
+test('tope del plan ordinario (1.500€) sobre el TOTAL de partidas del titular, también en lo mostrado', () => {
+  const e = entradaFixture()
+  const ps: PartidaHipotetica[] = [
+    { id: 'a', concepto: 'a', importe: 1000, tipo: 'plan_pensiones', titular: 'alberto' },
+    { id: 'b', concepto: 'b', importe: 1000, tipo: 'plan_pensiones', titular: 'alberto' },
+    { id: 'c', concepto: 'c', importe: 4250, tipo: 'plan_empleo_autonomo', titular: 'alberto' },
+  ]
+  const { aplicadas } = palancasDesdePartidas(e, ps)
+  const ap = (id: string) => aplicadas.find(a => a.id === id)!.aplicado
+  assert.equal(ap('a')! + ap('b')!, 1500)
+  assert.equal(ap('c'), 4250)
 })

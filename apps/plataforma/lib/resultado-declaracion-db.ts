@@ -3,8 +3,8 @@
 import { prisma } from './db'
 import type { IngresoPilar } from './resultado-declaracion.ts'
 
-export async function cargarDatosResultado(cuentaId: string, anio: number): Promise<{ retencionesPilar: number | null; ingresosPilar: IngresoPilar[] | null }> {
-  const [ret, ing] = await Promise.all([
+export async function cargarDatosResultado(cuentaId: string, anio: number): Promise<{ retencionesPilar: number | null; ingresosPilar: IngresoPilar[] | null; guarderiaBanco: number | null }> {
+  const [ret, ing, guarderiaBanco] = await Promise.all([
     prisma.$queryRaw<Array<{ r: unknown }>>`SELECT conyuge_retenciones AS r FROM fiscal_perfil WHERE cuenta_id = ${cuentaId}::uuid LIMIT 1`
       .then(rs => (rs[0]?.r == null ? null : Number(rs[0].r)))
       .catch((e: unknown) => { console.warn('[resultado-declaracion] retenciones de Pilar no leídas:', e instanceof Error ? e.message : e); return null }),
@@ -16,6 +16,15 @@ export async function cargarDatosResultado(cuentaId: string, anio: number): Prom
         AND mb.fecha_operacion BETWEEN make_date(${anio}::int, 1, 1) AND make_date(${anio}::int, 12, 31)`
       .then(rs => rs.map((r): IngresoPilar => ({ fecha: r.fecha ? r.fecha.toISOString().slice(0, 10) : '', concepto: r.concepto ?? '', importe: Number(r.importe) })))
       .catch(() => null),
+    // Guardería pagada en banco (movimientos etiquetados `guarderia`), sin los duplicados ignorados. null = no se pudo leer.
+    prisma.$queryRaw<Array<{ t: unknown }>>`
+      SELECT coalesce(sum(-mb.importe), 0) AS t
+      FROM movimientos_bancarios mb JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+      WHERE cb.cuenta_id = ${cuentaId}::uuid AND mb.deduccion_cuota_tipo = 'guarderia' AND mb.importe < 0
+        AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
+        AND mb.fecha_operacion BETWEEN make_date(${anio}::int, 1, 1) AND make_date(${anio}::int, 12, 31)`
+      .then(rs => (rs[0]?.t == null ? null : Number(rs[0].t)))
+      .catch(() => null),
   ])
-  return { retencionesPilar: ret, ingresosPilar: ing }
+  return { retencionesPilar: ret, ingresosPilar: ing, guarderiaBanco }
 }
