@@ -12,6 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 
+## (03/11/2026) Fiscal · estudios de pisos y correduría (docs/fiscal/2026-11-*.md)
+- Pisos: calificación capital inmobiliario OK; Bustos capital mobiliario OK. ⚠️ RDL 29/2026: alquiler ≤30 noches pasa de exento a IVA 10% desde 01/12/2026 SI se convalida (votación prevista 12/11). Mobiliario >300€ (TV 1.749€) debería amortizarse al 10%, no gasto íntegro: decidir con asesoría. Supremo anuló el NRA (19/05/2026); sigue VFT andaluz.
+- Correduría: Alberto dice SIN retenciones y sin 130 (contradice la skill `perfil-fiscal`: 15% y modelo 190). Riesgos: 130 sin presentar, IVA de Anthropic/Vercel/Supabase sin autoliquidar (inversión del sujeto pasivo, 303/309 + ROI/349), gasolina y seguro del coche sin prueba de afectación (STS 1872/2024), Asisa ≤500€/persona. Motor deduce el TOTAL con IVA (correcto: actividades exentas).
+- Fuentes oficiales (BOE/AEAT) no accesibles desde la sesión: todo a validar con Asecon.
+
 ## (03/11/2026) Fiscal · doble conteo P&L pisos + auditoría contable
 - `lib/sivra/pl-mensual.ts`: los cargos de tarjeta con `factura_ref='(sivra:)gasto:<uuid>'` cuyo gasto existe ya no suman (helper `cargos-ya-facturados.ts` + test). 8 pares enlazados en BD (TV 1.749€, Amazon 247,92€ y 6 de Socorro); rollback en scratchpad. El conciliador que debe escribir el enlace al casar es `lib/conciliacion.ts` (`sivra:gasto:`).
 - Póliza 061145138 (659,43€) descartada: era de un cliente (Rafael), no gasto. Correduría: 0 supermercados reales; 3 Asisa mal etiquetados → `seguro_salud`; 14 sin subcategoría clasificados; APROMES 72€ = cuota de la correduría; gasolina 300€ se queda en correduría por decisión de Alberto (riesgo: confirmar con asesoría).
