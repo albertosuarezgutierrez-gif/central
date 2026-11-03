@@ -1,0 +1,21 @@
+{
+ "sesion": "43dc5788-6c39-5e26-842d-28b5cda4ca00",
+ "inicio": "2026-11-03T10:03:59.108Z",
+ "fin": "2026-11-03T10:04:30.756Z",
+ "llamadas": 8,
+ "categorias": {
+  "otro": {
+   "llamadas": 8,
+   "chars_in": 1272,
+   "chars_out": 23128,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 1,
+    "WebSearch": 6,
+    "PushNotification": 1
+   }
+  }
+ }
+}
