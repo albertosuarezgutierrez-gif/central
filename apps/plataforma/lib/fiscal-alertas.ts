@@ -7,7 +7,7 @@
 import { createHash } from 'node:crypto'
 import { eur } from './dinero.ts'
 import type { AvisosDatos } from './base-fiscal-devengo.ts'
-import { detectarSubidas, UMBRAL_SUBIDA, VENTANA_RECIBOS, type GastoHist } from './gastos-recurrentes-detectados.ts'
+import { detectarSubidas, esVariablePorOcupacion, UMBRAL_SUBIDA, VENTANA_RECIBOS, type GastoHist } from './gastos-recurrentes-detectados.ts'
 import { MARGEN_CERCA, PALANCAS_SIMULABLES, ahorroPorPalanca, contribuyenteDe, type PalancaSimulable } from './fiscal-panel.ts'
 import {
   CATALOGO_PALANCAS, SIN_PALANCAS, declarar, palancasPorDefecto,
@@ -108,10 +108,11 @@ export function avisoFacturasMeses(a: AvisosDatos, hoy: string, anio: number): A
 /**
  * Un aviso por gasto recurrente (cualquier piso/negocio, detección genérica por proveedor) cuyo cargo del mes
  * supera en ≥30 % y ≥20 € la media de sus últimos 6 recibos (cadencia semestral/anual: el ciclo anterior).
+ * Fuera los gastos variables por ocupación (limpieza, lavandería, Si Que Brilla, El Giraldillo).
  * `nombres` traduce el ámbito (id de piso, 'correduria'…) a texto; sin nombre se muestra el id.
  */
 export function avisosGastosRecurrentes(hist: GastoHist[], hoy: string, nombres: Record<string, string> = {}): Alerta[] {
-  return detectarSubidas(hist, hoy).map(s => {
+  return detectarSubidas(hist.filter(g => !esVariablePorOcupacion(g)), hoy).map(s => {
     const r = s.recurrente
     const base = r.cadaMeses >= 6 ? 'el cargo anterior' : `media de ${s.recibos} recibos`
     return {

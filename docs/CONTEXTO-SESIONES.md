@@ -70,8 +70,8 @@ original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados
 - `lib/gastos-recurrentes-detectados.ts`: detección genérica proveedor+ámbito (mensual…anual), proyecta cargos pendientes a 31/12; recurrente con un cargo esperado ausente (>10 d de cortesía) = BAJA, no se proyecta (PriceLabs). Excluye lo ya cubierto (luz, agua, limpieza, lavandería, `gastos_fijos`).
 - Alerta `avisosGastosRecurrentes` (cron fiscal-avisos): ≥30 % y ≥20 € sobre media de 6 recibos; no avisa si el mismo mes del año anterior era parecido. Correduría = banco `seguros` (sin ingresos/traspasos/Bizum).
 - Bug arreglado: plantillas `gastos_fijos` del mes en curso ya apuntadas se volvían a proyectar (`mesesPlantillaPendientes`): base pisos +~730 € a 03/11.
-- Correduría detectada: autónomos 388,95 €, ASISA 180,99 €, Anthropic ~520 €, Vercel 95,44 €, IONOS 19,61 €. Alerta viva: Si Que Brilla 1.889 € vs 1.149 € (+64 %).
-- ⚠️ Cobro PriceLabs 30,09 € el 08/09/2026 tras la baja del 09/08: reclamar. El Giraldillo sin facturas desde julio.
+- Correduría detectada: autónomos 388,95 €, ASISA 180,99 €, Anthropic ~520 €, Vercel 95,44 €, IONOS 19,61 €. Limpieza/lavandería (Si Que Brilla, que desde hace meses también hace la lavandería, y El Giraldillo) quedan FUERA del aviso: varían con las reservas (Alberto).
+- ⚠️ Cobro PriceLabs 30,09 € el 08/09/2026 tras la baja del 09/08: reclamar. El Giraldillo sin facturas desde julio = sustituido por Si Que Brilla.
 
 ## (03/11/2026) Fiscal · Pilar, correduría (proyección), IBI y Booking
 - Motor: la media mensual de actividad (Pilar y correduría) divide entre MESES COMPLETOS TRANSCURRIDOS, no entre meses con dato (helper `lib/media-actividad.ts` + test). Pilar 2026: solo 2 facturas (29/05, 2.100€ brutos / 1.981,13€ netos); prestación SS ene-mar 2.835€ (nacimiento, exenta, no cargada). Faltan sus CARGOS (autónomos real, plan pensiones). Bizum = personal.

@@ -92,8 +92,8 @@ export const AMBITO_CORREDURIA = 'correduria'
 export async function cargarHistoricoGastos(cuentaId: string, anio: number): Promise<{ pisos: GastoHist[] | null; correduria: GastoHist[] | null }> {
   const ini = `${anio - 1}-01-01`, fin = `${anio}-12-31`
   const [pisos, banco] = await Promise.all([
-    prisma.$queryRaw<Array<{ propiedad: string; proveedor: string | null; fecha: string; total: unknown }>>`
-      SELECT propiedad, proveedor, to_char(fecha, 'YYYY-MM-DD') AS fecha, total
+    prisma.$queryRaw<Array<{ propiedad: string; categoria: string | null; proveedor: string | null; fecha: string; total: unknown }>>`
+      SELECT propiedad, categoria, proveedor, to_char(fecha, 'YYYY-MM-DD') AS fecha, total
       FROM gastos
       WHERE fecha BETWEEN ${ini}::date AND ${fin}::date
         AND descartado_at IS NULL AND revisado = true AND total IS NOT NULL AND proveedor IS NOT NULL
@@ -109,7 +109,7 @@ export async function cargarHistoricoGastos(cuentaId: string, anio: number): Pro
         AND mb.fecha_operacion BETWEEN ${ini}::date AND ${fin}::date`.catch(() => null),
   ])
   return {
-    pisos: pisos == null ? null : pisos.map(g => ({ ambito: g.propiedad, proveedor: g.proveedor as string, fecha: g.fecha, importe: num(g.total) })),
+    pisos: pisos == null ? null : pisos.map(g => ({ ambito: g.propiedad, proveedor: g.proveedor as string, fecha: g.fecha, importe: num(g.total), categoria: g.categoria })),
     correduria: banco == null ? null : banco.flatMap((m): GastoHist[] => {
       const proveedor = proveedorBanco(m.contraparte, m.concepto)
       return proveedor ? [{ ambito: AMBITO_CORREDURIA, proveedor, fecha: m.fecha, importe: num(m.importe) }] : []

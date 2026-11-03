@@ -7,7 +7,11 @@
 // por su CALENDARIO real y para avisar cuando uno sube de golpe.
 // Regla NULL: sin histórico suficiente NO se inventa recurrencia (no se proyecta nada, no se avisa).
 
-export type GastoHist = { ambito: string; proveedor: string; fecha: string; importe: number }
+export type GastoHist = { ambito: string; proveedor: string; fecha: string; importe: number; /** Categoría del gasto (`gastos.categoria`), si se conoce. */ categoria?: string | null }
+
+/** Gasto que varía con la ocupación (limpieza, lavandería; Si Que Brilla y El Giraldillo cobran por reserva): su subida no es alarma. */
+export const esVariablePorOcupacion = (g: Pick<GastoHist, 'proveedor' | 'categoria'>) =>
+  /limpieza|lavander/i.test(g.categoria ?? '') || /brilla|giraldillo|lavander/.test(normalizarProveedor(g.proveedor))
 export type Periodicidad = 'mensual' | 'bimestral' | 'trimestral' | 'semestral' | 'anual'
 
 const PERIODOS: [Periodicidad, number][] = [['mensual', 1], ['bimestral', 2], ['trimestral', 3], ['semestral', 6], ['anual', 12]]

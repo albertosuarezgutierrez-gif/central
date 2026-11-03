@@ -135,3 +135,14 @@ test('gasto recurrente al alza: construirAlertas solo lo incluye con histórico;
   assert.equal(al.length, 1)
   assert.equal(decidirEnvios(al, [{ clave: al[0].clave, hash: 'otro', enviadoAt: new Date('2026-10-20') }], new Date('2026-10-31')).length, 0)
 })
+
+test('gasto recurrente al alza: Si Que Brilla / El Giraldillo / limpieza / lavandería (variables por ocupación) no avisan', () => {
+  const brilla = [...recSerie('SI QUE BRILLA SOCIEDAD LIMITADA', [4, 5, 6, 7, 8, 9], 1000, 'prop_multi'), { ambito: 'prop_multi', proveedor: 'SI QUE BRILLA SOCIEDAD LIMITADA', fecha: '2026-10-05', importe: 1640 }]
+  assert.equal(avisosGastosRecurrentes(brilla, '2026-10-31').length, 0) // +64 %
+  const giraldillo = [...recSerie('Lavandería El Giraldillo', [4, 5, 6, 7, 8, 9], 400, 'prop_multi'), { ambito: 'prop_multi', proveedor: 'Lavandería El Giraldillo', fecha: '2026-10-05', importe: 700 }]
+  assert.equal(avisosGastosRecurrentes(giraldillo, '2026-10-31').length, 0)
+  const porCategoria = [...recSerie('Otra Empresa', [4, 5, 6, 7, 8, 9], 100), { ambito: 'prop_a', proveedor: 'Otra Empresa', fecha: '2026-10-05', importe: 200 }].map(g => ({ ...g, categoria: 'LIMPIEZA' }))
+  assert.equal(avisosGastosRecurrentes(porCategoria, '2026-10-31').length, 0)
+  // Control: el mismo patrón en un proveedor fijo SÍ avisa.
+  assert.equal(avisosGastosRecurrentes(porCategoria.map(g => ({ ...g, categoria: 'SUMINISTROS' })), '2026-10-31').length, 1)
+})
