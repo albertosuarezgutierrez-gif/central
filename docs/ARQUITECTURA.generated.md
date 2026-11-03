@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-03T18:56:50Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-03T20:07:45Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 45 packages · 23 capacidades · 44 skills · 1876 rutas API.
+**Resumen:** 13 apps · 45 packages · 23 capacidades · 44 skills · 1877 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -26,7 +26,7 @@
 - **Módulos que usa:** core-ai, core-catastro, core-direccion, core-email, core-identity, core-push, core-telegram, module-documental, module-patrimonio, module-seguros, module-seguros-pii, module-seguros-portal, module-tarificacion
 - **Capacidades:** QR / portal cliente, Facturación / VeriFactu, Escáner / OCR, Notificaciones (push)
 - **Tablas (56):** seguros.cliente_relaciones_permiso_volcado, seguros.portal_acceso, seguros.portal_autorizacion, seguros.portal_autorizacion_uso, seguros.portal_aviso_cima, seguros.portal_aviso_leido, seguros.portal_aviso_silenciado, seguros.portal_bien, seguros.portal_canal, seguros.portal_codigo, seguros.portal_consentimiento, seguros.portal_hoja_qr, seguros.portal_hoja_qr_poliza, seguros.portal_identidad, seguros.portal_invitacion, seguros.portal_invitacion_enlace, seguros.portal_invitacion_enlace_uso, seguros.portal_mensaje, seguros.portal_modulo, seguros.portal_obligacion, seguros.portal_parte_siniestro, seguros.portal_patrimonio_aviso_inquilino, seguros.portal_patrimonio_comunidad, seguros.portal_patrimonio_contrato, seguros.portal_patrimonio_contrato_inquilino, seguros.portal_patrimonio_derrama, seguros.portal_patrimonio_documento, seguros.portal_patrimonio_enlace_inquilino, seguros.portal_patrimonio_gasto, seguros.portal_patrimonio_importacion…
-- **Rutas API:** 136
+- **Rutas API:** 137
 ### asegura-web
 - **Módulos que usa:** core-consent, module-seguros, module-seguros-portal
 - **Capacidades:** —
@@ -281,6 +281,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (03/11/2026) 03/11/2026) Correduría · regularización RC fase 3 (respuesta a Occident + cierre manual)
 - (03/11/2026) 03/11/2026) Correduría · buscador de cartera tolerante (caso Antonio Villegas)
 - (03/11/2026) 03/11/2026) Correduría · regularización RC de Occident automatizada (fases 1-2)
 - (03/11/2026) 03/11/2026) Sivra · mensajes de huésped de Agoda por correo
@@ -290,5 +291,4 @@
 - (03/11/2026) 03/11/2026) Facturas · pólizas de clientes y comisiones de portal NO son gasto + bandeja de pendientes
 - (03/11/2026) 03/11/2026) Facturas · el agente de correo duplicaba adjuntos sin proveedor
 - (03/11/2026) 03/11/2026) Fiscal · gastos recurrentes a 31/12 + alerta Telegram de subidas
-- (03/11/2026) 03/11/2026) Fiscal · Pilar, correduría (proyección), IBI y Booking
 

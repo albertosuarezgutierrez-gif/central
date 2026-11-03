@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-03T18:56:50Z",
-  "sha": "820e9cbdaef290b4553ce86f06e8c6dad8d32a2b",
+  "generadoEn": "2026-11-03T20:07:45Z",
+  "sha": "fa4e8a82cbb4d4c88a829b12b06b41b03729bdc2",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -9142,6 +9142,27 @@
       "tablas": [],
       "rutaApi": "/api/modulos",
       "hash": "ba0bbc275bad"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/operador/push-cliente/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 24,
+          "resumen": "leído con `requireSecret`, sin fallback; comparación en tiempo constante con `bearerAutorizado`). Sin secreto configurado o sin cabecera → 401 (cerrado por defecto). No hay cookie: el middleware no in"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/push-cliente",
+      "hash": "d860da808573"
     },
     {
       "ruta": "apps/asegura-portal/app/api/oposicion-senales-patrimonio/route.ts",
@@ -23592,6 +23613,88 @@
       "hash": "75789cbc2ace"
     },
     {
+      "ruta": "apps/asegura-portal/lib/push-cliente-bd.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "depsPushClienteBd"
+      ],
+      "funciones": [
+        {
+          "nombre": "depsPushClienteBd",
+          "kind": "function",
+          "exportada": true,
+          "params": "enviar: DepsPushCliente['enviar'], ahora = new Date()",
+          "retorno": "DepsPushCliente",
+          "linea": 13,
+          "resumen": "Adaptador de BD de `push-cliente.ts` (03/11/2026). Lo usa SOLO `POST /api/operador/push-cliente`, que se autentica por el secreto entre apps (no hay cookie: quien pide es asegura, no un visitante). Ex"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a52b90b69c70"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/push-cliente.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "Aviso push a un CLIENTE pedido por `apps/asegura` (03/11/2026, regularización de RC fase 2): cuando Alberto pulsa ✅ y sale el correo con el enlace `/datos/<token>`, asegura llama a `POST /api/operador/push-cliente` para avisar también en la app. PURO: la BD y el envío se inyectan (`push-cliente-bd.t",
+      "exporta": [
+        "pushClienteAutorizado",
+        "urlInternaPortal",
+        "leerPeticionPushCliente",
+        "payloadPushCliente",
+        "enviarPushACliente"
+      ],
+      "funciones": [
+        {
+          "nombre": "pushClienteAutorizado",
+          "kind": "function",
+          "exportada": true,
+          "params": "cabecera: string | null, leerSecreto: (nombre: string) => string",
+          "retorno": "boolean",
+          "linea": 24,
+          "resumen": "¿Viene de asegura? `Bearer <ASEGURA_PORTAL_PUENTE_SECRET>` en tiempo constante. `leerSecreto` es `requireSecret` (lanza si falta): sin secreto configurado NO se autoriza a nadie, tampoco en desarrollo"
+        },
+        {
+          "nombre": "urlInternaPortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "url: unknown, prefijo: string",
+          "retorno": "string | null",
+          "linea": 49,
+          "resumen": "Ruta interna del portal con el prefijo pedido, o `null`. Nada de esquema, host, `//`, `\\`, `..`, query ni fragmento."
+        },
+        {
+          "nombre": "leerPeticionPushCliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "b: unknown",
+          "retorno": "PeticionPushCliente | null",
+          "linea": 59,
+          "resumen": "Cuerpo de la petición → petición válida o `null` (400). PURO."
+        },
+        {
+          "nombre": "payloadPushCliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PeticionPushCliente",
+          "retorno": "PayloadPushCliente",
+          "linea": 88,
+          "resumen": "El payload: SOLO el texto fijo del motivo y la ruta interna. PURO."
+        },
+        {
+          "nombre": "enviarPushACliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PeticionPushCliente, d: DepsPushCliente",
+          "retorno": "Promise<ResultadoPushCliente>",
+          "linea": 93
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9921e311aa6b"
+    },
+    {
       "ruta": "apps/asegura-portal/lib/push-estado.ts",
       "ambito": "apps/asegura-portal",
       "resumen": "Qué enseña el interruptor de avisos por notificación (`app/ActivarPush.tsx`), decidido AQUÍ y puro para poder cepar cada rama. El componente solo lee el navegador y pinta lo que esto devuelve. Tres estados con sentido para la persona, más lo que no se puede ofrecer: · `activas`: permiso concedido Y ",
@@ -32272,12 +32375,12 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 33
+          "linea": 43
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/regularizacion-rc",
-      "hash": "63c9a9e5f000"
+      "hash": "315140a94375"
     },
     {
       "ruta": "apps/asegura/app/api/operador/renovaciones/contacto/route.ts",
@@ -61432,6 +61535,175 @@
       "hash": "be645b994722"
     },
     {
+      "ruta": "apps/asegura/lib/regularizacion-rc-compania.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Regularización de RC — FASE 3 (03/11/2026): responder a la COMPAÑÍA con la cifra que dio el cliente, y cerrar. 1. Cuando la solicitud pasa a `completada` (el cliente rellenó el enlace), `prepararRespuestaCompania` deja el BORRADOR (asunto + texto CIFRADO con la cifra en formato español) y lo propone",
+      "exporta": [
+        "clavesTareaRegularizacion",
+        "enviandoAtascada",
+        "decidirRespuestaCompaniaConRepo",
+        "editarRespuestaCompaniaConRepo",
+        "resolverRegularizacionConRepo",
+        "repoCompania",
+        "prepararRespuestaCompania",
+        "proponerCompaniaEnTelegram",
+        "decidirRespuestaCompania",
+        "editarRespuestaCompania",
+        "resolverRegularizacion",
+        "trasRespuestaCliente"
+      ],
+      "funciones": [
+        {
+          "nombre": "clavesTareaRegularizacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "polizaId: string, p: PeriodoRegularizacion",
+          "retorno": "",
+          "linea": 34,
+          "resumen": "Claves de la tarea del agente de correo para esa póliza + periodo: la de hoy y la de antes del subtipo (`suplemento:<póliza>`)."
+        },
+        {
+          "nombre": "enviandoAtascada",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: { companiaEstado: string | null; companiaEnviadaAt: Date | null }, ahora: Date",
+          "retorno": "boolean",
+          "linea": 52,
+          "resumen": "¿Un `enviando` que ya no avanza? (el correo salió pero no se pudo confirmar —`confirmacion_fallida`, que NO vuelve a borrador para no mandar dos—, o el proceso murió a mitad). Pasado `MINUTOS_ENVIANDO"
+        },
+        {
+          "nombre": "decidirRespuestaCompaniaConRepo",
+          "kind": "function",
+          "exportada": true,
+          "params": "repo: RepoCompania, descifrar: (v: string) => string | null, d: { id: string; version: number },",
+          "retorno": "Promise<ResultadoDecisionCompania>",
+          "linea": 84,
+          "resumen": "✅ Enviar a la compañía. Solo lo que Alberto vio (versión), al buzón que eligió (re-validado contra el Directorio)."
+        },
+        {
+          "nombre": "editarRespuestaCompaniaConRepo",
+          "kind": "function",
+          "exportada": true,
+          "params": "repo: RepoCompania, cifrar: (v: string) => string, d: { id: string; entrada: unknown },",
+          "retorno": "Promise<ResultadoEdicionCompania>",
+          "linea": 124,
+          "resumen": "✏️: «Para: correo» (solo un contacto ACTIVO del Directorio de esa compañía) y/o texto nuevo → versión nueva."
+        },
+        {
+          "nombre": "resolverRegularizacionConRepo",
+          "kind": "function",
+          "exportada": true,
+          "params": "repo: RepoCompania, d: { id: string; actor: string }, ahora = new Date()",
+          "retorno": "Promise<ResultadoResolver>",
+          "linea": 151,
+          "resumen": "🏁 Regularización resuelta. Idempotente: la segunda vez es `ya_resuelta` y solo vuelve a cerrar alguna tarea que se hubiera quedado abierta (sin nota ni historial nuevos). No envía nada a nadie."
+        },
+        {
+          "nombre": "bd",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 176
+        },
+        {
+          "nombre": "esFaltaDeMigracion",
+          "kind": "function",
+          "exportada": false,
+          "params": "e: unknown",
+          "retorno": "Promise<boolean>",
+          "linea": 181
+        },
+        {
+          "nombre": "conMigracion",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: () => Promise<T>",
+          "retorno": "Promise<T |",
+          "linea": 186
+        },
+        {
+          "nombre": "repoCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string",
+          "retorno": "Promise<RepoCompania>",
+          "linea": 195
+        },
+        {
+          "nombre": "pii",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 281
+        },
+        {
+          "nombre": "prepararRespuestaCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, id: string",
+          "retorno": "Promise<ResultadoPreparar>",
+          "linea": 291,
+          "resumen": "Borrador de la respuesta a la compañía (si no lo hay) + propuesta a Alberto. Si ya hay borrador, solo re-propone."
+        },
+        {
+          "nombre": "proponerCompaniaEnTelegram",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, id: string, editado = false",
+          "retorno": "Promise<boolean>",
+          "linea": 328,
+          "resumen": "Manda (o vuelve a mandar tras ✏️) la propuesta con sus botones. `false` = Telegram no la recibió."
+        },
+        {
+          "nombre": "decidirRespuestaCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, d: { id: string; version: number }",
+          "retorno": null,
+          "linea": 348
+        },
+        {
+          "nombre": "editarRespuestaCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, id: string, entrada: unknown",
+          "retorno": null,
+          "linea": 352
+        },
+        {
+          "nombre": "resolverRegularizacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, id: string, actor: string",
+          "retorno": null,
+          "linea": 360
+        },
+        {
+          "nombre": "trasRespuestaCliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, id: string",
+          "retorno": "Promise<void>",
+          "linea": 365,
+          "resumen": "Tras la respuesta del cliente (fase 2): prepara la propuesta. Nunca lanza (no rompe el «gracias» del portal)."
+        }
+      ],
+      "tablas": [
+        "clientes",
+        "compania_contactos",
+        "companias_dgs",
+        "correo_evento_entrante",
+        "enviando",
+        "gestiones",
+        "polizas",
+        "solicitud_regularizacion"
+      ],
+      "rutaApi": null,
+      "hash": "8772234458f8"
+    },
+    {
       "ruta": "apps/asegura/lib/regularizacion-rc-enganche.ts",
       "ambito": "apps/asegura",
       "resumen": "Enganche fase 1 → fase 2 (03/11/2026): cuando el agente de correo CREA la tarea de regularización de RC de Occident, se abre la petición de regularización (borrador + Telegram a Alberto; nada sale al cliente sin su ✅). Misma app: se llama a `crearRegularizacion` directamente (sin HTTP). Idempotente ",
@@ -61457,7 +61729,9 @@
       "ambito": "apps/asegura",
       "resumen": "Tramo «correo → confirmar» del ✅ de la regularización de RC, aislado para poder probarlo sin BD (inyecta las dependencias). La fila ya está reclamada (`enviando`) cuando se llama. Regla: ante la duda NO se reenvía al cliente. · el envío LANZA (antes de confirmarse) → la fila vuelve a `borrador` (sin",
       "exporta": [
-        "enviarYConfirmar"
+        "enviarYConfirmar",
+        "avisarEnAppTrasCorreo",
+        "pedirPushRegularizacion"
       ],
       "funciones": [
         {
@@ -61467,11 +61741,28 @@
           "params": "d: { enviar: () => Promise<string> confirmar: () => Promise<number> volverABorrador: () => Promise<unknown> log: (m: string) => void }",
           "retorno": "Promise<ResultadoEnvio>",
           "linea": 13
+        },
+        {
+          "nombre": "avisarEnAppTrasCorreo",
+          "kind": "function",
+          "exportada": true,
+          "params": "correo: ResultadoEnvio, avisar: () => Promise<ResultadoAvisoApp>, log: (m: string) => void,",
+          "retorno": "Promise<ResultadoAvisoApp | null>",
+          "linea": 52
+        },
+        {
+          "nombre": "pedirPushRegularizacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: { clienteId: string; token: string }, e: { base: string | undefined; secreto: string | undefined; fetch: typeof fetch; timeoutMs?: number },",
+          "retorno": "Promise<ResultadoAvisoApp>",
+          "linea": 71,
+          "resumen": "`POST <ASEGURA_PORTAL_URL>/api/operador/push-cliente` con `Bearer <ASEGURA_PORTAL_PUENTE_SECRET>` (el secreto que ya comparten asegura y el portal). Solo viajan el `clienteId`, el MOTIVO y la ruta `/d"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8674fbdd0f9b"
+      "hash": "786db7d069bf"
     },
     {
       "ruta": "apps/asegura/lib/regularizacion-rc-portal.ts",
@@ -61550,7 +61841,9 @@
         "botonesRegularizacion",
         "leerBotonRrc",
         "textoPropuestaRegularizacion",
-        "textoAvisoRespuestaRegularizacion"
+        "textoAvisoRespuestaRegularizacion",
+        "botonesRespuestaCompania",
+        "textoPropuestaCompania"
       ],
       "funciones": [
         {
@@ -61559,7 +61852,7 @@
           "exportada": true,
           "params": "id: string, version: number",
           "retorno": "",
-          "linea": 17
+          "linea": 23
         },
         {
           "nombre": "leerBotonRrc",
@@ -61567,7 +61860,7 @@
           "exportada": true,
           "params": "accion: string, args: readonly string[]",
           "retorno": "",
-          "linea": 28,
+          "linea": 34,
           "resumen": "Lee `rrc_<acción>:<uuid>:<versión>` ya partido por `parseCallback`. `null` = botón no válido."
         },
         {
@@ -61576,7 +61869,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 35
+          "linea": 41
         },
         {
           "nombre": "textoPropuestaRegularizacion",
@@ -61584,7 +61877,7 @@
           "exportada": true,
           "params": "a: { quien: string; compania: string; numeroPoliza: string | null; periodo: PeriodoRegularizacion hayEmail: boolean; asunto: string; texto: string; editado?: boolean }",
           "retorno": "string",
-          "linea": 41,
+          "linea": 47,
           "resumen": "La propuesta a Alberto: quién (nombre de pila o razón social, SIN DNI ni contacto), compañía, nº de póliza, periodo, si hay email al que mandarlo, y el borrador plegado. El enlace aún NO existe (sale "
         },
         {
@@ -61593,13 +61886,31 @@
           "exportada": true,
           "params": "a: { quien: string; compania: string; numeroPoliza: string | null; periodo: PeriodoRegularizacion; respuesta: RespuestaRegularizacion; conDocumento: boolean; urlFicha: string | null }",
           "retorno": "string",
-          "linea": 62,
+          "linea": 68,
           "resumen": "Aviso a Alberto cuando el cliente contesta. Lleva la cifra (es su canal); no se responde a la compañía (fase 3)."
+        },
+        {
+          "nombre": "botonesRespuestaCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string, version: number, hayPara: boolean",
+          "retorno": "",
+          "linea": 86,
+          "resumen": "✅ solo si hay buzón elegido (sin destinatario no se ofrece enviar). 🏁 siempre: cerrar no manda nada."
+        },
+        {
+          "nombre": "textoPropuestaCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: { quien: string; compania: string; numeroPoliza: string | null; periodo: PeriodoRegularizacion para: string | null; buzones: readonly { nombre: string; email: string }[] asunto: string; texto: string; conDocumento: boolean; editado?: boo",
+          "retorno": "string",
+          "linea": 100,
+          "resumen": "La propuesta de respuesta a la compañía. Sin buzón elegido lo dice («falta dirección de <compañía>») y enseña los contactos ACTIVOS del Directorio para que Alberto elija con ✏️ «Para: …». Nunca propon"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4371bcb83706"
+      "hash": "b3ce2e124505"
     },
     {
       "ruta": "apps/asegura/lib/regularizacion-rc.ts",
@@ -61610,6 +61921,7 @@
         "proponerEnTelegram",
         "decidirRegularizacion",
         "editarRegularizacion",
+        "anotarHistorial",
         "regularizacionPublica",
         "responderRegularizacion",
         "subirDocumentoRegularizacion",
@@ -61622,7 +61934,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 53
+          "linea": 54
         },
         {
           "nombre": "conMigracion",
@@ -61630,7 +61942,7 @@
           "exportada": false,
           "params": "f: () => Promise<T>",
           "retorno": "Promise<T |",
-          "linea": 56,
+          "linea": 57,
           "resumen": "Sin la tabla (SQL 2026-11-03b sin aplicar) → `sin_migracion` en vez de un 500 opaco."
         },
         {
@@ -61639,7 +61951,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<FichaCliente | null>",
-          "linea": 70
+          "linea": 71
         },
         {
           "nombre": "quienEs",
@@ -61647,7 +61959,7 @@
           "exportada": false,
           "params": "f: FichaCliente | null",
           "retorno": "",
-          "linea": 78,
+          "linea": 79,
           "resumen": "Persona jurídica → su razón social; física → nombre de pila. Para el saludo y el Telegram (sin apellidos enteros)."
         },
         {
@@ -61656,7 +61968,7 @@
           "exportada": true,
           "params": "correduriaId: string, e: { polizaId?: unknown; numeroPoliza?: unknown; periodoDesde?: unknown; periodoHasta?: unknown; compania?: unknown; actor: string },",
           "retorno": "Promise<ResultadoCrear>",
-          "linea": 95
+          "linea": 96
         },
         {
           "nombre": "leerFila",
@@ -61664,7 +61976,7 @@
           "exportada": false,
           "params": "correduriaId: string, id: string",
           "retorno": "Promise<FilaBorrador | null>",
-          "linea": 160
+          "linea": 161
         },
         {
           "nombre": "proponerEnTelegram",
@@ -61672,7 +61984,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string, editado = false",
           "retorno": "Promise<boolean>",
-          "linea": 171,
+          "linea": 172,
           "resumen": "Manda (o vuelve a mandar tras ✏️) la propuesta con sus botones. `false` = Telegram no la recibió (sigue en borrador)."
         },
         {
@@ -61681,7 +61993,7 @@
           "exportada": true,
           "params": "correduriaId: string, d: { accion: 'env' | 'no'; id: string; version: number }",
           "retorno": "Promise<ResultadoDecision>",
-          "linea": 190
+          "linea": 193
         },
         {
           "nombre": "editarRegularizacion",
@@ -61689,16 +62001,16 @@
           "exportada": true,
           "params": "correduriaId: string, id: string, textoNuevo: unknown",
           "retorno": "Promise<",
-          "linea": 249,
+          "linea": 259,
           "resumen": "✏️: texto nuevo → versión nueva → propuesta nueva con botones nuevos (el ✅ viejo deja de valer)."
         },
         {
           "nombre": "anotarHistorial",
           "kind": "function",
-          "exportada": false,
+          "exportada": true,
           "params": "correduriaId: string, clienteId: string, polizaId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 261
+          "linea": 271
         },
         {
           "nombre": "repoPrisma",
@@ -61706,7 +62018,7 @@
           "exportada": false,
           "params": "",
           "retorno": "RepoRegularizacionToken",
-          "linea": 274,
+          "linea": 284,
           "resumen": "Implementación Prisma del repo del token. Toda escritura, condicionada por id + correduría + hash + estado vivo."
         },
         {
@@ -61715,7 +62027,7 @@
           "exportada": true,
           "params": "token: string",
           "retorno": "Promise<VistaPublicaRegularizacion | null>",
-          "linea": 301,
+          "linea": 311,
           "resumen": "GET del puente. `null` = el token no es de una regularización (o falta la tabla): el puente sigue con presupuesto."
         },
         {
@@ -61724,7 +62036,7 @@
           "exportada": true,
           "params": "token: string, entrada: unknown",
           "retorno": null,
-          "linea": 310
+          "linea": 320
         },
         {
           "nombre": "avisarRespuesta",
@@ -61732,7 +62044,7 @@
           "exportada": false,
           "params": "correduriaId: string, id: string",
           "retorno": "Promise<void>",
-          "linea": 321,
+          "linea": 334,
           "resumen": "Telegram a Alberto con la cifra. Sello `aviso_respuesta_at` solo si salió (un fallo se ve en la ficha, no se pierde el dato)."
         },
         {
@@ -61741,7 +62053,7 @@
           "exportada": true,
           "params": "token: string, fichero: { nombre: string; mime: string; contenido: Buffer }",
           "retorno": "Promise<ResultadoDocRegularizacion>",
-          "linea": 346,
+          "linea": 359,
           "resumen": "El adjunto opcional (modelo 390, cuentas): se archiva en la ficha, colgado de la póliza. Uno por solicitud."
         },
         {
@@ -61750,7 +62062,7 @@
           "exportada": true,
           "params": "correduriaId: string, polizaId: string",
           "retorno": null,
-          "linea": 368
+          "linea": 381
         }
       ],
       "tablas": [
@@ -61760,7 +62072,7 @@
         "solicitud_regularizacion"
       ],
       "rutaApi": null,
-      "hash": "c7313482511e"
+      "hash": "2f378242ead9"
     },
     {
       "ruta": "apps/asegura/lib/relaciones-figura.ts",
@@ -147790,7 +148102,7 @@
           "exportada": false,
           "params": "cuentaId: string, texto: string, fromId: unknown",
           "retorno": "Promise<void>",
-          "linea": 1564,
+          "linea": 1581,
           "resumen": "Texto libre de Alberto (escrito o transcrito de una nota de voz) → correduría o contable. El patrimonial ya se desvía antes; aquí solo se decide entre estos dos, y ante cualquier duda gana el contable"
         },
         {
@@ -147799,7 +148111,7 @@
           "exportada": false,
           "params": "updateId: unknown",
           "retorno": "Promise<boolean>",
-          "linea": 1571,
+          "linea": 1588,
           "resumen": "`true` = este update ya se procesó (reintento de Telegram). Sin id o sin BD → `false` (se procesa)."
         },
         {
@@ -147808,7 +148120,7 @@
           "exportada": false,
           "params": "updateId: unknown",
           "retorno": "Promise<void>",
-          "linea": 1583
+          "linea": 1600
         },
         {
           "nombre": "correduriaSegura",
@@ -147816,7 +148128,7 @@
           "exportada": false,
           "params": "texto: string, fromId: unknown",
           "retorno": "Promise<void>",
-          "linea": 1589,
+          "linea": 1606,
           "resumen": "El asistente corre en `after`: un error ya no da 500 (ni reintento), así que se le dice a Alberto."
         }
       ],
@@ -147847,7 +148159,7 @@
         "trading_watchlist"
       ],
       "rutaApi": "/api/sivra/mensajes/telegram-webhook",
-      "hash": "a2c053a15f08"
+      "hash": "91b3650263b3"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/webhook/route.ts",
@@ -185171,8 +185483,13 @@
         "decidirBotonRrc",
         "textoPedirEdicionRrc",
         "idDeEdicionRrc",
+        "textoPedirEdicionRrcCompania",
+        "idDeEdicionRrcCompania",
         "lineaTrasPulsarRrc",
+        "lineaPushRrc",
         "decidirRrcEnAsegura",
+        "decidirRrcCompaniaEnAsegura",
+        "editarRrcCompaniaEnAsegura",
         "editarRrcEnAsegura"
       ],
       "funciones": [
@@ -185182,7 +185499,7 @@
           "exportada": true,
           "params": "cb: { from?: { id?: unknown } | null } | null | undefined, accion: string, args: readonly string[], chatAutorizado: string | undefined",
           "retorno": "DecisionBotonRrc",
-          "linea": 17,
+          "linea": 23,
           "resumen": "¿Vale esta pulsación? Solo el titular (from.id EXACTO); sin chat configurado, nadie. PURO."
         },
         {
@@ -185191,7 +185508,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "string",
-          "linea": 28,
+          "linea": 34,
           "resumen": "El mensaje que pide el texto nuevo (force_reply). La marca liga la respuesta a la solicitud. PURO."
         },
         {
@@ -185200,8 +185517,26 @@
           "exportada": true,
           "params": "citado: string | null | undefined",
           "retorno": "string | null",
-          "linea": 33,
+          "linea": 39,
           "resumen": "Id de la solicitud si el mensaje citado es nuestra petición de edición. PURO."
+        },
+        {
+          "nombre": "textoPedirEdicionRrcCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "string",
+          "linea": 45,
+          "resumen": "✏️ de la respuesta a la COMPAÑÍA (marca distinta: la respuesta va a `editar_compania`, no al correo del cliente). PURO."
+        },
+        {
+          "nombre": "idDeEdicionRrcCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "citado: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 50,
+          "resumen": "Id de la solicitud si el mensaje citado es la petición de edición de la respuesta a la compañía. PURO."
         },
         {
           "nombre": "lineaTrasPulsarRrc",
@@ -185209,8 +185544,17 @@
           "exportada": true,
           "params": "estado: string",
           "retorno": "string",
-          "linea": 42,
+          "linea": 59,
           "resumen": "Línea que sustituye a los botones tras pulsar. PURO. Misma tabla que `lineaTrasPulsarRrc` de asegura (`apps/asegura/lib/regularizacion-rc-telegram.ts`); el test compara que no afirme un envío que no c"
+        },
+        {
+          "nombre": "lineaPushRrc",
+          "kind": "function",
+          "exportada": true,
+          "params": "estado: string, push: unknown",
+          "retorno": "string | null",
+          "linea": 87,
+          "resumen": "Línea del aviso en la APP del portal tras «Correo enviado» (03/11/2026). PURO. El push es accesorio: solo se pinta con `enviada`, y lo que no consta se dice («no consta»), nunca «enviado»."
         },
         {
           "nombre": "puerto",
@@ -185218,16 +185562,42 @@
           "exportada": false,
           "params": "cuerpo: Record<string, unknown>, actor: string",
           "retorno": "Promise<string>",
-          "linea": 57
+          "linea": 102
+        },
+        {
+          "nombre": "puertoConDetalle",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuerpo: Record<string, unknown>, actor: string",
+          "retorno": "Promise<",
+          "linea": 106
         },
         {
           "nombre": "decidirRrcEnAsegura",
           "kind": "function",
           "exportada": true,
           "params": "d: { accion: 'env' | 'no'; id: string; version: number }",
+          "retorno": "Promise<",
+          "linea": 126,
+          "resumen": "✅/❌ → asegura. Nunca lanza: devuelve el `estado` (y el `push` de la app) para pintar las líneas."
+        },
+        {
+          "nombre": "decidirRrcCompaniaEnAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: { accion: 'cenv' | 'res'; id: string; version: number }",
           "retorno": "Promise<string>",
-          "linea": 77,
-          "resumen": "✅/❌ → asegura. Nunca lanza: devuelve el `estado` para pintar la línea."
+          "linea": 131,
+          "resumen": "✅ a la compañía / 🏁 resuelta → asegura. Nunca lanza: devuelve el `estado` para pintar la línea."
+        },
+        {
+          "nombre": "editarRrcCompaniaEnAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string, texto: string",
+          "retorno": "Promise<string>",
+          "linea": 138,
+          "resumen": "«Para:»/texto nuevo de la respuesta a la compañía → asegura (sube `compania_version` y vuelve a proponer). Nunca lanza."
         },
         {
           "nombre": "editarRrcEnAsegura",
@@ -185235,13 +185605,13 @@
           "exportada": true,
           "params": "id: string, texto: string",
           "retorno": "Promise<string>",
-          "linea": 82,
+          "linea": 143,
           "resumen": "Texto editado por Alberto → asegura (sube la versión y vuelve a proponer). Nunca lanza."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cb9fe389706d"
+      "hash": "3be3d522f744"
     },
     {
       "ruta": "apps/plataforma/lib/relaciones-asegura.ts",
@@ -255840,7 +256210,10 @@
         "borradorCorreoRegularizacion",
         "textoConEnlace",
         "borradorEditadoRegularizacion",
-        "peticionRegularizacionDesdeEvento"
+        "peticionRegularizacionDesdeEvento",
+        "borradorRespuestaCompania",
+        "leerEdicionRespuestaCompania",
+        "buzonElegido"
       ],
       "funciones": [
         {
@@ -255957,11 +256330,38 @@
           "retorno": "PeticionRegularizacion | null",
           "linea": 205,
           "resumen": "Del evento de correo de la compañía al cuerpo de `POST /api/operador/regularizacion-rc` (accion `crear`). `null` = no es una regularización de RC que sepamos pedir (otra compañía, otro suplemento, o s"
+        },
+        {
+          "nombre": "borradorRespuestaCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: { compania: string | null numeroPoliza: string | null tomador: string | null periodo: PeriodoRegularizacion respuesta: RespuestaRegularizacion conDocumento: boolean claveMediador: string | null firmante: string }",
+          "retorno": "",
+          "linea": 239,
+          "resumen": "Borrador del correo a la compañía con el dato real. La cifra en formato español (`2.162,49€`). Empleados y masa salarial solo si el cliente los puso (`null` = no lo indicó: no se escribe ni «0»). Sin "
+        },
+        {
+          "nombre": "leerEdicionRespuestaCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: string | null | undefined",
+          "retorno": "EdicionRespuestaCompania | null",
+          "linea": 291,
+          "resumen": "Lo que contesta Alberto al ✏️ de la respuesta a la compañía. Primera línea opcional «Para: correo»; el resto, el texto nuevo (o nada, si solo cambia el destinatario). `null` = no vale (vacío, «Para:» "
+        },
+        {
+          "nombre": "buzonElegido",
+          "kind": "function",
+          "exportada": true,
+          "params": "buzones: readonly BuzonCompaniaRegularizacion[], para: string",
+          "retorno": "BuzonCompaniaRegularizacion | null",
+          "linea": 312,
+          "resumen": "El buzón que ha escrito Alberto, SOLO si es un contacto ACTIVO de esa compañía en el Directorio (comparación exacta del correo, sin mayúsculas). Un correo tecleado que no está ahí → `null`: no se mand"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2f7242005290"
+      "hash": "50a4bdb115f1"
     },
     {
       "ruta": "packages/module-seguros/src/relaciones.ts",
@@ -271963,7 +272363,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5586,
-    "funciones": 21983
+    "archivos": 5590,
+    "funciones": 22019
   }
 }

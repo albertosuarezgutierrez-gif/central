@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-11-03T18:56:50Z",
+  "generadoEn": "2026-11-03T20:07:45Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -759,7 +759,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "asegura-web": {
         "estado": "no",
@@ -867,7 +867,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 6
       },
       "asegura-web": {
         "estado": "no",
@@ -1025,7 +1025,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 22
+        "evidencias": 23
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2321,11 +2321,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 341
+        "evidencias": 342
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 215
+        "evidencias": 217
       },
       "asegura-web": {
         "estado": "usado",
@@ -2375,11 +2375,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 67
+        "evidencias": 68
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 9
+        "evidencias": 10
       },
       "asegura-web": {
         "estado": "no",
@@ -2433,7 +2433,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 167
+        "evidencias": 168
       },
       "asegura-web": {
         "estado": "usado",
@@ -4523,6 +4523,7 @@
       "/api/mis-datos/cuenta",
       "/api/mis-datos/cuenta/codigo",
       "/api/modulos",
+      "/api/operador/push-cliente",
       "/api/oposicion-senales-patrimonio",
       "/api/patrimonio/autorizaciones",
       "/api/patrimonio/autorizaciones/[id]",
@@ -7271,7 +7272,7 @@
     "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1876,
+    "apis": 1877,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
