@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 
+## (03/11/2026) Fiscal · carpeta Drive «Amazon deducible» revisada
+- 13 facturas (304,01€), 12 emitidas a **Punto y Coma Gestión (B90446683)**. Por decisión de Alberto, 5 consumibles registrados como gasto de **Socorro** (33,37€: cafetera, fundas, pilas, Abenula) con `titular_pendiente='receptor_no_titular'`, conciliados con su cargo y renombrados en Drive; el motor fiscal los cuenta. El resto (bebé/personal) sigue `personal`.
+- «Fregasuelos» = Roborock QV 35A, pedido 171-3879962-4037146 (01/08, 247,92€): confirmado por Alberto, registrado en Socorro (`menaje`, conciliado, mov. `213db534…`), SIN factura (solo confirmación de pedido; `factura_ref` NULL). Se envió a Costa Ballena (Rota), pero Alberto confirma (03/11) que está en Socorro: se queda como gasto del piso.
+- Pendiente Alberto: descargar las facturas Amazon a su NIF (28823484E) y cambiar los datos de facturación.
 ## (03/11/2026) Fiscal · tarjeta Kutxabank 0300 importada + catastro Socorro cerrado
 - Tarjeta Kutxabank 4662…0300 es de CRÉDITO: 246 movimientos nuevos (01/04–03/11), liquidaciones mensuales = `traspaso_interno`; Amazon → personal; ~50 sin clasificar. El aviso Telegram ya pide su extracto si se para (`fiscal-alertas.ts`).
 - Valor catastral Socorro 150.549,25€ el piso entero (#5417): renta 2025 y motor correctos. Fly.io 6,68€ → correduría (factura a nombre de Manuel: pedirla a su NIF).
