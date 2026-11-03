@@ -74,6 +74,8 @@ Flujo: Paso 0 (salud+backlog) → 1/1-bis (candidatos Gmail + subidas manuales D
 - **Agua por piso (03/11/2026, Alberto):** EMASESA bimestral con 3 contratos — 0104785292 Socorro 24 = House Sevillana · 0105137440 Bustos Tavera 22 Bajo DER = Luxury Busto · 0105185751 Bajo IZQ = Busto Reform. **El Dúplex NO tiene EMASESA: el agua va incluida en la cuota de comunidad (76,18 €/mes)**; no la busques ni la reclames como factura que falta, y no la sumes aparte en la estimación.
 - **Dúplex = Plaza Villasís = Pasaje Francisco Molina 4 1ºC** (misma propiedad, 100 % Alberto): una factura con cualquiera de esas direcciones va al Dúplex.
 - **EMASESA Bustos Tavera 22 1º Dcha** (Punto y Coma, B90446683) = antiguo piso de Luxury Busto (2025) → `prop_luxury_busto`. Ya registradas: 19/05/2025 (50,15 €) y 04/09/2025 (26,06 €).
+- **ASISA salud (Alberto tomador, cubre cónyuge + 2 hijos):** el cargo llega también como «RECIBO POLIZAS GIP» o «RECIBO PRIMAS POLIZAS CO»: casar por esos conceptos además de ASISA; gasto deducible de la correduría.
+- **No son duplicados (auditoría 03/11/2026):** Anthropic 170 € ×2 e IBI 171,55 € ×2 son facturas/expedientes distintos: no fusionar ni borrar como gemelos.
 - **Leroy Merlin** (compras para los pisos) → `prop_multi_apartamentos`. Los abonos/rectificativas (nº R…) se registran en negativo junto a la compra (ej. R019179 −140,64 € el 30/06/2026).
 
 - **Booking.com Invoice** (3/mes, una por alojamiento; el cuerpo no trae cifras): etiquetar `Claude/Adjuntos` → el Apps Script

@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(03/11/2026, 5)** — PRs #5448/#5453/#5459: cuadre de correduría automático, resultado de la declaración + simulador «¿y si…?» en el panel fiscal, abonos AEAT de maternidad (modelo 140) por concepto (no son devolución de renta; 1.393,20 € cobrados feb–sep), cotizaciones RETA de Pilar 661,49 € anuales, ASISA 2026 2.021,50 € (deducible tope 1.500 €).
+Auditoría de cierre: sin datos BBVA personal (25/06), Pilar (30/06) y N26 (03/07) → pedir extractos. TotalEnergies Socorro 1.295,66 € con fecha posiblemente invertida (pendiente). Anthropic 170 € ×2 e IBI 171,55 € ×2 no son duplicados.
+Pendientes: 8 gastos sin piso, Allianz 432,82 €, límite de maternidad por cotizaciones (con asesoría). Pilar: prioridad de Alberto = reparaciones antes que plan de pensiones.
+
 **(03/11/2026, 4)** — Drive: script «Procesar Facturas Apartamentos» publicado en Versión 4 (= `apps/sivra/scripts/drive-upload.gs`, carpeta 2026 + AAAA); 69 facturas ago-nov movidas a la carpeta 2026. Lección: cambiar `drive-upload.gs` exige PUBLICAR nueva versión en Apps Script. Comisiones correduría: ADYP Allianz = extracto (AMYA no se cuenta); neto banco 2026 ene-oct 6.238,78 €; bruto pendiente de liquidaciones. Allianz pagó 704,53 € (30/09-02/10). Pendiente: automatizar el cuadre mensual por compañía (aviso >60 días o >5 €).
 
 **(03/11/2026, 3)** — Sueltos Drive: abono Leroy R019179 y 2 EMASESA 2025 (1º Dcha = antiguo Luxury Busto) registrados; alias Dúplex = Villasís = Pasaje Francisco Molina 4 1ºC.
