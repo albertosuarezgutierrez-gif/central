@@ -66,6 +66,10 @@ Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; ti
 original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados revisado/falta_roto/devuelto + bloque en ficha. `rrhh.material_empleado`
 (0028, aplicada). Pendiente fase 2: revisión periódica mensual.
 
+## (03/11/2026) Facturas · el agente de correo duplicaba adjuntos sin proveedor
+- Causa: `fingerprint` vacío cuando la factura no trae proveedor/NIF (foto de WhatsApp) + Gmail relee la ventana de 36 h → mismo adjunto metido dos días seguidos (644,81 € lavandería Socorro; copia descartada en BD con OK de Alberto).
+- Arreglo: `lib/agente-facturas/huella-documento.ts` (msg:+adjunto › hash › nº factura › fecha+total+nombre de archivo; nunca dedupe solo por fecha+total; huella vacía no compara). Pendiente: deduplicar ANTES de subir a Drive (aún deja copias huérfanas en Drive).
+
 ## (03/11/2026) Fiscal · gastos recurrentes a 31/12 + alerta Telegram de subidas
 - `lib/gastos-recurrentes-detectados.ts`: detección genérica proveedor+ámbito (mensual…anual), proyecta cargos pendientes a 31/12; recurrente con un cargo esperado ausente (>10 d de cortesía) = BAJA, no se proyecta (PriceLabs). Excluye lo ya cubierto (luz, agua, limpieza, lavandería, `gastos_fijos`).
 - Alerta `avisosGastosRecurrentes` (cron fiscal-avisos): ≥30 % y ≥20 € sobre media de 6 recibos; no avisa si el mismo mes del año anterior era parecido. Correduría = banco `seguros` (sin ingresos/traspasos/Bizum).

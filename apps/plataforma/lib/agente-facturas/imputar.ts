@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { FACTOR_BANDA, type Regla } from './reglas'
 import { huellasDe } from './fingerprint'
+import { esHuellaDocumento } from './huella-documento'
+import { esquemaTitularAplicado } from './esquema-titular'
 import { mismoGastoPorHuella, TOLERANCIA_DIAS, TOLERANCIA_IMPORTE } from './duplicado'
 import type { AsignacionTitular } from './asignar-titular'
 
@@ -66,6 +68,8 @@ export async function getRegla(huella: string | string[]): Promise<Regla | null>
 // ±0,02 € + fecha ±3 días) cuando no hay dos números distintos: ver `duplicado.ts`.
 export async function existeDuplicado(d: {
   fingerprint: string
+  /** Huella del documento (correo+adjunto / archivo); '' o ausente = no se compara por ella. */
+  huellaDoc?: string
   numero_factura?: string | null
   fecha: string
   total: number
@@ -73,6 +77,18 @@ export async function existeDuplicado(d: {
   nif_proveedor?: string | null
   propiedad?: string | null
 }): Promise<boolean> {
+  // Mismo DOCUMENTO ya imputado (y no descartado): igualdad exacta de huella, sin ventana de fechas.
+  // Huella vacía = no se compara con nada. `descartado_at` solo existe con la migración de titular.
+  if (esHuellaDocumento(d.huellaDoc)) {
+    const conDescarte = await esquemaTitularAplicado()
+    const doc = await prisma.$queryRaw<any[]>(Prisma.sql`
+      SELECT 1 FROM gastos WHERE fingerprint = ${d.huellaDoc}
+        ${conDescarte ? Prisma.sql`AND descartado_at IS NULL` : Prisma.empty}
+      LIMIT 1
+    `)
+    if (doc.length > 0) return true
+  }
+
   // Dedup por nº de factura exacto, o por misma huella + mismo importe dentro de
   // ±7 días (pilla "presupuesto+factura" del mismo gasto, sin chocar con los
   // recurrentes mensuales, que distan ~30 días).
@@ -162,7 +178,8 @@ export async function escribirTitular(gastoId: string, a: AsignacionTitular): Pr
 // dejaba la regla escrita pero inservible. Ver el porqué en `reglas.ts`. Sigue sin ESTRECHAR
 // nunca: `LEAST`/`GREATEST` solo ensanchan lo ya aprendido.
 export async function reforzarRegla(d: DatosGasto): Promise<void> {
-  if (!d.fingerprint) return
+  // Huella de documento = identifica UN archivo, no un proveedor: aprender una regla de ella la ensucia.
+  if (!d.fingerprint || esHuellaDocumento(d.fingerprint)) return
   // La regla se guarda bajo TODAS las huellas del proveedor (la del NIF y la del nombre), no solo
   // bajo la que generó esta factura. Si no, lo aprendido de un PDF que traía el NIF no lo ve el
   // del mes siguiente que no lo trae, y al revés: es el caso «Anthropic Ireland» vs «Anthropic,

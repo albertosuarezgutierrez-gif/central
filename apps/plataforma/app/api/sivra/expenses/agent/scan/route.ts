@@ -9,6 +9,7 @@ import { extraerDesdeBuffer } from '@/lib/agente-facturas/extraer'
 import { procesarFactura, clasificarDocumento, type ProcesarResult } from '@/lib/agente-facturas/procesar'
 import { recurrentesQueFaltan, domiciliadosSinCargo } from '@/lib/agente-facturas/anomalias'
 import { avisaBandeja, avisaSinAdjunto, avisaSinDrive, avisaNoLegibles, avisaAjenas, avisaRecurrentesQueFaltan, avisaDomiciliadosSinCargo, resumen, type PendienteAviso } from '@/lib/agente-facturas/avisos'
+import { huellaDocumento, hashContenido } from '@/lib/agente-facturas/huella-documento'
 import { cargarTitulares } from '@/lib/agente-facturas/titulares'
 import { avisarTarjetaSinCargo } from '@/lib/agente-facturas/tarjeta-cargos'
 
@@ -85,6 +86,10 @@ export async function GET(req: NextRequest) {
             fuente: 'agente-email', drive: drive || undefined,
             esPresupuesto: doc.esPresupuesto, fingerprintOverride: doc.fingerprintOverride,
             esBooking: doc.esBooking, titulares,
+            huellaDoc: huellaDocumento({
+              messageId: c.messageId, nombreArchivo: adj.nombre, hashContenido: hashContenido(adj.buffer),
+              ...doc.factura, fecha,
+            }),
           })
           acumula(r, c.from)
           if (r.decision !== 'error') imputadoAlguno = true
@@ -118,6 +123,7 @@ export async function GET(req: NextRequest) {
           propiedadPorDefecto: doc.esBooking ? undefined : 'prop_personal',
           esPresupuesto: doc.esPresupuesto, fingerprintOverride: doc.fingerprintOverride,
           esBooking: doc.esBooking, titulares,
+          huellaDoc: huellaDocumento({ nombreArchivo: nombre, hashContenido: hashContenido(buffer), ...doc.factura, fecha }),
         })
         acumula(r)
       } catch (e) {

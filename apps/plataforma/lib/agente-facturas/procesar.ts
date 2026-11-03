@@ -54,7 +54,7 @@ export interface ProcesarResult {
 
 export async function procesarFactura(
   data: FacturaExtraida,
-  ctx: { fuente: string; drive?: DriveRef; propiedadPorDefecto?: string | null; esPresupuesto?: boolean; fingerprintOverride?: string; esBooking?: boolean; titulares?: Titular[] },
+  ctx: { fuente: string; drive?: DriveRef; propiedadPorDefecto?: string | null; esPresupuesto?: boolean; fingerprintOverride?: string; esBooking?: boolean; titulares?: Titular[]; huellaDoc?: string },
 ): Promise<ProcesarResult> {
   const total = Number(data.total ?? 0)
   const proveedor = data.proveedor ?? null
@@ -65,11 +65,13 @@ export async function procesarFactura(
   // aprendería regla y el dedup dejaría de distinguirlos. Se ignora y se cae al nombre.
   const nifEmisorFiable = !nifProveedorEsNuestro(data.nif_proveedor, titulares)
   // Huella: la del override (p.ej. Booking por establecimiento) o la calculada.
+  // Sin proveedor ni NIF la huella del proveedor sale '' y el dedup no comparaba nada (caso WhatsApp
+  // 644,81 € ×2, 03/11/2026): entonces se guarda la huella del DOCUMENTO (`huella-documento.ts`).
   const fp = ctx.fingerprintOverride || fingerprint({
     nif_proveedor: nifEmisorFiable ? data.nif_proveedor : null,
     proveedor,
     concepto: data.concepto,
-  })
+  }) || ctx.huellaDoc || ''
 
   // Presupuesto/cotización: no es un gasto → se omite (no se inserta para que no
   // tape a la factura real del mismo importe).
@@ -123,7 +125,7 @@ export async function procesarFactura(
   const propiedad = veredicto.propiedad || mapeaPropiedadAlquiler(data.concepto || '') || ctx.propiedadPorDefecto || null
 
   // Duplicado → no imputar.
-  if (await existeDuplicado({ fingerprint: fp, numero_factura: data.numero_factura ?? null, fecha: data.fecha, total, proveedor, nif_proveedor: nifEmisorFiable ? data.nif_proveedor ?? null : null, propiedad })) {
+  if (await existeDuplicado({ fingerprint: fp, huellaDoc: ctx.huellaDoc, numero_factura: data.numero_factura ?? null, fecha: data.fecha, total, proveedor, nif_proveedor: nifEmisorFiable ? data.nif_proveedor ?? null : null, propiedad })) {
     await log({ fuente: ctx.fuente, fingerprint: fp, decision: 'duplicado', payload: { total } })
     return { decision: 'duplicado', fingerprint: fp, total, proveedor }
   }
