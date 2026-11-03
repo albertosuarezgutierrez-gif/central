@@ -61,8 +61,7 @@ cifras con `eur()`, `null` = no se sabe (no `?? 0`).
 
 **Seguridad:** escrituras en BD solo con OK de Alberto (propón el lote, espera confirmación); nunca correos a terceros.
 
-1. **Booking.com (facturas de comisión):** 3/mes, una por alojamiento (2888928 Villasís=Dúplex · 4340072 Socorro 24=House
-   Sevillana · 4771238 Bustos Tavera 22=Busto Reform+Luxury Busto). Emisor Booking.com B.V., IVA 21 % español sobre
+1. **Booking.com (facturas de comisión):** 3/mes, una por alojamiento (2888928 = Dúplex (Plaza Villasís); 4340072 = Luxury Busto; 4771238 = Busto Reform; 2039943 = House Sevillana/Socorro 24 (OJO: el nombre impreso en la factura NO identifica el piso, usa el ID; mapa oficial en sivra-maestro/references/contexto-y-agente-huesped.md). Las facturas de 2039943 aún no se han localizado en Gmail (ene-oct 2026)). Emisor Booking.com B.V., IVA 21 % español sobre
    comisión + cargo por pagos; NO es inversión del sujeto pasivo y Booking descuenta el IVA de la liquidación.
    Registrar en `facturas_proveedor`/gastos con su piso. **Cuadre mensual:** total facturado del mes vs comisión implícita
    del motor (`incomes` amount_gross − amount); si no cuadra, AVISA (bruto−neto puede incluir cosas que no son comisión).
