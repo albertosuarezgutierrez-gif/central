@@ -357,7 +357,7 @@ test(`ePAC: el avance de paso por id tiene tope (${MAX_AVANCES_POR_ID} por traba
     const cap = (await capturarInventarioExploracion(page))!
     const marco = cap.inventario.marcos[0]
     const el = marco.elementos.find((e) => e.id === 'btnAceptar')!
-    await assert.rejects(pulsarExploracionAutorizada(page, guard, page.locator('#btnAceptar'), { entrada: MP, el, marco }), /ya se usó/)
+    await assert.rejects(pulsarExploracionAutorizada(page, guard, page.locator('#btnAceptar'), { entrada: MP, el, marco }), /ya se usó 3 veces/) // 03/11/2026: el tope de 6 es SOLO de Fidelidade Vivienda; ePAC sigue en 3
     await cap.liberar()
     assert.equal(guard.violacion(), null)
   } finally {

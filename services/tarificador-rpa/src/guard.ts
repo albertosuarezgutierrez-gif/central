@@ -90,6 +90,7 @@ import {
   type ElementoInventario,
   type MarcoInventario,
   type PantallaGuardado,
+  ORIGEN_FIDELIDADE_MEDIADORES,
 } from '@central/module-tarificacion'
 
 /**
@@ -3691,6 +3692,30 @@ async function sinOtrosManejadoresVivo(boton: Locator): Promise<boolean> {
 export const MAX_AVANCES_POR_ID = 3
 
 /**
+ * Topes de avances de PASO por REGLA (Alberto, 03/11/2026, «opción A»): la simulación de hogar de Fidelidade tiene más pantallas que
+ * 3 antes del precio (Simulación › Datos Cliente › Domicilio › …), así que SOLO su regla del avance sin rótulo sube a 6. Todo lo demás
+ * (otras compañías, otras reglas, el avance por id) sigue en `MAX_AVANCES_POR_ID`. Cada pantalla sigue exigiendo su ruta EXACTA en la
+ * lista cerrada de la regla; el tope no abre ninguna pantalla nueva. TARIFICAR ≠ EMITIR: no toca ningún tope de emisión.
+ */
+export const TOPES_AVANCES_POR_REGLA: Readonly<Record<string, number>> = Object.freeze({ 'fidelidade:vivienda': 6 })
+
+const ENTRADA_FIDELIDADE_VIVIENDA = 'fidelidade:particulares:vivienda'
+const PREFIJO_RUTAS_FIDELIDADE_VIVIENDA = '/OPI_ES_Vivienda/'
+
+/** Clave de `TOPES_AVANCES_POR_REGLA` de un avance sin rótulo, o `null` (tope por defecto). Pura. */
+export function claveTopeAvanceSinTexto(entrada: string, sinTexto: AvanceSinTexto | null): string | null {
+  if (!sinTexto || entrada !== ENTRADA_FIDELIDADE_VIVIENDA || sinTexto.origen !== ORIGEN_FIDELIDADE_MEDIADORES) return null
+  if (sinTexto.rutas.length === 0 || !sinTexto.rutas.every((r) => r.startsWith(PREFIJO_RUTAS_FIDELIDADE_VIVIENDA))) return null
+  return 'fidelidade:vivienda'
+}
+
+/** Tope de avances de paso por trabajo para este avance (por id: siempre `MAX_AVANCES_POR_ID`; sin rótulo: el de su regla). Pura. */
+export function topeAvancesPaso(entrada: string, porId: boolean, sinTexto: AvanceSinTexto | null): number {
+  const clave = porId ? null : claveTopeAvanceSinTexto(entrada, sinTexto)
+  return (clave !== null ? TOPES_AVANCES_POR_REGLA[clave] : undefined) ?? MAX_AVANCES_POR_ID
+}
+
+/**
  * AVANCE AUTORIZADO DEL EXPLORADOR IA (Alberto, 13/10/2026: «Aceptar» de Datos básicos → Tarificar, SOLO en exploración;
  * puede quedar un proyecto en ePAC, nunca una póliza). El ÚNICO camino del explorador para pulsar un control que el guard
  * de siempre bloquea por «aceptar». Exige, en este orden y sin atajos:
@@ -3721,7 +3746,8 @@ export async function pulsarExploracionAutorizada(
   const prefijoId = porId ? `exploracion:id:${porId.id}#` : sinTexto ? 'exploracion:sintexto#' : null
   const usadosPorId = prefijoId ? [...usados].filter((u) => u.startsWith(prefijoId)).length : 0
   if (!porId && !sinTexto && usados.has('exploracion')) throw new EmisionBloqueadaError('fase', 'el avance autorizado de exploración ya se usó en este trabajo')
-  if ((porId || sinTexto) && usadosPorId >= MAX_AVANCES_POR_ID) throw new EmisionBloqueadaError('fase', `el avance de paso autorizado de exploración ya se usó ${usadosPorId} veces en este trabajo`)
+  // Tope por regla (03/11/2026): 6 solo para la simulación de Vivienda de Fidelidade; el resto, `MAX_AVANCES_POR_ID` (3).
+  if ((porId || sinTexto) && usadosPorId >= topeAvancesPaso(aut.entrada, Boolean(porId), sinTexto)) throw new EmisionBloqueadaError('fase', `el avance de paso autorizado de exploración ya se usó ${usadosPorId} veces en este trabajo`)
   await exigirSinCuentaBancaria(page)
   if (!esAvanceAutorizado(aut.entrada, aut.el, aut.marco) || bloqueoAvance(aut.entrada, aut.el, aut.marco) !== null) {
     throw new EmisionBloqueadaError('boton', 'avance de exploración no autorizado para esta entrada y esta pantalla')
