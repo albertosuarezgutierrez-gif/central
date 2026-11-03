@@ -66,6 +66,11 @@ Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; ti
 original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados revisado/falta_roto/devuelto + bloque en ficha. `rrhh.material_empleado`
 (0028, aplicada). Pendiente fase 2: revisión periódica mensual.
 
+## (03/11/2026) Facturas · auditoría del lector: tipo de documento obligatorio y documento completo
+- Causa raíz de los errores básicos: `tipo_documento` salía null en 28/51 y `procesar.ts` no lo miraba; el texto se cortaba a 4.000 car. (la IA solo veía el encabezado). Ahora: prompt con vocabulario cerrado (presupuesto/solicitud/liquidación/resumen/aviso → omitido; null/otro → bandeja con aviso), emisor≠cliente≠dirección del piso, `numero_albaran` aparte, hasta 12.000 car. (inicio+final). Helpers `tipo-documento.ts`, `revision-lectura.ts`, `recorte-texto.ts`; dedupe por nº de factura sin separadores.
+- Bandeja revisada con Alberto: Netflix → pisos compartidos; PEPEMOBILE → correduría; Anthropic 170 € = bonos reales; TotalEnergies 310,01 € = Monte Carmelo (personal); Vercel B2DRQ0QS-0007 duplicado descartado.
+- Pendiente: lecturas sin tipo ni importe se releen a diario (distinguir «falló la IA» de «nada que leer»); nombres de pisos a mano en `NOMBRES_INMUEBLES`; vigilar facturas reales clasificadas como aviso/liquidación (van a `agente_log`, no a bandeja).
+
 ## (03/11/2026) Facturas · pólizas de clientes y comisiones de portal NO son gasto + bandeja de pendientes
 - Regla Alberto: recibo/liquidación de póliza de un CLIENTE (tomador ≠ Alberto/Pilar) NO es gasto (la comisión entra neta por banco); factura de comisión de Booking/Airbnb/Expedia/Vrbo = justificante, la comisión ya va como bruto−neto en `incomes`. Helpers `lib/agente-facturas/{poliza-cliente,portal-comision}.ts` (tomador dudoso → bandeja con aviso). Skills/agentes actualizados.
 - Bug: `/expenses/pendientes` (`lib/agente-facturas/pendientes.ts`) no filtraba `descartado_at` → enseñaba 9 ya descartados (50→41). Cepo `pendientes-vigente.test.ts`.

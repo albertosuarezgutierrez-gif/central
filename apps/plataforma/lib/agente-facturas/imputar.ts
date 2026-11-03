@@ -5,7 +5,7 @@ import { FACTOR_BANDA, type Regla } from './reglas'
 import { huellasDe } from './fingerprint'
 import { esHuellaDocumento } from './huella-documento'
 import { esquemaTitularAplicado } from './esquema-titular'
-import { mismoGastoPorHuella, TOLERANCIA_DIAS, TOLERANCIA_IMPORTE } from './duplicado'
+import { mismoGastoPorHuella, normalizaNumeroFactura, TOLERANCIA_DIAS, TOLERANCIA_IMPORTE } from './duplicado'
 import type { AsignacionTitular } from './asignar-titular'
 
 export interface DatosGasto {
@@ -89,12 +89,17 @@ export async function existeDuplicado(d: {
     if (doc.length > 0) return true
   }
 
+  const numNorm = normalizaNumeroFactura(d.numero_factura)
   // Dedup por nº de factura exacto, o por misma huella + mismo importe dentro de
   // ±7 días (pilla "presupuesto+factura" del mismo gasto, sin chocar con los
   // recurrentes mensuales, que distan ~30 días).
   const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT 1 FROM gastos WHERE
       (${d.numero_factura}::text IS NOT NULL AND numero_factura = ${d.numero_factura})
+      -- Mismo número salvo separadores («B2DRQ0QS-0007» vs «B2DRQ0QS 0007») DEL MISMO PROVEEDOR
+      -- (huella), sin ventana de fechas: la IA lee la fecha distinta en cada copia del PDF.
+      OR (${d.fingerprint} <> '' AND fingerprint = ${d.fingerprint} AND length(${numNorm}::text) >= 4
+          AND regexp_replace(upper(coalesce(numero_factura, '')), '[^A-Z0-9]', '', 'g') = ${numNorm}::text)
       OR (${d.fingerprint} <> '' AND fingerprint = ${d.fingerprint}
           AND fecha BETWEEN ${d.fecha}::date - 7 AND ${d.fecha}::date + 7
           AND abs(coalesce(total,0) - ${d.total}) < 0.01)

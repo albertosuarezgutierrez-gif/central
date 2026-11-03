@@ -9,9 +9,11 @@ import { contextoTitularSiAplicado } from './contexto-titular'
 import { esBooking, parseBooking, bookingFingerprint } from './booking'
 import { esPresupuesto, esPresupuestoExtraido } from './clasificar'
 import { pareceIngresoDeCorreduria } from './no-es-gasto'
-import { esDocumentoPolizaCliente, MOTIVO_POLIZA_CLIENTE, MOTIVO_POLIZA_DUDA } from './poliza-cliente'
+import { esDocumentoPolizaCliente, mencionaAseguradoraPropia, MOTIVO_POLIZA_CLIENTE, MOTIVO_POLIZA_DUDA } from './poliza-cliente'
 import { esFacturaComisionPortal, MOTIVO_COMISION_PORTAL } from './portal-comision'
 import { evaluaReceptor, nifProveedorEsNuestro, type Titular } from './receptor'
+import { decidirPorTipo } from './tipo-documento'
+import { avisosDeLectura } from './revision-lectura'
 import type { FacturaExtraida } from './extraer'
 
 // Decide cómo tratar un documento ya extraído: Booking (por establecimiento),
@@ -80,6 +82,22 @@ export async function procesarFactura(
   if (ctx.esPresupuesto) {
     await log({ fuente: ctx.fuente, fingerprint: fp, decision: 'omitido', motivo: 'Presupuesto/cotización, no factura', payload: { total } })
     return { decision: 'omitido', fingerprint: fp, total, proveedor, motivo: 'Presupuesto/cotización' }
+  }
+
+  // Tipo de documento (vocabulario cerrado, `tipo-documento.ts`). Presupuesto, proforma, solicitud,
+  // liquidación de comisiones, resumen de pagos o aviso → omitido y registrado. `null`/'otro' → sigue,
+  // pero forzado a la bandeja con aviso (más abajo): nunca confirmable en silencio (03/11/2026).
+  // Booking trae su factura del parser determinista, no de la IA: su tipo no se juzga aquí.
+  let porTipo = ctx.esBooking ? null : decidirPorTipo(data.tipo_documento, total)
+  // Los seguros PROPIOS (lista blanca Occident/ASISA) los media la propia correduría: su recibo lleva
+  // código de mediador y la IA podría llamarlo «liquidación». No se omite: a la bandeja con aviso.
+  if (porTipo?.accion === 'omitir' && porTipo.tipo === 'liquidacion_comisiones'
+      && mencionaAseguradoraPropia(`${proveedor ?? ''} ${data.concepto ?? ''}`)) {
+    porTipo = { accion: 'revisar', tipo: porTipo.tipo, aviso: 'La IA lo lee como liquidación de comisiones, pero es de una aseguradora de tus seguros propios: confirma si es gasto' }
+  }
+  if (porTipo?.accion === 'omitir') {
+    await log({ fuente: ctx.fuente, fingerprint: fp, decision: 'omitido', motivo: porTipo.motivo, payload: { total, tipo_documento: porTipo.tipo, drive_url: ctx.drive?.url ?? null } })
+    return { decision: 'omitido', fingerprint: fp, total, proveedor, motivo: porTipo.motivo }
   }
 
   // Documento que NO es un gasto (dictado por Alberto, 29-30/08/2026): la liquidación de un
@@ -167,6 +185,21 @@ export async function procesarFactura(
     motivo = MOTIVO_POLIZA_DUDA
   } else if (polizaCliente === 'duda') {
     motivo = motivo ? `${MOTIVO_POLIZA_DUDA} · ${motivo}` : MOTIVO_POLIZA_DUDA
+  }
+
+  // Lectura dudosa (tipo sin clasificar, proveedor = cliente/titular/dirección del piso, documento
+  // antiguo): a la bandeja con el aviso delante. La antigüedad solo en los agentes automáticos; en
+  // la subida manual Alberto sube a propósito lo que quiere.
+  const avisos = [
+    ...(porTipo?.accion === 'revisar' ? [porTipo.aviso] : []),
+    ...avisosDeLectura({ proveedor, cliente: data.cliente, fecha: data.fecha }, titulares, new Date(), {
+      antiguedad: ctx.fuente.startsWith('agente-'),
+    }),
+  ]
+  if (avisos.length) {
+    const aviso = avisos.join(' · ')
+    if (decision === 'auto') { decision = 'bandeja'; motivo = aviso }
+    else motivo = motivo ? `${aviso} · ${motivo}` : aviso
   }
 
   // Booking: la liquidación NUNCA se auto-imputa en silencio. Trae varias reservas, comisiones

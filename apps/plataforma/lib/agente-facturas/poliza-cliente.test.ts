@@ -30,3 +30,10 @@ test('aseguradora fuera de la lista blanca con nombre de Alberto → duda; gasto
   assert.equal(esDocumentoPolizaCliente({ proveedor: 'Allianz', concepto: 'Recibo de prima póliza 777', cliente: 'Alberto Suárez Gutiérrez', nif_cliente: '28823484E' }), 'duda')
   assert.equal(esDocumentoPolizaCliente({ proveedor: 'Allianz', concepto: 'Recibo de prima póliza 777', cliente: 'Alberto Suárez Gutiérrez' }, [], ['777']), false)
 })
+
+test('mencionaAseguradoraPropia: solo la lista blanca (Occident/ASISA)', async () => {
+  const { mencionaAseguradoraPropia } = await import('./poliza-cliente.ts')
+  assert.equal(mencionaAseguradoraPropia('Occident GCO, S.A.U. Hogar'), true)
+  assert.equal(mencionaAseguradoraPropia('ASISA VIDA SEGUROS'), true)
+  assert.equal(mencionaAseguradoraPropia('Allianz, Compañía de Seguros'), false)
+})

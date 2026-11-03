@@ -30,9 +30,16 @@ function dias(fecha: string): number {
   return Math.floor(Date.parse(String(fecha).slice(0, 10) + 'T00:00:00Z') / MS_DIA)
 }
 
-function numeroNorm(n?: string | null): string {
+/**
+ * Nº de factura sin separadores ni mayúsculas/minúsculas: «B2DRQ0QS-0007» y «B2DRQ0QS 0007» son el
+ * MISMO número (Vercel 94,20 € confirmado dos veces, 14/10 y 22/10/2026: la IA leyó el guion en un
+ * PDF y el espacio en el otro, y además dos fechas distintas). La SQL de `existeDuplicado` replica
+ * esto con `regexp_replace(upper(numero_factura), '[^A-Z0-9]', '', 'g')`.
+ */
+export function normalizaNumeroFactura(n?: string | null): string {
   return (n ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '')
 }
+const numeroNorm = normalizaNumeroFactura
 
 export function mismoGastoPorHuella(a: GastoHuella, b: GastoHuella): boolean {
   const na = numeroNorm(a.numero_factura)
