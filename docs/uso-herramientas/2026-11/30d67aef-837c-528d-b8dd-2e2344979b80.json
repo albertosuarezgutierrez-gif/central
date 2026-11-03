@@ -1,0 +1,76 @@
+{
+ "sesion": "30d67aef-837c-528d-b8dd-2e2344979b80",
+ "inicio": "2026-11-03T06:23:46.105Z",
+ "fin": "2026-11-03T06:24:25.183Z",
+ "llamadas": 24,
+ "categorias": {
+  "otro": {
+   "llamadas": 3,
+   "chars_in": 5173,
+   "chars_out": 289,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 1,
+    "SubagentHandback": 2
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 16,
+   "chars_in": 2247,
+   "chars_out": 58298,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 9,
+    "Read": 7
+   }
+  },
+  "bash": {
+   "llamadas": 1,
+   "chars_in": 188,
+   "chars_out": 335,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 1
+   }
+  },
+  "sql": {
+   "llamadas": 2,
+   "chars_in": 1222,
+   "chars_out": 3097,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 2
+   }
+  },
+  "agente:jefe-contabilidad": {
+   "llamadas": 1,
+   "chars_in": 835,
+   "chars_out": 148,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "agente:rastreador-codigo": {
+   "llamadas": 1,
+   "chars_in": 1029,
+   "chars_out": 148,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  }
+ }
+}
