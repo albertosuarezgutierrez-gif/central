@@ -7,6 +7,7 @@ import { parseExtractoCsv } from '@/lib/extracto-csv'
 import { parseExtractoTarjetaPdf } from '@/lib/extracto-tarjeta-pdf'
 import { importarExtracto, enviarResumenTarjeta } from '@/lib/banca'
 import { analizarMovimientos } from '@/lib/categorizar'
+import { conciliarFacturasTarjeta } from '@/lib/agente-facturas/tarjeta-cargos'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -80,5 +81,10 @@ export async function POST(req: NextRequest) {
     enviarResumenTarjeta(session.id, resultado.cuentaBancariaIds, mes).catch(() => {})
   }
 
-  return NextResponse.json({ ok: true, ...resultado, categorizados })
+  // Extracto de tarjeta: casa las facturas de proveedores que se cobran con tarjeta (Fly, Vercel…) con los cargos
+  // recién subidos. Un fallo aquí NO invalida la importación: se informa como «no comprobado» (null), no como 0.
+  let facturasTarjetaCasadas: number | null = null
+  if (tipo === 'tarjeta') facturasTarjetaCasadas = await conciliarFacturasTarjeta(session.id).catch(() => null)
+
+  return NextResponse.json({ ok: true, ...resultado, categorizados, facturasTarjetaCasadas })
 }

@@ -129,3 +129,8 @@ export async function resumen(s: ResumenStats): Promise<void> {
     'resuelto',
   )
 }
+
+// Aviso: facturas de tarjeta sin cargo casado a los 10 días (texto ya compuesto por `tarjeta.ts`).
+export async function avisaTarjetaSinCargo(texto: string): Promise<void> {
+  await tgAvisoAlerta('facturas.tarjeta-sin-cargo', texto, 'aviso')
+}

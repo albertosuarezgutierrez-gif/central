@@ -25,6 +25,10 @@ import { asignarCargos, toleranciaFactura } from './casar-cargos'
 import { normalizarDivisa } from './divisa'
 import { coberturaPorCuenta } from './anomalias'
 import { decidirGuardaPago, fechaCorta, textoYaPagada } from './guarda-pago'
+import { proveedoresTarjeta } from './tarjeta-cargos'
+import { notaTarjeta, pagableAMano, sinFacturasTarjeta } from './tarjeta'
+import { botonesVerificacionSqb, esProveedorSqb, mensajeVerificacionSqb } from '@/lib/sivra/factura-verificacion'
+import { verificarSqbGuardada } from '@/lib/sivra/factura-verificacion-db'
 
 const ETIQUETA_GMAIL = 'Facturas/Proveedor'
 /**
@@ -259,7 +263,7 @@ export async function escanearNuevasFacturas(
 
     // Notificar por Telegram con botones de acción
     const ivaDudoso = ofrecerSinIvaExtranjero(ivaPct, { nif_proveedor: datos.nif_proveedor as string | null, proveedor })
-    await notificarFactura(facturaId, proveedor, importe, fechaVenc, cuentaId, decision.permitirPagar, decision.motivoRevision, ivaDudoso)
+    await notificarFactura(facturaId, proveedor, importe, fechaVenc, cuentaId, decision.permitirPagar, decision.motivoRevision, ivaDudoso, datos.nif_proveedor as string | null)
     // Idea #11: proponer vínculo con reserva cercana
     await proponerVinculoReserva(facturaId, proveedor, fechaFactura).catch(() => {})
   }
@@ -281,6 +285,7 @@ async function notificarFactura(
   permitirPagar = true,
   motivoRevision: 'sin_numero_ni_iva' | 'tipo_dudoso' = 'sin_numero_ni_iva',
   ivaDudoso = false,
+  nifProveedor: string | null = null,
 ): Promise<void> {
   const vence = fechaVenc ? ` · vence ${fechaVenc}` : ''
 
@@ -298,6 +303,13 @@ async function notificarFactura(
     }
   } catch {
     bancoNoComprobado = true
+  }
+
+  // 🚨 Si que Brilla (SQB): Alberto la paga SIEMPRE él, a mano, por transferencia. El aviso es de
+  // VERIFICACIÓN (¿cuadra con lo hecho?) y NUNCA lleva «Pagar». Identidad por NIF/nombre completo.
+  if (esProveedorSqb({ nif: nifProveedor, proveedor })) {
+    await notificarVerificacionSqb(facturaId, proveedor, importe, cuentaId)
+    return
   }
 
   // Idea #4: mostrar gasto acumulado del año y presupuesto si existe
@@ -327,9 +339,11 @@ async function notificarFactura(
   // 🚨 Una factura que se cobra SOLA (domiciliada/tarjeta/plataforma) no se «paga»: sin botón Pagar.
   const forma = (await formasPago(cuentaId, [proveedor])).get(proveedor) ?? 'desconocida'
   const sola = forma === 'cargo_automatico' || forma === 'plataforma'
+  // Tarjeta: true = se cobra con tarjeta (sin Pagar). null/error de lectura = no se sabe → comportamiento de siempre.
+  const tarjeta = (await proveedoresTarjeta(cuentaId, [proveedor]).catch(() => null))?.get(proveedor) ?? null
   const permitirPagarOriginal = permitirPagar
-  if (sola || bancoNoComprobado) permitirPagar = false
-  const prefijo = (bancoNoComprobado ? '⚠️ No pude comprobar el banco: sin botón Pagar por ahora\n' : '') + prefijoAviso(forma, permitirPagarOriginal, motivoRevision)
+  if (sola || bancoNoComprobado || !pagableAMano(tarjeta)) permitirPagar = false
+  const prefijo = (bancoNoComprobado ? '⚠️ No pude comprobar el banco: sin botón Pagar por ahora\n' : '') + prefijoAviso(forma, permitirPagarOriginal, motivoRevision, tarjeta)
   const texto = `${prefijo}🧾 <b>${proveedor}</b> · ${eur(importe)}${vence}${budgetLinea}`
   const botones = sola
     ? [[{ texto: '❌ Rechazar', callback: `pago_rechazar:${facturaId}` }]]
@@ -367,6 +381,37 @@ async function notificarFactura(
   } catch { /* Telegram no crítico */ }
 }
 
+/** Aviso 🧾 de SQB: desglose de verificación + «pendiente de tu transferencia»; solo Aplazar/Rechazar. */
+async function notificarVerificacionSqb(facturaId: string, proveedor: string, importe: number, cuentaId: string): Promise<void> {
+  const cola = '\nPendiente de tu transferencia.'
+  let texto = ''
+  try {
+    const num = await prisma.$queryRaw<{ numero_factura: string | null }[]>(Prisma.sql`
+      SELECT numero_factura FROM facturas_proveedor WHERE id = ${facturaId}::uuid AND cuenta_id = ${cuentaId}::uuid LIMIT 1`)
+    const numero = num[0]?.numero_factura ?? null
+    const r = numero ? await verificarSqbGuardada(cuentaId, numero) : null
+    if (r?.avisada) {
+      // El triaje del correo ya mandó el desglose completo: aquí solo los botones, sin repetirlo.
+      texto = `🧾 <b>${proveedor}</b> · ${eur(importe)} — verificación enviada arriba.${cola}`
+    } else if (r?.v) {
+      texto = mensajeVerificacionSqb(r.v)
+    } else {
+      texto = `🧾 <b>${proveedor}</b> · ${eur(importe)}\n❔ Sin verificar: aún no he leído el PDF de limpiezas para cuadrarlo (no es un ✅).${cola}`
+    }
+  } catch {
+    texto = `🧾 <b>${proveedor}</b> · ${eur(importe)}\n⚠️ No he podido cuadrarla con las limpiezas: revísala a mano.${cola}`
+  }
+  try {
+    const msgId = await tgAvisoBotones('facturas.pago-aprobar', texto, botonesVerificacionSqb(facturaId))
+    if (msgId) {
+      await prisma.$executeRaw(Prisma.sql`
+        UPDATE facturas_proveedor SET telegram_msg_id = ${msgId}, estado = 'pendiente_revision'
+        WHERE id = ${facturaId}::uuid
+      `)
+    }
+  } catch { /* Telegram no crítico */ }
+}
+
 // ── Aprobar pago ──────────────────────────────────────────────────────────────
 
 export async function aprobarPago(
@@ -394,6 +439,11 @@ export async function aprobarPago(
     return { ok: false, yaPagada: true, error: `Esta factura (${factura.proveedor} · ${eur(factura.importe)}) está ${textoYaPagada(fechaCargo)}. No se inicia ningún pago.` }
   }
   if (!pagable) return { ok: false, error: `Estado actual: ${factura.estado}` }
+  // 🚨 Factura de tarjeta (true): no se paga a mano, el cargo la cerrará. null/fallo de lectura = no se sabe (sigue).
+  const tarjeta = (await proveedoresTarjeta(cuentaId, [factura.proveedor]).catch(() => null))?.get(factura.proveedor) ?? null
+  if (!pagableAMano(tarjeta)) {
+    return { ok: false, error: `${factura.proveedor} se cobra con tarjeta: no se paga a mano. La factura se cerrará sola cuando entre el cargo.` }
+  }
   if (veredicto === 'sin_comprobar') {
     return { ok: false, error: 'No pude comprobar el banco para descartar que ya esté pagada. No se ha iniciado el pago; inténtalo de nuevo en unos minutos.' }
   }
@@ -614,7 +664,8 @@ export async function pagarTodo(cuentaId: string): Promise<{ ok: number; error: 
   `)
   // 🚨 Solo las que exigen transferencia: lo domiciliado/tarjeta/plataforma o sin forma conocida NO se paga a mano.
   const formas = await formasPago(cuentaId, facturas.map(f => f.proveedor))
-  const aPagar = facturas.filter(f => formas.get(f.proveedor) === 'transferencia')
+  const tarjetas = await proveedoresTarjeta(cuentaId, facturas.map(f => f.proveedor)).catch(() => new Map<string, boolean | null>())
+  const aPagar = sinFacturasTarjeta(facturas, tarjetas).filter(f => formas.get(f.proveedor) === 'transferencia')
   const debtorIban = process.env.EB_DEBTOR_IBAN ?? ''
   let ok = 0, error = 0
   for (const f of aPagar) {
@@ -632,11 +683,12 @@ export async function pagarTodo(cuentaId: string): Promise<{ ok: number; error: 
  * deja `desconocida` (no inventa una obligación de pago).
  */
 /** Prefijo del aviso: «se cobra sola» y «revisar documento» CONVIVEN (la revisión no se pisa). */
-export function prefijoAviso(forma: FormaPago, permitirPagar: boolean, motivoRevision: 'sin_numero_ni_iva' | 'tipo_dudoso'): string {
+export function prefijoAviso(forma: FormaPago, permitirPagar: boolean, motivoRevision: 'sin_numero_ni_iva' | 'tipo_dudoso', tarjeta: boolean | null = null): string {
   const sola = forma === 'cargo_automatico' || forma === 'plataforma'
   const revisar = permitirPagar ? '' : motivoRevision === 'tipo_dudoso' ? '⚠️ Revisar: documento dudoso\n' : '⚠️ Revisar: sin nº de factura ni IVA\n'
   const aviso = sola ? `🏦 Se cobra sola (${forma === 'plataforma' ? 'la plataforma lo descuenta' : 'banco/tarjeta'}): no hay que pagarla\n` : ''
-  return revisar + aviso
+  const conTarjeta = notaTarjeta(tarjeta, sola)
+  return revisar + aviso + conTarjeta
 }
 
 async function formasPago(cuentaId: string, proveedores: string[]): Promise<Map<string, FormaPago>> {

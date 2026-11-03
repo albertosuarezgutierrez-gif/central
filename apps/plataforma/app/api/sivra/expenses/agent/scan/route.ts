@@ -1,6 +1,8 @@
 // Cron diario del agente de facturas: lee Gmail + Drive, imputa/encola y avisa.
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
+import { prisma } from '@/lib/db'
+import { Prisma } from '@prisma/client'
 import { listarCandidatosConLimite, marcarProcesado } from '@/lib/agente-facturas/gmail'
 import { listNuevos, getContenido, archivar, subir } from '@/lib/agente-facturas/drive'
 import { extraerDesdeBuffer } from '@/lib/agente-facturas/extraer'
@@ -8,6 +10,7 @@ import { procesarFactura, clasificarDocumento, type ProcesarResult } from '@/lib
 import { recurrentesQueFaltan, domiciliadosSinCargo } from '@/lib/agente-facturas/anomalias'
 import { avisaBandeja, avisaSinAdjunto, avisaSinDrive, avisaNoLegibles, avisaAjenas, avisaRecurrentesQueFaltan, avisaDomiciliadosSinCargo, resumen, type PendienteAviso } from '@/lib/agente-facturas/avisos'
 import { cargarTitulares } from '@/lib/agente-facturas/titulares'
+import { avisarTarjetaSinCargo } from '@/lib/agente-facturas/tarjeta-cargos'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -140,6 +143,9 @@ export async function GET(req: NextRequest) {
     // se avisa; si el extracto no llega a esa fecha, se declara el hueco (no se afirma).
     const dom = await domiciliadosSinCargo(now.toISOString().slice(0, 10))
     await avisaDomiciliadosSinCargo(dom.avisos, dom.sinCobertura, dom.cuentasParadas)
+    // Facturas de tarjeta sin cargo a los 10 días (por cuenta; un fallo no corta el resumen).
+    const cuentasTarjeta = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`SELECT id::text AS id FROM cuentas`).catch(() => [])
+    for (const c of cuentasTarjeta) await avisarTarjetaSinCargo(c.id).catch((e) => console.error('[scan] tarjeta sin cargo:', e))
     await resumen({ fuente: 'diario', ...stats })
   } catch (e) {
     console.error('[scan] avisos error:', e)
