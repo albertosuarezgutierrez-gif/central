@@ -281,7 +281,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (03/11/2026) 03/11/2026) Correduría · regularización RC fase 3 (respuesta a Occident + cierre manual)
+- (03/11/2026) 03/11/2026) Correduría · regularización RC fase 3 (respuesta a Occident + cierre manual) — ✅ PR #5472 mergeado
 - (03/11/2026) 03/11/2026) Correduría · buscador de cartera tolerante (caso Antonio Villegas)
 - (03/11/2026) 03/11/2026) Correduría · regularización RC de Occident automatizada (fases 1-2)
 - (03/11/2026) 03/11/2026) Sivra · mensajes de huésped de Agoda por correo
