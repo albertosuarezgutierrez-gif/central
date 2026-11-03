@@ -5,6 +5,7 @@
 import { describe, it, expect } from 'vitest'
 import { validarFormularioAuto } from './formulario-auto.ts'
 import { validarFormularioHogar } from './formulario-hogar.ts'
+import { validarFormularioPatinete } from './formulario-patinete.ts'
 import { validarFormularioComunidad } from './capacidades.ts'
 import {
   capacidadesConObligatorios,
@@ -67,12 +68,21 @@ const comunidad = () => ({
   listaPropietarios: '> 50%',
 })
 
-const COMPLETO: Record<string, () => Record<string, unknown>> = { auto: coche, moto, hogar, comunidades: comunidad }
+const patinete = () => ({
+  ramo: 'patinete',
+  vmp: { marca: 'MARCA', modelo: 'MODELO', usoProfesional: false, homologado: true, velocidadLimitada25: true },
+  codigoPostal: '41001',
+  poblacion: 'SEVILLA',
+  conductor: { fechaNacimiento: '1985-03-10' },
+  tomador: { documentoIdentidad: '00000000T' },
+})
+const COMPLETO: Record<string, () => Record<string, unknown>> = { auto: coche, moto, hogar, comunidades: comunidad, patinete }
 const VALIDA: Record<string, (x: unknown) => boolean> = {
   auto: (x) => validarFormularioAuto(x, HOY).ok,
   moto: (x) => validarFormularioAuto(x, HOY).ok,
   hogar: (x) => validarFormularioHogar(x, HOY).ok,
   comunidades: (x) => validarFormularioComunidad(x, HOY).ok,
+  patinete: (x) => validarFormularioPatinete(x, HOY).ok,
 }
 
 function sinRuta(o: Record<string, unknown>, ruta: string): Record<string, unknown> {
@@ -91,8 +101,8 @@ function conRuta(o: Record<string, unknown>, ruta: string, v: unknown): void {
 }
 
 describe('obligatorios · declaraciones', () => {
-  it('los 9 bots (registrados o en construcción) tienen declaración; lo desconocido es null («no se sabe»), nunca []', () => {
-    const esperados = ['allianz::comunidades', 'allianz::moto', 'allianz::auto', 'allianz::hogar', 'mapfre::auto', 'mapfre::moto', 'mapfre::hogar', 'occident::hogar', 'generali::auto']
+  it('los 10 bots (registrados o en construcción) tienen declaración; lo desconocido es null («no se sabe»), nunca []', () => {
+    const esperados = ['allianz::comunidades', 'allianz::moto', 'allianz::auto', 'allianz::hogar', 'mapfre::auto', 'mapfre::moto', 'mapfre::hogar', 'occident::hogar', 'generali::auto', 'allianz::patinete']
     expect(capacidadesConObligatorios().map((c) => `${c.compania}::${c.ramo}`).sort()).toEqual([...esperados].sort())
     for (const k of esperados) {
       const [c, r] = k.split('::')
@@ -123,7 +133,7 @@ describe('obligatorios · declaraciones', () => {
 })
 
 describe('obligatorios · forma del ramo ⇔ validador del ramo', () => {
-  for (const ramo of ['auto', 'moto', 'hogar', 'comunidades']) {
+  for (const ramo of ['auto', 'moto', 'hogar', 'comunidades', 'patinete']) {
     it(`${ramo}: el formulario completo pasa el validador`, () => {
       expect(VALIDA[ramo](COMPLETO[ramo]())).toBe(true)
     })

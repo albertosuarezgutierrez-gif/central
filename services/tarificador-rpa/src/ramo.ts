@@ -1,6 +1,7 @@
 // Runner tipado por ramo (13/10/2026). El registro guarda adaptadores de CUALQUIER ramo; este módulo (puro, sin
 // Playwright ni red) los estrecha por su `ramo` declarado y valida el riesgo del trabajo con el validador DE ESE RAMO:
-//   · comunidades → `validarRiesgoComunidad`  · auto / moto → `validarFormularioAuto`  · hogar → `validarFormularioHogar`.
+//   · comunidades → `validarRiesgoComunidad`  · auto / moto → `validarFormularioAuto`  · hogar → `validarFormularioHogar`
+//   · patinete → `validarFormularioPatinete`.
 // Sin casts: el `switch` sobre `adaptador.ramo` estrecha la unión discriminada. Un ramo sin validador es un error de
 // compilación (exhaustividad), no un trabajo que se cuela con otra forma de riesgo.
 import {
@@ -8,9 +9,11 @@ import {
   mensajeFaltan,
   validarFormularioAuto,
   validarFormularioHogar,
+  validarFormularioPatinete,
   validarRiesgoComunidad,
   type FormularioAuto,
   type FormularioHogar,
+  type FormularioPatinete,
   type ResultadoAdaptador,
   type RiesgoComunidad,
   type TarificadorAdapter,
@@ -25,8 +28,10 @@ export type AdaptadorComunidades = AdaptadorPortal
 export type AdaptadorVehiculo = TarificadorAdapter<Page, FormularioAuto, ContextoPortal> & ExtrasAdaptador & { readonly ramo: 'auto' | 'moto' }
 /** Hogar (14/10/2026): riesgo `FormularioHogar`. Primer adaptador: Allianz ePAC, tras `ALLIANZ_HOGAR_ACTIVO` (apagado). */
 export type AdaptadorHogar = TarificadorAdapter<Page, FormularioHogar, ContextoPortal> & ExtrasAdaptador & { readonly ramo: 'hogar' }
+/** Patinete / VMP (03/11/2026): riesgo `FormularioPatinete`. Primer adaptador: Allianz ePAC «Movilidad Personal», tras `ALLIANZ_PATINETE_ACTIVO` (apagado). */
+export type AdaptadorPatinete = TarificadorAdapter<Page, FormularioPatinete, ContextoPortal> & ExtrasAdaptador & { readonly ramo: 'patinete' }
 /** Lo que guarda el registro del worker. */
-export type AdaptadorRegistrado = AdaptadorComunidades | AdaptadorVehiculo | AdaptadorHogar
+export type AdaptadorRegistrado = AdaptadorComunidades | AdaptadorVehiculo | AdaptadorHogar | AdaptadorPatinete
 
 export type TrabajoPreparado =
   | {
@@ -69,6 +74,11 @@ function prepararForma(adaptador: AdaptadorRegistrado, crudo: unknown, hoy: Date
     }
     case 'hogar': {
       const v = validarFormularioHogar(crudo, hoy)
+      if (!v.ok) return { ok: false, errores: v.errores }
+      return { ok: true, comunidad: null, tarificar: (page, ctx) => adaptador.tarificar(page, v.formulario, ctx) }
+    }
+    case 'patinete': {
+      const v = validarFormularioPatinete(crudo, hoy)
       if (!v.ok) return { ok: false, errores: v.errores }
       return { ok: true, comunidad: null, tarificar: (page, ctx) => adaptador.tarificar(page, v.formulario, ctx) }
     }

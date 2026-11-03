@@ -169,6 +169,7 @@ export {
   type ValidacionFormularioHogar,
   type ValidacionFormularioHogarSinTomador,
 } from './formulario-hogar.ts'
+export { validarFormularioPatinete, type DatosVmp, type FormularioPatinete, type ValidacionFormularioPatinete } from './formulario-patinete.ts'
 
 // Constructor del riesgo de HOGAR para los bots (movido de plataforma el 27/10/2026; lo usan «pedir precio» y «Probar» de asegura).
 export {
