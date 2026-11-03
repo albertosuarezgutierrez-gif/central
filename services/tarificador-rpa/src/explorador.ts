@@ -126,6 +126,9 @@ const TOPE_PASO_MS = 30_000
 /** Margen sobre el tope de tiempo del explorador para cerrar y mandar el resultado. */
 const MARGEN_CIERRE_MS = 90_000
 const ATRIBUTO_MARCA = 'data-explorador-ref'
+/** Re-localizaciones de un `rellenar` tras acciones hechas del mismo lote (repintado OsAjax de Fidelidade): máximo por lote. */
+export const MAX_RELOCALIZACIONES_LOTE = 3
+
 /** Lotes seguidos cortados por repintado (sin completar ninguno) antes de darlo por bucle. */
 const MAX_REPINTADOS_SEGUIDOS = 4
 /** Tras rellenar un campo que autocompleta (CP, provincia…): margen para que el portal repinte antes de reinventariar. */
@@ -646,6 +649,10 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
       const antes = { huella, elementos: nElementos(inv) }
       /** Acciones de ESTE lote que ya tocaron el portal: con alguna hecha, un nodo que ya no está = repintado, no ambigüedad. */
       let hechas = 0
+      /** Re-localizaciones de `rellenar` tras acciones hechas en ESTE lote (tope `MAX_RELOCALIZACIONES_LOTE`). */
+      let relocalizacionesLote = 0
+      /** `elegir` de desplegable ya hechos en ESTE lote: su `change` es lo que repinta (postback OsAjax); solo entonces se re-localiza un `rellenar`. */
+      let hechasElegir = 0
       /** Corta el lote: las acciones que quedan SIN ejecutar viajan como incidencias `lote_cortado` (ref + clave; sin valor). */
       const cortarLote = (desde: number, corte: MotivoCorteLote, primera?: Exclude<Localizado, { loc: Locator }>) => {
         const pendientes = incidenciasLoteCortado(lote.slice(desde), corte, primera)
@@ -701,6 +708,24 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
           } else {
             incidencias.push({ accion: 'rellenar', ref: a.ref, dato: a.dato, causa: 'nodo_no_relocalizado', ...(fallo ? { motivo: fallo.motivo, ...(fallo.visibilidad ? { visibilidad: fallo.visibilidad } : {}) } : {}) })
             throw new Parar('ambiguo', 'nodo_no_relocalizado')
+          }
+        }
+        // Fidelidade real 03/11/2026, Domicilio.aspx: provincia › municipio › tipo de vía repintan la página y `nombre_via` quedaba como
+        // `lote_cortado_por_repintado`): un `rellenar` cuyo nodo ya no está TRAS un `elegir` hecho en el lote se re-localiza sobre el DOM nuevo
+        // (espera a la pantalla quieta, re-inventaría y busca el MISMO control por su identidad, con la huella validada del paso: fail-closed),
+        // como el `rellenar` primero. Máx. `MAX_RELOCALIZACIONES_LOTE` por lote; si no aparece, se corta como siempre (no se adivina).
+        if (!loc && hechasElegir > 0 && a.accion === 'rellenar' && relocalizacionesLote < MAX_RELOCALIZACIONES_LOTE) {
+          relocalizacionesLote++
+          const re = await relocalizar(page, hit.el, hit.marco, huella, k.esperaRepintadoMs ?? ESPERA_REPINTADO_MS, estabilidad, vigia, pistas)
+          k.log('exploracion_relocalizacion', { n: pasos, ref: a.ref, estado: re ? 'ok' : 'no_encontrado', tras: 'acciones_del_lote' })
+          if (re) {
+            ({ loc, hit } = re)
+            try {
+              exigirSinCuenta(hit.el)
+            } catch (err) {
+              await loc.evaluate((n, at) => n.removeAttribute(at), ATRIBUTO_MARCA, { timeout: TOPE_COMPROBACION_REF_MS }).catch(() => undefined)
+              throw err
+            }
           }
         }
         if (!loc) {
@@ -832,6 +857,10 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
             const elegidas = await loc.selectOption({ value: a.opcion.valor }, { timeout: 10_000 })
             if (elegidas.length !== 1 || elegidas[0] !== a.opcion.valor) throw new Parar('ambiguo', 'opcion_no_aplicada')
             hechas++
+            hechasElegir++
+            // El `change` de un desplegable puede lanzar un postback OsAjax que repinta la página (Fidelidade: provincia › municipio › vía):
+            // con acciones detrás se espera a la pantalla quieta (tope de `asentar`) antes de seguir, en vez de escribir sobre un DOM a medio repintar.
+            if (i < lote.length - 1) await asentar('tras_elegir')
           } else if (a.accion === 'marcar') {
             // 0.3.15: una casilla ya marcada no se pulsa (desmarcaría); el radio sí (idempotente).
             const esCasilla = ((hit.el.type ?? '').toLowerCase() === 'checkbox')
