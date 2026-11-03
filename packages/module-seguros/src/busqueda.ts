@@ -29,6 +29,8 @@
 // a nadie» y «por ahí no he podido buscar» son cosas distintas, y la segunda
 // dice qué hacer en su lugar.
 
+import { normalizarDni } from './cliente-edicion.ts'
+
 export type TipoCriterio =
   | 'nombre'
   | 'matricula'
@@ -96,19 +98,30 @@ const RE_CP = /^\d{5}$/
 const RE_POLIZA = /^[A-Z0-9][A-Z0-9\/-]{3,}$/
 
 /**
- * Solo los dígitos de un número de póliza, si hay los bastantes para que sea
- * un identificador y no ruido. El cliente dicta «G-H-R 410001512» y en BD está
- * «HR-G-410001512»: las letras y los guiones no coinciden, los dígitos sí
- * (03/11/2026). Con menos de 6 dígitos devuelve null: casaría media cartera.
+ * Solo los dígitos de un número de póliza, si la CONSULTA parece un número de
+ * póliza dictado (el cliente dice «G-H-R 410001512» y en BD está
+ * «HR-G-410001512»: las letras y guiones no coinciden, los dígitos sí).
+ * Devuelve null (no se busca por dígitos) si: hay menos de 6 dígitos (casaría
+ * media cartera); hay más de 4 letras o alguna palabra de 4+ letras seguidas
+ * («Juan 637349990» es un nombre con teléfono); es un DNI/NIE/CIF válido
+ * («28823484E»); o son 9 dígitos de teléfono español (empiezan por 6-9).
  */
 export const MIN_DIGITOS_POLIZA = 6
+export const MAX_LETRAS_POLIZA = 4
 export function digitosDePoliza(valor: string): string | null {
-  const d = valor.replace(/\D/g, '')
-  return d.length >= MIN_DIGITOS_POLIZA ? d : null
+  const compactoV = valor.toUpperCase().replace(/[^\p{L}\p{N}]/gu, '')
+  const d = compactoV.replace(/\D/g, '')
+  if (d.length < MIN_DIGITOS_POLIZA) return null
+  const letras = compactoV.replace(/[^\p{L}]/gu, '')
+  if (letras.length > MAX_LETRAS_POLIZA) return null
+  if (/\p{L}{4,}/u.test(compactoV)) return null
+  if (normalizarDni(compactoV).ok) return null
+  if (/^[6-9]\d{8}$/.test(d)) return null
+  return d
 }
 
 /**
- * Nombre tolerante a UNA letra de diferencia («Villegas» ↔ «Villega Sanchez»).
+ * Nombre tolerante a una letra de MÁS o de MENOS al final («Villegas» ↔ «Villega Sanchez»; no cubre sustituciones).
  * En SQL lo hace `extensions.word_similarity(...) >= UMBRAL_NOMBRE_DIFUSO`
  * (pg_trgm), solo para palabras de >= MIN_LETRAS_NOMBRE_DIFUSO letras; los
  * mismos números viven aquí para que el SQL y el test no diverjan. Medido

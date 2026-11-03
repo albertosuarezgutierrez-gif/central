@@ -61,6 +61,7 @@ import {
 } from '@central/module-seguros-pii'
 import { Prisma } from './generated/asegura-client'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
+import { registrarErrorCartera } from './error-cartera'
 import { ordenarPorInteres } from './orden-hallazgos'
 import { campoIlegible, descifrarCampo } from './cartera-edicion'
 
@@ -351,7 +352,7 @@ async function porNombre(correduriaId: string, c: Criterio): Promise<BloqueResul
   const db = prismaAsegura()
   const palabras = c.valor.split(/\s+/).slice(0, 4)
 
-  // Tolerancia a 1 letra (pg_trgm, schema `extensions`; palabras de ≥5 letras):
+  // Tolerancia a una letra de MÁS o de MENOS (no sustituciones; pg_trgm en schema `extensions`, umbral 0,7, palabras de ≥5 letras):
   // «Villegas» encuentra «Villega Sanchez». Alternativa OR al ilike; el ranking
   // pone antes las fichas que casan EXACTO.
   const exacta = (p: string) =>
@@ -381,7 +382,9 @@ async function porNombre(correduriaId: string, c: Criterio): Promise<BloqueResul
       and ${condicionUnaccent}
     order by (case when ${todasExactas} then 0 else 1 end), cl.apellidos asc, cl.nombre asc
     limit ${LIMITE}
-  `.catch(async () => {
+  `.catch(async (e) => {
+    // Si pg_trgm/unaccent fallan se cae al ILIKE simple, pero el fallo se registra.
+    registrarErrorCartera('porNombre', e)
     return db.$queryRaw<{ id: string; nombre: string; apellidos: string; tipo: string }[]>`
       select cl.id, cl.nombre, cl.apellidos, cl.tipo::text as tipo
       from clientes cl
@@ -425,7 +428,9 @@ async function porCiudad(correduriaId: string, c: Criterio): Promise<BloqueResul
       and extensions.unaccent(cl.ciudad) ilike extensions.unaccent(${'%' + c.valor + '%'})
     order by cl.apellidos asc
     limit ${LIMITE}
-  `.catch(async () => {
+  `.catch(async (e) => {
+    // Si pg_trgm/unaccent fallan se cae al ILIKE simple, pero el fallo se registra.
+    registrarErrorCartera('porNombre', e)
     return db.$queryRaw<{ id: string; nombre: string; apellidos: string; tipo: string }[]>`
       select cl.id, cl.nombre, cl.apellidos, cl.tipo::text as tipo
       from clientes cl
@@ -695,6 +700,7 @@ async function porNumeroPoliza(correduriaId: string, c: Criterio): Promise<Bloqu
         or (${digitos}::text is not null
             and regexp_replace(p.numero_poliza, '[^0-9]', '', 'g') like ${'%' + (digitos ?? '') + '%'})
       )
+    order by (case when regexp_replace(upper(p.numero_poliza), '[^A-Z0-9]', '', 'g') like ${'%' + c.valor + '%'} then 0 else 1 end)
     limit ${LIMITE}
   `
   const filas = await db.poliza.findMany({

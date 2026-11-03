@@ -1,6 +1,15 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { avisoDireccion, direccionCoincide, explicarVacio, normalizarDireccion, planBusqueda } from './busqueda.ts'
+import { readFileSync } from 'node:fs'
+import {
+  admiteNombreDifuso,
+  avisoDireccion,
+  digitosDePoliza,
+  direccionCoincide,
+  explicarVacio,
+  normalizarDireccion,
+  planBusqueda,
+} from './busqueda.ts'
 
 const tipos = (t: string) => planBusqueda(t).criterios.map((c) => c.tipo).sort()
 
@@ -135,22 +144,27 @@ test('una palabra suelta NO es un usuario de email: «alberto» sigue siendo sol
   assert.ok(!tipos('alberto suarez').includes('email_usuario'))
 })
 
-import { readFileSync } from 'node:fs'
-import { admiteNombreDifuso, digitosDePoliza } from './busqueda.ts'
-
-test('póliza dictada con letras sueltas: «G-H-R 410001512» se busca también por sus dígitos', () => {
-  const plan = planBusqueda('G-H-R 410001512')
-  const k = plan.criterios.find((x) => x.tipo === 'poliza')
-  assert.ok(k, 'debe haber criterio poliza')
-  const d = digitosDePoliza(k.valor)
-  assert.equal(d, '410001512')
-  // «HR-G-410001512» comparado SOLO por dígitos
-  assert.ok('HR-G-410001512'.replace(/\D/g, '').includes(d))
+test('póliza dictada: «G-H-R 410001512» y «410001512» se buscan también por sus dígitos', () => {
+  for (const q of ['G-H-R 410001512', '410001512', 'HR-G-410001512', 'AB123456']) {
+    const k = planBusqueda(q).criterios.find((x) => x.tipo === 'poliza')
+    assert.ok(k, `${q}: debe haber criterio poliza`)
+    assert.ok(digitosDePoliza(k.valor), `${q}: debe dar dígitos`)
+  }
+  assert.equal(digitosDePoliza('G-H-R 410001512'), '410001512')
 })
 
 test('dígitos de póliza: menos de 6 no se usan (casaría media cartera)', () => {
   assert.equal(digitosDePoliza('AB12345'), null)
   assert.equal(digitosDePoliza('AB123456'), '123456')
+})
+
+test('dígitos de póliza: un nombre con teléfono o un DNI NO activan la rama', () => {
+  assert.equal(digitosDePoliza('Juan 637349990'), null)
+  assert.equal(digitosDePoliza('Ana 637349990'), null)
+  assert.equal(digitosDePoliza('28823484E Alberto'), null)
+  assert.equal(digitosDePoliza('28823484E'), null)
+  assert.equal(digitosDePoliza('X1234567L'), null)
+  assert.equal(digitosDePoliza('A-B-C-D-E 410001512'), null)
 })
 
 test('nombre difuso: solo palabras de >=5 letras', () => {
@@ -159,11 +173,13 @@ test('nombre difuso: solo palabras de >=5 letras', () => {
   assert.equal(admiteNombreDifuso('Ruiz'), false)
 })
 
-test('cepo SQL: la búsqueda real usa pg_trgm (alternativa al ilike) y los dígitos de la póliza', () => {
+test('cepo SQL: la búsqueda real usa pg_trgm (letra de más o de menos) y los dígitos de la póliza', () => {
   const src = readFileSync(new URL('../../../apps/asegura/lib/cartera-busqueda.ts', import.meta.url), 'utf8')
   assert.match(src, /extensions\.word_similarity\(/, 'nombre difuso: «Villegas» ↔ «Villega Sanchez»')
   assert.match(src, /admiteNombreDifuso\(p\)/)
   assert.match(src, /order by \(case when \$\{todasExactas\} then 0 else 1 end\)/, 'exactos antes que difusos')
   assert.match(src, /regexp_replace\(p\.numero_poliza, '\[\^0-9\]', '', 'g'\) like/, 'póliza por solo dígitos')
+  assert.match(src, /order by \(case when regexp_replace\(upper\(p\.numero_poliza\)/, 'póliza: compacta exacta antes que solo dígitos')
+  assert.match(src, /registrarErrorCartera\('porNombre'/)
   assert.match(src, /merged_into_cliente_id is null/)
 })
