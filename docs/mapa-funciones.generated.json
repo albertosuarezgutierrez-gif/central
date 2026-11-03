@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-03T08:35:09Z",
-  "sha": "a9532a14640c279e1d088b939a3c9e8f5af57b05",
+  "generadoEn": "2026-11-03T09:37:03Z",
+  "sha": "d47365e8450de06a6beee431dd662faf24abd201",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -147852,7 +147852,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 62
+          "linea": 63
         },
         {
           "nombre": "fmt",
@@ -147860,7 +147860,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 63
+          "linea": 64
         },
         {
           "nombre": "GET",
@@ -147868,7 +147868,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 82,
+          "linea": 83,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -147877,7 +147877,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 86
+          "linea": 87
         }
       ],
       "tablas": [
@@ -147900,7 +147900,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "e3d4c8c507d1"
+      "hash": "1e8bcbb8eebd"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -190689,6 +190689,48 @@
       "hash": "569d890e48ed"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/cargos-ya-facturados.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Dedupe del P&L por piso: un pago con factura en `gastos` Y su cargo de tarjeta asignado al piso se contaba DOS veces (caso real: televisor de 1.749€ restaba 3.498€). El enlace explícito es la convención ya existente `movimientos_bancarios.factura_ref = 'gasto:<uuid>'` (el conciliador de lib/concilia",
+      "exporta": [
+        "idGastoDeRef",
+        "cargoYaFacturado",
+        "sumarCargosSinFactura"
+      ],
+      "funciones": [
+        {
+          "nombre": "idGastoDeRef",
+          "kind": "function",
+          "exportada": true,
+          "params": "ref: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 22,
+          "resumen": "Id del gasto que cita un `factura_ref`, o null si no es una referencia a gasto."
+        },
+        {
+          "nombre": "cargoYaFacturado",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Pick<CargoPiso, 'factura_ref' | 'gasto_existe'>",
+          "retorno": "boolean",
+          "linea": 28,
+          "resumen": "¿El cargo ya está representado por una factura en `gastos`?"
+        },
+        {
+          "nombre": "sumarCargosSinFactura",
+          "kind": "function",
+          "exportada": true,
+          "params": "cargos: CargoPiso[]",
+          "retorno": "Map<string, number>",
+          "linea": 33,
+          "resumen": "Importe (positivo) de los cargos NO representados por un gasto, sumado por piso."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9c1cf9b38c02"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/catastro-pisos-logica.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/catastro-pisos-logica.ts — qué se escribe en `properties.catastro_*` según lo que conteste el Catastro. PURO (solo tipos) → testeable con node --test. Regla del repo «dato que NO hay ≠ dato que NO se ha mirado»: los datos solo se escriben con `estado: 'ok'`. Cualquier otro desenlace deja m",
@@ -194880,7 +194922,7 @@
           "exportada": false,
           "params": "",
           "retorno": "PLGastosPiso",
-          "linea": 79
+          "linea": 80
         },
         {
           "nombre": "catToField",
@@ -194888,7 +194930,7 @@
           "exportada": false,
           "params": "categoria: string",
           "retorno": "CampoGasto",
-          "linea": 90
+          "linea": 91
         },
         {
           "nombre": "getPLMensual",
@@ -194896,7 +194938,7 @@
           "exportada": true,
           "params": "mes: string",
           "retorno": "Promise<PLMensual>",
-          "linea": 101
+          "linea": 102
         },
         {
           "nombre": "mesPorDefecto",
@@ -194904,7 +194946,7 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 399,
+          "linea": 406,
           "resumen": "Mes anterior al actual en formato 'YYYY-MM'"
         }
       ],
@@ -194918,7 +194960,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "f5ac5e14a941"
+      "hash": "9b45a7303008"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pl-rango-logica.ts",
@@ -195759,6 +195801,28 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "c2554197c39c"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/pricing-capa-final.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pricing-capa-final.ts — QUÉ CAPA decidió el precio final de una noche del apply. POR QUÉ (03/11/2026): el motor compone prima vie/sáb, raíl, suelos y techos, y `pricing_applied` solo guardaba el resultado. Sin la capa no se puede atribuir el efecto de la prima ni de los suelos sin estimarl",
+      "exporta": [
+        "decidirCapaFinal"
+      ],
+      "funciones": [
+        {
+          "nombre": "decidirCapaFinal",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: CapaInput",
+          "retorno": "CapaFinal",
+          "linea": 47,
+          "resumen": "Capa que decidió el precio. Prioridad: lo último que pudo tocar el número, hacia atrás."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5b13d4127c2b"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-centinelas.ts",
@@ -269298,7 +269362,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5540,
-    "funciones": 21756
+    "archivos": 5542,
+    "funciones": 21760
   }
 }
