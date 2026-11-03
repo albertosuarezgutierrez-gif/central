@@ -111,6 +111,16 @@ test('remapeo de lectura: claves genéricas de una oferta de coche antigua se al
   assert.equal(remapearGarantiasLectura('hogar', { rc_general: inc }).garantias.rc_general, inc)
 })
 
+// 🪤 03/11/2026 (AS-26-0067): el jsonb de Postgres ordena las claves por longitud, así que «*Indemnización» (sub-garantía de Mapfre sin canónica)
+// llega PRIMERO y creaba su propia fila con las celdas de las demás ofertas vacías. Para verlo en rojo: vuelve a exigir `previo !== null`.
+test('remapeo de lectura: una sub-garantía sin canónica no crea fila aunque llegue la primera (orden del jsonb)', async () => {
+  const { remapearGarantiasLectura } = await import('./coberturas-taxonomia.ts')
+  const exc = { estado: 'excluida' as const, capital: null, limite: null, franquicia: null }
+  const inc = { estado: 'incluida' as const, capital: null, limite: null, franquicia: null }
+  const r = remapearGarantiasLectura('auto', { '*Indemnización': exc, 'R. C. OBLIGATORIA': inc, 'DAÑOS A. CINEGÉTICOS': exc })
+  assert.deepEqual(Object.keys(r.garantias).sort(), ['colision_animales', 'rc_obligatoria'])
+})
+
 test('bot: la oferta del portal entra por forma, con franquicia general y fraccionamiento', () => {
   const o = ofertaDeBot({
     compania: 'Compañía D', producto: 'Comunidad', primaAnualEur: 700, primaNetaEur: null, fraccionamiento: 'semestral', importeReciboEur: 350,
