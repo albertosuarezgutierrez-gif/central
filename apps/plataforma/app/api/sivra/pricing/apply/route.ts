@@ -9,6 +9,7 @@ import { factorLastMinute } from "@/lib/sivra/pricing-lastminute"
 import { factorAntelacion } from "@/lib/sivra/pricing-antelacion"
 import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
 import { anclaMercadoFecha } from "@/lib/sivra/pricing-ancla-fecha"
+import { decidirCapaFinal } from "@/lib/sivra/pricing-capa-final"
 import { sueloFinde, sueloFindePropietario } from "@/lib/sivra/pricing-suelo-finde"
 import { SQL_SUELOS_FECHA, indexarSuelosFecha, sueloFechaPropietario, sueloPropietario, type FilaSueloFecha } from "@/lib/sivra/pricing-suelo-fecha"
 import {
@@ -963,6 +964,10 @@ export async function POST(req: NextRequest) {
       target_crudo: number; clamp_floor: number; clamp_ceil: number
       // NULL cuando la fecha no tenía precio previo (`old == null`): ahí no hay raíl que anclar.
       rail_ancla: number | null; rail_ancla_origen: OrigenAncla | null
+      // Capas que movieron el precio (migración 2026-11-03_pricing_applied_capas.sql). NULL en
+      // prima/semana = no se aplicó o el piso no está en la env; no es un 1 inventado.
+      prima_finde: number | null; factor_semana: number | null
+      suelo_propietario: number | null; capa_final: string
     }[] = []
     // Fechas que la guarda «evento a ciegas» dejó sin bajar en esta pasada (van a la respuesta y
     // al aviso agrupado del final — una congelación muda sería un precio que nadie explica).
@@ -1224,6 +1229,8 @@ export async function POST(req: NextRequest) {
         ventanaDias: rFinde?.semana?.ventanaDias ?? null, factorEvento: evFactor,
       })
       if (fSem < lm.factor) bajadasSemana.push({ fecha: date, factor: fSem, lastminute: Number(lm.factor.toFixed(4)) })
+      // Solo se anota si el piso está en la env y el factor bajó de verdad (fSem < 1).
+      const factorSemanaAplicado = primaFindeHabilitada && fSem < 1 ? Number(fSem.toFixed(4)) : null
       const urg = urgenciaCombinada(lm.factor, fSem)
       if (urg < 1) target = Math.round(target * urg)
 
@@ -1234,6 +1241,7 @@ export async function POST(req: NextRequest) {
       // ámbito del raíl y la fila persistida volvería a no decir desde dónde se midió el tope.
       let railAncla: number | null = null
       let railAnclaOrigen: OrigenAncla | null = null
+      let railActuo = false
       if (old != null) {
         // Ancla del raíl = precio de AYER (ref24), no el de la pasada anterior de HOY: así el
         // tope ±max_change_pct es por DÍA aunque el cron corra 3 veces al día. Sin histórico
@@ -1250,7 +1258,9 @@ export async function POST(req: NextRequest) {
         const lo = Math.round(ancla * (1 - Number(r.max_change_pct)))
         const hi = Math.round(ancla * (1 + Number(r.max_change_pct)))
         railLo = lo
+        const antesRail = target
         target = clamp(target, lo, hi)
+        railActuo = target !== antesRail
       }
       if (r.min_price != null) target = Math.max(target, r.min_price)
       // Suelos estacionales del día que viajan a los techos de abajo: sin ellos, `acotarPorTecho`
@@ -1284,10 +1294,12 @@ export async function POST(req: NextRequest) {
       const sueloTecho = sueloFrenteTecho({ minPrice: r.min_price, sueloEstacional: sueloEstDia, sueloTemporada: sueloTempDia })
       // Suelo de FIN DE SEMANA sin mercado medido de la fecha (ver pricing-suelo-finde.ts): sin él,
       // viernes y sábado caían al mismo min_price que un martes (House 29-30/01/2027 vendido a 300€).
+      let sueloFindeAutoSubio = false
       {
         let sFinde = sueloFinde({ fecha: date, minPrice: r.min_price, fechaMedida: anclaF > 0, factorEvento: evFactor })
         if (sFinde != null) {
           if (r.max_price != null) sFinde = Math.min(sFinde, r.max_price)
+          if (target < sFinde) sueloFindeAutoSubio = true
           target = Math.max(target, sFinde)
         }
       }
@@ -1318,6 +1330,7 @@ export async function POST(req: NextRequest) {
       // Los suelos del acote (raíl del día, min_price) no pueden re-subir por encima del techo
       // del PROPIETARIO: max_price manda siempre (hoy NULL en los cuatro, pero el orden importa).
       if (r.max_price != null) target = Math.min(target, r.max_price)
+      let techoActuo = acote.acotado
       if (acote.acotado) techoAcotadas.push({ fecha: date, techo: tMkt.techo, origen: tMkt.origen! })
       // 💶 TECHO por ADR PROPIO (03/09/2026, ver pricing-techo-adr.ts). El techo de arriba mira el
       // MERCADO; este mira los euros que este piso ha cobrado de verdad ese mes. Hacia falta porque
@@ -1364,6 +1377,7 @@ export async function POST(req: NextRequest) {
         if (tAdr.motivo === 'aplicado' && tAdr.techo != null) {
           const acA = acotarPorTecho({ target, techo: tAdr.techo, old, railLo, minPrice: sueloTecho })
           if (acA.acotado) adrAcotadas.push({ fecha: date, techo: tAdr.techo, adr: Math.round(aBaseD(aq!.adr)) })
+          if (acA.acotado) techoActuo = true
           target = acA.target
           // En una fecha de EVENTO sin mercado medido, este techo es el único juicio que hay: si el
           // precio vivo lo supera, la guarda «evento a ciegas» no puede retenerlo (si no, el techo
@@ -1382,6 +1396,7 @@ export async function POST(req: NextRequest) {
       // `target < old` (y entonces old > target ≥ suelo), y la banda muerta respeta `sProp`.
       const sFechaProp = sueloFechaPropietario({ propertyId: r.property_id, fecha: date, suelos: suelosFecha, maxPrice: r.max_price })
       const sProp = sueloPropietario(sFindeProp, sFechaProp)
+      const sPropSubio = sProp != null && target < sProp
       if (sProp != null && target < sProp) {
         if (sFechaProp != null && sProp === sFechaProp) sueloFechaSubidas.push({ fecha: date, desde: target, suelo: sProp })
         else sueloFindeSubidas.push({ fecha: date, desde: target, suelo: sProp })
@@ -1506,6 +1521,15 @@ export async function POST(req: NextRequest) {
         // guardar dos veces `new_price`.
         target_crudo: Math.round(normalBase), clamp_floor: Math.round(floorD), clamp_ceil: Math.round(ceilF),
         rail_ancla: railAncla, rail_ancla_origen: railAnclaOrigen,
+        prima_finde: primaD > 1 ? primaD : null,
+        factor_semana: factorSemanaAplicado,
+        suelo_propietario: sProp,
+        capa_final: decidirCapaFinal({
+          precioFinal: target, maxPrice: r.max_price, minPrice: r.min_price, sueloEstacional: sueloEstDia,
+          sueloPropietarioSubio: sPropSubio,
+          sueloPropietarioOrigen: sProp == null ? null : (sFechaProp != null && sProp === sFechaProp ? "fecha" : "finde"),
+          sueloFindeAutoSubio, techoActuo, railActuo, prima: primaD,
+        }),
       })
     }
 
@@ -1540,9 +1564,9 @@ export async function POST(req: NextRequest) {
     if (audit.length > 0 && anotable) {
       try {
         const auditRows = audit.map(a =>
-          Prisma.sql`(${r.property_id}, ${a.rate_date}::date, ${a.old_price}::int, ${a.new_price}::int, ${dryRun}, ${a.demanda_fuente}, ${a.demanda_gateada}, ${a.antelacion_factor}::numeric, ${anclaOrigen}, ${a.base_fuente}, ${a.target_crudo}::int, ${a.clamp_floor}::int, ${a.clamp_ceil}::int, ${a.rail_ancla}::int, ${a.rail_ancla_origen})`)
+          Prisma.sql`(${r.property_id}, ${a.rate_date}::date, ${a.old_price}::int, ${a.new_price}::int, ${dryRun}, ${a.demanda_fuente}, ${a.demanda_gateada}, ${a.antelacion_factor}::numeric, ${anclaOrigen}, ${a.base_fuente}, ${a.target_crudo}::int, ${a.clamp_floor}::int, ${a.clamp_ceil}::int, ${a.rail_ancla}::int, ${a.rail_ancla_origen}, ${a.prima_finde}::numeric, ${a.factor_semana}::numeric, ${a.suelo_propietario}::int, ${a.capa_final})`)
         await prisma.$executeRaw(Prisma.sql`
-          INSERT INTO pricing_applied (property_id, rate_date, old_price, new_price, dry_run, demanda_fuente, demanda_gateada, antelacion_factor, ancla_origen, base_fuente, target_crudo, clamp_floor, clamp_ceil, rail_ancla, rail_ancla_origen)
+          INSERT INTO pricing_applied (property_id, rate_date, old_price, new_price, dry_run, demanda_fuente, demanda_gateada, antelacion_factor, ancla_origen, base_fuente, target_crudo, clamp_floor, clamp_ceil, rail_ancla, rail_ancla_origen, prima_finde, factor_semana, suelo_propietario, capa_final)
           VALUES ${Prisma.join(auditRows)}`)
       } catch { /* no crítico */ }
     }
@@ -1573,8 +1597,8 @@ export async function POST(req: NextRequest) {
       congeladas_cambio_fuente: { noches: congeladasFuente.length, muestra: congeladasFuente.slice(0, 10) },
       // Prima vie/sáb por ritmo propio (pricing-ritmo-finde.ts). `prima: null` = sin muestra o
       // lectura caída (NO se aplicó nada), distinto de `1` = medida y sin prima. `noches` = las
-      // fechas libres vie/sáb de esta pasada a las que se aplicó. NO va a `pricing_applied`: esa
-      // tabla no tiene columna de desglose para esto.
+      // fechas libres vie/sáb de esta pasada a las que se aplicó. Por noche va a `pricing_applied`
+      // (prima_finde, factor_semana, capa_final; migración 2026-11-03).
       // `habilitada:false` = calculada pero NO aplicada (piso fuera de SIVRA_PRIMA_FINDE_PISOS).
       ritmo_finde: rFinde
         ? { ...rFinde, habilitada: primaFindeHabilitada, noches: primadasFinde.length, muestra: primadasFinde.slice(0, 6) }
