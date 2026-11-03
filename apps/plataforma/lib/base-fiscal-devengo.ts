@@ -170,7 +170,7 @@ export type EntradaBase = {
    * Histórico de gastos de PISO con proveedor (año en curso + anterior, `ambito` = propertyId). Con él, los
    * recurrentes que nada más cubre se proyectan a 31/12 por su calendario. Requiere `recurrentesCubiertos`.
    */
-  historicoGastos?: GastoHist[]
+  historicoGastos?: GastoHist[] | null
   /** Plantillas activas de `gastos_fijos` (ya van en `fijosMes`): no se proyectan dos veces. Sin esta lista NO se proyecta. */
   recurrentesCubiertos?: { ambito: string; proveedor: string }[]
 }
@@ -622,7 +622,7 @@ function escalar(a: Agregado, k: number): Agregado {
 // ── Estimación de cierre de año ─────────────────────────────────────────────────────────────
 export type EscenarioId = 'base' | 'ocupacion' | 'pesimista'
 export type ConceptoSinDato = {
-  concepto: 'comision' | 'limpieza' | 'lavanderia' | 'luz' | 'agua' | 'fijos'
+  concepto: 'comision' | 'limpieza' | 'lavanderia' | 'luz' | 'agua' | 'fijos' | 'recurrentes'
   propertyId: string
   nombre: string
   /** Solo comisión: reservas del escenario sin comisión conocida y su bruto. */
@@ -785,6 +785,8 @@ export function estimarCierre(e: EntradaBase, hastaHoy: Periodo): Estimacion {
       if (mesesRestantes > 0 && luz == null) sd('luz')
       if (mesesRestantes > 0 && agua == null) sd('agua')
       if (mesesRestantes > 0 && fijos == null) sd('fijos')
+      // Se pidió proyectar recurrentes (hay lista de cubiertos) y el histórico no llegó: sin dato, no 0.
+      if (mesesRestantes > 0 && e.recurrentesCubiertos && e.historicoGastos == null) sd('recurrentes')
     }
     let baseGeneral = 0, baseEstimada = 0
     for (const b of BLOQUES) {

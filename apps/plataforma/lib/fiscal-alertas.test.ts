@@ -146,3 +146,10 @@ test('gasto recurrente al alza: Si Que Brilla / El Giraldillo / limpieza / lavan
   // Control: el mismo patrón en un proveedor fijo SÍ avisa.
   assert.equal(avisosGastosRecurrentes(porCategoria.map(g => ({ ...g, categoria: 'SUMINISTROS' })), '2026-10-31').length, 1)
 })
+
+test('gasto recurrente al alza: ámbito sin nombre → «Otro ámbito», nunca el id crudo', () => {
+  const hist = [...recSerie('Endesa', [4, 5, 6, 7, 8, 9], 100, 'prop_xyz'), { ambito: 'prop_xyz', proveedor: 'Endesa', fecha: '2026-10-05', importe: 160 }]
+  const a = avisosGastosRecurrentes(hist, '2026-10-31', {})
+  assert.equal(a.length, 1)
+  assert.match(a[0].texto, /Otro ámbito/); assert.doesNotMatch(a[0].texto, /prop_xyz/)
+})

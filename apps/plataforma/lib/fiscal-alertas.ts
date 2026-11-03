@@ -109,7 +109,7 @@ export function avisoFacturasMeses(a: AvisosDatos, hoy: string, anio: number): A
  * Un aviso por gasto recurrente (cualquier piso/negocio, detección genérica por proveedor) cuyo cargo del mes
  * supera en ≥30 % y ≥20 € la media de sus últimos 6 recibos (cadencia semestral/anual: el ciclo anterior).
  * Fuera los gastos variables por ocupación (limpieza, lavandería, Si Que Brilla, El Giraldillo).
- * `nombres` traduce el ámbito (id de piso, 'correduria'…) a texto; sin nombre se muestra el id.
+ * `nombres` traduce el ámbito (id de piso, 'correduria'…) a texto; sin nombre se muestra «Otro ámbito» (nunca el id crudo).
  */
 export function avisosGastosRecurrentes(hist: GastoHist[], hoy: string, nombres: Record<string, string> = {}): Alerta[] {
   return detectarSubidas(hist.filter(g => !esVariablePorOcupacion(g)), hoy).map(s => {
@@ -118,7 +118,7 @@ export function avisosGastosRecurrentes(hist: GastoHist[], hoy: string, nombres:
     return {
       clave: `gasto-sube-${s.mes}-${r.ambito}-${r.clave}`, soloUnaVez: true,
       texto: [
-        `📈 Gasto recurrente al alza: ${nombres[r.ambito] ?? r.ambito}`,
+        `📈 Gasto recurrente al alza: ${nombres[r.ambito] ?? 'Otro ámbito'}`,
         `${r.proveedor} (${r.periodicidad}): ${dinero(s.importe)} este mes frente a ${dinero(s.media)} (${base}), +${s.porcentaje} % (umbral ${Math.round(UMBRAL_SUBIDA * 100)} %, ventana ${VENTANA_RECIBOS}).`,
       ].join('\n'),
     }

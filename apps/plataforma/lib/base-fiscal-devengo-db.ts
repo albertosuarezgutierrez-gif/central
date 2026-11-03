@@ -278,7 +278,9 @@ export async function cargarEntradaBase(cuentaId: string, anio: number, hoy: str
     pilar: act(bancoPil),
     costes, referencia: refBd.map(fila),
     // Recurrentes de piso por calendario: sin lectura del histórico NO se proyectan (null ≠ «no hay»).
-    ...(hist.pisos ? { historicoGastos: hist.pisos, recurrentesCubiertos: fijosBd.map(f => ({ ambito: f.propiedad, proveedor: f.proveedor ?? '' })) } : {}),
+    // Sin lectura del histórico (null) NO se proyectan recurrentes y la estimación avisa «sin dato» (null ≠ «no hay»).
+    historicoGastos: hist.pisos,
+    recurrentesCubiertos: fijosBd.map(f => ({ ambito: f.propiedad, proveedor: f.proveedor ?? '' })),
   }
 }
 

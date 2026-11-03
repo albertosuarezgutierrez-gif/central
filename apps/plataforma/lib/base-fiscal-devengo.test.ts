@@ -396,3 +396,11 @@ test('plantillas: el cierre usa los meses pendientes, no fijosMes × mesesRestan
   // Sin día de cargo en alguna plantilla → cálculo antiguo (no se inventa el día).
   assert.equal(calcularCostesUnitarios({ ...x, fijos: [{ propertyId: 'S', total: 100 }] }).fijosRestante!.S, undefined)
 })
+
+test('recurrentes: se pidió proyectar (lista de cubiertos) y el histórico vino null → aviso «sin dato»; si no se pidió, no hay aviso', () => {
+  const pedido = entrada({ costes: COSTES, historicoGastos: null, recurrentesCubiertos: [] })
+  const sd = estimarCierre(pedido, calcularPeriodo(pedido, '2026-01-01', '2026-10-31')).escenarios[0].sinDato
+  assert.ok(sd.some(x => x.concepto === 'recurrentes' && x.propertyId === 'S'))
+  const noPedido = entrada({ costes: COSTES })
+  assert.ok(!estimarCierre(noPedido, calcularPeriodo(noPedido, '2026-01-01', '2026-10-31')).escenarios[0].sinDato.some(x => x.concepto === 'recurrentes'))
+})

@@ -26,7 +26,10 @@ export async function calcularAlertas(cuentaId: string, anio: number, hoy: strin
   // Gastos recurrentes al alza (pisos + correduría). Si una de las dos lecturas falla, se avisa solo con la otra (no se afirma nada de la que falta).
   const h = await cargarHistoricoGastos(cuentaId, anio).catch(() => null)
   const gastosHist = h && (h.pisos || h.correduria) ? [...(h.pisos ?? []), ...(h.correduria ?? [])] : undefined
+  // Todos los pisos (no solo los de la base fiscal): un gasto de un piso fuera de ella no debe salir con el id crudo.
+  const todos = await prisma.$queryRaw<Array<{ id: string; name: string }>>`SELECT id, name FROM properties`.catch(() => [])
   const nombres: Record<string, string> = {
+    ...Object.fromEntries(todos.map(p => [p.id, p.name])),
     prop_multi_apartamentos: 'Pisos (compartido)', prop_personal: 'Personal', [AMBITO_CORREDURIA]: 'Correduría',
     ...Object.fromEntries(base.propiedades.map(p => [p.id, p.nombre])),
   }
