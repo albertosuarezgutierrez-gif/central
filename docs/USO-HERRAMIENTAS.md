@@ -171,22 +171,22 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 416 | 75.982 | 65.817.595 | 0 | 0 |
-| `otro` | 410 | 17.808 | 36.568.083 | 21.480.658 | 0 |
-| `lectura-directa` | 351 | 11.583 | 31.654.132 | 0 | 0 |
-| `mcp:github` | 352 | 8.736 | 6.412.924 | 58.212.794 | 119 |
-| `sql` | 266 | 8.266 | 4.598.426 | 3.040.710 | 30 |
+| `bash` | 416 | 76.021 | 65.839.293 | 0 | 0 |
+| `otro` | 410 | 17.824 | 36.618.214 | 21.480.658 | 0 |
+| `lectura-directa` | 351 | 11.596 | 31.669.842 | 0 | 0 |
+| `mcp:github` | 352 | 8.741 | 6.413.047 | 58.212.794 | 119 |
+| `sql` | 266 | 8.301 | 4.632.986 | 3.040.710 | 31 |
 | `escritura` | 254 | 6.592 | 103.584.152 | 0 | 0 |
 | `mcp:Vercel` | 89 | 1.537 | 1.331.114 | 237.328 | 49 |
 | `mcp:Booking-com` | 53 | 1.505 | 6.179.360 | 0 | 0 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
 | `mcp:Gmail` | 69 | 1.461 | 1.609.999 | 0 | 101 |
-| `agente:general-purpose` | 150 | 1.390 | 821.611 | 27.825.130 | 0 |
-| `mcp:claude-code-remote` | 86 | 1.310 | 193.592 | 2.984.731 | 0 |
+| `agente:general-purpose` | 151 | 1.393 | 823.538 | 27.827.350 | 0 |
+| `mcp:claude-code-remote` | 86 | 1.314 | 193.775 | 2.984.731 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 17 | 711 | 831.624 | 0 | 0 |
 | `mcp:Supabase` | 154 | 518 | 148.735 | 17.601 | 9 |
 | `agente:agente-architect` | 90 | 515 | 358.330 | 12.940.667 | 0 |
-| `mcp:Google_Drive` | 26 | 468 | 599.051 | 0 | 51 |
+| `mcp:Google_Drive` | 27 | 507 | 627.734 | 0 | 52 |
 | `mcp:Google-Drive` | 36 | 177 | 183.372 | 0 | 2 |
 | `mcp:Booking_com` | 5 | 166 | 443.032 | 0 | 0 |
 | `agente:agente-mecanico` | 64 | 159 | 85.709 | 8.187.207 | 0 |
@@ -198,7 +198,7 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:Trivago` | 3 | 53 | 8.707.439 | 0 | 1 |
 | `mcp:posthog` | 5 | 47 | 64.610 | 0 | 1 |
 | `agente:verificador-esceptico` | 18 | 35 | 11.159 | 133.263 | 0 |
-| `agente:jefe-contabilidad` | 5 | 29 | 12.739 | 579.584 | 0 |
+| `agente:jefe-contabilidad` | 5 | 31 | 13.689 | 579.584 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
 | `agente:general` | 14 | 20 | 12.731 | 1.297.222 | 0 |
