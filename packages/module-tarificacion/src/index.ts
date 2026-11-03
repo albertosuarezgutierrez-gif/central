@@ -631,6 +631,7 @@ export {
 export {
   ENTRADAS_EXPLORACION,
   esEntradaExploracion,
+  entradaSoloLectura,
   valoresSensiblesExploracion,
   CATALOGO_EXPLORACION,
   ENV_EXPLORADOR_EMAIL,

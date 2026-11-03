@@ -1265,14 +1265,22 @@ export const ENLACES_ENTRADA_AUTORIZADOS: Readonly<Record<string, readonly strin
   // el patrón de emisión hoy; se listan igual para que el recorrido sea EXACTO, ordenado (`PREVIOS_ENTRADA`) y solo en su origen
   // (`ORIGEN_ENTRADA`). «Simulación» es el botón rojo de la tarjeta «Fidelidade Vivienda» (simula = tarifica; no emite).
   fidelidade: Object.freeze(['Oficina Virtual', 'Proyecto', 'Nuevo proyecto', 'Simulación']),
+  // Pelayo (portal de mediadores, Alberto 03/11/2026): «Contratación» (menú; casa con `contrat` y por eso necesita esta puerta: SOLO el
+  // rótulo exacto, en https://mediadores.pelayo.com, en orden) › «Presupuestos» › «Nuevo Presupuesto» (tarifica, no emite) › el RAMO
+  // del selector cuando es un control pulsable (no un <select>). Uno de los rótulos de ramo por trabajo lo decide `pelayo/entrada.ts`.
+  pelayo: Object.freeze(['Contratación', 'Presupuestos', 'Nuevo Presupuesto', 'Auto', 'Autos', 'Automóvil', 'Automóviles', 'Hogar']),
 })
 
 /** Origen EXACTO (https) en el que vale el enlace de entrada de una compañía; sin entrada aquí = sin restricción de origen (Mapfre). */
-export const ORIGEN_ENTRADA: Readonly<Record<string, string>> = Object.freeze({ fidelidade: 'https://mediadores.fidelidade.es' })
+export const ORIGEN_ENTRADA: Readonly<Record<string, string>> = Object.freeze({ fidelidade: 'https://mediadores.fidelidade.es', pelayo: 'https://mediadores.pelayo.com' })
 
 /** Orden obligatorio de los enlaces de entrada de una compañía: cada clave solo se pulsa tras su valor (etiquetas normalizadas). */
 export const PREVIOS_ENTRADA: Readonly<Record<string, Readonly<Record<string, string>>>> = Object.freeze({
   fidelidade: Object.freeze({ proyecto: 'oficina virtual', 'nuevo proyecto': 'proyecto', 'simulación': 'nuevo proyecto' }),
+  pelayo: Object.freeze({
+    presupuestos: 'contratación', 'nuevo presupuesto': 'presupuestos',
+    auto: 'nuevo presupuesto', autos: 'nuevo presupuesto', 'automóvil': 'nuevo presupuesto', 'automóviles': 'nuevo presupuesto', hogar: 'nuevo presupuesto',
+  }),
 })
 
 const textoEntrada = (t: string | null | undefined) => (t ?? '').normalize('NFC').replace(/\s+/g, ' ').trim().toLocaleLowerCase('es')
