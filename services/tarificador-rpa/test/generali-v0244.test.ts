@@ -11,7 +11,7 @@ import { obligatoriosVaciosGenerali, resumenEstadoCalculoGenerali } from '../src
 import { validarFormularioAuto, type FormularioAuto } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../src/adaptador.ts'
 
-test('v0.2.44 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.69'))
+test('v0.2.44 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.70'))
 
 test('v0.2.44 · puro: un desplegable obligatorio en «Seleccione…» cuenta como VACÍO; los avisos de «Datos de Valoración» salen en el resumen', () => {
   assert.deepEqual(obligatoriosVaciosGenerali([
@@ -96,5 +96,5 @@ test('v0.2.44 · el atasco nombra los obligatorios vacíos de «Datos de Valorac
       return true
     })
   })
-  assert.equal(recalculos, 2) // v0.2.63: segundo Recalcular (máx. 2)
+  assert.equal(recalculos, 1) // v0.2.70: UN solo Recalcular (el guard bloquea el 2º)
 })

@@ -1173,6 +1173,53 @@ export function portalDatosIncompletosGenerali(avisos: readonly string[]): boole
   return avisos.some((a) => /datos\s+incompletos|no\s+tiene\s+los\s+datos\s+completos|paso\s+anterior\s+no\s+tiene/i.test(a))
 }
 
+/**
+ * v0.2.70 (trabajo a42d9628): obligatorios de «Garantías y Resultados» que el bot rellena con un valor NEUTRO si (y solo si) están VACÍOS, antes de «Recalcular».
+ * Rótulo y `name` del HTML real (volcado redactado del mismo flujo). Cada uno deja su aviso «Supuesto: …» (precio `estimado`). «Prima máxima …» NO está:
+ * es de solo lectura (la calcula el portal) y nunca se toca.
+ */
+export type NeutroGarantiasGenerali = { name: string; rotulo: string; tipo: 'opciones' | 'texto'; valor: string; aviso: string }
+export const NEUTROS_GARANTIAS_GENERALI: readonly NeutroGarantiasGenerali[] = [
+  { name: 'reg1063E.general.zletdv', rotulo: '¿Quieres reparar los daños de tu vehículo en nuestros talleres Concertados?', tipo: 'opciones', valor: 'No', aviso: 'Supuesto: talleres concertados = No (cobertura estándar)' },
+  { name: 'reg1063E.general.zletdl', rotulo: '¿Quieres reparar los daños de las lunas de tu vehículo en talleres de reparación de Lunas concertados?', tipo: 'opciones', valor: 'No', aviso: 'Supuesto: lunas en talleres concertados = No (se mantiene la modalidad)' },
+  { name: 'reg1063E.general.zleabo', rotulo: '¿Deseas reducir la suma asegurada para libre elección de Abogado?', tipo: 'opciones', valor: 'No', aviso: 'Supuesto: reducir suma de abogado = No' },
+  { name: 'reg1063E.general.xrdcom', rotulo: 'Recargo o descuento comercial', tipo: 'texto', valor: '0', aviso: 'Supuesto: recargo o descuento comercial = 0 (sin recargo ni descuento)' },
+]
+
+/** Estado leído de UN campo de la tabla anterior (nunca su valor: solo si está vacío). */
+export type EstadoNeutroGarantiasGenerali = { rotulo: string; opciones: readonly { texto: string; marcada: boolean }[]; vacio: boolean; soloLectura: boolean }
+export type DecisionNeutroGarantiasGenerali = { accion: 'nada' } | { accion: 'marcar'; indice: number } | { accion: 'escribir'; valor: string } | { accion: 'error'; motivo: string }
+
+/** v0.2.70: qué hacer con un campo neutro. Ya puesto o de solo lectura → nada; rótulo distinto o sin la opción EXACTA → error que lo nombra (nada a ciegas). PURA. */
+export function decidirNeutroGarantiasGenerali(n: NeutroGarantiasGenerali, e: EstadoNeutroGarantiasGenerali): DecisionNeutroGarantiasGenerali {
+  const rot = String(e.rotulo ?? '').replace(/\s+/g, ' ').replace(/\*\s*$/, '').trim()
+  if (rot !== n.rotulo) return { accion: 'error', motivo: `el campo «${n.rotulo.slice(0, 110)}» (el bloque se rotula «${sanearFragmentoGenerali(rot).slice(0, 60)}»)` }
+  if (e.soloLectura) return { accion: 'nada' }
+  if (n.tipo === 'opciones') {
+    if (e.opciones.some((o) => o.marcada)) return { accion: 'nada' }
+    const i = opcionExactaGenerali(e.opciones.map((o) => o.texto), n.valor)
+    if (i < 0) return { accion: 'error', motivo: `la opción «${n.valor}» de «${n.rotulo.slice(0, 60)}» (opciones vistas: ${e.opciones.map((o) => `«${sanearFragmentoGenerali(o.texto).slice(0, 30)}»`).join(' · ') || '(ninguna)'})` }
+    return { accion: 'marcar', indice: i }
+  }
+  return e.vacio ? { accion: 'escribir', valor: n.valor } : { accion: 'nada' }
+}
+
+/**
+ * v0.2.70: diagnóstico tras «Recalcular» con el portal aún en «datos incompletos»: los obligatorios que siguen vacíos (solo rótulos, saneados, nunca valores).
+ * Sin ninguno detectado y con el aviso «El paso anterior…», dice que el hueco está en «Datos de Valoración». PURA.
+ */
+export function resumenTrasRecalcularGenerali(avisos: readonly string[], vaciosGarantias: readonly string[], vaciosValoracion: readonly string[] = []): string | null {
+  if (!portalDatosIncompletosGenerali(avisos)) return null
+  const s = (xs: readonly string[]) => [...new Set(xs.map((x) => sanearFragmentoGenerali(String(x ?? '').replace(/\*\s*$/, '')).trim().slice(0, 60)).filter(Boolean))].slice(0, 12)
+  const g = s(vaciosGarantias)
+  const v = s(vaciosValoracion)
+  const pasoAnterior = avisos.some((a) => /paso\s+anterior/i.test(a))
+  const partes = [`tras «Recalcular» el portal sigue con «datos incompletos»; obligatorios aún vacíos en «Garantías y Resultados»: ${g.length ? g.map((x) => `«${x}»`).join(' · ') : '(ninguno detectado)'}`]
+  if (v.length) partes.push(`en «Datos de Valoración»: ${v.map((x) => `«${x}»`).join(' · ')}`)
+  if (pasoAnterior) partes.push('el aviso «El paso anterior no tiene los datos completos» apunta a «Datos de Valoración», no a esta pestaña')
+  return partes.join('; ')
+}
+
 /** v0.2.42: etiquetas de los campos obligatorios VACÍOS de una pantalla leída (sin «*», saneadas, sin repetir, máx. 12). PURA. */
 export function obligatoriosVaciosGenerali(campos: readonly { etiqueta: string; obligatorio: boolean; valor: string }[]): string[] {
   const out: string[] = []
