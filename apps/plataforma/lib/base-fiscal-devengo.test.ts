@@ -330,7 +330,8 @@ test('CIMA: la estimación nov-dic son los recibos pendientes con efecto nov-dic
   const f = est.escenarios[0].futuro
   assert.equal(f.correduriaEstimacion, 'recibos_pendientes')
   cerca(f.correduriaIngresosPendientes ?? null, 421.65 + 344.59) // sin octubre (pasado) ni 2027
-  cerca(f.correduriaNeto, 766.24 - 1000 * est.mesesRestantes, 0.05)
+  // Gastos 3 × 1.000€ en 10 meses completos = 300€/mes (antes se promediaba solo entre los 3 meses con dato = 1.000€/mes).
+  cerca(f.correduriaNeto, 766.24 - 300 * est.mesesRestantes, 0.05)
 })
 
 test('CIMA: sin pendientes el futuro es 0 de ingreso (revisado), no sin dato', () => {

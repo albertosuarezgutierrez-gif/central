@@ -66,6 +66,11 @@ Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; ti
 original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados revisado/falta_roto/devuelto + bloque en ficha. `rrhh.material_empleado`
 (0028, aplicada). Pendiente fase 2: revisión periódica mensual.
 
+## (03/11/2026) Fiscal · Pilar, correduría (proyección), IBI y Booking
+- Motor: la media mensual de actividad (Pilar y correduría) divide entre MESES COMPLETOS TRANSCURRIDOS, no entre meses con dato (helper `lib/media-actividad.ts` + test). Pilar 2026: solo 2 facturas (29/05, 2.100€ brutos / 1.981,13€ netos); prestación SS ene-mar 2.835€ (nacimiento, exenta, no cargada). Faltan sus CARGOS (autónomos real, plan pensiones). Bizum = personal.
+- IBI cuenta común (4×171,55€) = Monte Carmelo (ref. 4707007TG3440N0003TR), personal. Socorro es CASA sin comunidad; su IBI ya está prorrateado en `gastos`. ¿Desde qué cuenta se paga? pendiente.
+- Booking: 33 facturas en Gmail (3/mes, IVA 21% a NIF de Alberto). Jul-oct ≈2.597€ frente a comisión implícita bruto−neto 34.006,63€: cruce en curso (¿bruto−neto incluye no-comisión?). Skills/agentes actualizados (#5427).
+
 ## (03/11/2026) Fiscal · estudios de pisos y correduría (docs/fiscal/2026-11-*.md)
 - Pisos: calificación capital inmobiliario OK; Bustos capital mobiliario OK. Dúplex se queda 100% Alberto (decisión 03/11, descartado repartir con Pilar). ⚠️ RDL 29/2026: alquiler ≤30 noches pasa de exento a IVA 10% desde 01/12/2026 SI se convalida (votación prevista 12/11). Mobiliario >300€ (TV 1.749€) debería amortizarse al 10%, no gasto íntegro: decidir con asesoría. Supremo anuló el NRA (19/05/2026); sigue VFT andaluz.
 - Correduría: las compañías SÍ retienen (le pagan el neto; confirmado por Alberto 03/11) → coherente con la skill (15%, modelo 190) y exonera del 130 si ≥70% de ingresos lleva retención (10 años sin requerimientos). Falta cargar el importe de retenciones 2026 (solo 195€ de CIMA): restan de la cuota. Riesgos: IVA de Anthropic/Vercel/Supabase sin autoliquidar (inversión del sujeto pasivo, 303/309 + ROI/349), gasolina y seguro del coche sin prueba de afectación (STS 1872/2024), Asisa ≤500€/persona. Motor deduce el TOTAL con IVA (correcto: actividades exentas).
