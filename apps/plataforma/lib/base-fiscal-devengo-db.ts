@@ -11,6 +11,7 @@
 //    `seguros` / `actividad_pilar`), tarjetas incluidas: no hay doble conteo porque `gastos` de la
 //    correduría NO se lee aquí. Si el rol de BD no puede leer la vista, los ingresos caen al banco (legado).
 import { prisma } from './db'
+import { aplicarTopeSalud } from './seguro-salud-deducible.ts'
 import { proveedorBanco, type GastoHist } from './gastos-recurrentes-detectados.ts'
 import { repartirIngresosBanco, type IngresoSinIdentificar, type MovimientoIngreso } from './correduria-companias.ts'
 import {
@@ -145,11 +146,14 @@ export async function cargarEntradaBase(cuentaId: string, anio: number, hoy: str
              lf.total / nullif(lf.base, 0) AS factor
       FROM limpieza_facturas lf, jsonb_array_elements(lf.limpieza) x
       WHERE lf.cuenta_id = ${cuentaId} AND lf.periodo BETWEEN ${anio + '-01'} AND ${anio + '-12'}`,
-    prisma.$queryRaw<Array<{ mes: string; ingresos: unknown; gastos: unknown }>>`
+    prisma.$queryRaw<Array<{ mes: string; ingresos: unknown; gastos: unknown; salud: unknown }>>`
       SELECT to_char(mb.fecha_operacion, 'YYYY-MM') AS mes,
              coalesce(sum(mb.importe) FILTER (WHERE mb.importe > 0 AND coalesce(mb.subcategoria,'') <> 'exento'
                       AND coalesce(mb.categoria,'') <> 'devolucion_impuestos'), 0) AS ingresos,
-             coalesce(sum(-mb.importe) FILTER (WHERE mb.importe < 0 AND NOT coalesce(mb.amortizable,false)), 0) AS gastos
+             coalesce(sum(-mb.importe) FILTER (WHERE mb.importe < 0 AND NOT coalesce(mb.amortizable,false)), 0) AS gastos,
+             -- Seguro de salud (tope art. 30.2.5ª LIRPF): subcategoría o, si falta, ASISA en contraparte/concepto.
+             coalesce(sum(-mb.importe) FILTER (WHERE mb.importe < 0 AND NOT coalesce(mb.amortizable,false)
+                      AND (mb.subcategoria = 'seguro_salud' OR coalesce(mb.contraparte,'') || ' ' || coalesce(mb.concepto,'') ~* 'asisa')), 0) AS salud
       FROM movimientos_bancarios mb JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
       WHERE cb.cuenta_id = ${cuentaId}::uuid AND mb.destino = 'seguros' AND coalesce(mb.duplicado_estado,'') <> 'ignorado'
         AND mb.fecha_operacion BETWEEN ${ini}::date AND ${fin}::date
@@ -223,12 +227,16 @@ export async function cargarEntradaBase(cuentaId: string, anio: number, hoy: str
     gastosPiso.push({ propertyId: l.pid, mes: l.periodo, importe: num(l.importe) * num(l.factor), categoria: 'LIMPIEZA' })
   }
 
-  const act = (rows: typeof bancoCor): Actividad => {
+  const act = (rows: Array<{ mes: string; ingresos: unknown; gastos: unknown; salud?: unknown }>): Actividad => {
     const a: Actividad = { ingresosPorMes: {}, gastosPorMes: {} }
+    const salud: Record<string, number> = {}
     for (const r of rows) {
       if (num(r.ingresos) !== 0) a.ingresosPorMes[r.mes] = num(r.ingresos)
       if (num(r.gastos) !== 0) a.gastosPorMes[r.mes] = num(r.gastos)
+      if (r.salud != null && num(r.salud) > 0) salud[r.mes] = num(r.salud)
     }
+    // Solo la correduría trae `salud`: gasto deducible de seguro de enfermedad ≤ 500 € × asegurados.
+    a.gastosPorMes = aplicarTopeSalud(a.gastosPorMes, salud)
     return a
   }
 
