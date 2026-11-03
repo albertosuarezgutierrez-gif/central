@@ -45,3 +45,11 @@ test('sin proveedor NI NIF en ambos = no se aplica la huella', () => {
   assert.equal(m(d, { ...d, proveedor: 'Digi' }), true)
   assert.equal(m({ ...d, nif_proveedor: 'B123' }, { ...d }), true)
 })
+
+test('nº de factura igual salvo separadores = mismo número (Vercel B2DRQ0QS-0007 ×2, 10/2026)', async () => {
+  const { normalizaNumeroFactura } = await import('./duplicado.ts')
+  assert.equal(normalizaNumeroFactura('B2DRQ0QS-0007'), normalizaNumeroFactura('B2DRQ0QS 0007'))
+  assert.equal(normalizaNumeroFactura('b2drq0qs/0007'), 'B2DRQ0QS0007')
+  assert.notEqual(normalizaNumeroFactura('B2DRQ0QS-0007'), normalizaNumeroFactura('B2DRQ0QS-0006'))
+  assert.equal(normalizaNumeroFactura(null), '')
+})

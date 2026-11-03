@@ -136,3 +136,8 @@ test('tipo «otro» no aparta: pasa sin Pagar y con motivo «tipo_dudoso»', () 
   const s = decidirAvisoPago({ fecha: '2026-10-04', tipo_documento: 'recibo' }, TITULARES, HOY2) as any
   assert.equal(s.motivoRevision, 'sin_numero_ni_iva')
 })
+
+test('«ticket» (vocabulario cerrado del 03/11/2026) es pagable como factura/recibo', () => {
+  const d = decidirAvisoPago({ fecha: '2026-10-04', proveedor: 'Alguien', tipo_documento: 'ticket', numero_factura: 'T-1' }, TITULARES, HOY2)
+  assert.equal(d.pagar, true)
+})

@@ -71,6 +71,7 @@ Flujo: Paso 0 (salud+backlog) → 1/1-bis (candidatos Gmail + subidas manuales D
   concilie o etiquete algo — aunque sea ad-hoc o quede a medias.
 
 ## Aprendido 03/11/2026 — Booking, Amazon y enlace gasto↔banco
+- **Agua por piso (03/11/2026, Alberto):** EMASESA bimestral con 3 contratos — 0104785292 Socorro 24 = House Sevillana · 0105137440 Bustos Tavera 22 Bajo DER = Luxury Busto · 0105185751 Bajo IZQ = Busto Reform. **El Dúplex NO tiene EMASESA: el agua va incluida en la cuota de comunidad (76,18 €/mes)**; no la busques ni la reclames como factura que falta, y no la sumes aparte en la estimación.
 
 - **Booking.com Invoice** (3/mes, una por alojamiento; el cuerpo no trae cifras): etiquetar `Claude/Adjuntos` → el Apps Script
   copia el PDF a Drive en 10-20 min → leer PDF (agente `lector-correo`). Emisor Booking.com B.V. (NL805734958B01) a Alberto

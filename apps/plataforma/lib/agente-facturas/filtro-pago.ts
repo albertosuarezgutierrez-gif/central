@@ -25,7 +25,7 @@ export type MotivoApartar = 'antigua' | 'emitida_por_ti' | 'ajena' | 'asegurador
  * (circular, formulario de inscripción, certificado de donativo, presupuesto, proforma, otro)
  * se aparta. Un tipo ausente (`null`, la IA no lo dio) NO aparta: estado conservador.
  */
-export const TIPOS_DOCUMENTO_PAGABLES = ['factura', 'recibo', 'justificante_pago'] as const
+export const TIPOS_DOCUMENTO_PAGABLES = ['factura', 'recibo', 'ticket', 'justificante_pago'] as const
 
 export type DecisionPago =
   /** `permitirPagar: false` = pasa, pero sin nº de factura ni desglose fiscal: se avisa SIN botón ✅ Pagar. */
