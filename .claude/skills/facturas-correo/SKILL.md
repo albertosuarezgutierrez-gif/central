@@ -72,6 +72,9 @@ Flujo: Paso 0 (salud+backlog) → 1/1-bis (candidatos Gmail + subidas manuales D
 
 ## Aprendido 03/11/2026 — Booking, Amazon y enlace gasto↔banco
 - **Agua por piso (03/11/2026, Alberto):** EMASESA bimestral con 3 contratos — 0104785292 Socorro 24 = House Sevillana · 0105137440 Bustos Tavera 22 Bajo DER = Luxury Busto · 0105185751 Bajo IZQ = Busto Reform. **El Dúplex NO tiene EMASESA: el agua va incluida en la cuota de comunidad (76,18 €/mes)**; no la busques ni la reclames como factura que falta, y no la sumes aparte en la estimación.
+- **Dúplex = Plaza Villasís = Pasaje Francisco Molina 4 1ºC** (misma propiedad, 100 % Alberto): una factura con cualquiera de esas direcciones va al Dúplex.
+- **EMASESA Bustos Tavera 22 1º Dcha** (Punto y Coma, B90446683) = antiguo piso de Luxury Busto (2025) → `prop_luxury_busto`. Ya registradas: 19/05/2025 (50,15 €) y 04/09/2025 (26,06 €).
+- **Leroy Merlin** (compras para los pisos) → `prop_multi_apartamentos`. Los abonos/rectificativas (nº R…) se registran en negativo junto a la compra (ej. R019179 −140,64 € el 30/06/2026).
 
 - **Booking.com Invoice** (3/mes, una por alojamiento; el cuerpo no trae cifras): etiquetar `Claude/Adjuntos` → el Apps Script
   copia el PDF a Drive en 10-20 min → leer PDF (agente `lector-correo`). Emisor Booking.com B.V. (NL805734958B01) a Alberto

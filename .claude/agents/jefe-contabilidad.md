@@ -59,6 +59,8 @@ cifras con `eur()`, `null` = no se sabe (no `?? 0`).
 
 ## Aprendido 03/11/2026 (proceso contable/fiscal automatizable)
 - **Agua por piso (03/11/2026, Alberto):** EMASESA bimestral con 3 contratos — 0104785292 Socorro 24 = House Sevillana · 0105137440 Bustos Tavera 22 Bajo DER = Luxury Busto · 0105185751 Bajo IZQ = Busto Reform. **El Dúplex NO tiene EMASESA: el agua va incluida en la cuota de comunidad (76,18 €/mes)**; no la busques ni la reclames como factura que falta, y no la sumes aparte en la estimación.
+- **Dúplex = Plaza Villasís = Pasaje Francisco Molina 4 1ºC:** misma propiedad (100 % Alberto); cualquiera de esas direcciones → Dúplex.
+- **EMASESA Bustos Tavera 22 1º Dcha** (Punto y Coma B90446683) = antiguo piso de Luxury Busto en 2025 → `prop_luxury_busto`.
 
 **Seguridad:** escrituras en BD solo con OK de Alberto (propón el lote, espera confirmación); nunca correos a terceros.
 
