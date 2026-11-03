@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-02T19:51:18Z",
-  "sha": "3e6a0c81f1b1bdc03c80b9ff59b10b7962311e64",
+  "generadoEn": "2026-11-03T07:41:34Z",
+  "sha": "8dcba7345a2683933584e2a8c7cb3bd33b2d7828",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -135971,13 +135971,13 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 21,
+          "linea": 22,
           "resumen": "POST multipart/form-data { sociedadId, file, iban?, banco? } — importa un extracto bancario en una sociedad de la cuenta. Detecta el formato por extensión: .xls/.xlsx → Excel (Kutxa, BBVA, Santander…)"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/banca/importar",
-      "hash": "f7d1fd56fbc6"
+      "hash": "71a6f4fb7222"
     },
     {
       "ruta": "apps/plataforma/app/api/banca/movimientos/route.ts",
@@ -145383,12 +145383,15 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 15
+          "linea": 18
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "cuentas",
+        "next"
+      ],
       "rutaApi": "/api/sivra/expenses/agent/scan",
-      "hash": "43cefb705804"
+      "hash": "39ea811fc0a7"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/expenses/fijos/generar/route.ts",
@@ -147325,7 +147328,7 @@
         "trading_watchlist"
       ],
       "rutaApi": "/api/sivra/mensajes/telegram-webhook",
-      "hash": "7dce2d566eeb"
+      "hash": "653cd54d0d16"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/webhook/route.ts",
@@ -151001,7 +151004,8 @@
         "avisaAjenas",
         "avisaRecurrentesQueFaltan",
         "avisaDomiciliadosSinCargo",
-        "resumen"
+        "resumen",
+        "avisaTarjetaSinCargo"
       ],
       "funciones": [
         {
@@ -151082,11 +151086,20 @@
           "params": "s: ResumenStats",
           "retorno": "Promise<void>",
           "linea": 120
+        },
+        {
+          "nombre": "avisaTarjetaSinCargo",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "Promise<void>",
+          "linea": 134,
+          "resumen": "Aviso: facturas de tarjeta sin cargo casado a los 10 días (texto ya compuesto por `tarjeta.ts`)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8cbbaf0f3099"
+      "hash": "d7b9cae1fa81"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/backfill-titular.ts",
@@ -151202,7 +151215,9 @@
       "resumen": "Casado factura↔cargo bancario, PURO (testeable con `node --test`). Dos fallos reales de `conciliarConBanco` (auditoría 05/10/2026): 1. Anthropic: 3 facturas de 170,00€ con la misma fecha de referencia y 5 cargos exactos de 170€. El SQL elegía «el cargo más cercano» de CADA factura y luego «la factur",
       "exporta": [
         "toleranciaFactura",
-        "asignarCargos"
+        "asignarCargos",
+        "enVentanaCargo",
+        "ratioTarjeta"
       ],
       "funciones": [
         {
@@ -151221,11 +151236,28 @@
           "retorno": "",
           "linea": 35,
           "resumen": "Asignación global 1:1: primero los pares más cercanos en fecha y, a igualdad, en importe."
+        },
+        {
+          "nombre": "enVentanaCargo",
+          "kind": "function",
+          "exportada": true,
+          "params": "diasDesdeFactura: number",
+          "retorno": "boolean",
+          "linea": 70
+        },
+        {
+          "nombre": "ratioTarjeta",
+          "kind": "function",
+          "exportada": true,
+          "params": "importe: number, divisa: string | null | undefined, cargoAbs: number, cambio?: number | null,",
+          "retorno": "",
+          "linea": 79,
+          "resumen": "Ratio cargo/esperado y tolerancia para una factura de tarjeta. `divisa` null/vacía/EUR = EUR (la divisa desconocida de un proveedor en USD la resuelve quien llama con `divisaEfectiva`). Divisa extranj"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4299dc259c76"
+      "hash": "aca281f2d5c1"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/clasificar.ts",
@@ -151279,6 +151311,40 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "cd988cebd9f5"
+    },
+    {
+      "ruta": "apps/plataforma/lib/agente-facturas/conciliar-par.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Cierra una factura CON su cargo, atómicamente: un cargo solo puede cerrar UNA factura. 1) marca el movimiento (`conciliado IS NOT TRUE` → true, `factura_ref = 'fp:<factura>'`); si no afecta filas, otro lo usó: la factura NO se cierra. 2) cierra la factura; si ya no estaba abierta, se deshace el movi",
+      "exporta": [
+        "actualizarMensajeTg",
+        "cerrarFacturaConCargo"
+      ],
+      "funciones": [
+        {
+          "nombre": "actualizarMensajeTg",
+          "kind": "function",
+          "exportada": true,
+          "params": "msgId: number | null, texto: string",
+          "retorno": "Promise<void>",
+          "linea": 9,
+          "resumen": "Quita los botones del 🧾 viejo reescribiendo su texto. Telegram no es crítico."
+        },
+        {
+          "nombre": "cerrarFacturaConCargo",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, par: ParConciliar, estadosAbiertos: readonly string[]",
+          "retorno": "Promise<boolean>",
+          "linea": 20
+        }
+      ],
+      "tablas": [
+        "facturas_proveedor",
+        "movimientos_bancarios"
+      ],
+      "rutaApi": null,
+      "hash": "795afffa1803"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/conciliar.ts",
@@ -152108,6 +152174,47 @@
       "hash": "8eccd21eaf18"
     },
     {
+      "ruta": "apps/plataforma/lib/agente-facturas/guarda-pago.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Guarda anti doble pago, PURA (testeable con `node --test`). Una factura que ya casa con un cargo bancario (o ya está pagada) NO recibe botón Pagar ni inicia pago. Fail-closed: si no se pudo consultar el banco (`casado === null`), NO se paga. Caso real: factura SQB 1.889,06€ pagada por transferencia ",
+      "exporta": [
+        "decidirGuardaPago",
+        "fechaCorta",
+        "textoYaPagada"
+      ],
+      "funciones": [
+        {
+          "nombre": "decidirGuardaPago",
+          "kind": "function",
+          "exportada": true,
+          "params": "estado: string, casado: boolean | null",
+          "retorno": "VeredictoGuarda",
+          "linea": 13,
+          "resumen": "@param estado estado actual de la factura @param casado true = hay cargo que casa · false = consultado y no lo hay · null = la consulta falló"
+        },
+        {
+          "nombre": "fechaCorta",
+          "kind": "function",
+          "exportada": true,
+          "params": "iso: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 20,
+          "resumen": "`2026-11-02` (o ISO con hora) → `02/11`. Sin dato legible → null (nunca inventa fecha)."
+        },
+        {
+          "nombre": "textoYaPagada",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string | null",
+          "retorno": "string",
+          "linea": 25
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ef986f9dc874"
+    },
+    {
       "ruta": "apps/plataforma/lib/agente-facturas/huella-rescate.ts",
       "ambito": "apps/plataforma",
       "resumen": "Rescatar la HUELLA de las facturas que se guardaron sin ella. Caso fundacional (29/08/2026). Alberto, sobre una factura que la bandeja presentaba como «SOCORRO · sin histórico»: «esto realmente es Giraldillo lavandería, que ya he dado ok a varias… tiene el agente que aprender». Y no aprendía, pero n",
@@ -152294,6 +152401,7 @@
         "aplicarSinIvaExtranjero",
         "verificarPagosPendientes",
         "conciliarConBanco",
+        "conciliarFactura",
         "pagarTodo",
         "prefijoAviso",
         "resumenSemanal",
@@ -152306,16 +152414,25 @@
           "exportada": true,
           "params": "cuentaId: string, opts: { deadline?: number } = {},",
           "retorno": "Promise<ResultadoEscaneo>",
-          "linea": 88,
+          "linea": 94,
           "resumen": "@param opts.deadline epoch ms en el que el escaneo debe estar de vuelta. Sin él el trabajo es ilimitado y la función acaba muriendo por `maxDuration` — que es justo como se perdía el latido antes del "
         },
         {
           "nombre": "notificarFactura",
           "kind": "function",
           "exportada": false,
-          "params": "facturaId: string, proveedor: string, importe: number, fechaVenc: string | null, cuentaId: string, permitirPagar = true, motivoRevision: 'sin_numero_ni_iva' | 'tipo_dudoso' = 'sin_numero_ni_iva', ivaDudoso = false,",
+          "params": "facturaId: string, proveedor: string, importe: number, fechaVenc: string | null, cuentaId: string, permitirPagar = true, motivoRevision: 'sin_numero_ni_iva' | 'tipo_dudoso' = 'sin_numero_ni_iva', ivaDudoso = false, nifProveedor: string | nu",
           "retorno": "Promise<void>",
-          "linea": 274
+          "linea": 280
+        },
+        {
+          "nombre": "notificarVerificacionSqb",
+          "kind": "function",
+          "exportada": false,
+          "params": "facturaId: string, proveedor: string, importe: number, cuentaId: string",
+          "retorno": "Promise<void>",
+          "linea": 386,
+          "resumen": "Aviso 🧾 de SQB: desglose de verificación + «pendiente de tu transferencia»; solo Aplazar/Rechazar."
         },
         {
           "nombre": "aprobarPago",
@@ -152323,7 +152440,7 @@
           "exportada": true,
           "params": "facturaId: string, cuentaId: string, debtorIban: string,",
           "retorno": "Promise<",
-          "linea": 355
+          "linea": 418
         },
         {
           "nombre": "aplazarPago",
@@ -152331,7 +152448,7 @@
           "exportada": true,
           "params": "facturaId: string, cuentaId: string, dias = 7",
           "retorno": "Promise<boolean>",
-          "linea": 416
+          "linea": 509
         },
         {
           "nombre": "rechazarFactura",
@@ -152339,7 +152456,7 @@
           "exportada": true,
           "params": "facturaId: string, cuentaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 432
+          "linea": 525
         },
         {
           "nombre": "aplicarSinIvaExtranjero",
@@ -152347,7 +152464,7 @@
           "exportada": true,
           "params": "facturaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 445,
+          "linea": 538,
           "resumen": "IVA 0 de un proveedor extranjero. Solo si seguía sin leer (null): nunca pisa un dato."
         },
         {
@@ -152356,7 +152473,24 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<number>",
-          "linea": 455
+          "linea": 548
+        },
+        {
+          "nombre": "casarFacturasConBanco",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuentaId: string",
+          "retorno": null,
+          "linea": 589,
+          "resumen": "Casado factura↔cargo de la cuenta (criterio ÚNICO: lo usan la conciliación, el aviso y la guarda de pago)."
+        },
+        {
+          "nombre": "marcarConciliadas",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuentaId: string, pares: { factura_id: string; movimiento_id: string }[], msgPorFactura: Map<string, number | null>",
+          "retorno": "Promise<number>",
+          "linea": 636
         },
         {
           "nombre": "conciliarConBanco",
@@ -152364,7 +152498,16 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<number>",
-          "linea": 495
+          "linea": 646
+        },
+        {
+          "nombre": "conciliarFactura",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, facturaId: string",
+          "retorno": "Promise<",
+          "linea": 655,
+          "resumen": "Concilia UNA factura si ya casa con un cargo (mismo criterio que `conciliarConBanco`). LANZA si la consulta falla: quien pague debe tratar el error como «no se pudo comprobar», nunca como «no hay carg"
         },
         {
           "nombre": "pagarTodo",
@@ -152372,15 +152515,15 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<",
-          "linea": 556
+          "linea": 665
         },
         {
           "nombre": "prefijoAviso",
           "kind": "function",
           "exportada": true,
-          "params": "forma: FormaPago, permitirPagar: boolean, motivoRevision: 'sin_numero_ni_iva' | 'tipo_dudoso'",
+          "params": "forma: FormaPago, permitirPagar: boolean, motivoRevision: 'sin_numero_ni_iva' | 'tipo_dudoso', tarjeta: boolean | null = null",
           "retorno": "string",
-          "linea": 581,
+          "linea": 691,
           "resumen": "Prefijo del aviso: «se cobra sola» y «revisar documento» CONVIVEN (la revisión no se pisa)."
         },
         {
@@ -152389,7 +152532,7 @@
           "exportada": false,
           "params": "cuentaId: string, proveedores: string[]",
           "retorno": "Promise<Map<string, FormaPago>>",
-          "linea": 588
+          "linea": 699
         },
         {
           "nombre": "resumenSemanal",
@@ -152397,7 +152540,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 625
+          "linea": 736
         },
         {
           "nombre": "alertarFacturasAusentes",
@@ -152405,7 +152548,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<number>",
-          "linea": 660
+          "linea": 773
         },
         {
           "nombre": "proponerVinculoReserva",
@@ -152413,15 +152556,7 @@
           "exportada": false,
           "params": "facturaId: string, proveedor: string, fechaFactura: string | null,",
           "retorno": "Promise<void>",
-          "linea": 693
-        },
-        {
-          "nombre": "actualizarMensajeTg",
-          "kind": "function",
-          "exportada": false,
-          "params": "msgId: number | null, texto: string",
-          "retorno": "Promise<void>",
-          "linea": 724
+          "linea": 806
         }
       ],
       "tablas": [
@@ -152435,7 +152570,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "cec77c8a43fb"
+      "hash": "90cf56f9504e"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/parsear-json-ia.ts",
@@ -152779,6 +152914,175 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "03624f55129f"
+    },
+    {
+      "ruta": "apps/plataforma/lib/agente-facturas/tarjeta-cargos.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Parte con BD de «facturas de tarjeta» (la lógica pura vive en `tarjeta.ts` y `casar-cargos.ts`). Sin estado nuevo en BD: «pendiente de cobro de tarjeta» = estado abierto + forma de pago tarjeta (true) + no conciliada. `estado` es TEXT sin CHECK, así que un valor `cobro_tarjeta_pendiente` no exigiría",
+      "exporta": [
+        "proveedoresTarjeta",
+        "facturasTarjetaPendientes",
+        "conciliarFacturasTarjeta",
+        "avisarTarjetaSinCargo"
+      ],
+      "funciones": [
+        {
+          "nombre": "proveedoresTarjeta",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, proveedores: string[]",
+          "retorno": "Promise<Map<string, boolean | null>>",
+          "linea": 21,
+          "resumen": "Forma de pago «tarjeta» (true/false/null) por proveedor, desde la factura leída + historial de cargos. Un fallo = null."
+        },
+        {
+          "nombre": "facturasTarjetaPendientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string",
+          "retorno": "Promise<FilaFactura[]>",
+          "linea": 59,
+          "resumen": "Facturas abiertas cuyo proveedor se cobra con tarjeta (true)."
+        },
+        {
+          "nombre": "conciliarFacturasTarjeta",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string",
+          "retorno": "Promise<number>",
+          "linea": 77,
+          "resumen": "Casa las facturas de tarjeta pendientes con cargos (ventana [−3, +10] días sobre la fecha de factura, clave de proveedor en concepto/contraparte, ±3 % en EUR o sobre la conversión en divisa) y las mar"
+        },
+        {
+          "nombre": "avisarTarjetaSinCargo",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, hoy = new Date().toISOString().slice(0, 10), nombreCuenta?: string | null",
+          "retorno": "Promise<number>",
+          "linea": 117,
+          "resumen": "Aviso de facturas de tarjeta sin cargo a los 10 días (para el cron del agente). Devuelve cuántas avisó. Antes de avisar CONCILIA (los cargos de la débito entran por PSD2, no solo al importar extracto)"
+        }
+      ],
+      "tablas": [
+        "cuentas_bancarias",
+        "facturas_proveedor",
+        "gastos",
+        "sociedades",
+        "tarjeta",
+        "v_movimientos_activos"
+      ],
+      "rutaApi": null,
+      "hash": "0cdcce3fc796"
+    },
+    {
+      "ruta": "apps/plataforma/lib/agente-facturas/tarjeta.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Facturas de proveedor que se cobran con TARJETA (Fly.io, Vercel…): no se pagan a mano, quedan «pendientes de revisión hasta que aparezca el cargo» y casan solas al subir el extracto de la tarjeta. Módulo PURO (solo importa módulos puros) para testearlo con `node --test`. 🚨 Tres estados, nunca asumi",
+      "exporta": [
+        "clasificarCargo",
+        "tarjetaDeRaw",
+        "clasificarTarjeta",
+        "divisaEfectiva",
+        "planificarAvisoTarjeta",
+        "textoAvisoTarjeta",
+        "tocaAvisoTarjetaSemanal",
+        "notaTarjeta",
+        "pagableAMano",
+        "sinFacturasTarjeta"
+      ],
+      "funciones": [
+        {
+          "nombre": "clasificarCargo",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipoCuenta: string | null, concepto: string | null",
+          "retorno": "'tarjeta' | 'otro' | null",
+          "linea": 29,
+          "resumen": "'tarjeta' = cuenta tipo tarjeta o concepto de tarjeta · 'otro' = transferencia/recibo identificable · null = ambiguo (no cuenta)."
+        },
+        {
+          "nombre": "tarjetaDeRaw",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "boolean | null",
+          "linea": 48,
+          "resumen": "Lee la forma de pago escrita en la factura. Texto no reconocido = null (no se sabe)."
+        },
+        {
+          "nombre": "clasificarTarjeta",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaTarjeta",
+          "retorno": "boolean | null",
+          "linea": 59
+        },
+        {
+          "nombre": "divisaEfectiva",
+          "kind": "function",
+          "exportada": true,
+          "params": "proveedor: string | null, divisa: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 70,
+          "resumen": "Divisa efectiva: la guardada, o USD si el proveedor es de los que facturan en USD; null = se tratará como EUR."
+        },
+        {
+          "nombre": "planificarAvisoTarjeta",
+          "kind": "function",
+          "exportada": true,
+          "params": "facturas: FacturaTarjeta[], hoy: string, dias = DIAS_AVISO_TARJETA",
+          "retorno": "PlanAvisoTarjeta",
+          "linea": 92
+        },
+        {
+          "nombre": "textoAvisoTarjeta",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PlanAvisoTarjeta, escapar: (s: string) => string = (s) => s, cuenta?: string | null",
+          "retorno": "string",
+          "linea": 101,
+          "resumen": "Texto HTML del aviso (el proveedor lo escapa quien llama). Vacío si no hay nada que decir."
+        },
+        {
+          "nombre": "tocaAvisoTarjetaSemanal",
+          "kind": "function",
+          "exportada": true,
+          "params": "hoy: string",
+          "retorno": "boolean",
+          "linea": 117,
+          "resumen": "El aviso de «sin cargo» no guarda estado (sin migración): para no repetirlo cada día con el mismo conjunto de facturas, solo sale los LUNES (`hoy` = YYYY-MM-DD)."
+        },
+        {
+          "nombre": "notaTarjeta",
+          "kind": "function",
+          "exportada": true,
+          "params": "tarjeta: boolean | null | undefined, yaSeCobraSola = false",
+          "retorno": "string",
+          "linea": 128,
+          "resumen": "Nota del aviso 🧾: solo con tarjeta === true (null = no se sabe → nada) y si no hay ya otra nota «se cobra sola»."
+        },
+        {
+          "nombre": "pagableAMano",
+          "kind": "function",
+          "exportada": true,
+          "params": "tarjeta: boolean | null | undefined",
+          "retorno": "boolean",
+          "linea": 133,
+          "resumen": "¿Se puede ofrecer/hacer el pago a mano? Solo `true` lo impide; null/undefined (no se sabe, error de lectura) = como hasta ahora."
+        },
+        {
+          "nombre": "sinFacturasTarjeta",
+          "kind": "function",
+          "exportada": true,
+          "params": "facturas: T[], formas: Map<string, boolean | null>",
+          "retorno": "T[]",
+          "linea": 138,
+          "resumen": "Para `pagarTodo`: quita las facturas de tarjeta confirmada."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "254bdbd070ab"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/titulares.ts",
@@ -191473,7 +191777,7 @@
           "exportada": true,
           "params": "periodo: string",
           "retorno": "Promise<Salida[]>",
-          "linea": 31,
+          "linea": 33,
           "resumen": "Salidas (checkouts) del mes de servicio de reservas NO canceladas, en fecha civil de Madrid. Excluye lo que figure en `reservas_canceladas` (por si una cancelación tardía sigue en `incomes`)."
         },
         {
@@ -191482,7 +191786,7 @@
           "exportada": true,
           "params": "periodo: string",
           "retorno": "Promise<SinSalida[]>",
-          "linea": 51,
+          "linea": 53,
           "resumen": "Reservas NO canceladas sin `checkOut` cuyo `checkIn` cae antes del fin del mes facturado: podrían haber salido ese mes y no se sabe. Se cuentan para que el cuadre no pueda ser un ✅ limpio."
         },
         {
@@ -191491,7 +191795,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<string | null>",
-          "linea": 68,
+          "linea": 70,
           "resumen": "Cuenta dueña de las facturas: la de las ya guardadas (o `SIVRA_CUENTA_ID`). Sin sesión en un cron."
         },
         {
@@ -191500,17 +191804,27 @@
           "exportada": true,
           "params": "correo: { subject: string fecha: Date pdfs?: Buffer[] }",
           "retorno": "Promise<SalidaProcesoFactura>",
-          "linea": 86,
+          "linea": 88,
           "resumen": "Procesa el correo de la factura. Idempotente por nº de factura (guardarFactura hace upsert). Nunca lanza por un PDF ilegible: avisa «no he podido leer la factura»."
+        },
+        {
+          "nombre": "avisarVerificacion",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuentaId: string, resultado: ResultadoCuadre, periodo: string, nota: string",
+          "retorno": "Promise<boolean | null>",
+          "linea": 166,
+          "resumen": "Aviso de verificación de SQB, UNO por factura. Si el agente de facturas ya creó la factura y mandó su 🧾 (sin verificar, porque aún no estaba el PDF), este aviso lo SUSTITUYE (con los botones Aplazar/"
         }
       ],
       "tablas": [
+        "facturas_proveedor",
         "incomes",
         "limpieza_facturas",
         "reservas_canceladas"
       ],
       "rutaApi": null,
-      "hash": "f26951f396da"
+      "hash": "d14ccac39c6b"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/factura-cuadre.ts",
@@ -191776,6 +192090,223 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "1a7a0b923bfe"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/factura-verificacion-db.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/factura-verificacion-db.ts — borde sucio de la verificación de la factura de SQB. SQL + ensamblado; toda la decisión vive en `factura-verificacion.ts` (puro). Lo usan: · `agente-facturas/pagos.ts::notificarFactura` (el aviso 🧾 de SQB, con botones sin «Pagar»); · `factura-cuadre-correo.ts`",
+      "exporta": [
+        "huespedNochesDelPeriodo",
+        "historicoLavanderia",
+        "verificarSqbDesdeDatos",
+        "verificarSqbGuardada",
+        "marcarVerificacionAvisada",
+        "facturaAgenteSqb"
+      ],
+      "funciones": [
+        {
+          "nombre": "aMapa",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "filas: Array<{ pid: string; n: number }>",
+          "retorno": "Record<string, number>",
+          "linea": 32
+        },
+        {
+          "nombre": "huespedNochesDelPeriodo",
+          "kind": "function",
+          "exportada": true,
+          "params": "periodo: string",
+          "retorno": "Promise<number | null>",
+          "linea": 36,
+          "resumen": "Huésped-noches del mes de servicio (reservas NO canceladas con salida en el mes). `null` = no calculable."
+        },
+        {
+          "nombre": "historicoLavanderia",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, periodoActual: string",
+          "retorno": "Promise<MesLavanderia[]>",
+          "linea": 56,
+          "resumen": "Histórico: facturas SQB ANTERIORES al periodo con lavandería > 0, con sus huésped-noches."
+        },
+        {
+          "nombre": "verificarSqbDesdeDatos",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, d: DatosFacturaSqb",
+          "retorno": "Promise<Verificacion | null>",
+          "linea": 83,
+          "resumen": "Verificación completa. Lanza si la BD falla: quien llama decide qué decir (nunca «cuadra» por defecto)."
+        },
+        {
+          "nombre": "verificarSqbGuardada",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, numero: string",
+          "retorno": "Promise<",
+          "linea": 128,
+          "resumen": "Verifica una factura SQB ya guardada en `limpieza_facturas` (la deja el triaje del correo). `null` = no está guardada."
+        },
+        {
+          "nombre": "marcarVerificacionAvisada",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, numero: string",
+          "retorno": "Promise<void>",
+          "linea": 147,
+          "resumen": "Deja constancia de que el aviso de verificación ya salió (el otro camino no lo repite entero)."
+        },
+        {
+          "nombre": "facturaAgenteSqb",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, numero: string",
+          "retorno": "Promise<FacturaAgenteSqb | null>",
+          "linea": 159,
+          "resumen": "La factura SQB (mismo nº) que ya tiene el agente de facturas, si la tiene. Identidad por nombre completo normalizado."
+        }
+      ],
+      "tablas": [
+        "facturas_proveedor",
+        "incomes",
+        "limpieza_facturas",
+        "properties",
+        "reservas_canceladas",
+        "sivra_ordenes_limpieza"
+      ],
+      "rutaApi": null,
+      "hash": "6f4b46bea33c"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/factura-verificacion.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/factura-verificacion.ts — VERIFICACIÓN de la factura mensual de Si que Brilla (SQB). Puro. Alberto paga a SQB siempre él, a mano, por transferencia (el banco le pide contraseña): para SQB el aviso 🧾 de Telegram NO es de pago sino de VERIFICACIÓN — ¿lo facturado cuadra con lo hecho? 1. Lim",
+      "exporta": [
+        "esProveedorSqb",
+        "huespedNoches",
+        "costeMedioLavanderia",
+        "estimarLavanderia",
+        "cuadrePorPiso",
+        "verificarFacturaSqb",
+        "mensajeVerificacionSqb",
+        "botonesVerificacionSqb"
+      ],
+      "funciones": [
+        {
+          "nombre": "r2",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 23
+        },
+        {
+          "nombre": "esc",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 24
+        },
+        {
+          "nombre": "normalizaNif",
+          "kind": "function",
+          "exportada": false,
+          "params": "s?: string | null",
+          "retorno": "string",
+          "linea": 26
+        },
+        {
+          "nombre": "esProveedorSqb",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { nif?: string | null; proveedor?: string | null }, nifsTitulares: readonly (string | null | undefined)[] = [],",
+          "retorno": "boolean",
+          "linea": 36,
+          "resumen": "sin NIF, por la clave del nombre (todo el nombre en letras, no una palabra suelta)."
+        },
+        {
+          "nombre": "huespedNoches",
+          "kind": "function",
+          "exportada": true,
+          "params": "reservas: ReservaAforo[]",
+          "retorno": "number | null",
+          "linea": 65,
+          "resumen": "Huésped-noches del mes. Huéspedes reales (adults+children); si la reserva no trae NINGUNO de los dos cae a la capacidad del piso (misma regla que `pesoLavanderia`). Si algo no se puede resolver (noche"
+        },
+        {
+          "nombre": "costeMedioLavanderia",
+          "kind": "function",
+          "exportada": true,
+          "params": "historico: MesLavanderia[], minMeses = MIN_MESES_HISTORICO",
+          "retorno": "number | null",
+          "linea": 90,
+          "resumen": "Coste medio por huésped-noche = Σ lavandería facturada / Σ huésped-noches, sobre los meses de histórico con lavandería > 0 Y huésped-noches conocidas > 0. Un mes con lavandería 0 no cuenta (hasta jun-"
+        },
+        {
+          "nombre": "estimarLavanderia",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { huespedNoches: number | null coste: number | null facturada: number banda?: number }",
+          "retorno": "EstimacionLavanderia",
+          "linea": 106
+        },
+        {
+          "nombre": "cuadrePorPiso",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { lineas: LineaLimp[] salidas: Record<string, number> canceladas?: Record<string, number> ordenesExtra?: Record<string, number> tarifas: Record<string, number> nombres: Record<string, string> }",
+          "retorno": "PisoVerif[]",
+          "linea": 152,
+          "resumen": "Cuadre por piso: sesiones facturadas vs salidas del mes (reservas no canceladas), y el importe contra la tarifa cerrada. Explica la diferencia con lo que sabe: salidas canceladas del mes y órdenes ext"
+        },
+        {
+          "nombre": "verificarFacturaSqb",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaVerificacion",
+          "retorno": "Verificacion",
+          "linea": 219
+        },
+        {
+          "nombre": "fmtPct",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 243
+        },
+        {
+          "nombre": "mesLegible",
+          "kind": "function",
+          "exportada": false,
+          "params": "periodo: string | null",
+          "retorno": "string",
+          "linea": 246
+        },
+        {
+          "nombre": "mensajeVerificacionSqb",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: Verificacion",
+          "retorno": "string",
+          "linea": 253,
+          "resumen": "Texto del aviso 🧾 de Telegram (HTML) para SQB: desglose corto + veredicto + «pendiente de tu transferencia»."
+        },
+        {
+          "nombre": "botonesVerificacionSqb",
+          "kind": "function",
+          "exportada": true,
+          "params": "facturaId: string",
+          "retorno": "BotonTg[][]",
+          "linea": 277,
+          "resumen": "Botones del aviso de SQB: SIN «Pagar» (paga Alberto a mano). Solo Aplazar y Rechazar."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "84a623a51e93"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/facturas-control.ts",
@@ -202873,7 +203404,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "boolean",
-          "linea": 895
+          "linea": 901
         },
         {
           "nombre": "avisosDe",
@@ -202881,7 +203412,7 @@
           "exportada": true,
           "params": "categoria: CategoriaAviso",
           "retorno": "AvisoTelegram[]",
-          "linea": 900,
+          "linea": 906,
           "resumen": "Avisos de una categoría, en el orden del catálogo."
         },
         {
@@ -202890,13 +203421,13 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "string | null",
-          "linea": 910,
+          "linea": 916,
           "resumen": "Id del aviso inmediato del triaje de correo para una categoría de `lib/correo/rutas.ts`. `null` = esa categoría no avisa al momento (va al digest o no se toca), así que no hay interruptor que ofrecer."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8d66624acce6"
+      "hash": "1620d3b9c779"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
@@ -268776,7 +269307,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5534,
-    "funciones": 21711
+    "archivos": 5540,
+    "funciones": 21757
   }
 }
