@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-03T08:35:09Z",
-  "sha": "a9532a14640c279e1d088b939a3c9e8f5af57b05",
+  "generadoEn": "2026-11-03T10:10:40Z",
+  "sha": "5a379d3458470b34ae34e093a4877869ba4e7c52",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -147852,7 +147852,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 62
+          "linea": 63
         },
         {
           "nombre": "fmt",
@@ -147860,7 +147860,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 63
+          "linea": 64
         },
         {
           "nombre": "GET",
@@ -147868,7 +147868,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 82,
+          "linea": 83,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -147877,7 +147877,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 86
+          "linea": 87
         }
       ],
       "tablas": [
@@ -147900,7 +147900,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "e3d4c8c507d1"
+      "hash": "1e8bcbb8eebd"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -154446,7 +154446,7 @@
           "exportada": true,
           "params": "valorCatastral: number | null, revisado: boolean | null, diasNoArrendados: number, diasAnio: number",
           "retorno": "number | null",
-          "linea": 70,
+          "linea": 71,
           "resumen": "Renta imputada del inmueble entero (sin % de titularidad). null si falta valor o «revisado»."
         },
         {
@@ -154455,7 +154455,7 @@
           "exportada": false,
           "params": "p: { id: string; nombre: string }, par: ParamImputacion | undefined, diasPeriodo: number, diasArrendados: number | null, anio: number",
           "retorno": "LineaImputacion",
-          "linea": 87
+          "linea": 88
         },
         {
           "nombre": "sumaImputacion",
@@ -154463,7 +154463,7 @@
           "exportada": false,
           "params": "ls: LineaImputacion[]",
           "retorno": null,
-          "linea": 96
+          "linea": 97
         },
         {
           "nombre": "interesesParaSimulador",
@@ -154471,7 +154471,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Record<string, number>",
-          "linea": 99,
+          "linea": 100,
           "resumen": "Forma que lee el simulador (`EntradaSimulador.intereses`): propertyId → € del año."
         },
         {
@@ -154480,7 +154480,7 @@
           "exportada": true,
           "params": "n: number",
           "retorno": "number",
-          "linea": 170,
+          "linea": 171,
           "resumen": "── Utilidades ──────────────────────────────────────────────────────────────────────────────"
         },
         {
@@ -154489,7 +154489,7 @@
           "exportada": false,
           "params": "xs: number[]",
           "retorno": null,
-          "linea": 171
+          "linea": 172
         },
         {
           "nombre": "mesDe",
@@ -154497,7 +154497,7 @@
           "exportada": false,
           "params": "f: string",
           "retorno": null,
-          "linea": 172
+          "linea": 173
         },
         {
           "nombre": "diasDelAnio",
@@ -154505,7 +154505,7 @@
           "exportada": false,
           "params": "y: number",
           "retorno": null,
-          "linea": 173
+          "linea": 174
         },
         {
           "nombre": "sumDias",
@@ -154513,7 +154513,7 @@
           "exportada": false,
           "params": "f: string, n: number",
           "retorno": "string",
-          "linea": 174
+          "linea": 175
         },
         {
           "nombre": "mesesDe",
@@ -154521,7 +154521,7 @@
           "exportada": false,
           "params": "desde: string, hasta: string",
           "retorno": "string[]",
-          "linea": 177
+          "linea": 178
         },
         {
           "nombre": "diasOcupados",
@@ -154529,7 +154529,7 @@
           "exportada": true,
           "params": "ingresos: FilaIngreso[], propertyId: string, desde: string, hasta: string",
           "retorno": "Set<string>",
-          "linea": 189,
+          "linea": 190,
           "resumen": "Días DISTINTOS (YYYY-MM-DD) con reserva en [desde, hasta]; la noche del día X cuenta el día X."
         },
         {
@@ -154538,7 +154538,7 @@
           "exportada": true,
           "params": "fecha: string",
           "retorno": "string",
-          "linea": 201,
+          "linea": 202,
           "resumen": "Mismo día del año anterior (YYYY-MM-DD); el 29/02 pasa a 28/02 (fecha válida para la BD)."
         },
         {
@@ -154547,7 +154547,7 @@
           "exportada": false,
           "params": "a: Actividad, meses: string[]",
           "retorno": null,
-          "linea": 250
+          "linea": 251
         },
         {
           "nombre": "netoAct",
@@ -154555,7 +154555,7 @@
           "exportada": false,
           "params": "i: number | null, g: number | null",
           "retorno": null,
-          "linea": 258
+          "linea": 259
         },
         {
           "nombre": "calcularPeriodo",
@@ -154563,7 +154563,7 @@
           "exportada": true,
           "params": "e: EntradaBase, desde: string, hasta: string",
           "retorno": "Periodo",
-          "linea": 260
+          "linea": 261
         },
         {
           "nombre": "mesSiguiente",
@@ -154571,7 +154571,7 @@
           "exportada": false,
           "params": "m: string",
           "retorno": "string",
-          "linea": 361
+          "linea": 362
         },
         {
           "nombre": "repartoIndividual",
@@ -154579,7 +154579,7 @@
           "exportada": true,
           "params": "p: Periodo, props: PropiedadFiscal[]",
           "retorno": "",
-          "linea": 390,
+          "linea": 391,
           "resumen": "Parte de cada piso que declara cada titular; el resto de bloques son de Alberto (Pilar: su actividad)."
         },
         {
@@ -154588,7 +154588,7 @@
           "exportada": true,
           "params": "p: Periodo, props: PropiedadFiscal[], c: ParamsCuota",
           "retorno": "Comparativa",
-          "linea": 411
+          "linea": 412
         },
         {
           "nombre": "mesesCompletosHasta",
@@ -154596,7 +154596,7 @@
           "exportada": false,
           "params": "anio: number, hoy: string",
           "retorno": "string[]",
-          "linea": 470
+          "linea": 471
         },
         {
           "nombre": "calcularCostesUnitarios",
@@ -154604,7 +154604,7 @@
           "exportada": true,
           "params": "x: EntradaCostes",
           "retorno": "CostesUnitarios",
-          "linea": 474
+          "linea": 475
         },
         {
           "nombre": "costeReserva",
@@ -154612,7 +154612,7 @@
           "exportada": true,
           "params": "r: FilaIngreso, c: CostesUnitarios",
           "retorno": "CosteReserva",
-          "linea": 537
+          "linea": 538
         },
         {
           "nombre": "sumN",
@@ -154620,7 +154620,7 @@
           "exportada": false,
           "params": "a: number | null, b: number | null",
           "retorno": null,
-          "linea": 557
+          "linea": 558
         },
         {
           "nombre": "agregar",
@@ -154628,7 +154628,7 @@
           "exportada": false,
           "params": "rows: CosteReserva[], dias: number",
           "retorno": "Agregado",
-          "linea": 558
+          "linea": 559
         },
         {
           "nombre": "combinar",
@@ -154636,7 +154636,7 @@
           "exportada": false,
           "params": "a: Agregado, b: Agregado, k: number, diasTramo: number",
           "retorno": "Agregado",
-          "linea": 572,
+          "linea": 573,
           "resumen": "a + k·b (k ≥ 0). Un null en b solo contamina si k > 0. Los días añadidos no pasan de `diasTramo − a.dias`."
         },
         {
@@ -154645,7 +154645,7 @@
           "exportada": false,
           "params": "a: Agregado, k: number",
           "retorno": "Agregado",
-          "linea": 582
+          "linea": 583
         },
         {
           "nombre": "estimarCierre",
@@ -154653,7 +154653,7 @@
           "exportada": true,
           "params": "e: EntradaBase, hastaHoy: Periodo",
           "retorno": "Estimacion",
-          "linea": 639
+          "linea": 640
         },
         {
           "nombre": "esProvisional",
@@ -154661,7 +154661,7 @@
           "exportada": true,
           "params": "x: Pick<EscenarioEst, 'sinDato'>, propertyId?: string",
           "retorno": "boolean",
-          "linea": 759,
+          "linea": 756,
           "resumen": "La cifra estimada cuenta conceptos «sin dato» como 0 → provisional (de todo el escenario o de un piso)."
         },
         {
@@ -154670,7 +154670,7 @@
           "exportada": true,
           "params": "real: Periodo, est: Pick<EscenarioEst, 'bloques' | 'baseGeneral' | 'estimadoPorPiso'> & { diasPorPiso?: Record<string, number> }, anio: number",
           "retorno": "Periodo",
-          "linea": 768,
+          "linea": 765,
           "resumen": "Periodo «cierre» (real + un escenario estimado) listo para compararConjuntaIndividual. La imputación de rentas se rehace para el AÑO entero: días arrendados = reales hasta hoy + estimados del escenari"
         },
         {
@@ -154679,12 +154679,12 @@
           "exportada": true,
           "params": "args: { hoy: string anio: number cuentas: CuentaFeed[] mesesConFacturaLimpieza: string[] mesesConSuministros: string[] umbralDias?: number }",
           "retorno": "AvisosDatos",
-          "linea": 795
+          "linea": 792
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c7aefb58cff6"
+      "hash": "23b2e01e1985"
     },
     {
       "ruta": "apps/plataforma/lib/base-url.ts",
@@ -180007,6 +180007,58 @@
       "hash": "38aaa2fc4dc8"
     },
     {
+      "ruta": "apps/plataforma/lib/media-actividad.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Media mensual de una actividad (ingresos o gastos por mes) para proyectar el cierre del año. Divide entre los MESES COMPLETOS transcurridos, no entre los meses que tienen entrada: si solo hubo un ingreso en 10 meses, el ritmo mensual es ingreso/10, no el ingreso entero. `null` = no hay ningún mes co",
+      "exporta": [
+        "mediaMensualMesesCompletos",
+        "hayEntradaEnMeses",
+        "proyectarNetoActividad",
+        "mediaMensualOSinDato"
+      ],
+      "funciones": [
+        {
+          "nombre": "mediaMensualMesesCompletos",
+          "kind": "function",
+          "exportada": true,
+          "params": "porMes: Record<string, number>, mesesCompletos: string[]",
+          "retorno": "number | null",
+          "linea": 5,
+          "resumen": "Media mensual de una actividad (ingresos o gastos por mes) para proyectar el cierre del año. Divide entre los MESES COMPLETOS transcurridos, no entre los meses que tienen entrada: si solo hubo un ingr"
+        },
+        {
+          "nombre": "hayEntradaEnMeses",
+          "kind": "function",
+          "exportada": true,
+          "params": "porMes: Record<string, number>, mesesCompletos: string[]",
+          "retorno": "boolean",
+          "linea": 13,
+          "resumen": "¿Hay alguna entrada en los meses completos? (distingue «sin dato» de «0 revisado»)."
+        },
+        {
+          "nombre": "proyectarNetoActividad",
+          "kind": "function",
+          "exportada": true,
+          "params": "ingresosPorMes: Record<string, number>, gastosPorMes: Record<string, number>, mesesCompletos: string[], mesesRestantes: number,",
+          "retorno": "number | null",
+          "linea": 18,
+          "resumen": "Neto proyectado de la actividad de Pilar para los meses restantes; null si no hay ni ingresos ni gastos registrados."
+        },
+        {
+          "nombre": "mediaMensualOSinDato",
+          "kind": "function",
+          "exportada": true,
+          "params": "porMes: Record<string, number>, mesesCompletos: string[]",
+          "retorno": "number | null",
+          "linea": 29,
+          "resumen": "Media mensual sobre meses completos, o null si no hay ninguna entrada en ellos (sin dato ≠ 0)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "11b7675677f5"
+    },
+    {
       "ruta": "apps/plataforma/lib/modelo-openrouter.ts",
       "ambito": "apps/plataforma",
       "resumen": "Modelo de OpenRouter EXPLÍCITO que un llamante de la pasarela puede pedir (13/10/2026, explorador IA del tarificador de asegura). Puro: valida la forma del slug. `null` = no es un slug de OpenRouter aceptable. No confundir con `model` del cuerpo de /api/ai/chat: ese es el PIN que SALTA OpenRouter y ",
@@ -190689,6 +190741,48 @@
       "hash": "569d890e48ed"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/cargos-ya-facturados.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Dedupe del P&L por piso: un pago con factura en `gastos` Y su cargo de tarjeta asignado al piso se contaba DOS veces (caso real: televisor de 1.749€ restaba 3.498€). El enlace explícito es la convención ya existente `movimientos_bancarios.factura_ref = 'gasto:<uuid>'` (el conciliador de lib/concilia",
+      "exporta": [
+        "idGastoDeRef",
+        "cargoYaFacturado",
+        "sumarCargosSinFactura"
+      ],
+      "funciones": [
+        {
+          "nombre": "idGastoDeRef",
+          "kind": "function",
+          "exportada": true,
+          "params": "ref: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 22,
+          "resumen": "Id del gasto que cita un `factura_ref`, o null si no es una referencia a gasto."
+        },
+        {
+          "nombre": "cargoYaFacturado",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Pick<CargoPiso, 'factura_ref' | 'gasto_existe'>",
+          "retorno": "boolean",
+          "linea": 28,
+          "resumen": "¿El cargo ya está representado por una factura en `gastos`?"
+        },
+        {
+          "nombre": "sumarCargosSinFactura",
+          "kind": "function",
+          "exportada": true,
+          "params": "cargos: CargoPiso[]",
+          "retorno": "Map<string, number>",
+          "linea": 33,
+          "resumen": "Importe (positivo) de los cargos NO representados por un gasto, sumado por piso."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9c1cf9b38c02"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/catastro-pisos-logica.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/catastro-pisos-logica.ts — qué se escribe en `properties.catastro_*` según lo que conteste el Catastro. PURO (solo tipos) → testeable con node --test. Regla del repo «dato que NO hay ≠ dato que NO se ha mirado»: los datos solo se escriben con `estado: 'ok'`. Cualquier otro desenlace deja m",
@@ -194880,7 +194974,7 @@
           "exportada": false,
           "params": "",
           "retorno": "PLGastosPiso",
-          "linea": 79
+          "linea": 80
         },
         {
           "nombre": "catToField",
@@ -194888,7 +194982,7 @@
           "exportada": false,
           "params": "categoria: string",
           "retorno": "CampoGasto",
-          "linea": 90
+          "linea": 91
         },
         {
           "nombre": "getPLMensual",
@@ -194896,7 +194990,7 @@
           "exportada": true,
           "params": "mes: string",
           "retorno": "Promise<PLMensual>",
-          "linea": 101
+          "linea": 102
         },
         {
           "nombre": "mesPorDefecto",
@@ -194904,7 +194998,7 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 399,
+          "linea": 406,
           "resumen": "Mes anterior al actual en formato 'YYYY-MM'"
         }
       ],
@@ -194918,7 +195012,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "f5ac5e14a941"
+      "hash": "9b45a7303008"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pl-rango-logica.ts",
@@ -195759,6 +195853,28 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "c2554197c39c"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/pricing-capa-final.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pricing-capa-final.ts — QUÉ CAPA decidió el precio final de una noche del apply. POR QUÉ (03/11/2026): el motor compone prima vie/sáb, raíl, suelos y techos, y `pricing_applied` solo guardaba el resultado. Sin la capa no se puede atribuir el efecto de la prima ni de los suelos sin estimarl",
+      "exporta": [
+        "decidirCapaFinal"
+      ],
+      "funciones": [
+        {
+          "nombre": "decidirCapaFinal",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: CapaInput",
+          "retorno": "CapaFinal",
+          "linea": 47,
+          "resumen": "Capa que decidió el precio. Prioridad: lo último que pudo tocar el número, hacia atrás."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5b13d4127c2b"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-centinelas.ts",
@@ -206861,14 +206977,14 @@
           "exportada": true,
           "params": "{ convenio, analisis, analisisFecha, branding }: { convenio: { codigo: string; nombre: string } analisis: Analisis | null analisisFecha: string | null branding: Branding }",
           "retorno": null,
-          "linea": 14
+          "linea": 15
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "f1c8c64ee4a5"
+      "hash": "65f634869c45"
     },
     {
       "ruta": "apps/rrhh/app/admin/cuenta/page.tsx",
@@ -207083,7 +207199,15 @@
           "exportada": false,
           "params": "fecha: string | null | undefined",
           "retorno": "number | null",
-          "linea": 13
+          "linea": 15
+        },
+        {
+          "nombre": "ChipsPendientes",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ e }: { e: E }",
+          "retorno": null,
+          "linea": 23
         },
         {
           "nombre": "EmpleadosClient",
@@ -207091,14 +207215,14 @@
           "exportada": true,
           "params": "{ inicial, nombreUsuario, nombreEmpresa }: { inicial: E[]; nombreUsuario: string; nombreEmpresa: string }",
           "retorno": null,
-          "linea": 21
+          "linea": 34
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "8e4be409e55f"
+      "hash": "a266d4bacbe8"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/page.tsx",
@@ -207121,7 +207245,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "4b5add25ad05"
+      "hash": "e183b7eeb44e"
     },
     {
       "ruta": "apps/rrhh/app/admin/empresa/page.tsx",
@@ -207356,12 +207480,12 @@
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
           "linea": 16,
-          "resumen": "Marco común del panel: logo de la empresa ACTIVA de la sesión, leído en servidor una vez. La marca es SIEMPRE Grupo ASegura (no cambia al cambiar de empresa: solo cambia el logo del cliente). 🚨 Esto "
+          "resumen": "Marco común del panel: logo de la empresa ACTIVA de la sesión, leído en servidor una vez. Logo y color son los de la empresa (Grupo ASegura queda discreto, ver lib/marca-empresa.ts). 🚨 Esto NO es la "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1dcf76af13c7"
+      "hash": "545de6e9a73e"
     },
     {
       "ruta": "apps/rrhh/app/admin/material/page.tsx",
@@ -207532,13 +207656,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 16,
-          "resumen": "Inicio del responsable (antes `/admin` daba 404): lo que espera una acción, de un vistazo. Solo lectura, con el `empresa_id` de la sesión y sin tablas nuevas."
+          "linea": 10,
+          "resumen": "Inicio del responsable (antes `/admin` daba 404): lo que espera una acción, de un vistazo. Solo lectura, con el `empresa_id` de la sesión y sin tablas nuevas. La presentación vive en `components/Inici"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "25e4e539f53a"
+      "hash": "19b34329eba7"
     },
     {
       "ruta": "apps/rrhh/app/admin/prl/page.tsx",
@@ -207771,13 +207895,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 14,
+          "linea": 8,
           "resumen": "El gestor define la marca corporativa de su empresa: color + logo (multipart)."
         }
       ],
       "tablas": [],
       "rutaApi": "/api/admin/cuenta/branding",
-      "hash": "d0240dc82204"
+      "hash": "ad80ee0ef2f9"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/cuenta/convenio/analizar/route.ts",
@@ -208358,7 +208482,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/admin/fichajes/[id]",
-      "hash": "b8e6b1499478"
+      "hash": "775e25c6d607"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/fichajes/exportar/route.ts",
@@ -209206,7 +209330,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/cron/recordatorio-fichaje",
-      "hash": "04844f5e3d97"
+      "hash": "5c2f65529d42"
     },
     {
       "ruta": "apps/rrhh/app/api/cron/recordatorio-firmas/route.ts",
@@ -209677,7 +209801,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 8,
+          "linea": 10,
           "resumen": "GET — lista de empresas rrhh para el god-panel (nº empleados + email del responsable)."
         },
         {
@@ -209686,8 +209810,8 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 25,
-          "resumen": "POST { empresa, color?, responsable_nombre, responsable_email } — alta empresa+responsable. 26/10/2026: el responsable entra por CÓDIGO al correo (/login), sin contraseña. `password` se IGNORA si lleg"
+          "linea": 27,
+          "resumen": "POST { empresa, color?, logo_base64? + logo_mime? (se recorta/normaliza y sube al bucket; si no hay color, se deriva del logo), logo_url? (legado: ruta local /logos/x.png), responsable_nombre, respons"
         }
       ],
       "tablas": [
@@ -209695,7 +209819,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/operador/empresas",
-      "hash": "b69044880d8c"
+      "hash": "545e8f4a5a8e"
     },
     {
       "ruta": "apps/rrhh/app/api/operador/logos/route.ts",
@@ -209821,7 +209945,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ebd3e151f27c"
+      "hash": "95631f530b3c"
     },
     {
       "ruta": "apps/rrhh/app/e/[token]/LoginEmpleado.tsx",
@@ -209836,12 +209960,12 @@
           "exportada": true,
           "params": "{ token, branding }: { token: string; branding: Branding | null }",
           "retorno": null,
-          "linea": 8
+          "linea": 10
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d446c6e5eacc"
+      "hash": "9778d9c7aaab"
     },
     {
       "ruta": "apps/rrhh/app/e/[token]/page.tsx",
@@ -209892,7 +210016,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b1445d2cb385"
+      "hash": "889a6c18fa4d"
     },
     {
       "ruta": "apps/rrhh/app/e/entrar/page.tsx",
@@ -209923,19 +210047,36 @@
       ],
       "funciones": [
         {
+          "nombre": "puedeFirmar",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: { estado_firma: string; carpeta: string }",
+          "retorno": null,
+          "linea": 26,
+          "resumen": "Mismo criterio que antes en los dos sitios donde sale «Firmar» (avisos y lista): solo cambia que ahora se nombra."
+        },
+        {
+          "nombre": "IconoDoc",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 28
+        },
+        {
           "nombre": "ExpedienteEmpleado",
           "kind": "function",
           "exportada": true,
-          "params": "{ visibles, subibles, inicial, branding, tieneFichaje, avisosIniciales, urlSeguros }: { urlSeguros: string; visibles: Carpeta[]; subibles: Carpeta[]; inicial: Doc[]; branding?: Branding; tieneFichaje?: boolean; avisosIniciales?: Avisos | nu",
+          "params": "{ visibles, subibles, inicial, branding, tieneFichaje, avisosIniciales, urlSeguros, nombreEmpleado }: { urlSeguros: string; nombreEmpleado?: string | null; visibles: Carpeta[]; subibles: Carpeta[]; inicial: Doc[]; branding?: Branding; tiene",
           "retorno": null,
-          "linea": 22
+          "linea": 34
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "64cbb98f9f48"
+      "hash": "0c1a1b7eb42f"
     },
     {
       "ruta": "apps/rrhh/app/e/page.tsx",
@@ -209958,7 +210099,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "d19825b139e0"
+      "hash": "23ea1e88feec"
     },
     {
       "ruta": "apps/rrhh/app/layout.tsx",
@@ -209978,7 +210119,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f64e33b49175"
+      "hash": "50e2f293583e"
     },
     {
       "ruta": "apps/rrhh/app/login/LoginForm.tsx",
@@ -210023,12 +210164,12 @@
           "params": "",
           "retorno": null,
           "linea": 9,
-          "resumen": "Marca Grupo ASegura siempre. Aún no se sabe de qué empresa es quien entra: co-marca sin logo de cliente."
+          "resumen": "Aún no se sabe de qué empresa es quien entra: «Portal del Empleado» manda y Grupo ASegura queda pequeño."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "17aad18e28cb"
+      "hash": "868566fc710e"
     },
     {
       "ruta": "apps/rrhh/app/page.tsx",
@@ -210044,12 +210185,32 @@
           "params": "",
           "retorno": null,
           "linea": 6,
-          "resumen": "Portada: marca Grupo ASegura siempre (26/10/2026). Metadatos, manifest y color de barra vienen del layout raíz."
+          "resumen": "Portada: «Portal del Empleado» + Grupo ASegura discreto (27/10/2026). Metadatos, manifest y color de barra vienen del layout raíz."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "173355ba74fa"
+      "hash": "1572736404c3"
+    },
+    {
+      "ruta": "apps/rrhh/app/privacidad-seguridad/page.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "Page"
+      ],
+      "funciones": [
+        {
+          "nombre": "Page",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 26
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "fa5011e5e816"
     },
     {
       "ruta": "apps/rrhh/app/robots.ts",
@@ -210150,6 +210311,7 @@
       "ruta": "apps/rrhh/components/ActivarPush.tsx",
       "ambito": "apps/rrhh",
       "exporta": [
+        "suscribirPush",
         "ActivarPush"
       ],
       "funciones": [
@@ -210162,18 +210324,27 @@
           "linea": 4
         },
         {
+          "nombre": "suscribirPush",
+          "kind": "function",
+          "exportada": true,
+          "params": "endpoint: string",
+          "retorno": "Promise<string>",
+          "linea": 14,
+          "resumen": "Pide permiso y suscribe este dispositivo. Devuelve el texto de estado para mostrar."
+        },
+        {
           "nombre": "ActivarPush",
           "kind": "function",
           "exportada": true,
           "params": "{ endpoint }: { endpoint: string }",
           "retorno": null,
-          "linea": 14,
+          "linea": 32,
           "resumen": "Botón para activar las notificaciones push. `endpoint` = ruta de suscripción del lado actual."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c0f3dbc98c31"
+      "hash": "ed1ec438d1ea"
     },
     {
       "ruta": "apps/rrhh/components/AdminNav.tsx",
@@ -210225,15 +210396,15 @@
           "nombre": "AdminShell",
           "kind": "function",
           "exportada": true,
-          "params": "{ children, logoUrl, nombreEmpresa, tieneFichaje, urlSeguros, empresas, empresaActualId }: { children: React.ReactNode logoUrl?: string | null nombreEmpresa?: string | null tieneFichaje?: boolean urlSeguros: string empresas: { id: string; n",
+          "params": "{ children, logoUrl, nombreEmpresa, colorEmpresa, tieneFichaje, urlSeguros, empresas, empresaActualId }: { children: React.ReactNode logoUrl?: string | null nombreEmpresa?: string | null colorEmpresa?: string | null tieneFichaje?: boolean u",
           "retorno": null,
-          "linea": 10,
+          "linea": 11,
           "resumen": "Marco del panel del responsable: cabecera común (Herramientas · Seguros, selector de empresa) + menú lateral + contenido. Presentacional puro: lo monta UNA vez `app/admin/layout.tsx`. NO es barrera de"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f92ccdc32b69"
+      "hash": "e2af40bc0065"
     },
     {
       "ruta": "apps/rrhh/components/AsistentePanel.tsx",
@@ -210274,7 +210445,27 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bce7a4a4d149"
+      "hash": "dddda931ff4f"
+    },
+    {
+      "ruta": "apps/rrhh/components/AvisoPushEmpleado.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "AvisoPushEmpleado"
+      ],
+      "funciones": [
+        {
+          "nombre": "AvisoPushEmpleado",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ endpoint, hayAlgoQueFirmar }: { endpoint: string; hayAlgoQueFirmar: boolean }",
+          "retorno": null,
+          "linea": 12
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2ac42304569b"
     },
     {
       "ruta": "apps/rrhh/components/AvisosAdminBanner.tsx",
@@ -210310,13 +210501,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 12,
-          "resumen": "Aviso pequeño, SOLO la primera vez: «Mis seguros» ya no es una tarjeta del cuerpo, está en la cabecera («Seguros»). El recuerdo vive en localStorage (conveniencia por dispositivo): si no está disponib"
+          "linea": 10,
+          "resumen": "Banner de UNA línea, SOLO la primera vez: «Mis seguros» ya no es una tarjeta del cuerpo, está en la cabecera («Seguros»). El recuerdo vive en localStorage (conveniencia por dispositivo): si no está di"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "85b1da4997a0"
+      "hash": "484340f5562f"
     },
     {
       "ruta": "apps/rrhh/components/CabeceraApp.tsx",
@@ -210329,9 +210520,9 @@
           "nombre": "CabeceraApp",
           "kind": "function",
           "exportada": true,
-          "params": "{ perfil, logoUrl, nombreEmpresa, urlSeguros, empresas = [], empresaActualId }: { perfil: 'empleado' | 'responsable' logoUrl?: string | null nombreEmpresa?: string | null urlSeguros: string empresas?: Empresa[] empresaActualId?: string }",
+          "params": "{ perfil, marca, urlSeguros, empresas = [], empresaActualId }: { perfil: 'empleado' | 'responsable' marca: MarcaCabecera urlSeguros: string empresas?: Empresa[] empresaActualId?: string }",
           "retorno": null,
-          "linea": 12
+          "linea": 13
         }
       ],
       "tablas": [
@@ -210339,7 +210530,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "c875dbae6aa4"
+      "hash": "8ad2e1124a03"
     },
     {
       "ruta": "apps/rrhh/components/ChatPanel.tsx",
@@ -210407,14 +210598,35 @@
           "nombre": "FichajeEmpleado",
           "kind": "function",
           "exportada": true,
-          "params": "",
+          "params": "{ compacto = false }: { compacto?: boolean }",
           "retorno": null,
           "linea": 106
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fc6af71ca051"
+      "hash": "1ed1edc4af3a"
+    },
+    {
+      "ruta": "apps/rrhh/components/InicioAdmin.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "InicioAdmin"
+      ],
+      "funciones": [
+        {
+          "nombre": "InicioAdmin",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ nombreEmpresa, tarjetas }: { nombreEmpresa: string; tarjetas: Tarjeta[] }",
+          "retorno": null,
+          "linea": 20,
+          "resumen": "Inicio del responsable (presentacional): las tarjetas de pendientes ya calculadas por `tarjetasInicio`."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "aed49b227216"
     },
     {
       "ruta": "apps/rrhh/components/InstalarApp.tsx",
@@ -210442,6 +210654,9 @@
       "exporta": [
         "LogoAsegura",
         "CoMarca",
+        "IconoCandado",
+        "MarcaEmpresa",
+        "MarcaGenerica",
         "PieAsegura"
       ],
       "funciones": [
@@ -210451,7 +210666,7 @@
           "exportada": true,
           "params": "{ alto = 32, color = 'currentColor', className = '' }: { alto?: number; color?: string; className?: string }",
           "retorno": null,
-          "linea": 5,
+          "linea": 6,
           "resumen": "Logotipo de Grupo ASegura (SVG con currentColor → se pinta con máscara del color del contexto)."
         },
         {
@@ -210460,8 +210675,35 @@
           "exportada": true,
           "params": "{ logoUrl, nombre, alto = 26, className = '' }: { logoUrl?: string | null; nombre?: string | null; alto?: number; className?: string }",
           "retorno": null,
-          "linea": 18,
+          "linea": 19,
           "resumen": "Co-marca (móvil 320-430 px): logo del CLIENTE arriba y, debajo, «con» + logotipo «Grupo ASegura». En vertical porque «[cliente] × [Grupo ASegura]» en una fila no cabe a 320 px sin encoger los dos logo"
+        },
+        {
+          "nombre": "IconoCandado",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ tam = 14, className = '' }: { tam?: number; className?: string }",
+          "retorno": null,
+          "linea": 36,
+          "resumen": "Candado (trazo SVG, decorativo): la señal de confianza que acompaña a «Privacidad y seguridad»."
+        },
+        {
+          "nombre": "MarcaEmpresa",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ marca, className = '', centrada = false }: { marca: MarcaCabecera; className?: string; centrada?: boolean }",
+          "retorno": null,
+          "linea": 48,
+          "resumen": "Marca de la cabecera DENTRO de la app (ya se sabe la empresa). Con logo: el logo manda (ya lleva el nombre, no se repite en texto: va en el `alt`) y a su lado, tras una raya fina, «Portal del Empleado"
+        },
+        {
+          "nombre": "MarcaGenerica",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ className = '' }: { className?: string }",
+          "retorno": null,
+          "linea": 79,
+          "resumen": "Marca de las pantallas SIN empresa conocida (portada, login): «Portal del Empleado» manda; Grupo ASegura, pequeño y apagado."
         },
         {
           "nombre": "PieAsegura",
@@ -210469,13 +210711,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 35,
-          "resumen": "Pie común: «Herramienta gratuita de Grupo ASegura · grupoasegura.es» (enlace en pestaña nueva) + instalar la app."
+          "linea": 92,
+          "resumen": "Pie común, en una línea que se parte en móvil: «Herramienta gratuita de Grupo ASegura · grupoasegura.es · Privacidad y seguridad» + instalar la app."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "650c1295341c"
+      "hash": "732d06885ca1"
     },
     {
       "ruta": "apps/rrhh/components/MaterialAdminLista.tsx",
@@ -210540,6 +210782,26 @@
       "hash": "4e81cac607af"
     },
     {
+      "ruta": "apps/rrhh/components/NavEmpleado.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "NavEmpleado"
+      ],
+      "funciones": [
+        {
+          "nombre": "NavEmpleado",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ activa, secciones, onCambiar, insignias = {} }: { activa: Seccion secciones: Seccion[] onCambiar: (s: Seccion) => void insignias?: Partial<Record<Seccion, number>> }",
+          "retorno": null,
+          "linea": 14
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a0f8d51833a2"
+    },
+    {
       "ruta": "apps/rrhh/components/PestanasSolicitudes.tsx",
       "ambito": "apps/rrhh",
       "resumen": "Solicitudes y Calendario son dos vistas de lo mismo: una sola entrada de menú con dos pestañas.",
@@ -210595,7 +210857,7 @@
           "exportada": false,
           "params": "{ label, valor, color }: { label: string; valor: number | null; color?: string }",
           "retorno": null,
-          "linea": 18
+          "linea": 19
         },
         {
           "nombre": "SolicitudesEmpleado",
@@ -210603,14 +210865,14 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 27
+          "linea": 28
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "98465d07f792"
+      "hash": "51b4225e455d"
     },
     {
       "ruta": "apps/rrhh/components/ui/Aviso.tsx",
@@ -213706,6 +213968,87 @@
       "hash": "ffd5bb918315"
     },
     {
+      "ruta": "apps/rrhh/lib/logo-empresa.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Orquesta el alta del logo de una empresa (Cuenta y operador): valida → recorta márgenes → normaliza tamaño → PNG → sube al bucket (mismo `subirObjeto` que el resto de subidas) → guarda `logo_path` y, si la empresa NO tiene color, el color dominante del logo. SVG se guarda tal cual (vectorial, sin ra",
+      "exporta": [
+        "procesarLogo",
+        "guardarLogoEmpresa"
+      ],
+      "funciones": [
+        {
+          "nombre": "procesarLogo",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: Buffer, mime: string",
+          "retorno": "Promise<LogoProcesado>",
+          "linea": 18,
+          "resumen": "Raster → PNG recortado (≤ 600 px de ancho, proporción intacta) + color dominante. Lanza si no es imagen decodificable."
+        },
+        {
+          "nombre": "guardarLogoEmpresa",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, entrada: Buffer, mime: string,",
+          "retorno": "Promise<",
+          "linea": 31,
+          "resumen": "Valida (tipo y 2 MB), procesa, sube y guarda. Devuelve error legible o el color sugerido que se haya guardado."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "79c07adf9e5b"
+    },
+    {
+      "ruta": "apps/rrhh/lib/logo-pixeles.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Análisis PURO de píxeles de un logo (RGBA 8 bits, sin sharp): recorte de márgenes uniformes y color dominante. Alta de marca de un cliente: subir logo → recorte + color automáticos (`lib/logo-empresa.ts` lo orquesta con sharp).",
+      "exporta": [
+        "bboxContenido",
+        "colorDominante"
+      ],
+      "funciones": [
+        {
+          "nombre": "esFondo",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Uint8Array | Uint8ClampedArray | Buffer, i: number",
+          "retorno": "boolean",
+          "linea": 7,
+          "resumen": "Un píxel es «fondo» si es transparente o casi blanco (los márgenes de un logo pegado sobre blanco)."
+        },
+        {
+          "nombre": "bboxContenido",
+          "kind": "function",
+          "exportada": true,
+          "params": "data: Uint8Array | Uint8ClampedArray | Buffer, w: number, h: number, margen = 0",
+          "retorno": "Bbox | null",
+          "linea": 17,
+          "resumen": "Rectángulo mínimo con contenido (no transparente ni casi blanco), más `margen` px de respiro (acotado a la imagen). `null` si TODA la imagen es fondo (logo vacío/blanco): no hay nada que recortar ni d"
+        },
+        {
+          "nombre": "toHex",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 34
+        },
+        {
+          "nombre": "colorDominante",
+          "kind": "function",
+          "exportada": true,
+          "params": "data: Uint8Array | Uint8ClampedArray | Buffer, w: number, h: number",
+          "retorno": "string | null",
+          "linea": 42,
+          "resumen": "Color corporativo probable: el cubo (16 niveles por canal) más poblado entre los píxeles NO neutros (se ignoran transparentes, casi blancos, casi negros y grises: saturación < 0,25). Devuelve la media"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e3484251ca5a"
+    },
+    {
       "ruta": "apps/rrhh/lib/mailer.ts",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -213729,7 +214072,7 @@
     {
       "ruta": "apps/rrhh/lib/marca-asegura.ts",
       "ambito": "apps/rrhh",
-      "resumen": "Marca «Grupo ASegura» del Portal del Empleado. PURO (sin BD) → testeable. 26/10/2026 (decisión de Alberto): la marca es SIEMPRE Grupo ASegura, para todas las empresas. Se acabó el doble diseño (beige/teal/serif) y su gating por la env `RRHH_EMPRESAS_MARCA_ASEGURA`, por host y por `?m=`. 🚨 Esa env Y",
+      "resumen": "Marca «Grupo ASegura» del Portal del Empleado. PURO (sin BD) → testeable. 27/10/2026 («algo intermedio»): dentro de la app el logo y el color son los de la EMPRESA (lib/marca-empresa.ts) y Grupo ASegura queda discreto («con Grupo ASegura» + pie). Fuera (portada, login) manda «Portal del Empleado». 2",
       "exporta": [
         "urlPortalAsegura"
       ],
@@ -213740,13 +214083,87 @@
           "exportada": true,
           "params": "email: string | null | undefined, base?: string | null",
           "retorno": "string",
-          "linea": 22,
+          "linea": 26,
           "resumen": "Enlace «Seguros». 🚨 REGLA LEGAL: solo viajan `email` (si lo hay) y `origen`. Ningún otro dato del empleado ni de la empresa (nombre, DNI, domicilio, empresa_id…) se añade jamás a esta URL: los datos "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3e588c891fc5"
+      "hash": "12518182ed5f"
+    },
+    {
+      "ruta": "apps/rrhh/lib/marca-empresa.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Marca de la EMPRESA dentro del portal (27/10/2026, decisión de Alberto: «algo intermedio»). Los empleados desconfiaban de ver «Grupo ASegura» por todas partes: dentro de la app (cuando ya se sabe la empresa) el logo y el color son los de SU empresa y Grupo ASegura queda como una línea pequeña («con ",
+      "exporta": [
+        "contraste",
+        "paletaEmpresa",
+        "marcaCabecera"
+      ],
+      "funciones": [
+        {
+          "nombre": "canales",
+          "kind": "function",
+          "exportada": false,
+          "params": "hex: string",
+          "retorno": "[number, number, number]",
+          "linea": 18
+        },
+        {
+          "nombre": "aHex",
+          "kind": "function",
+          "exportada": false,
+          "params": "[r, g, b]: [number, number, number]",
+          "retorno": "string",
+          "linea": 21
+        },
+        {
+          "nombre": "luminancia",
+          "kind": "function",
+          "exportada": false,
+          "params": "hex: string",
+          "retorno": "number",
+          "linea": 25
+        },
+        {
+          "nombre": "contraste",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: string, b: string",
+          "retorno": "number",
+          "linea": 30,
+          "resumen": "Ratio de contraste WCAG entre dos colores `#rrggbb` (1 a 21)."
+        },
+        {
+          "nombre": "mezcla",
+          "kind": "function",
+          "exportada": false,
+          "params": "hex: string, objetivo: number, t: number",
+          "retorno": "string",
+          "linea": 34
+        },
+        {
+          "nombre": "paletaEmpresa",
+          "kind": "function",
+          "exportada": true,
+          "params": "color: string | null | undefined",
+          "retorno": "",
+          "linea": 44,
+          "resumen": "Paleta de acento a partir del color corporativo, con AA garantizado: el texto blanco de los botones sobre `brand` (y el texto `brand` sobre el fondo suave de los avisos) llega a ≥ 4,5:1. Si el color e"
+        },
+        {
+          "nombre": "marcaCabecera",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: { nombre?: string | null; logoUrl?: string | null; color?: string | null } | null | undefined",
+          "retorno": "MarcaCabecera",
+          "linea": 57,
+          "resumen": "Qué marca pinta la cabecera/pantallas internas. Empresa si tiene logo o color válido; si no, Grupo ASegura como antes."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "134668cad7f4"
     },
     {
       "ruta": "apps/rrhh/lib/material-repo.ts",
@@ -214464,6 +214881,69 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "c8c933a9e10b"
+    },
+    {
+      "ruta": "apps/rrhh/lib/saludo.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Saludo del portal del empleado («Hola, Antonio»). PURO → testeable. Sin nombre (o vacío) → «Hola» a secas: nunca «Hola, null» ni un nombre inventado. Solo el primer nombre, con la capitalización que tenga en la ficha salvo que venga TODO EN MAYÚSCULAS (importaciones de nóminas), que se pasa a «Anton",
+      "exporta": [
+        "saludoEmpleado"
+      ],
+      "funciones": [
+        {
+          "nombre": "saludoEmpleado",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre: string | null | undefined",
+          "retorno": "string",
+          "linea": 4,
+          "resumen": "Saludo del portal del empleado («Hola, Antonio»). PURO → testeable. Sin nombre (o vacío) → «Hola» a secas: nunca «Hola, null» ni un nombre inventado. Solo el primer nombre, con la capitalización que t"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6c63e72f2ff8"
+    },
+    {
+      "ruta": "apps/rrhh/lib/seccion-empleado.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Secciones del portal del empleado (/e). Viven en la URL (`#documentos` o `?seccion=documentos`) para que enlaces y avisos push sigan funcionando. Módulo puro: se testea sin navegador.",
+      "exporta": [
+        "esSeccion",
+        "seccionDeUrl",
+        "seccionDisponible"
+      ],
+      "funciones": [
+        {
+          "nombre": "esSeccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "v is Seccion",
+          "linea": 6
+        },
+        {
+          "nombre": "seccionDeUrl",
+          "kind": "function",
+          "exportada": true,
+          "params": "hash: string, search: string",
+          "retorno": "Seccion",
+          "linea": 11,
+          "resumen": "Sección pedida por la URL: primero el hash, luego `?seccion=`; cualquier otra cosa = inicio."
+        },
+        {
+          "nombre": "seccionDisponible",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: Seccion, tieneFichaje: boolean",
+          "retorno": "Seccion",
+          "linea": 19,
+          "resumen": "Sin fichaje en la empresa, la sección «fichaje» no existe y su enlace cae en inicio."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1e5835eb9c2b"
     },
     {
       "ruta": "apps/rrhh/lib/sesion-responsable-reglas.ts",
@@ -269298,7 +269778,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5540,
-    "funciones": 21756
+    "archivos": 5552,
+    "funciones": 21792
   }
 }
