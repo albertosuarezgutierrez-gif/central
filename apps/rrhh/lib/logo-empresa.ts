@@ -7,6 +7,9 @@ import { bboxContenido, colorDominante } from '@/lib/logo-pixeles'
 
 export const MAX_LOGO = 2 * 1024 * 1024 // 2 MB
 export const ANCHO_MAX_LOGO = 600
+// Tope de píxeles de ENTRADA (antes de decodificar): un PNG de 2 MB puede declarar 16.000×16.000 px (bomba de
+// descompresión → ~1 GB en RGBA y un bucle JS de 256 M de píxeles). 24 MP sobra para cualquier logo real.
+export const MAX_PIXELES_LOGO = 24_000_000
 export const MIME_LOGO = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp', 'image/gif'] as const
 
 export type LogoProcesado = { bytes: Buffer; mime: string; ext: string; color: string | null }
@@ -15,10 +18,10 @@ export type LogoProcesado = { bytes: Buffer; mime: string; ext: string; color: s
 export async function procesarLogo(entrada: Buffer, mime: string): Promise<LogoProcesado> {
   if (mime === 'image/svg+xml') return { bytes: entrada, mime, ext: 'svg', color: null }
   const sharp = (await import('sharp')).default
-  const { data, info } = await sharp(entrada).rotate().ensureAlpha().raw().toBuffer({ resolveWithObject: true })
+  const { data, info } = await sharp(entrada, { limitInputPixels: MAX_PIXELES_LOGO }).rotate().ensureAlpha().raw().toBuffer({ resolveWithObject: true })
   const margen = Math.max(2, Math.round(Math.max(info.width, info.height) * 0.01))
   const box = bboxContenido(data, info.width, info.height, margen)
-  let img = sharp(entrada).rotate()
+  let img = sharp(entrada, { limitInputPixels: MAX_PIXELES_LOGO }).rotate()
   if (box) img = img.extract(box) // logo vacío/blanco: se deja como vino
   const png = await img.resize({ width: ANCHO_MAX_LOGO, withoutEnlargement: true }).png().toBuffer()
   return { bytes: png, mime: 'image/png', ext: 'png', color: colorDominante(data, info.width, info.height) }

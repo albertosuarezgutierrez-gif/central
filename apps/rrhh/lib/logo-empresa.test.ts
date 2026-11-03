@@ -18,6 +18,12 @@ describe('procesarLogo', () => {
     expect(m.width!).toBeLessThan(260); expect(m.height!).toBeLessThan(100)
     expect(r.color).toBe('#1b3461'); expect(r.ext).toBe('png')
   })
+  it('rechaza una imagen por encima del tope de píxeles (bomba de descompresión) sin decodificarla', async () => {
+    const sharp = (await import('sharp')).default
+    const enorme = await sharp({ create: { width: 5000, height: 5000, channels: 3, background: '#ffffff' } }).png().toBuffer()
+    expect(enorme.byteLength).toBeLessThan(2 * 1024 * 1024)
+    await expect(procesarLogo(enorme, 'image/png')).rejects.toThrow()
+  })
   it('SVG pasa tal cual', async () => {
     const r = await procesarLogo(Buffer.from('<svg/>'), 'image/svg+xml')
     expect(r.ext).toBe('svg'); expect(r.color).toBeNull()
