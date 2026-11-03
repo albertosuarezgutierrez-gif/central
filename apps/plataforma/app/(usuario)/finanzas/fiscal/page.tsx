@@ -70,7 +70,7 @@ export default async function FiscalPage({
       const extra = await cargarDatosResultado(session.id, year)
       const contexto = armarContextoResultado({
         anio: year, hoy: baseDevengo.hoy, perfil: data.deducciones.perfil, descendientes,
-        retencionesCorreduria: quarter === 0 ? data.correduria.retenciones : null, retencionesPilar: extra.retencionesPilar, ingresosPilar: extra.ingresosPilar, guarderiaBanco: extra.guarderiaBanco,
+        retencionesCorreduria: quarter === 0 ? data.correduria.retenciones : null, retencionesPilar: extra.retencionesPilar, ingresosPilar: extra.ingresosPilar, guarderiaBanco: extra.guarderiaBanco, abonosBanco: extra.abonosBanco,
       })
       panel = armarPanel(baseDevengo, { descendientes, conyugeTrabaja: data.deducciones.perfil.conyugeTrabaja, contexto })
       compras = await listarComprasPrevistas(session.id)

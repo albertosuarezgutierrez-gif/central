@@ -10,6 +10,7 @@
 // Para poder dar una cifra, el total cuenta las pendientes como 0 y las LISTA en `pendientes`
 // (`firme: false`): la cifra es provisional hasta que lleguen.
 import { calcularDeducciones, importesDe, type Descendiente, type LineaDeduccion, type PerfilFiscal } from './fiscal-deducciones.ts'
+import type { AbonosBanco } from './abonos-anticipados.ts'
 import { declarar, type EntradaSimulador, type Palancas, type PorTitular, type ResultadoContribuyente } from './simulador-irpf.ts'
 
 const r2 = (n: number) => Math.round(n * 100) / 100
@@ -43,6 +44,8 @@ export type ContextoResultado = {
   mesesTranscurridos: number
   /** Guardería pagada en banco en el año (sin duplicados ignorados). null = sin dato. Solo para contrastar con el perfil. */
   guarderiaBancoAnual?: number | null
+  /** Abonos anticipados 140/143 leídos del banco (100 € AEAT). null/ausente = no se pudo leer ⇒ se usa el perfil. */
+  abonosBanco?: AbonosBanco | null
   /** Avisos de tipificación (p. ej. posible prestación exenta de Pilar). */
   avisos: string[]
 }
@@ -147,6 +150,17 @@ function abonos(perfil: PerfilFiscal, parteMat: number, parteFn: number): Partid
   ]
 }
 
+/** Abonos del banco (real + proyección a 31/12): una partida por contribuyente. `parte` = fracción que le toca. */
+function abonosDelBanco(b: AbonosBanco, parte: number): Partida[] {
+  if (parte <= 0) return []
+  const est = b.estimado > 0
+  return [{
+    id: 'abono_banco', etiqueta: 'Abonos anticipados 140/143 (del banco)', importe: r2(b.total * parte), estimada: est,
+    nota: `del banco: ${b.n} abonos de 100,00€ (${eur2(b.real)}€)` + (est ? `; estimado hasta 31/12: +${eur2(b.estimado)}€ al ritmo de los últimos 3 meses` : '')
+      + (parte < 1 ? '; reparto 50/50 entre los dos' : ''),
+  }]
+}
+
 // ── Cuenta final de un contribuyente ────────────────────────────────────────────────────────
 const sumaP = (ps: Partida[]) => ps.reduce((s, p) => s + (p.importe ?? 0), 0)
 
@@ -201,7 +215,7 @@ export function calcularResultadoDeclaracion(e: EntradaSimulador, palIn: Palanca
   const dedConj = lineasDeduccion(perfilConj, ctx.descendientes, anio, cc?.baseLiquidable ?? undefined)
     .map(l => aPartida(l, 1, notaTope(l, ctx.perfil, ctx.guarderiaBancoAnual))).map(MARCA_TOPE)
   const conjunta = cerrarModalidad('conjunta', [
-    cerrarContribuyente('unidad_familiar', cc, dedConj, [retAlb, retPil], [pfA, pfP], abonos(ctx.perfil, 1, 1)),
+    cerrarContribuyente('unidad_familiar', cc, dedConj, [retAlb, retPil], [pfA, pfP], ctx.abonosBanco ? abonosDelBanco(ctx.abonosBanco, 1) : abonos(ctx.perfil, 1, 1)),
   ])
 
   // ── Individual: cada uno la suya. Reparto de las deducciones familiares ──
@@ -235,7 +249,7 @@ export function calcularResultadoDeclaracion(e: EntradaSimulador, palIn: Palanca
     return cerrarContribuyente(
       titular, c, mias,
       [titular === 'alberto' ? retAlb : retPil], [titular === 'alberto' ? pfA : pfP],
-      abonos(ctx.perfil, titular === 'pilar' ? 1 : 0, parteFn),
+      ctx.abonosBanco ? abonosDelBanco(ctx.abonosBanco, ctx.perfil.conyugeTrabaja ? 0.5 : titular === 'alberto' ? 1 : 0) : abonos(ctx.perfil, titular === 'pilar' ? 1 : 0, parteFn),
     )
   }
   const ind = cerrarModalidad('individual', [individual('alberto', cA), individual('pilar', cP)])
@@ -276,7 +290,7 @@ export function mesesTranscurridos(anio: number, hoy: string): number {
 export function armarContextoResultado(e: {
   anio: number; hoy: string; perfil: PerfilFiscal; descendientes: Descendiente[]
   retencionesCorreduria: RetencionCorreduria | null; retencionesPilar: number | null; ingresosPilar: IngresoPilar[] | null
-  pagosFraccionados?: PorTitular<number | null>; guarderiaBanco?: number | null
+  pagosFraccionados?: PorTitular<number | null>; guarderiaBanco?: number | null; abonosBanco?: AbonosBanco | null
 }): ContextoResultado {
   const aviso = e.ingresosPilar ? avisoPrestacionExenta(e.ingresosPilar) : null
   return {
@@ -286,6 +300,7 @@ export function armarContextoResultado(e: {
     pagosFraccionados: e.pagosFraccionados ?? { alberto: null, pilar: null },
     mesesTranscurridos: mesesTranscurridos(e.anio, e.hoy),
     guarderiaBancoAnual: e.guarderiaBanco ?? null,
+    abonosBanco: e.abonosBanco ?? null,
     avisos: aviso ? [aviso] : [],
   }
 }

@@ -133,3 +133,15 @@ test('guardería: la nota dice el origen (perfil) y avisa si difiere del banco (
   assert.match(g(ctxFixture({ guarderiaBancoAnual: 3435.5 })), /coincide con el banco/)
   assert.match(g(ctxFixture({ guarderiaBancoAnual: null })), /banco: sin dato/)
 })
+
+test('abonos 140/143 del banco: aparecen «del banco», desaparece «faltan abonos» y suman (real + estimado) en ambas modalidades', () => {
+  const banco = { real: 1400, n: 14, ultimoMes: 10, estimado: 200, total: 1600 }
+  const base = calcularResultadoDeclaracion(entradaFixture(), SIN_PALANCAS, ctxFixture({ perfil: { ...PERFIL, abonoAnticipadoMaternidad: null, abonoAnticipadoFamiliaNumerosa: null } }))
+  const r = calcularResultadoDeclaracion(entradaFixture(), SIN_PALANCAS, ctxFixture({ perfil: { ...PERFIL, abonoAnticipadoMaternidad: null, abonoAnticipadoFamiliaNumerosa: null }, abonosBanco: banco }))
+  assert.equal(base.faltanAbonos, true)
+  assert.equal(r.faltanAbonos, false); assert.equal(r.avisoAbonos, null)
+  const a = r.conjunta.contribuyentes[0].abonosAnticipados[0]
+  assert.equal(a.importe, 1600); assert.equal(a.estimada, true); assert.match(a.nota ?? '', /del banco/)
+  cerca(r.individual.contribuyentes.reduce((s, c) => s + c.abonosAnticipados.reduce((x, p) => x + (p.importe ?? 0), 0), 0), 1600)
+  cerca(r.conjunta.resultado, base.conjunta.resultado! + 1600) // los abonos ya cobrados se regularizan: suman a pagar
+})
