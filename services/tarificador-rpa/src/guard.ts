@@ -1272,6 +1272,9 @@ export const ENLACES_ENTRADA_AUTORIZADOS: Readonly<Record<string, readonly strin
   pelayo: Object.freeze(['Contratación', 'Presupuestos', 'Nuevo Presupuesto', 'Auto', 'Autos', 'Automóvil', 'Automóviles', 'Hogar']),
 })
 
+/** 0.3.33: etiquetas (normalizadas) de ramo de Pelayo que admiten UN reintento de clic. */
+const RAMOS_REINTENTABLES_PELAYO: ReadonlySet<string> = new Set(['auto', 'autos', 'automóvil', 'automóviles', 'hogar'])
+
 /** Origen EXACTO (https) en el que vale el enlace de entrada de una compañía; sin entrada aquí = sin restricción de origen (Mapfre). */
 export const ORIGEN_ENTRADA: Readonly<Record<string, string>> = Object.freeze({ fidelidade: 'https://mediadores.fidelidade.es', pelayo: 'https://mediadores.pelayo.com' })
 
@@ -1301,7 +1304,7 @@ export function cerrarFaseEntrada(guard: GuardEmision): void {
  * por trabajo; y
  * `comprobarBoton` sobre el resto de su descripción. Solo entonces pulsa UNA vez. No lo recibe el bucle IA.
  */
-export async function pulsarEnlaceEntradaAutorizado(boton: Locator, guard: GuardEmision, compania: string): Promise<void> {
+export async function pulsarEnlaceEntradaAutorizado(boton: Locator, guard: GuardEmision, compania: string, opciones: { reintento?: boolean } = {}): Promise<void> {
   guard.comprobar()
   if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'enlace de entrada con la ventana de emisión, de avance o de guardado abierta')
   if (ENTRADA_CERRADA.has(guard)) throw new EmisionBloqueadaError('fase', 'enlace de entrada fuera de la fase de entrada')
@@ -1332,7 +1335,19 @@ export async function pulsarEnlaceEntradaAutorizado(boton: Locator, guard: Guard
   }
   const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
   const clave = `entrada:${autorizado}`
-  if (usados.has(clave)) throw new EmisionBloqueadaError('fase', `el enlace de entrada «${String(desc[0] ?? '').trim()}» ya se usó en este trabajo`)
+  if (usados.has(clave)) {
+    // 0.3.33: UN reintento, solo de la tarjeta del RAMO de Pelayo (nunca un menú ni «Nuevo Presupuesto»), cuando el primer clic no cambió nada.
+    const claveReintento = `${clave}:reintento`
+    if (!(opciones.reintento === true && compania === 'pelayo' && RAMOS_REINTENTABLES_PELAYO.has(autorizado) && !usados.has(claveReintento))) {
+      throw new EmisionBloqueadaError('fase', `el enlace de entrada «${String(desc[0] ?? '').trim()}» ya se usó en este trabajo`)
+    }
+    comprobarBoton(desc.filter((d) => textoEntrada(d) !== autorizado))
+    usados.add(claveReintento)
+    AVANCES_USADOS.set(guard, usados)
+    await boton.click()
+    guard.comprobar()
+    return
+  }
   const previo = PREVIOS_ENTRADA[compania]?.[autorizado]
   if (previo !== undefined && !usados.has(`entrada:${previo}`)) throw new EmisionBloqueadaError('fase', `el enlace de entrada «${String(desc[0] ?? '').trim()}» va después de «${previo}»`)
   comprobarBoton(desc.filter((d) => textoEntrada(d) !== autorizado))

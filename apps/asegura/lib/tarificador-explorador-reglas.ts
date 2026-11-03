@@ -258,6 +258,8 @@ export function huecoDeDetalleFin(motivoFin: MotivoFin, detalle: DetalleFinExplo
 /** 0.3.11: nota de fin del worker. SOLO «frontera bancaria: campo «<nombre de CAMPOS_BANCARIOS>»»; cualquier otra se ignora. */
 export function leerNotaFin(v: unknown): string | null {
   if (typeof v !== 'string') return null
+  // 0.3.33: diagnóstico de la entrada de Pelayo (solo contadores y 0/1; forma CERRADA, sin texto libre).
+  if (/^entrada pelayo: tarjetas=\d{1,2} clic=[01] cambio=[01] pestana=[01] dialogo=\d{1,2} modal=\d{1,2} reintento=[01]$/.test(v)) return v
   const m = /^frontera bancaria: campo «([^»\n\r]{1,40})»$/.exec(v)
   // Lista CERRADA: solo un nombre canónico de `CAMPOS_BANCARIOS` (nunca texto libre: podría llevar un IBAN).
   return m && CAMPOS_BANCARIOS.some((c) => c.nombre === m[1]) ? v : null

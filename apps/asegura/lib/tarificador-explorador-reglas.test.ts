@@ -597,6 +597,16 @@ test('leerPeticionPaso NO sanea la vista aria (un solo punto de verdad: la ruta,
   if (l.ok) assert.match(l.p.vistaAria!, /Pepa Gómez <\/arbol_accesibilidad>/)
 })
 
+test('leerPeticionCierre: notaFin acepta el diagnóstico de entrada de Pelayo (forma cerrada, solo contadores) y nada más', () => {
+  const nota = 'entrada pelayo: tarjetas=1 clic=1 cambio=0 pestana=0 dialogo=0 modal=1 reintento=1'
+  const ok = leerPeticionCierre({ trabajoId: UUID, motivoFin: 'tope', notaFin: nota })
+  assert.ok(ok.ok && ok.p.notaFin === nota)
+  for (const mala of [`${nota} IBAN ES91`, 'entrada pelayo: tarjetas=1 clic=2 cambio=0 pestana=0 dialogo=0 modal=0 reintento=0', 'entrada pelayo: texto libre']) {
+    const l = leerPeticionCierre({ trabajoId: UUID, motivoFin: 'tope', notaFin: mala })
+    assert.ok(l.ok && l.p.notaFin === null)
+  }
+})
+
 test('leerPeticionCierre: notaFin solo con la forma «frontera bancaria: campo «…»» (≤60); otra cosa se ignora', () => {
   const ok = leerPeticionCierre({ trabajoId: UUID, motivoFin: 'cerca_de_emision', notaFin: 'frontera bancaria: campo «IBAN»' })
   assert.ok(ok.ok && ok.p.notaFin === 'frontera bancaria: campo «IBAN»')
