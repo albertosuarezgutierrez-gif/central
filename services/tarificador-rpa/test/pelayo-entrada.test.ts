@@ -10,7 +10,7 @@ import { ENTRADAS_EXPLORACION, entradaSoloLectura, nombresCredencial, type Inven
 import { ErrorCredenciales } from '../src/credenciales.ts'
 import { ENLACES_ENTRADA_AUTORIZADOS, instalarGuardEmision, pulsar, pulsarEnlaceEntradaAutorizado, pulsarExploracionAutorizada, pulsarGuardadoDialogoAutorizado, pulsarGuardadoPresupuesto, type GuardEmision } from '../src/guard.ts'
 import { bucleExploracion, PORTALES_EXPLORACION, problemaTrabajoExploracion, type ContextoBucle, type CtxEntrada } from '../src/explorador.ts'
-import { abrirNuevoPresupuestoPelayo, esHostLoginPelayo, etiquetaExactaPelayo, loginPelayo, opcionRamoPelayo, rotulosRamoPelayo, rotulosSeguros, URL_PORTAL_PELAYO } from '../src/adapters/pelayo/entrada.ts'
+import { abrirNuevoPresupuestoPelayo, esHostLoginPelayo, etiquetaExactaPelayo, HOSTS_LOGIN_PELAYO, loginPelayo, RE_HOST_SSO_PELAYO, opcionRamoPelayo, rotulosRamoPelayo, rotulosSeguros, URL_PORTAL_PELAYO } from '../src/adapters/pelayo/entrada.ts'
 import { PELAYO_ACTIVO, pelayoAuto, pelayoHogar } from '../src/adapters/pelayo/ramos.ts'
 import { adaptadores } from '../src/adapters/index.ts'
 import type { RespuestaPaso, Trabajo } from '../src/api.ts'
@@ -202,6 +202,42 @@ test('login en un host fuera de la lista: hueco y NO se escriben credenciales', 
   } finally {
     await context.close()
   }
+})
+
+test('0.3.29 · login en el SSO de Pelayo (acceso12.pelayo.com, exploración real): se escriben las credenciales y entra; un host ajeno sigue en hueco', async () => {
+  const SSO = 'https://acceso12.pelayo.com'
+  const { context, page, ctx, logs } = await abrir()
+  try {
+    await page.route(`${SSO}/**`, (r) => r.fulfill({ contentType: 'text/html; charset=utf-8', body: portal() }))
+    await loginPelayo(page, ctx, ESPERAS, `${SSO}/nidp/app/login`)
+    assert.ok(logs.includes('login ok'))
+    assert.equal(await page.locator('#home').isVisible(), true)
+  } finally {
+    await context.close()
+  }
+  for (const AJENO of ['https://acceso12.pelayo.com.evil.example', 'https://acceso.pelayo.com', 'https://sso.pelayo.com']) {
+    const x = await abrir()
+    try {
+      await x.page.route(`${AJENO}/**`, (r) => r.fulfill({ contentType: 'text/html; charset=utf-8', body: portal() }))
+      await assert.rejects(() => loginPelayo(x.page, x.ctx, ESPERAS, `${AJENO}/login`), /host fuera de la lista/, AJENO)
+      assert.equal(await x.page.locator('#u').inputValue(), '', AJENO)
+      assert.equal(await x.page.locator('#p').inputValue(), '', AJENO)
+    } finally {
+      await x.context.close()
+    }
+  }
+})
+
+test('0.3.29 · puras: host del SSO de Pelayo — acceso12 (y accesoN) solo por https; nada más', () => {
+  assert.ok(HOSTS_LOGIN_PELAYO.includes('acceso12.pelayo.com'))
+  for (const u of ['https://acceso12.pelayo.com/nidp/app/login?id=x', 'https://acceso1.pelayo.com/', 'https://acceso999.pelayo.com/']) assert.equal(esHostLoginPelayo(u), true, u)
+  for (const u of [
+    'http://acceso12.pelayo.com/', 'https://acceso12.pelayo.com.evil.example/', 'https://evil.acceso12.pelayo.com/', 'https://xacceso12.pelayo.com/',
+    'https://acceso.pelayo.com/', 'https://acceso012.pelayo.com/', 'https://acceso1234.pelayo.com/', 'https://acceso12-pelayo.com/', 'https://acceso12.pelayo.co/',
+    'https://u:p@acceso12.pelayo.com/', 'https://acceso12.pelayo.com:8443/', 'https://sso.pelayo.com/', 'https://pelayo.com/',
+  ]) assert.equal(esHostLoginPelayo(u), false, u)
+  assert.equal(RE_HOST_SSO_PELAYO.test('acceso12.pelayo.com'), true)
+  assert.equal(RE_HOST_SSO_PELAYO.test('acceso12.pelayo.com.evil'), false)
 })
 
 test('puras: host de login, etiqueta exacta, opción de ramo, rótulos sin PII, ramo sin recorrido', () => {

@@ -51,7 +51,7 @@ async function abrir(html: string, url: string): Promise<{ context: BrowserConte
 }
 const posts = () => peticiones.filter((p) => p.metodo === 'POST')
 
-test('versión del explorador 0.3.28', () => assert.equal(EXPLORADOR_VERSION, '0.3.28'))
+test('versión del explorador 0.3.29', () => assert.equal(EXPLORADOR_VERSION, '0.3.29'))
 
 // ─── 1) Fidelidade ────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 const FI = 'fidelidade:particulares:vivienda'
