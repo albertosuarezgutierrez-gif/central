@@ -1,6 +1,6 @@
 -- 2026-11-03b — Regularización de RC: PEDIR al cliente la facturación real del periodo por enlace (`/datos/<token>`,
 -- motivo `regularizacion_rc`). Código: apps/asegura/lib/regularizacion-rc*.ts; reglas puras en
--- packages/module-seguros/src/regularizacion-rc.ts. SIN APLICAR: lo aplica Alberto.
+-- packages/module-seguros/src/regularizacion-rc.ts. APLICADO el 03/11/2026 (OK de Alberto).
 --
 -- Tabla PROPIA y no columnas en `solicitud_datos` (a propósito): aquella va atada a una OPORTUNIDAD (`oportunidad_id NOT
 -- NULL`, «una viva por oportunidad y persona», historial de oportunidad, CHECK de ramos de presupuesto). Una regularización
