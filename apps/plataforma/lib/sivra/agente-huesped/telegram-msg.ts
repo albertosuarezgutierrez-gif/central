@@ -80,10 +80,12 @@ export async function proponerPorTelegram(ctx: Contexto, pregunta: string, dec: 
   const pet = peticionCambioHorario(pregunta, dec.categoria, { checkIn: ctx.horaCheckIn, checkOut: ctx.horaCheckOut })
   if (pet) return proponerCambioHorario(ctx, pregunta, dec, pet)
   const urgente = dec.sentimiento === 'negativo'
+  // Agoda: el transporte cambia (responde al correo del huésped), la política no. Se dice, con el DESTINO
+  // exacto, para que no sorprenda y se vea si el alias no cuadra.
+  const hiloAgoda = await hiloAgodaDe(ctx.bookingId)
   const cabecera = `${EMOJI(urgente)} <b>${escapeHtml(ctx.property)}</b> · ${escapeHtml(ctx.guestName)} (reserva ${ctx.bookingId})` +
     `\n📅 Entrada ${fmtFecha(ctx.checkIn)} · Salida ${fmtFecha(ctx.checkOut)}` +
-    // Agoda: el transporte cambia (responde al correo del huésped), la política no. Se dice para que no sorprenda.
-    ((await hiloAgodaDe(ctx.bookingId)) ? `\n📧 <i>Agoda: al enviar, la respuesta sale como respuesta al correo del huésped.</i>` : '')
+    (hiloAgoda ? `\n📧 <i>Agoda: al enviar, la respuesta sale como respuesta al correo del huésped → ${escapeHtml(hiloAgoda.responderA)}</i>` : '')
 
   // Si el huésped escribe en OTRO idioma, traducir al español TANTO la pregunta COMO el borrador,
   // para que Alberto entienda de un vistazo qué le dicen y qué se le va a responder (lo pidió él).

@@ -79,3 +79,56 @@ export function elegirReservaAgoda(
   })
   return hits.length === 1 && hits[0].id != null ? String(hits[0].id) : null
 }
+
+// ── Decisiones del enrutado (03/11/2026, revisión del PR #5455) ─────────────────────────────────────
+
+/**
+ * Acciones del orquestador con las que el agente SÍ se ha hecho cargo del mensaje (respondido, propuesto
+ * en Telegram, enlace de cobro mandado o ya procesado en otra pasada). Cualquier otra (`fallo_envio`,
+ * `sin_contexto`, `ya_respondido`, `eco_plantilla`, `eco_propio`…) NO es «enrutado»: el triaje manda el
+ * aviso de respaldo por Telegram con el motivo, para que nada se quede sin contestar en silencio.
+ */
+export const ACCIONES_AGENTE_SE_ENCARGA: ReadonlySet<string> = new Set([
+  'auto_enviado', 'propuesto_telegram', 'cobro_enlace_enviado', 'ya_procesado',
+])
+
+export function agenteSeEncarga(accion: string): boolean {
+  return ACCIONES_AGENTE_SE_ENCARGA.has(accion)
+}
+
+const RE_DOMINIO_AGODA = /(?:^|\.)agoda(?:-messaging)?\.com$/
+
+function dominioAgoda(valor: string | undefined): boolean {
+  const d = (valor || '').trim().toLowerCase().replace(/^.*@/, '').replace(/[>"'),]+$/, '')
+  return !!d && RE_DOMINIO_AGODA.test(d)
+}
+
+/**
+ * ¿El correo viene AUTENTICADO por Agoda? Se lee la cabecera `Authentication-Results` MÁS ALTA (la que
+ * añade el servidor que lo recibe, Gmail: un remitente falso puede meter las suyas, pero siempre por
+ * debajo). Vale `dkim=pass` con `header.d`/`header.i` de agoda.com / agoda-messaging.com, o `dmarc=pass`
+ * con `header.from` de esos dominios. Sin cabecera o sin pase → false (sin DKIM no se enruta: un From
+ * falsificado con el Reply-To de otra reserva podría secuestrar ese hilo).
+ */
+export function autenticadoPorAgoda(authResults: string | null | undefined): boolean {
+  const cab = (authResults || '').replace(/\s+/g, ' ')
+  if (!cab.trim()) return false
+  // El primer tramo es el authserv-id (p. ej. «mx.google.com»); el resto, un resultado por «;».
+  for (const tramo of cab.split(';').slice(1)) {
+    const t = tramo.trim().toLowerCase()
+    const prop = (k: string) => t.match(new RegExp(`(?:^|\\s)${k.replace('.', '\\.')}=([^\\s;]+)`))?.[1]
+    if (/^dkim=pass\b/.test(t) && (dominioAgoda(prop('header.d')) || dominioAgoda(prop('header.i')))) return true
+    if (/^dmarc=pass\b/.test(t) && dominioAgoda(prop('header.from'))) return true
+  }
+  return false
+}
+
+/**
+ * Registro del hilo de una reserva: si ya hay uno con OTRO destino, no se pisa en silencio (un correo
+ * podría desviar las respuestas de esa reserva a otro alias). Mismo destino o sin hilo → se registra.
+ */
+export function decidirRegistroHilo(existenteResponderA: string | null | undefined, nuevoResponderA: string): 'registrar' | 'conflicto' {
+  const viejo = (existenteResponderA || '').trim().toLowerCase()
+  if (!viejo) return 'registrar'
+  return viejo === nuevoResponderA.trim().toLowerCase() ? 'registrar' : 'conflicto'
+}

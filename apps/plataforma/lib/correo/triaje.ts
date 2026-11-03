@@ -259,7 +259,7 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
             // `extracto` es asunto+cuerpo truncado a 1500 chars: el nombre y el texto del mensaje van
             // al PRINCIPIO y siempre sobreviven; el enlace de YCS va al final y puede caerse. El parser
             // devuelve null en lo que no ve y el aviso lo declara — nunca se inventa el piso.
-            ? parsearAvisoMensajesAgoda({ from: correo.from, subject: correo.subject, body: correo.texto ?? correo.extracto })
+            ? parsearAvisoMensajesAgoda({ from: correo.from, subject: correo.subject, body: correo.texto || correo.extracto })
             : null
           // Correo INDIVIDUAL de Agoda (03/11/2026): entra al agente de huéspedes como cualquier mensaje y
           // la respuesta sale respondiendo a ese correo. Solo si el agente lo coge se omite el aviso suelto;
@@ -276,7 +276,7 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
           } else if (avisoAgoda) {
             const nombre = avisoAgoda.propertyId ? (ACCESO[avisoAgoda.propertyId]?.nombre ?? null) : null
             await tgAviso('correo.agoda', textoAvisoAgoda(avisoAgoda, nombre ?? undefined)
-              + (agodaMotivo ? `\n\n⚠️ El agente de huéspedes NO lo ha cogido (${agodaMotivo}). Contéstalo tú respondiendo al correo de Agoda (le llega al huésped).` : ''))
+              + (agodaMotivo ? `\n\n⚠️ El agente de huéspedes NO lo ha cogido (${escapeHtml(agodaMotivo)}). ${/dkim/i.test(agodaMotivo) ? 'El correo NO viene firmado por Agoda y puede ser falso: NO lo respondas por correo, contesta desde el buzón de YCS.' : 'Contéstalo tú respondiendo al correo de Agoda (le llega al huésped).'}` : ''))
             stats.avisados++
           } else if (c.categoria === 'correduria-recibo' && (devolucion = leerCorreoDevolucion({ remitente: correo.from, asunto: correo.subject, texto: conPdfs(correo, await textoPdfs()), fecha: correo.fecha.toISOString() })) !== null) {
             // Correo de DEVOLUCIÓN que se sabe leer: se registra en la cartera (marca el recibo,

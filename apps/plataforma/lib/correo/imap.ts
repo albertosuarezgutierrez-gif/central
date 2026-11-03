@@ -43,6 +43,11 @@ export interface CorreoNuevo {
   destinatarios?: string[]
   /** Dirección de `Reply-To` (minúsculas), si la trae. Agoda responde al huésped a través de ella. */
   replyTo?: string
+  /**
+   * Valor de la cabecera `Authentication-Results` MÁS ALTA (la que añade el servidor receptor, Gmail), sin
+   * el nombre. `undefined` = no la trae. La usa el enrutado de Agoda para exigir DKIM/DMARC de Agoda.
+   */
+  autenticacion?: string
   /** Message-IDs de los que este correo es respuesta (In-Reply-To + References), para casar el hilo. */
   referencias?: string[]
   /** Lista, autorespuesta o envío masivo (`List-Unsubscribe`, `Auto-Submitted`, `Precedence`): nunca un lead. */
@@ -89,6 +94,17 @@ export function correoExcluidoSinDescargar(s: {
 
 const RE_DIRECCION = /[a-z0-9._%+'-]+@[a-z0-9.-]+\.[a-z]{2,}/gi
 const CABECERAS_DESTINO = ['to', 'cc', 'delivered-to', 'x-original-to', 'x-forwarded-to']
+
+/**
+ * Puro: valor de la PRIMERA cabecera `Authentication-Results` (la más alta = la del servidor que recibió el
+ * correo; las que trae el remitente quedan por debajo y no se miran). `undefined` si no hay ninguna.
+ */
+export function autenticacionDe(lineas: readonly { key: string; line: string }[] | undefined): string | undefined {
+  const l = (lineas ?? []).find((h) => h.key.toLowerCase() === 'authentication-results')
+  if (!l) return undefined
+  const v = l.line.slice(l.line.indexOf(':') + 1).replace(/\s+/g, ' ').trim()
+  return v || undefined
+}
 
 /** Puro: direcciones de destino a partir de las líneas de cabecera crudas (`parsed.headerLines`). */
 export function destinatariosDe(lineas: readonly { key: string; line: string }[] | undefined): string[] {
@@ -216,6 +232,7 @@ export async function abrirTriaje(): Promise<SesionTriaje> {
         const destinatarios = destinatariosDe(parsed.headerLines)
         const referencias = referenciasDe(parsed.inReplyTo, parsed.references)
         const automatico = esCorreoAutomatico(parsed.headerLines)
+        const autenticacion = autenticacionDe(parsed.headerLines)
         // 🛡️ Excluido por el CUERPO (secreto en claro): el texto ya se leyó para detectarlo, pero NINGÚN adjunto se conserva.
         const excluido = exclusionSeguridad(from, subject, parsed.text || '') !== null
         const adjLead = excluido ? null : adjuntosDeRespuestaLead({ referencias, destinatarios, automatico }, parsed.attachments, presupuestoAdjuntos)
@@ -234,6 +251,7 @@ export async function abrirTriaje(): Promise<SesionTriaje> {
           destinatarios,
           referencias,
           ...(parsed.replyTo?.value?.[0]?.address ? { replyTo: parsed.replyTo.value[0].address.toLowerCase() } : {}),
+          ...(autenticacion ? { autenticacion } : {}),
           automatico,
           ...(adjLead ? { adjuntosLead: adjLead.adjuntos, adjuntosLeadOmitidos: adjLead.omitidos } : {}),
           ...(adjCia ? { adjuntosCompania: adjCia.adjuntos, adjuntosCompaniaOmitidos: adjCia.omitidos } : {}),
