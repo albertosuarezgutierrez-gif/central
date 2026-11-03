@@ -63,7 +63,7 @@ const valor = (page: Page, name: string) => page.evaluate((n) => {
 }, name)
 const ant = (extra: Record<string, unknown> = {}) => conAntecedentesFavorables(formulario(extra))
 
-test('v0.2.60 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.70'))
+test('v0.2.60 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.71'))
 
 test('v0.2.60 · «Historial Siniestral» ya no es subpestaña pulsable (lista blanca solo con Garantías)', () => {
   assert.deepEqual([...SUBPESTANAS_GENERALI], ['Garantías y Resultados'])

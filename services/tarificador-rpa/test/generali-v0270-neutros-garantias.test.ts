@@ -46,7 +46,7 @@ const texto = (name: string, rotulo: string, valor: string, extra = '') => `<div
 const [TALLERES, LUNAS, ABOGADO, RECARGO] = NEUTROS_GARANTIAS_GENERALI as [typeof NEUTROS_GARANTIAS_GENERALI[number], typeof NEUTROS_GARANTIAS_GENERALI[number], typeof NEUTROS_GARANTIAS_GENERALI[number], typeof NEUTROS_GARANTIAS_GENERALI[number]]
 const PRIMA_MAX = texto('reg1063E.qprimx', 'Prima máxima a pagar por los Kilometros declarados', '', ' readonly')
 
-test('v0.2.70 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.70'))
+test('v0.2.70 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.71'))
 
 test('decisión pura: vacío → «No» exacto; ya marcado (también «Sí») → nada; rótulo distinto o sin «No» → error con nombre', () => {
   const op = (no: boolean, si: boolean) => [{ texto: 'No', marcada: no }, { texto: 'Sí', marcada: si }]

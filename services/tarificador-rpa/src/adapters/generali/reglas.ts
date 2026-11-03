@@ -2434,3 +2434,62 @@ export function planHistorialSiniestralGenerali(bloques: readonly BloqueHistoria
   }
   return { acciones, sinRegla }
 }
+
+// ─── v0.2.71 (03/11/2026, trabajo 1a88445a con 0.2.70): el portal sigue en «datos incompletos» con «Garantías y Resultados» sin obligatorios vacíos ───
+// Avisos: «Paso con datos incompletos» · «El paso anterior no tiene los datos completos» · «No se puede calcular con datos incompletos». El hueco está en un
+// PASO ANTERIOR de la barra de pasos (`#secundario li`, `pedirPaso(...)`): antes del único «Recalcular» se va a él, se rellenan sus obligatorios vacíos con
+// un valor neutro (cada uno «Supuesto: …») y se vuelve. Lo que no tiene valor neutro seguro hace que el atasco nombre paso + campo.
+
+/** Un paso de la barra de pasos de «Valoración Riesgo» (solo texto y estado; nunca valores). */
+export type PasoBarraGenerali = { texto: string; actual: boolean; marcado: boolean }
+
+/** v0.2.71: ¿algún aviso del portal dice que un PASO tiene datos incompletos («Paso con datos incompletos», «El paso anterior no tiene…»)? PURA. */
+export function avisoPasoIncompletoGenerali(avisos: readonly string[]): boolean {
+  return avisos.some((a) => /paso\s+con\s+datos\s+incompletos|paso\s+anterior\s+no\s+tiene/i.test(String(a ?? '')))
+}
+
+/**
+ * v0.2.71: a qué paso ir. Primero uno MARCADO por el portal (clase de error/incompleto) que no sea el actual; si no, con el aviso de paso incompleto, el paso
+ * inmediatamente ANTERIOR al actual. Sin aviso, sin paso actual o sin anterior → null (no se navega a ciegas). PURA.
+ */
+export function destinoPasoIncompletoGenerali(pasos: readonly PasoBarraGenerali[], avisos: readonly string[]): string | null {
+  const limpio = (t: string) => String(t ?? '').replace(/\s+/g, ' ').trim()
+  const marcado = pasos.find((p) => p.marcado && !p.actual && limpio(p.texto))
+  if (marcado) return limpio(marcado.texto)
+  if (!avisoPasoIncompletoGenerali(avisos)) return null
+  const i = pasos.findIndex((p) => p.actual)
+  if (i <= 0) return null
+  return limpio(pasos[i - 1]!.texto) || null
+}
+
+/** Qué hacer con un obligatorio vacío del paso incompleto. */
+export type DecisionNeutroPasoGenerali = { accion: 'marcar' | 'elegir'; indice: number; valor: string } | { accion: 'sinRegla'; motivo: string }
+
+/**
+ * v0.2.71: valor neutro de un obligatorio VACÍO del paso incompleto. Grupo de opciones → «No» EXACTO (como los neutros de 0.2.70); desplegable → la única
+ * opción real (sin «Seleccione…»/vacía); texto libre → no se inventa. Cualquier otro caso → `sinRegla` con el motivo (el atasco nombra paso + campo). PURA.
+ */
+export function decidirNeutroPasoGenerali(tipo: 'select' | 'texto' | 'opciones', opciones: readonly string[]): DecisionNeutroPasoGenerali {
+  const ops = opciones.map((o) => String(o ?? '').replace(/\s+/g, ' ').trim())
+  if (tipo === 'opciones') {
+    const i = opcionExactaGenerali(ops, 'No')
+    return i >= 0 ? { accion: 'marcar', indice: i, valor: 'No' } : { accion: 'sinRegla', motivo: `sin opción «No» exacta (${ops.map((o) => `«${sanearFragmentoGenerali(o).slice(0, 25)}»`).join(' · ') || 'sin opciones'})` }
+  }
+  if (tipo === 'select') {
+    const reales = ops.flatMap((o, k) => (o === '' || /^seleccione/i.test(o) ? [] : [k]))
+    if (reales.length === 1) return { accion: 'elegir', indice: reales[0]!, valor: ops[reales[0]!]! }
+    return { accion: 'sinRegla', motivo: reales.length === 0 ? 'desplegable sin opciones' : `desplegable con ${reales.length} opciones; no se elige a ciegas` }
+  }
+  return { accion: 'sinRegla', motivo: 'texto libre; no se inventa' }
+}
+
+/** v0.2.71: aviso «Supuesto» (precio `estimado`) de un obligatorio del paso incompleto puesto en valor neutro. Solo rótulos, saneados. PURA. */
+export function avisoNeutroPasoGenerali(paso: string, rotulo: string, valor: string): string {
+  return `Supuesto: «${sanearFragmentoGenerali(paso).slice(0, 40)}» · ${sanearFragmentoGenerali(rotulo).slice(0, 60)} = ${sanearFragmentoGenerali(valor).slice(0, 40)} (valor neutro; el portal daba el paso por incompleto)`
+}
+
+/** v0.2.71: texto del atasco cuando el paso incompleto tiene obligatorios que el bot no puede rellenar: nombra el PASO y cada CAMPO (sin valores). PURA. */
+export function errorPasoIncompletoGenerali(paso: string, faltan: readonly string[]): string {
+  const xs = [...new Set(faltan.map((x) => sanearFragmentoGenerali(String(x ?? '')).trim().slice(0, 90)).filter(Boolean))].slice(0, 10)
+  return `el paso «${sanearFragmentoGenerali(paso).slice(0, 40)}» marcado con datos incompletos («Paso con datos incompletos» / «El paso anterior no tiene los datos completos») tiene obligatorios vacíos sin valor neutro seguro: ${xs.length ? xs.join(' · ') : '(ninguno legible)'}. No se pulsa «Recalcular»`
+}
