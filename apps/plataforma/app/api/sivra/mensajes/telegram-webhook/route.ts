@@ -368,7 +368,7 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
         if (result.ok && result.auth_url) {
           await tgSend(`🔐 Autoriza el pago en tu banco:\n${result.auth_url}`)
         } else if (!result.ok) {
-          await tgSend(`❌ Error al iniciar el pago: ${result.error}`)
+          await tgSend(result.yaPagada ? `✅ ${result.error}` : `❌ Error al iniciar el pago: ${result.error}`)
         }
         return NextResponse.json({ ok: true })
       }

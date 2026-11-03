@@ -24,6 +24,7 @@ import { clasificarFormaPago, claveProveedor, claveUtil, clavesDeTitulares, CLAV
 import { asignarCargos, toleranciaFactura } from './casar-cargos'
 import { normalizarDivisa } from './divisa'
 import { coberturaPorCuenta } from './anomalias'
+import { decidirGuardaPago, fechaCorta, textoYaPagada } from './guarda-pago'
 
 const ETIQUETA_GMAIL = 'Facturas/Proveedor'
 /**
@@ -283,6 +284,22 @@ async function notificarFactura(
 ): Promise<void> {
   const vence = fechaVenc ? ` · vence ${fechaVenc}` : ''
 
+  // 🚨 Antes de ofrecer «Pagar»: ¿ya hay un cargo que casa? Entonces se concilia y el aviso sale SIN botones
+  // (informativo, para que Alberto sepa que entró y está cerrada). Fail-closed: si el banco no se pudo
+  // consultar, no se ofrece Pagar (Aplazar/Rechazar sí) y se dice; `aprobarPago` vuelve a comprobarlo.
+  let bancoNoComprobado = false
+  try {
+    const r = await conciliarFactura(cuentaId, facturaId)
+    if (r.casa) {
+      try {
+        await tgAviso('facturas.pago-aprobar', `🧾 <b>${proveedor}</b> · ${eur(importe)} — ${textoYaPagada(r.fecha)}`)
+      } catch { /* Telegram no crítico */ }
+      return
+    }
+  } catch {
+    bancoNoComprobado = true
+  }
+
   // Idea #4: mostrar gasto acumulado del año y presupuesto si existe
   let budgetLinea = ''
   try {
@@ -311,8 +328,8 @@ async function notificarFactura(
   const forma = (await formasPago(cuentaId, [proveedor])).get(proveedor) ?? 'desconocida'
   const sola = forma === 'cargo_automatico' || forma === 'plataforma'
   const permitirPagarOriginal = permitirPagar
-  if (sola) permitirPagar = false
-  const prefijo = prefijoAviso(forma, permitirPagarOriginal, motivoRevision)
+  if (sola || bancoNoComprobado) permitirPagar = false
+  const prefijo = (bancoNoComprobado ? '⚠️ No pude comprobar el banco: sin botón Pagar por ahora\n' : '') + prefijoAviso(forma, permitirPagarOriginal, motivoRevision)
   const texto = `${prefijo}🧾 <b>${proveedor}</b> · ${eur(importe)}${vence}${budgetLinea}`
   const botones = sola
     ? [[{ texto: '❌ Rechazar', callback: `pago_rechazar:${facturaId}` }]]
@@ -356,14 +373,29 @@ export async function aprobarPago(
   facturaId: string,
   cuentaId: string,
   debtorIban: string,
-): Promise<{ ok: boolean; auth_url?: string; xml?: string; error?: string }> {
+): Promise<{ ok: boolean; auth_url?: string; xml?: string; error?: string; yaPagada?: boolean }> {
   const rows = await prisma.$queryRaw<FacturaProveedor[]>(
     Prisma.sql`SELECT * FROM facturas_proveedor WHERE id = ${facturaId}::uuid AND cuenta_id = ${cuentaId}::uuid LIMIT 1`
   )
   const factura = rows[0]
   if (!factura) return { ok: false, error: 'Factura no encontrada' }
-  if (!['nueva', 'pendiente_revision', 'aprobada'].includes(factura.estado)) {
-    return { ok: false, error: `Estado actual: ${factura.estado}` }
+  // 🚨 Guarda anti doble pago: ya pagada, o ya hay un cargo que casa → no se inicia nada. Fail-closed.
+  const pagable = ['nueva', 'pendiente_revision', 'aprobada'].includes(factura.estado)
+  let casado: boolean | null = null
+  let fechaCargo: string | null = null
+  if (pagable) {
+    try {
+      const r = await conciliarFactura(cuentaId, facturaId)
+      casado = r.casa; fechaCargo = r.fecha
+    } catch { casado = null }
+  }
+  const veredicto = decidirGuardaPago(factura.estado, casado)
+  if (veredicto === 'ya_pagada') {
+    return { ok: false, yaPagada: true, error: `Esta factura (${factura.proveedor} · ${eur(factura.importe)}) está ${textoYaPagada(fechaCargo)}. No se inicia ningún pago.` }
+  }
+  if (!pagable) return { ok: false, error: `Estado actual: ${factura.estado}` }
+  if (veredicto === 'sin_comprobar') {
+    return { ok: false, error: 'No pude comprobar el banco para descartar que ya esté pagada. No se ha iniciado el pago; inténtalo de nuevo en unos minutos.' }
   }
 
   await prisma.$executeRaw(Prisma.sql`UPDATE facturas_proveedor SET estado = 'aprobada' WHERE id = ${facturaId}::uuid`)
@@ -492,13 +524,14 @@ export async function verificarPagosPendientes(): Promise<number> {
 // no se usan: casarían con cargos de otros. Un cargo solo paga UNA factura (la más
 // cercana en fecha).
 
-export async function conciliarConBanco(cuentaId: string): Promise<number> {
+/** Casado factura↔cargo de la cuenta (criterio ÚNICO: lo usan la conciliación, el aviso y la guarda de pago). */
+async function casarFacturasConBanco(cuentaId: string) {
   // Candidatos SIN elegir en SQL: la asignación 1:1 global la hace `casar-cargos.ts` (puro, con test).
   // El SQL solo acota con la ventana más ancha (±15 %, por las facturas en USD); la tolerancia real
   // de cada factura se aplica en TS.
   const cands = await prisma.$queryRaw<{
     factura_id: string; telegram_msg_id: number | null; movimiento_id: string
-    dist: number; ratio: number; proveedor: string; divisa: string | null
+    dist: number; ratio: number; proveedor: string; divisa: string | null; fecha_mov: string
   }[]>(Prisma.sql`
     WITH fp AS (
       SELECT f.id, f.telegram_msg_id, f.importe, f.proveedor,
@@ -514,7 +547,7 @@ export async function conciliarConBanco(cuentaId: string): Promise<number> {
     SELECT fp.id::text AS factura_id, fp.telegram_msg_id, mb.id::text AS movimiento_id,
            ABS(mb.fecha_operacion - fp.ref)::int AS dist,
            (ABS(mb.importe) / fp.importe)::float AS ratio,
-           fp.proveedor, fp.divisa
+           fp.proveedor, fp.divisa, mb.fecha_operacion::text AS fecha_mov
     FROM fp
     JOIN v_movimientos_activos mb
       ON ABS(mb.importe) BETWEEN fp.importe * 0.85 AND fp.importe * 1.15
@@ -531,17 +564,21 @@ export async function conciliarConBanco(cuentaId: string): Promise<number> {
       AND fp.clave NOT IN (${Prisma.join(CLAVES_GENERICAS)})
   `)
   const msgPorFactura = new Map(cands.map(c => [c.factura_id, c.telegram_msg_id]))
+  const fechaPorMov = new Map(cands.map(c => [c.movimiento_id, c.fecha_mov]))
   const pares = asignarCargos(cands.map(c => ({
     factura_id: c.factura_id, movimiento_id: c.movimiento_id, dist: c.dist, ratio: c.ratio,
     tolerancia: toleranciaFactura(c.proveedor, c.divisa),
   })))
-  if (pares.length === 0) return 0
+  return { pares, msgPorFactura, fechaPorMov }
+}
 
+async function marcarConciliadas(cuentaId: string, ids: string[], msgPorFactura: Map<string, number | null>): Promise<number> {
+  if (ids.length === 0) return 0
   const conciliadas = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
     UPDATE facturas_proveedor f
     SET estado = 'pagada', pago_confirmado_at = NOW()
     WHERE f.cuenta_id = ${cuentaId}::uuid
-      AND f.id = ANY(${pares.map(p => p.factura_id)}::uuid[])
+      AND f.id = ANY(${ids}::uuid[])
       AND f.estado IN ('nueva', 'pendiente_revision', 'aprobada', 'pago_iniciado')
     RETURNING f.id::text
   `)
@@ -549,6 +586,23 @@ export async function conciliarConBanco(cuentaId: string): Promise<number> {
     await actualizarMensajeTg(msgPorFactura.get(row.id) ?? null, `✅ Pago conciliado con el extracto bancario.`)
   }
   return conciliadas.length
+}
+
+export async function conciliarConBanco(cuentaId: string): Promise<number> {
+  const { pares, msgPorFactura } = await casarFacturasConBanco(cuentaId)
+  return marcarConciliadas(cuentaId, pares.map(p => p.factura_id), msgPorFactura)
+}
+
+/**
+ * Concilia UNA factura si ya casa con un cargo (mismo criterio que `conciliarConBanco`).
+ * LANZA si la consulta falla: quien pague debe tratar el error como «no se pudo comprobar», nunca como «no hay cargo».
+ */
+export async function conciliarFactura(cuentaId: string, facturaId: string): Promise<{ casa: boolean; fecha: string | null }> {
+  const { pares, msgPorFactura, fechaPorMov } = await casarFacturasConBanco(cuentaId)
+  const par = pares.find(p => p.factura_id === facturaId)
+  if (!par) return { casa: false, fecha: null }
+  await marcarConciliadas(cuentaId, [facturaId], msgPorFactura)
+  return { casa: true, fecha: fechaCorta(fechaPorMov.get(par.movimiento_id)) }
 }
 
 // ── Pagar todas las facturas pendientes de una cuenta (Idea #3) ───────────────
