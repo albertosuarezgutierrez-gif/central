@@ -4,7 +4,8 @@
 // Por compañía, sobre las filas del libro (`comisiones_devengo`) ya cuadradas:
 //   (a) 🔴 devengado/liquidado y SIN abono en el banco tras más de 60 días del cierre del periodo;
 //   (b) 🔴 neto liquidado (remesa) contra el abono del banco con diferencia > 5 €;
-//   (c) ℹ️ abono en el banco sin ninguna liquidación (ni CIMA ni PDF): aviso suave.
+//   (c) ℹ️ abono en el banco sin ninguna liquidación (ni CIMA ni PDF): aviso suave;
+//   (d) 🔴 aritmética del extracto: bruto − retención ≠ remesa (el `descuadra` interno de `estadoCuadre`).
 // Antes el cron mandaba un mensaje CADA DÍA con todo lo que no cuadraba (incluido lo recién liquidado
 // que aún no había tenido tiempo de cobrarse). Ahora: una alerta por compañía y tipo, con clave
 // estable, y el cron las pasa por `decidirEnvios` (`fiscal_avisos_enviados`): el mismo contenido no se
@@ -12,7 +13,7 @@
 //
 // 🚨 Una fila con `leidoOk = false` no avisa de nada: «no se ha podido mirar» no es «no te han pagado».
 import { eur } from '../dinero.ts'
-import { remesaEfectiva, brutoEfectivo } from './cuadre.ts'
+import { remesaEfectiva, brutoEfectivo, TOLERANCIA_ARITMETICA } from './cuadre.ts'
 
 export const DIAS_SIN_ABONO = 60
 export const TOLERANCIA_AVISO_BANCO = 5
@@ -113,6 +114,26 @@ export function alertasCuadreComisiones(periodos: readonly PeriodoAviso[], hoy: 
         texto: `ℹ️ <b>Comisiones · ${nombre}</b> — abonos en el banco sin liquidación (ni CIMA ni PDF) que los explique:\n` +
           lista(sinLiq.map(p => `• ${fechaEs(p.inicio)} → ${fechaEs(p.fin)}: banco ${eur(p.bancoTotal as number)} · devengado ${dinero(p.esperadoBruto)}`)) +
           `\nSi la compañía manda su liquidación por correo, el agente de facturas la recogerá sola.`,
+      })
+    }
+
+    // (d) Aritmética interna del extracto: solo con importes completos (bruto y remesa). La convención de
+    // Occident (bruto negativo, remesa 0) no es un descuadre: la casa el banco en (b).
+    const malSumados = ordenados.filter(p => {
+      if (p.liqBruto == null || p.liqRemesa == null) return false
+      if (p.liqBruto < 0 && p.liqRemesa === 0) return false
+      return Math.abs(p.liqBruto - (p.liqRetencion ?? 0) - p.liqRemesa) > TOLERANCIA_ARITMETICA
+    })
+    if (malSumados.length) {
+      alertas.push({
+        clave: `comisiones-aritmetica-${codigo}`,
+        suave: false,
+        texto: `🔴 <b>Comisiones · ${nombre}</b> — el extracto no cuadra consigo mismo (bruto − retención ≠ remesa):\n` +
+          lista(malSumados.map(p => {
+            const esperada = Math.round(((p.liqBruto as number) - (p.liqRetencion ?? 0)) * 100) / 100
+            return `• ${fechaEs(p.inicio)} → ${fechaEs(p.fin)}: bruto ${eur(p.liqBruto as number)} − retención ${dinero(p.liqRetencion)} = ${eur(esperada)}, pero la remesa dice ${eur(p.liqRemesa as number)}${p.liqOrigen === 'pdf' ? ' (PDF)' : ''}`
+          })) +
+          `\nRevisa el extracto en <b>/correduria</b>.`,
       })
     }
   }

@@ -55,3 +55,17 @@ test('una alerta por compañía y tipo, con clave estable', () => {
   assert.deepEqual(a.map(x => x.clave), ['comisiones-sin-abono-C0058', 'comisiones-sin-abono-C0072'])
   assert.ok(a[0].texto.indexOf('01/07/2026') < a[0].texto.indexOf('01/08/2026'))
 })
+
+const ar = (ps: PeriodoAviso[], h: string) => alertasCuadreComisiones(ps, h).filter(a => a.clave.startsWith('comisiones-aritmetica'))
+
+test('(d) aritmética del extracto: bruto − retención ≠ remesa avisa; cuadrado, incompleto u Occident no', () => {
+  const mal = ar([p({ liqBruto: 100, liqRetencion: 15, liqRemesa: 80 })], HOY)
+  assert.equal(mal.length, 1)
+  assert.equal(mal[0].clave, 'comisiones-aritmetica-C0058')
+  assert.equal(mal[0].suave, false)
+  assert.deepEqual(ar([p({ liqBruto: 100, liqRetencion: 15, liqRemesa: 85 })], HOY), [])
+  assert.deepEqual(ar([p({ liqBruto: 100, liqRetencion: 15, liqRemesa: null })], HOY), [])
+  assert.deepEqual(ar([p({ liqBruto: -200, liqRetencion: 30, liqRemesa: 0 })], HOY), [])
+  // sin retención informada cuenta como 0, igual que estadoCuadre
+  assert.equal(ar([p({ liqBruto: 100, liqRetencion: null, liqRemesa: 85 })], HOY).length, 1)
+})

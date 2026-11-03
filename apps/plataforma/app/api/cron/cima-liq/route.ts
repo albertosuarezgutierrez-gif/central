@@ -23,6 +23,7 @@ import { bancoDePeriodo, casarAbonos, rangoAbonos, type AbonoBanco } from '@/lib
 import { cuentaDelLibro } from '@/lib/correduria/cuenta-libro'
 import { fusionarExtractosPdf, type FilaLibro } from '@/lib/correduria/liquidacion-doc'
 import { leerLiquidacionDocs } from '@/lib/correduria/liquidacion-doc-db'
+import { hashesPdfVigentes } from '@/lib/correduria/huerfanas-pdf'
 import { alertasCuadreComisiones, type AlertaComisiones, type PeriodoAviso } from '@/lib/correduria/cuadre-avisos'
 import { decidirEnvios, hashTexto } from '@/lib/fiscal-alertas'
 import { enviosPrevios, registrarEnvio } from '@/lib/fiscal-alertas-db'
@@ -265,6 +266,21 @@ export async function GET(req: NextRequest) {
       esperadoBruto: esperado, liqBruto: f.bruto, liqRetencion: f.ret, liqRemesa: f.remesa, bancoTotal,
       liqOrigen: f.bruto == null ? null : f.origen,
     })
+  }
+
+  // ── PDF huérfanos: filas `pdf` que ningún documento de ESTA pasada respalda ──
+  // (CIMA trajo el periodo con otras fechas, o ganó otro PDF solapado). Se vacía su liquidación y su
+  // banco para que no se sume doble. Solo `pdf`: lo confirmado a mano o de CIMA no se toca. Con `docs`
+  // ilegible (null) no se limpia nada: «no se pudo leer» no autoriza a borrar.
+  if (docs !== null) {
+    await prisma.$executeRaw`
+      UPDATE comisiones_devengo SET
+        liq_bruto = NULL, liq_retencion = NULL, liq_remesa = NULL,
+        liq_origen = NULL, liq_hash = NULL, liq_email_message_id = NULL,
+        banco_total = NULL, banco_movimiento_ids = NULL, actualizado_at = now()
+      WHERE cuenta_id = ${cuentaId}::uuid
+        AND liq_origen = 'pdf'
+        AND coalesce(liq_hash, '') <> ALL(${hashesPdfVigentes(fusion.usados)}::text[])`
   }
 
   // ── Cuadre mensual por compañía (lib/correduria/cuadre-avisos.ts) ─────────
