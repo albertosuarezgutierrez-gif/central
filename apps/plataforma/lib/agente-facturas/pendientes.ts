@@ -12,6 +12,7 @@ import { sugerirDesdeHistorico, type Sugerencia } from './sugerencia-pendiente'
 import { fingerprint, huellasDe } from './fingerprint'
 import { proveedorParaHuella } from './huella-rescate'
 import { reforzarRegla } from './imputar'
+import { sqlGastoVigente } from '../gasto-vigente'
 
 /** Cuántas facturas del histórico del proveedor se miran para proponer. */
 const HISTORICO_MAX = 12
@@ -54,7 +55,7 @@ export async function listarPendientes(limite = 200): Promise<Pendiente[]> {
            categoria, propiedad, base_imponible, iva, iva_porcentaje, total,
            drive_url, origen, motivo_revision, fingerprint
     FROM gastos
-    WHERE revisado = false AND origen IS NOT NULL
+    WHERE revisado = false AND origen IS NOT NULL AND ${Prisma.raw(sqlGastoVigente('gastos'))}
     ORDER BY total DESC NULLS LAST, fecha DESC
     LIMIT ${limite}
   `)
@@ -82,7 +83,7 @@ export async function listarPendientes(limite = 200): Promise<Pendiente[]> {
           SELECT fingerprint, propiedad, categoria,
                  row_number() OVER (PARTITION BY fingerprint ORDER BY fecha DESC) AS rn
           FROM gastos
-          WHERE revisado = true AND fingerprint IN (${Prisma.join(huellas)})
+          WHERE revisado = true AND ${Prisma.raw(sqlGastoVigente('gastos'))} AND fingerprint IN (${Prisma.join(huellas)})
         ) t WHERE rn <= ${HISTORICO_MAX}
       `)
     : []
@@ -141,7 +142,7 @@ export async function confirmarPendiente(id: string, cambios: CambiosPendiente =
     SELECT id::text, fecha::text, proveedor, nif_proveedor, categoria, propiedad, concepto,
            iva_porcentaje, irpf_porcentaje, total, fingerprint
     FROM gastos
-    WHERE id = ${id}::uuid AND revisado = false AND origen IS NOT NULL
+    WHERE id = ${id}::uuid AND revisado = false AND origen IS NOT NULL AND ${Prisma.raw(sqlGastoVigente('gastos'))}
     LIMIT 1
   `)
   if (!fila) return false
@@ -209,7 +210,7 @@ export async function confirmarProveedor(id: string, cambios: CambiosPendiente =
   const [origen] = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT id::text, fingerprint
     FROM gastos
-    WHERE id = ${id}::uuid AND revisado = false AND origen IS NOT NULL
+    WHERE id = ${id}::uuid AND revisado = false AND origen IS NOT NULL AND ${Prisma.raw(sqlGastoVigente('gastos'))}
     LIMIT 1
   `)
   if (!origen) return null
@@ -219,7 +220,7 @@ export async function confirmarProveedor(id: string, cambios: CambiosPendiente =
   const hermanas: string[] = origen.fingerprint
     ? (await prisma.$queryRaw<any[]>(Prisma.sql`
         SELECT id::text FROM gastos
-        WHERE revisado = false AND origen IS NOT NULL AND fingerprint = ${origen.fingerprint}
+        WHERE revisado = false AND origen IS NOT NULL AND ${Prisma.raw(sqlGastoVigente('gastos'))} AND fingerprint = ${origen.fingerprint}
         ORDER BY fecha ASC
       `)).map((r) => r.id)
     : [origen.id]
@@ -240,7 +241,7 @@ export async function confirmarProveedor(id: string, cambios: CambiosPendiente =
  */
 export async function descartarPendiente(id: string): Promise<boolean> {
   const n = await prisma.$executeRaw(Prisma.sql`
-    DELETE FROM gastos WHERE id = ${id}::uuid AND revisado = false AND origen IS NOT NULL
+    DELETE FROM gastos WHERE id = ${id}::uuid AND revisado = false AND origen IS NOT NULL AND ${Prisma.raw(sqlGastoVigente('gastos'))}
   `)
   return n > 0
 }
