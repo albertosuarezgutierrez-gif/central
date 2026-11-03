@@ -32,8 +32,10 @@ after(async () => { await browser?.close() })
 async function conPagina<T>(html: string, fn: (page: Page) => Promise<T>): Promise<T> {
   const context = await browser.newContext()
   try {
+    // v0.2.76: servida en la URL real del marco (`emiAutosGenB028.do`): la vuelta del historial solo cuenta dentro de un único marco B028.
+    await context.route('https://www.generali.es/**', (rr) => rr.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: `<!doctype html><html><body>${html}</body></html>` }))
     const page = await context.newPage()
-    await page.setContent(`<html><body>${html}</body></html>`)
+    await page.goto('https://www.generali.es/emi_genAutosFormWeb/emiAutosGenB028.do')
     return await fn(page)
   } finally { await context.close() }
 }
@@ -88,7 +90,7 @@ const ctxCon = (r: Registro, page: () => Page, conPuertas = true) => ({
   } : {}),
 }) as unknown as ContextoPortal
 
-test('v0.2.74 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.75'))
+test('v0.2.74 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.76'))
 
 test('puras: el obligatorio de BOTÓN «Historial siniestral obtenido» se localiza (por name exacto) y solo a la vista', () => {
   const o = (x: Partial<ObligatorioPasoGenerali>): ObligatorioPasoGenerali => ({ etiqueta: '', name: '', tipo: 'boton', opciones: [], vacio: false, visible: true, editable: false, ...x })

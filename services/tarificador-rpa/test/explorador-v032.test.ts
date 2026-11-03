@@ -357,7 +357,7 @@ test(`ePAC: el avance de paso por id tiene tope (${MAX_AVANCES_POR_ID} por traba
     const cap = (await capturarInventarioExploracion(page))!
     const marco = cap.inventario.marcos[0]
     const el = marco.elementos.find((e) => e.id === 'btnAceptar')!
-    await assert.rejects(pulsarExploracionAutorizada(page, guard, page.locator('#btnAceptar'), { entrada: MP, el, marco }), /ya se usó/)
+    await assert.rejects(pulsarExploracionAutorizada(page, guard, page.locator('#btnAceptar'), { entrada: MP, el, marco }), /ya se usó 3 veces/) // 03/11/2026: el tope de 6 es SOLO de Fidelidade Vivienda; ePAC sigue en 3
     await cap.liberar()
     assert.equal(guard.violacion(), null)
   } finally {
@@ -801,7 +801,7 @@ test('0.3.5b · solo los descriptores URL se neutralizan: posiciones de href/for
 
 // ─── 0.3.6 (real 28/10/2026 15:17, main-301931b) ────────────────────────────────────────────────────────────
 
-test('versión 0.3.29', () => assert.equal(EXPLORADOR_VERSION, '0.3.29'))
+test('versión 0.3.31', () => assert.equal(EXPLORADOR_VERSION, '0.3.31'))
 
 /** ePAC valida el NIF al SALIR del campo (change → petición asíncrona → campo oculto); «Aceptar» en el mismo lote llegaba antes. */
 const FIGURAS_NIF = PAGINA(`

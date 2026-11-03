@@ -293,7 +293,10 @@ const SIMULACION_FIDELIDADE_SIN_TEXTO: AvanceSinTexto = Object.freeze({
   // 0.3.22 (Fidelidade real 29/10/2026, 530656a4…): LISTA CERRADA de pantallas del flujo de SIMULACIÓN de Vivienda, antes del precio. Solo
   // las vistas en real: «Simulación» (con la errata del portal) y «Datos Cliente» (`ClientData.aspx`, a la que envía el formulario de la
   // simulación). No hay más pantallas de Vivienda documentadas en el repo; una nueva se añade aquí al verla, nunca una de contratación/pago.
-  rutas: Object.freeze(['/OPI_ES_Vivienda/Simualtion.aspx', '/OPI_ES_Vivienda/ClientData.aspx']),
+  // 0.3.30 (Fidelidade real 31/10/2026, exploración 37f3fb2e…, bot 0.3.27): tras «Datos Cliente» el portal pinta «Domicilio»
+  // (`Domicilio.aspx`: uso y tipo de vivienda + dirección del riesgo, sin importes ni texto de acción final). Su avance (input submit
+  // sin rótulo, `…$wtNextButton3`, Button+Is_Default, único) caía en `ruta_distinta`. Se añade SOLO esa ruta exacta, vista en real.
+  rutas: Object.freeze(['/OPI_ES_Vivienda/Simualtion.aspx', '/OPI_ES_Vivienda/ClientData.aspx', '/OPI_ES_Vivienda/Domicilio.aspx']),
   prefijoName: 'OPI_Theme_wt',
   contieneName: '$block$wtMainContent$',
   clase: Object.freeze(['Button', 'Is_Default']),

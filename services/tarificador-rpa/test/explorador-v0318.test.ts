@@ -68,7 +68,7 @@ async function captura(page: Page): Promise<{ marco: MarcoInventario; el: Elemen
 
 const posts = () => peticiones.filter((p) => p.metodo === 'POST')
 
-test('versión del explorador 0.3.29', () => assert.equal(EXPLORADOR_VERSION, '0.3.29'))
+test('versión del explorador 0.3.31', () => assert.equal(EXPLORADOR_VERSION, '0.3.31'))
 
 test('0.3.18 · el inventario del worker guarda el input submit sin rótulo con name y clase (lo que la regla necesita)', async () => {
   const { context, page } = await abrir(PAGINA(''))
@@ -160,17 +160,20 @@ test('0.3.18 · el inventario del origen/ruta equivocados ni siquiera autoriza (
   }
 })
 
-test('0.3.18 · tope: el avance sin texto se usa como mucho MAX_AVANCES_POR_ID veces por trabajo', async () => {
+test('0.3.30 · tope de la regla de Vivienda de Fidelidade (Alberto 03/11/2026): del 4.º al 6.º avance sin texto pasan; el 7.º se bloquea', async () => {
   const { context, page, guard } = await abrir(PAGINA(''))
   try {
-    let ultimo: unknown = null
-    for (let i = 0; i < 4; i++) {
+    const resultados: unknown[] = []
+    for (let i = 0; i < 7; i++) {
       const { marco, el, liberar } = await captura(page)
-      ultimo = await pulsarExploracionAutorizada(page, guard, page.locator(SUBMIT), { entrada: FI, el, marco }).then(() => null, (x: unknown) => x)
+      resultados.push(await pulsarExploracionAutorizada(page, guard, page.locator(SUBMIT), { entrada: FI, el, marco }).then(() => null, (x: unknown) => x))
       await liberar()
       await page.goto(`${ORIGEN}${RUTA}`)
     }
-    assert.ok(ultimo instanceof EmisionBloqueadaError && /ya se usó 3 veces/.test(ultimo.message), String(ultimo))
+    for (let i = 0; i < 6; i++) assert.equal(resultados[i], null, `avance ${i + 1}: ${String(resultados[i])}`)
+    const ultimo = resultados[6]
+    assert.ok(ultimo instanceof EmisionBloqueadaError && /ya se usó 6 veces/.test(ultimo.message), String(ultimo))
+    assert.equal(posts().length, 6)
   } finally {
     await context.close()
   }

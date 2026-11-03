@@ -95,7 +95,7 @@ async function entrar(page: Page, guard: GuardEmision) {
   await marco(page).locator('#navegacion input#cancelar').waitFor()
 }
 
-test('v0.2.75 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.75'))
+test('v0.2.75 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.76'))
 
 test('puras: onclick exacto (salvo espacios) del «Volver» de la barra y de la pestaña del historial', () => {
   assert.equal(onclickExactoGenerali("eventAndSubmit('CANCEL');", ONCLICK_VOLVER_HISTORIAL_GENERALI), true)

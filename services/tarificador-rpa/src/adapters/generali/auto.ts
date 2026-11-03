@@ -233,6 +233,7 @@ import {
   NAME_BOTON_HISTORIAL_OBTENIDO_GENERALI,
   resumenObligatoriosHistorialGenerali,
   resumenPantallaHistorialObtenidoGenerali,
+  ubicacionTrasHistorialGenerali,
   type CampoSenaladoGenerali,
   type ObligatorioPasoGenerali,
   type PasoBarraGenerali,
@@ -500,6 +501,9 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * dato, la siniestralidad más favorable (aviso «supuesto» → precio estimado). Un obligatorio vacío sin regla (p. ej. una fecha) para con su nombre. Si la
  * pestaña no existe se anota y se sigue como antes; el atasco final trae el inventario (etiquetas, sin valores) de esa pestaña.
  *
+ * 0.2.76 (03/11/2026, trabajo 5973929e con 0.2.75): tras «Volver» del historial el marco enseñaba «Garantías y Resultados» pero con URL `histSiniestral.do`
+ *   y la puerta de «Recalcular» (exactamente un marco `emiAutosGenB028.do`, sin cambios) dio «0 marcos». La vuelta solo cuenta con un único marco B028 con la
+ *   pestaña cargada; si no, se vuelve a «Garantías y Resultados» por la barra de pasos (0.2.72); si tampoco, atasco con marcos/título/paso (saneado).
  * 0.2.75 (03/11/2026, volcado 12142ffe con 0.2.74): la pantalla del historial (`histSiniestral.do`, «Lista de Accesos») abre en el MISMO marco; su salida «Volver»
  *   (`#navegacion input#cancelar`) se contaba dos veces (texto + valor) y se atascaba: el guard no duplica `<input>` y desempata SOLO por ese «Volver» de la
  *   barra de navegación; además se pulsa UNA vez su pestaña «Historial Siniestral» (`pedirPaso('0','0')`) por su puerta del guard antes de seguir.
@@ -524,7 +528,7 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * 0.2.65 (02/11/2026): el panel de «Versión» con columnas lista las opciones como `tr[data-label]` (no `li`): «Otras versiones ...» se localiza también ahí.
  * 0.2.64 (02/11/2026): «Garantías y Resultados» no se vuelve a pulsar si ya se pulsó en el trabajo (el guard solo lo permite una vez); solo espera al bloque.
  */
-export const VERSION_GENERALI_AUTO = '0.2.75'
+export const VERSION_GENERALI_AUTO = '0.2.76'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -1863,19 +1867,42 @@ export async function completarHistorialObtenidoGenerali(
     if (e instanceof Error && /Bloqueada/.test(e.constructor.name)) throw e
     throw new ErrorMapaIncompletoGenerali(`la salida de la pantalla «Historial Siniestral» (${sanearFragmentoGenerali(e instanceof Error ? e.message : String(e)).slice(0, 200)}). Pantalla: ${resumenPantallaHistorialObtenidoGenerali(inv)}`)
   }
-  // 5) De vuelta en «Garantías y Resultados».
-  const fin = Date.now() + esperaMs
-  let vuelta = false
-  for (;;) {
-    if ((await hayEnDomGenerali(page, SEL_PESTANA_GARANTIAS_CARGADA_GENERALI)) && (await m.evaluate(() => document.readyState === 'complete').catch(() => false))) { vuelta = true; break }
-    if (Date.now() >= fin) break
-    await pausa(300)
+  // 5) De vuelta en «Garantías y Resultados» DENTRO de `emiAutosGenB028.do`. v0.2.76 (trabajo 5973929e con 0.2.75): tras «Volver» el marco enseñaba los bloques
+  // de «Garantías y Resultados» pero su URL era `histSiniestral.do` (el «Volver» es un submit a esa acción) y la puerta de «Recalcular» exige EXACTAMENTE un
+  // marco `emiAutosGenB028.do` → «0 marcos». Ahora la vuelta solo cuenta con un único marco B028 con la pestaña cargada; si no llega, se vuelve a «Garantías y
+  // Resultados» por la barra de pasos (mecanismo de 0.2.72, `ctx.pulsar`); si tampoco, atasco con dónde está (marcos/título/paso, saneado). El guard no se toca.
+  const enGarantiasB028 = async (): Promise<boolean> => {
+    const b = page.frames().filter((x) => !x.isDetached() && urlDatosPersonasGenerali(x.url()))
+    if (b.length !== 1) return false
+    const g = b[0]!
+    return (await g.locator(SEL_PESTANA_GARANTIAS_CARGADA_GENERALI).count().catch(() => 0)) > 0 && (await g.evaluate(() => document.readyState === 'complete').catch(() => false)) === true
   }
   const sd = s.dialogo ? ` (diálogo cancelado: ${sanearFragmentoGenerali(s.dialogo).slice(0, 120)})` : ''
-  if (!vuelta) throw new ErrorMapaIncompletoGenerali(`«${SUBPESTANA_PRECIO_GENERALI}» tras salir de «Historial Siniestral» por «${sanearFragmentoGenerali(s.texto).slice(0, 30)}»${sd} (no volvió en ${Math.round(esperaMs / 1000)} s); no se pulsa «Recalcular». Pantalla: ${resumenPantallaHistorialObtenidoGenerali(await leerInventario())}`)
+  const salida = `«${sanearFragmentoGenerali(s.texto).slice(0, 30)}»${sd}`
+  let vuelta = await esperarHasta(enGarantiasB028, esperaMs)
+  let por = ''
+  const probado: string[] = []
+  if (!vuelta) {
+    probado.push(`espera de ${Math.round(esperaMs / 1000)} s`)
+    const barra = await leerBarraPasosGenerali(page)
+    if (barra && barra.pasos.some((p) => p.texto === SUBPESTANA_PRECIO_GENERALI)) {
+      await irAPasoGenerali(page, ctx, SUBPESTANA_PRECIO_GENERALI, Math.min(esperaMs, 2_000))
+      if (await esperarHasta(enGarantiasB028, esperaMs)) {
+        vuelta = true
+        por = ' por la barra de pasos («Volver» dejó el marco fuera de emiAutosGenB028.do)'
+        avisos.push(`Historial siniestral obtenido: tras ${salida} el marco quedó fuera de emiAutosGenB028.do; vuelta a «${SUBPESTANA_PRECIO_GENERALI}» por la barra de pasos`)
+      } else probado.push('barra de pasos')
+    } else probado.push(`barra de pasos sin «${SUBPESTANA_PRECIO_GENERALI}»`)
+  }
+  if (!vuelta) {
+    const barraAhora = await leerBarraPasosGenerali(page)
+    const titulo = await (barraAhora?.marco ?? m).title().catch(() => '')
+    const donde = ubicacionTrasHistorialGenerali({ urls: page.frames().filter((x) => !x.isDetached()).map((x) => x.url()), titulo, pasoActual: barraAhora?.pasos.find((p) => p.actual)?.texto ?? null })
+    throw new ErrorMapaIncompletoGenerali(`«${SUBPESTANA_PRECIO_GENERALI}» en emiAutosGenB028.do tras salir de «Historial Siniestral» por ${salida} (no se volvió; probado: ${probado.join(' y ')}); no se pulsa «Recalcular». Ubicación: ${donde}`)
+  }
   return {
     avisos,
-    nota: `Historial siniestral obtenido: ${vecesEntrada}; pantalla: ${resumenPantallaHistorialObtenidoGenerali(inv, 300)}${pestana}${consulta}; ${avisos.filter((x) => !x.startsWith('Historial siniestral obtenido:')).length} obligatorio(s) rellenado(s); salida por «${sanearFragmentoGenerali(s.texto).slice(0, 30)}»${sd}; de vuelta en «${SUBPESTANA_PRECIO_GENERALI}»`,
+    nota: `Historial siniestral obtenido: ${vecesEntrada}; pantalla: ${resumenPantallaHistorialObtenidoGenerali(inv, 300)}${pestana}${consulta}; ${avisos.filter((x) => !x.startsWith('Historial siniestral obtenido:')).length} obligatorio(s) rellenado(s); salida por ${salida}; de vuelta en «${SUBPESTANA_PRECIO_GENERALI}»${por}`,
   }
 }
 

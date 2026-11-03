@@ -2601,3 +2601,15 @@ export function resumenPantallaHistorialObtenidoGenerali(
   const t = `encabezados: ${enc}; botones: ${bot}; obligatorios: ${obl}`
   return t.length <= max ? t : `${t.slice(0, max - 1)}…`
 }
+
+/**
+ * v0.2.76 (trabajo 5973929e con 0.2.75): ¿dónde quedó la página tras salir de la pantalla del historial? Marcos (URL sin datos, sin vídeos), cuántos son
+ * `emiAutosGenB028.do`, título y paso actual de la barra, todo saneado. Para el atasco «no se volvió a Garantías y Resultados». Nunca valores. PURA.
+ */
+export function ubicacionTrasHistorialGenerali(p: { urls: readonly string[]; titulo: string | null; pasoActual: string | null }): string {
+  const marcos = [...new Set(p.urls.filter((u) => u && u !== 'about:blank' && !/vimeo/i.test(u)).map((u) => urlSinDatosGenerali(u).replace(/^www\.generali\.es\//, '')))].slice(0, 6)
+  const b028 = p.urls.filter((u) => urlDatosPersonasGenerali(u)).length
+  const titulo = sanearFragmentoGenerali(String(p.titulo ?? '')).slice(0, 60) || '(sin título)'
+  const paso = sanearFragmentoGenerali(String(p.pasoActual ?? '')).slice(0, 40) || '(sin barra de pasos)'
+  return `marcos: ${marcos.join(' · ') || '(ninguno)'}; ${b028} marco(s) emiAutosGenB028.do; título: ${titulo}; paso actual: ${paso}`
+}
