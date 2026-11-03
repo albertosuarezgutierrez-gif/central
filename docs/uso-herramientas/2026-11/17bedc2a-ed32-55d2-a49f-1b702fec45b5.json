@@ -1,8 +1,8 @@
 {
  "sesion": "17bedc2a-ed32-55d2-a49f-1b702fec45b5",
  "inicio": "2026-11-03T07:09:36.868Z",
- "fin": "2026-11-03T12:59:42.415Z",
- "llamadas": 1658,
+ "fin": "2026-11-03T13:42:05.471Z",
+ "llamadas": 1783,
  "categorias": {
   "agente:jefe-contabilidad": {
    "llamadas": 16,
@@ -16,15 +16,15 @@
    }
   },
   "otro": {
-   "llamadas": 195,
-   "chars_in": 23000,
-   "chars_out": 1632711,
+   "llamadas": 204,
+   "chars_in": 23247,
+   "chars_out": 1709724,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 46,
-    "ReadNotifications": 105,
+    "ToolSearch": 50,
+    "ReadNotifications": 110,
     "TaskStop": 1,
     "SendMessage": 14,
     "WebSearch": 26,
@@ -32,89 +32,89 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 149,
-   "chars_in": 19055,
-   "chars_out": 3670500,
+   "llamadas": 157,
+   "chars_in": 19812,
+   "chars_out": 3745568,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Grep": 73,
-    "Read": 68,
-    "Glob": 8
+    "Read": 75,
+    "Glob": 9
    }
   },
   "sql": {
-   "llamadas": 301,
-   "chars_in": 176024,
-   "chars_out": 992985,
+   "llamadas": 315,
+   "chars_in": 182481,
+   "chars_out": 1008873,
    "errores": 3,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 301
+    "mcp__Supabase__execute_sql": 315
    }
   },
   "bash": {
-   "llamadas": 324,
-   "chars_in": 280070,
-   "chars_out": 859942,
+   "llamadas": 396,
+   "chars_in": 341760,
+   "chars_out": 1070576,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 324
+    "Bash": 396
    }
   },
   "mcp:github": {
-   "llamadas": 31,
-   "chars_in": 15056,
-   "chars_out": 21982,
+   "llamadas": 35,
+   "chars_in": 17334,
+   "chars_out": 32572,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__github__create_pull_request": 10,
-    "mcp__github__update_pull_request": 6,
+    "mcp__github__create_pull_request": 11,
+    "mcp__github__update_pull_request": 7,
     "mcp__github__merge_pull_request": 10,
     "mcp__github__pull_request_read": 4,
-    "mcp__github__get_job_logs": 1
+    "mcp__github__get_job_logs": 3
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 30,
-   "chars_in": 3723,
-   "chars_out": 8989,
+   "llamadas": 32,
+   "chars_in": 4114,
+   "chars_out": 9336,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__claude-code-remote__subscribe_pr_activity": 10,
+    "mcp__claude-code-remote__subscribe_pr_activity": 11,
     "mcp__claude-code-remote__unsubscribe_pr_activity": 10,
-    "mcp__claude-code-remote__send_later": 6,
+    "mcp__claude-code-remote__send_later": 7,
     "mcp__claude-code-remote__delete_trigger": 4
    }
   },
   "agente:general-purpose": {
-   "llamadas": 23,
-   "chars_in": 52331,
-   "chars_out": 58046,
+   "llamadas": 24,
+   "chars_in": 54296,
+   "chars_out": 60207,
    "errores": 0,
-   "archivos_citados": 4,
-   "chars_citados": 114884,
+   "archivos_citados": 6,
+   "chars_citados": 141118,
    "tools": {
-    "Agent": 23
+    "Agent": 24
    }
   },
   "mcp:Google_Drive": {
-   "llamadas": 480,
-   "chars_in": 62790,
-   "chars_out": 1668920,
+   "llamadas": 482,
+   "chars_in": 63000,
+   "chars_out": 1684703,
    "errores": 11,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Google_Drive__search_files": 131,
+    "mcp__Google_Drive__search_files": 133,
     "mcp__Google_Drive__read_file_content": 108,
     "mcp__Google_Drive__download_file_content": 3,
     "mcp__Google_Drive__update_file": 189,
@@ -138,15 +138,15 @@
    }
   },
   "escritura": {
-   "llamadas": 45,
-   "chars_in": 144514,
-   "chars_out": 675510,
+   "llamadas": 56,
+   "chars_in": 191437,
+   "chars_out": 884714,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Edit": 23,
-    "Write": 22
+    "Edit": 25,
+    "Write": 31
    }
   },
   "agente:rastreador-codigo": {
@@ -161,14 +161,15 @@
    }
   },
   "mcp:Supabase": {
-   "llamadas": 3,
-   "chars_in": 224,
-   "chars_out": 114480,
+   "llamadas": 4,
+   "chars_in": 1969,
+   "chars_out": 114496,
    "errores": 0,
    "archivos_citados": 4,
    "chars_citados": 31787,
    "tools": {
-    "mcp__Supabase__list_tables": 3
+    "mcp__Supabase__list_tables": 3,
+    "mcp__Supabase__apply_migration": 1
    }
   },
   "agente:lector-correo": {
@@ -183,14 +184,14 @@
    }
   },
   "agente:agente-architect": {
-   "llamadas": 2,
-   "chars_in": 7431,
-   "chars_out": 7851,
+   "llamadas": 3,
+   "chars_in": 8930,
+   "chars_out": 9560,
    "errores": 0,
-   "archivos_citados": 4,
-   "chars_citados": 160458,
+   "archivos_citados": 5,
+   "chars_citados": 164289,
    "tools": {
-    "Agent": 2
+    "Agent": 3
    }
   },
   "agente:agente-mecanico": {
