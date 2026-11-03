@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-11-03T13:52:38Z",
+  "generadoEn": "2026-11-03T15:27:28Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -621,7 +621,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 6
       },
       "rrhh": {
         "estado": "usado",
@@ -6394,6 +6394,7 @@
       "agente_reparaciones",
       "agente_salud",
       "agente_veredicto",
+      "agoda_hilos_correo",
       "ai_usos",
       "ayudas_perfiles",
       "banca_destino_reglas",
