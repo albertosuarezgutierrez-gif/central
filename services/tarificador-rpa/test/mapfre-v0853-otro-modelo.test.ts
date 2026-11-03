@@ -6,7 +6,7 @@ const REF = { origen: 'humano', marca: 'SMART', modelo: 'Fortwo', version: 'PURE
 const FORFOUR = { denominacion: 'SMART FORFOUR PURE 1.1', cvKw: '75', cc: '1124', puertas: '5', fechaInicio: '01/2015' }
 const FORTWO = { denominacion: 'SMART FORTWO PURE 52', cvKw: '71', cc: '999', puertas: '3', fechaInicio: '01/2015' }
 
-test('v0.8.53 · la versión del bot es 0.8.55', () => assert.equal(mapfreAuto.version, '0.8.55'))
+test('v0.8.53 · la versión del bot es 0.8.55', () => assert.equal(mapfreAuto.version, '0.8.56'))
 
 test('v0.8.55 · fila ÚNICA de otro modelo que la referencia humana: se tarifica con ella y se avisa (supuesto), ya no para', () => {
   const r = filaVehiculoPorEquivalencia([FORFOUR], { vehiculoReferencia: REF })
