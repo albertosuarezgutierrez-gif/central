@@ -171,22 +171,22 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 422 | 78.097 | 67.576.424 | 0 | 0 |
-| `otro` | 417 | 18.462 | 37.683.806 | 21.502.739 | 0 |
-| `lectura-directa` | 358 | 12.007 | 33.796.415 | 0 | 0 |
-| `sql` | 272 | 8.945 | 5.119.675 | 3.040.710 | 36 |
-| `mcp:github` | 356 | 8.908 | 6.501.709 | 58.215.068 | 120 |
-| `escritura` | 258 | 6.805 | 109.464.710 | 0 | 0 |
+| `bash` | 422 | 78.445 | 67.795.738 | 0 | 0 |
+| `otro` | 417 | 18.482 | 37.727.725 | 21.502.739 | 0 |
+| `lectura-directa` | 358 | 12.036 | 33.873.621 | 0 | 0 |
+| `sql` | 272 | 8.947 | 5.120.430 | 3.040.710 | 36 |
+| `mcp:github` | 356 | 8.911 | 6.502.050 | 58.215.068 | 120 |
+| `escritura` | 258 | 6.850 | 110.173.158 | 0 | 0 |
 | `mcp:Vercel` | 91 | 1.541 | 1.337.805 | 237.328 | 49 |
 | `mcp:Gmail` | 72 | 1.521 | 1.643.142 | 0 | 101 |
 | `mcp:Booking-com` | 53 | 1.505 | 6.179.360 | 0 | 0 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
 | `agente:general-purpose` | 157 | 1.456 | 859.799 | 28.108.365 | 0 |
-| `mcp:claude-code-remote` | 91 | 1.427 | 202.470 | 2.985.432 | 0 |
+| `mcp:claude-code-remote` | 91 | 1.431 | 202.620 | 2.985.432 | 0 |
 | `mcp:Google_Drive` | 27 | 953 | 1.025.962 | 0 | 62 |
 | `mcp:Interactive-Brokers--IBKR-` | 17 | 711 | 831.624 | 0 | 0 |
 | `mcp:Supabase` | 159 | 537 | 195.912 | 31.787 | 9 |
-| `agente:agente-architect` | 93 | 526 | 366.446 | 13.054.220 | 0 |
+| `agente:agente-architect` | 93 | 529 | 369.426 | 13.062.039 | 0 |
 | `mcp:Google-Drive` | 37 | 178 | 185.960 | 0 | 2 |
 | `mcp:Booking_com` | 5 | 166 | 443.032 | 0 | 0 |
 | `agente:agente-mecanico` | 65 | 164 | 87.939 | 8.187.207 | 0 |
@@ -198,8 +198,8 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:Trivago` | 3 | 53 | 8.707.439 | 0 | 1 |
 | `mcp:posthog` | 5 | 47 | 64.610 | 0 | 1 |
 | `agente:jefe-contabilidad` | 5 | 46 | 21.986 | 584.358 | 0 |
+| `agente:verificador-esceptico` | 19 | 37 | 12.024 | 141.081 | 0 |
 | `agente:general` | 15 | 36 | 25.304 | 1.456.441 | 0 |
-| `agente:verificador-esceptico` | 18 | 35 | 11.159 | 133.263 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
 | `agente:lector-correo` | 8 | 24 | 8.569 | 0 | 0 |
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
