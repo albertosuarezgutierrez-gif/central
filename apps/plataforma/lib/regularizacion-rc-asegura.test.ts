@@ -2,7 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { PREFIJO_RRC, decidirBotonRrc, idDeEdicionRrc, lineaTrasPulsarRrc, textoPedirEdicionRrc } from './regularizacion-rc-asegura.ts'
+import { PREFIJO_RRC, decidirBotonRrc, decidirRrcCompaniaEnAsegura, idDeEdicionRrc, idDeEdicionRrcCompania, lineaTrasPulsarRrc, textoPedirEdicionRrc, textoPedirEdicionRrcCompania } from './regularizacion-rc-asegura.ts'
 
 const ID = '3f2a1c4e-5b6d-4e7f-8a9b-0c1d2e3f4a5b'
 
@@ -39,4 +39,55 @@ test('la línea tras pulsar no afirma un envío que no consta; 503 ≠ 502', () 
   assert.doesNotMatch(lineaTrasPulsarRrc('<b>x'), /<b>/)
   assert.notEqual(lineaTrasPulsarRrc('canal_no_disponible'), lineaTrasPulsarRrc('envio_fallido'))
   assert.match(lineaTrasPulsarRrc('canal_no_disponible'), /NO ha salido/)
+})
+
+// ── Fase 3: respuesta a la COMPAÑÍA (rrc_cenv / rrc_cmod / rrc_res, 03/11/2026) ──
+
+test('🚨 fase 3: ✅ a la compañía y 🏁 solo los pulsa el titular; versión obligatoria', () => {
+  for (const a of ['cenv', 'cmod', 'res']) {
+    assert.equal(decidirBotonRrc({ from: { id: 999 } }, a, [ID, '1'], '123').ok, false, a)
+    assert.equal(decidirBotonRrc({ from: { id: 123 } }, a, [ID, '1'], '').ok, false, a)
+    assert.deepEqual(decidirBotonRrc({ from: { id: 123 } }, a, [ID, '3'], '123'), { ok: true, accion: a, id: ID, version: 3 })
+    assert.equal(decidirBotonRrc({ from: { id: 123 } }, a, [ID], '123').ok, false)
+  }
+})
+
+test('fase 3: el webhook comprueba al titular antes de llamar a asegura (botón y respuesta «Para:»)', () => {
+  const webhook = readFileSync(new URL('../app/api/sivra/mensajes/telegram-webhook/route.ts', import.meta.url), 'utf8')
+  const rama = webhook.slice(webhook.indexOf('if (prefix === PREFIJO_RRC)'))
+  assert.ok(rama.indexOf('decidirBotonRrc(cb, action, args, process.env.TELEGRAM_CHAT_ID)') < rama.indexOf('decidirRrcCompaniaEnAsegura('))
+  const resp = webhook.slice(webhook.indexOf('const rrccEdit = idDeEdicionRrcCompania('))
+  assert.ok(resp.indexOf("String(msg.from?.id ?? '') === String(process.env.TELEGRAM_CHAT_ID ?? '')") < resp.indexOf('editarRrcCompaniaEnAsegura('))
+  // asegura emite exactamente estas acciones con el mismo prefijo.
+  const tg = readFileSync(new URL('../../asegura/lib/regularizacion-rc-telegram.ts', import.meta.url), 'utf8')
+  for (const a of ['cenv', 'cmod', 'res']) assert.match(tg, new RegExp(`\\$\\{PREFIJO_RRC\\}_${a}:`))
+})
+
+test('fase 3: la marca de edición de la compañía no se confunde con la del cliente', () => {
+  assert.equal(idDeEdicionRrcCompania(textoPedirEdicionRrcCompania(ID)), ID)
+  assert.equal(idDeEdicionRrc(textoPedirEdicionRrcCompania(ID)), null, 'la edición de la compañía no va al correo del cliente')
+  assert.equal(idDeEdicionRrcCompania(textoPedirEdicionRrc(ID)), null)
+})
+
+test('fase 3: las líneas no afirman un envío que no consta; sin dirección lo dice', () => {
+  assert.match(lineaTrasPulsarRrc('enviada_compania'), /enviada a la compañía/)
+  assert.match(lineaTrasPulsarRrc('sin_destino_compania'), /Falta dirección/)
+  assert.match(lineaTrasPulsarRrc('sin_destino_compania'), /NO ha salido/)
+  assert.doesNotMatch(lineaTrasPulsarRrc('enviada'), /compañía/)
+  assert.match(lineaTrasPulsarRrc('resuelta'), /resuelta/)
+  assert.equal(typeof decidirRrcCompaniaEnAsegura, 'function')
+})
+
+test('🪤 línea del aviso en la app: solo con enviada, y nunca afirma un envío que no consta', async () => {
+  const { lineaPushRrc } = await import('./regularizacion-rc-asegura.ts')
+  assert.equal(lineaPushRrc('envio_fallido', { estado: 'enviado', dispositivos: 2 }), null)
+  assert.equal(lineaPushRrc('canal_no_disponible', null), null)
+  assert.match(lineaPushRrc('enviada', { estado: 'enviado', dispositivos: 2 })!, /enviado a 2 dispositivos/)
+  assert.match(lineaPushRrc('enviada', { estado: 'enviado', dispositivos: 1 })!, /enviado a 1 dispositivo\./)
+  assert.match(lineaPushRrc('enviada', { estado: 'sin_app' })!, /no tiene la app activada/)
+  assert.match(lineaPushRrc('enviada', { estado: 'no_se_pudo', causa: 'HTTP 503' })!, /no se pudo/)
+  for (const raro of [null, undefined, {}, { estado: 'enviado' }, { estado: '<b>x' }, 'enviado']) {
+    assert.doesNotMatch(lineaPushRrc('enviada', raro)!, /enviado a \d/, JSON.stringify(raro))
+  }
+  assert.doesNotMatch(lineaPushRrc('enviada', { estado: 'no_se_pudo', causa: '<script>' })!, /<script>/)
 })

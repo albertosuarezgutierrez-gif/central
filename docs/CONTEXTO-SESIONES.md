@@ -76,6 +76,12 @@ Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; ti
 original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados revisado/falta_roto/devuelto + bloque en ficha. `rrhh.material_empleado`
 (0028, aplicada). Pendiente fase 2: revisión periódica mensual.
 
+## (03/11/2026) Correduría · regularización RC fase 3 (respuesta a Occident + cierre manual)
+- Al completar el cliente: borrador a la compañía → Telegram ✏️/🏁 (✅ solo cuando hay buzón elegido de contactos activos del Directorio; anti-replay `compania_version`). 🏁 Resuelta cierra solicitud + tarea (también clave antigua `suplemento:<póliza>` del mismo periodo).
+- 🚨 Occident no tiene dirección de respuesta: avisos desde occidentinforma.com y el canal oficial es el PORTAL de mediadores. Pendiente decidir buzón fijo (posible `recibe_regularizaciones` en Directorio).
+- Cierre automático NO: no hay ningún correo real de Occident de «suplemento emitido». SQL `2026-11-03c` APLICADO (03/11, verificado).
+- 📱 El ✅ al cliente manda también push en la app (portal `POST /api/operador/push-cliente`, secreto `ASEGURA_PORTAL_PUENTE_SECRET`, texto FIJO por `motivo`, url solo `/datos/…`). Push nunca condiciona el correo; Telegram dice el resultado. Global 2 hoy: 0 dispositivos. Desplegar portal antes que asegura.
+
 ## (03/11/2026) Correduría · buscador de cartera tolerante (caso Antonio Villegas)
 - Cliente no aparecía: DNI mal dado por él + apellido en BD «Villega» (sin s) + póliza dictada «G-H-R» vs «HR-G-410001512».
 - `cartera-busqueda.ts`: póliza también por solo dígitos (≥6); nombre con `word_similarity ≥ 0,7` (pg_trgm) en palabras ≥5 letras, exactas primero. ~31→68 ms. Cepo en `busqueda.test.ts`.
