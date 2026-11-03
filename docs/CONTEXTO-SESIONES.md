@@ -76,7 +76,7 @@ Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; ti
 original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados revisado/falta_roto/devuelto + bloque en ficha. `rrhh.material_empleado`
 (0028, aplicada). Pendiente fase 2: revisión periódica mensual.
 
-## (03/11/2026) Correduría · regularización RC fase 3 (respuesta a Occident + cierre manual)
+## (03/11/2026) Correduría · regularización RC fase 3 (respuesta a Occident + cierre manual) — ✅ PR #5472 mergeado
 - Al completar el cliente: borrador a la compañía → Telegram ✏️/🏁 (✅ solo cuando hay buzón elegido de contactos activos del Directorio; anti-replay `compania_version`). 🏁 Resuelta cierra solicitud + tarea (también clave antigua `suplemento:<póliza>` del mismo periodo).
 - 🚨 Occident no tiene dirección de respuesta: avisos desde occidentinforma.com y el canal oficial es el PORTAL de mediadores. Pendiente decidir buzón fijo (posible `recibe_regularizaciones` en Directorio).
 - Cierre automático NO: no hay ningún correo real de Occident de «suplemento emitido». SQL `2026-11-03c` APLICADO (03/11, verificado).
