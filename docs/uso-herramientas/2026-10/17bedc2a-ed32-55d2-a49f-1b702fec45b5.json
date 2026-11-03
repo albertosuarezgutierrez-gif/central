@@ -1,8 +1,8 @@
 {
  "sesion": "17bedc2a-ed32-55d2-a49f-1b702fec45b5",
  "inicio": "2026-10-30T07:10:10.054Z",
- "fin": "2026-10-31T10:24:27.183Z",
- "llamadas": 1485,
+ "fin": "2026-10-31T10:36:01.106Z",
+ "llamadas": 1502,
  "categorias": {
   "lectura-directa": {
    "llamadas": 127,
@@ -18,29 +18,29 @@
    }
   },
   "otro": {
-   "llamadas": 182,
-   "chars_in": 42292,
-   "chars_out": 897854,
+   "llamadas": 191,
+   "chars_in": 42396,
+   "chars_out": 954264,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 67,
+    "ToolSearch": 68,
     "SubagentHandback": 7,
-    "ReadNotifications": 70,
+    "ReadNotifications": 78,
     "SendMessage": 23,
     "WebSearch": 15
    }
   },
   "bash": {
-   "llamadas": 513,
-   "chars_in": 637620,
-   "chars_out": 1675595,
+   "llamadas": 515,
+   "chars_in": 638179,
+   "chars_out": 1676092,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 513
+    "Bash": 515
    }
   },
   "mcp:Supabase": {
@@ -57,14 +57,14 @@
    }
   },
   "sql": {
-   "llamadas": 405,
-   "chars_in": 207390,
-   "chars_out": 1251232,
+   "llamadas": 408,
+   "chars_in": 208661,
+   "chars_out": 1256111,
    "errores": 0,
    "archivos_citados": 6,
    "chars_citados": 2757922,
    "tools": {
-    "mcp__Supabase__execute_sql": 405
+    "mcp__Supabase__execute_sql": 408
    }
   },
   "agente:general-purpose": {
@@ -79,9 +79,9 @@
    }
   },
   "mcp:github": {
-   "llamadas": 31,
-   "chars_in": 11842,
-   "chars_out": 103892,
+   "llamadas": 32,
+   "chars_in": 11939,
+   "chars_out": 104001,
    "errores": 0,
    "archivos_citados": 3,
    "chars_citados": 1220601,
@@ -93,13 +93,13 @@
     "mcp__github__actions_run_trigger": 2,
     "mcp__github__pull_request_read": 7,
     "mcp__github__update_pull_request": 6,
-    "mcp__github__merge_pull_request": 4
+    "mcp__github__merge_pull_request": 5
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 14,
-   "chars_in": 1459,
-   "chars_out": 4820,
+   "llamadas": 15,
+   "chars_in": 1532,
+   "chars_out": 4946,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
@@ -107,18 +107,18 @@
     "mcp__claude-code-remote__subscribe_pr_activity": 3,
     "mcp__claude-code-remote__send_later": 5,
     "mcp__claude-code-remote__delete_trigger": 3,
-    "mcp__claude-code-remote__unsubscribe_pr_activity": 3
+    "mcp__claude-code-remote__unsubscribe_pr_activity": 4
    }
   },
   "agente:jefe-contabilidad": {
-   "llamadas": 20,
-   "chars_in": 32720,
-   "chars_out": 39741,
+   "llamadas": 21,
+   "chars_in": 33759,
+   "chars_out": 40974,
    "errores": 0,
    "archivos_citados": 5,
    "chars_citados": 2287817,
    "tools": {
-    "Agent": 20
+    "Agent": 21
    }
   },
   "mcp:Google_Drive": {
