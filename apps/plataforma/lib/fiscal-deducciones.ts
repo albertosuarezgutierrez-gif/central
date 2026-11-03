@@ -166,13 +166,16 @@ export type PerfilFiscal = {
 }
 
 /**
- * La columna `fiscal_perfil.conyuge_cuota_autonomos` guarda la cuota RETA MENSUAL de Pilar (dato de Alberto, 03/11/2026: 467,45 €/mes).
- * El tope del art. 81 LIRPF se mide con las cotizaciones del ejercicio: mensual × 12 (proyección a 31/12). null = sin dato.
+ * `fiscal_perfil.conyuge_cuota_autonomos` guarda las cotizaciones RETA ANUALES de Pilar del ejercicio (NO mensuales).
+ * 2026: 661,49 € = 596,81 reales ene-oct (121,83 + 72,12 + 90,78 + 118,04 + 6 x 32,34; dato banco Pilar Kutxabank ...5420,
+ * Alberto 03/11/2026, cuenta fuera de la BD) + 64,68 ESTIMADOS nov-dic (2 x 32,34). Estuvo de baja por maternidad a principios
+ * de 2026 (la prestacion de ene-mar, 2.835 EUR, es exenta art. 7.h: no es rendimiento). Reemplaza al antiguo 467,45 x 12, erroneo.
  */
-export function cuotasAnualesDesdeMensual(mensual: number | null | undefined): number | null {
-  if (mensual == null || !Number.isFinite(mensual)) return null
-  return Math.round(Math.max(0, mensual) * 12 * 100) / 100
-}
+export const NOTA_COTIZACIONES_MADRE =
+  'Cotizaciones de Pilar 2026 parcialmente estimadas: 596,81 € reales hasta octubre + 64,68 € estimados nov-dic (661,49 €).'
+
+/** TODO visible en el panel: el repo limita maternidad Y guardería por cotizaciones; no verificado con la redacción vigente. */
+export const TODO_LIMITE_COTIZACIONES = 'TODO: límite por cotizaciones: revisar con asesoría.'
 
 export type Descendiente = {
   nombre: string

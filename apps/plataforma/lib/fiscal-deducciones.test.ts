@@ -9,7 +9,8 @@ import assert from 'node:assert/strict'
 
 import {
   esMenor3,
-  cuotasAnualesDesdeMensual,
+  NOTA_COTIZACIONES_MADRE,
+  TODO_LIMITE_COTIZACIONES,
   mesesMenor3,
   calcularMaternidadGuarderia,
   minimoPersonalYFamiliar,
@@ -234,13 +235,18 @@ test('SIN cuotas ⇒ null («sin dato»), nunca el importe sin tope', () => {
   assert.equal(calcularMaternidadGuarderia({ ...PERFIL, cuotasSSMadreAnual: 0 }, [PILAR], 2026).maternidad, 0)
 })
 
-test('cuota RETA de Pilar MENSUAL 467,45 → ×12 = 5.609,40 anual: el tope no recorta (maternidad 2.400 + guardería 2.000)', () => {
-  assert.equal(cuotasAnualesDesdeMensual(467.45), 5609.4)
-  assert.equal(cuotasAnualesDesdeMensual(null), null)
-  const p: PerfilFiscal = { ...PERFIL, familiaNumerosa: null, gastoGuarderiaAnual: 3435.5, cuotasSSMadreAnual: cuotasAnualesDesdeMensual(467.45) }
+test('cotizaciones RETA 2026 de Pilar = 661,49 anual (596,81 real + 64,68 estimado): tope por hijo, 2 hijos <3', () => {
+  const real = 121.83 + 72.12 + 90.78 + 118.04 + 6 * 32.34
+  assert.equal(Math.round(real * 100) / 100, 596.81)
+  const anual = Math.round((real + 2 * 32.34) * 100) / 100
+  assert.equal(anual, 661.49)
+  const p: PerfilFiscal = { ...PERFIL, familiaNumerosa: null, gastoGuarderiaAnual: 3435.5, cuotasSSMadreAnual: anual }
   const r = calcularMaternidadGuarderia(p, [PILAR, ALBERTO], 2026)
-  assert.equal(r.maternidad, 2400)
-  assert.equal(r.guarderia, 2000)
-  // Tratarla como anual (error previo) daba 934,90: el tope mensual es 6 veces menos restrictivo.
-  assert.equal(calcularMaternidadGuarderia({ ...p, cuotasSSMadreAnual: 467.45 }, [PILAR, ALBERTO], 2026).maternidad, 934.9)
+  assert.equal(r.tope, 1322.98) // 661,49 por hijo
+  assert.equal(r.maternidad, 1322.98) // cada hijo agota su limite con la maternidad (1.200 > 661,49)
+  assert.equal(r.guarderia, 0)
+  // Declaracion individual: el tope depende de la madre, no de la modalidad.
+  assert.equal(calcularMaternidadGuarderia({ ...p, declaracionConjunta: false }, [PILAR, ALBERTO], 2026).maternidad, 1322.98)
+  assert.match(NOTA_COTIZACIONES_MADRE, /661,49/)
+  assert.match(TODO_LIMITE_COTIZACIONES, /revisar con asesoría/)
 })

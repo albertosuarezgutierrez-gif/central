@@ -1,4 +1,5 @@
 'use client'
+import { NOTA_COTIZACIONES_MADRE, TODO_LIMITE_COTIZACIONES } from '@/lib/fiscal-deducciones'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useTransition, type CSSProperties } from 'react'
 import type { ResumenFinanciero } from '@/lib/finanzas'
@@ -347,6 +348,9 @@ export default function FiscalPageClient({ initialData, initialComparativa, base
                       <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '6px' }}>♻️ reembolsable · 🌅 Andalucía</div>
                       {r.deducciones.some(dd => dd.clave === 'maternidad') && (
                         <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '4px' }}>ℹ️ La maternidad se prorratea por meses y se topa por hijo con las cuotas SS de la madre (art. 81); sin ese dato no se calcula y el resultado no la incluye — el borrador AEAT manda.</div>
+                      )}
+                      {r.deducciones.some(dd => dd.clave === 'maternidad') && (
+                        <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '4px' }}>⚠️ {NOTA_COTIZACIONES_MADRE} {TODO_LIMITE_COTIZACIONES}</div>
                       )}
                     </>
                   )

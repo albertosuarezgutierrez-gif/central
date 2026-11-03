@@ -16,7 +16,6 @@ import {
   deduccionesAplicablesNoMarcadas,
   transicionesEdad,
   importesDe,
-  cuotasAnualesDesdeMensual,
   PLAZOS_FISCALES,
   type PerfilFiscal,
   type Descendiente,
@@ -339,8 +338,8 @@ async function getDeducciones(
         ascendientesMayores75: perfilRows[0].ascendientes_mayores_75,
         donativosAnual: Number(perfilRows[0].donativos_anual),
         gastoDeportivoAnual: Number(perfilRows[0].gasto_deportivo_anual ?? 0),
-        // La columna es la cuota RETA MENSUAL de la madre; el tope art. 81 usa las cotizaciones del año (×12). NULL = sin dato ⇒ maternidad «sin dato», nunca 0.
-        cuotasSSMadreAnual: cuotasAnualesDesdeMensual(perfilRows[0].conyuge_cuota_autonomos == null ? null : Number(perfilRows[0].conyuge_cuota_autonomos)),
+        // La columna es la cotización RETA ANUAL de la madre (2026: 661,49 €, parcialmente estimada; ver NOTA_COTIZACIONES_MADRE). NULL = sin dato ⇒ maternidad «sin dato», nunca 0.
+        cuotasSSMadreAnual: perfilRows[0].conyuge_cuota_autonomos == null ? null : Number(perfilRows[0].conyuge_cuota_autonomos),
         // Fecha de inicio del título de FN (prorrateo por meses); sin columna/valor ⇒ FN estatal «sin dato».
         familiaNumerosaDesde: fechaIso(perfilRows[0].familia_numerosa_desde),
         abonoAnticipadoMaternidad: perfilRows[0].abono_anticipado_maternidad == null ? null : Number(perfilRows[0].abono_anticipado_maternidad),
