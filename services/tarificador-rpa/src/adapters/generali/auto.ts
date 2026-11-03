@@ -52,7 +52,7 @@ import { descargarProyectoAuto, ofertasConPdfProyecto } from '../../descarga-pro
 import { garantiasDePdfGenerali, leerGarantiasPantallaGenerali, ofertasConGarantiasGenerali, type GarantiasLeidas } from './garantias.ts'
 import { companiaActualDe, comprobarCampo, ErrorEleccionVersion } from '../allianz/auto.ts'
 import { campoConRespaldo, type ContextoFormador } from '../../formador.ts'
-import { CONSULTAS_HISTORIAL_OBTENIDO_GENERALI, esUrlOktaSmsGenerali, MAX_PULSACIONES_HISTORIAL_GENERALI, opcionesTipoPlacaGenerali, otroVehiculoGeneraliPermitido } from '../../guard.ts'
+import { ACCION_FORM_HISTORIAL_GENERALI, CONSULTAS_HISTORIAL_OBTENIDO_GENERALI, ONCLICK_PESTANA_HISTORIAL_GENERALI, esUrlOktaSmsGenerali, MAX_PULSACIONES_HISTORIAL_GENERALI, opcionesTipoPlacaGenerali, otroVehiculoGeneraliPermitido } from '../../guard.ts'
 import { CONCEPTOS_LECTURA, alternativa, terminosDe } from '../../vocabulario.ts'
 import {
   AVISO_MATRICULA_PROVINCIAL,
@@ -500,6 +500,9 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * dato, la siniestralidad más favorable (aviso «supuesto» → precio estimado). Un obligatorio vacío sin regla (p. ej. una fecha) para con su nombre. Si la
  * pestaña no existe se anota y se sigue como antes; el atasco final trae el inventario (etiquetas, sin valores) de esa pestaña.
  *
+ * 0.2.75 (03/11/2026, volcado 12142ffe con 0.2.74): la pantalla del historial (`histSiniestral.do`, «Lista de Accesos») abre en el MISMO marco; su salida «Volver»
+ *   (`#navegacion input#cancelar`) se contaba dos veces (texto + valor) y se atascaba: el guard no duplica `<input>` y desempata SOLO por ese «Volver» de la
+ *   barra de navegación; además se pulsa UNA vez su pestaña «Historial Siniestral» (`pedirPaso('0','0')`) por su puerta del guard antes de seguir.
  * 0.2.74 (03/11/2026, trabajo b1c5363f): sin vacíos en ningún paso y «Recalcular» en «datos incompletos». En «Garantías y Resultados» › «Bonus-Malus» el
  *   obligatorio «Historial siniestral obtenido» es un BOTÓN (`reg1063E.bonusMalus.zhsdet`, `link('histsin')`) que ningún lector contaba: ahora, antes de los
  *   bloques de la pestaña y del único «Recalcular», se pulsa por su puerta del guard, se completa la pantalla del historial (dato del riesgo o neutro, supuesto)
@@ -521,7 +524,7 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * 0.2.65 (02/11/2026): el panel de «Versión» con columnas lista las opciones como `tr[data-label]` (no `li`): «Otras versiones ...» se localiza también ahí.
  * 0.2.64 (02/11/2026): «Garantías y Resultados» no se vuelve a pulsar si ya se pulsó en el trabajo (el guard solo lo permite una vez); solo espera al bloque.
  */
-export const VERSION_GENERALI_AUTO = '0.2.74'
+export const VERSION_GENERALI_AUTO = '0.2.75'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -1666,6 +1669,21 @@ const JS_HAY_CONSULTA_HISTORIAL_GENERALI = `(() => {${JS_COMUN}
   return Array.from(document.querySelectorAll('input[type=button],input[type=submit],button,a,li[onclick]')).filter((e) => VIS(e))
     .some((e) => OK.includes(N(e.tagName === 'INPUT' ? e.value : T(e))));
 })()`
+/**
+ * v0.2.75 (volcado 12142ffe): ¿es la pantalla «Lista de Accesos» del historial (`form#profile` con acción `histSiniestral.do`) con su pestaña «Historial Siniestral»
+ * (`#secundario`, `pedirPaso('0','0');return false;`) a la vista? Solo lee; la puerta del guard decide.
+ */
+const JS_HAY_PESTANA_HISTORIAL_GENERALI = `(() => {${JS_COMUN}
+  const f = document.querySelectorAll('form#profile');
+  if (f.length !== 1 || f[0].getAttribute('action') !== ${JSON.stringify(ACCION_FORM_HISTORIAL_GENERALI)}) return false;
+  if (!Array.from(f[0].querySelectorAll('h2')).some((h) => String(h.textContent || '').replace(/\\s+/g, ' ').trim() === 'Lista de Accesos')) return false;
+  const oc = (x) => String(x || '').replace(/\\s+/g, '');
+  return Array.from(document.querySelectorAll('#secundario > li[onclick]')).filter((e) => VIS(e))
+    .filter((e) => T(e) === 'Historial Siniestral' && oc(e.getAttribute('onclick')) === oc(${JSON.stringify(ONCLICK_PESTANA_HISTORIAL_GENERALI)})).length === 1;
+})()`
+async function hayPestanaHistorialGenerali(m: Frame): Promise<boolean> {
+  return (await m.evaluate(JS_HAY_PESTANA_HISTORIAL_GENERALI).catch(() => false)) === true
+}
 async function hayConsultaHistorialGenerali(m: Frame): Promise<boolean> {
   return (await m.evaluate(JS_HAY_CONSULTA_HISTORIAL_GENERALI).catch(() => false)) === true
 }
@@ -1739,9 +1757,25 @@ export async function completarHistorialObtenidoGenerali(
   const vecesEntrada = `«Historial Siniestral» pulsado${pulsEntrada > 1 ? ` ${pulsEntrada} veces` : ''}${dlg}`
   if (!cambio) return { avisos: [], nota: `Historial siniestral obtenido: ${vecesEntrada}; la pantalla no cambió en ${Math.round((esperaPrimera + (pulsEntrada > 1 ? esperaMs : 0)) / 1000)} s` }
   await pausa(400)
-  let inv = await leerInventario()
   const avisos: string[] = []
   if (pulsEntrada > 1) avisos.push(`Historial siniestral obtenido: «Historial Siniestral» abrió su pantalla a la ${pulsEntrada}.ª pulsación`)
+  // 2b) v0.2.75 (volcado 12142ffe): la pantalla «Lista de Accesos» trae su pestaña «Historial Siniestral»; se pulsa UNA vez por su puerta del guard
+  // («hay que darle dos veces para que haga la consulta») y se espera a que el marco termine de cargar.
+  let pestana = ''
+  if (await hayPestanaHistorialGenerali(m)) {
+    const pulsarPestana = ctx.pestanaHistorialSiniestralGenerali
+    if (typeof pulsarPestana !== 'function') pestana = '; pestaña «Historial Siniestral»: a la vista, pero el contexto del runner no trae su puerta guardada (no se pulsa)'
+    else {
+      const p = await pulsarPestana()
+      await pausa(pausaEntre)
+      await esperarHasta(async () => (await m.evaluate(() => document.readyState === 'complete').catch(() => false)) === true, esperaPrimera)
+      await pausa(400)
+      const pd = p?.dialogo ? ` (diálogo cancelado: ${sanearFragmentoGenerali(p.dialogo).slice(0, 120)})` : ''
+      pestana = `; pestaña «Historial Siniestral» de «Lista de Accesos» pulsada${pd}`
+      avisos.push(`Historial siniestral obtenido: pestaña «Historial Siniestral» de «Lista de Accesos» pulsada${pd}`)
+    }
+  }
+  let inv = await leerInventario()
   const faltan: string[] = []
   const tratados: string[] = []
   const destino = 'Historial Siniestral'
@@ -1841,7 +1875,7 @@ export async function completarHistorialObtenidoGenerali(
   if (!vuelta) throw new ErrorMapaIncompletoGenerali(`«${SUBPESTANA_PRECIO_GENERALI}» tras salir de «Historial Siniestral» por «${sanearFragmentoGenerali(s.texto).slice(0, 30)}»${sd} (no volvió en ${Math.round(esperaMs / 1000)} s); no se pulsa «Recalcular». Pantalla: ${resumenPantallaHistorialObtenidoGenerali(await leerInventario())}`)
   return {
     avisos,
-    nota: `Historial siniestral obtenido: ${vecesEntrada}; pantalla: ${resumenPantallaHistorialObtenidoGenerali(inv, 300)}${consulta}; ${avisos.filter((x) => !x.startsWith('Historial siniestral obtenido:')).length} obligatorio(s) rellenado(s); salida por «${sanearFragmentoGenerali(s.texto).slice(0, 30)}»${sd}; de vuelta en «${SUBPESTANA_PRECIO_GENERALI}»`,
+    nota: `Historial siniestral obtenido: ${vecesEntrada}; pantalla: ${resumenPantallaHistorialObtenidoGenerali(inv, 300)}${pestana}${consulta}; ${avisos.filter((x) => !x.startsWith('Historial siniestral obtenido:')).length} obligatorio(s) rellenado(s); salida por «${sanearFragmentoGenerali(s.texto).slice(0, 30)}»${sd}; de vuelta en «${SUBPESTANA_PRECIO_GENERALI}»`,
   }
 }
 

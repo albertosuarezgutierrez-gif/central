@@ -6079,7 +6079,12 @@ export async function pulsarSalidaHistorialObtenidoGenerali(page: Page, guard: G
       const porTexto = f.getByText(new RegExp(`^\\s*${s}\\s*$`, 'i')).filter({ visible: true })
       const porValor = f.locator('input[type="button"],input[type="submit"]').filter({ visible: true })
       const n = await porTexto.count()
-      for (let i = 0; i < n; i++) candidatos.push({ marco: f, texto: s, control: porTexto.nth(i) })
+      // v0.2.75 (volcado 12142ffe): `getByText` también casa `input[type=button|submit]` por su `value`, y esos ya los cuenta `porValor`: el mismo
+      // «Volver» salía DOS veces («2 controles visibles»). Los `<input>` solo entran por `porValor`.
+      for (let i = 0; i < n; i++) {
+        if ((await porTexto.nth(i).evaluate((el) => el.tagName).catch(() => 'INPUT')) === 'INPUT') continue
+        candidatos.push({ marco: f, texto: s, control: porTexto.nth(i) })
+      }
       const m = await porValor.count()
       for (let i = 0; i < m; i++) {
         const v = await porValor.nth(i).getAttribute('value').catch(() => null)
@@ -6092,7 +6097,14 @@ export async function pulsarSalidaHistorialObtenidoGenerali(page: Page, guard: G
   // Por orden de preferencia: el primer rótulo de la lista blanca con EXACTAMENTE un control.
   let elegido: { marco: Frame; texto: string; control: Locator } | null = null
   for (const s of SALIDAS_HISTORIAL_OBTENIDO_GENERALI) {
-    const xs = candidatos.filter((c) => c.texto === s)
+    let xs = candidatos.filter((c) => c.texto === s)
+    // v0.2.75: con más de uno, SOLO se desempata por el «Volver» de la barra de navegación de la pantalla del historial (`#navegacion` › `input#cancelar`,
+    // `eventAndSubmit('CANCEL');` exacto, en el marco del formulario `histSiniestral.do`). Cualquier otro empate sigue siendo atasco.
+    if (xs.length > 1 && s === 'Volver') {
+      const nav: typeof xs = []
+      for (const c of xs) if (await esVolverNavegacionHistorialGenerali(c.marco, c.control)) nav.push(c)
+      if (nav.length === 1) xs = nav
+    }
     if (xs.length === 1) { elegido = xs[0]!; break }
     if (xs.length > 1) throw new ErrorMapaGuardGenerali(`la salida «${s}» de la pantalla del historial (${xs.length} controles visibles con ese rótulo; hace falta exactamente uno)`)
   }
@@ -6110,6 +6122,83 @@ export async function pulsarSalidaHistorialObtenidoGenerali(page: Page, guard: G
   })
   guard.comprobar()
   return { dialogo, texto: elegido.texto }
+}
+
+/** v0.2.75: onclick EXACTO del «Volver» de la barra de navegación de la pantalla del historial (volcado 12142ffe). */
+export const ONCLICK_VOLVER_HISTORIAL_GENERALI = "eventAndSubmit('CANCEL');"
+/** v0.2.75: acción EXACTA del formulario de la pantalla del historial (volcado 12142ffe: `form#profile`, misma URL de marco `emiAutosGenB028.do`). */
+export const ACCION_FORM_HISTORIAL_GENERALI = '/emi_genAutosFormWeb/histSiniestral.do'
+/** v0.2.75: onclick EXACTO de la pestaña «Historial Siniestral» (`#secundario`) de esa pantalla (volcado 12142ffe). */
+export const ONCLICK_PESTANA_HISTORIAL_GENERALI = "pedirPaso('0','0');return false;"
+/** v0.2.75: clave de la pestaña «Historial Siniestral» de la pantalla «Lista de Accesos» (una vez por trabajo). */
+const CLAVE_PESTANA_HISTORIAL_GENERALI = 'generali:historial-pestana'
+/** v0.2.75: onclick igual a `esperado` salvo espacios. PURA. */
+export function onclickExactoGenerali(onclick: string | null | undefined, esperado: string): boolean {
+  const n = (x: string) => String(x ?? '').replace(/\s+/g, '')
+  return onclick != null && n(onclick) === n(esperado)
+}
+/** v0.2.75: ¿el marco es la pantalla del historial (`form#profile` con acción EXACTA `histSiniestral.do`, uno solo)? */
+async function esMarcoPantallaHistorialGenerali(f: Frame): Promise<boolean> {
+  if (!urlEmiAutosGenerali(f.url())) return false
+  const acciones = (await f.evaluate(() => Array.from(document.querySelectorAll('form#profile')).map((x) => x.getAttribute('action') ?? '')).catch(() => [])) as string[]
+  return acciones.length === 1 && acciones[0] === ACCION_FORM_HISTORIAL_GENERALI
+}
+/** v0.2.75: ¿es `control` el «Volver» de la barra de navegación de la pantalla del historial (`#navegacion input#cancelar[name=cancelar]`, onclick exacto)? */
+async function esVolverNavegacionHistorialGenerali(f: Frame, control: Locator): Promise<boolean> {
+  if (!(await esMarcoPantallaHistorialGenerali(f))) return false
+  const x = (await control.evaluate((el) => ({
+    nav: el.matches('#navegacion input[type="button"]#cancelar[name="cancelar"]'),
+    valor: (el as HTMLInputElement).value ?? '',
+    onclick: el.getAttribute('onclick'),
+  })).catch(() => null)) as { nav: boolean; valor: string; onclick: string | null } | null
+  return x !== null && x.nav && textoMenu(x.valor) === textoMenu('Volver') && onclickExactoGenerali(x.onclick, ONCLICK_VOLVER_HISTORIAL_GENERALI)
+}
+
+/**
+ * v0.2.75 (volcado 12142ffe, Alberto: «hay que darle dos veces para que haga la consulta»): tras la entrada, la pantalla del historial (`histSiniestral.do`,
+ * encabezado «Lista de Accesos») trae en su barra `#secundario` la pestaña «Historial Siniestral» (`pedirPaso('0','0');return false;`). Puerta ESTRECHA:
+ * armada por la entrada y antes de la salida; UNA vez por trabajo (clave propia); marco de la pantalla del historial (acción de formulario exacta) con
+ * encabezado «Lista de Accesos» y sin los formularios de pasos; exactamente una pestaña visible con rótulo y onclick EXACTOS; sin textos de emisión;
+ * ni ella ni su contenedor hablan de guardar/emitir/pagar…; `comprobarBoton` (sin «Aceptar»). No emite ni recalcula.
+ */
+export async function pulsarPestanaHistorialObtenidoGenerali(page: Page, guard: GuardEmision): Promise<{ dialogo: string | null }> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'pestaña del historial de Generali con una ventana de red abierta')
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (!usados.has(CLAVE_HISTORIAL_OBTENIDO_GENERALI)) throw new EmisionBloqueadaError('fase', 'pestaña del historial de Generali sin haberlo abierto por su puerta en este trabajo')
+  if (usados.has(`${CLAVE_HISTORIAL_OBTENIDO_GENERALI}:salida`)) throw new EmisionBloqueadaError('fase', 'pestaña del historial de Generali tras haber salido ya de su pantalla')
+  if (usados.has(CLAVE_PESTANA_HISTORIAL_GENERALI)) throw new EmisionBloqueadaError('fase', 'la pestaña «Historial Siniestral» de la pantalla del historial de Generali ya se pulsó en este trabajo')
+  await exigirSinCuentaBancaria(page)
+  const casa = await casaEmisionEnPaginaGenerali(page)
+  if (casa !== null) throw new EmisionBloqueadaError('fase', `pestaña del historial de Generali: casó ${casa.slice(0, 200)} (textos de emisión/contratación/pago/firma en la página o en un diálogo)`)
+  const candidatos: { marco: Frame; control: Locator }[] = []
+  for (const f of marcosVivos(page)) {
+    if (!(await esMarcoPantallaHistorialGenerali(f))) continue
+    if ((await f.locator(SEL_FORMULARIOS_PASOS_GENERALI).count().catch(() => 1)) > 0) continue
+    const lista = (await f.evaluate(() => Array.from(document.querySelectorAll('form#profile h2')).some((h) => (h.textContent ?? '').replace(/\s+/g, ' ').trim() === 'Lista de Accesos')).catch(() => false)) === true
+    if (!lista) continue
+    const lis = f.locator('#secundario > li[onclick]').filter({ visible: true })
+    const k = await lis.count()
+    for (let i = 0; i < k; i++) {
+      const c = lis.nth(i)
+      const x = (await c.evaluate((el) => ({ t: ((el as HTMLElement).innerText || el.textContent || '').replace(/\s+/g, ' ').trim(), o: el.getAttribute('onclick') })).catch(() => null)) as { t: string; o: string | null } | null
+      if (x && textoMenu(x.t) === textoMenu('Historial Siniestral') && onclickExactoGenerali(x.o, ONCLICK_PESTANA_HISTORIAL_GENERALI)) candidatos.push({ marco: f, control: c })
+    }
+  }
+  if (candidatos.length !== 1) throw new ErrorMapaGuardGenerali(`la pestaña «Historial Siniestral» de «Lista de Accesos» (${candidatos.length} visibles con rótulo y onclick exactos; hace falta exactamente una)`)
+  const elegido = candidatos[0]!
+  const desc = await descripcion(elegido.control, true)
+  if (desc.some((d) => d !== null && RE_SALIDA_HISTORIAL_PELIGROSA_GENERALI.test(sinTildesNi(d)))) throw new EmisionBloqueadaError('boton', desc.filter(Boolean).join(' | ').slice(0, 120))
+  comprobarBoton(desc)
+  usados.add(CLAVE_PESTANA_HISTORIAL_GENERALI)
+  AVANCES_USADOS.set(guard, usados)
+  const control = elegido.control
+  const dialogo = await conDialogoCanceladoGenerali(page, elegido.marco, async () => {
+    await control.click({ timeout: MS_CLIC_NORMAL_CONFIRMAR_GENERALI })
+    guard.comprobar()
+  })
+  guard.comprobar()
+  return { dialogo }
 }
 
 /** v0.2.74: huella (rótulo normalizado + onclick sin espacios) del control de consulta de la PRIMERA pulsación: la segunda solo vale sobre el MISMO control. */

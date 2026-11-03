@@ -16,7 +16,7 @@ import { detalleFilaPanelVersionGenerali } from '../src/adapters/generali/reglas
 import { ErrorEleccionVersion } from '../src/adapters/allianz/auto.ts'
 import { abrirDesplegableModeloGenerali, abrirDesplegableVersionGenerali, elegirVersionListaGenerali, instalarGuardEmision, type GuardEmision } from '../src/guard.ts'
 
-test('v0.2.67 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.74'))
+test('v0.2.67 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.75'))
 
 let browser: Browser
 before(async () => {

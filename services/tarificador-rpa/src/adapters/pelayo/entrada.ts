@@ -10,7 +10,7 @@
 // Pulsar SOLO por `ctx.pulsarEnlaceEntrada` (puerta EXACTA del guard: texto exacto de `ENLACES_ENTRADA_AUTORIZADOS.pelayo`, origen
 // https://mediadores.pelayo.com, en orden, una vez cada uno y solo en la fase de entrada) y el botón de entrada del login por `ctx.pulsar`
 // (guard genérico, sin ensancharlo). El ramo, si es un <select> nativo, se elige con `selectOption` (sin clic). Usuario y contraseña
-// SOLO se escriben en un host de `HOSTS_LOGIN_PELAYO` (un SSO en otro dominio = hueco explícito, se añade tras verlo).
+// SOLO se escriben en un host de `HOSTS_LOGIN_PELAYO` o del SSO `accesoN.pelayo.com` (otro dominio = hueco explícito, se añade tras verlo).
 // Fail-closed: lo que no aparece → `ErrorTarificador('portal')` con QUÉ falta; no se adivina. Los volcados de estructura van al log
 // (rótulos ≤40 car., sin nada que parezca dato personal: `pareceDatoPersonalInventario`).
 
@@ -23,8 +23,16 @@ import { pareceDatoPersonalInventario } from '@central/module-tarificacion'
 
 /** URL pública de entrada (dada por Alberto, 03/11/2026; no es secreta). */
 export const URL_PORTAL_PELAYO = 'https://mediadores.pelayo.com/portalmediador-pagina-inicio/'
-/** Hosts EXACTOS donde se pueden escribir las credenciales. */
-export const HOSTS_LOGIN_PELAYO: readonly string[] = Object.freeze(['mediadores.pelayo.com'])
+/**
+ * Hosts EXACTOS donde se pueden escribir las credenciales. `acceso12.pelayo.com` (03/11/2026, exploración real con 0.3.28): el formulario de acceso
+ * es el SSO de Pelayo, fuera de mediadores.pelayo.com; tras el login el portal vuelve a mediadores (la ruta de menús sigue limitada a ese origen).
+ */
+export const HOSTS_LOGIN_PELAYO: readonly string[] = Object.freeze(['mediadores.pelayo.com', 'acceso12.pelayo.com'])
+/**
+ * SSO de Pelayo numerado (`acceso12` hace pensar en `acceso1..N`): SOLO `accesoN.pelayo.com` (N de 1 a 3 cifras, sin cero delante), anclada, nada
+ * más (ni otros subdominios ni `pelayo.com.ajeno`). Se usa además de la lista exacta y solo con https (`esHostLoginPelayo`).
+ */
+export const RE_HOST_SSO_PELAYO = /^acceso[1-9]\d{0,2}\.pelayo\.com$/
 /** Ruta de la página de presupuestos (solo para reconocerla; no se navega por URL). */
 export const RUTA_PRESUPUESTOS_PELAYO = '/portalmediador-presupuestos/'
 
@@ -56,11 +64,11 @@ export function etiquetaExactaPelayo(texto: string): RegExp {
   return new RegExp(`^\\s*${partes.join('\\s+')}\\s*$`, 'i')
 }
 
-/** ¿El host de la URL es uno de los del login? (hostname EXACTO, https, sin credenciales en la URL). Pura. */
-export function esHostLoginPelayo(url: string, hosts: readonly string[] = HOSTS_LOGIN_PELAYO): boolean {
+/** ¿El host de la URL es uno de los del login? (hostname EXACTO de la lista o `accesoN.pelayo.com`; https, sin credenciales ni puerto en la URL). Pura. */
+export function esHostLoginPelayo(url: string, hosts: readonly string[] = HOSTS_LOGIN_PELAYO, sso: RegExp | null = RE_HOST_SSO_PELAYO): boolean {
   try {
     const u = new URL(url)
-    return u.protocol === 'https:' && !u.username && !u.password && hosts.includes(u.hostname)
+    return u.protocol === 'https:' && !u.username && !u.password && !u.port && (hosts.includes(u.hostname) || (sso !== null && sso.test(u.hostname)))
   } catch {
     return false
   }

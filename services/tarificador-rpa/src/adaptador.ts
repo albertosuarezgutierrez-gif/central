@@ -179,6 +179,11 @@ export type ContextoPortal = ContextoTarificacion & {
    * abrirla y antes de salir, máx. 2 por trabajo y la segunda sobre el MISMO control («hay que darle otra para que haga la consulta»).
    */
   consultarHistorialSiniestralGenerali?: () => Promise<{ dialogo: string | null; texto: string; pulsacion: number }>
+  /**
+   * Generali (v0.2.75): pestaña «Historial Siniestral» (`#secundario`, `pedirPaso('0','0');return false;` exacto) de la pantalla «Lista de Accesos»
+   * (`histSiniestral.do`) por `pulsarPestanaHistorialObtenidoGenerali` de guard.ts: solo tras abrirla y antes de salir, una vez por trabajo. No emite.
+   */
+  pestanaHistorialSiniestralGenerali?: () => Promise<{ dialogo: string | null }>
   /** Generali (v0.2.7): abre «Todas las marcas» por su disparador (`abrirDesplegableMarcaGenerali` de guard.ts; id `buscamarca`, una vez). */
   abrirDesplegableMarcaGenerali?: (base: string) => Promise<void>
   /** Generali (v0.2.7): pulsa el `li` de la marca elegida (`elegirMarcaListaGenerali` de guard.ts; texto exacto, una vez). */
