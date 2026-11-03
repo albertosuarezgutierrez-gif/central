@@ -14,7 +14,7 @@ import {
   pulsarContinuarMapfre, type GuardEmision,
 } from '../src/guard.ts'
 
-test('v0.8.51 · versión', () => assert.equal(mapfreAuto.version, '0.8.55'))
+test('v0.8.51 · versión', () => assert.equal(mapfreAuto.version, '0.8.56'))
 
 const MATRICULA = '1234BCD'
 const OPCIONES = ['TERCEROS', 'TERCEROS AMPLIADO', 'TODO RIESGO', 'BASICar TERCEROS AMPLIADO', 'BASICar TODO RIESGO']
@@ -202,17 +202,17 @@ test('coberturasAccesiblesMapfre: misma pantalla → null; otro nº de tarjetas 
   await context.close()
 })
 
-test('cableado: variantes DESPUÉS de «Generar Proyecto» y de las garantías base; la restauración ya no condiciona el proyecto; auto.ts sin «Continuar» ni clics directos', () => {
+test('cableado (0.8.56): variantes ANTES de «Generar Proyecto», tras las garantías base de pantalla; sin restauración verificada no se genera el proyecto; auto.ts sin «Continuar» ni clics directos', () => {
   const src = readFileSync(join(import.meta.dirname, '../src/adapters/mapfre/auto.ts'), 'utf8')
   const cuerpo = src.slice(src.indexOf('export async function precioDesdeObjetoAsegurado'), src.indexOf('export const mapfreAuto'))
   const iGen = cuerpo.indexOf('await ctx.generarProyectoMapfre(nsei')
   const iPdf = cuerpo.indexOf('await descargarProyectoAuto(')
-  const iGarPdf = cuerpo.indexOf('garantiasPdf = coberturasPorProducto(')
-  const iVar = cuerpo.indexOf('if (!opciones.variantesAntesDeProyecto) await probarVariantes()')
+  const iGarPant = cuerpo.indexOf('garantiasPantalla = await leerGarantiasPantallaMapfre(')
+  const iVar = cuerpo.indexOf('\n  await probarVariantes()')
   const iOfertas = cuerpo.indexOf('return { ofertas:')
-  assert.ok(iGen > -1 && iPdf > iGen && iGarPdf > iPdf && iVar > iGarPdf && iOfertas > iVar, 'orden: proyecto → PDF → garantías base → variantes → ofertas')
-  assert.ok(!/variantes\.restaurado/.test(cuerpo.slice(cuerpo.indexOf('const proyecto'), iPdf)), 'el proyecto no depende de la restauración')
-  assert.ok(!/estado: 'no_generado', motivo: 'no se pudo verificar que las tarjetas/.test(src))
+  assert.ok(iGarPant > -1 && iVar > iGarPant && iGen > iVar && iPdf > iGen && iOfertas > iPdf, 'orden: garantías base de pantalla → variantes → proyecto → PDF → ofertas')
+  assert.equal(cuerpo.split('probarVariantes()').length - 1, 1, 'las variantes se prueban una sola vez')
+  assert.match(cuerpo.slice(iVar, iGen), /!variantes\.restaurado/, 'el proyecto depende de la restauración verificada')
   const variantes = src.slice(src.indexOf('export async function tarificarVariantesComercialesMapfre'), src.indexOf('/** Primas → ofertas normalizadas'))
   assert.ok(!/\.click\(|\.selectOption\(|\.dispatchEvent\(|Continuar|\.press\(|\.fill\(/.test(variantes), 'sin clics directos ni «Continuar» en la tarificación de variantes')
   const guard = readFileSync(join(import.meta.dirname, '../src/guard.ts'), 'utf8')
