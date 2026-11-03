@@ -95,6 +95,31 @@ const RE_CP = /^\d{5}$/
 /** Un número de póliza: letras, dígitos, guiones y barras. Al menos 4 signos. */
 const RE_POLIZA = /^[A-Z0-9][A-Z0-9\/-]{3,}$/
 
+/**
+ * Solo los dígitos de un número de póliza, si hay los bastantes para que sea
+ * un identificador y no ruido. El cliente dicta «G-H-R 410001512» y en BD está
+ * «HR-G-410001512»: las letras y los guiones no coinciden, los dígitos sí
+ * (03/11/2026). Con menos de 6 dígitos devuelve null: casaría media cartera.
+ */
+export const MIN_DIGITOS_POLIZA = 6
+export function digitosDePoliza(valor: string): string | null {
+  const d = valor.replace(/\D/g, '')
+  return d.length >= MIN_DIGITOS_POLIZA ? d : null
+}
+
+/**
+ * Nombre tolerante a UNA letra de diferencia («Villegas» ↔ «Villega Sanchez»).
+ * En SQL lo hace `extensions.word_similarity(...) >= UMBRAL_NOMBRE_DIFUSO`
+ * (pg_trgm), solo para palabras de >= MIN_LETRAS_NOMBRE_DIFUSO letras; los
+ * mismos números viven aquí para que el SQL y el test no diverjan. Medido
+ * 03/11/2026 sobre 32.600 fichas: 0,6 mete ruido (martinez 152 → 258), 0,7 no.
+ */
+export const UMBRAL_NOMBRE_DIFUSO = 0.7
+export const MIN_LETRAS_NOMBRE_DIFUSO = 5
+export function admiteNombreDifuso(palabra: string): boolean {
+  return palabra.replace(/[^\p{L}]/gu, '').length >= MIN_LETRAS_NOMBRE_DIFUSO
+}
+
 function limpio(v: string): string {
   return v.trim().replace(/\s+/g, ' ')
 }

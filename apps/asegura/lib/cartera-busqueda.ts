@@ -35,6 +35,9 @@
 // cliente. La casa de Rota de un cliente de Sevilla no salía por «rota».
 
 import {
+  UMBRAL_NOMBRE_DIFUSO,
+  admiteNombreDifuso,
+  digitosDePoliza,
   avisoDireccion,
   avisoHermanas,
   direccionCoincide,
@@ -348,13 +351,20 @@ async function porNombre(correduriaId: string, c: Criterio): Promise<BloqueResul
   const db = prismaAsegura()
   const palabras = c.valor.split(/\s+/).slice(0, 4)
 
+  // Tolerancia a 1 letra (pg_trgm, schema `extensions`; palabras de ≥5 letras):
+  // «Villegas» encuentra «Villega Sanchez». Alternativa OR al ilike; el ranking
+  // pone antes las fichas que casan EXACTO.
+  const exacta = (p: string) =>
+    Prisma.sql`(extensions.unaccent(cl.nombre) ilike extensions.unaccent(${'%' + p + '%'}) or extensions.unaccent(cl.apellidos) ilike extensions.unaccent(${'%' + p + '%'}))`
+  const difusa = (p: string) =>
+    Prisma.sql`extensions.word_similarity(lower(extensions.unaccent(${p})), lower(extensions.unaccent(cl.nombre || ' ' || cl.apellidos))) >= ${UMBRAL_NOMBRE_DIFUSO}`
   const condicionUnaccent = Prisma.join(
-    palabras.map(
-      (p) =>
-        Prisma.sql`(extensions.unaccent(cl.nombre) ilike extensions.unaccent(${'%' + p + '%'}) or extensions.unaccent(cl.apellidos) ilike extensions.unaccent(${'%' + p + '%'}))`,
+    palabras.map((p) =>
+      admiteNombreDifuso(p) ? Prisma.sql`(${exacta(p)} or ${difusa(p)})` : exacta(p),
     ),
     ' and ',
   )
+  const todasExactas = Prisma.join(palabras.map(exacta), ' and ')
   const condicionSimple = Prisma.join(
     palabras.map((p) => Prisma.sql`(cl.nombre ilike ${'%' + p + '%'} or cl.apellidos ilike ${'%' + p + '%'})`),
     ' and ',
@@ -369,7 +379,7 @@ async function porNombre(correduriaId: string, c: Criterio): Promise<BloqueResul
       and cl.merged_into_cliente_id is null
       and cl.activo
       and ${condicionUnaccent}
-    order by cl.apellidos asc, cl.nombre asc
+    order by (case when ${todasExactas} then 0 else 1 end), cl.apellidos asc, cl.nombre asc
     limit ${LIMITE}
   `.catch(async () => {
     return db.$queryRaw<{ id: string; nombre: string; apellidos: string; tipo: string }[]>`
@@ -671,6 +681,8 @@ async function porNumeroPoliza(correduriaId: string, c: Criterio): Promise<Bloqu
   // compacta también la columna antes de comparar. `c.valor` ya viene compacto
   // de `planBusqueda`. El filtro de cliente va DENTRO de la consulta: si fuera
   // después del `limit`, fichas fusionadas o inactivas se comerían el cupo.
+  // Además, solo los DÍGITOS (≥6): «G-H-R 410001512» ≈ «HR-G-410001512».
+  const digitos = digitosDePoliza(c.valor)
   const ids = await db.$queryRaw<{ id: string }[]>`
     select p.id from polizas p
     join clientes cl on cl.id = p.cliente_id
@@ -678,7 +690,11 @@ async function porNumeroPoliza(correduriaId: string, c: Criterio): Promise<Bloqu
       and p.merged_into_poliza_id is null
       and cl.merged_into_cliente_id is null
       and cl.activo
-      and regexp_replace(upper(p.numero_poliza), '[^A-Z0-9]', '', 'g') like ${'%' + c.valor + '%'}
+      and (
+        regexp_replace(upper(p.numero_poliza), '[^A-Z0-9]', '', 'g') like ${'%' + c.valor + '%'}
+        or (${digitos}::text is not null
+            and regexp_replace(p.numero_poliza, '[^0-9]', '', 'g') like ${'%' + (digitos ?? '') + '%'})
+      )
     limit ${LIMITE}
   `
   const filas = await db.poliza.findMany({

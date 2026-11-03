@@ -74,6 +74,12 @@ Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; ti
 original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados revisado/falta_roto/devuelto + bloque en ficha. `rrhh.material_empleado`
 (0028, aplicada). Pendiente fase 2: revisión periódica mensual.
 
+## (03/11/2026) Correduría · buscador de cartera tolerante (caso Antonio Villegas)
+- Cliente no aparecía: DNI mal dado por él + apellido en BD «Villega» (sin s) + póliza dictada «G-H-R» vs «HR-G-410001512».
+- `cartera-busqueda.ts`: póliza también por solo dígitos (≥6); nombre con `word_similarity ≥ 0,7` (pg_trgm) en palabras ≥5 letras, exactas primero. ~31→68 ms. Cepo en `busqueda.test.ts`.
+- Escritura del apellido por SQL bloqueada por permisos; Alberto lo edita a mano (a las 1ª no quedó guardado: revisar). Sincro CIMA (`sincro-cima.ts` caso 'nombre') puede reescribir nombre: no hay blindaje de edición manual.
+- 698 lápidas fusionadas conservan `tipo='cliente'`/`activo=true` (pendiente normalizar).
+
 ## (03/11/2026) Sivra · mensajes de huésped de Agoda por correo
 - Agoda ya NO es de una sola dirección: manda 1 correo por mensaje desde `@agoda-messaging.com` («Reply from …») y responder a ese correo le llega al huésped. El detector solo conocía el digest de `@agoda.com` → los mensajes de Nicolas Iha (Luxury) quedaron sin contestar.
 - Ahora el parser reconoce ambos formatos, el mensaje entra al agente de huéspedes (misma política auto/botón que Booking) y la respuesta sale por correo (In-Reply-To) en vez de Smoobu. Tabla nueva `agoda_hilos_correo` (aplicada en central).

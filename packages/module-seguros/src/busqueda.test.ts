@@ -134,3 +134,36 @@ test('una palabra suelta NO es un usuario de email: «alberto» sigue siendo sol
   // Con espacios tampoco: «alberto suarez» no es una dirección de correo.
   assert.ok(!tipos('alberto suarez').includes('email_usuario'))
 })
+
+import { readFileSync } from 'node:fs'
+import { admiteNombreDifuso, digitosDePoliza } from './busqueda.ts'
+
+test('póliza dictada con letras sueltas: «G-H-R 410001512» se busca también por sus dígitos', () => {
+  const plan = planBusqueda('G-H-R 410001512')
+  const k = plan.criterios.find((x) => x.tipo === 'poliza')
+  assert.ok(k, 'debe haber criterio poliza')
+  const d = digitosDePoliza(k.valor)
+  assert.equal(d, '410001512')
+  // «HR-G-410001512» comparado SOLO por dígitos
+  assert.ok('HR-G-410001512'.replace(/\D/g, '').includes(d))
+})
+
+test('dígitos de póliza: menos de 6 no se usan (casaría media cartera)', () => {
+  assert.equal(digitosDePoliza('AB12345'), null)
+  assert.equal(digitosDePoliza('AB123456'), '123456')
+})
+
+test('nombre difuso: solo palabras de >=5 letras', () => {
+  assert.equal(admiteNombreDifuso('Villegas'), true)
+  assert.equal(admiteNombreDifuso('Pérez'), true)
+  assert.equal(admiteNombreDifuso('Ruiz'), false)
+})
+
+test('cepo SQL: la búsqueda real usa pg_trgm (alternativa al ilike) y los dígitos de la póliza', () => {
+  const src = readFileSync(new URL('../../../apps/asegura/lib/cartera-busqueda.ts', import.meta.url), 'utf8')
+  assert.match(src, /extensions\.word_similarity\(/, 'nombre difuso: «Villegas» ↔ «Villega Sanchez»')
+  assert.match(src, /admiteNombreDifuso\(p\)/)
+  assert.match(src, /order by \(case when \$\{todasExactas\} then 0 else 1 end\)/, 'exactos antes que difusos')
+  assert.match(src, /regexp_replace\(p\.numero_poliza, '\[\^0-9\]', '', 'g'\) like/, 'póliza por solo dígitos')
+  assert.match(src, /merged_into_cliente_id is null/)
+})

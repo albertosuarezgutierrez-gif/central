@@ -298,6 +298,11 @@ export {
 } from './recibos.ts'
 export {
   MINIMO_TEXTO,
+  MIN_DIGITOS_POLIZA,
+  UMBRAL_NOMBRE_DIFUSO,
+  MIN_LETRAS_NOMBRE_DIFUSO,
+  digitosDePoliza,
+  admiteNombreDifuso,
   planBusqueda,
   avisoDireccion,
   explicarVacio,
