@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-11-03T07:41:34Z",
+  "generadoEn": "2026-11-03T13:52:38Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -6405,6 +6405,7 @@
       "cima_liquidaciones",
       "comisiones_cobertura",
       "comisiones_devengo",
+      "comisiones_liquidacion_docs",
       "comunicacion_categorias",
       "comunicacion_conversacion_participantes",
       "comunicacion_conversaciones",
