@@ -1,8 +1,8 @@
 {
  "sesion": "17bedc2a-ed32-55d2-a49f-1b702fec45b5",
  "inicio": "2026-11-03T07:09:36.868Z",
- "fin": "2026-11-03T12:59:16.547Z",
- "llamadas": 1639,
+ "fin": "2026-11-03T12:59:42.415Z",
+ "llamadas": 1658,
  "categorias": {
   "agente:jefe-contabilidad": {
    "llamadas": 16,
@@ -45,25 +45,25 @@
    }
   },
   "sql": {
-   "llamadas": 296,
-   "chars_in": 174765,
-   "chars_out": 982353,
+   "llamadas": 301,
+   "chars_in": 176024,
+   "chars_out": 992985,
    "errores": 3,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 296
+    "mcp__Supabase__execute_sql": 301
    }
   },
   "bash": {
-   "llamadas": 316,
-   "chars_in": 278549,
-   "chars_out": 853403,
+   "llamadas": 324,
+   "chars_in": 280070,
+   "chars_out": 859942,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 316
+    "Bash": 324
    }
   },
   "mcp:github": {
@@ -138,14 +138,14 @@
    }
   },
   "escritura": {
-   "llamadas": 39,
-   "chars_in": 139178,
-   "chars_out": 531891,
+   "llamadas": 45,
+   "chars_in": 144514,
+   "chars_out": 675510,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Edit": 17,
+    "Edit": 23,
     "Write": 22
    }
   },

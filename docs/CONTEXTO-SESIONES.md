@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(03/11/2026, 4)** — Drive: script «Procesar Facturas Apartamentos» publicado en Versión 4 (= `apps/sivra/scripts/drive-upload.gs`, carpeta 2026 + AAAA); 69 facturas ago-nov movidas a la carpeta 2026. Lección: cambiar `drive-upload.gs` exige PUBLICAR nueva versión en Apps Script. Comisiones correduría: ADYP Allianz = extracto (AMYA no se cuenta); neto banco 2026 ene-oct 6.238,78 €; bruto pendiente de liquidaciones. Allianz pagó 704,53 € (30/09-02/10). Pendiente: automatizar el cuadre mensual por compañía (aviso >60 días o >5 €).
+
 **(03/11/2026, 3)** — Sueltos Drive: abono Leroy R019179 y 2 EMASESA 2025 (1º Dcha = antiguo Luxury Busto) registrados; alias Dúplex = Villasís = Pasaje Francisco Molina 4 1ºC.
 
 **(03/11/2026, 2)** — RRHH PR #5424 (auditado por architect): inicio del empleado por secciones (`lib/seccion-empleado.ts`, `#documentos`/`?seccion=`, nav inferior), vacaciones «Te quedan N días», lista de empleados móvil con chips (consulta agregada por empresa_id de sesión), aviso Seguros en una línea, aviso push contextual. MARCA AUTOMÁTICA por cliente: al subir logo → recorte + 600 px + PNG (`lib/logo-empresa.ts`, sharp, `limitInputPixels` 24 MP contra bombas de descompresión) y color derivado si falta; el alta del operador ahora escribe `color_primario` (antes `marca_color`, que nadie leía). Pushes de fichaje → `/e#fichaje`.
