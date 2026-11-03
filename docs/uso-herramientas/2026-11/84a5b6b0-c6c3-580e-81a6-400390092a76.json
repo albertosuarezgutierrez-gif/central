@@ -1,8 +1,8 @@
 {
  "sesion": "84a5b6b0-c6c3-580e-81a6-400390092a76",
  "inicio": "2026-11-03T17:31:57.112Z",
- "fin": "2026-11-03T18:41:39.902Z",
- "llamadas": 172,
+ "fin": "2026-11-03T18:42:18.244Z",
+ "llamadas": 173,
  "categorias": {
   "agente:general-purpose": {
    "llamadas": 5,
@@ -16,16 +16,16 @@
    }
   },
   "otro": {
-   "llamadas": 38,
-   "chars_in": 12681,
-   "chars_out": 264638,
+   "llamadas": 39,
+   "chars_in": 12683,
+   "chars_out": 286323,
    "errores": 0,
    "archivos_citados": 4,
    "chars_citados": 85520,
    "tools": {
     "ToolSearch": 10,
     "SubagentHandback": 5,
-    "ReadNotifications": 22,
+    "ReadNotifications": 23,
     "Skill": 1
    }
   },
