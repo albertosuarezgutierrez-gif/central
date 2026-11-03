@@ -150,5 +150,6 @@ Decisiones de Alberto sobre clasificación de gastos por negocio. Guardianas del
   `lib/fiscal-deducciones.ts` (maternidad, guardería y su landmine del tope, `compararDeclaracion()`),
   datos vivos y relación con otras skills. Léelo para: clasificar facturas/movimientos, `facturas-correo`,
   `fiscal-novedades`, o cualquier cálculo del módulo `/finanzas`.
+  - Guardería 2026 (dato Alberto 03/11/2026): Escuela Infantil Ratón de Los Remedios ene–jul (últ. recibo 12/07, julio = vacaciones) y desde el curso 2026-27 Grupo Workandlife «EI Estrella Polar» (recibos jul matrícula, sep, oct…). Banco hasta oct: 3.312,14 € (abr–jun duplicados marcados ‘ignorado’). Cuota RETA de Pilar 467,45 € = MENSUAL (confirmado).
 
 <!-- verificado: 2026-07-20 -->
