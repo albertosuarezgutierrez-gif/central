@@ -167,22 +167,22 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 432 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 433 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 420 | 77.118 | 66.641.434 | 0 | 0 |
-| `otro` | 414 | 18.147 | 37.126.577 | 21.480.658 | 0 |
-| `lectura-directa` | 355 | 11.859 | 33.591.054 | 0 | 0 |
-| `mcp:github` | 354 | 8.821 | 6.441.307 | 58.212.794 | 119 |
-| `sql` | 270 | 8.751 | 5.005.406 | 3.040.710 | 35 |
-| `escritura` | 257 | 6.744 | 108.573.745 | 0 | 0 |
+| `bash` | 420 | 77.328 | 66.784.464 | 0 | 0 |
+| `otro` | 415 | 18.184 | 37.183.644 | 21.481.359 | 0 |
+| `lectura-directa` | 356 | 11.880 | 33.632.107 | 0 | 0 |
+| `mcp:github` | 354 | 8.839 | 6.449.124 | 58.212.794 | 119 |
+| `sql` | 270 | 8.791 | 5.031.953 | 3.040.710 | 36 |
+| `escritura` | 257 | 6.761 | 109.090.955 | 0 | 0 |
 | `mcp:Vercel` | 90 | 1.538 | 1.335.201 | 237.328 | 49 |
 | `mcp:Gmail` | 71 | 1.513 | 1.634.672 | 0 | 101 |
 | `mcp:Booking-com` | 53 | 1.505 | 6.179.360 | 0 | 0 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
-| `agente:general-purpose` | 154 | 1.430 | 845.688 | 27.931.834 | 0 |
-| `mcp:claude-code-remote` | 89 | 1.374 | 198.180 | 2.984.731 | 0 |
+| `agente:general-purpose` | 155 | 1.431 | 846.367 | 27.934.208 | 0 |
+| `mcp:claude-code-remote` | 89 | 1.383 | 198.876 | 2.985.432 | 0 |
 | `mcp:Google_Drive` | 27 | 950 | 1.020.227 | 0 | 62 |
 | `mcp:Interactive-Brokers--IBKR-` | 17 | 711 | 831.624 | 0 | 0 |
 | `mcp:Supabase` | 157 | 528 | 189.079 | 27.255 | 9 |
@@ -198,8 +198,8 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:Trivago` | 3 | 53 | 8.707.439 | 0 | 1 |
 | `mcp:posthog` | 5 | 47 | 64.610 | 0 | 1 |
 | `agente:jefe-contabilidad` | 5 | 44 | 20.906 | 584.358 | 0 |
+| `agente:general` | 15 | 36 | 25.304 | 1.456.441 | 0 |
 | `agente:verificador-esceptico` | 18 | 35 | 11.159 | 133.263 | 0 |
-| `agente:general` | 15 | 31 | 21.229 | 1.323.623 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
 | `agente:lector-correo` | 8 | 23 | 8.176 | 0 | 0 |
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
