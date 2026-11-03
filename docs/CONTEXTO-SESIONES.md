@@ -69,6 +69,7 @@ original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados
 ## (03/11/2026) Facturas · auditoría del lector: tipo de documento obligatorio y documento completo
 - Causa raíz de los errores básicos: `tipo_documento` salía null en 28/51 y `procesar.ts` no lo miraba; el texto se cortaba a 4.000 car. (la IA solo veía el encabezado). Ahora: prompt con vocabulario cerrado (presupuesto/solicitud/liquidación/resumen/aviso → omitido; null/otro → bandeja con aviso), emisor≠cliente≠dirección del piso, `numero_albaran` aparte, hasta 12.000 car. (inicio+final). Helpers `tipo-documento.ts`, `revision-lectura.ts`, `recorte-texto.ts`; dedupe por nº de factura sin separadores.
 - Bandeja revisada con Alberto: Netflix → pisos compartidos; PEPEMOBILE → correduría; Anthropic 170 € = bonos reales; TotalEnergies 310,01 € = Monte Carmelo (personal); Vercel B2DRQ0QS-0007 duplicado descartado.
+- EMASESA 2026 completo (15/15, 3 contratos). **Dúplex: el agua va en la comunidad (76,18 €/mes), sin contrato EMASESA** (Alberto).
 - Pendiente: lecturas sin tipo ni importe se releen a diario (distinguir «falló la IA» de «nada que leer»); nombres de pisos a mano en `NOMBRES_INMUEBLES`; vigilar facturas reales clasificadas como aviso/liquidación (van a `agente_log`, no a bandeja).
 
 ## (03/11/2026) Facturas · pólizas de clientes y comisiones de portal NO son gasto + bandeja de pendientes

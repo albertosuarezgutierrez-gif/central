@@ -110,6 +110,7 @@ Decisiones de Alberto sobre clasificación de gastos por negocio. Guardianas del
 - **Comisiones correduría:** bruto en renta (con retención 15% de compañía), no neto bancario
 
 ## Aprendido 03/11/2026 (criterios fiscales para automatizar)
+- **Agua por piso (03/11/2026, Alberto):** EMASESA bimestral con 3 contratos — 0104785292 Socorro 24 = House Sevillana · 0105137440 Bustos Tavera 22 Bajo DER = Luxury Busto · 0105185751 Bajo IZQ = Busto Reform. **El Dúplex NO tiene EMASESA: el agua va incluida en la cuota de comunidad (76,18 €/mes)**; no la busques ni la reclames como factura que falta, y no la sumes aparte en la estimación.
 
 - **IVA:** correduría (art. 20.1.16) y alquiler turístico sin servicios hoteleros son actividades EXENTAS → el IVA soportado
   no se recupera: gasto por el TOTAL con IVA. Proveedores extranjeros sin IVA (Anthropic, Vercel, Supabase…): posible
