@@ -17,6 +17,7 @@
 //    actividad correduría (bruto = cobrado / (1 − 15 %)) y actividad de Pilar.
 //  - `null` = «sin dato», nunca 0.
 
+import { mediaMensualOSinDato, proyectarNetoActividad } from './media-actividad.ts'
 import { cuotaTarifa, type ImportesAnio } from './fiscal-deducciones.ts'
 
 // ── Parámetros de amortización (ÚNICO sitio) ────────────────────────────────────────────────
@@ -654,24 +655,20 @@ export function estimarCierre(e: EntradaBase, hastaHoy: Periodo): Estimacion {
   }
   const medioComp = medio(e.gastosCompartidos.filter(g => g.categoria !== 'LAVANDERIA'))
 
-  // Actividades (correduría y Pilar): media mensual de los meses completos, igual en los 3 escenarios.
-  const mediaAct = (m: Record<string, number>) => {
-    const v = mesesCompletos.filter(k => m[k] != null).map(k => m[k])
-    return v.length ? suma(v) / v.length : null
-  }
-  const cI = mediaAct(e.correduria.ingresosPorMes), cG = mediaAct(e.correduria.gastosPorMes)
+  // Actividades (correduría y Pilar): media mensual sobre los meses completos transcurridos, igual en los 3 escenarios.
+  const cI = mediaMensualOSinDato(e.correduria.ingresosPorMes, mesesCompletos), cG = mediaMensualOSinDato(e.correduria.gastosPorMes, mesesCompletos)
   // CIMA: los ingresos de lo que falta = recibos PENDIENTES con efecto en los meses restantes (estimación marcada);
   // 0 es un valor revisado, no «sin dato». Banco (legado): media mensual elevada al bruto.
   const cima = e.correduria.fuente === 'cima'
   const pendienteFuturo = cima ? suma(Object.entries(e.correduria.pendientePorMes ?? {}).filter(([m]) => m > e.hoy.slice(0, 7) && m <= fin.slice(0, 7)).map(([, v]) => v)) : null
   // Banco fuera de CIMA (no hay recibos pendientes que lo anticipen): media mensual de los meses completos, elevada al bruto.
-  const bancoMedia = cima ? mediaAct(e.correduria.ingresosBancoPorMes ?? {}) : null
+  const bancoMedia = cima ? mediaMensualOSinDato(e.correduria.ingresosBancoPorMes ?? {}, mesesCompletos) : null
   const bancoFuturo = bancoMedia == null ? 0 : (bancoMedia / (1 - RETENCION_CORREDURIA)) * mesesRestantes
   const correduriaNeto = cima
     ? (pendienteFuturo ?? 0) + bancoFuturo - (cG ?? 0) * mesesRestantes
     : cI == null && cG == null ? null : ((cI ?? 0) / (1 - RETENCION_CORREDURIA) - (cG ?? 0)) * mesesRestantes
-  const pI = mediaAct(e.pilar.ingresosPorMes), pG = mediaAct(e.pilar.gastosPorMes)
-  const pilarNeto = pI == null && pG == null ? null : ((pI ?? 0) - (pG ?? 0)) * mesesRestantes
+  // Pilar: media sobre los meses COMPLETOS transcurridos (no sobre los que tienen entrada: un único ingreso suelto no es un ritmo mensual).
+  const pilarNeto = proyectarNetoActividad(e.pilar.ingresosPorMes, e.pilar.gastosPorMes, mesesCompletos, mesesRestantes)
 
   // Agregados por piso: reservas hechas y referencia del mismo tramo del año anterior.
   const futuras = e.ingresos.filter(r => r.checkIn > e.hoy && r.checkIn <= fin)

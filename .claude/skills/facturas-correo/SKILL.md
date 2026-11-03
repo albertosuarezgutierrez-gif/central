@@ -74,8 +74,7 @@ Flujo: Paso 0 (salud+backlog) → 1/1-bis (candidatos Gmail + subidas manuales D
 
 - **Booking.com Invoice** (3/mes, una por alojamiento; el cuerpo no trae cifras): etiquetar `Claude/Adjuntos` → el Apps Script
   copia el PDF a Drive en 10-20 min → leer PDF (agente `lector-correo`). Emisor Booking.com B.V. (NL805734958B01) a Alberto
-  (28823484E), IVA 21 % sobre comisión + cargo por pagos (no inversión del sujeto pasivo). ID→piso: 2888928 = Villasís/Dúplex;
-  4340072 = Socorro 24/House Sevillana; 4771238 = Bustos Tavera 22 (Busto Reform + Luxury Busto). Registrar con su piso y
+  (28823484E), IVA 21 % sobre comisión + cargo por pagos (no inversión del sujeto pasivo). ID→piso: 2888928 = Dúplex (Plaza Villasís); 4340072 = Luxury Busto; 4771238 = Busto Reform; 2039943 = House Sevillana/Socorro 24 (OJO: el nombre impreso en la factura NO identifica el piso, usa el ID; mapa oficial en sivra-maestro/references/contexto-y-agente-huesped.md). Las facturas de 2039943 aún no se han localizado en Gmail (ene-oct 2026). Registrar con su piso y
   cuadrar el total mensual contra bruto−neto de `incomes`; si no cuadra, avisar. Son JUSTIFICANTE: el motor fiscal ya deduce
   esa comisión, no se suman otra vez. Airbnb: aún sin facturas localizadas.
 - **Carpeta Drive «Amazon deducible»** (facturas a Punto y Coma Gestión B90446683 por compras de pisos): registrar en el piso
