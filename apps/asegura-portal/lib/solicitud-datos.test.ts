@@ -129,3 +129,15 @@ test('/api/datos/vivienda: el token tiene que ser de una solicitud de HOGAR (403
   assert.ok(src.indexOf('await ramoSolicitudViva(') < guarda)
   assert.ok(guarda < src.indexOf('await viviendaCatastro('), 'la guarda va antes de consultar el Catastro')
 })
+
+// Regularización de RC (03/11/2026): mismo enlace, otro motivo. Estado propio (no `ok`): las ayudas de presupuesto
+// (Catastro, catálogo de vehículos) exigen `ok` + ramo y así no se abren con este token.
+test('regularización: solo periodo y compañía; forma rara = error; completada dice su motivo', async () => {
+  const { interpretarSolicitud } = await import('./solicitud-datos.ts')
+  const r = interpretarSolicitud(200, { estado: 'ok', motivo: 'regularizacion_rc', periodo: { desde: '2025-06', hasta: '2026-06' }, compania: 'Occident', documento: false, polizaId: 'x', nombre: 'Ana' })
+  assert.deepEqual(r, { estado: 'regularizacion', periodo: { desde: '2025-06', hasta: '2026-06' }, compania: 'Occident', documento: false })
+  assert.equal(interpretarSolicitud(200, { estado: 'ok', motivo: 'regularizacion_rc', periodo: { desde: '2025-13', hasta: '2026-06' } }).estado, 'error')
+  assert.equal(interpretarSolicitud(200, { estado: 'ok', motivo: 'regularizacion_rc' }).estado, 'error')
+  assert.deepEqual(interpretarSolicitud(200, { estado: 'completada', motivo: 'regularizacion_rc' }), { estado: 'completada', motivo: 'regularizacion_rc' })
+  assert.deepEqual(interpretarSolicitud(200, { estado: 'completada' }), { estado: 'completada' })
+})

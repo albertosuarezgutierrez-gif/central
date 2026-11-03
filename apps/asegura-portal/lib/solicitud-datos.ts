@@ -11,8 +11,14 @@ export type SolicitudLeida =
   /** `borrador` (26/10/2026): lo que dejó a medias con este enlace (guardado automático); `null` = nada. */
   | { estado: 'ok'; ramo: RamoSolicitud; campos: CampoSolicitud[]; tercero: boolean; borrador: BorradorLeido | null }
   | { estado: 'muerta' }
-  | { estado: 'completada' }
+  | { estado: 'completada'; motivo?: 'regularizacion_rc' }
   | { estado: 'error' }
+  /**
+   * Motivo `regularizacion_rc` (03/11/2026): el MISMO enlace pide la facturación del periodo para la regularización de RC.
+   * Estado aparte (no `ok`) a propósito: las ayudas del enlace de presupuesto (Catastro, catálogo de vehículos) exigen
+   * `ok` + ramo y así no se abren con un token de regularización. Solo periodo y compañía: nada del cliente.
+   */
+  | { estado: 'regularizacion'; periodo: { desde: string; hasta: string }; compania: string; documento: boolean }
 
 export type BorradorLeido = Record<string, string | boolean | string[]>
 
@@ -42,7 +48,18 @@ export function interpretarSolicitud(status: number, json: unknown): SolicitudLe
   const o = json !== null && typeof json === 'object' && !Array.isArray(json) ? (json as Record<string, unknown>) : null
   if (status !== 200 || !o) return { estado: 'error' }
   if (o.estado === 'muerta') return { estado: 'muerta' }
-  if (o.estado === 'completada') return { estado: 'completada' }
+  if (o.estado === 'completada') return o.motivo === 'regularizacion_rc' ? { estado: 'completada', motivo: 'regularizacion_rc' } : { estado: 'completada' }
+  if (o.estado === 'ok' && o.motivo === 'regularizacion_rc') {
+    const p = o.periodo !== null && typeof o.periodo === 'object' ? (o.periodo as Record<string, unknown>) : null
+    const mes = (x: unknown) => typeof x === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(x)
+    if (!p || !mes(p.desde) || !mes(p.hasta)) return { estado: 'error' }
+    return {
+      estado: 'regularizacion',
+      periodo: { desde: p.desde as string, hasta: p.hasta as string },
+      compania: typeof o.compania === 'string' && o.compania.length <= 40 ? o.compania : 'tu aseguradora',
+      documento: o.documento === true,
+    }
+  }
   // 25/10/2026: cualquier ramo de oportunidad (antes, solo moto/auto).
   const ramo = ramoSolicitud(o.ramo)
   if (o.estado === 'ok' && ramo && Array.isArray(o.campos)) {
@@ -81,6 +98,32 @@ export async function llamarPuenteSolicitud(init: { metodo: 'GET'; token: string
     return { status: res.status, json: await res.json().catch(() => null) }
   } catch (e) {
     console.error('[portal/solicitud-datos] el puente no respondió:', e instanceof Error ? e.message : e)
+    return null
+  } finally {
+    clearTimeout(reloj)
+  }
+}
+
+/** El cliente manda la facturación de una regularización de RC. `null` = el puente no respondió. */
+export async function enviarRegularizacionPuente(token: string, regularizacion: unknown): Promise<{ status: number; json: unknown } | null> {
+  const p = puente()
+  if (!p) return null
+  const control = new AbortController()
+  const reloj = setTimeout(() => control.abort(), PORTAL_PUENTE_TIEMPO_MS)
+  try {
+    const o = regularizacion !== null && typeof regularizacion === 'object' && !Array.isArray(regularizacion) ? (regularizacion as Record<string, unknown>) : {}
+    // Solo los tres campos de texto: nada más del cuerpo viaja a asegura.
+    const limpio = Object.fromEntries((['facturacion', 'empleados', 'masaSalarial'] as const).map((k) => [k, typeof o[k] === 'string' ? (o[k] as string).slice(0, 40) : '']))
+    const res = await fetch(`${p.base}/api/portal/solicitud-datos`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${p.secret}` },
+      body: JSON.stringify({ token, motivo: 'regularizacion_rc', regularizacion: limpio }),
+      cache: 'no-store',
+      signal: control.signal,
+    })
+    return { status: res.status, json: await res.json().catch(() => null) }
+  } catch (e) {
+    console.error('[portal/regularizacion] el puente no respondió:', e instanceof Error ? e.message : e)
     return null
   } finally {
     clearTimeout(reloj)
@@ -215,7 +258,7 @@ export const TOPE_PUENTE_DOCUMENTO_MS = 55_000
 export const TOPE_PUENTE_POLIZA_MS = 110_000
 
 /** Reenvía el fichero al puente de asegura (multipart). `null` = el puente no respondió. */
-export async function subirDocPuente(token: string, fichero: File, consentimiento = false, clase: 'documento' | 'poliza' = 'documento'): Promise<{ status: number; json: unknown } | null> {
+export async function subirDocPuente(token: string, fichero: File, consentimiento = false, clase: 'documento' | 'poliza' = 'documento', motivo: 'presupuesto' | 'regularizacion_rc' = 'presupuesto'): Promise<{ status: number; json: unknown } | null> {
   const p = puente()
   if (!p) return null
   const control = new AbortController()
@@ -229,6 +272,7 @@ export async function subirDocPuente(token: string, fichero: File, consentimient
     form.set('documento', fichero, fichero.name || 'documento')
     form.set('consentimiento', consentimiento ? '1' : '0')
     if (clase === 'poliza') form.set('clase', 'poliza')
+    if (motivo === 'regularizacion_rc') form.set('motivo', 'regularizacion_rc')
     const res = await fetch(`${p.base}/api/portal/solicitud-datos/documento`, {
       method: 'POST',
       headers: { authorization: `Bearer ${p.secret}` },

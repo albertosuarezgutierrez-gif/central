@@ -22,6 +22,8 @@ import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
 import { abrirSiniestro } from './cartera-siniestros'
 import { crearTarea } from './oportunidad-seguimiento'
+import { crearRegularizacion } from './regularizacion-rc'
+import { engancharRegularizacion } from './regularizacion-rc-enganche'
 import { esTablaInexistente } from './correo-avisos-intranet'
 import { anotarSolicitudCompania } from './solicitud-compania-bd'
 import { asignarDocumentosDeMensaje } from './correo-documento-bd'
@@ -321,6 +323,8 @@ async function procesarItem(
         if (v.ok) {
           gestionId = await crearTareaCorreo(db, correduriaId, clienteId, polizaId, plan.tarea)
           fechaLimite = plan.tarea.fechaLimite
+          // Regularización de RC: la tarea recién creada abre su petición al cliente (borrador + Telegram; no rompe el evento).
+          await engancharRegularizacion(crearRegularizacion, correduriaId, entrada.compania, item as Record<string, unknown>, polizaId, ACTOR_CORREO)
         } else {
           resumen = `nota en la ficha; tarea NO creada (${v.motivo})`
         }
