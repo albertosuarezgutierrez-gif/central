@@ -1,0 +1,102 @@
+{
+ "sesion": "84a5b6b0-c6c3-580e-81a6-400390092a76",
+ "inicio": "2026-11-03T17:31:57.112Z",
+ "fin": "2026-11-03T18:42:18.244Z",
+ "llamadas": 173,
+ "categorias": {
+  "agente:general-purpose": {
+   "llamadas": 5,
+   "chars_in": 9878,
+   "chars_out": 10983,
+   "errores": 0,
+   "archivos_citados": 6,
+   "chars_citados": 145441,
+   "tools": {
+    "Agent": 5
+   }
+  },
+  "otro": {
+   "llamadas": 39,
+   "chars_in": 12683,
+   "chars_out": 286323,
+   "errores": 0,
+   "archivos_citados": 4,
+   "chars_citados": 85520,
+   "tools": {
+    "ToolSearch": 10,
+    "SubagentHandback": 5,
+    "ReadNotifications": 23,
+    "Skill": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 20,
+   "chars_in": 2368,
+   "chars_out": 100363,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 11,
+    "Read": 9
+   }
+  },
+  "bash": {
+   "llamadas": 80,
+   "chars_in": 33544,
+   "chars_out": 243307,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 80
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 3,
+   "chars_in": 6,
+   "chars_out": 1173,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 3
+   }
+  },
+  "sql": {
+   "llamadas": 20,
+   "chars_in": 8150,
+   "chars_out": 33161,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 20
+   }
+  },
+  "mcp:github": {
+   "llamadas": 2,
+   "chars_in": 1434,
+   "chars_out": 182,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__update_pull_request": 1
+   }
+  },
+  "mcp:claude-code-remote": {
+   "llamadas": 4,
+   "chars_in": 840,
+   "chars_out": 563,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__claude-code-remote__subscribe_pr_activity": 1,
+    "mcp__claude-code-remote__send_later": 3
+   }
+  }
+ }
+}

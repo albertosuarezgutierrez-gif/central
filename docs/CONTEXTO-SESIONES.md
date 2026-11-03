@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(03/11/2026) Tarificador — plan acordado con Alberto.** Prueba de fuego primero: Pelayo auto/hogar con el guard nuevo (navegación libre normalizada + paradas de emisión intactas, explorador 0.3.36, agente-architect). Si pasa → plantilla de alta de compañía: secretos Fly + URL → mapeo → agente genera adaptador contra riesgo canónico → prueba en borrador (objetivo 1-2 días/compañía-ramo; Generali necesita grabación manual de Alberto). Después, por orden: (1) retarificación por lotes de cartera viva que vence en 60 días con aviso si otra compañía mejora; (2) vigilante nocturno de huellas de portales; (3) caché de precio 24 h por riesgo+compañía; (4) comprobador de coherencia del presupuesto antes de Telegram (precio ×3/÷3, garantías básicas, nunca «No figura»); (5) tablero de estado de bots en /correduria. No meter más compañías hasta validar Pelayo. Pendientes: Fidelidade hogar (nombre_via repintado), Generali auto (grabación), Mapfre BASICar sin precio, patinete web solicitud (Allianz primero).
+
 **(03/11/2026, 5)** — PRs #5448/#5453/#5459: cuadre de correduría automático, resultado de la declaración + simulador «¿y si…?» en el panel fiscal, abonos AEAT de maternidad (modelo 140) por concepto (no son devolución de renta; 1.393,20 € cobrados feb–sep), cotizaciones RETA de Pilar 661,49 € anuales, ASISA 2026 2.021,50 € (deducible tope 1.500 €).
 Auditoría de cierre: sin datos BBVA personal (25/06), Pilar (30/06) y N26 (03/07) → pedir extractos. TotalEnergies Socorro 1.295,66 € con fecha posiblemente invertida (pendiente). Anthropic 170 € ×2 e IBI 171,55 € ×2 no son duplicados.
 Pendientes: 8 gastos sin piso, Allianz 432,82 €, límite de maternidad por cotizaciones (con asesoría). Pilar: prioridad de Alberto = reparaciones antes que plan de pensiones.
@@ -79,6 +81,12 @@ original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados
 - 🚨 Occident no tiene dirección de respuesta: avisos desde occidentinforma.com y el canal oficial es el PORTAL de mediadores. Pendiente decidir buzón fijo (posible `recibe_regularizaciones` en Directorio).
 - Cierre automático NO: no hay ningún correo real de Occident de «suplemento emitido». SQL `2026-11-03c` APLICADO (03/11, verificado).
 - 📱 El ✅ al cliente manda también push en la app (portal `POST /api/operador/push-cliente`, secreto `ASEGURA_PORTAL_PUENTE_SECRET`, texto FIJO por `motivo`, url solo `/datos/…`). Push nunca condiciona el correo; Telegram dice el resultado. Global 2 hoy: 0 dispositivos. Desplegar portal antes que asegura.
+
+## (03/11/2026) Correduría · buscador de cartera tolerante (caso Antonio Villegas)
+- Cliente no aparecía: DNI mal dado por él + apellido en BD «Villega» (sin s) + póliza dictada «G-H-R» vs «HR-G-410001512».
+- `cartera-busqueda.ts`: póliza también por solo dígitos (≥6); nombre con `word_similarity ≥ 0,7` (pg_trgm) en palabras ≥5 letras, exactas primero. ~31→68 ms. Cepo en `busqueda.test.ts`.
+- Escritura del apellido por SQL bloqueada por permisos; Alberto lo edita a mano (a las 1ª no quedó guardado: revisar). Sincro CIMA (`sincro-cima.ts` caso 'nombre') puede reescribir nombre: no hay blindaje de edición manual.
+- 698 lápidas fusionadas conservan `tipo='cliente'`/`activo=true` (pendiente normalizar).
 
 ## (03/11/2026) Correduría · regularización RC de Occident automatizada (fases 1-2)
 - F1: parser saca periodo/fecha carta/recordatorio; clave tarea póliza+periodo; vence carta+15d (mín. hoy+2); 2º aviso → prioridad alta + ⚠️ en Telegram.
