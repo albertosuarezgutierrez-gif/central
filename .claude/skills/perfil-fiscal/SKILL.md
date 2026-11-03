@@ -150,5 +150,7 @@ Decisiones de Alberto sobre clasificación de gastos por negocio. Guardianas del
   `lib/fiscal-deducciones.ts` (maternidad, guardería y su landmine del tope, `compararDeclaracion()`),
   datos vivos y relación con otras skills. Léelo para: clasificar facturas/movimientos, `facturas-correo`,
   `fiscal-novedades`, o cualquier cálculo del módulo `/finanzas`.
+  - Guardería 2026 (dato Alberto 03/11/2026): Escuela Infantil Ratón de Los Remedios ene–jul (últ. recibo 12/07, julio = vacaciones) y desde el curso 2026-27 Grupo Workandlife «EI Estrella Polar» (recibos jul matrícula, sep, oct…). Banco hasta oct: 3.312,14 € (abr–jun duplicados marcados ‘ignorado’). Cuota RETA de Pilar 467,45 € = MENSUAL (confirmado).
+  - Seguro de salud ASISA (dato Alberto 03/11/2026): lo paga Alberto desde la correduría y cubre a su MUJER y 2 HIJOS (3 asegurados; Alberto no). Baja en diciembre de 2026. Banco 2026: 8 × 180,99 € = 1.447,92 €. Deducible art. 30.2.5ª LIRPF hasta 500 € × 3 = 1.500 € (`lib/seguro-salud-deducible.ts`, aplicado en `base-fiscal-devengo-db.ts`); nota: la proyección a 31/12 usa media mensual y aún supondría cargo de diciembre.
 
 <!-- verificado: 2026-07-20 -->

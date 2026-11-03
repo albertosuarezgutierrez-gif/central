@@ -5,6 +5,7 @@
 import { REDUCCION_CONJUNTA, UMBRAL_TARIFA_ALTA, esProvisional, interesesParaSimulador, periodoCierre, type AvisosDatos, type MesBase } from './base-fiscal-devengo.ts'
 import type { BaseDevengo } from './base-fiscal-devengo-db.ts'
 import type { Descendiente } from './fiscal-deducciones.ts'
+import type { ContextoResultado } from './resultado-declaracion.ts'
 import {
   CATALOGO_PALANCAS, SIN_PALANCAS, declarar, parametrosIrpf,
   type CompraPrevista, type EntradaSimulador, type LineaTramo, type Modo, type Palancas, type PalancaId, type ResultadoContribuyente,
@@ -57,9 +58,11 @@ export type PanelDatos = {
   porMes: { mes: string; total: number | null }[]
   avisos: AvisosDatos
   propiedades: { id: string; nombre: string }[]
+  /** Perfil, retenciones y pagos a cuenta para el RESULTADO de la declaración. null = no se pudo cargar (el bloque lo dice). */
+  contexto: ContextoResultado | null
 }
 
-export function armarPanel(b: BaseDevengo, ctx: { descendientes: Descendiente[]; conyugeTrabaja: boolean }): PanelDatos {
+export function armarPanel(b: BaseDevengo, ctx: { descendientes: Descendiente[]; conyugeTrabaja: boolean; contexto?: ContextoResultado | null }): PanelDatos {
   const base = {
     propiedades: b.propiedades,
     params: parametrosIrpf(b.anio, ctx.descendientes),
@@ -81,6 +84,7 @@ export function armarPanel(b: BaseDevengo, ctx: { descendientes: Descendiente[];
     porMes: b.hastaHoy.porMes.map((m: MesBase) => ({ mes: m.mes, total: m.total })),
     avisos: b.avisos,
     propiedades: b.propiedades.map(p => ({ id: p.id, nombre: p.nombre })),
+    contexto: ctx.contexto ?? null,
   }
 }
 
