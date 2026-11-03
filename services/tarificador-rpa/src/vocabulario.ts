@@ -62,6 +62,7 @@ const ALZ_PROPUESTA = o('allianz', '26/10/2026', '«Descargar propuesta» tras g
 const DESCARGA = o('allianz+mapfre+generali', '26/10/2026', 'descarga del proyecto/presupuesto guardado, Allianz 0.6.28 / Mapfre 0.8.23 / Generali 0.2.33')
 const DESCARGA_BLOQUEO = o('allianz+mapfre+generali', '26/10/2026', 'lista negra del rótulo de descarga')
 const GUARD_OCULTO = o('allianz+mapfre+generali', '26/10/2026', 'lista negra de atributos internos (id, name, href, manejadores)')
+const NAV_LIBRE = o('comun', '03/11/2026', 'navegación libre del explorador: lo que nunca se pulsa como navegación (Alberto)')
 
 // ───────────────────────── CONCEPTOS ─────────────────────────
 
@@ -291,6 +292,19 @@ export const BLOQUEO = congelarProfundo({
     t('formaliz', GUARD_OCULTO), t('enviar', GUARD_OCULTO), t('email', GUARD_OCULTO), t('mail', GUARD_OCULTO), t('sms', GUARD_OCULTO), t('anul', GUARD_OCULTO),
     t('elimin', GUARD_OCULTO), t('borrar', GUARD_OCULTO),
   ],
+  /**
+   * NAVEGACIÓN LIBRE del explorador (03/11/2026): lo que, además de los grupos de rótulo, un control de navegación NUNCA puede nombrar
+   * (en su texto, aria-label, title o value): emisión como sustantivo, IBAN/cuenta/SEPA, solicitar, confirmar, tramitar, alta, guardar,
+   * archivar, condiciones, salir/cerrar sesión. Solo lo usa `casaBloqueoNavegacion`; no entra en `GRUPOS_BLOQUEO_ROTULO` (descarga).
+   */
+  navegacion: [
+    t('emisi', NAV_LIBRE, { prefijo: true }), t('emission', NAV_LIBRE), t('iban', NAV_LIBRE), t('bancari', NAV_LIBRE, { prefijo: true }), t('cuenta', NAV_LIBRE, { plural: true }),
+    t('sepa', NAV_LIBRE), t('mandato', NAV_LIBRE, { plural: true }), t('tarjeta', NAV_LIBRE, { plural: true }), t('cobr', NAV_LIBRE, { prefijo: true }),
+    t('solicit', NAV_LIBRE, { prefijo: true }), t('confirm', NAV_LIBRE, { prefijo: true }), t('tramit', NAV_LIBRE, { prefijo: true }), t('suplement', NAV_LIBRE, { prefijo: true }),
+    t('alta', NAV_LIBRE, { plural: true }), t('guardar', NAV_LIBRE), t('archivar', NAV_LIBRE), t('condicion', NAV_LIBRE, { prefijo: true }),
+    t('salir', NAV_LIBRE), t('cerrar sesion', NAV_LIBRE), t('desconect', NAV_LIBRE, { prefijo: true }), t('logout', NAV_LIBRE), t('log out', NAV_LIBRE), t('logoff', NAV_LIBRE),
+    t('sign out', NAV_LIBRE), t('checkout', NAV_LIBRE), t('payment', NAV_LIBRE),
+  ],
   /** Texto de emisión visible en la página o en un diálogo (Generali). Palabra entera, sobre texto sin tildes y en minúsculas. */
   emision_pagina: [
     t('emitir', GEN_EMISION), t('contratar', GEN_EMISION), t('grabar poliza', GEN_EMISION), t('grabar la poliza', GEN_EMISION),
@@ -371,6 +385,32 @@ export function casaBloqueo(texto: string | null | undefined, opts: { extra?: re
     if (m) return { grupo: 'solo_guard', termino: m[0] }
   }
   return null
+}
+
+/** Grupos que se miran sobre el RÓTULO de un control de NAVEGACIÓN LIBRE (palabra entera): los de rótulo + `navegacion`. */
+export const GRUPOS_BLOQUEO_NAVEGACION: readonly GrupoBloqueo[] = Object.freeze([...GRUPOS_BLOQUEO_ROTULO, 'navegacion'] as const)
+
+/**
+ * NAVEGACIÓN LIBRE (03/11/2026): ¿el rótulo (texto/aria-label/title/value) nombra algo que la navegación libre nunca pulsa? Palabra entera
+ * sobre `normalizarRotulo` (sin tildes ni mayúsculas, `_` → espacio). `extra`: los términos que solo puede nombrar el guard. Devuelve el
+ * grupo y el término, o `null`. Pura.
+ */
+export function casaBloqueoNavegacion(texto: string | null | undefined, extra: readonly Termino[] = []): { grupo: GrupoBloqueo | 'solo_guard'; termino: string } | null {
+  const n = normalizarRotulo(texto)
+  if (n === '') return null
+  for (const g of GRUPOS_BLOQUEO_NAVEGACION) {
+    const m = regexPalabras(BLOQUEO[g]).exec(n)
+    if (m) return { grupo: g, termino: m[0] }
+  }
+  const m = extra.length > 0 ? regexPalabras(extra).exec(n) : null
+  return m ? { grupo: 'solo_guard', termino: m[0] } : null
+}
+
+/** NAVEGACIÓN LIBRE: ¿un atributo INTERNO (id, name, clase, onclick, href, acción del formulario) contiene, por subcadena, un término oculto prohibido? Pura. */
+export function casaAtributoInternoNavegacion(texto: string | null | undefined): string | null {
+  const n = normalizarRotulo(texto).replace(/\s+/g, '')
+  if (n === '') return null
+  return regexPalabras(BLOQUEO.atributo_interno, { limites: false }).exec(n)?.[0] ?? null
 }
 
 /** Un único patrón (palabra entera) con TODOS los grupos de rótulo del bloqueo más `extra` (los términos que solo puede nombrar el guard). */

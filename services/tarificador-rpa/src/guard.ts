@@ -14,6 +14,8 @@ import { indiceOpcionGenerica, indicesCompaniaActualCompuesta } from './compania
 import {
   BLOQUEO,
   CONCEPTOS_ACCION,
+  casaAtributoInternoNavegacion,
+  casaBloqueoNavegacion,
   RE_EXCLUIR_DESCARGA,
   RE_OBJETO_DESCARGA,
   RE_OBJETO_PROPUESTA,
@@ -91,6 +93,12 @@ import {
   type MarcoInventario,
   type PantallaGuardado,
   ORIGEN_FIDELIDADE_MEDIADORES,
+  navegacionLibre,
+  navegacionLibreInventario,
+  neutralizarDomicilioDireccion,
+  planoNavegacion,
+  SUSTANTIVOS_MENU_NAVEGACION,
+  type ControlNavegacion,
 } from '@central/module-tarificacion'
 
 /**
@@ -3728,6 +3736,164 @@ export function claveTopeAvanceSinTexto(entrada: string, sinTexto: AvanceSinText
 export function topeAvancesPaso(entrada: string, porId: boolean, sinTexto: AvanceSinTexto | null): number {
   const clave = porId ? null : claveTopeAvanceSinTexto(entrada, sinTexto)
   return (clave !== null ? TOPES_AVANCES_POR_REGLA[clave] : undefined) ?? MAX_AVANCES_POR_ID
+}
+
+// ─────────── NAVEGACIÓN LIBRE DEL EXPLORADOR (Alberto, 03/11/2026) ───────────
+// El guard se parte en dos para el EXPLORADOR: (A) navegación libre por regla general (aquí y en `navegacion-libre.ts` del módulo) y
+// (B) emisión bloqueada igual que hoy (`comprobarBoton`, la red, la frontera bancaria y todas las puertas estrechas no cambian). La
+// regla es ADICIONAL: las listas exactas por compañía (`ENLACES_ENTRADA_AUTORIZADOS`, `SIMULACION_FIDELIDADE_SIN_TEXTO`…) siguen igual.
+
+/** Tope ANTI-BUCLE de pulsaciones del MISMO control por navegación libre en un trabajo (la 4.ª se bloquea). */
+export const MAX_PULSACIONES_NAVEGACION_POR_CONTROL = 3
+
+/** Tope de pulsaciones por control de la navegación libre para esta entrada: 6 en la simulación de Vivienda de Fidelidade (como su avance), 3 el resto. Pura. */
+export function topeNavegacionLibre(entrada: string): number {
+  return (entrada === ENTRADA_FIDELIDADE_VIVIENDA ? TOPES_AVANCES_POR_REGLA['fidelidade:vivienda'] : undefined) ?? MAX_PULSACIONES_NAVEGACION_POR_CONTROL
+}
+
+/** Pulsaciones de navegación libre por control y trabajo (clave: documento + tag + id + name + rótulo normalizados). */
+const PULSACIONES_NAVEGACION = new WeakMap<GuardEmision, Map<string, number>>()
+
+/** Clave ESTABLE de un control para el tope anti-bucle (sin query de la URL: el cache-buster no lo convierte en otro control). Pura. */
+export function claveControlNavegacion(c: ControlNavegacion, urlDocumento: string): string {
+  let doc = ''
+  try {
+    const u = new URL(urlDocumento)
+    doc = `${u.origin}${u.pathname}`
+  } catch {
+    doc = '?'
+  }
+  const rotulo = [c.texto, c.ariaLabel, c.title, c.value].map(planoNavegacion).find((x) => x !== '') ?? ''
+  return [doc, (c.tag ?? '').toLowerCase(), c.id ?? '', c.name ?? '', rotulo].join('|')
+}
+
+/** Rótulo normalizado sin adornos finales (›, >, », *, :, flechas de desplegable). Pura. */
+const rotuloSinAdornos = (d: string | null | undefined) => planoNavegacion(d).replace(/[\s›>»*:▾▼]+$/u, '')
+
+/**
+ * La regla VIVA de navegación libre: la del módulo (`navegacionLibre`) sobre lo que el DOM dice AHORA y, además, el VOCABULARIO del worker
+ * (`casaBloqueoNavegacion` sobre cada rótulo, más los términos de `TERMINOS_BLOQUEO_SOLO_GUARD`; `casaAtributoInternoNavegacion` sobre id,
+ * name, clase, onclick, href, acción del formulario y ancestros). El sustantivo de un desplegable de menú («Contratación») solo se exime en
+ * el rótulo y solo si el módulo lo reconoce como desplegable. `null` = se puede pulsar; si no, por qué no (sin valores). Pura.
+ */
+export function motivoNoNavegacionLibreVivo(c: ControlNavegacion, urlDocumento: string): string | null {
+  const r = navegacionLibre(c, { urlMarco: urlDocumento })
+  if (!r.ok) return r.motivo
+  for (const v of [c.texto, c.ariaLabel, c.title, c.value]) {
+    if (typeof v !== 'string' || v.trim() === '') continue
+    const n = neutralizarDomicilioDireccion(rotuloSinAdornos(v))
+    if (r.exentoMenu && SUSTANTIVOS_MENU_NAVEGACION.includes(n)) continue
+    const b = casaBloqueoNavegacion(n, TERMINOS_BLOQUEO_SOLO_GUARD)
+    if (b) return `rotulo_bloqueado (${b.grupo})`
+  }
+  for (const d of [c.id, c.name, c.clase, c.onclick, c.hrefLiteral, c.hrefAbsoluto, c.accionFormulario, ...(c.ancestros ?? [])]) {
+    if (typeof d !== 'string' || d === '') continue
+    if (casaAtributoInternoNavegacion(neutralizarDomicilioDireccion(planoNavegacion(d)))) return 'atributo_bloqueado'
+  }
+  return null
+}
+
+/** El control VIVO como `ControlNavegacion` + la URL de SU documento. Solo lectura (sin funciones con nombre dentro de `evaluate`). */
+async function controlNavegacionVivo(boton: Locator): Promise<{ c: ControlNavegacion; url: string } | null> {
+  return boton
+    .evaluate((n) => {
+      const h = n as HTMLElement & { value?: unknown; form?: HTMLFormElement | null }
+      const tag = h.tagName.toLowerCase()
+      const tipo = (h.getAttribute('type') ?? (tag === 'button' ? 'submit' : '')).toLowerCase()
+      const form = tag === 'button' || tag === 'input' ? (h.form ?? null) : null
+      const envia = !!form && (tipo === 'submit' || tipo === 'image')
+      const fa = h.getAttribute('formaction')
+      let accion: string | null = null
+      if (envia) {
+        try {
+          accion = new URL(fa ?? form.getAttribute('action') ?? '', h.ownerDocument.baseURI).href
+        } catch {
+          accion = 'invalida:'
+        }
+      } else if (fa) accion = fa
+      const href = tag === 'a' ? h.getAttribute('href') : null
+      let hrefAbs: string | null = null
+      if (href !== null && href.trim() !== '' && !/^\s*(#|javascript:)/i.test(href)) {
+        try {
+          hrefAbs = new URL(href, h.ownerDocument.baseURI).href
+        } catch {
+          hrefAbs = 'invalida:'
+        }
+      }
+      const anc: (string | null)[] = []
+      let p: Element | null = h.parentElement ?? ((h.getRootNode() as ShadowRoot).host ?? null)
+      for (let i = 0; p && i < 3; i++) {
+        anc.push(p.getAttribute('onclick'), p.getAttribute('ng-click'), p.getAttribute('data-ng-click'), p.tagName === 'A' ? p.getAttribute('href') : null)
+        p = p.parentElement ?? ((p.getRootNode() as ShadowRoot).host ?? null)
+      }
+      const oc = [h.getAttribute('onclick'), h.getAttribute('ng-click'), h.getAttribute('data-ng-click'), href !== null && /^\s*javascript:/i.test(href) ? href : null]
+        .filter((x): x is string => x !== null && x.trim() !== '')
+        .join(' ; ')
+      return {
+        url: h.ownerDocument.location.href,
+        c: {
+          tag,
+          type: h.getAttribute('type'),
+          role: h.getAttribute('role'),
+          texto: (h.innerText ?? h.textContent ?? '').replace(/\s+/g, ' ').trim() || null,
+          ariaLabel: h.getAttribute('aria-label'),
+          title: h.getAttribute('title'),
+          value: tag === 'input' && typeof h.value === 'string' ? h.value : null,
+          id: h.id || null,
+          name: h.getAttribute('name'),
+          clase: h.getAttribute('class'),
+          onclick: oc || null,
+          hrefLiteral: href,
+          hrefAbsoluto: hrefAbs,
+          accionFormulario: accion,
+          enviaFormulario: envia,
+          ariaHaspopup: h.getAttribute('aria-haspopup'),
+          ariaExpanded: h.getAttribute('aria-expanded'),
+          ancestros: anc,
+        },
+      }
+    }, undefined, { timeout: 5_000 })
+    .catch(() => null)
+}
+
+/**
+ * NAVEGACIÓN LIBRE DEL EXPLORADOR IA (0.3.36). El ÚNICO camino para pulsar un control que el validador aceptó SOLO por la regla general
+ * de navegación (`requiereNavegacionLibre` del módulo). Exige, en este orden y sin atajos:
+ *   1. guard limpio y las ventanas de red de emisión, avance y guardado cerradas;
+ *   2. la regla del módulo sobre el INVENTARIO (`navegacionLibreInventario`) y la frontera bancaria (`exigirSinCuentaBancaria`);
+ *   3. EXACTAMENTE un control vivo, con el MISMO rótulo que el inventario;
+ *   4. la regla VIVA (`motivoNoNavegacionLibreVivo`: módulo + vocabulario del worker; href a otro origen, salida, formulario o pantalla
+ *      de contratación/pago → no) y `comprobarBoton` sobre su descripción completa, menos SOLO el rótulo exacto del sustantivo de un
+ *      desplegable de menú si el módulo lo eximió (todo lo demás de emisión, igual que siempre);
+ *   5. el tope anti-bucle por control (`topeNavegacionLibre`: 3; 6 en la simulación de Vivienda de Fidelidade).
+ * Solo entonces pulsa UNA vez. Sin ventana de red: la navegación y los POST que provoque pasan por el guard de contexto de siempre.
+ */
+export async function pulsarNavegacionLibre(boton: Locator, guard: GuardEmision, aut: { entrada: string; el: ElementoInventario; marco: MarcoInventario }): Promise<void> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'navegación libre con la ventana de emisión, de avance o de guardado abierta')
+  const inv = navegacionLibreInventario(aut.el, aut.marco)
+  if (!inv.ok) throw new EmisionBloqueadaError('boton', `navegación libre: el control del inventario no es de navegación (${inv.motivo})`)
+  await exigirSinCuentaBancaria(boton.page())
+  if ((await boton.count()) !== 1) throw new EmisionBloqueadaError('boton', 'navegación libre: no hay exactamente un control')
+  const vivo = await controlNavegacionVivo(boton)
+  if (!vivo) throw new EmisionBloqueadaError('boton', 'navegación libre: no se pudo leer el control vivo')
+  if (planoNavegacion(aut.el.texto ?? aut.el.ariaLabel ?? '') !== planoNavegacion(vivo.c.texto ?? vivo.c.ariaLabel ?? '')) throw new EmisionBloqueadaError('boton', 'navegación libre: el control vivo no es el del inventario')
+  const motivo = motivoNoNavegacionLibreVivo(vivo.c, vivo.url)
+  if (motivo !== null) throw new EmisionBloqueadaError('boton', `navegación libre: ${motivo}`)
+  const r = navegacionLibre(vivo.c, { urlMarco: vivo.url })
+  const exento = r.ok && r.exentoMenu
+  const desc = await descripcion(boton)
+  // Posiciones 0-3 de `descripcion` (texto, aria-label, title, value): las ÚNICAS que la excepción del menú puede quitar, y solo el sustantivo exacto.
+  comprobarBoton(conRutasTolerables(guard, desc.map((d, i) => (exento && i <= 3 && SUSTANTIVOS_MENU_NAVEGACION.includes(rotuloSinAdornos(d)) ? null : d))))
+  const tope = topeNavegacionLibre(aut.entrada)
+  const cuenta = PULSACIONES_NAVEGACION.get(guard) ?? new Map<string, number>()
+  const clave = claveControlNavegacion(vivo.c, vivo.url)
+  const usadas = cuenta.get(clave) ?? 0
+  if (usadas >= tope) throw new EmisionBloqueadaError('fase', `navegación libre: el mismo control ya se pulsó ${usadas} veces en este trabajo (tope ${tope})`)
+  cuenta.set(clave, usadas + 1)
+  PULSACIONES_NAVEGACION.set(guard, cuenta)
+  await boton.click()
+  guard.comprobar()
 }
 
 /**
