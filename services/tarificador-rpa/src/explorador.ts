@@ -622,7 +622,7 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
       // 0.3.28: entrada de SOLO LECTURA (Pelayo): la pantalla ya está en asegura (el inventario de este paso); el lote NO se ejecuta.
       if (entradaSoloLectura(k.entrada)) {
         k.log('exploracion_solo_lectura', { n: pasos })
-        throw new Parar('tope', undefined, 'solo lectura: primera pantalla volcada')
+        throw new Parar('tope')
       }
       // REVALIDACIÓN contra el inventario PROPIO (el que se mandó): lo que no valida aquí no toca el portal.
       const v = validarRespuestaExplorador(r.respuesta, { inventario: inv, ramo: k.ramo, entrada: k.entrada, datosReales: k.conDatosReales ? { riesgo: k.riesgo } : null, presupuestoEnCurso: presupuesto.guardado, precioVisto: precioVistoEn(k.guard) })
@@ -1367,6 +1367,15 @@ export async function entrarYExplorar(
   }
 }
 
+/**
+ * 0.3.35: qué nota viaja en `notaFin`. Solo una cabe: frontera bancaria (manda) > diagnóstico de la entrada (Pelayo) > la que traiga el bucle.
+ * Antes (0.3.33) la del bucle ganaba siempre y la entrada de solo lectura (`Parar('tope', …, nota)`) tapaba el diagnóstico. Pura.
+ */
+export function conNotaDeEntrada<T extends { nota?: string }>(fin: T, notaEntrada: string | undefined): T {
+  if (!notaEntrada || (fin.nota !== undefined && fin.nota.startsWith('frontera bancaria'))) return fin
+  return { ...fin, nota: notaEntrada }
+}
+
 export type EntradaEjecucion = {
   cfg: Config
   trabajo: Trabajo
@@ -1506,7 +1515,7 @@ export async function ejecutarExploracion(p: EntradaEjecucion): Promise<number> 
       }),
     })
     // 0.3.33: el diagnóstico de la entrada (Pelayo: elección del ramo) viaja en `notaFin` → huecos del mapa; la frontera bancaria manda si la hay.
-    if (notaEntrada && !finExp.nota) finExp = { ...finExp, nota: notaEntrada }
+    finExp = conNotaDeEntrada(finExp, notaEntrada)
   } catch (e) {
     const c = clasificar(e)
     finExp = { motivo: 'error_portal', error: { tipo: c.tipo === 'portal' ? 'infra' : c.tipo, mensaje: c.mensaje }, redNoGet: [], efectos: ['ninguno_visto'], pasos: 0, acciones: 0 }
