@@ -16,14 +16,22 @@ test('solo cuenta 100,00 € de DEVOLUCIONES TRIBUTARIAS sin duplicado ignorado'
 test('real del año + proyección a 31/12 con la media de los últimos 3 meses', () => {
   const movs = [mov('2026-08-20'), mov('2026-08-21'), mov('2026-09-18'), mov('2026-10-23'), mov('2026-10-24'), mov('2026-10-24', 100, { duplicado_estado: 'ignorado' }),
     mov('2026-08-20', 93.2), mov('2025-12-20')]
-  const r = detectarAbonosAnticipados(movs, 2026)
+  const r = detectarAbonosAnticipados(movs, 2026, '2026-11-03')
   assert.equal(r.real, 500); assert.equal(r.n, 5); assert.equal(r.ultimoMes, 10)
   assert.equal(r.estimado, 333.33); // ago 200 + sep 100 + oct 200 = 500 → 166,67/mes × 2
   assert.equal(r.total, 833.33)
 })
 
 test('abono en diciembre: sin proyección; sin abonos: ultimoMes null y 0', () => {
-  assert.equal(detectarAbonosAnticipados([mov('2026-12-18')], 2026).estimado, 0)
-  const v = detectarAbonosAnticipados([], 2026)
+  assert.equal(detectarAbonosAnticipados([mov('2026-12-18')], 2026, '2026-12-20').estimado, 0)
+  const v = detectarAbonosAnticipados([], 2026, '2026-11-03')
   assert.deepEqual(v, { real: 0, n: 0, ultimoMes: null, estimado: 0, total: 0 })
+})
+
+test('proyección solo en el año en curso y con el último abono del mes actual o el anterior', () => {
+  const movs = [mov('2026-08-20'), mov('2026-09-18'), mov('2026-10-23')]
+  assert.equal(detectarAbonosAnticipados(movs, 2026, '2026-10-30').estimado, 200) // oct: mes actual
+  assert.equal(detectarAbonosAnticipados(movs, 2026, '2026-11-03').estimado, 200) // oct: mes anterior
+  assert.equal(detectarAbonosAnticipados(movs, 2026, '2026-12-03').estimado, 0) // interrumpidos (último oct, hoy dic)
+  assert.equal(detectarAbonosAnticipados(movs, 2026, '2027-01-10').estimado, 0) // ejercicio cerrado
 })

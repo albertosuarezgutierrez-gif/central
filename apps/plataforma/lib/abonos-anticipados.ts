@@ -1,4 +1,4 @@
-// Abonos anticipados AEAT (modelos 140/143: maternidad / familia numerosa) leídos del banco. PURO: sin BD ni reloj.
+// Abonos anticipados AEAT (modelos 140/143: maternidad / familia numerosa) leídos del banco. PURO: sin BD ni reloj (`hoy` se inyecta).
 // Son ingresos «DEVOLUCIONES TRIBUTARIAS» de EXACTAMENTE 100,00 € (por niño y mes). Otros importes (p. ej. 93,20 €, que puede ser
 // la devolución de la renta) NO se cuentan. Los duplicados marcados `ignorado` tampoco.
 
@@ -26,7 +26,8 @@ export function esAbonoAnticipado(m: MovAbono): boolean {
   return PATRON.test(`${m.concepto ?? ''} ${m.contraparte ?? ''}`)
 }
 
-export function detectarAbonosAnticipados(movs: MovAbono[], anio: number): AbonosBanco {
+/** `hoy` = YYYY-MM-DD. La proyección solo aplica al año en curso con el último abono del mes actual o del anterior (abonos vivos). */
+export function detectarAbonosAnticipados(movs: MovAbono[], anio: number, hoy: string): AbonosBanco {
   const reales = movs.filter(m => m.fecha.startsWith(`${anio}-`) && esAbonoAnticipado(m))
   const porMes = new Array<number>(13).fill(0)
   for (const m of reales) porMes[Number(m.fecha.slice(5, 7))] += m.importe
@@ -34,7 +35,9 @@ export function detectarAbonosAnticipados(movs: MovAbono[], anio: number): Abono
   const meses = porMes.map((v, i) => (v > 0 ? i : 0)).filter(Boolean)
   const ultimoMes = meses.length ? Math.max(...meses) : null
   let estimado = 0
-  if (ultimoMes != null && ultimoMes < 12) {
+  const mesHoy = Number(hoy.slice(5, 7))
+  const vivo = Number(hoy.slice(0, 4)) === anio && ultimoMes != null && ultimoMes >= mesHoy - 1
+  if (vivo && ultimoMes != null && ultimoMes < 12) {
     let suma = 0
     for (let k = ultimoMes - 2; k <= ultimoMes; k++) if (k >= 1) suma += porMes[k]
     estimado = r2((suma / 3) * (12 - ultimoMes))

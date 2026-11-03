@@ -156,9 +156,25 @@ function abonosDelBanco(b: AbonosBanco, parte: number): Partida[] {
   const est = b.estimado > 0
   return [{
     id: 'abono_banco', etiqueta: 'Abonos anticipados 140/143 (del banco)', importe: r2(b.total * parte), estimada: est,
-    nota: `del banco: ${b.n} abonos de 100,00€ (${eur2(b.real)}€)` + (est ? `; estimado hasta 31/12: +${eur2(b.estimado)}€ al ritmo de los últimos 3 meses` : '')
-      + (parte < 1 ? '; reparto 50/50 entre los dos' : ''),
+    nota: `del banco: ${b.n} abonos de 100,00€ (${eur2(b.real)}€)` + (est ? `; estimado hasta 31/12: +${eur2(b.estimado)}€ al ritmo de los últimos 3 meses` : ''),
   }]
+}
+
+/** Reparto individual de los abonos del banco (no distingue 140/143): maternidad → Pilar; familia numerosa → 50/50 (todo Alberto si Pilar no trabaja).
+ *  Con desglose en el perfil (mat y fn conocidos y >0 en total) se reparte según él; si no, en proporción a la deducción de cada tipo y se marca «supuesto». */
+export function abonosBancoIndividual(b: AbonosBanco, titular: 'alberto' | 'pilar', perfil: PerfilFiscal, dedMat: number, dedFn: number): Partida[] {
+  const fnPilar = perfil.conyugeTrabaja ? 0.5 : 0
+  const mat = perfil.abonoAnticipadoMaternidad, fn = perfil.abonoAnticipadoFamiliaNumerosa
+  const conDesglose = mat != null && fn != null && mat + fn > 0
+  const wMat = conDesglose ? mat : Math.max(0, dedMat), wFn = conDesglose ? fn : Math.max(0, dedFn)
+  const tot = wMat + wFn
+  const parteMat = tot > 0 ? wMat / tot : 0
+  const parte = tot > 0
+    ? (titular === 'pilar' ? parteMat + (1 - parteMat) * fnPilar : (1 - parteMat) * (1 - fnPilar))
+    : (titular === 'alberto' ? (perfil.conyugeTrabaja ? 0.5 : 1) : fnPilar)
+  const p = abonosDelBanco(b, parte)
+  if (conDesglose || p.length === 0) return p.map(x => ({ ...x, nota: `${x.nota}; reparto según el desglose 140/143 del perfil` }))
+  return p.map(x => ({ ...x, estimada: true, nota: `${x.nota}; reparto supuesto (el banco no distingue 140/143): maternidad a Pilar, familia numerosa 50/50` }))
 }
 
 // ── Cuenta final de un contribuyente ────────────────────────────────────────────────────────
@@ -203,6 +219,8 @@ export function calcularResultadoDeclaracion(e: EntradaSimulador, palIn: Palanca
   // dos veces. El perfil no dice quién donó: se atribuyen a Alberto (declarante); se SUMAN a los hipotéticos de la palanca.
   const donReal = Math.max(0, ctx.perfil.donativosAnual || 0)
   const pal: Palancas = donReal > 0 ? { ...palIn, donativos: { ...palIn.donativos, alberto: palIn.donativos.alberto + donReal } } : palIn
+  // Abonos del banco solo si hay alguno (n>0): 0 leídos no es «cero abonos», cae al perfil / aviso (null ≠ 0).
+  const banco = ctx.abonosBanco && ctx.abonosBanco.n > 0 ? ctx.abonosBanco : null
   const retAlb = retencionCierre(ctx.retencionesAlberto, ctx.mesesTranscurridos)
   const retPil = partidaRetPilar(ctx.retencionesPilar)
   const pfA = partidaPf('alberto', ctx.pagosFraccionados.alberto)
@@ -215,7 +233,7 @@ export function calcularResultadoDeclaracion(e: EntradaSimulador, palIn: Palanca
   const dedConj = lineasDeduccion(perfilConj, ctx.descendientes, anio, cc?.baseLiquidable ?? undefined)
     .map(l => aPartida(l, 1, notaTope(l, ctx.perfil, ctx.guarderiaBancoAnual))).map(MARCA_TOPE)
   const conjunta = cerrarModalidad('conjunta', [
-    cerrarContribuyente('unidad_familiar', cc, dedConj, [retAlb, retPil], [pfA, pfP], ctx.abonosBanco ? abonosDelBanco(ctx.abonosBanco, 1) : abonos(ctx.perfil, 1, 1)),
+    cerrarContribuyente('unidad_familiar', cc, dedConj, [retAlb, retPil], [pfA, pfP], banco ? abonosDelBanco(banco, 1) : abonos(ctx.perfil, 1, 1)),
   ])
 
   // ── Individual: cada uno la suya. Reparto de las deducciones familiares ──
@@ -230,6 +248,7 @@ export function calcularResultadoDeclaracion(e: EntradaSimulador, palIn: Palanca
   const lineasDe = (c: ResultadoContribuyente | null) => lineasDeduccion(perfilInd, ctx.descendientes, anio, c?.baseLiquidable ?? undefined)
   const lineasPorTitular = { alberto: lineasDe(cA), pilar: lineasDe(cP) }
   const conDerecho = (l: LineaDeduccion) => Boolean(l.sinDato) || l.importe > 0
+  const importeConjunta = (id: string) => dedConj.find(d => d.id === id)?.importe ?? 0
   const individual = (titular: 'alberto' | 'pilar', c: ResultadoContribuyente | null): ContribuyenteFinal => {
     const otro = titular === 'alberto' ? 'pilar' : 'alberto'
     const mias: DeduccionPartida[] = []
@@ -249,7 +268,7 @@ export function calcularResultadoDeclaracion(e: EntradaSimulador, palIn: Palanca
     return cerrarContribuyente(
       titular, c, mias,
       [titular === 'alberto' ? retAlb : retPil], [titular === 'alberto' ? pfA : pfP],
-      ctx.abonosBanco ? abonosDelBanco(ctx.abonosBanco, ctx.perfil.conyugeTrabaja ? 0.5 : titular === 'alberto' ? 1 : 0) : abonos(ctx.perfil, titular === 'pilar' ? 1 : 0, parteFn),
+      banco ? abonosBancoIndividual(banco, titular, ctx.perfil, importeConjunta('maternidad'), importeConjunta('fn_general') + importeConjunta('fn_especial')) : abonos(ctx.perfil, titular === 'pilar' ? 1 : 0, parteFn),
     )
   }
   const ind = cerrarModalidad('individual', [individual('alberto', cA), individual('pilar', cP)])
