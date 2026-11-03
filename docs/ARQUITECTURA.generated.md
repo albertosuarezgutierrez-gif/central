@@ -281,14 +281,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (03/11/2026) 03/11/2026) Captación · parado el mailing en frío de ia-rest/ialimp; foco 100% correduría
+- (03/11/2026) 03/11/2026) Facturas · pólizas de clientes y comisiones de portal NO son gasto + bandeja de pendientes
+- (03/11/2026) 03/11/2026) Facturas · el agente de correo duplicaba adjuntos sin proveedor
+- (03/11/2026) 03/11/2026) Fiscal · gastos recurrentes a 31/12 + alerta Telegram de subidas
 - (03/11/2026) 03/11/2026) Fiscal · Pilar, correduría (proyección), IBI y Booking
 - (03/11/2026) 03/11/2026) Fiscal · estudios de pisos y correduría (docs/fiscal/2026-11-*.md)
 - (03/11/2026) 03/11/2026) Pricing · atribución de capas en `pricing_applied`
 - (03/11/2026) 03/11/2026) Fiscal · doble conteo P&L pisos + auditoría contable
 - (03/11/2026) 03/11/2026) Fiscal · carpeta Drive «Amazon deducible» revisada - 13 facturas (304,01€), 12 emitidas a
 - (03/11/2026) 03/11/2026) Fiscal · tarjeta Kutxabank 0300 importada + catastro Socorro cerrado
-- (03/11/2026) 03/11/2026) PR #5412 MERGEADO · facturas de plataforma: «✅ Pagar» hace pago REAL
-- (02/11/2026) 02/11/2026) Auditoría lote 2 (rama `claude/auditoria-lote2`, PR por abrir)
-- (02/11/2026) 02/11/2026) PR #5396 MERGEADO · `@central/module-cima` fase 2 (lógica pura)
-- (02/11/2026) 02/11/2026) #5385 MERGEADO · arranca la unificación de la ingesta CIMA en central
 

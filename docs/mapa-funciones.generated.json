@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-03T10:10:40Z",
-  "sha": "5a379d3458470b34ae34e093a4877869ba4e7c52",
+  "generadoEn": "2026-11-03T11:23:54Z",
+  "sha": "5e0a3c06d1af142be0a5a3ad9d0c4cfc6bea34ba",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -129955,7 +129955,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "98b61f4c5c2a"
+      "hash": "e46c2e69f938"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/fiscal/ComparativaModalidad.tsx",
@@ -145383,7 +145383,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 18
+          "linea": 19
         }
       ],
       "tablas": [
@@ -145391,7 +145391,7 @@
         "next"
       ],
       "rutaApi": "/api/sivra/expenses/agent/scan",
-      "hash": "39ea811fc0a7"
+      "hash": "ee62b0e7d42e"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/expenses/fijos/generar/route.ts",
@@ -151264,7 +151264,8 @@
       "ambito": "apps/plataforma",
       "resumen": "Clasificadores puros para el agente de facturas.",
       "exporta": [
-        "esPresupuesto"
+        "esPresupuesto",
+        "esPresupuestoExtraido"
       ],
       "funciones": [
         {
@@ -151275,11 +151276,20 @@
           "retorno": "boolean",
           "linea": 5,
           "resumen": "Detecta documentos que NO son facturas (presupuestos/cotizaciones) para no contabilizarlos. Evita la duplicidad presupuesto+factura del mismo gasto."
+        },
+        {
+          "nombre": "esPresupuestoExtraido",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: { tipo_documento?: unknown; concepto?: string | null }",
+          "retorno": "boolean",
+          "linea": 15,
+          "resumen": "La IA ya leyó el documento COMPLETO: si dice que es presupuesto/cotización/proforma, o el concepto empieza así, NO es factura aunque el texto contenga «recibo» o «factura» (incidente 03/11/2026: «Pres"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5f471fad7fa1"
+      "hash": "81ce7f61ee3d"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/conciliar-gmail.ts",
@@ -152215,6 +152225,89 @@
       "hash": "ef986f9dc874"
     },
     {
+      "ruta": "apps/plataforma/lib/agente-facturas/huella-documento.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Huella ESTABLE del DOCUMENTO (correo+adjunto, archivo o factura). Módulo PURO. 🚨 Por qué existe (03/11/2026). `fingerprint()` (fingerprint.ts) es la huella del PROVEEDOR: sale de NIF o nombre. Una foto de WhatsApp sin proveedor ni NIF legibles daba `''`, y entonces: · `existeDuplicado` salta su ram",
+      "exporta": [
+        "hashContenido",
+        "huellaDocumento",
+        "esHuellaDocumento",
+        "yaImputadoPorDocumento"
+      ],
+      "funciones": [
+        {
+          "nombre": "sha",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 37
+        },
+        {
+          "nombre": "hashContenido",
+          "kind": "function",
+          "exportada": true,
+          "params": "buf: Uint8Array",
+          "retorno": "string",
+          "linea": 39
+        },
+        {
+          "nombre": "nombreNorm",
+          "kind": "function",
+          "exportada": false,
+          "params": "n?: string | null",
+          "retorno": "string",
+          "linea": 43
+        },
+        {
+          "nombre": "totalNorm",
+          "kind": "function",
+          "exportada": false,
+          "params": "t?: number | null",
+          "retorno": "string",
+          "linea": 47
+        },
+        {
+          "nombre": "fechaNorm",
+          "kind": "function",
+          "exportada": false,
+          "params": "f?: string | null",
+          "retorno": "string",
+          "linea": 51
+        },
+        {
+          "nombre": "huellaDocumento",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaHuellaDoc",
+          "retorno": "string",
+          "linea": 57,
+          "resumen": "Huella del documento, o '' si no hay clave suficiente (entonces NO se compara con nada)."
+        },
+        {
+          "nombre": "esHuellaDocumento",
+          "kind": "function",
+          "exportada": true,
+          "params": "fp?: string | null",
+          "retorno": "boolean",
+          "linea": 78,
+          "resumen": "¿Es una huella de documento (y no la del proveedor)?"
+        },
+        {
+          "nombre": "yaImputadoPorDocumento",
+          "kind": "function",
+          "exportada": true,
+          "params": "huella: string, existentes: readonly (string | null | undefined)[]",
+          "retorno": "boolean",
+          "linea": 86,
+          "resumen": "¿Ya hay un gasto vivo con esa huella de documento? Vacía = no se compara con nada. `existentes` = huellas de gastos NO descartados."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3b92b452fe4f"
+    },
+    {
       "ruta": "apps/plataforma/lib/agente-facturas/huella-rescate.ts",
       "ambito": "apps/plataforma",
       "resumen": "Rescatar la HUELLA de las facturas que se guardaron sin ella. Caso fundacional (29/08/2026). Alberto, sobre una factura que la bandeja presentaba como «SOCORRO · sin histórico»: «esto realmente es Giraldillo lavandería, que ya he dado ok a varias… tiene el agente que aprender». Y no aprendía, pero n",
@@ -152274,16 +152367,16 @@
           "exportada": true,
           "params": "huella: string | string[]",
           "retorno": "Promise<Regla | null>",
-          "linea": 39,
+          "linea": 41,
           "resumen": "Busca la regla aprendida del proveedor. Acepta VARIAS huellas (ver `huellasDe`): el mismo proveedor queda registrado bajo su NIF o bajo su nombre según lo que trajera cada factura, y mirar solo una er"
         },
         {
           "nombre": "existeDuplicado",
           "kind": "function",
           "exportada": true,
-          "params": "d: { fingerprint: string numero_factura?: string | null fecha: string total: number proveedor?: string | null nif_proveedor?: string | null propiedad?: string | null }",
+          "params": "d: { fingerprint: string /** Huella del documento (correo+adjunto / archivo); '' o ausente = no se compara por ella. */ huellaDoc?: string numero_factura?: string | null fecha: string total: number proveedor?: string | null nif_proveedor?: ",
           "retorno": "Promise<boolean>",
-          "linea": 67,
+          "linea": 69,
           "resumen": "Dedup: nº de factura exacto, misma huella+importe (±7 días), o HUELLA de gasto (proveedor + importe ±0,02 € + fecha ±3 días) cuando no hay dos números distintos: ver `duplicado.ts`."
         },
         {
@@ -152292,7 +152385,7 @@
           "exportada": true,
           "params": "d: DatosGasto, meta: { revisado: boolean; origen: string; confianza: number; motivo_revision?: string | null },",
           "retorno": "Promise<string>",
-          "linea": 106
+          "linea": 122
         },
         {
           "nombre": "escribirTitular",
@@ -152300,7 +152393,7 @@
           "exportada": true,
           "params": "gastoId: string, a: AsignacionTitular",
           "retorno": "Promise<void>",
-          "linea": 146,
+          "linea": 162,
           "resumen": "Escribe a quién va el gasto (sociedad/negocio o motivo de pendiente). Solo lo llama quien ya comprobó `contextoTitularSiAplicado()` (columnas creadas por `2026-10-04_gastos_titular.sql`). Va APARTE de"
         },
         {
@@ -152309,7 +152402,7 @@
           "exportada": true,
           "params": "d: DatosGasto",
           "retorno": "Promise<void>",
-          "linea": 164,
+          "linea": 180,
           "resumen": "Crea o refuerza la regla aprendida tras una confirmación/imputación. La banda de importes usa `FACTOR_BANDA` (multiplicativo) y no el ±10 % de antes: los proveedores de esta bandeja facturan suscripci"
         },
         {
@@ -152318,7 +152411,7 @@
           "exportada": false,
           "params": "fingerprint: string, d: DatosGasto",
           "retorno": "Promise<void>",
-          "linea": 177
+          "linea": 194
         },
         {
           "nombre": "log",
@@ -152326,7 +152419,7 @@
           "exportada": true,
           "params": "entry: { fuente: string fingerprint?: string | null gasto_id?: string | null decision: string confianza?: number | null motivo?: string | null payload?: unknown }",
           "retorno": "Promise<void>",
-          "linea": 201
+          "linea": 218
         },
         {
           "nombre": "num",
@@ -152334,7 +152427,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 218
+          "linea": 235
         }
       ],
       "tablas": [
@@ -152344,7 +152437,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "dd6ff081eb1c"
+      "hash": "6c55bc6997f8"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/iva.ts",
@@ -152611,7 +152704,7 @@
           "exportada": true,
           "params": "limite = 200",
           "retorno": "Promise<Pendiente[]>",
-          "linea": 51,
+          "linea": 52,
           "resumen": "Las facturas que el agente dejó sin imputar, más caras primero. El criterio de «pendiente» es el MISMO que usan `/api/sivra/expenses`, el resumen mensual y las anomalías: `revisado = false AND origen "
         },
         {
@@ -152620,7 +152713,7 @@
           "exportada": true,
           "params": "id: string, cambios: CambiosPendiente = {}",
           "retorno": "Promise<boolean>",
-          "linea": 139,
+          "linea": 140,
           "resumen": "Confirma una factura: la da por contabilizada y APRENDE la regla. El refuerzo de la regla es la mitad del trabajo: es lo que hace que la próxima factura del mismo proveedor se impute sola. `reforzarRe"
         },
         {
@@ -152629,7 +152722,7 @@
           "exportada": true,
           "params": "id: string, cambios: CambiosPendiente = {}",
           "retorno": "Promise<string[] | null>",
-          "linea": 208,
+          "linea": 209,
           "resumen": "Confirma TODAS las pendientes del mismo proveedor con la misma clasificación. Petición de Alberto (29/08/2026): «cuando es el mismo proveedor, en el momento que resuelvo uno todo es igual». Es cierto "
         },
         {
@@ -152638,7 +152731,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "Promise<boolean>",
-          "linea": 241,
+          "linea": 242,
           "resumen": "Descarta una factura que no es un gasto nuestro (ajena, duplicada, un contrato leído como factura…). Se BORRA en vez de marcarse revisada: dejarla revisada la contaría como gasto."
         }
       ],
@@ -152647,7 +152740,58 @@
         "gastos"
       ],
       "rutaApi": null,
-      "hash": "a17eb946022e"
+      "hash": "4d6deb300434"
+    },
+    {
+      "ruta": "apps/plataforma/lib/agente-facturas/poliza-cliente.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Documentos de aseguradora sobre pólizas de CLIENTES de la correduría (recibos, liquidaciones de prima, avisos de cobro). NO son un gasto de Alberto: la compañía le liquida la comisión en NETO, y esa comisión ya entra como ingreso de la correduría por el banco. Caso fundacional (03/11/2026): un docum",
+      "exporta": [
+        "esDocumentoPolizaCliente"
+      ],
+      "funciones": [
+        {
+          "nombre": "nombreEsPropio",
+          "kind": "function",
+          "exportada": false,
+          "params": "nombre: string, titulares: Titular[]",
+          "retorno": "boolean",
+          "linea": 42
+        },
+        {
+          "nombre": "esDocumentoPolizaCliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: ExtraccionPoliza, titulares: Titular[] = [], polizasPropias: string[] = []",
+          "retorno": "boolean | 'duda'",
+          "linea": 56,
+          "resumen": "@param polizasPropias números de póliza de `gastos_fijos` activos (ampliación de la lista blanca). El nombre/NIF de Alberto NO convierte una póliza en propia: en las liquidaciones de las aseguradoras "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ab851a53c37e"
+    },
+    {
+      "ruta": "apps/plataforma/lib/agente-facturas/portal-comision.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Facturas de COMISIÓN de los portales de reservas (Booking.com B.V., Airbnb, Expedia, Vrbo). No son un gasto: el portal paga en NETO y el motor fiscal ya resta la comisión como `incomes.amount_gross − amount`. La factura es solo un justificante (se archiva en Drive). Caso fundacional (03/11/2026): Bo",
+      "exporta": [
+        "esFacturaComisionPortal"
+      ],
+      "funciones": [
+        {
+          "nombre": "esFacturaComisionPortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: ExtraccionPortal",
+          "retorno": "boolean",
+          "linea": 22
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e980bfeb27a3"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/procesar.ts",
@@ -152664,20 +152808,20 @@
           "exportada": true,
           "params": "data: FacturaExtraida, texto: string, etiqueta = ''",
           "retorno": "DocClasificado",
-          "linea": 25
+          "linea": 27
         },
         {
           "nombre": "procesarFactura",
           "kind": "function",
           "exportada": true,
-          "params": "data: FacturaExtraida, ctx: { fuente: string; drive?: DriveRef; propiedadPorDefecto?: string | null; esPresupuesto?: boolean; fingerprintOverride?: string; esBooking?: boolean; titulares?: Titular[] },",
+          "params": "data: FacturaExtraida, ctx: { fuente: string; drive?: DriveRef; propiedadPorDefecto?: string | null; esPresupuesto?: boolean; fingerprintOverride?: string; esBooking?: boolean; titulares?: Titular[]; huellaDoc?: string },",
           "retorno": "Promise<ProcesarResult>",
-          "linea": 55
+          "linea": 57
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1627a22aadbe"
+      "hash": "606063e5dc9b"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/receptor.ts",
@@ -154340,6 +154484,7 @@
       "exporta": [
         "leerIngresosCima",
         "agruparSinIdentificar",
+        "cargarHistoricoGastos",
         "cargarEntradaBase",
         "cargarAvisos",
         "getBaseDevengo"
@@ -154351,7 +154496,7 @@
           "exportada": false,
           "params": "x: unknown",
           "retorno": null,
-          "linea": 33
+          "linea": 34
         },
         {
           "nombre": "leerIngresosCima",
@@ -154359,7 +154504,7 @@
           "exportada": true,
           "params": "cuentaId: string, anio: number",
           "retorno": "Promise<(Pick<Actividad, 'ingresosPorMes' | 'retencionPorMes' | 'pendientePorMes'> &",
-          "linea": 41,
+          "linea": 42,
           "resumen": "Ingresos de la correduría desde CIMA: `comision_bruta` (texto → número) de los recibos `cobrado`, en el mes de `fecha_situacion`; retención = solo `retencion_irpf` cuando consta; pendientes por mes de"
         },
         {
@@ -154368,7 +154513,7 @@
           "exportada": true,
           "params": "xs: IngresoSinIdentificar[]",
           "retorno": "",
-          "linea": 71,
+          "linea": 72,
           "resumen": "Un renglón por pagador (suma de sus abonos), de mayor a menor importe."
         },
         {
@@ -154377,7 +154522,16 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 77
+          "linea": 78
+        },
+        {
+          "nombre": "cargarHistoricoGastos",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, anio: number",
+          "retorno": "Promise<",
+          "linea": 92,
+          "resumen": "Histórico de gastos con proveedor del año anterior y el actual, para detectar recurrentes (solo lectura): - `pisos`: tabla `gastos` (revisado, no descartados), ámbito = `propiedad` (pisos, compartido "
         },
         {
           "nombre": "cargarEntradaBase",
@@ -154385,7 +154539,7 @@
           "exportada": true,
           "params": "cuentaId: string, anio: number, hoy: string",
           "retorno": "Promise<EntradaBase>",
-          "linea": 81
+          "linea": 120
         },
         {
           "nombre": "cargarAvisos",
@@ -154393,7 +154547,7 @@
           "exportada": true,
           "params": "cuentaId: string, anio: number, hoy: string",
           "retorno": "Promise<AvisosDatos>",
-          "linea": 243
+          "linea": 287
         },
         {
           "nombre": "getBaseDevengo",
@@ -154401,7 +154555,7 @@
           "exportada": true,
           "params": "cuentaId: string, anio: number, cuota: ParamsCuota | null",
           "retorno": "Promise<BaseDevengo>",
-          "linea": 268,
+          "linea": 312,
           "resumen": "Todo lo que pinta el bloque «Hasta hoy» + «Estimación cierre de año»."
         }
       ],
@@ -154417,7 +154571,7 @@
         "seguros_agregado"
       ],
       "rutaApi": null,
-      "hash": "8c456c3eb342"
+      "hash": "c5390b1bdca8"
     },
     {
       "ruta": "apps/plataforma/lib/base-fiscal-devengo.ts",
@@ -154432,6 +154586,7 @@
         "calcularPeriodo",
         "repartoIndividual",
         "compararConjuntaIndividual",
+        "mesesPlantillaPendientes",
         "calcularCostesUnitarios",
         "costeReserva",
         "estimarCierre",
@@ -154446,7 +154601,7 @@
           "exportada": true,
           "params": "valorCatastral: number | null, revisado: boolean | null, diasNoArrendados: number, diasAnio: number",
           "retorno": "number | null",
-          "linea": 71,
+          "linea": 72,
           "resumen": "Renta imputada del inmueble entero (sin % de titularidad). null si falta valor o «revisado»."
         },
         {
@@ -154455,7 +154610,7 @@
           "exportada": false,
           "params": "p: { id: string; nombre: string }, par: ParamImputacion | undefined, diasPeriodo: number, diasArrendados: number | null, anio: number",
           "retorno": "LineaImputacion",
-          "linea": 88
+          "linea": 89
         },
         {
           "nombre": "sumaImputacion",
@@ -154463,7 +154618,7 @@
           "exportada": false,
           "params": "ls: LineaImputacion[]",
           "retorno": null,
-          "linea": 97
+          "linea": 98
         },
         {
           "nombre": "interesesParaSimulador",
@@ -154471,7 +154626,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Record<string, number>",
-          "linea": 100,
+          "linea": 101,
           "resumen": "Forma que lee el simulador (`EntradaSimulador.intereses`): propertyId → € del año."
         },
         {
@@ -154480,7 +154635,7 @@
           "exportada": true,
           "params": "n: number",
           "retorno": "number",
-          "linea": 171,
+          "linea": 179,
           "resumen": "── Utilidades ──────────────────────────────────────────────────────────────────────────────"
         },
         {
@@ -154489,7 +154644,7 @@
           "exportada": false,
           "params": "xs: number[]",
           "retorno": null,
-          "linea": 172
+          "linea": 180
         },
         {
           "nombre": "mesDe",
@@ -154497,7 +154652,7 @@
           "exportada": false,
           "params": "f: string",
           "retorno": null,
-          "linea": 173
+          "linea": 181
         },
         {
           "nombre": "diasDelAnio",
@@ -154505,7 +154660,7 @@
           "exportada": false,
           "params": "y: number",
           "retorno": null,
-          "linea": 174
+          "linea": 182
         },
         {
           "nombre": "sumDias",
@@ -154513,7 +154668,7 @@
           "exportada": false,
           "params": "f: string, n: number",
           "retorno": "string",
-          "linea": 175
+          "linea": 183
         },
         {
           "nombre": "mesesDe",
@@ -154521,7 +154676,7 @@
           "exportada": false,
           "params": "desde: string, hasta: string",
           "retorno": "string[]",
-          "linea": 178
+          "linea": 186
         },
         {
           "nombre": "diasOcupados",
@@ -154529,7 +154684,7 @@
           "exportada": true,
           "params": "ingresos: FilaIngreso[], propertyId: string, desde: string, hasta: string",
           "retorno": "Set<string>",
-          "linea": 190,
+          "linea": 198,
           "resumen": "Días DISTINTOS (YYYY-MM-DD) con reserva en [desde, hasta]; la noche del día X cuenta el día X."
         },
         {
@@ -154538,7 +154693,7 @@
           "exportada": true,
           "params": "fecha: string",
           "retorno": "string",
-          "linea": 202,
+          "linea": 210,
           "resumen": "Mismo día del año anterior (YYYY-MM-DD); el 29/02 pasa a 28/02 (fecha válida para la BD)."
         },
         {
@@ -154547,7 +154702,7 @@
           "exportada": false,
           "params": "a: Actividad, meses: string[]",
           "retorno": null,
-          "linea": 251
+          "linea": 259
         },
         {
           "nombre": "netoAct",
@@ -154555,7 +154710,7 @@
           "exportada": false,
           "params": "i: number | null, g: number | null",
           "retorno": null,
-          "linea": 259
+          "linea": 267
         },
         {
           "nombre": "calcularPeriodo",
@@ -154563,7 +154718,7 @@
           "exportada": true,
           "params": "e: EntradaBase, desde: string, hasta: string",
           "retorno": "Periodo",
-          "linea": 261
+          "linea": 269
         },
         {
           "nombre": "mesSiguiente",
@@ -154571,7 +154726,7 @@
           "exportada": false,
           "params": "m: string",
           "retorno": "string",
-          "linea": 362
+          "linea": 370
         },
         {
           "nombre": "repartoIndividual",
@@ -154579,7 +154734,7 @@
           "exportada": true,
           "params": "p: Periodo, props: PropiedadFiscal[]",
           "retorno": "",
-          "linea": 391,
+          "linea": 399,
           "resumen": "Parte de cada piso que declara cada titular; el resto de bloques son de Alberto (Pilar: su actividad)."
         },
         {
@@ -154588,7 +154743,16 @@
           "exportada": true,
           "params": "p: Periodo, props: PropiedadFiscal[], c: ParamsCuota",
           "retorno": "Comparativa",
-          "linea": 412
+          "linea": 420
+        },
+        {
+          "nombre": "mesesPlantillaPendientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "hoy: string, anio: number, dia: number",
+          "retorno": "number",
+          "linea": 488,
+          "resumen": "Cargos de una plantilla mensual (día `dia`) que quedan por apuntar: meses de `anio` cuya fecha de cargo es POSTERIOR a `hoy`. (`calcularPeriodo` cuenta como real todo lo fechado ≤ hoy; lo posterior ha"
         },
         {
           "nombre": "mesesCompletosHasta",
@@ -154596,7 +154760,7 @@
           "exportada": false,
           "params": "anio: number, hoy: string",
           "retorno": "string[]",
-          "linea": 471
+          "linea": 498
         },
         {
           "nombre": "calcularCostesUnitarios",
@@ -154604,7 +154768,7 @@
           "exportada": true,
           "params": "x: EntradaCostes",
           "retorno": "CostesUnitarios",
-          "linea": 475
+          "linea": 502
         },
         {
           "nombre": "costeReserva",
@@ -154612,7 +154776,7 @@
           "exportada": true,
           "params": "r: FilaIngreso, c: CostesUnitarios",
           "retorno": "CosteReserva",
-          "linea": 538
+          "linea": 568
         },
         {
           "nombre": "sumN",
@@ -154620,7 +154784,7 @@
           "exportada": false,
           "params": "a: number | null, b: number | null",
           "retorno": null,
-          "linea": 558
+          "linea": 588
         },
         {
           "nombre": "agregar",
@@ -154628,7 +154792,7 @@
           "exportada": false,
           "params": "rows: CosteReserva[], dias: number",
           "retorno": "Agregado",
-          "linea": 559
+          "linea": 589
         },
         {
           "nombre": "combinar",
@@ -154636,7 +154800,7 @@
           "exportada": false,
           "params": "a: Agregado, b: Agregado, k: number, diasTramo: number",
           "retorno": "Agregado",
-          "linea": 573,
+          "linea": 603,
           "resumen": "a + k·b (k ≥ 0). Un null en b solo contamina si k > 0. Los días añadidos no pasan de `diasTramo − a.dias`."
         },
         {
@@ -154645,7 +154809,7 @@
           "exportada": false,
           "params": "a: Agregado, k: number",
           "retorno": "Agregado",
-          "linea": 583
+          "linea": 613
         },
         {
           "nombre": "estimarCierre",
@@ -154653,7 +154817,7 @@
           "exportada": true,
           "params": "e: EntradaBase, hastaHoy: Periodo",
           "retorno": "Estimacion",
-          "linea": 640
+          "linea": 673
         },
         {
           "nombre": "esProvisional",
@@ -154661,7 +154825,7 @@
           "exportada": true,
           "params": "x: Pick<EscenarioEst, 'sinDato'>, propertyId?: string",
           "retorno": "boolean",
-          "linea": 756,
+          "linea": 804,
           "resumen": "La cifra estimada cuenta conceptos «sin dato» como 0 → provisional (de todo el escenario o de un piso)."
         },
         {
@@ -154670,7 +154834,7 @@
           "exportada": true,
           "params": "real: Periodo, est: Pick<EscenarioEst, 'bloques' | 'baseGeneral' | 'estimadoPorPiso'> & { diasPorPiso?: Record<string, number> }, anio: number",
           "retorno": "Periodo",
-          "linea": 765,
+          "linea": 813,
           "resumen": "Periodo «cierre» (real + un escenario estimado) listo para compararConjuntaIndividual. La imputación de rentas se rehace para el AÑO entero: días arrendados = reales hasta hoy + estimados del escenari"
         },
         {
@@ -154679,12 +154843,12 @@
           "exportada": true,
           "params": "args: { hoy: string anio: number cuentas: CuentaFeed[] mesesConFacturaLimpieza: string[] mesesConSuministros: string[] umbralDias?: number }",
           "retorno": "AvisosDatos",
-          "linea": 792
+          "linea": 840
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "23b2e01e1985"
+      "hash": "df4fb7cdcd7f"
     },
     {
       "ruta": "apps/plataforma/lib/base-url.ts",
@@ -176430,7 +176594,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<EnvioPrevio[]>",
-          "linea": 30,
+          "linea": 40,
           "resumen": "Envíos de los últimos 365 días. `[]` si la tabla aún no existe (sin dedupe)."
         },
         {
@@ -176439,21 +176603,22 @@
           "exportada": true,
           "params": "cuentaId: string, clave: string, hash: string",
           "retorno": "Promise<void>",
-          "linea": 42
+          "linea": 52
         }
       ],
       "tablas": [
         "fiscal_avisos_enviados",
         "fiscal_descendientes",
-        "fiscal_perfil"
+        "fiscal_perfil",
+        "properties"
       ],
       "rutaApi": null,
-      "hash": "d33bec4cc4f1"
+      "hash": "a4215cd31a71"
     },
     {
       "ruta": "apps/plataforma/lib/fiscal-alertas.ts",
       "ambito": "apps/plataforma",
-      "resumen": "Avisos fiscales a ALBERTO por Telegram (puro: sin BD, sin red, sin reloj; `node --test lib/fiscal-alertas.test.ts`). Cuatro avisos: (1) previsión de base liquidable a 31/12 cerca de / por encima del umbral de 60.000€, (2) cuentas sin movimientos hace +30 días, (3) meses CERRADOS sin factura de limpi",
+      "resumen": "Avisos fiscales a ALBERTO por Telegram (puro: sin BD, sin red, sin reloj; `node --test lib/fiscal-alertas.test.ts`). Cinco avisos (el quinto, gastos recurrentes al alza, solo si se le pasa el histórico): (1) previsión de base liquidable a 31/12 cerca de / por encima del umbral de 60.000€, (2) cuenta",
       "exporta": [
         "mejorPalanca",
         "avisoUmbral",
@@ -176461,6 +176626,7 @@
         "esPorExtracto",
         "avisoCuentas",
         "avisoFacturasMeses",
+        "avisosGastosRecurrentes",
         "avisoDiciembre",
         "construirAlertas",
         "hashTexto",
@@ -176473,7 +176639,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": null,
-          "linea": 27
+          "linea": 28
         },
         {
           "nombre": "fechaEs",
@@ -176481,7 +176647,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 28
+          "linea": 29
         },
         {
           "nombre": "mesEs",
@@ -176489,7 +176655,7 @@
           "exportada": false,
           "params": "m: string",
           "retorno": null,
-          "linea": 29
+          "linea": 30
         },
         {
           "nombre": "mejorPalanca",
@@ -176497,7 +176663,7 @@
           "exportada": true,
           "params": "ahorros: Partial<Record<PalancaSimulable, number | null>>",
           "retorno": "Mejor | null",
-          "linea": 34,
+          "linea": 35,
           "resumen": "La palanca de mayor ahorro positivo (null si ninguna se sabe o ahorra)."
         },
         {
@@ -176506,7 +176672,7 @@
           "exportada": true,
           "params": "e: EntradaSimulador, compras: CompraPrevista[], anio: number",
           "retorno": "Alerta | null",
-          "linea": 48,
+          "linea": 49,
           "resumen": "`e` = escenario base de cierre (a 31/12). Avisa si la base liquidable de Alberto en individual, o la conjunta, queda a menos de `MARGEN_CERCA` del umbral o lo supera. Si ninguna se sabe, lo dice (no c"
         },
         {
@@ -176515,7 +176681,7 @@
           "exportada": true,
           "params": "meses: string[], hoy: string",
           "retorno": null,
-          "linea": 76,
+          "linea": 77,
           "resumen": "Meses con `YYYY-MM` estrictamente anteriores al de `hoy`: el mes en curso aún no se puede dar por «sin factura»."
         },
         {
@@ -176524,7 +176690,7 @@
           "exportada": true,
           "params": "nombre: string",
           "retorno": null,
-          "linea": 83,
+          "linea": 84,
           "resumen": "BBVA (Dúplex y correduría), las de Pilar y la tarjeta de CRÉDITO Kutxabank (4662032019750300) no sincronizan: se pide el extracto; el resto, reconectar. La cuenta Kutxabank solo trae la liquidación me"
         },
         {
@@ -176533,7 +176699,7 @@
           "exportada": true,
           "params": "a: AvisosDatos, anio: number",
           "retorno": "Alerta | null",
-          "linea": 85
+          "linea": 86
         },
         {
           "nombre": "avisoFacturasMeses",
@@ -176541,7 +176707,16 @@
           "exportada": true,
           "params": "a: AvisosDatos, hoy: string, anio: number",
           "retorno": "Alerta | null",
-          "linea": 96
+          "linea": 97
+        },
+        {
+          "nombre": "avisosGastosRecurrentes",
+          "kind": "function",
+          "exportada": true,
+          "params": "hist: GastoHist[], hoy: string, nombres: Record<string, string> = {}",
+          "retorno": "Alerta[]",
+          "linea": 114,
+          "resumen": "Un aviso por gasto recurrente (cualquier piso/negocio, detección genérica por proveedor) cuyo cargo del mes supera en ≥30 % y ≥20 € la media de sus últimos 6 recibos (cadencia semestral/anual: el cicl"
         },
         {
           "nombre": "avisoDiciembre",
@@ -176549,16 +176724,16 @@
           "exportada": true,
           "params": "e: EntradaSimulador, compras: CompraPrevista[], hoy: string, anio: number",
           "retorno": "Alerta | null",
-          "linea": 108,
+          "linea": 130,
           "resumen": "Del 1 al 31 de diciembre (`hoy` = 'YYYY-MM-DD'). Un recordatorio único por año."
         },
         {
           "nombre": "construirAlertas",
           "kind": "function",
           "exportada": true,
-          "params": "p: { hoy: string; anio: number; entrada: EntradaSimulador | null; avisos: AvisosDatos | null; compras: CompraPrevista[] }",
+          "params": "p: { hoy: string; anio: number; entrada: EntradaSimulador | null; avisos: AvisosDatos | null; compras: CompraPrevista[] /** Histórico de gastos con proveedor (pisos y negocios) y nombres de ámbito: activa el aviso de recurrentes al alza. */",
           "retorno": "Alerta[]",
-          "linea": 124,
+          "linea": 146,
           "resumen": "Los cuatro avisos (los que no apliquen, fuera). `avisos` y `e` salen del panel (`armarPanel`)."
         },
         {
@@ -176567,7 +176742,7 @@
           "exportada": true,
           "params": "t: string",
           "retorno": null,
-          "linea": 134,
+          "linea": 159,
           "resumen": "── Anti-spam ───────────────────────────────────────────────────────────────────────────────"
         },
         {
@@ -176576,13 +176751,13 @@
           "exportada": true,
           "params": "alertas: Alerta[], previos: EnvioPrevio[], ahora: Date, ventanaDias = VENTANA_DEDUPE_DIAS",
           "retorno": "Alerta[]",
-          "linea": 141,
+          "linea": 166,
           "resumen": "No repetir el mismo aviso (clave + contenido) en `ventanaDias` días; los `soloUnaVez` no se repiten en 365 días aunque cambie el contenido. Contenido distinto = aviso nuevo (la situación ha cambiado)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ecaffad4dc70"
+      "hash": "206e4377f6bd"
     },
     {
       "ruta": "apps/plataforma/lib/fiscal-compras-db.ts",
@@ -177527,6 +177702,127 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "878bc78784b2"
+    },
+    {
+      "ruta": "apps/plataforma/lib/gastos-recurrentes-detectados.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Gastos RECURRENTES detectados por proveedor + ámbito (piso, 'correduria', 'pilar'…). Puro: sin BD ni reloj. Runner: `node --test lib/gastos-recurrentes-detectados.test.ts`. (No confundir con `gastos-recurrentes.ts`, que detecta patrones en el banco para la proyección IRPF.) Detección genérica (sin l",
+      "exporta": [
+        "esVariablePorOcupacion",
+        "normalizarProveedor",
+        "detectarRecurrentes",
+        "proyectarRecurrente",
+        "proyectarRecurrentes",
+        "detectarSubidas",
+        "proveedorBanco"
+      ],
+      "funciones": [
+        {
+          "nombre": "esVariablePorOcupacion",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "g: Pick<GastoHist, 'proveedor' | 'categoria'>",
+          "retorno": null,
+          "linea": 13,
+          "resumen": "Gasto que varía con la ocupación (limpieza, lavandería; Si Que Brilla y El Giraldillo cobran por reserva): su subida no es alarma."
+        },
+        {
+          "nombre": "normalizarProveedor",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: string",
+          "retorno": "string",
+          "linea": 40
+        },
+        {
+          "nombre": "idx",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "mes: string",
+          "retorno": null,
+          "linea": 48
+        },
+        {
+          "nombre": "deIdx",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "i: number",
+          "retorno": null,
+          "linea": 49
+        },
+        {
+          "nombre": "mediana",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "xs: number[]",
+          "retorno": null,
+          "linea": 50
+        },
+        {
+          "nombre": "r2",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 51
+        },
+        {
+          "nombre": "detectarRecurrentes",
+          "kind": "function",
+          "exportada": true,
+          "params": "hist: GastoHist[], hoy: string",
+          "retorno": "Recurrente[]",
+          "linea": 54,
+          "resumen": "Recurrentes de `hist` (solo cargos con fecha ≤ hoy; los importes ≤ 0 no cuentan)."
+        },
+        {
+          "nombre": "difDias",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a: string, b: string",
+          "retorno": null,
+          "linea": 93
+        },
+        {
+          "nombre": "proyectarRecurrente",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: Recurrente, hoy: string, anio: number",
+          "retorno": "",
+          "linea": 100,
+          "resumen": "Cargos que faltan de `hoy` (excluido) al 31/12/`anio`: desde el último cargo, cada `cadaMeses`. BAJA: si un cargo esperado antes de hoy no llegó (pasada la cortesía), el contrato se da por cancelado ("
+        },
+        {
+          "nombre": "proyectarRecurrentes",
+          "kind": "function",
+          "exportada": true,
+          "params": "hist: GastoHist[], hoy: string, anio: number, excluir: (r: Recurrente) => boolean = () => false",
+          "retorno": "ProyeccionRecurrentes",
+          "linea": 118,
+          "resumen": "`excluir(r)` = ya lo cubre otro concepto de la estimación (gastos_fijos, luz, agua, limpieza…): no se duplica."
+        },
+        {
+          "nombre": "detectarSubidas",
+          "kind": "function",
+          "exportada": true,
+          "params": "hist: GastoHist[], hoy: string",
+          "retorno": "Subida[]",
+          "linea": 143,
+          "resumen": "Recurrentes con cargo en el mes de `hoy` que superan en ≥30 % y ≥20 € su media de los últimos 6 recibos (cadencia ≥ semestral: el cargo anterior, o sea el mismo periodo del ciclo previo). Exige 3 reci"
+        },
+        {
+          "nombre": "proveedorBanco",
+          "kind": "function",
+          "exportada": true,
+          "params": "contraparte: string | null | undefined, concepto: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 168,
+          "resumen": "Nombre estable del proveedor de un apunte (contraparte, o concepto si no hay): sin «COMPRA EN», «PAGO CON TARJETA //», números de adeudo ni asteriscos, y reducido a su primera palabra con contenido. S"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "64cb97065dc5"
     },
     {
       "ruta": "apps/plataforma/lib/gastos-recurrentes.ts",
@@ -242882,7 +243178,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "479b8c11fb64"
+      "hash": "6eceff3cd9c8"
     },
     {
       "ruta": "packages/module-seguros/src/coherencia-cotizacion.ts",
@@ -269778,7 +270074,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5552,
-    "funciones": 21792
+    "archivos": 5556,
+    "funciones": 21819
   }
 }
