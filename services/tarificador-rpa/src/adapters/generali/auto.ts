@@ -491,6 +491,8 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * dato, la siniestralidad más favorable (aviso «supuesto» → precio estimado). Un obligatorio vacío sin regla (p. ej. una fecha) para con su nombre. Si la
  * pestaña no existe se anota y se sigue como antes; el atasco final trae el inventario (etiquetas, sin valores) de esa pestaña.
  *
+ * 0.2.72 (03/11/2026, trabajo 9aa12762): tras completar «Datos de Valoración» la vuelta por «Siguiente» no cambió de paso (sin navegación en 8 s) y no se probó
+ *   la barra: ahora se vuelve PRIMERO por la barra de pasos (`#secundario > li` con `pedirPaso`, el mismo control que llevó al paso) y «Siguiente» queda de respaldo.
  * 0.2.71 (03/11/2026, trabajo 1a88445a): «Garantías y Resultados» sin obligatorios vacíos pero «Paso con datos incompletos» / «El paso anterior…»: antes del único
  *   «Recalcular» se va al paso marcado (o al anterior) de la barra de pasos, se ponen sus obligatorios vacíos en valor neutro (supuesto) y se vuelve; si no, atasco con paso + campo.
  * 0.2.70 (03/11/2026): obligatorios vacíos de «Garantías y Resultados» en valor neutro antes del ÚNICO «Recalcular» (se quita el 2º) y atasco con los aún vacíos.
@@ -502,7 +504,7 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * 0.2.65 (02/11/2026): el panel de «Versión» con columnas lista las opciones como `tr[data-label]` (no `li`): «Otras versiones ...» se localiza también ahí.
  * 0.2.64 (02/11/2026): «Garantías y Resultados» no se vuelve a pulsar si ya se pulsó en el trabajo (el guard solo lo permite una vez); solo espera al bloque.
  */
-export const VERSION_GENERALI_AUTO = '0.2.71'
+export const VERSION_GENERALI_AUTO = '0.2.72'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -1386,7 +1388,7 @@ async function irAPasoGenerali(page: Page, ctx: ContextoPortal, texto: string, e
  * (`destinoPasoIncompletoGenerali`); sin destino → null y no se toca nada. 2) Se pulsa ese paso (`ctx.pulsar`). 3) Se repasa «Historial Siniestral» (sus reglas)
  * y cada obligatorio VACÍO editable se pone en valor NEUTRO (`decidirNeutroPasoGenerali`: «No» exacto o la única opción real), con aviso «Supuesto» (precio
  * `estimado`). 4) Lo que siga vacío (o sea de solo lectura) → `ErrorMapaIncompletoGenerali` con paso + campo (`errorPasoIncompletoGenerali`). 5) Se vuelve al
- * paso de origen: «Siguiente» por su puerta guardada si existe, si no el paso de la barra por `ctx.pulsar`. Nunca emite, graba ni recalcula.
+ * paso de origen: v0.2.72, primero el paso de la barra por `ctx.pulsar`; si no vuelve, «Siguiente» por su puerta guardada. Nunca emite, graba ni recalcula.
  */
 export async function completarPasoIncompletoGenerali(
   page: Page,
@@ -1438,13 +1440,18 @@ export async function completarPasoIncompletoGenerali(
     if (r && !faltan.some((y) => y.startsWith(r))) faltan.push(`${r} (sigue vacío)`)
   }
   if (faltan.length > 0) throw new ErrorMapaIncompletoGenerali(errorPasoIncompletoGenerali(destino, faltan))
-  // Vuelta al paso de origen.
-  let vuelta: string
-  if (destino !== origen && /valoraci/i.test(destino) && typeof ctx.pulsarSiguienteGenerali === 'function') {
-    await ctx.pulsarSiguienteGenerali()
-    vuelta = (await esperarPasoActualGenerali(page, origen, esperaMs)) ? 'Siguiente' : ''
-  } else vuelta = (await irAPasoGenerali(page, ctx, origen, esperaMs)) ? 'barra de pasos' : ''
-  if (!vuelta) throw new ErrorMapaIncompletoGenerali(`el paso «${sanearFragmentoGenerali(origen).slice(0, 40)}» tras completar «${sanearFragmentoGenerali(destino).slice(0, 40)}» (no se pudo volver por la barra de pasos ni por «Siguiente»); no se pulsa «Recalcular»`)
+  // Vuelta al paso de origen. v0.2.72 (trabajo 9aa12762): PRIMERO la barra de pasos (`pedirPaso`, el control que acaba de llevar al destino); en el volcado,
+  // «Siguiente» (`eventAndSubmit('NEXT')`) desde «Datos de Valoración» no cambió de paso. «Siguiente» (puerta guardada) queda de respaldo; el atasco dice qué se probó.
+  const probado: string[] = []
+  let vuelta = ''
+  if (await irAPasoGenerali(page, ctx, origen, esperaMs)) vuelta = 'barra de pasos'
+  else probado.push('barra de pasos')
+  if (!vuelta && destino !== origen && /valoraci/i.test(destino) && typeof ctx.pulsarSiguienteGenerali === 'function') {
+    const r = await ctx.pulsarSiguienteGenerali()
+    if (await esperarPasoActualGenerali(page, origen, esperaMs)) vuelta = 'Siguiente'
+    else probado.push(`«Siguiente»${r?.dialogo ? ` (diálogo cancelado: ${sanearFragmentoGenerali(r.dialogo).slice(0, 80)})` : ''}`)
+  }
+  if (!vuelta) throw new ErrorMapaIncompletoGenerali(`el paso «${sanearFragmentoGenerali(origen).slice(0, 40)}» tras completar «${sanearFragmentoGenerali(destino).slice(0, 40)}» (no se pudo volver: probado ${probado.join(' y ')}); no se pulsa «Recalcular»`)
   return { avisos, nota: `Paso incompleto «${sanearFragmentoGenerali(destino).slice(0, 40)}»: ${avisos.length ? `${avisos.length} obligatorio(s) en valor neutro` : 'sin obligatorios vacíos detectados'}; vuelta por ${vuelta}` }
 }
 

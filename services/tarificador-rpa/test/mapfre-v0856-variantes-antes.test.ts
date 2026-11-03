@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { test } from 'node:test'
 import { mapfreAuto, tarificarVariantesComercialesMapfre, type ProductoVistoMapfre } from '../src/adapters/mapfre/auto.ts'
 
-test('v0.8.56 · versión', () => assert.equal(mapfreAuto.version, '0.8.58'))
+test('v0.8.56 · versión', () => assert.equal(mapfreAuto.version, '0.8.59'))
 
 const OPC = ['TERCEROS', 'TERCEROS AMPLIADO', 'TODO RIESGO', 'BASICar TERCEROS AMPLIADO', 'BASICar TODO RIESGO']
 const vistos = (): ProductoVistoMapfre[] => [
@@ -25,7 +25,8 @@ test('antes del proyecto: cada variante BASICar sale como oferta con su prima', 
   assert.deepEqual(r.primas.map((p) => p.producto).sort(), ['BASICar TERCEROS AMPLIADO', 'BASICar TODO RIESGO'])
 })
 
-test('CEPO: con el selector oculto (proyecto ya generado) las variantes salen «no leída» — por eso van antes', async () => {
+// v0.8.59: el orden vuelve a ser proyecto → variantes (run c380133b); si tras el proyecto el selector no se ve, la variante sale «no leída» (aviso) y lo base ya está leído.
+test('con el selector oculto (proyecto ya generado) las variantes salen «no leída», sin lanzar', async () => {
   const v = vistos()
   const r = await tarificarVariantesComercialesMapfre({} as never, v, [], portal(true))
   assert.equal(r.primas.length, 0)

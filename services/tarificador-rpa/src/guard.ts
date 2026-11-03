@@ -1992,6 +1992,8 @@ const CALCULOS_COMERCIALES = new WeakMap<GuardEmision, number>()
 const GRACIA_AUTORECALCULO_MS = 1_500
 const RE_ROTULO_CALCULAR = /^\s*(?:calculate\s*)?Calcular\s*$/i
 const ESPERA_RECALCULO_COMERCIAL_MS = 15_000
+/** v0.8.59 (run real c380133b: «el recálculo de la tarjeta no terminó a tiempo» con 15 s): el recálculo de una variante «BASICar» espera hasta 30 s. Solo lectura/espera: no añade clics. */
+export const ESPERA_RECALCULO_VARIANTE_MS = 30_000
 const MIN_RECALCULO_COMERCIAL_MS = 1_200
 /** v0.8.58: un diálogo desconocido que desaparece solo antes de este plazo es el del recálculo (sin pulsar nada en él). */
 const ESPERA_DIALOGO_TRANSITORIO_MS = 4_000
@@ -2076,7 +2078,9 @@ export async function elegirOpcionComercialMapfre(page: Page, guard: GuardEmisio
   }
   // Espera del recálculo: diálogo/spinner «Calculando» → esperar; «Controles técnicos» → cerrar y marcar bloqueada; cualquier otro diálogo → ALTERADO.
   let inicio = Date.now()
-  let hasta = inicio + ESPERA_RECALCULO_COMERCIAL_MS
+  // v0.8.59: una variante «BASICar» espera su recálculo hasta ESPERA_RECALCULO_VARIANTE_MS; el producto base (restauración), 15 s como antes.
+  const esperaRecalculo = /^BASICar\b/i.test(texto) ? ESPERA_RECALCULO_VARIANTE_MS : ESPERA_RECALCULO_COMERCIAL_MS
+  let hasta = inicio + esperaRecalculo
   let bloqueoDialogo = false
   let firmaPrevia: string | null = null
   let recalculoVisto = false
@@ -2121,7 +2125,7 @@ export async function elegirOpcionComercialMapfre(page: Page, guard: GuardEmisio
           await clicSinDialogoNativo(page, guard, boton, 'Calcular (variante comercial de Mapfre)')
           calcularPulsado = true
           inicio = Date.now()
-          hasta = inicio + ESPERA_RECALCULO_COMERCIAL_MS
+          hasta = inicio + esperaRecalculo
           firmaPrevia = null
           continue
         }
