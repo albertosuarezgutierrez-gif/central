@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-11-03T15:27:28Z",
+  "generadoEn": "2026-11-03T18:26:44Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1025,7 +1025,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 21
+        "evidencias": 22
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2321,11 +2321,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 336
+        "evidencias": 341
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 214
+        "evidencias": 215
       },
       "asegura-web": {
         "estado": "usado",
@@ -2349,7 +2349,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 248
+        "evidencias": 249
       },
       "rrhh": {
         "estado": "no",
@@ -2375,7 +2375,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 66
+        "evidencias": 67
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4363,6 +4363,7 @@
       "/api/operador/recaptacion/whatsapp",
       "/api/operador/recibos/devolucion",
       "/api/operador/red-diaria",
+      "/api/operador/regularizacion-rc",
       "/api/operador/renovaciones/contacto",
       "/api/operador/resumen",
       "/api/operador/retencion/descartar",
@@ -6179,6 +6180,7 @@
       "seguros.solicitud_cambio_documentos",
       "seguros.solicitud_compania",
       "seguros.solicitud_datos",
+      "seguros.solicitud_regularizacion",
       "seguros.tarificacion_emision_autorizacion",
       "seguros.tarificacion_precios",
       "seguros.tarificacion_trabajo_pasos",
@@ -7269,7 +7271,7 @@
     "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1875,
+    "apis": 1876,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
