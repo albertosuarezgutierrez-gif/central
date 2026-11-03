@@ -206,8 +206,8 @@ describe('0.3.22 · Fidelidade: la regla sin texto vale en Simualtion.aspx y Cli
   const invFi = (url: string) => sanearInventarioDom({ marcos: [{ url, nombre: 'm', titulos: [{ texto: 'Datos Cliente', tag: 'h2' }], elementos: [BOTON] }] }, undefined, { refs: true })!
   const motivo = (url: string) => { const i = invFi(url); return motivoNoAvanceSinTexto(FI, i.marcos[0].elementos[0], i.marcos[0]) }
 
-  it('la lista de la regla es EXACTAMENTE esas dos rutas', () => {
-    expect(ENTRADAS_EXPLORACION[FI].avancesSinTexto!.map((a) => [...a.rutas])).toEqual([['/OPI_ES_Vivienda/Simualtion.aspx', '/OPI_ES_Vivienda/ClientData.aspx']])
+  it('la lista de la regla es EXACTAMENTE esas rutas (0.3.30: + Domicilio.aspx, ver explorador-v0330.test.ts)', () => {
+    expect(ENTRADAS_EXPLORACION[FI].avancesSinTexto!.map((a) => [...a.rutas])).toEqual([['/OPI_ES_Vivienda/Simualtion.aspx', '/OPI_ES_Vivienda/ClientData.aspx', '/OPI_ES_Vivienda/Domicilio.aspx']])
   })
   it('real (530656a4): «Datos Cliente» en ClientData.aspx → autorizado; Simualtion.aspx sigue', () => {
     expect(motivo('https://mediadores.fidelidade.es/OPI_ES_Vivienda/ClientData.aspx')).toBeNull()
