@@ -174,6 +174,11 @@ export type ContextoPortal = ContextoTarificacion & {
   obtenerHistorialSiniestralGenerali?: () => Promise<{ dialogo: string | null }>
   /** Generali (v0.2.74): salida de esa pantalla por `pulsarSalidaHistorialObtenidoGenerali` de guard.ts (lista blanca exacta de rótulos, solo tras abrirla, una vez). */
   salirHistorialSiniestralGenerali?: () => Promise<{ dialogo: string | null; texto: string }>
+  /**
+   * Generali (v0.2.74): control de CONSULTA dentro de esa pantalla («Consultar»… exacto) por `pulsarConsultaHistorialObtenidoGenerali` de guard.ts: solo tras
+   * abrirla y antes de salir, máx. 2 por trabajo y la segunda sobre el MISMO control («hay que darle otra para que haga la consulta»).
+   */
+  consultarHistorialSiniestralGenerali?: () => Promise<{ dialogo: string | null; texto: string; pulsacion: number }>
   /** Generali (v0.2.7): abre «Todas las marcas» por su disparador (`abrirDesplegableMarcaGenerali` de guard.ts; id `buscamarca`, una vez). */
   abrirDesplegableMarcaGenerali?: (base: string) => Promise<void>
   /** Generali (v0.2.7): pulsa el `li` de la marca elegida (`elegirMarcaListaGenerali` de guard.ts; texto exacto, una vez). */

@@ -52,7 +52,7 @@ import { descargarProyectoAuto, ofertasConPdfProyecto } from '../../descarga-pro
 import { garantiasDePdfGenerali, leerGarantiasPantallaGenerali, ofertasConGarantiasGenerali, type GarantiasLeidas } from './garantias.ts'
 import { companiaActualDe, comprobarCampo, ErrorEleccionVersion } from '../allianz/auto.ts'
 import { campoConRespaldo, type ContextoFormador } from '../../formador.ts'
-import { esUrlOktaSmsGenerali, opcionesTipoPlacaGenerali, otroVehiculoGeneraliPermitido } from '../../guard.ts'
+import { CONSULTAS_HISTORIAL_OBTENIDO_GENERALI, esUrlOktaSmsGenerali, MAX_PULSACIONES_HISTORIAL_GENERALI, opcionesTipoPlacaGenerali, otroVehiculoGeneraliPermitido } from '../../guard.ts'
 import { CONCEPTOS_LECTURA, alternativa, terminosDe } from '../../vocabulario.ts'
 import {
   AVISO_MATRICULA_PROVINCIAL,
@@ -1655,6 +1655,25 @@ const JS_INVENTARIO_PANTALLA_HISTORIAL_GENERALI = `(() => {${JS_COMUN}
   return { encabezados: enc.slice(0, 20), botones: bot.slice(0, 40) };
 })()`
 
+/** v0.2.74: espera de la PRIMERA pulsación (entrada o consulta del historial) antes de darle la segunda. */
+const ESPERA_PRIMERA_PULSACION_HISTORIAL_MS = 8_000
+/** v0.2.74: pausa entre la primera y la segunda pulsación del mismo control del historial. */
+const PAUSA_ENTRE_PULSACIONES_HISTORIAL_MS = 1_500
+/** v0.2.74: ¿hay a la vista un control de CONSULTA del historial (rótulo exacto de la lista blanca del guard)? Solo lee; la puerta del guard decide. */
+const JS_HAY_CONSULTA_HISTORIAL_GENERALI = `(() => {${JS_COMUN}
+  const N = (t) => String(t || '').normalize('NFC').replace(/\\s+/g, ' ').trim().toLocaleUpperCase('es');
+  const OK = ${JSON.stringify(CONSULTAS_HISTORIAL_OBTENIDO_GENERALI.map((t) => t.normalize('NFC').toLocaleUpperCase('es')))};
+  return Array.from(document.querySelectorAll('input[type=button],input[type=submit],button,a,li[onclick]')).filter((e) => VIS(e))
+    .some((e) => OK.includes(N(e.tagName === 'INPUT' ? e.value : T(e))));
+})()`
+async function hayConsultaHistorialGenerali(m: Frame): Promise<boolean> {
+  return (await m.evaluate(JS_HAY_CONSULTA_HISTORIAL_GENERALI).catch(() => false)) === true
+}
+/** v0.2.74: firma del texto visible de la pantalla (para ver si la consulta trajo algo). Solo se compara en memoria; nunca se anota. */
+async function firmaPantallaHistorialGenerali(m: Frame): Promise<string> {
+  return String(await m.evaluate(() => (document.body?.innerText ?? '').replace(/\s+/g, ' ').trim()).catch(() => ''))
+}
+
 /**
  * v0.2.74 (03/11/2026, trabajo b1c5363f con 0.2.73): en «Garantías y Resultados» › «Bonus-Malus» el obligatorio «Historial siniestral obtenido» es un BOTÓN
  * («Historial Siniestral», `reg1063E.bonusMalus.zhsdet`, `link('histsin')`) que abre la pantalla del historial; sin pasar por ella el portal no calcula
@@ -1687,49 +1706,109 @@ export async function completarHistorialObtenidoGenerali(
     ...(((await m.evaluate(JS_INVENTARIO_PANTALLA_HISTORIAL_GENERALI).catch(() => null)) as { encabezados: string[]; botones: string[] } | null) ?? { encabezados: [], botones: [] }),
     obligatorios: await leerObligatoriosPasoGenerali(m),
   })
-  const r = await puerta()
-  const dlg = r?.dialogo ? ` (diálogo cancelado: ${sanearFragmentoGenerali(r.dialogo).slice(0, 120)})` : ''
-  // La pantalla cambió cuando el botón ya no está y el documento terminó de cargar.
-  let fin = Date.now() + esperaMs
-  let cambio = false
-  for (;;) {
-    const sigue = (await m.locator(selBoton).count().catch(() => 1)) > 0
-    const listo = (await m.evaluate(() => document.readyState === 'complete').catch(() => false)) === true
-    if (!sigue && listo) { cambio = true; break }
-    if (Date.now() >= fin) break
-    await pausa(300)
+  // v0.2.74 (Alberto, portal Generali: «le das una vez y hay que darle otra para que haga la consulta»): la entrada y la consulta del historial admiten una
+  // SEGUNDA pulsación del MISMO control (tope del guard: 2), con espera entre ambas. La primera espera es corta; la segunda, la completa.
+  const esperaPrimera = Math.min(esperaMs, ESPERA_PRIMERA_PULSACION_HISTORIAL_MS)
+  const pausaEntre = Math.min(PAUSA_ENTRE_PULSACIONES_HISTORIAL_MS, Math.max(300, Math.round(esperaMs / 4)))
+  const esperarHasta = async (cond: () => Promise<boolean>, ms: number) => {
+    const fin = Date.now() + ms
+    for (;;) {
+      if (await cond()) return true
+      if (Date.now() >= fin) return false
+      await pausa(300)
+    }
   }
-  if (!cambio) return { avisos: [], nota: `Historial siniestral obtenido: «Historial Siniestral» pulsado${dlg}; la pantalla no cambió en ${Math.round(esperaMs / 1000)} s` }
+  const pantallaCambio = async () => (await m.locator(selBoton).count().catch(() => 1)) === 0 && (await m.evaluate(() => document.readyState === 'complete').catch(() => false)) === true
+  const dialogos: string[] = []
+  const r = await puerta()
+  if (r?.dialogo) dialogos.push(r.dialogo)
+  let pulsEntrada = 1
+  // La pantalla cambió cuando el botón ya no está y el documento terminó de cargar.
+  let cambio = await esperarHasta(pantallaCambio, esperaPrimera)
+  if (!cambio) {
+    await pausa(pausaEntre)
+    cambio = await pantallaCambio()
+    if (!cambio && (await m.locator(selBoton).filter({ visible: true }).count().catch(() => 0)) === 1) {
+      const r2 = await puerta()
+      if (r2?.dialogo) dialogos.push(r2.dialogo)
+      pulsEntrada = 2
+      cambio = await esperarHasta(pantallaCambio, esperaMs)
+    }
+  }
+  const dlg = dialogos.length ? ` (diálogo cancelado: ${dialogos.map((d) => sanearFragmentoGenerali(d).slice(0, 120)).join(' / ')})` : ''
+  const vecesEntrada = `«Historial Siniestral» pulsado${pulsEntrada > 1 ? ` ${pulsEntrada} veces` : ''}${dlg}`
+  if (!cambio) return { avisos: [], nota: `Historial siniestral obtenido: ${vecesEntrada}; la pantalla no cambió en ${Math.round((esperaPrimera + (pulsEntrada > 1 ? esperaMs : 0)) / 1000)} s` }
   await pausa(400)
   let inv = await leerInventario()
   const avisos: string[] = []
+  if (pulsEntrada > 1) avisos.push(`Historial siniestral obtenido: «Historial Siniestral» abrió su pantalla a la ${pulsEntrada}.ª pulsación`)
   const faltan: string[] = []
   const tratados: string[] = []
   const destino = 'Historial Siniestral'
-  // 3a) Con regla del riesgo (mismas reglas que la sección de «Datos de Valoración»; certificados/fechas no se inventan).
-  const plan = planHistorialSiniestralGenerali(await leerBloquesHistorialGenerali(m), f, clavesSupuestas)
-  for (const a of plan.acciones) {
-    const b = a.bloque
-    const rotulo = sanearFragmentoGenerali(b.etiqueta).slice(0, 60)
-    if (!b.name || b.name.includes('"')) continue
-    if (b.tipo === 'select') {
-      const sel = m.locator(`select[name="${b.name}"]`)
-      if ((await sel.count()) !== 1) continue
-      await elegirIndice(sel, indiceOpcionNormalizadaGenerali(b.opciones, [a.valor]), ctx)
-    } else {
-      const campo = m.locator(`input[name="${b.name}"], textarea[name="${b.name}"]`)
-      if ((await campo.count()) !== 1) continue
-      await escribir(campo, a.valor, ctx)
+  const rellenar = async () => {
+    // 3a) Con regla del riesgo (mismas reglas que la sección de «Datos de Valoración»; certificados/fechas no se inventan).
+    const plan = planHistorialSiniestralGenerali(await leerBloquesHistorialGenerali(m), f, clavesSupuestas)
+    for (const a of plan.acciones) {
+      const b = a.bloque
+      const rotulo = sanearFragmentoGenerali(b.etiqueta).slice(0, 60)
+      if (!b.name || b.name.includes('"') || tratados.includes(b.name)) continue
+      if (b.tipo === 'select') {
+        const sel = m.locator(`select[name="${b.name}"]`)
+        if ((await sel.count()) !== 1) continue
+        await elegirIndice(sel, indiceOpcionNormalizadaGenerali(b.opciones, [a.valor]), ctx)
+      } else {
+        const campo = m.locator(`input[name="${b.name}"], textarea[name="${b.name}"]`)
+        if ((await campo.count()) !== 1) continue
+        await escribir(campo, a.valor, ctx)
+      }
+      tratados.push(b.name)
+      avisos.push(`Historial Siniestral (pantalla) · ${rotulo}: ${a.valor} (${a.supuesto ? 'siniestralidad más favorable; supuesto' : 'dato de la ficha'})`)
     }
-    tratados.push(b.name)
-    avisos.push(`Historial Siniestral (pantalla) · ${rotulo}: ${a.valor} (${a.supuesto ? 'siniestralidad más favorable; supuesto' : 'dato de la ficha'})`)
+    // 3b) El resto de obligatorios vacíos editables: valor neutro (supuesto).
+    for (const b of candidatosNeutroPasoGenerali(await leerObligatoriosPasoGenerali(m), tratados)) {
+      tratados.push(b.name)
+      const x = await neutroBloquePasoGenerali(m, ctx, destino, b as typeof b & { tipo: 'select' | 'texto' | 'opciones' })
+      if ('aviso' in x) avisos.push(x.aviso)
+      else faltan.push(x.falta)
+    }
   }
-  // 3b) El resto de obligatorios vacíos editables: valor neutro (supuesto).
-  for (const b of candidatosNeutroPasoGenerali(await leerObligatoriosPasoGenerali(m), tratados)) {
-    tratados.push(b.name)
-    const x = await neutroBloquePasoGenerali(m, ctx, destino, b as typeof b & { tipo: 'select' | 'texto' | 'opciones' })
-    if ('aviso' in x) avisos.push(x.aviso)
-    else faltan.push(x.falta)
+  await rellenar()
+  // 3c) v0.2.74: control de CONSULTA de la pantalla («Consultar»… exacto). Tras rellenar, se pulsa por su puerta del guard; si el historial no aparece como
+  // consultado (el control sigue y la pantalla no cambió), se espera y se pulsa OTRA vez el MISMO control (máx. 2). Lo que aparezca después se rellena igual.
+  let consulta = ''
+  if (await hayConsultaHistorialGenerali(m)) {
+    const consultar = ctx.consultarHistorialSiniestralGenerali
+    if (typeof consultar !== 'function') consulta = '; consulta: el control está a la vista pero el contexto del runner no trae su puerta guardada (no se pulsa)'
+    else {
+      let veces = 0
+      let obtenido = false
+      let rotuloConsulta = ''
+      const dlgC: string[] = []
+      for (let i = 0; i < MAX_PULSACIONES_HISTORIAL_GENERALI; i++) {
+        const antes = await firmaPantallaHistorialGenerali(m)
+        let c: { dialogo: string | null; texto: string; pulsacion: number }
+        try {
+          c = await consultar()
+        } catch (e) {
+          if (e instanceof Error && /Bloqueada/.test(e.constructor.name)) throw e
+          throw new ErrorMapaIncompletoGenerali(`la consulta de la pantalla «Historial Siniestral» (${sanearFragmentoGenerali(e instanceof Error ? e.message : String(e)).slice(0, 200)}; ${veces} pulsación(es) antes). Pantalla: ${resumenPantallaHistorialObtenidoGenerali(await leerInventario())}`)
+        }
+        veces = c.pulsacion
+        rotuloConsulta = sanearFragmentoGenerali(c.texto).slice(0, 30)
+        if (c.dialogo) dlgC.push(sanearFragmentoGenerali(c.dialogo).slice(0, 120))
+        obtenido = await esperarHasta(async () => !(await hayConsultaHistorialGenerali(m)) || (await firmaPantallaHistorialGenerali(m)) !== antes, i === 0 ? esperaPrimera : esperaMs)
+        if (obtenido) break
+        if (i + 1 < MAX_PULSACIONES_HISTORIAL_GENERALI) {
+          await pausa(pausaEntre)
+          if (!(await hayConsultaHistorialGenerali(m)) || (await firmaPantallaHistorialGenerali(m)) !== antes) { obtenido = true; break }
+        }
+      }
+      await pausa(400)
+      await rellenar()
+      const veces1 = `«${rotuloConsulta}» pulsado ${veces} ${veces === 1 ? 'vez' : 'veces'}${dlgC.length ? ` (diálogo cancelado: ${dlgC.join(' / ')})` : ''}`
+      consulta = `; consulta: ${veces1}, ${obtenido ? 'historial consultado' : 'sin resultado visible'}`
+      avisos.push(`Historial siniestral obtenido: consulta ${veces1}${obtenido ? '' : '; sin resultado visible tras el tope (el precio puede no calcular)'}`)
+    }
   }
   inv = await leerInventario()
   for (const o of inv.obligatorios) {
@@ -1751,7 +1830,7 @@ export async function completarHistorialObtenidoGenerali(
     throw new ErrorMapaIncompletoGenerali(`la salida de la pantalla «Historial Siniestral» (${sanearFragmentoGenerali(e instanceof Error ? e.message : String(e)).slice(0, 200)}). Pantalla: ${resumenPantallaHistorialObtenidoGenerali(inv)}`)
   }
   // 5) De vuelta en «Garantías y Resultados».
-  fin = Date.now() + esperaMs
+  const fin = Date.now() + esperaMs
   let vuelta = false
   for (;;) {
     if ((await hayEnDomGenerali(page, SEL_PESTANA_GARANTIAS_CARGADA_GENERALI)) && (await m.evaluate(() => document.readyState === 'complete').catch(() => false))) { vuelta = true; break }
@@ -1762,7 +1841,7 @@ export async function completarHistorialObtenidoGenerali(
   if (!vuelta) throw new ErrorMapaIncompletoGenerali(`«${SUBPESTANA_PRECIO_GENERALI}» tras salir de «Historial Siniestral» por «${sanearFragmentoGenerali(s.texto).slice(0, 30)}»${sd} (no volvió en ${Math.round(esperaMs / 1000)} s); no se pulsa «Recalcular». Pantalla: ${resumenPantallaHistorialObtenidoGenerali(await leerInventario())}`)
   return {
     avisos,
-    nota: `Historial siniestral obtenido: «Historial Siniestral» pulsado${dlg}; pantalla: ${resumenPantallaHistorialObtenidoGenerali(inv, 300)}; ${avisos.length} obligatorio(s) rellenado(s); salida por «${sanearFragmentoGenerali(s.texto).slice(0, 30)}»${sd}; de vuelta en «${SUBPESTANA_PRECIO_GENERALI}»`,
+    nota: `Historial siniestral obtenido: ${vecesEntrada}; pantalla: ${resumenPantallaHistorialObtenidoGenerali(inv, 300)}${consulta}; ${avisos.filter((x) => !x.startsWith('Historial siniestral obtenido:')).length} obligatorio(s) rellenado(s); salida por «${sanearFragmentoGenerali(s.texto).slice(0, 30)}»${sd}; de vuelta en «${SUBPESTANA_PRECIO_GENERALI}»`,
   }
 }
 

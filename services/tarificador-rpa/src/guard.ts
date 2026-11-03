@@ -5959,6 +5959,14 @@ export async function pulsarRecalcularGenerali(page: Page, guard: GuardEmision):
 //    hablan de guardar/grabar/emitir/contratar/pagar/firmar/póliza/IBAN; sin textos de emisión en la página; `comprobarBoton` con «Aceptar» permitido SOLO aquí.
 //  Los topes de emisión no se relajan: «Aceptar» solo vale dentro de la pantalla del historial abierta por la entrada en este mismo trabajo.
 
+/** v0.2.74: clave de la entrada en `AVANCES_USADOS` (la segunda pulsación es `…:2`; la salida, `…:salida`). */
+const CLAVE_HISTORIAL_OBTENIDO_GENERALI = 'generali:historial-obtenido'
+/** v0.2.74: clave de la consulta dentro de la pantalla del historial (la segunda es `…:2`). */
+const CLAVE_CONSULTA_HISTORIAL_GENERALI = 'generali:historial-consulta'
+/** v0.2.74 (Alberto: «hay que darle otra para que haga la consulta»): tope de pulsaciones por trabajo de la entrada y de la consulta del historial. */
+export const MAX_PULSACIONES_HISTORIAL_GENERALI = 2
+/** v0.2.74: rótulos EXACTOS (sin tildes ni mayúsculas) del control de CONSULTA dentro de la pantalla del historial. Nada más. */
+export const CONSULTAS_HISTORIAL_OBTENIDO_GENERALI = Object.freeze(['Consultar', 'Consultar historial', 'Consultar SINCO', 'Consulta SINCO'] as const)
 /** v0.2.74: rótulos EXACTOS (sin tildes ni mayúsculas) con los que se puede salir de la pantalla del historial, por orden de preferencia. Nada más. */
 export const SALIDAS_HISTORIAL_OBTENIDO_GENERALI = Object.freeze(['Aceptar', 'Volver'] as const)
 /** v0.2.74: lo que nunca puede llevar el control de salida ni su contenedor (sin tildes, sin mayúsculas). */
@@ -5971,6 +5979,13 @@ export function salidaHistorialObtenidoGeneraliPermitida(texto: string | null | 
   const t = textoMenu(String(texto ?? '').replace(/ /g, ' '))
   if (t === '' || RE_SALIDA_HISTORIAL_PELIGROSA_GENERALI.test(sinTildesNi(t))) return false
   return SALIDAS_HISTORIAL_OBTENIDO_GENERALI.some((s) => textoMenu(s) === t)
+}
+
+/** v0.2.74: ¿es `texto` el rótulo EXACTO (tras normalizar) de un control de consulta del historial de la lista blanca? PURA. */
+export function consultaHistorialObtenidoGeneraliPermitida(texto: string | null | undefined): boolean {
+  const t = textoMenu(String(texto ?? '').replace(/\u00a0/g, ' '))
+  if (t === '' || RE_SALIDA_HISTORIAL_PELIGROSA_GENERALI.test(sinTildesNi(t))) return false
+  return CONSULTAS_HISTORIAL_OBTENIDO_GENERALI.some((s) => textoMenu(s) === t)
 }
 
 /** v0.2.74: ¿es `onclick` EXACTAMENTE el del botón «Historial Siniestral» (`link('histsin');`, `;` final y espacios opcionales)? PURA. */
@@ -6014,7 +6029,11 @@ export async function pulsarHistorialObtenidoGenerali(page: Page, guard: GuardEm
   if (marcos.length !== 1) throw new EmisionBloqueadaError('fase', `«Historial Siniestral» de Generali fuera de emiAutosGenB028.do (${marcos.length} marcos; hace falta exactamente uno)`)
   const marco = marcos[0]!
   const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
-  if (usados.has('generali:historial-obtenido')) throw new EmisionBloqueadaError('fase', '«Historial Siniestral» de Generali ya se pulsó en este trabajo')
+  // v0.2.74 (Alberto): «le das una vez y hay que darle otra para que haga la consulta» → hasta DOS pulsaciones por trabajo, la segunda solo si no se ha
+  // salido ya de la pantalla del historial (`:salida`). La tercera, nunca.
+  const n = usados.has(CLAVE_HISTORIAL_OBTENIDO_GENERALI) ? (usados.has(`${CLAVE_HISTORIAL_OBTENIDO_GENERALI}:2`) ? 3 : 2) : 1
+  if (n > MAX_PULSACIONES_HISTORIAL_GENERALI) throw new EmisionBloqueadaError('fase', `«Historial Siniestral» de Generali ya se pulsó ${MAX_PULSACIONES_HISTORIAL_GENERALI} veces en este trabajo`)
+  if (n > 1 && usados.has(`${CLAVE_HISTORIAL_OBTENIDO_GENERALI}:salida`)) throw new EmisionBloqueadaError('fase', '«Historial Siniestral» de Generali: segunda pulsación tras haber salido ya de la pantalla del historial')
   await exigirSinCuentaBancaria(page)
   const casa = await casaEmisionEnPaginaGenerali(page)
   if (casa !== null) throw new EmisionBloqueadaError('fase', `«Historial Siniestral» de Generali: casó ${casa.slice(0, 200)} (textos de emisión/contratación/pago/firma en la página o en un diálogo)`)
@@ -6024,7 +6043,7 @@ export async function pulsarHistorialObtenidoGenerali(page: Page, guard: GuardEm
   if (textoMenu(textoControl(desc)) !== textoMenu('Historial Siniestral')) throw new EmisionBloqueadaError('boton', textoControl(desc).slice(0, 80))
   if (!onclickHistorialObtenidoGenerali(desc[7])) throw new EmisionBloqueadaError('boton', `«Historial Siniestral» con un onclick distinto de ${ONCLICK_BOTON_HISTORIAL_OBTENIDO_GENERALI}`)
   comprobarBoton(desc)
-  usados.add('generali:historial-obtenido')
+  usados.add(n === 1 ? CLAVE_HISTORIAL_OBTENIDO_GENERALI : `${CLAVE_HISTORIAL_OBTENIDO_GENERALI}:${n}`)
   AVANCES_USADOS.set(guard, usados)
   const dialogo = await conDialogoCanceladoGenerali(page, marco, async () => {
     await boton.click({ timeout: MS_CLIC_NORMAL_CONFIRMAR_GENERALI })
@@ -6038,8 +6057,8 @@ export async function pulsarSalidaHistorialObtenidoGenerali(page: Page, guard: G
   guard.comprobar()
   if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'salida del historial de Generali con una ventana de red abierta')
   const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
-  if (!usados.has('generali:historial-obtenido')) throw new EmisionBloqueadaError('fase', 'salida del historial de Generali sin haberlo abierto por su puerta en este trabajo')
-  if (usados.has('generali:historial-obtenido:salida')) throw new EmisionBloqueadaError('fase', 'la salida del historial de Generali ya se pulsó en este trabajo')
+  if (!usados.has(CLAVE_HISTORIAL_OBTENIDO_GENERALI)) throw new EmisionBloqueadaError('fase', 'salida del historial de Generali sin haberlo abierto por su puerta en este trabajo')
+  if (usados.has(`${CLAVE_HISTORIAL_OBTENIDO_GENERALI}:salida`)) throw new EmisionBloqueadaError('fase', 'la salida del historial de Generali ya se pulsó en este trabajo')
   await exigirSinCuentaBancaria(page)
   const casa = await casaEmisionEnPaginaGenerali(page)
   if (casa !== null) throw new EmisionBloqueadaError('fase', `salida del historial de Generali: casó ${casa.slice(0, 200)} (textos de emisión/contratación/pago/firma en la página o en un diálogo)`)
@@ -6074,7 +6093,7 @@ export async function pulsarSalidaHistorialObtenidoGenerali(page: Page, guard: G
   if (!salidaHistorialObtenidoGeneraliPermitida(textoControl(desc))) throw new EmisionBloqueadaError('boton', textoControl(desc).slice(0, 80))
   if (desc.some((d) => d !== null && RE_SALIDA_HISTORIAL_PELIGROSA_GENERALI.test(sinTildesNi(d)))) throw new EmisionBloqueadaError('boton', desc.filter(Boolean).join(' | ').slice(0, 120))
   comprobarBoton(desc, { permitirAceptar: true })
-  usados.add('generali:historial-obtenido:salida')
+  usados.add(`${CLAVE_HISTORIAL_OBTENIDO_GENERALI}:salida`)
   AVANCES_USADOS.set(guard, usados)
   const control = elegido.control
   const dialogo = await conDialogoCanceladoGenerali(page, elegido.marco, async () => {
@@ -6083,6 +6102,60 @@ export async function pulsarSalidaHistorialObtenidoGenerali(page: Page, guard: G
   })
   guard.comprobar()
   return { dialogo, texto: elegido.texto }
+}
+
+/** v0.2.74: huella (rótulo normalizado + onclick sin espacios) del control de consulta de la PRIMERA pulsación: la segunda solo vale sobre el MISMO control. */
+const HUELLA_CONSULTA_HISTORIAL_GENERALI = new WeakMap<GuardEmision, string>()
+
+/**
+ * v0.2.74 (Alberto: «le das una vez y hay que darle otra para que haga la consulta»): control de CONSULTA dentro de la pantalla del historial (`histsin`).
+ * Puerta ESTRECHA: solo armada por la entrada (`pulsarHistorialObtenidoGenerali`) y antes de la salida; marco de `www.generali.es/emi_genAutosFormWeb/`
+ * SIN los formularios de pasos; exactamente UN control visible con rótulo EXACTO de `CONSULTAS_HISTORIAL_OBTENIDO_GENERALI`; ni él ni su contenedor/ancestros
+ * hablan de guardar/grabar/emitir/contratar/pagar/firmar/póliza/IBAN; sin textos de emisión en la página; `comprobarBoton` (sin «Aceptar»). Máximo DOS por
+ * trabajo, y la segunda SOLO sobre el mismo control (mismo rótulo y mismo onclick exactos que la primera). La tercera se bloquea. No emite ni recalcula.
+ */
+export async function pulsarConsultaHistorialObtenidoGenerali(page: Page, guard: GuardEmision): Promise<{ dialogo: string | null; texto: string; pulsacion: number }> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'consulta del historial de Generali con una ventana de red abierta')
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (!usados.has(CLAVE_HISTORIAL_OBTENIDO_GENERALI)) throw new EmisionBloqueadaError('fase', 'consulta del historial de Generali sin haberlo abierto por su puerta en este trabajo')
+  if (usados.has(`${CLAVE_HISTORIAL_OBTENIDO_GENERALI}:salida`)) throw new EmisionBloqueadaError('fase', 'consulta del historial de Generali tras haber salido ya de su pantalla')
+  const n = usados.has(CLAVE_CONSULTA_HISTORIAL_GENERALI) ? (usados.has(`${CLAVE_CONSULTA_HISTORIAL_GENERALI}:2`) ? 3 : 2) : 1
+  if (n > MAX_PULSACIONES_HISTORIAL_GENERALI) throw new EmisionBloqueadaError('fase', `la consulta del historial de Generali ya se pulsó ${MAX_PULSACIONES_HISTORIAL_GENERALI} veces en este trabajo`)
+  await exigirSinCuentaBancaria(page)
+  const casa = await casaEmisionEnPaginaGenerali(page)
+  if (casa !== null) throw new EmisionBloqueadaError('fase', `consulta del historial de Generali: casó ${casa.slice(0, 200)} (textos de emisión/contratación/pago/firma en la página o en un diálogo)`)
+  const candidatos: { marco: Frame; texto: string; control: Locator }[] = []
+  for (const f of marcosVivos(page)) {
+    if (!urlEmiAutosGenerali(f.url())) continue
+    if ((await f.locator(SEL_FORMULARIOS_PASOS_GENERALI).count().catch(() => 1)) > 0) continue
+    // Controles «hoja» (un `<li onclick>` con un `<a>` dentro es UN control: se toma el `<a>` y la descripción sube al contenedor con manejador).
+    const ctrls = f.locator('input[type="button"],input[type="submit"],button,a,li[onclick]:not(:has(a,button))').filter({ visible: true })
+    const k = await ctrls.count()
+    for (let i = 0; i < k; i++) {
+      const c = ctrls.nth(i)
+      const t = (await c.evaluate((el) => (el.tagName === 'INPUT' ? String((el as HTMLInputElement).value || '') : (el as HTMLElement).innerText || el.textContent || '')).catch(() => '')).replace(/\s+/g, ' ').trim()
+      if (consultaHistorialObtenidoGeneraliPermitida(t)) candidatos.push({ marco: f, texto: t, control: c })
+    }
+  }
+  if (candidatos.length !== 1) throw new ErrorMapaGuardGenerali(`la consulta de la pantalla del historial (${candidatos.length} controles visibles ${CONSULTAS_HISTORIAL_OBTENIDO_GENERALI.join('/')} fuera de los formularios de pasos; hace falta exactamente uno)`)
+  const elegido = candidatos[0]!
+  const desc = await descripcion(elegido.control, true)
+  if (!consultaHistorialObtenidoGeneraliPermitida(textoControl(desc))) throw new EmisionBloqueadaError('boton', textoControl(desc).slice(0, 80))
+  if (desc.some((d) => d !== null && RE_SALIDA_HISTORIAL_PELIGROSA_GENERALI.test(sinTildesNi(d)))) throw new EmisionBloqueadaError('boton', desc.filter(Boolean).join(' | ').slice(0, 120))
+  const huella = `${textoMenu(textoControl(desc))}|${desc.slice(7).map((d) => String(d ?? '').replace(/\s+/g, '')).join('|')}`
+  if (n === 2 && HUELLA_CONSULTA_HISTORIAL_GENERALI.get(guard) !== huella) throw new EmisionBloqueadaError('boton', 'segunda consulta del historial de Generali sobre un control distinto del de la primera (rótulo u onclick)')
+  comprobarBoton(desc)
+  if (n === 1) HUELLA_CONSULTA_HISTORIAL_GENERALI.set(guard, huella)
+  usados.add(n === 1 ? CLAVE_CONSULTA_HISTORIAL_GENERALI : `${CLAVE_CONSULTA_HISTORIAL_GENERALI}:${n}`)
+  AVANCES_USADOS.set(guard, usados)
+  const control = elegido.control
+  const dialogo = await conDialogoCanceladoGenerali(page, elegido.marco, async () => {
+    await control.click({ timeout: MS_CLIC_NORMAL_CONFIRMAR_GENERALI })
+    guard.comprobar()
+  })
+  guard.comprobar()
+  return { dialogo, texto: elegido.texto, pulsacion: n }
 }
 
 /** v0.2.74: ¿marco de la aplicación de autos de Generali (`https://www.generali.es/emi_genAutosFormWeb/…`)? PURA. */
