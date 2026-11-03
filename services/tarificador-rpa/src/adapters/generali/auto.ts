@@ -81,6 +81,10 @@ import {
   decisionesPendientesGenerali,
   elegirSumaAbogadoGenerali,
   avisoSumaAbogadoGenerali,
+  NEUTROS_GARANTIAS_GENERALI,
+  decidirNeutroGarantiasGenerali,
+  resumenTrasRecalcularGenerali,
+  type EstadoNeutroGarantiasGenerali,
   type EstadoCalculoGenerali,
   motivosInteresadoGenerali,
   PESTANA_PERSONAS_GENERALI,
@@ -481,6 +485,7 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * dato, la siniestralidad más favorable (aviso «supuesto» → precio estimado). Un obligatorio vacío sin regla (p. ej. una fecha) para con su nombre. Si la
  * pestaña no existe se anota y se sigue como antes; el atasco final trae el inventario (etiquetas, sin valores) de esa pestaña.
  *
+ * 0.2.70 (03/11/2026): obligatorios vacíos de «Garantías y Resultados» en valor neutro antes del ÚNICO «Recalcular» (se quita el 2º) y atasco con los aún vacíos.
  * 0.2.69 (02/11/2026): «Verificación del riesgo» es condicional (no para si falta con la pestaña cargada) y se ofrecen TODAS las modalidades leídas como ofertas separadas.
  * 0.2.68 (02/11/2026, Alberto: «que el bot coja el que haya»): sin modelo/versión de la referencia en el catálogo (tras ampliar) se tarifica el más parecido con aviso «Modelo distinto del de referencia» (supuesto), no requiere_humano.
  *
@@ -489,7 +494,7 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * 0.2.65 (02/11/2026): el panel de «Versión» con columnas lista las opciones como `tr[data-label]` (no `li`): «Otras versiones ...» se localiza también ahí.
  * 0.2.64 (02/11/2026): «Garantías y Resultados» no se vuelve a pulsar si ya se pulsó en el trabajo (el guard solo lo permite una vez); solo espera al bloque.
  */
-export const VERSION_GENERALI_AUTO = '0.2.69'
+export const VERSION_GENERALI_AUTO = '0.2.70'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -1261,6 +1266,61 @@ export async function elegirSumaAbogadoVisibleGenerali(page: Page, ctx: Contexto
     throw new ErrorMapaIncompletoGenerali(`la «Suma asegurada para libre elección abogado» no quedó en «${e.texto}» tras elegirla (el AJAX del portal la devolvió a «Seleccione…»)`)
   }
   return null
+}
+
+/** v0.2.70: rótulo, opciones (texto + marcada), si el texto está vacío y si es de solo lectura del bloque Genernet de UN `name`. Nunca valores. */
+const jsEstadoNeutroGenerali = (selBloque: string, name: string) => `(() => {
+  const T = (n) => (n ? (n.innerText || n.textContent || '') : '').replace(/\\s+/g, ' ').trim();
+  const b = document.querySelector('${selBloque}');
+  if (!b) return null;
+  const col = b.firstElementChild ? b.firstElementChild.cloneNode(true) : null;
+  if (col) col.querySelectorAll('.required').forEach((x) => x.remove());
+  const ctrls = Array.from(b.querySelectorAll('input[name="${name}"]'));
+  const radios = ctrls.filter((el) => (el.getAttribute('type') || '').toLowerCase() === 'radio');
+  const texto = ctrls.find((el) => (el.getAttribute('type') || 'text').toLowerCase() === 'text');
+  return {
+    rotulo: T(col).replace(/\\*\\s*$/, '').trim(),
+    opciones: radios.map((el) => ({ texto: T(el.nextElementSibling), marcada: el.checked === true })),
+    vacio: texto ? String(texto.value || '').trim() === '' : false,
+    soloLectura: ctrls.length > 0 && ctrls.every((el) => el.readOnly || el.disabled),
+  };
+})()`
+
+/**
+ * v0.2.70 (trabajo a42d9628): ANTES de «Recalcular», los obligatorios de «Garantías y Resultados» de `NEUTROS_GARANTIAS_GENERALI` que estén VACÍOS se ponen en su
+ * valor neutro (talleres/lunas/reducir abogado = «No» exacto; recargo o descuento comercial = 0). Ya puestos (p. ej. por defecto del portal) o de solo lectura → no se
+ * tocan. Elige por TEXTO exacto y pulsa/escribe por las vías del guard (`ctx.pulsar`, `comprobarCampo`). Bloque no visible → se salta; rótulo distinto, sin la opción
+ * exacta, varios bloques o sin quedar puesto → `ErrorMapaIncompletoGenerali` nombrándolo. Devuelve los avisos «Supuesto: …» (precio `estimado`).
+ */
+export async function rellenarNeutrosGarantiasGenerali(page: Page, ctx: ContextoPortal): Promise<string[]> {
+  const avisos: string[] = []
+  for (const n of NEUTROS_GARANTIAS_GENERALI) {
+    const selBloque = `#${n.name.replace(/\./g, '_')}Identification`
+    const selCtrl = `input[name="${n.name}"]`
+    const vistos: { marco: Frame; bloque: Locator }[] = []
+    for (const f of page.frames()) {
+      if (f.isDetached()) continue
+      const l = f.locator(selBloque).filter({ has: f.locator(selCtrl).filter({ visible: true }) })
+      const k = await l.count().catch(() => 0)
+      for (let i = 0; i < k; i++) vistos.push({ marco: f, bloque: l.nth(i) })
+    }
+    if (vistos.length === 0) continue
+    if (vistos.length > 1) throw new ErrorMapaIncompletoGenerali(`el campo «${n.rotulo.slice(0, 60)}» de «${SUBPESTANA_PRECIO_GENERALI}» (${vistos.length} bloques a la vista; hace falta exactamente uno)`)
+    const { marco, bloque } = vistos[0]!
+    const leer = async () => (await marco.evaluate(jsEstadoNeutroGenerali(selBloque, n.name)).catch(() => null)) as EstadoNeutroGarantiasGenerali | null
+    const antes = await leer()
+    if (!antes) continue
+    const d = decidirNeutroGarantiasGenerali(n, antes)
+    if (d.accion === 'nada') continue
+    if (d.accion === 'error') throw new ErrorMapaIncompletoGenerali(d.motivo)
+    if (d.accion === 'marcar') await ctx.pulsar(bloque.locator(selCtrl).nth(d.indice))
+    else await escribir(bloque.locator(`${selCtrl}[type="text"]`).first(), d.valor, ctx)
+    const despues = await leer()
+    const puesto = d.accion === 'marcar' ? despues?.opciones[d.indice]?.marcada === true : despues?.vacio === false
+    if (!puesto) throw new ErrorMapaIncompletoGenerali(`el campo «${n.rotulo.slice(0, 60)}» no quedó en «${n.valor}» tras ponerlo`)
+    avisos.push(n.aviso)
+  }
+  return avisos
 }
 
 /** v0.2.64: páginas donde ya se pulsó «Garantías y Resultados» en este trabajo (el guard no permite una segunda vez). */
@@ -4316,19 +4376,23 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
     const envio = await elegirEnvioEmailGenerali(page, ctx)
     const verif = await elegirVerificacionRiesgoGenerali(page, ctx)
     // v0.2.63 (trabajo 7f358ff2): la suma de libre elección de abogado (obligatoria) se elige en la más alta; el aviso «Supuesto» deja el precio en `estimado`.
+    // v0.2.70 (trabajo a42d9628): obligatorios vacíos de la pestaña (talleres, lunas, reducir abogado, recargo comercial) en su valor neutro, ANTES del abogado
+    // (reducir abogado = «No» puede traer el desplegable de la suma) y del único «Recalcular».
+    const neutros = await rellenarNeutrosGarantiasGenerali(page, ctx)
     const abogado = await elegirSumaAbogadoVisibleGenerali(page, ctx)
-    for (const aviso of [envio, verif, abogado]) if (aviso && !avisosFormaPago.includes(aviso)) avisosFormaPago.push(aviso)
+    for (const aviso of [envio, verif, ...neutros, abogado]) if (aviso && !avisosFormaPago.includes(aviso)) avisosFormaPago.push(aviso)
     // v0.2.44: que el atasco diga si cada bloque estaba (en dd2067b2 «Verificación del riesgo» no estaba a la vista y no hubo rastro).
     bloquesDecision = `forma de pago ${fp ? 'marcada' : 'sin bloque a la vista'}, envío e-mail ${envio ? 'Mediador' : 'sin bloque a la vista'}, verificación del riesgo ${verif ? 'No' : 'sin bloque a la vista'}, suma de abogado ${abogado ? 'la más alta' : 'sin cambio'}`
     try {
       const r = await paso('tarificar', async () => puerta())
       avanceRecalcular.push(`Recalcular×1${r && r.dialogo ? ` (diálogo cancelado: ${r.dialogo.slice(0, 120)})` : ''}`)
-      let lec = await paso('lectura_primas', leerPrimas)
-      // v0.2.63: si #areaErrores sigue con «datos incompletos» y no hay precio, un SEGUNDO Recalcular (máx. 2 en total).
-      if (lec.tipo !== 'unico' && portalDatosIncompletosGenerali(await avisosAreaErroresGenerali(page))) {
-        const r2 = await paso('tarificar', async () => puerta())
-        avanceRecalcular.push(`Recalcular×2 (el portal seguía con «datos incompletos»)${r2 && r2.dialogo ? ` (diálogo cancelado: ${r2.dialogo.slice(0, 120)})` : ''}`)
-        lec = await paso('lectura_primas', leerPrimas)
+      const lec = await paso('lectura_primas', leerPrimas)
+      // v0.2.70: el SEGUNDO «Recalcular» de 0.2.63 se quita: el guard lo permite UNA vez por trabajo y lo abortaba (trabajo a42d9628). Si el portal sigue con
+      // «datos incompletos», el atasco dice qué obligatorios siguen vacíos (solo rótulos, saneados).
+      if (lec.tipo !== 'unico') {
+        const est = await volcarEstadoCalculoGenerali(page)
+        const tras = resumenTrasRecalcularGenerali([...(est?.avisos ?? []), ...(await avisosAreaErroresGenerali(page))], est?.obligatoriosVacios ?? [], vaciosValoracion)
+        if (tras) avanceRecalcular.push(tras)
       }
       return lec
     } catch (e) {

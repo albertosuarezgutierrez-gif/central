@@ -10,7 +10,7 @@ import { ErrorMapaIncompletoGenerali, VERSION_GENERALI_AUTO, cortarEsperaPorBloq
 import { validarFormularioAuto, type FormularioAuto } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../src/adaptador.ts'
 
-test('v0.2.43 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.69'))
+test('v0.2.43 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.70'))
 
 test('v0.2.43 · puro: solo se corta con el aviso estable y pasada la gracia', () => {
   assert.equal(cortarEsperaPorBloqueoGenerali(9_000, 3_500), true)
@@ -106,7 +106,7 @@ test('v0.2.43 · con «datos incompletos» las lecturas largas se cortan: el ata
     assert.equal(await page.locator('input[name="reg1063E.opcEnvio.opcenv"]:checked').count(), 0)
     assert.equal(await page.locator('input[name="reg1063E.verifRiesgo.zvriep"]:checked').count(), 0)
   })
-  assert.equal(recalculos, 2) // v0.2.63: segundo Recalcular con «datos incompletos» persistente (máx. 2)
+  assert.equal(recalculos, 1) // v0.2.70: UN solo Recalcular (el guard bloquea el 2º)
 })
 
 // ── Decisión de Alberto (28/10/2026): «Envío e-mail» = «Mediador» (nunca «Tomador») y «Verificación del riesgo» = «No», opción EXACTA, antes de «Recalcular» ──

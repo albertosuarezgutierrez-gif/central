@@ -12,7 +12,7 @@ import { validarFormularioAuto, type FormularioAuto } from '@central/module-tari
 import type { ContextoPortal } from '../src/adaptador.ts'
 
 test('v0.2.42 · versión', () => {
-  assert.equal(VERSION_GENERALI_AUTO, '0.2.69')
+  assert.equal(VERSION_GENERALI_AUTO, '0.2.70')
 })
 
 let browser: Browser
@@ -111,14 +111,14 @@ test('v0.2.42 · atasco: tras «Recalcular» el mensaje trae el aviso del portal
     } as unknown as ContextoPortal
     await assert.rejects(hastaPrecioGenerali(page, formulario(), [], ctx, { esperaGarantiasMs: 0, esperaPrecioMs: 200 }), (e: unknown) => {
       if (!(e instanceof ErrorMapaIncompletoGenerali)) return false
-      assert.match(e.message, /Recalcular: Recalcular×1 · Recalcular×2 \(el portal seguía con «datos incompletos»\)\. Estado del cálculo: Avisos del portal \(areaErrores\): «No se puede calcular con datos incompletos»; el portal da los datos por INCOMPLETOS/, e.message.slice(0, 600))
+      assert.match(e.message, /Recalcular: Recalcular×1 · tras «Recalcular» el portal sigue con «datos incompletos»; obligatorios aún vacíos en «Garantías y Resultados»: «Forma de pago a contratar» · «Suma asegurada abogado»[^.]*\. Estado del cálculo: Avisos del portal \(areaErrores\): «No se puede calcular con datos incompletos»; el portal da los datos por INCOMPLETOS/, e.message.slice(0, 600))
       assert.match(e.message, /obligatorios vacíos en «Garantías y Resultados»: Forma de pago a contratar · Suma asegurada abogado;/)
       assert.match(e.message, /cargando: no; botones\/enlaces del marco: [^;]*Recalcular/)
       assert.ok(e.message.length <= 1_900, String(e.message.length))
       return true
     })
   })
-  assert.equal(recalculos, 2) // v0.2.63: con «datos incompletos» persistente, un segundo Recalcular (máx. 2)
+  assert.equal(recalculos, 1) // v0.2.70: UN solo Recalcular (el guard bloquea el 2º; el de 0.2.63 abortaba el trabajo)
 })
 
 // ── Decisión de Alberto: «Forma de pago a contratar» = Anual por defecto (opción exacta); «Envío e-mail» y «Verificación del riesgo» no se tocan ──

@@ -37,7 +37,7 @@ const PESTANA_SIN_VERIF = '<div id="reg1063E_gridmodsegIdentification"><table><t
 // Bloque de verificación con hijos flotantes: el contenedor mide 0 de alto (caso real: Playwright no lo da por visible).
 const VERIF_FLOTANTE = '<div id="reg1063E_verifRiesgoIdentification"><div id="reg1063E_verifRiesgo_zvriepIdentification"><div style="float:left">El mediador declara que ha realizado la verificación del riesgo a asegurar, y que el mismo se encuentra en perfecto estado</div><div style="float:left"><input type="radio" name="reg1063E.verifRiesgo.zvriep"><span>No</span><input type="radio" name="reg1063E.verifRiesgo.zvriep"><span>Sí</span></div></div></div>'
 
-test('v0.2.69 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.69'))
+test('v0.2.69 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.70'))
 
 test('pestaña cargada sin bloque de verificación: sigue sin él (false), sin error ni clic', async () => {
   const c = { n: 0 }
