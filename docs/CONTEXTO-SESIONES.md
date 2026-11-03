@@ -78,6 +78,7 @@ original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados
 - Al completar el cliente: borrador a la compañía → Telegram ✏️/🏁 (✅ solo cuando hay buzón elegido de contactos activos del Directorio; anti-replay `compania_version`). 🏁 Resuelta cierra solicitud + tarea (también clave antigua `suplemento:<póliza>` del mismo periodo).
 - 🚨 Occident no tiene dirección de respuesta: avisos desde occidentinforma.com y el canal oficial es el PORTAL de mediadores. Pendiente decidir buzón fijo (posible `recibe_regularizaciones` en Directorio).
 - Cierre automático NO: no hay ningún correo real de Occident de «suplemento emitido». SQL pendiente: `2026-11-03c_regularizacion_rc_compania.sql`.
+- 📱 El ✅ al cliente manda también push en la app (portal `POST /api/operador/push-cliente`, secreto `ASEGURA_PORTAL_PUENTE_SECRET`, texto FIJO por `motivo`, url solo `/datos/…`). Push nunca condiciona el correo; Telegram dice el resultado. Global 2 hoy: 0 dispositivos. Desplegar portal antes que asegura.
 
 ## (03/11/2026) Correduría · regularización RC de Occident automatizada (fases 1-2)
 - F1: parser saca periodo/fecha carta/recordatorio; clave tarea póliza+periodo; vence carta+15d (mín. hoy+2); 2º aviso → prioridad alta + ⚠️ en Telegram.

@@ -106,6 +106,11 @@ const EXENTOS = new Set([
   // bien y sus interruptores (nada de la persona ni de la cartera), y no puede tener más funciones: cepo propio en
   // `test/regression-portal-vehiculo-qr.test.ts`.
   'apps/asegura-portal/lib/vehiculo-token.ts',
+  // Aviso push pedido por asegura (03/11/2026, regularización de RC): lo usa SOLO `POST /api/operador/push-cliente`,
+  // autenticado por `ASEGURA_PORTAL_PUENTE_SECRET` (servidor a servidor, no hay visitante ni cookie). El `clienteId` lo
+  // pone asegura; el adaptador resuelve las identidades por `portal_vinculo` de ESE cliente y cada consulta `portal*`
+  // lleva esos `identidadId`. No lee cartera; el texto del aviso es fijo por motivo. Cepo: `lib/push-cliente.test.ts`.
+  'apps/asegura-portal/lib/push-cliente-bd.ts',
 ])
 
 /**

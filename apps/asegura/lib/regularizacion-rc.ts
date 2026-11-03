@@ -44,7 +44,7 @@ import {
   type RepoRegularizacionToken,
   type VistaPublicaRegularizacion,
 } from './regularizacion-rc-portal'
-import { enviarYConfirmar, MINUTOS_ENVIANDO_ATASCADA } from './regularizacion-rc-envio'
+import { avisarEnAppTrasCorreo, enviarYConfirmar, MINUTOS_ENVIANDO_ATASCADA, pedirPushRegularizacion, type ResultadoAvisoApp } from './regularizacion-rc-envio'
 import { botonesRegularizacion, textoAvisoRespuestaRegularizacion, textoPropuestaRegularizacion } from './regularizacion-rc-telegram'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -185,7 +185,9 @@ export async function proponerEnTelegram(correduriaId: string, id: string, edita
 // ─── 2. Los botones (los reenvía el webhook de plataforma) ───────────────────
 
 export type ResultadoDecision =
-  | { estado: 'enviada' | 'descartada' | 'sin_cambios' | 'obsoleta' | 'sin_destino' | 'no_encontrada' | 'sin_migracion' }
+  /** `push`: el aviso en la app tras el correo (accesorio; `null` = no se intentó). */
+  | { estado: 'enviada'; push: ResultadoAvisoApp | null }
+  | { estado: 'descartada' | 'sin_cambios' | 'obsoleta' | 'sin_destino' | 'no_encontrada' | 'sin_migracion' }
   | { estado: 'canal_no_disponible' | 'envio_fallido' | 'confirmacion_fallida' }
 
 export async function decidirRegularizacion(correduriaId: string, d: { accion: 'env' | 'no'; id: string; version: number }): Promise<ResultadoDecision> {
@@ -240,9 +242,16 @@ export async function decidirRegularizacion(correduriaId: string, d: { accion: '
     })
     if (r === 'canal_no_disponible' || r === 'envio_fallido' || r === 'confirmacion_fallida') return { estado: r }
     if (r === 'sin_cambios') return { estado: 'sin_cambios' }
+    // El correo ya salió y la fila está en `pendiente`: el aviso en la app es accesorio y no cambia nada si falla.
+    const push = await avisarEnAppTrasCorreo(r, () => pedirPushRegularizacion(
+      { clienteId: f.clienteId, token },
+      { base: process.env.ASEGURA_PORTAL_URL, secreto: process.env.ASEGURA_PORTAL_PUENTE_SECRET, fetch },
+    ), (m) => console.error(`[regularizacion-rc] ${f.id}: ${m}`))
+    if (push && push.estado === 'no_se_pudo') console.error(`[regularizacion-rc] ${f.id}: aviso en la app no enviado (${push.causa})`)
+    const enApp = push?.estado === 'enviado' ? ` Aviso en la app: ${push.dispositivos} dispositivo(s).` : ''
     await anotarHistorial(correduriaId, f.clienteId, f.polizaId,
-      `Regularización de RC (${f.compania}, periodo ${f.periodoDesde} a ${f.periodoHasta}): pedida la facturación al cliente por correo con enlace.`)
-    return { estado: 'enviada' }
+      `Regularización de RC (${f.compania}, periodo ${f.periodoDesde} a ${f.periodoHasta}): pedida la facturación al cliente por correo con enlace.${enApp}`)
+    return { estado: 'enviada', push }
   })
 }
 

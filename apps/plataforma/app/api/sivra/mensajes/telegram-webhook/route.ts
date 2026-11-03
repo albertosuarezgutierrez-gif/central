@@ -41,7 +41,7 @@ import { PREFIJO_CLP, decidirBotonClp, idDeEdicion } from '@/lib/correo/lead-cor
 import { guardarEdicionClp, resolverBotonClp } from '@/lib/correo/lead-correduria-pendiente'
 import { PREFIJO_CSG, decidirBotonCsg } from '@/lib/correo/contacto-sugerido'
 import { PREFIJO_FEX, decidirBotonFex, decidirFexEnAsegura, lineaTrasPulsarFex } from '@/lib/felicitaciones-exclientes-asegura'
-import { PREFIJO_RRC, decidirBotonRrc, decidirRrcCompaniaEnAsegura, decidirRrcEnAsegura, editarRrcCompaniaEnAsegura, editarRrcEnAsegura, idDeEdicionRrc, idDeEdicionRrcCompania, lineaTrasPulsarRrc, textoPedirEdicionRrc, textoPedirEdicionRrcCompania } from '@/lib/regularizacion-rc-asegura'
+import { PREFIJO_RRC, decidirBotonRrc, decidirRrcCompaniaEnAsegura, decidirRrcEnAsegura, editarRrcCompaniaEnAsegura, editarRrcEnAsegura, idDeEdicionRrc, idDeEdicionRrcCompania, lineaPushRrc, lineaTrasPulsarRrc, textoPedirEdicionRrc, textoPedirEdicionRrcCompania } from '@/lib/regularizacion-rc-asegura'
 import { resolverBotonCsg } from '@/lib/correo/contacto-sugerido-pendiente'
 import { PREFIJO_FACTURA_HUESPED, decidirBotonFactura } from '@/lib/sivra/facturas/telegram'
 import { resolverBotonFactura } from '@/lib/sivra/facturas/telegram-acciones'
@@ -1064,10 +1064,11 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
       }
       if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n⏳ <i>Pulsado…</i>`).catch(() => {})
       after(async () => {
-        const estado = d.accion === 'cenv' || d.accion === 'res'
-          ? await decidirRrcCompaniaEnAsegura({ accion: d.accion, id: d.id, version: d.version })
+        const { estado, push } = d.accion === 'cenv' || d.accion === 'res'
+          ? { estado: await decidirRrcCompaniaEnAsegura({ accion: d.accion, id: d.id, version: d.version }), push: null }
           : await decidirRrcEnAsegura({ accion: d.accion as 'env' | 'no', id: d.id, version: d.version })
-        const linea = lineaTrasPulsarRrc(estado)
+        const lineaApp = lineaPushRrc(estado, push)
+        const linea = lineaApp ? `${lineaTrasPulsarRrc(estado)}\n${lineaApp}` : lineaTrasPulsarRrc(estado)
         if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${linea}`).catch(() => {})
         else await tgSend(linea).catch(() => {})
       })

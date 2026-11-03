@@ -80,9 +80,32 @@ export function lineaTrasPulsarRrc(estado: string): string {
   }
 }
 
+/**
+ * Línea del aviso en la APP del portal tras «Correo enviado» (03/11/2026). PURO. El push es accesorio: solo se pinta con
+ * `enviada`, y lo que no consta se dice («no consta»), nunca «enviado».
+ */
+export function lineaPushRrc(estado: string, push: unknown): string | null {
+  if (estado !== 'enviada') return null
+  const p = push && typeof push === 'object' ? (push as Record<string, unknown>) : null
+  switch (p?.estado) {
+    case 'enviado': {
+      const n = typeof p.dispositivos === 'number' && Number.isInteger(p.dispositivos) && p.dispositivos > 0 ? p.dispositivos : null
+      return n === null ? '📱 <i>Aviso en la app: no consta a cuántos dispositivos.</i>' : `📱 <i>Aviso en la app: enviado a ${n} dispositivo${n === 1 ? '' : 's'}.</i>`
+    }
+    case 'sin_app': return '📱 <i>El cliente no tiene la app activada: solo ha ido el correo.</i>'
+    case 'preferencia': return '📱 <i>El cliente ha pedido no recibir avisos en la app ahora (solo correo / no molestar): solo ha ido el correo.</i>'
+    case 'no_se_pudo': return '📱 <i>Aviso en la app: no se pudo (el correo sí ha salido).</i>'
+    default: return '📱 <i>Aviso en la app: no consta (el correo sí ha salido).</i>'
+  }
+}
+
 async function puerto(cuerpo: Record<string, unknown>, actor: string): Promise<string> {
+  return (await puertoConDetalle(cuerpo, actor)).estado
+}
+
+async function puertoConDetalle(cuerpo: Record<string, unknown>, actor: string): Promise<{ estado: string; push: unknown }> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
-  if (!secret) return 'puerto_sin_configurar'
+  if (!secret) return { estado: 'puerto_sin_configurar', push: null }
   try {
     const base = (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
     const res = await fetch(`${base}/api/operador/regularizacion-rc`, {
@@ -92,16 +115,16 @@ async function puerto(cuerpo: Record<string, unknown>, actor: string): Promise<s
       cache: 'no-store',
       signal: AbortSignal.timeout(25_000),
     })
-    const j = (await res.json().catch(() => null)) as { estado?: unknown } | null
-    return typeof j?.estado === 'string' ? j.estado : `HTTP ${res.status}`
+    const j = (await res.json().catch(() => null)) as { estado?: unknown; push?: unknown } | null
+    return { estado: typeof j?.estado === 'string' ? j.estado : `HTTP ${res.status}`, push: j?.push ?? null }
   } catch (e) {
-    return e instanceof Error ? e.message.slice(0, 80) : 'error'
+    return { estado: e instanceof Error ? e.message.slice(0, 80) : 'error', push: null }
   }
 }
 
-/** ✅/❌ → asegura. Nunca lanza: devuelve el `estado` para pintar la línea. */
-export function decidirRrcEnAsegura(d: { accion: 'env' | 'no'; id: string; version: number }): Promise<string> {
-  return puerto({ accion: 'decidir', decision: d.accion, id: d.id, version: d.version }, 'sistema:telegram-regularizacion')
+/** ✅/❌ → asegura. Nunca lanza: devuelve el `estado` (y el `push` de la app) para pintar las líneas. */
+export function decidirRrcEnAsegura(d: { accion: 'env' | 'no'; id: string; version: number }): Promise<{ estado: string; push: unknown }> {
+  return puertoConDetalle({ accion: 'decidir', decision: d.accion, id: d.id, version: d.version }, 'sistema:telegram-regularizacion')
 }
 
 /** ✅ a la compañía / 🏁 resuelta → asegura. Nunca lanza: devuelve el `estado` para pintar la línea. */

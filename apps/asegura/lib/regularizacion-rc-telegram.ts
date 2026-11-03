@@ -55,7 +55,7 @@ export function textoPropuestaRegularizacion(a: {
       ? '✏️ Borrador EDITADO por ti.'
       : 'La compañía pide la facturación real del periodo. Propongo pedírsela al cliente por correo con un enlace de un solo uso (30 días).',
     a.hayEmail
-      ? 'Sale a su email de la ficha. Nada sale sin ✅.'
+      ? 'Se enviará por correo (a su email de la ficha) y aviso en la app si la tiene. Tu ✅ cubre los dos; nada sale sin ✅.'
       : '⚠️ <b>No tiene email válido en la ficha</b> (o está de baja): el ✅ no podrá enviarlo. Pídeselo por otra vía.',
     '',
     `<b>Asunto:</b> ${esc(a.asunto)}`,

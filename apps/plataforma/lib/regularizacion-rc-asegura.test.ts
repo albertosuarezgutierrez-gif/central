@@ -77,3 +77,17 @@ test('fase 3: las líneas no afirman un envío que no consta; sin dirección lo 
   assert.match(lineaTrasPulsarRrc('resuelta'), /resuelta/)
   assert.equal(typeof decidirRrcCompaniaEnAsegura, 'function')
 })
+
+test('🪤 línea del aviso en la app: solo con enviada, y nunca afirma un envío que no consta', async () => {
+  const { lineaPushRrc } = await import('./regularizacion-rc-asegura.ts')
+  assert.equal(lineaPushRrc('envio_fallido', { estado: 'enviado', dispositivos: 2 }), null)
+  assert.equal(lineaPushRrc('canal_no_disponible', null), null)
+  assert.match(lineaPushRrc('enviada', { estado: 'enviado', dispositivos: 2 })!, /enviado a 2 dispositivos/)
+  assert.match(lineaPushRrc('enviada', { estado: 'enviado', dispositivos: 1 })!, /enviado a 1 dispositivo\./)
+  assert.match(lineaPushRrc('enviada', { estado: 'sin_app' })!, /no tiene la app activada/)
+  assert.match(lineaPushRrc('enviada', { estado: 'no_se_pudo', causa: 'HTTP 503' })!, /no se pudo/)
+  for (const raro of [null, undefined, {}, { estado: 'enviado' }, { estado: '<b>x' }, 'enviado']) {
+    assert.doesNotMatch(lineaPushRrc('enviada', raro)!, /enviado a \d/, JSON.stringify(raro))
+  }
+  assert.doesNotMatch(lineaPushRrc('enviada', { estado: 'no_se_pudo', causa: '<script>' })!, /<script>/)
+})

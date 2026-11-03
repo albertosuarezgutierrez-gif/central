@@ -2,7 +2,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { enviarYConfirmar } from './regularizacion-rc-envio.ts'
+import { avisarEnAppTrasCorreo, enviarYConfirmar, pedirPushRegularizacion } from './regularizacion-rc-envio.ts'
 
 function deps(o: { enviar?: () => Promise<string>; confirmar?: () => Promise<number>; borrador?: () => Promise<unknown> }) {
   const c = { enviar: 0, confirmar: 0, borrador: 0, logs: [] as string[] }
@@ -80,4 +80,70 @@ test('editar: el id se valida con UUID estricto 8-4-4-4-12 (no solo 36 caractere
   const malo = '-'.repeat(36)
   assert.ok(viejo.test(malo)); assert.ok(!UUID.test(malo))
   assert.ok(UUID.test('11111111-1111-4111-8111-111111111111'))
+})
+
+// ─── Aviso en la app (03/11/2026) ────────────────────────────────────────────
+
+test('🪤 el push que FALLA no cambia el correo: enviada sigue enviada y nada vuelve a borrador', async () => {
+  const { c, d } = deps({})
+  const correo = await enviarYConfirmar(d)
+  const push = await avisarEnAppTrasCorreo(correo, async () => { throw new Error('portal caído') }, () => {})
+  assert.equal(correo, 'enviada')
+  assert.deepEqual(push, { estado: 'no_se_pudo', causa: 'excepcion' })
+  assert.equal(c.borrador, 0)
+})
+
+test('🪤 sin correo no hay push: ni con canal caído, ni con envío fallido, ni con confirmación fallida (enlace muerto)', async () => {
+  for (const r of ['canal_no_disponible', 'envio_fallido', 'confirmacion_fallida', 'sin_cambios'] as const) {
+    let llamado = false
+    assert.equal(await avisarEnAppTrasCorreo(r, async () => { llamado = true; return { estado: 'sin_app' } }, () => {}), null)
+    assert.equal(llamado, false, r)
+  }
+})
+
+test('🪤 en regularizacion-rc.ts el push va DESPUÉS de enviarYConfirmar y el return de enviada no depende de él', () => {
+  const src = readFileSync(new URL('./regularizacion-rc.ts', import.meta.url), 'utf8')
+  const iEnvio = src.indexOf('await enviarYConfirmar(')
+  const iPush = src.indexOf('avisarEnAppTrasCorreo(r,')
+  assert.ok(iEnvio > 0 && iPush > iEnvio, 'el aviso en la app se pide tras el correo, con su resultado')
+  assert.match(src, /return \{ estado: 'enviada', push \}/)
+})
+
+type Llamada = { url: string; init: RequestInit }
+const TOKEN = 'b'.repeat(43)
+function fetchFalso(status: number, cuerpo: unknown, llamadas: Llamada[]): typeof fetch {
+  return (async (url: string, init: RequestInit) => {
+    llamadas.push({ url, init })
+    return new Response(JSON.stringify(cuerpo), { status, headers: { 'content-type': 'application/json' } })
+  }) as unknown as typeof fetch
+}
+
+test('🪤 sin secreto no se llama al portal: no_se_pudo', async () => {
+  const ll: Llamada[] = []
+  const r = await pedirPushRegularizacion({ clienteId: 'c', token: TOKEN }, { base: 'https://p.example', secreto: undefined, fetch: fetchFalso(200, {}, ll) })
+  assert.deepEqual(r, { estado: 'no_se_pudo', causa: 'sin_secreto' })
+  assert.equal(ll.length, 0)
+})
+
+test('🪤 la petición lleva motivo y ruta /datos/<token>, sin texto ni cifras; Bearer con el secreto', async () => {
+  const ll: Llamada[] = []
+  const r = await pedirPushRegularizacion({ clienteId: 'cli-1', token: TOKEN }, { base: 'https://p.example/', secreto: 's', fetch: fetchFalso(200, { estado: 'ok', enviados: 2, fallidos: 0, sinSuscripcion: false, omitidasPorPreferencia: 0 }, ll) })
+  assert.deepEqual(r, { estado: 'enviado', dispositivos: 2 })
+  assert.equal(ll[0].url, 'https://p.example/api/operador/push-cliente')
+  assert.equal((ll[0].init.headers as Record<string, string>).Authorization, 'Bearer s')
+  const cuerpo = JSON.parse(String(ll[0].init.body))
+  assert.deepEqual(Object.keys(cuerpo).sort(), ['clienteId', 'motivo', 'url'])
+  assert.equal(cuerpo.url, `/datos/${TOKEN}`)
+})
+
+test('respuestas del portal → estado para Telegram (sin app, preferencia, 401, portal caído)', async () => {
+  const e = (status: number, cuerpo: unknown) => ({ base: 'https://p.example', secreto: 's', fetch: fetchFalso(status, cuerpo, []) })
+  const a = { clienteId: 'c', token: TOKEN }
+  assert.deepEqual(await pedirPushRegularizacion(a, e(200, { estado: 'ok', enviados: 0, fallidos: 0, sinSuscripcion: true, omitidasPorPreferencia: 0 })), { estado: 'sin_app' })
+  assert.deepEqual(await pedirPushRegularizacion(a, e(200, { estado: 'ok', enviados: 0, fallidos: 0, sinSuscripcion: false, omitidasPorPreferencia: 1 })), { estado: 'preferencia' })
+  assert.deepEqual(await pedirPushRegularizacion(a, e(200, { estado: 'ok', enviados: 0, fallidos: 1, sinSuscripcion: false, omitidasPorPreferencia: 0 })), { estado: 'no_se_pudo', causa: 'ningun_dispositivo_lo_acepto' })
+  assert.deepEqual(await pedirPushRegularizacion(a, e(401, { error: 'No autorizado' })), { estado: 'no_se_pudo', causa: 'HTTP 401' })
+  const caido = (async () => { throw new TypeError('fetch failed') }) as unknown as typeof fetch
+  assert.deepEqual(await pedirPushRegularizacion(a, { base: 'https://p.example', secreto: 's', fetch: caido }), { estado: 'no_se_pudo', causa: 'TypeError' })
+  assert.deepEqual(await pedirPushRegularizacion(a, { base: 'http://p.example', secreto: 's', fetch: caido }), { estado: 'no_se_pudo', causa: 'url_portal_no_https' })
 })
