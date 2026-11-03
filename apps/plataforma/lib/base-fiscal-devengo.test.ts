@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 
 import {
   AMORTIZACION_INMUEBLES, avisosDatos, calcularCostesUnitarios, calcularPeriodo, compararConjuntaIndividual, costeReserva, diasOcupados,
-  esProvisional, estimarCierre, mismoDiaAnioAnterior, periodoCierre, type CostesUnitarios, type EntradaBase, type PropiedadFiscal,
+  esProvisional, estimarCierre, mesesPlantillaPendientes, mismoDiaAnioAnterior, periodoCierre, type CostesUnitarios, type EntradaBase, type PropiedadFiscal,
 } from './base-fiscal-devengo.ts'
 import { importesDe } from './fiscal-deducciones.ts'
 
@@ -355,4 +355,44 @@ test('cargador: ingresos de la correduría por la vista AGREGADA de CIMA (nunca 
   assert.match(sql, /WHEN r\.situacion = 'pendiente' THEN r\.fecha_efecto_actual ELSE r\.fecha_situacion END/)
   assert.match(sql, /GRANT SELECT ON seguros_agregado\.v_comisiones_mes TO prisma_plataforma/)
   assert.doesNotMatch(sql, /^\s*GRANT[^\n]*ON (SCHEMA )?seguros(\.| )/m)
+})
+
+// ── Recurrentes de piso proyectados por calendario ──────────────────────────────────────────
+test('recurrentes: IBI semestral cae en su mes real; lo cubierto por gastos_fijos/luz no se duplica; sin lista de cubiertos NO se proyecta', () => {
+  const h = (ambito: string, proveedor: string, fecha: string, importe: number) => ({ ambito, proveedor, fecha, importe })
+  const historicoGastos = [
+    h('S', 'Ayuntamiento IBI', '2025-06-20', 480), h('S', 'Ayuntamiento IBI', '2025-12-20', 480), h('S', 'Ayuntamiento IBI', '2026-06-20', 480),
+    ...['01', '02', '03', '04', '05', '06', '07', '08', '09', '10'].flatMap(m => [h('S', 'Occident GCO S.A.', `2026-${m}-01`, 50), h('S', 'Endesa Energía S.A.U.', `2026-${m}-10`, 80)]),
+  ]
+  const e = entrada({ costes: COSTES, historicoGastos, recurrentesCubiertos: [{ ambito: 'S', proveedor: 'Occident GCO S.A.' }] })
+  const est = estimarCierre(e, calcularPeriodo(e, '2026-01-01', '2026-10-31'))
+  const d = est.escenarios[0].desglose.find(x => x.propertyId === 'S')!
+  assert.equal(d.recurrentes, 480) // solo el IBI de 20/12; Occident (fijo) y Endesa (luz) fuera
+  assert.equal(est.escenarios[0].futuro.recurrentes, 480)
+  const sin = entrada({ costes: COSTES })
+  const d0 = estimarCierre(sin, calcularPeriodo(sin, '2026-01-01', '2026-10-31')).escenarios[0].desglose.find(x => x.propertyId === 'S')!
+  assert.equal(d0.recurrentes, undefined) // sin histórico = sin dato, no 0
+  assert.equal(d.neto, d0.neto - 480)
+  const noCub = entrada({ costes: COSTES, historicoGastos })
+  assert.equal(estimarCierre(noCub, calcularPeriodo(noCub, '2026-01-01', '2026-10-31')).escenarios[0].desglose.find(x => x.propertyId === 'S')!.recurrentes, undefined)
+})
+
+// ── Plantillas de gastos_fijos: sin doble conteo del mes ya apuntado ────────────────────────
+test('plantillas: solo cuentan los meses cuyo cargo es posterior a hoy (nov ya apuntado el 01/11 no se repite)', () => {
+  assert.equal(mesesPlantillaPendientes('2026-10-31', 2026, 1), 2) // 01/11 y 01/12
+  assert.equal(mesesPlantillaPendientes('2026-11-03', 2026, 1), 1) // solo 01/12
+  assert.equal(mesesPlantillaPendientes('2026-11-01', 2026, 1), 1) // el día del cargo ya está apuntado (≤ hoy)
+  assert.equal(mesesPlantillaPendientes('2026-12-01', 2026, 1), 0)
+  assert.equal(mesesPlantillaPendientes('2026-11-03', 2026, 31), 2) // día 31 → 30/11 y 31/12
+  assert.equal(mesesPlantillaPendientes('2026-12-31', 2026, 31), 0)
+})
+test('plantillas: el cierre usa los meses pendientes, no fijosMes × mesesRestantes (≈1,9 a 03/11)', () => {
+  const x = { anio: 2026, hoy: '2026-11-03', propiedadIds: ['S'], limpieza: [], lavanderia: [], estancias: [], suministros: [], fijos: [{ propertyId: 'S', total: 100, dia: 1 }] }
+  const c = calcularCostesUnitarios(x)
+  assert.equal(c.fijosMes.S, 100); assert.equal(c.fijosRestante!.S, 100)
+  const e = entrada({ hoy: '2026-11-03', costes: { ...COSTES, fijosMes: { S: 100, R: 0 }, fijosRestante: c.fijosRestante } })
+  const d = estimarCierre(e, calcularPeriodo(e, '2026-01-01', '2026-11-03')).escenarios[0].desglose.find(z => z.propertyId === 'S')!
+  assert.equal(d.fijos, 100) // antes: 100 × 1,9 ≈ 190
+  // Sin día de cargo en alguna plantilla → cálculo antiguo (no se inventa el día).
+  assert.equal(calcularCostesUnitarios({ ...x, fijos: [{ propertyId: 'S', total: 100 }] }).fijosRestante!.S, undefined)
 })

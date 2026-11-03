@@ -2,7 +2,7 @@
 // (prisma/sql/2026-10-31_fiscal_avisos.sql). Sin la tabla NO hay dedupe: se avisa de todos modos
 // (fail-open, como el resto de avisos) y se deja constancia en el log.
 import { prisma } from './db'
-import { getBaseDevengo } from './base-fiscal-devengo-db'
+import { getBaseDevengo, cargarHistoricoGastos, AMBITO_CORREDURIA } from './base-fiscal-devengo-db'
 import { armarPanel, comprasParaMotor } from './fiscal-panel'
 import { listarComprasPrevistas } from './fiscal-compras-db'
 import { construirAlertas, type Alerta, type EnvioPrevio } from './fiscal-alertas'
@@ -23,7 +23,14 @@ export async function calcularAlertas(cuentaId: string, anio: number, hoy: strin
     })),
   })
   const compras = comprasParaMotor((await listarComprasPrevistas(cuentaId)) ?? [], anio)
-  return construirAlertas({ hoy, anio, entrada: panel.cierres[0]?.entrada ?? null, avisos: panel.avisos, compras })
+  // Gastos recurrentes al alza (pisos + correduría). Si una de las dos lecturas falla, se avisa solo con la otra (no se afirma nada de la que falta).
+  const h = await cargarHistoricoGastos(cuentaId, anio).catch(() => null)
+  const gastosHist = h && (h.pisos || h.correduria) ? [...(h.pisos ?? []), ...(h.correduria ?? [])] : undefined
+  const nombres: Record<string, string> = {
+    prop_multi_apartamentos: 'Pisos (compartido)', prop_personal: 'Personal', [AMBITO_CORREDURIA]: 'Correduría',
+    ...Object.fromEntries(base.propiedades.map(p => [p.id, p.nombre])),
+  }
+  return construirAlertas({ hoy, anio, entrada: panel.cierres[0]?.entrada ?? null, avisos: panel.avisos, compras, gastosHist, nombres })
 }
 
 /** Envíos de los últimos 365 días. `[]` si la tabla aún no existe (sin dedupe). */

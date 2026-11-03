@@ -11,6 +11,7 @@
 //    `seguros` / `actividad_pilar`), tarjetas incluidas: no hay doble conteo porque `gastos` de la
 //    correduría NO se lee aquí. Si el rol de BD no puede leer la vista, los ingresos caen al banco (legado).
 import { prisma } from './db'
+import { proveedorBanco, type GastoHist } from './gastos-recurrentes-detectados.ts'
 import { repartirIngresosBanco, type IngresoSinIdentificar, type MovimientoIngreso } from './correduria-companias.ts'
 import {
   avisosDatos, calcularCostesUnitarios, mismoDiaAnioAnterior, calcularPeriodo, compararConjuntaIndividual, estimarCierre, periodoCierre,
@@ -78,11 +79,49 @@ function hoyMadrid(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid' }).format(new Date())
 }
 
+/** Ámbito del histórico para la correduría (gastos bancarios del negocio `seguros`). */
+export const AMBITO_CORREDURIA = 'correduria'
+
+/**
+ * Histórico de gastos con proveedor del año anterior y el actual, para detectar recurrentes (solo lectura):
+ *  - `pisos`: tabla `gastos` (revisado, no descartados), ámbito = `propiedad` (pisos, compartido y personal).
+ *  - `correduria`: cargos del banco con destino `seguros` (ámbito `correduria`); fuera ingresos, duplicados ignorados,
+ *    amortizables, traspasos internos y Bizum. El proveedor sale de `proveedorBanco` (contraparte o concepto).
+ * `null` en una de las dos = no se pudo leer (≠ vacío).
+ */
+export async function cargarHistoricoGastos(cuentaId: string, anio: number): Promise<{ pisos: GastoHist[] | null; correduria: GastoHist[] | null }> {
+  const ini = `${anio - 1}-01-01`, fin = `${anio}-12-31`
+  const [pisos, banco] = await Promise.all([
+    prisma.$queryRaw<Array<{ propiedad: string; proveedor: string | null; fecha: string; total: unknown }>>`
+      SELECT propiedad, proveedor, to_char(fecha, 'YYYY-MM-DD') AS fecha, total
+      FROM gastos
+      WHERE fecha BETWEEN ${ini}::date AND ${fin}::date
+        AND descartado_at IS NULL AND revisado = true AND total IS NOT NULL AND proveedor IS NOT NULL
+        AND propiedad LIKE 'prop\_%'`.catch(() => null),
+    prisma.$queryRaw<Array<{ fecha: string; importe: unknown; contraparte: string | null; concepto: string | null }>>`
+      SELECT to_char(mb.fecha_operacion, 'YYYY-MM-DD') AS fecha, -mb.importe AS importe, mb.contraparte, mb.concepto
+      FROM movimientos_bancarios mb JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+      WHERE cb.cuenta_id = ${cuentaId}::uuid AND mb.destino = 'seguros' AND mb.importe < 0
+        AND coalesce(mb.duplicado_estado,'') <> 'ignorado' AND NOT coalesce(mb.amortizable,false)
+        AND coalesce(mb.categoria,'') NOT IN ('traspaso_interno','traspaso','cobro_cliente')
+        AND coalesce(mb.subcategoria,'') NOT IN ('bizum','traspaso_interno')
+        AND coalesce(mb.concepto,'') !~* 'bizum'
+        AND mb.fecha_operacion BETWEEN ${ini}::date AND ${fin}::date`.catch(() => null),
+  ])
+  return {
+    pisos: pisos == null ? null : pisos.map(g => ({ ambito: g.propiedad, proveedor: g.proveedor as string, fecha: g.fecha, importe: num(g.total) })),
+    correduria: banco == null ? null : banco.flatMap((m): GastoHist[] => {
+      const proveedor = proveedorBanco(m.contraparte, m.concepto)
+      return proveedor ? [{ ambito: AMBITO_CORREDURIA, proveedor, fecha: m.fecha, importe: num(m.importe) }] : []
+    }),
+  }
+}
+
 export async function cargarEntradaBase(cuentaId: string, anio: number, hoy: string): Promise<EntradaBase> {
   const ini = `${anio}-01-01`, fin = `${anio}-12-31`
 
   const refIni = mismoDiaAnioAnterior(hoy), refFin = `${anio - 1}-12-31`
-  const [tit, ing, gas, limp, bancoCor, bancoPil, lavFact, fijosBd, refBd, cima, abonosCor] = await Promise.all([
+  const [tit, ing, gas, limp, bancoCor, bancoPil, lavFact, fijosBd, refBd, cima, abonosCor, hist] = await Promise.all([
     prisma.$queryRaw<Array<{ propiedad_id: string; titular: string; porcentaje: unknown; regimen: string | null; nombre: string | null }>>`
       SELECT t.propiedad_id, t.titular, t.porcentaje, t.regimen, p.name AS nombre
       FROM propiedad_titularidad t LEFT JOIN properties p ON p.id = t.propiedad_id`,
@@ -129,8 +168,8 @@ export async function cargarEntradaBase(cuentaId: string, anio: number, hoy: str
       FROM limpieza_facturas
       WHERE cuenta_id = ${cuentaId} AND periodo BETWEEN ${anio + '-01'} AND ${anio + '-12'} AND lavanderia > 0`,
     // Resto de gastos fijos: plantillas activas de `gastos_fijos` (importe mensual con IVA).
-    prisma.$queryRaw<Array<{ propiedad: string; categoria: string | null; proveedor: string | null; total: unknown }>>`
-      SELECT propiedad, categoria, proveedor, total FROM gastos_fijos
+    prisma.$queryRaw<Array<{ propiedad: string; categoria: string | null; proveedor: string | null; total: unknown; dia_mes: number | null }>>`
+      SELECT propiedad, categoria, proveedor, total, dia_mes FROM gastos_fijos
       WHERE activo = true AND propiedad LIKE 'prop\_%'`,
     // Estancias del mismo tramo (hoy→31/12) del año anterior: referencia del escenario de ocupación.
     prisma.$queryRaw<Array<{ pid: string; ci: string; co: string; bruto: unknown; neto: unknown; bruto_ok: boolean; portal: string | null; adultos: number | null; ninos: number | null }>>`
@@ -149,6 +188,7 @@ export async function cargarEntradaBase(cuentaId: string, anio: number, hoy: str
         AND coalesce(mb.duplicado_estado,'') <> 'ignorado' AND coalesce(mb.subcategoria,'') <> 'exento'
         AND coalesce(mb.categoria,'') <> 'devolucion_impuestos'
         AND mb.fecha_operacion BETWEEN ${ini}::date AND ${fin}::date`,
+    cargarHistoricoGastos(cuentaId, anio),
   ])
 
   // Propiedades y titularidad
@@ -217,7 +257,7 @@ export async function cargarEntradaBase(cuentaId: string, anio: number, hoy: str
     }),
     // Luz y agua van por su propio coste; internet y demás plantillas son «resto de fijos».
     fijos: fijosBd.filter(f => mapa.has(f.propiedad) && !esAgua(f.proveedor) && !/endesa|totalenergies|iberdrola|naturgy/i.test(f.proveedor ?? ''))
-      .map(f => ({ propertyId: f.propiedad, total: num(f.total) })),
+      .map(f => ({ propertyId: f.propiedad, total: num(f.total), dia: f.dia_mes })),
   })
 
   // Banco de la correduría: lo de compañías CIMA se excluye, lo de las demás se suma, lo irreconocible se avisa.
@@ -237,6 +277,8 @@ export async function cargarEntradaBase(cuentaId: string, anio: number, hoy: str
       : act(bancoCor),
     pilar: act(bancoPil),
     costes, referencia: refBd.map(fila),
+    // Recurrentes de piso por calendario: sin lectura del histórico NO se proyectan (null ≠ «no hay»).
+    ...(hist.pisos ? { historicoGastos: hist.pisos, recurrentesCubiertos: fijosBd.map(f => ({ ambito: f.propiedad, proveedor: f.proveedor ?? '' })) } : {}),
   }
 }
 

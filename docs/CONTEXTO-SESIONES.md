@@ -66,6 +66,13 @@ Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; ti
 original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados revisado/falta_roto/devuelto + bloque en ficha. `rrhh.material_empleado`
 (0028, aplicada). Pendiente fase 2: revisión periódica mensual.
 
+## (03/11/2026) Fiscal · gastos recurrentes a 31/12 + alerta Telegram de subidas
+- `lib/gastos-recurrentes-detectados.ts`: detección genérica proveedor+ámbito (mensual…anual), proyecta cargos pendientes a 31/12; recurrente con un cargo esperado ausente (>10 d de cortesía) = BAJA, no se proyecta (PriceLabs). Excluye lo ya cubierto (luz, agua, limpieza, lavandería, `gastos_fijos`).
+- Alerta `avisosGastosRecurrentes` (cron fiscal-avisos): ≥30 % y ≥20 € sobre media de 6 recibos; no avisa si el mismo mes del año anterior era parecido. Correduría = banco `seguros` (sin ingresos/traspasos/Bizum).
+- Bug arreglado: plantillas `gastos_fijos` del mes en curso ya apuntadas se volvían a proyectar (`mesesPlantillaPendientes`): base pisos +~730 € a 03/11.
+- Correduría detectada: autónomos 388,95 €, ASISA 180,99 €, Anthropic ~520 €, Vercel 95,44 €, IONOS 19,61 €. Alerta viva: Si Que Brilla 1.889 € vs 1.149 € (+64 %).
+- ⚠️ Cobro PriceLabs 30,09 € el 08/09/2026 tras la baja del 09/08: reclamar. El Giraldillo sin facturas desde julio.
+
 ## (03/11/2026) Fiscal · Pilar, correduría (proyección), IBI y Booking
 - Motor: la media mensual de actividad (Pilar y correduría) divide entre MESES COMPLETOS TRANSCURRIDOS, no entre meses con dato (helper `lib/media-actividad.ts` + test). Pilar 2026: solo 2 facturas (29/05, 2.100€ brutos / 1.981,13€ netos); prestación SS ene-mar 2.835€ (nacimiento, exenta, no cargada). Faltan sus CARGOS (autónomos real, plan pensiones). Bizum = personal.
 - IBI 2026 (confirmado con extracto BBVA 03/11): Socorro 2×242,93€ = 485,86€/año (1 recibo por semestre, BBVA ···1175, piso entero 50/50) y Dúplex 2×130,46€ = 260,92€ — cuadran con `gastos_fijos` (falta solo la fila de diciembre). Monte Carmelo (cuenta común) 4×171,55€ = personal. Socorro es CASA sin comunidad. Cargos del 03/11 aún no sincronizados en BD: asignar con factura_ref `ibi:<piso>:2026-plazo2`.
