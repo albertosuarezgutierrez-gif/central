@@ -100,6 +100,52 @@ export type EntradaAsignar = {
   envio_id?: string | null
 }
 
+export function estadoFirmaDe(firma: ModoFirma): { estado: 'pendiente_empresa' | 'pendiente' | 'no_requiere'; requiereEmpresa: boolean } {
+  return {
+    estado: firma === 'empresa_y_empleado' ? 'pendiente_empresa' : firma === 'solo_empleado' ? 'pendiente' : 'no_requiere',
+    requiereEmpresa: firma === 'empresa_y_empleado',
+  }
+}
+
+/**
+ * Inserta la fila de UNA copia ya subida a Storage (`destino`) y avisa si se pide. Compartido por el envío
+ * de un documento a varios empleados (`asignarStaging`) y por «Distribuir documentos desde PDF».
+ * IDEMPOTENTE: ON CONFLICT (envio_id, empleado_id) → si otra petición ganó, borra `destino` (sobra) y
+ * devuelve el documento existente con `ya_enviado`.
+ */
+export async function registrarCopia(p: {
+  empresaId: string; empleadoId: string; usuarioId: string; envioId: string
+  v: { carpeta: string; nombre: string; tipo: string | null; tamano: number | null }
+  destino: string; estado: 'pendiente_empresa' | 'pendiente' | 'no_requiere'; requiereEmpresa: boolean
+  categoria: CategoriaDoc | null; resumen: string | null; avisar: boolean; origen?: string | null
+}): Promise<{ doc_id: string; aviso?: ResultadoAviso | null; ya_enviado?: boolean }> {
+  const { empresaId, empleadoId, usuarioId, envioId, v, destino, estado, requiereEmpresa, categoria, resumen, avisar, origen } = p
+  const rows = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
+    INSERT INTO rrhh.documentos (empresa_id, empleado_id, carpeta, nombre, tipo, tamano, storage_path, subido_por,
+                                 estado_firma, requiere_firma_empresa, categoria_doc, resumen, envio_id, avisar)
+    VALUES (${empresaId}::uuid, ${empleadoId}::uuid, ${v.carpeta}, ${v.nombre}, ${v.tipo}, ${v.tamano}::bigint, ${destino}, ${ACTOR_GESTOR},
+            ${estado}, ${requiereEmpresa}, ${categoria}, ${resumen}, ${envioId}::uuid, ${avisar})
+    ON CONFLICT (envio_id, empleado_id) WHERE envio_id IS NOT NULL DO NOTHING
+    RETURNING id`)
+  if (!rows[0]) {
+    await borrarObjeto(destino) // la otra petición ganó: esta copia sobra
+    const ex = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
+      SELECT id FROM rrhh.documentos
+      WHERE empresa_id = ${empresaId}::uuid AND envio_id = ${envioId}::uuid AND empleado_id = ${empleadoId}::uuid LIMIT 1`)
+    if (!ex[0]) throw new Error('Conflicto de envío')
+    return { doc_id: ex[0].id, ya_enviado: true }
+  }
+  const docId = rows[0].id
+  let aviso: ResultadoAviso | null = null
+  if (avisar && estado === 'pendiente') aviso = await avisarSolicitudFirma(empresaId, empleadoId, docId, usuarioId, origen)
+  else if (avisar && estado === 'no_requiere') {
+    aviso = await avisarDocumento({ empresaId, empleadoId, documentoId: docId, tipo: 'documento_nuevo', creadoPor: usuarioId, origen })
+      .catch(err => { console.error('registrarCopia: aviso', err?.message); return null })
+  }
+  // pendiente_empresa: el aviso sale cuando la empresa firma (ruta firmar-empresa), si `avisar`.
+  return { doc_id: docId, aviso }
+}
+
 export type ResultadoAsignar = {
   envio_id: string
   total: number
@@ -168,39 +214,16 @@ export async function asignarStaging(empresaId: string, usuarioId: string, e: En
   // Mismas reglas que la subida normal del gestor (carpeta válida, permiso, nombre, tamaño).
   const v = validarSubida(CARPETAS_IDX, ACTOR_GESTOR, { carpeta: e.carpeta, nombre, tipo: info.tipo, tamano: info.tamano })
 
-  const estado = e.firma === 'empresa_y_empleado' ? 'pendiente_empresa' : e.firma === 'solo_empleado' ? 'pendiente' : 'no_requiere'
-  const requiereEmpresa = e.firma === 'empresa_y_empleado'
+  const { estado, requiereEmpresa } = estadoFirmaDe(e.firma)
 
   async function uno(empleadoId: string) {
     try {
       const destino = construirPathStorage({ tipo: 'empleado', id: empleadoId }, v.carpeta, v.nombre, crypto.randomUUID())
       await copiarObjeto(e.path, destino)
-      // ON CONFLICT: dos peticiones simultáneas del mismo envío → solo una fila por empleado.
-      const rows = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
-        INSERT INTO rrhh.documentos (empresa_id, empleado_id, carpeta, nombre, tipo, tamano, storage_path, subido_por,
-                                     estado_firma, requiere_firma_empresa, categoria_doc, resumen, envio_id, avisar)
-        VALUES (${empresaId}::uuid, ${empleadoId}::uuid, ${v.carpeta}, ${v.nombre}, ${v.tipo}, ${v.tamano}::bigint, ${destino}, ${ACTOR_GESTOR},
-                ${estado}, ${requiereEmpresa}, ${categoria}, ${resumen}, ${envioId}::uuid, ${e.avisar})
-        ON CONFLICT (envio_id, empleado_id) WHERE envio_id IS NOT NULL DO NOTHING
-        RETURNING id`)
-      if (!rows[0]) {
-        await borrarObjeto(destino) // la otra petición ganó: esta copia sobra
-        const ex = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
-          SELECT id FROM rrhh.documentos
-          WHERE empresa_id = ${empresaId}::uuid AND envio_id = ${envioId}::uuid AND empleado_id = ${empleadoId}::uuid LIMIT 1`)
-        if (!ex[0]) throw new Error('Conflicto de envío')
-        resultados.push({ empleado_id: empleadoId, doc_id: ex[0].id, ya_enviado: true })
-        return
-      }
-      const docId = rows[0].id
-      let aviso: ResultadoAviso | null = null
-      if (e.avisar && estado === 'pendiente') aviso = await avisarSolicitudFirma(empresaId, empleadoId, docId, usuarioId, origen)
-      else if (e.avisar && estado === 'no_requiere') {
-        aviso = await avisarDocumento({ empresaId, empleadoId, documentoId: docId, tipo: 'documento_nuevo', creadoPor: usuarioId, origen })
-          .catch(err => { console.error('asignarStaging: aviso', err?.message); return null })
-      }
-      // pendiente_empresa: el aviso sale cuando la empresa firma (ruta firmar-empresa), si `avisar`.
-      resultados.push({ empleado_id: empleadoId, doc_id: docId, aviso })
+      const r = await registrarCopia({
+        empresaId, empleadoId, usuarioId, envioId, v, destino, estado, requiereEmpresa, categoria, resumen, avisar: e.avisar, origen,
+      })
+      resultados.push({ empleado_id: empleadoId, ...r })
     } catch (err) {
       resultados.push({ empleado_id: empleadoId, error: err instanceof Error ? err.message.slice(0, 200) : 'Error' })
     }

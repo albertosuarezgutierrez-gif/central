@@ -102,6 +102,11 @@ El god-panel de plataforma crea empresas vía HTTP:
     (`carpetaAdmiteFirma`). `documentos.avisar=false` → firmar-empresa no avisa (NULL = anterior: avisa).
   - El cron `recordatorio-firmas` borra el staging de > 48 h (por empresa, solo `staging/<empresa>/`). Un aviso con
     `email_estado` NULL de > 1 h no cuenta como contacto (`ultimoContactoEfectivo`).
+- **Distribuir documentos desde PDF** (04/11/2026, panel en `/admin/documentos`, `POST /api/admin/documentos/distribuir-pdf`,
+  `lib/distribuir-documentos.ts` + reglas puras `distribuir-documentos-reglas.ts`): UN PDF → documento por empleado. Reusa la tubería de
+  nóminas (texto por página, `identificarEmpleado` estricto, `extraerPaginas`) y `registrarCopia` (insert idempotente + avisos/firma).
+  Páginas consecutivas del mismo empleado = 1 doc; sin identificar (o IA no verificada por DNI/nombre en el texto) = NO se asigna.
+  Idempotencia: `envio_id` determinista (hash del PDF+carpeta+páginas+empleado), sin cambios de BD.
 - Avisos (`lib/avisos.ts`, tabla `rrhh.avisos`): intranet + email + push con el resultado de cada canal registrado; un
   fallo de email no tumba la solicitud. Saltan al solicitar firma, al subir con «solo firma el empleado», al firmar la
   empresa y al «Reclamar». El empleado los ve en `/e` y abrir el documento los marca vistos (`documentos.visto_empleado_at`).
