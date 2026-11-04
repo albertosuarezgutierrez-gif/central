@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-04T06:12:53Z",
-  "sha": "e31ad5824645ed1d58ff4164d76827244aad4c60",
+  "generadoEn": "2026-11-04T07:31:44Z",
+  "sha": "0f9f90a73d7bc0aa6d554d40ae14f59ae8a59a4b",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -66847,7 +66847,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "",
-          "linea": 271
+          "linea": 273
         },
         {
           "nombre": "faseLoginPermitida",
@@ -66855,7 +66855,7 @@
           "exportada": true,
           "params": "fase: 'normal' | 'login', entrada: string",
           "retorno": "boolean",
-          "linea": 335,
+          "linea": 337,
           "resumen": "¿Se admite un paso de fase `login` para esta entrada? Solo si su compañía está en `LOGIN_ASISTIDO` (módulo; hoy Occident). La fase normal, siempre. Pura."
         },
         {
@@ -66864,7 +66864,7 @@
           "exportada": true,
           "params": "inv: InventarioDom",
           "retorno": "string",
-          "linea": 361,
+          "linea": 363,
           "resumen": "El inventario como JSON para el prompt, con `<` y `>` neutralizados (→ ‹ ›): el texto del portal (no confiable) no puede cerrar `</inventario>` ni abrir otra etiqueta del prompt. El JSON sigue siendo "
         },
         {
@@ -66873,7 +66873,7 @@
           "exportada": true,
           "params": "inv: InventarioDom",
           "retorno": "InventarioDom",
-          "linea": 367
+          "linea": 369
         },
         {
           "nombre": "promptLoginExplorador",
@@ -66881,7 +66881,7 @@
           "exportada": true,
           "params": "e: { entrada: string; inventario: InventarioDom; historial: string[]; avancesFallidos: number; pantallasLogin: number }",
           "retorno": "string",
-          "linea": 383,
+          "linea": 385,
           "resumen": "El mensaje de usuario de la fase de login: entrada, claves (sin valores), pasos anteriores y el inventario como DATOS."
         },
         {
@@ -66890,7 +66890,7 @@
           "exportada": true,
           "params": "pasos: readonly { respuesta: RespuestaExplorador | null }[]",
           "retorno": "string[]",
-          "linea": 394,
+          "linea": 396,
           "resumen": "Una línea por paso anterior: pantalla y acciones por CLAVE/ref (nunca valores)."
         },
         {
@@ -66899,7 +66899,7 @@
           "exportada": true,
           "params": "e: EntradaPrompt",
           "retorno": "string",
-          "linea": 421,
+          "linea": 423,
           "resumen": "El mensaje de usuario. El texto del portal va DELIMITADO como datos (`<inventario>`), en JSON: un intento de inyección desde el DOM se queda en una cadena dentro de un objeto. El catálogo va sin valor"
         },
         {
@@ -66908,7 +66908,7 @@
           "exportada": true,
           "params": "pasos: readonly PasoGuardado[], iniciadoAt: Date | null, ahora: Date",
           "retorno": "",
-          "linea": 453,
+          "linea": 455,
           "resumen": "Lo gastado hasta ahora por la exploración (para `comprobarTopes`). `iniciadoAt` null = ahora (0 ms)."
         },
         {
@@ -66917,13 +66917,13 @@
           "exportada": true,
           "params": "mapas: readonly { estado: string; mapa: unknown }[], huella: string",
           "retorno": "PantallaMapaExploracion | null",
-          "linea": 467,
+          "linea": 469,
           "resumen": "MEMORIA: la pantalla con esa huella en los mapas guardados (válidos) de la compañía/producto. Gana un mapa REVISADO por una persona; entre iguales, el primero de la lista (la consulta los trae del más"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "138548702e57"
+      "hash": "a3757d035e66"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-explorador.ts",
@@ -69320,7 +69320,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "",
-          "linea": 40,
+          "linea": 41,
           "resumen": "Forma de un comando (operador → BD → worker). Fail-closed: clave desconocida o acción fuera de lista → error. PURA."
         },
         {
@@ -69329,7 +69329,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "ResultadoComando | null",
-          "linea": 87
+          "linea": 88
         },
         {
           "nombre": "redactarTextoPilotaje",
@@ -69337,7 +69337,7 @@
           "exportada": true,
           "params": "t: string, valores: readonly string[]",
           "retorno": "string",
-          "linea": 100,
+          "linea": 101,
           "resumen": "Campos de DIAGNÓSTICO nuevos (motivo/detalle del resultado, URL): la misma barrera que `redactarValoresInventario` aplica a cada texto del inventario (`contieneValorSensible` con los valores sensibles"
         },
         {
@@ -69346,7 +69346,7 @@
           "exportada": true,
           "params": "r: ResultadoComando | null, valores: readonly string[]",
           "retorno": "ResultadoComando | null",
-          "linea": 103
+          "linea": 104
         },
         {
           "nombre": "leerPeticionEncolarPilotaje",
@@ -69354,7 +69354,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "",
-          "linea": 110,
+          "linea": 111,
           "resumen": "Cuerpo de `POST /api/operador/tarificador/pilotaje`: `{ entrada }` y nada más (sintética siempre). PURA."
         },
         {
@@ -69363,7 +69363,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "",
-          "linea": 135,
+          "linea": 136,
           "resumen": "Cuerpo de `POST /api/tarificador/pilotaje/estado` (worker). PURA."
         },
         {
@@ -69372,7 +69372,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 162,
+          "linea": 163,
           "resumen": "Solo origen + ruta (la query puede llevar tokens o datos): nunca se guarda entera. PURA."
         },
         {
@@ -69381,7 +69381,7 @@
           "exportada": true,
           "params": "b64: string",
           "retorno": "boolean",
-          "linea": 174,
+          "linea": 175,
           "resumen": "¿Es un PNG (firma de 8 bytes) en base64 y cabe en el tope? PURA."
         },
         {
@@ -69390,7 +69390,7 @@
           "exportada": true,
           "params": "sesionId: string, n: number",
           "retorno": "string",
-          "linea": 181,
+          "linea": 182,
           "resumen": "Ruta del objeto en el bucket: `pilotaje/<sesion>/<n>.png` (la misma forma que exige el CHECK de la tabla). PURA."
         },
         {
@@ -69399,7 +69399,7 @@
           "exportada": true,
           "params": "k: { ahora: Date; inicio: Date | null; leaseMs: number }",
           "retorno": "Date",
-          "linea": 187,
+          "linea": 188,
           "resumen": "Lease renovado de una sesión: `ahora + leaseMs`, nunca más allá de inicio + 30 min + margen. PURA."
         },
         {
@@ -69408,7 +69408,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "",
-          "linea": 200,
+          "linea": 201,
           "resumen": "Cuerpo de `POST /api/tarificador/pilotaje/cierre` (worker). PURA."
         },
         {
@@ -69417,13 +69417,13 @@
           "exportada": true,
           "params": "r: ResultadoComando | null",
           "retorno": "'hecho' | 'rechazado' | null",
-          "linea": 216,
+          "linea": 217,
           "resumen": "Estado de una fila tras el resultado de su comando. PURA."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "22ee475fe490"
+      "hash": "5850bfec7ce8"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-pilotaje.ts",
