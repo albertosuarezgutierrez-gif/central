@@ -748,7 +748,7 @@ test('0.3.5 · el explorador fija en el guard las rutas tolerables de SU entrada
   const { readFileSync } = await import('node:fs')
   const src = readFileSync(new URL('../src/explorador.ts', import.meta.url), 'utf8')
   const i = src.indexOf('const guard = await instalarGuardEmision(context)')
-  const j = src.indexOf('const tolerables = rutasAppTolerablesDe(exp.entrada)', i)
+  const j = src.indexOf('const tolerables = rutasAppTolerablesDe(entradaClave)', i)
   const k = src.indexOf('if (tolerables.length > 0) tolerarRutasApp(guard, tolerables)', j)
   const p = src.indexOf('const page = await context.newPage()', i)
   assert.ok(i > 0 && j > i && k > j && p > k, 'tolerarRutasApp con las rutas de la entrada, tras instalar el guard y antes de la página')

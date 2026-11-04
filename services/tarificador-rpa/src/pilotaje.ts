@@ -41,7 +41,7 @@ import { exigirSinCaptcha } from './captcha.ts'
 import { clasificar } from './errores.ts'
 import { exigirSinVerificacion } from './verificacion.ts'
 import { capturarInventarioExploracion, type InventarioExploracion } from './inventario-dom.ts'
-import { ATRIBUTO_MARCA, PORTALES_EXPLORACION, elegirNxDropdown, localizar, valorParaControl, type CtxEntrada } from './explorador.ts'
+import { ATRIBUTO_MARCA, PORTALES_EXPLORACION, abrirSesionEntrada, crearCtxEntrada, elegirNxDropdown, entrarAlPortal, localizar, valorParaControl } from './explorador.ts'
 import {
   cerrarFaseEntrada,
   exigirCampoNoBancario,
@@ -349,49 +349,12 @@ export async function ejecutarPilotaje(p: EntradaPilotaje): Promise<number> {
   let finP: FinPilotaje
   try {
     browser = await chromium.launch({ headless: true })
-    const context = await browser.newContext({ locale: 'es-ES', timezoneId: 'Europe/Madrid' })
-    const guard = await instalarGuardEmision(context)
-    const tolerables = rutasAppTolerablesDe(entradaClave)
-    if (tolerables.length > 0) tolerarRutasApp(guard, tolerables)
-    const neutras = neutralizacionesOnclickDe(entradaClave)
-    if (neutras.length > 0) neutralizarOnclicksEntrada(guard, neutras)
-    const page = await context.newPage()
-    page.setDefaultTimeout(TOPE_PASO_MS)
-    page.setDefaultNavigationTimeout(TOPE_PASO_MS)
-    page.on('dialog', (d) => { d.dismiss().catch(() => {}) })
-    const ctxEntrada: CtxEntrada = {
-      credenciales,
-      log: (m) => log(m),
-      pausa: () => dormirReal(azar(800, 2_500)),
-      pulsar: async (boton) => {
-        await dormirReal(azar(300, 1_200))
-        await pulsar(boton, guard)
-      },
-      exigirSinCaptcha: () => exigirSinCaptcha(page),
-      // `resto[0]` = opciones de la puerta (Pelayo: `{ reintento }`), si la entrada las pasa; la puerta las valida.
-      pulsarEnlaceEntrada: async (boton: Locator, ...resto: unknown[]) => {
-        await dormirReal(azar(300, 1_200))
-        await pulsarEnlaceEntradaAutorizado(boton, guard, trabajo.compania, resto[0] as { reintento?: boolean } | undefined)
-      },
-      pulsarAccesoNse: async (boton) => {
-        await dormirReal(azar(300, 1_200))
-        await pulsarAccesoNseMapfre(boton, guard, trabajo.compania)
-      },
-      pulsarMenuNse: async (boton) => {
-        await dormirReal(azar(300, 1_200))
-        await pulsarMenuOfertaNseMapfre(boton, guard, trabajo.compania)
-      },
-    }
+    // MISMO camino que el explorador (04/11/2026): sesión, ctx de entrada y login + entrada son las funciones del explorador, sin copia.
+    const { guard, page } = await abrirSesionEntrada(browser, entradaClave)
+    const ctxEntrada = crearCtxEntrada({ page, guard, compania: trabajo.compania, credenciales, log, dormir: dormirReal })
     let pagina = page
     try {
-      const devuelta = await portal.entrar(page, ctxEntrada, entrada)
-      if (devuelta && devuelta !== page) {
-        pagina = devuelta
-        pagina.setDefaultTimeout(TOPE_PASO_MS)
-        pagina.setDefaultNavigationTimeout(TOPE_PASO_MS)
-        pagina.on('dialog', (dlg) => { dlg.dismiss().catch(() => {}) })
-      }
-      cerrarFaseEntrada(guard)
+      pagina = await entrarAlPortal(page, portal, ctxEntrada, entrada, guard)
       log('pilotaje_entrada_ok', { entrada: entradaClave })
     } catch (e) {
       const c = clasificar(guard.violacion() ?? e)

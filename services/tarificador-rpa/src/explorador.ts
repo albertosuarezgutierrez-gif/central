@@ -24,7 +24,7 @@
 //    prohibidos en el validador, en `pulsar()` y en `pulsarGuardadoPresupuesto`). 🔑 Ningún valor de campo ni credencial va al log, a asegura ni a la IA.
 
 import { randomUUID } from 'node:crypto'
-import { chromium, type Browser, type Frame, type Locator, type Page } from 'playwright'
+import { chromium, type Browser, type BrowserContext, type Frame, type Locator, type Page } from 'playwright'
 import {
   CLAVES_AUTOCOMPLETADO,
   CLAVES_VALIDAN_AL_SALIR,
@@ -145,7 +145,7 @@ const MAX_BYTES_PDF_PRESUPUESTO = 9 * 1024 * 1024
 
 export type CtxEntrada = Pick<ContextoPortal, 'credenciales' | 'pausa' | 'pulsar' | 'exigirSinCaptcha' | 'log'> & {
   /** Enlace de menú autorizado de la compañía del trabajo (`pulsarEnlaceEntradaAutorizado`); solo en la ENTRADA. */
-  pulsarEnlaceEntrada: (boton: Locator) => Promise<void>
+  pulsarEnlaceEntrada: (boton: Locator, opciones?: { reintento?: boolean }) => Promise<void>
   /** «Acceso a NSE» de Mapfre Patinetes (`pulsarAccesoNseMapfre`); solo en la ENTRADA. */
   pulsarAccesoNse?: (boton: Locator) => Promise<void>
   /** «Oferta / Contratación» del menú NSE de Mapfre (`pulsarMenuOfertaNseMapfre`); solo en la ENTRADA. */
@@ -155,6 +155,8 @@ export type CtxEntrada = Pick<ContextoPortal, 'credenciales' | 'pausa' | 'pulsar
    * necesita además del contexto: la entrada, el guard (ventana de red del login) y el paso de login hacia asegura.
    */
   loginAsistido?: Pick<CtxLoginAsistido, 'entrada' | 'guard' | 'pedirPaso' | 'log'>
+  /** 0.3.33: nota de diagnóstico de la entrada (Pelayo: elección del ramo); la lee el explorador. */
+  diagnostico?: (nota: string) => void
 }
 
 export type PortalExploracion = {
@@ -1364,6 +1366,82 @@ export async function finDeEntrada(e: unknown, page: Page, redactar: (t: string)
 }
 
 /**
+ * SESIÓN DE ENTRADA ÚNICA (04/11/2026): el navegador, el contexto, el guard y la página con los que se hace el login + la entrada cerrada.
+ * La usan el explorador Y el modo pilotado (`pilotaje.ts`): el mismo contexto (locale, zona, descargas), las mismas tolerancias/neutralizaciones
+ * del guard por entrada y los mismos topes de la página. Así el pilotaje no puede divergir del camino que ya sabe hacer login.
+ */
+export async function abrirSesionEntrada(browser: Browser, entradaClave: string): Promise<{ context: BrowserContext; guard: GuardEmision; page: Page }> {
+  // Descargas ACEPTADAS (14/10/2026): el PDF del presupuesto guardado llega como descarga; solo lo lee `esperarPdf` en memoria.
+  const context = await browser.newContext({ locale: 'es-ES', timezoneId: 'Europe/Madrid', acceptDownloads: true })
+  const guard = await instalarGuardEmision(context)
+  // Rutas de aplicación tolerables de la entrada (Mapfre NSE `/app/emision/`, decisión de Alberto 28/10/2026); las demás, ninguna.
+  const tolerables = rutasAppTolerablesDe(entradaClave)
+  if (tolerables.length > 0) tolerarRutasApp(guard, tolerables)
+  // 0.3.19: subcadena exacta del onclick de UN control exacto (Mapfre NSE «Siguiente >>»); las demás entradas, ninguna.
+  const neutras = neutralizacionesOnclickDe(entradaClave)
+  if (neutras.length > 0) neutralizarOnclicksEntrada(guard, neutras)
+  const page = await context.newPage()
+  page.setDefaultTimeout(TOPE_PASO_MS)
+  page.setDefaultNavigationTimeout(TOPE_PASO_MS)
+  // Ningún diálogo del portal se acepta.
+  page.on('dialog', (d) => { d.dismiss().catch(() => {}) })
+  return { context, guard, page }
+}
+
+/** El `CtxEntrada` ÚNICO del explorador y del pilotaje: pausas, pulsaciones por las puertas del guard y captcha. Solo cambia lo que cada modo inyecta. */
+export function crearCtxEntrada(d: {
+  page: Page
+  guard: GuardEmision
+  compania: string
+  credenciales: Credenciales
+  log: Log
+  dormir?: (ms: number) => Promise<void>
+  diagnostico?: (nota: string) => void
+  loginAsistido?: CtxEntrada['loginAsistido']
+}): CtxEntrada {
+  const dorm = d.dormir ?? dormir
+  const { guard, compania } = d
+  return {
+    credenciales: d.credenciales,
+    log: (m) => d.log(m),
+    pausa: () => dorm(azar(800, 2_500)),
+    pulsar: async (boton) => {
+      await dorm(azar(300, 1_200))
+      await pulsar(boton, guard)
+    },
+    exigirSinCaptcha: () => exigirSinCaptcha(d.page),
+    pulsarEnlaceEntrada: async (boton, opciones) => {
+      await dorm(azar(300, 1_200))
+      await pulsarEnlaceEntradaAutorizado(boton, guard, compania, opciones)
+    },
+    ...(d.diagnostico ? { diagnostico: d.diagnostico } : {}),
+    pulsarAccesoNse: async (boton) => {
+      await dorm(azar(300, 1_200))
+      await pulsarAccesoNseMapfre(boton, guard, compania)
+    },
+    pulsarMenuNse: async (boton) => {
+      await dorm(azar(300, 1_200))
+      await pulsarMenuOfertaNseMapfre(boton, guard, compania)
+    },
+    ...(d.loginAsistido ? { loginAsistido: d.loginAsistido } : {}),
+  }
+}
+
+/** Login + entrada cerrada del portal (`portal.entrar`) y cierre de la fase de entrada. Devuelve la página del formulario. Compartido con el pilotaje. */
+export async function entrarAlPortal(page: Page, portal: PortalExploracion, ctx: CtxEntrada, e: EntradaExploracion, guard: GuardEmision): Promise<Page> {
+  let pagina = page
+  const devuelta = await portal.entrar(page, ctx, e)
+  if (devuelta && devuelta !== page) {
+    pagina = devuelta
+    pagina.setDefaultTimeout(TOPE_PASO_MS)
+    pagina.setDefaultNavigationTimeout(TOPE_PASO_MS)
+    pagina.on('dialog', (dlg) => { dlg.dismiss().catch(() => {}) })
+  }
+  cerrarFaseEntrada(guard)
+  return pagina
+}
+
+/**
  * La ENTRADA cerrada y el bucle, sobre la página donde terminó la entrada (la que `entrar` devuelve si abrió una pestaña
  * nueva; si no, la misma `page`). Cierra la fase de entrada del guard antes del primer paso. Nunca lanza: un fallo de la
  * entrada sale por `finDeEntrada` con la evidencia de esa página.
@@ -1383,14 +1461,7 @@ export async function entrarYExplorar(
 ): Promise<FinBucle> {
   let pagina = page
   try {
-    const devuelta = await portal.entrar(page, ctx, e)
-    if (devuelta && devuelta !== page) {
-      pagina = devuelta
-      pagina.setDefaultTimeout(TOPE_PASO_MS)
-      pagina.setDefaultNavigationTimeout(TOPE_PASO_MS)
-      pagina.on('dialog', (dlg) => { dlg.dismiss().catch(() => {}) })
-    }
-    cerrarFaseEntrada(d.guard)
+    pagina = await entrarAlPortal(page, portal, ctx, e, d.guard)
     d.alEntrar?.()
     // TODAS las páginas abiertas al cerrar la entrada son de la entrada (real 28/10/2026, Mapfre Patinetes: home → pestaña del
     // enlace de la tarjeta → ventana de «Acceso a NSE»; la intermedia contaba como ventana nueva y el bucle paraba `sin_salida`).
@@ -1484,46 +1555,14 @@ export async function ejecutarExploracion(p: EntradaEjecucion): Promise<number> 
   let finExp: FinBucle
   try {
     browser = await chromium.launch({ headless: true })
-    // Descargas ACEPTADAS (14/10/2026): el PDF del presupuesto guardado llega como descarga; solo lo lee `esperarPdf` en memoria.
-    const context = await browser.newContext({ locale: 'es-ES', timezoneId: 'Europe/Madrid', acceptDownloads: true })
-    const guard = await instalarGuardEmision(context)
-    // Rutas de aplicación tolerables de la entrada (Mapfre NSE `/app/emision/`, decisión de Alberto 28/10/2026); las demás, ninguna.
-    const tolerables = rutasAppTolerablesDe(exp.entrada)
-    if (tolerables.length > 0) tolerarRutasApp(guard, tolerables)
-    // 0.3.19: subcadena exacta del onclick de UN control exacto (Mapfre NSE «Siguiente >>»); las demás entradas, ninguna.
-    const neutras = neutralizacionesOnclickDe(exp.entrada)
-    if (neutras.length > 0) neutralizarOnclicksEntrada(guard, neutras)
-    const page = await context.newPage()
-    page.setDefaultTimeout(TOPE_PASO_MS)
-    page.setDefaultNavigationTimeout(TOPE_PASO_MS)
-    // Ningún diálogo del portal se acepta.
-    page.on('dialog', (d) => { d.dismiss().catch(() => {}) })
+    const { guard, page } = await abrirSesionEntrada(browser, exp.entrada)
     let notaEntrada: string | undefined
-    const ctxEntrada: CtxEntrada = {
-      credenciales,
-      log: (m) => log(m),
-      pausa: () => dormir(azar(800, 2_500)),
-      pulsar: async (boton) => {
-        await dormir(azar(300, 1_200))
-        await pulsar(boton, guard)
-      },
-      exigirSinCaptcha: () => exigirSinCaptcha(page),
-      pulsarEnlaceEntrada: async (boton, opciones) => {
-        await dormir(azar(300, 1_200))
-        await pulsarEnlaceEntradaAutorizado(boton, guard, trabajo.compania, opciones)
-      },
+    const ctxEntrada = crearCtxEntrada({
+      page, guard, compania: trabajo.compania, credenciales, log,
       diagnostico: (n) => { notaEntrada = n },
-      pulsarAccesoNse: async (boton) => {
-        await dormir(azar(300, 1_200))
-        await pulsarAccesoNseMapfre(boton, guard, trabajo.compania)
-      },
-      pulsarMenuNse: async (boton) => {
-        await dormir(azar(300, 1_200))
-        await pulsarMenuOfertaNseMapfre(boton, guard, trabajo.compania)
-      },
       // Login asistido SOLO para las compañías de la lista cerrada del módulo (asegura lo vuelve a comprobar por la entrada).
       ...(loginAsistidoDe(exp.entrada) ? { loginAsistido: { entrada: exp.entrada, guard, log, pedirPaso: (c) => pedirPaso(cfg, { trabajoId: trabajo.id, ...c, fase: 'login' }) } } : {}),
-    }
+    })
     finExp = await entrarYExplorar(page, portal, ctxEntrada, entrada, {
       guard, redactar, env,
       alEntrar: () => log('exploracion_entrada_ok', { entrada: exp.entrada }),
