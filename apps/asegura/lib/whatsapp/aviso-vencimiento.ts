@@ -83,7 +83,7 @@ async function leerCandidatos(correduriaId: string, hoyIso: string): Promise<Can
       join clientes c on c.id = o.cliente_id and c.correduria_id = o.correduria_id
       join conversaciones cv on cv.cliente_id = c.id and cv.correduria_id = o.correduria_id and cv.wa_telefono_hash is not null
      where o.correduria_id = ${correduriaId}::uuid and o.estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
-       and o.import_ref is null and o.poliza_id is null and c.merged_into_cliente_id is null
+       and o.import_ref is null and o.poliza_id is null and c.merged_into_cliente_id is null -- import_ref de OPORTUNIDAD (lead del volcado)
        and o.fecha_fin_vigencia between ${desde}::date and ${hasta}::date
      order by o.fecha_fin_vigencia, o.id limit ${LIMITE_CRIBA}`)
   return [...filasPol, ...filasOpo]
@@ -105,7 +105,7 @@ async function leerRegistro(correduriaId: string, claves: string[], hoyIso: stri
     db.$queryRaw<{ cliente_id: string }[]>(Prisma.sql`
       select distinct cliente_id::text as cliente_id from whatsapp_avisos_vencimiento
        where correduria_id = ${correduriaId}::uuid and estado in ('reservado', 'enviado')
-         and creada_at > now() - make_interval(days => ${DIAS_ENTRE_AVISOS_CLIENTE})`),
+         and creada_at > now() - make_interval(days => ${DIAS_ENTRE_AVISOS_CLIENTE}::int)`),
     db.$queryRaw<{ n: number }[]>(Prisma.sql`
       select count(*)::int as n from whatsapp_avisos_vencimiento
        where correduria_id = ${correduriaId}::uuid and estado in ('reservado', 'enviado') and (creada_at at time zone 'Europe/Madrid')::date = ${hoyIso}::date`),
