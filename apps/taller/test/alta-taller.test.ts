@@ -155,3 +155,136 @@ test('alta con dirección completa la guarda; a medias → 400 y no se crea nada
   assert.equal((await manejador(m3)(req(cuerpo))).status, 201)
   assert.equal(m3.bd.filas('taller')[0].cp, undefined)
 })
+
+// ── Taller que YA existe sin dueño (piloto G2: sembrado por 0002 con configuración y código, 0 usuarios y NIF NULL) ──
+// Cepos vistos fallar el 04/11/2026 (uno por brazo, restaurados → verde): sin el candado → rojo «a la vez»; 409 viejo (sin mirar dueños)
+// → rojo «0 dueños»; sin el 404 → rojo «inexistente»; sin el chequeo de NIF distinto → rojo «OTRO NIF»; sin fijar NIF → rojo «NIF NULL»;
+// sin mapear P2002 → rojo «ux_talleres_nif»; sin el 409 de taller a medias con dueño → rojo «a medias».
+const G2 = 'f9e29b9a-0fb8-4196-ac7a-01c1722b1d8b'
+async function sembrarG2(m: ReturnType<typeof montar>, nif: string | null = null) {
+  m.bd.sembrar('taller', { id: G2, razonSocial: 'Talleres de Automoción G2', nombreComercial: 'G2', ...(nif ? { nif } : {}), codigoAcceso: 'G2CODIGO' })
+  // Configuración completa como la deja el alta (mismo camino que un alta normal, con RLS).
+  const alta = configDeAlta()
+  const { escalaresDeConfig, guardarConfig } = await import('../lib/config-repo.ts')
+  await m.conTaller(G2, async (tx: any) => {
+    await tx.configuracion.create({ data: { tallerId: G2, ...escalaresDeConfig(alta) } })
+    await guardarConfig(tx, G2, alta)
+  })
+}
+
+test('taller existente con configuración y 0 dueños activos → se crea el dueño con PIN temporal (201), sin segundo taller', async () => {
+  const m = montar()
+  await sembrarG2(m, 'B12345678')
+  const r = await manejador(m)(req(cuerpo))
+  assert.equal(r.status, 201)
+  const j: any = await r.json()
+  assert.equal(j.tallerId, G2)
+  assert.equal(j.codigoTaller, 'G2CODIGO', 'se conserva el código que ya tenía')
+  assert.match(j.pinTemporal, /^\d{4}$/)
+  assert.equal(m.bd.filas('taller').length, 1, 'no se crea otro taller')
+  const u = m.bd.filas('usuarioTaller')
+  assert.equal(u.length, 1); assert.equal(u[0].rol, 'dueno'); assert.equal(u[0].debeCambiarPin, true)
+  assert.equal(m.bd.filas('configuracion').length, 1, 'no se duplica la configuración')
+  assert.ok(m.bd.filas('auditoria').some((a) => a.accion === 'alta_operador'), 'auditado')
+  assert.ok(!JSON.stringify(m.bd.filas('auditoria')).includes(j.pinTemporal), 'el PIN no va a la auditoría')
+  // Un dueño DADO DE BAJA no cuenta como dueño: se puede volver a dar uno.
+  const m2 = montar()
+  await sembrarG2(m2, 'B12345678')
+  m2.bd.sembrar('usuarioTaller', { tallerId: G2, nombre: 'Antiguo', rol: 'dueno', pinHash: 'x', activo: false })
+  assert.equal((await manejador(m2)(req(cuerpo))).status, 201)
+})
+
+test('taller existente con dueño activo → 409 con el código, sin PIN nuevo ni segundo dueño (también por tallerId)', async () => {
+  const m = montar()
+  await sembrarG2(m, 'B12345678')
+  const h = manejador(m)
+  assert.equal((await h(req(cuerpo))).status, 201)
+  for (const c of [cuerpo, { ...cuerpo, tallerId: G2 }]) {
+    const r = await h(req(c))
+    assert.equal(r.status, 409)
+    const j: any = await r.json()
+    assert.ok(!('pinTemporal' in j))
+    assert.equal(j.codigoTaller, 'G2CODIGO')
+  }
+  assert.equal(m.bd.filas('usuarioTaller').length, 1)
+})
+
+test('tallerId inexistente → 404 y no se crea nada (ni se llama a alta_taller)', async () => {
+  const m = montar()
+  let llamadas = 0
+  const crearTaller = async (d: any) => { llamadas++; return m.crearTaller(d) }
+  const h = crearManejadorAlta({ autorizado: () => true, alta: (e) => altaTaller({ crearTaller, conTaller: m.conTaller }, e) })
+  const r = await h(req({ ...cuerpo, tallerId: '00000000-0000-4000-8000-0000000000ff' }))
+  assert.equal(r.status, 404)
+  assert.equal(llamadas, 0)
+  assert.equal(m.bd.filas('taller').length, 0)
+  assert.equal(m.bd.filas('usuarioTaller').length, 0)
+  assert.equal((await h(req({ ...cuerpo, tallerId: 'no-uuid' }))).status, 400)
+})
+
+test('tallerId con OTRO NIF → 409, no se pisa el NIF ni se crea dueño', async () => {
+  const m = montar()
+  await sembrarG2(m, 'B99999999')
+  const r = await manejador(m)(req({ ...cuerpo, tallerId: G2 }))
+  assert.equal(r.status, 409)
+  assert.ok(!('pinTemporal' in ((await r.json()) as any)))
+  assert.equal(m.bd.filas('taller')[0].nif, 'B99999999')
+  assert.equal(m.bd.filas('usuarioTaller').length, 0)
+})
+
+test('tallerId con NIF NULL → se fija el NIF de la entrada y se crea el dueño; sin tallerId ese caso crearía un 2.º taller', async () => {
+  const m = montar()
+  await sembrarG2(m, null)
+  const r = await manejador(m)(req({ ...cuerpo, nif: 'b-12345678', tallerId: G2.toUpperCase(), rrhhEmpresaId: '33333333-3333-4333-8333-333333333333' }))
+  assert.equal(r.status, 201)
+  const j: any = await r.json()
+  assert.equal(j.tallerId, G2)
+  assert.equal(m.bd.filas('taller').length, 1)
+  assert.equal(m.bd.filas('taller')[0].nif, 'B12345678')
+  assert.equal(m.bd.filas('taller')[0].razonSocial, 'Talleres de Automoción G2', 'la razón social no se pisa')
+  assert.deepEqual(m.vinculos, [], 'rrhhEmpresaId solo en alta NUEVA')
+  assert.equal(m.bd.filas('usuarioTaller').length, 1)
+})
+
+test('tallerId con NIF NULL pero ese NIF ya es de OTRO taller (ux_talleres_nif) → 409 y no se crea nada', async () => {
+  const m = montar()
+  await sembrarG2(m, null)
+  m.bd.sembrar('taller', { id: '11111111-1111-4111-8111-111111111111', razonSocial: 'Otro', nombreComercial: 'Otro', nif: 'B12345678' })
+  // El fake no tiene índices únicos: se emula el choque de Postgres/Prisma al fijar el NIF.
+  const conTaller = (id: unknown, fn: (tx: any) => Promise<any>, o?: any) => m.conTaller(id, (tx: any) => fn(new Proxy(tx, {
+    get(t, k) {
+      if (k !== 'taller') return t[k]
+      const d = t.taller
+      return { ...d, update: async (a: any) => {
+        if (a.data?.nif && m.bd.filas('taller').some((x) => x.nif === a.data.nif && x.id !== a.where.id))
+          throw Object.assign(new Error('Unique constraint failed on the fields: (`nif`)'), { code: 'P2002', meta: { target: ['nif'] } })
+        return d.update(a)
+      } }
+    },
+  })), o)
+  const h = crearManejadorAlta({ autorizado: () => true, alta: (e) => altaTaller({ crearTaller: m.crearTaller, conTaller: conTaller as any }, e) })
+  const r = await h(req({ ...cuerpo, tallerId: G2 }))
+  assert.equal(r.status, 409)
+  assert.equal(m.bd.filas('taller').find((x) => x.id === G2)!.nif, undefined)
+  assert.equal(m.bd.filas('usuarioTaller').length, 0)
+})
+
+test('dos altas A LA VEZ del mismo taller sin dueño → un solo dueño y un solo PIN (candado por taller)', async () => {
+  const m = montar()
+  await sembrarG2(m, 'B12345678')
+  const h = manejador(m)
+  const rs = await Promise.all([h(req(cuerpo)), h(req({ ...cuerpo, tallerId: G2 }))])
+  assert.deepEqual(rs.map((r) => r.status).sort(), [201, 409])
+  assert.equal(m.bd.filas('usuarioTaller').length, 1)
+})
+
+test('taller a medias (sin configuración) pero CON dueño activo → se completa la configuración, 409 sin PIN ni segundo dueño', async () => {
+  const m = montar()
+  m.bd.sembrar('taller', { id: G2, razonSocial: 'G2', nombreComercial: 'G2', nif: 'B12345678', codigoAcceso: 'G2CODIGO' })
+  m.bd.sembrar('usuarioTaller', { tallerId: G2, nombre: 'Dueño', rol: 'dueno', pinHash: 'x' })
+  const r = await manejador(m)(req(cuerpo))
+  assert.equal(r.status, 409)
+  assert.ok(!('pinTemporal' in ((await r.json()) as any)))
+  assert.equal(m.bd.filas('configuracion').length, 1)
+  assert.equal(m.bd.filas('usuarioTaller').length, 1)
+})
