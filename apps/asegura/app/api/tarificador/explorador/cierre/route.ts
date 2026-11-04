@@ -4,6 +4,7 @@ import { workerAutorizado } from '@/lib/tarificador-worker-auth'
 import { hayExplorador } from '@/lib/esquema-bd'
 import { PasoOcupado, anotarErroresUltimoPaso, conLockExploracion, costeYModelo, exploracionViva, guardarMapa, leerEstadoPaso, pasosDe, riesgoDeExploracion, type Bd } from '@/lib/tarificador-explorador'
 import { ejecutarCierre } from '@/lib/tarificador-explorador-paso'
+import { permisosNavegacionDeEntrada } from '@/lib/tarificador-permisos-navegacion'
 import { huecoDeDetalleFin, leerPeticionCierre } from '@/lib/tarificador-explorador-reglas'
 
 export const runtime = 'nodejs'
@@ -32,6 +33,8 @@ export async function POST(req: Request) {
     // Re-validación con las MISMAS reglas que el paso: con datos reales, elegir/marcar solo con valor conocido. Sin riesgo
     // legible (`null`), esos pasos no entran en el mapa (conservador).
     const datosReales = e.conDatosReales ? { riesgo: await riesgoDeExploracion(e).catch(() => null) } : null
+    // 0.3.46: los mismos permisos de navegación de BD que validaron cada paso (fail-closed: sin tabla = solo código).
+    const permisos = await permisosNavegacionDeEntrada(e.entrada)
     let resumen: { pantallas: number; huecos: number; resultado: boolean; coste: { llamadas: number; eurEstimado: number } } | null = null
     const out = await ejecutarCierre<Bd>({
       conLock: (fn) => conLockExploracion(e, fn),
@@ -49,7 +52,7 @@ export async function POST(req: Request) {
         })
         const pasos = leidos.map((x) => {
           const inv = sanearInventarioDom(x.inventario, undefined, { refs: true })
-          const v = inv && x.respuesta ? validarRespuestaExplorador(x.respuesta, { inventario: inv, ramo: e.ramo, entrada: e.entrada, datosReales, presupuestoEnCurso: enCurso }) : null
+          const v = inv && x.respuesta ? validarRespuestaExplorador(x.respuesta, { inventario: inv, ramo: e.ramo, entrada: e.entrada, datosReales, presupuestoEnCurso: enCurso, permisos }) : null
           const respuesta: RespuestaExplorador | null = v?.ok ? v.respuesta : null
           if (respuesta?.acciones.some((a) => a.accion === 'avanzar' && a.efectoEsperado === 'guardar_presupuesto')) enCurso = true
           return inv ? { huella: huellaPantalla(inv), inventario: inv, respuesta } : null

@@ -149,7 +149,7 @@ test('topes · 3 por defecto, 6 en la simulación de Vivienda de Fidelidade', ()
 })
 test('el explorador pulsa lo de la navegación libre SOLO por pulsarNavegacionLibre (nunca por el pulsar genérico)', () => {
   const src = readFileSync(new URL('../src/explorador.ts', import.meta.url), 'utf8')
-  assert.match(src, /else if \(requiereNavegacionLibre\(k\.entrada, hit\.el, hit\.marco\)\) \{[\s\S]{0,400}?await pulsarNavegacionLibre\(loc, k\.guard, \{ entrada: k\.entrada, el: hit\.el, marco: hit\.marco \}\)\s*\} else \{\s*await k\.pulsar\(loc\)/)
+  assert.match(src, /else if \(requiereNavegacionLibre\(k\.entrada, hit\.el, hit\.marco, permisosNavegacionEn\(k\.guard\)\)\) \{[\s\S]{0,400}?await pulsarNavegacionLibre\(loc, k\.guard, \{ entrada: k\.entrada, el: hit\.el, marco: hit\.marco \}\)\s*\} else \{\s*await k\.pulsar\(loc\)/)
 })
 
 // ───────────────────────── vivo: la puerta del guard ─────────────────────────

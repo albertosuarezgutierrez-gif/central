@@ -19,6 +19,7 @@ import {
   riesgoDeExploracion,
 } from '@/lib/tarificador-explorador'
 import { ejecutarPaso } from '@/lib/tarificador-explorador-paso'
+import { permisosNavegacionDeEntrada } from '@/lib/tarificador-permisos-navegacion'
 import {
   MAX_TOKENS_SALIDA_EXPLORADOR,
   MAX_TOKENS_SALIDA_LOGIN,
@@ -80,8 +81,10 @@ export async function POST(req: Request) {
     const inventario = redactarValoresInventario(p.inventario, valores)
 
     let inicio: Date | null = null
+    // 0.3.46: permisos de navegación de BD de la entrada (validados; fail-closed: sin tabla o sin filas = solo código).
+    const permisos = await permisosNavegacionDeEntrada(e.entrada)
     const out = await ejecutarPaso<Bd>(
-      { inventario, avancesFallidos: p.avancesFallidos, ramo: e.ramo, entrada: e.entrada, conDatosReales: e.conDatosReales, modelo, riesgo, incidencias: p.incidencias, vistaAria: sanearVistaAria(p.vistaAria, valores), fase: p.fase },
+      { inventario, avancesFallidos: p.avancesFallidos, ramo: e.ramo, entrada: e.entrada, conDatosReales: e.conDatosReales, modelo, riesgo, incidencias: p.incidencias, vistaAria: sanearVistaAria(p.vistaAria, valores), fase: p.fase, permisos },
       {
         conLock: (fn) => conLockExploracion(e, fn),
         leer: async (bd) => {

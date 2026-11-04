@@ -33,6 +33,7 @@ import {
 import { decryptField } from '@central/module-seguros-pii'
 import { aplicarCompaniaActual, aplicarPolizaAnteriorUltimos5, companiaActualDeCliente, companiaActualUnica, necesitaCompaniaActual, type PolizaParaCompaniaActual } from './tarificador-compania-actual'
 import { aplicarFichaTomador, fichaTomadorAutoDeFicha, necesitaFichaTomador, type FilaFichaTomadorAuto } from './tarificador-ficha-tomador'
+import { permisosNavegacionParaWorker } from './tarificador-permisos-navegacion'
 import { prisma } from './tenant'
 import { esRamoVehiculo, ofertasConSupuestoReferencia, referenciaDeResultadoOrigen, riesgoConReferencia, usadoDeResultado } from './tarificador-vehiculo-referencia'
 import { anotarVehiculoUsado, guardarReferenciaOportunidad, leerReferenciaOportunidad } from './tarificador-vehiculo-referencia-bd'
@@ -528,6 +529,11 @@ export type TrabajoParaWorker = {
   pilotaje?: { entrada: string }
   /** Solo en `modo = 'exploracion'`: la entrada cerrada y si va ligada a una petición real (la verdad: `cliente_id`). */
   exploracion?: { entrada: string; conDatosReales: boolean }
+  /**
+   * 0.3.46: permisos de navegación de BD YA validados (filas canónicas; el worker los revalida). Solo exploración, pilotaje (los de su
+   * entrada) y tarificar (solo rutas de las entradas de su compañía/ramo); nunca emisión ni humo. Sin la clave = ninguno.
+   */
+  permisosNavegacion?: unknown[]
 }
 
 /**
@@ -551,7 +557,9 @@ export async function trabajoParaWorker(id: string, modosWorker: readonly string
   // abierta legible → no se sirve (el worker sale sin entrar en el portal).
   if (modo === 'pilotaje') {
     const entrada = await entradaDePilotaje(f.id, f.correduria_id)
-    return entrada ? { id: f.id, compania: f.compania, ramo: f.ramo, riesgo: {}, leaseHasta: f.lease_hasta.toISOString(), modo, pilotaje: { entrada } } : null
+    if (!entrada) return null
+    const permisosNavegacion = await permisosNavegacionParaWorker('pilotaje', { id: f.id, compania: f.compania, ramo: f.ramo, entrada })
+    return { id: f.id, compania: f.compania, ramo: f.ramo, riesgo: {}, leaseHasta: f.lease_hasta.toISOString(), modo, pilotaje: { entrada }, ...(permisosNavegacion ? { permisosNavegacion } : {}) }
   }
   let riesgo = f.riesgo
   // NIF del tomador (Mapfre auto/moto, 14/10/2026): se descifra AQUÍ, solo para la respuesta (canal del worker, con su
@@ -609,6 +617,11 @@ export async function trabajoParaWorker(id: string, modosWorker: readonly string
     riesgo = riesgoConReferencia(riesgo, f.ramo, await leerReferenciaOportunidad(prisma, f.correduria_id, f.oportunidad_id))
   }
   const base = { id: f.id, compania: f.compania, ramo: f.ramo, riesgo, leaseHasta: f.lease_hasta.toISOString(), modo }
+  if (modo === 'tarificar') {
+    // 0.3.46: solo las RUTAS exactas de BD de las entradas de esta compañía/ramo (fail-closed: sin tabla o sin filas, nada).
+    const permisosNavegacion = await permisosNavegacionParaWorker('tarificar', { id: f.id, compania: f.compania, ramo: f.ramo, entrada: null })
+    return permisosNavegacion ? { ...base, permisosNavegacion } : base
+  }
   if (modo !== 'exploracion') return base
   const x = await prisma.$queryRaw<{ entrada: string }[]>`
     select e.entrada from seguros.tarificador_exploraciones e
@@ -617,7 +630,8 @@ export async function trabajoParaWorker(id: string, modosWorker: readonly string
   if (!x[0]) return null
   // Tomador = MEDIADOR (patinete, 28/10/2026): sus datos van SOLO en la respuesta al worker (como el NIF de arriba), nunca en BD.
   const conMediador = entradaConTomadorMediador(x[0].entrada) && !f.con_cliente
-  return { ...base, ...(conMediador ? { riesgo: riesgoConTomadorMediador(riesgo) } : {}), exploracion: { entrada: x[0].entrada, conDatosReales: f.con_cliente } }
+  const permisosNavegacion = await permisosNavegacionParaWorker('exploracion', { id: f.id, compania: f.compania, ramo: f.ramo, entrada: x[0].entrada })
+  return { ...base, ...(conMediador ? { riesgo: riesgoConTomadorMediador(riesgo) } : {}), exploracion: { entrada: x[0].entrada, conDatosReales: f.con_cliente }, ...(permisosNavegacion ? { permisosNavegacion } : {}) }
 }
 
 // ─── Resultado ───────────────────────────────────────────────────────────────

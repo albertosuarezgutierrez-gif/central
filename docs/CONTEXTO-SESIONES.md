@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(04/11/2026)** — Tarificador ASegura: estado vivo en `docs/TARIFICADOR-ESTADO.md` (canal bot RPA + Avant2 provisional; Pelayo en pilotaje, 0.3.47 en curso). Actualizar ese fichero, no esta entrada.
+
 **(04/11/2026) Instagram de ia.rest → Grupo ASegura.** Alberto reabre la decisión del 07/09 (LinkedIn sí, IG no); sigue sin haber perfil de IG.
 Nuevo `packages/core-instagram` (Graph API parametrizada) + plataforma `lib/correduria/instagram-asegura*.ts`, cron `/api/cron/asegura-instagram`
 (L/X/V 07:13 UTC por `cron-dispatch`), imagen `/api/publico/asegura-ig/[id]`, botones `asig_` en el webhook Telegram de sivra, lista en Redes.

@@ -41,6 +41,9 @@ import {
   type Recorrido,
   valoresSensiblesDeRiesgo,
   type ResultadoAdaptador,
+  permisosTarificacionDe,
+  resumenPermisos,
+  type PermisosNavegacion,
 } from '@central/module-tarificacion'
 import { adaptadores } from './adapters/index.ts'
 import { enviarResultado, leerConfig, pedirTrabajo, salidaSinTrabajo, vehiculoDelResultado, type Config, type CuerpoResultado, type VehiculoDelResultado } from './api.ts'
@@ -48,7 +51,7 @@ import { exigirSinCaptcha } from './captcha.ts'
 import { crearTrazaIntento } from './traza-intento.ts'
 import { ErrorCodigoSmsPendiente, ErrorTarificador, ErrorVerificacionHumana, MOTIVO_VERIFICACION_HUMANA, cabeReintento, clasificar, clasificarIntento, esperaReintentoMs, limiteDelTrabajo, pideInventarioDom, type Clasificacion } from './errores.ts'
 import { capturarInventarioDom, marcosDePestanas } from './inventario-dom.ts'
-import { pulsarMediadorGenerali, pulsarEntrarGenerali, entrarTurismosGenerali, cerrarAvisoSabiasQueGenerali, pulsarSubpestanaGenerali, pulsarRecalcularGenerali, pulsarHistorialObtenidoGenerali, pulsarSalidaHistorialObtenidoGenerali, pulsarConsultaHistorialObtenidoGenerali, pulsarPestanaHistorialObtenidoGenerali, marcarPlacasEspecialesGenerali, pulsarConfirmarVehiculoGenerali, pulsarConfirmarDatosPersonasGenerali, pulsarSiguienteValoracionGenerali, abrirDesplegableMarcaGenerali, elegirMarcaListaGenerali, abrirDesplegableModeloGenerali, elegirModeloListaGenerali, elegirPotenciaGenerali, elegirFilaVersionGenerali, elegirCombustibleGenerali, abrirDesplegableVersionGenerali, elegirVersionListaGenerali, cerrarAvisoTomadorMapfre, cerrarClubMapfre, leerOpcionesComercialesMapfre, elegirOpcionComercialMapfre, cerrarControlesTecnicosMapfre, rearmarContinuarMapfreTrasControlesTecnicos, generarProyectoMapfre, companiaActualTurismosAllianz, localidadTurismosAllianz, marcarAntecedenteTurismosAllianz, confirmarVehiculoMapfre, elegirTomadorMapfre, elegirOpcion, pulsarContinuarMapfre, instalarGuardEmision, marcarOpcionRiesgoHogarAllianz, marcarOpcionResueltaHogarAllianz, marcarOpcionTurismosAllianz, marcarTarjetaVehiculoTurismosAllianz, polizaActualTurismosAllianz,
+import { pulsarMediadorGenerali, pulsarEntrarGenerali, entrarTurismosGenerali, cerrarAvisoSabiasQueGenerali, pulsarSubpestanaGenerali, pulsarRecalcularGenerali, pulsarHistorialObtenidoGenerali, pulsarSalidaHistorialObtenidoGenerali, pulsarConsultaHistorialObtenidoGenerali, pulsarPestanaHistorialObtenidoGenerali, marcarPlacasEspecialesGenerali, pulsarConfirmarVehiculoGenerali, pulsarConfirmarDatosPersonasGenerali, pulsarSiguienteValoracionGenerali, abrirDesplegableMarcaGenerali, elegirMarcaListaGenerali, abrirDesplegableModeloGenerali, elegirModeloListaGenerali, elegirPotenciaGenerali, elegirFilaVersionGenerali, elegirCombustibleGenerali, abrirDesplegableVersionGenerali, elegirVersionListaGenerali, cerrarAvisoTomadorMapfre, cerrarClubMapfre, leerOpcionesComercialesMapfre, elegirOpcionComercialMapfre, cerrarControlesTecnicosMapfre, rearmarContinuarMapfreTrasControlesTecnicos, generarProyectoMapfre, companiaActualTurismosAllianz, localidadTurismosAllianz, marcarAntecedenteTurismosAllianz, confirmarVehiculoMapfre, elegirTomadorMapfre, elegirOpcion, pulsarContinuarMapfre, instalarGuardEmision, fijarPermisosNavegacion, marcarOpcionRiesgoHogarAllianz, marcarOpcionResueltaHogarAllianz, marcarOpcionTurismosAllianz, marcarTarjetaVehiculoTurismosAllianz, polizaActualTurismosAllianz,
   guardarPresupuestoTurismosAllianz, buscarBotonDescargaProyecto, pulsarDescargaProyectoAuto, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto, esUrlOktaSmsGenerali, type GuardEmision } from './guard.ts'
 import { puertoCodigoHttp, relevarCodigoSmsGenerali, type Relevo } from './relevo-sms.ts'
 import { conRedaccionMediador } from './privacidad-mediador.ts'
@@ -142,6 +145,8 @@ type Comun = {
   log: (m: string, d?: Record<string, unknown>) => void
   /** Relevo del código SMS por Telegram (adaptador con `codigoSms`). UNO por trabajo: `usado` lo apaga tras el primero. */
   relevoSms?: { usado: boolean; relevar: (page: Page, guard: GuardEmision) => Promise<Relevo> }
+  /** 0.3.46: rutas exactas de BD de la compañía/ramo (solo GET y href `pulsable`; sin avances), ya revalidadas. `null` = ninguna. */
+  permisosBd: PermisosNavegacion | null
 }
 
 /** Un intento completo en un contexto NUEVO del navegador. Nunca lanza: devuelve ok, el fallo clasificado o `verificado`. */
@@ -176,6 +181,7 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
   let ultimo5xx: number | null = null
   try {
     const guard = await instalarGuardEmision(context)
+    if (k.permisosBd) fijarPermisosNavegacion(guard, k.permisosBd, k.compania)
     const page = await context.newPage()
     page.setDefaultTimeout(TOPE_PASO_MS)
     page.setDefaultNavigationTimeout(TOPE_PASO_MS)
@@ -768,7 +774,11 @@ async function main(): Promise<number> {
   const meta = () => ({ pasos: traza.pasos(), botVersion: adaptador.version })
   // Recorrido del trabajo (15/10/2026): mismo redactor que el resto de lo que sale + los valores del riesgo; tope ~60 KB.
   const recorrido = crearCapturadorRecorrido({ redactar: redactarTrabajo, valores: valoresSensiblesDeRiesgo(trabajo.riesgo), log })
-  const k: Comun = { sesion: fuente, trabajoId: trabajo.id, compania: trabajo.compania, adaptador, tarificar: v.tarificar, credenciales, formador, traza, recorrido, log, relevoSms }
+  // 0.3.46: permisos de RUTA de BD de las entradas de esta compañía/ramo (TARIFICAR: nunca avances; la emisión no llega aquí).
+  const rp = permisosTarificacionDe(trabajo.compania, trabajo.ramo, trabajo.permisosNavegacion)
+  if (rp.ignorados.length > 0 || rp.permisos.rutas.length > 0) log('permisos_navegacion', resumenPermisos(rp))
+  const permisosBd = rp.permisos.rutas.length > 0 ? rp.permisos : null
+  const k: Comun = { sesion: fuente, trabajoId: trabajo.id, compania: trabajo.compania, adaptador, tarificar: v.tarificar, credenciales, formador, traza, recorrido, log, relevoSms, permisosBd }
 
   // Un intento y, si se cortó en el SMS y el relevo lo verificó, OTRO (ya con el dispositivo) con el límite recalculado.
   const intentarConRelevo = async (b: Browser, topeMs: number): Promise<Intento> => {

@@ -75,7 +75,7 @@ async function abrir(): Promise<{ page: Page; guard: GuardEmision; cerrar: () =>
 const elementos = (inv: InventarioDom) => inv.marcos.flatMap((m) => m.elementos)
 const ventana = (page: Page, k: string) => page.evaluate((x) => (window as unknown as Record<string, unknown>)[x] ?? null, k)
 
-test('versión del explorador 0.3.45', () => assert.equal(EXPLORADOR_VERSION, '0.3.45'))
+test('versión del explorador 0.3.46', () => assert.equal(EXPLORADOR_VERSION, '0.3.46'))
 
 test('inventario: el <pelayo-smart-select> sin <select> se marca `desplegableCustom` con los TEXTOS de sus 4 opciones ocultas', async () => {
   const { page, cerrar } = await abrir()

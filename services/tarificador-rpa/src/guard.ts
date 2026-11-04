@@ -111,6 +111,17 @@ import {
   planoNavegacion,
   SUSTANTIVOS_MENU_NAVEGACION,
   type ControlNavegacion,
+  avanceTextoBdAutorizado,
+  fuenteTextoExacto,
+  NUNCA_TITULO_AVANCE_BD,
+  origenYRuta,
+  rutasHrefBd,
+  rutasRedGetBd,
+  topeUsosAvanceBd,
+  validarPermisosNavegacion,
+  filasDePermisos,
+  type PermisoAvanceBd,
+  type PermisosNavegacion,
 } from '@central/module-tarificacion'
 
 /**
@@ -489,6 +500,8 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
   // Rutas de APLICACIÓN tolerables de la entrada (Mapfre NSE `/EVT21_NSE_FWEB/app/emision/`, decisión de Alberto 28/10/2026): solo
   // las fija `tolerarRutasApp`; su prefijo no cuenta como emisión en la URL (query y cuerpo se miran igual).
   let tolerables: readonly RutaTolerable[] = []
+  // 0.3.46: rutas EXACTAS de BD (`permisos-navegacion.ts`), SOLO para navegaciones GET (`fijarPermisosNavegacion`); nunca en POST ni cuerpos.
+  let tolerablesBdGet: readonly RutaTolerable[] = []
   // La ventana se cierra en cuanto el MARCO PRINCIPAL navega a otro origen (el SSO redirige al portal tras el login: el
   // portal ya no está en la fase de login). `request` también salta en cada salto de una redirección (route no lo ve).
   context.on('request', (req) => {
@@ -522,7 +535,8 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
       const op = { permitirAceptar: fases.aceptarEnVuelo() || enLista, permitirGuardarPresupuesto: enGuardado && !enProyectoMapfre, permitirGenerarProyectoMapfre: enProyectoMapfre }
       // 0.3.45: las reglas `soloNavegacionGet` (SSO authorize de Pelayo) solo valen para una NAVEGACIÓN GET (documento/redirección); un
       // POST o cualquier otra petición a esa ruta se mira entera (query incluida: su `redirect_uri` casa con «contrat»).
-      const neutra = neutralizarRutaTolerable(url, tolerables, null, { navegacionGet: req.isNavigationRequest() && !noGet }) ?? url
+      // 0.3.46: las rutas exactas de BD (`tolerablesBdGet`) solo se suman para GET; un POST se mira solo con las de código.
+      const neutra = neutralizarRutaTolerable(url, noGet || tolerablesBdGet.length === 0 ? tolerables : [...tolerables, ...tolerablesBdGet], null, { navegacionGet: req.isNavigationRequest() && !noGet }) ?? url
       // Tarificación de hogar de Mapfre (ruta EXACTA, `neutralizarTarificacionProyectoMapfre`): solo su RUTA deja de contar; query y cuerpo igual.
       const neutraUrl = neutralizarTarificacionProyectoMapfre(url) ?? neutra
       const porUrl = pareceEmision(neutraUrl, op) || parametrosParecenEmision(url, op)
@@ -625,6 +639,7 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
     },
   }
   FIJAR_TOLERABLES.set(g, (r) => { tolerables = r })
+  FIJAR_TOLERABLES_BD_GET.set(g, (r) => { tolerablesBdGet = r })
   ABRIR_VENTANA.set(g, (ms) => { ventanaHasta = Date.now() + Math.min(ms, VENTANA_RED_EMISION_MS) })
   ABRIR_AVANCE.set(g, (hasta, endpoints, ajax = []) => { avance = { hasta: Math.min(hasta, Date.now() + VENTANA_RED_AVANCE_MS), endpoints, ajax } })
   ABRIR_GUARDADO.set(g, (origen, proyectoMapfre = false) => { guardado = { hasta: Date.now() + VENTANA_RED_GUARDADO_MS, origen, proyectoMapfre } })
@@ -639,6 +654,30 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
 }
 
 const FIJAR_TOLERABLES = new WeakMap<GuardEmision, (r: readonly RutaTolerable[]) => void>()
+const FIJAR_TOLERABLES_BD_GET = new WeakMap<GuardEmision, (r: readonly RutaTolerable[]) => void>()
+const RUTAS_HREF_BD = new WeakMap<GuardEmision, readonly RutaTolerable[]>()
+const PERMISOS_BD = new WeakMap<GuardEmision, PermisosNavegacion>()
+
+/**
+ * 0.3.46 PERMISOS DE NAVEGACIÓN DE BD del trabajo (ya validados por `permisosNavegacionDe`; aquí se REVALIDAN otra vez desde sus filas
+ * canónicas, fail-closed: lo que no pase se cae). Una sola vez por guard (después, `fase`). Efectos, y solo estos:
+ *   · sus rutas exactas dejan de contar como emisión en las navegaciones GET (nunca POST, query ni cuerpo: la red los mira igual);
+ *   · las `pulsable` se neutralizan además en los href de los controles (`conRutasTolerables`);
+ *   · sus avances por texto los usa SOLO `pulsarExploracionAutorizada` (que lo repite todo VIVO).
+ * El tope del wizard de Pelayo, los rótulos de acción final, la frontera bancaria y el resto de `comprobarBoton` no cambian.
+ */
+export function fijarPermisosNavegacion(guard: GuardEmision, permisos: PermisosNavegacion, compania: string): PermisosNavegacion {
+  const fijarGet = FIJAR_TOLERABLES_BD_GET.get(guard)
+  if (!fijarGet) throw new EmisionBloqueadaError('fase', 'guard sin permisos de navegación')
+  if (PERMISOS_BD.has(guard)) throw new EmisionBloqueadaError('fase', 'permisos de navegación ya fijados en este trabajo')
+  const p = validarPermisosNavegacion(permisos.entrada, compania, filasDePermisos(permisos)).permisos
+  PERMISOS_BD.set(guard, p)
+  RUTAS_HREF_BD.set(guard, Object.freeze(rutasHrefBd(p)))
+  fijarGet(Object.freeze(rutasRedGetBd(p)))
+  return p
+}
+/** Los permisos de BD fijados en este guard (vacíos si no hay). */
+export const permisosNavegacionEn = (guard: GuardEmision): PermisosNavegacion | null => PERMISOS_BD.get(guard) ?? null
 const RUTAS_TOLERABLES = new WeakMap<GuardEmision, readonly RutaTolerable[]>()
 
 /**
@@ -674,7 +713,8 @@ export function tolerarRutasApp(guard: GuardEmision, reglas: readonly RutaTolera
  */
 export const INDICES_URL_DESCRIPCION: readonly number[] = Object.freeze([6, 8, 15, 19, 23])
 const conRutasTolerables = (guard: GuardEmision, desc: readonly (string | null)[]): (string | null)[] => {
-  const reglas = RUTAS_TOLERABLES.get(guard) ?? []
+  // 0.3.46: + las rutas `pulsable` de BD (solo href; el texto/atributos con acción real anulan TODA neutralización, abajo).
+  const reglas = [...(RUTAS_TOLERABLES.get(guard) ?? []), ...(RUTAS_HREF_BD.get(guard) ?? [])]
   if (reglas.length === 0) return [...desc]
   // 0.3.6: si el TEXTO/atributos del control (lo que no es URL) nombran una acción real (emitir, contratar, confirmar, firma, pago,
   // formalizar, grabar, IBAN…), no se tolera NADA: la URL se mira entera. Una excepción por texto exacto (menú «Oferta / Contratación»)
@@ -4108,6 +4148,39 @@ const TEXTO_ACCION_FINAL_VIVO = `function (fuente) {
  * 0.3.18: VIVO, en TODOS los marcos, ¿hay texto visible (cuerpo, valores/aria/title de controles) de acción final o dato bancario
  * (`textoAccionFinal`: emitir, contratar, confirmar, firmar, pagar, formaliz, IBAN, cuenta…)? Un marco que no se puede leer cuenta como sí (fail-closed).
  */
+/**
+ * 0.3.46: VIVO, ¿es `boton` el avance de BD `a`? `null` = sí; si no, el código del motivo (sin valores). Exige: origen y ruta del documento
+ * del control EXACTOS, tag (input: button/submit), texto vivo (y aria-label, si lo hay) EXACTO, dentro del contenedor (si lo declara),
+ * habilitado y ÚNICO control del documento con ese texto. Solo lee.
+ */
+async function causaNoEsAvanceBdVivo(boton: Locator, a: PermisoAvanceBd, desc: readonly (string | null)[]): Promise<string | null> {
+  const plano = (t: string | null | undefined) => String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase()
+  const v = await boton
+    .evaluate((el, cont) => {
+      const d = el.ownerDocument
+      const tipo = el instanceof HTMLInputElement ? (el.type || '').toLowerCase() : ''
+      let dentro = true
+      try {
+        dentro = cont === null || el.closest(cont) !== null
+      } catch {
+        dentro = false
+      }
+      return { href: d.location.href, tag: el.tagName.toLowerCase(), tipo, dentro, deshabilitado: (el as HTMLButtonElement).disabled === true || el.getAttribute('aria-disabled') === 'true' }
+    }, a.contenedor)
+    .catch(() => null)
+  if (!v) return 'ilegible'
+  const u = origenYRuta(v.href)
+  if (!u || u.origen !== a.origen || u.ruta !== a.rutaMarco) return 'marco'
+  if (v.tag !== a.tag || (v.tag === 'input' && !['button', 'submit'].includes(v.tipo))) return 'tag'
+  if (v.deshabilitado) return 'deshabilitado'
+  if (!v.dentro) return 'contenedor'
+  const texto = plano(desc[0])
+  if (texto !== a.texto) return 'texto'
+  if (plano(desc[1]) !== '' && plano(desc[1]) !== a.texto) return 'aria'
+  if (!(await esUnicoPorTextoVivo(boton, fuenteTextoExacto(a.texto)))) return 'no_unico'
+  return null
+}
+
 async function hayTextoAccionFinalVivo(page: Page, fuente: RegExp): Promise<boolean> {
   for (const f of marcosVivos(page)) {
     const r = await (f.evaluate(`(${TEXTO_ACCION_FINAL_VIVO})(${JSON.stringify(fuente.source)})`) as Promise<unknown>).catch(() => true)
@@ -4502,13 +4575,18 @@ export async function pulsarExploracionAutorizada(
   const porId = avancePorIdAutorizado(aut.entrada, aut.el, aut.marco)
   // 0.3.18: el `<input type=submit>` sin rótulo de la simulación de Fidelidade (regla estrecha): mismo tope que el avance por id.
   const sinTexto = porId ? null : avanceSinTextoAutorizado(aut.entrada, aut.el, aut.marco)
-  const prefijoId = porId ? `exploracion:id:${porId.id}#` : sinTexto ? 'exploracion:sintexto#' : null
+  // 0.3.46: avance por texto EXACTO de BD (permisos REVALIDADOS de este guard, `fijarPermisosNavegacion`), solo si no es de código.
+  const permisosBd = permisosNavegacionEn(guard)
+  const porBd: PermisoAvanceBd | null = porId || sinTexto || !permisosBd || permisosBd.entrada !== aut.entrada ? null : avanceTextoBdAutorizado(permisosBd, aut.el, aut.marco)
+  const prefijoId = porId ? `exploracion:id:${porId.id}#` : sinTexto ? 'exploracion:sintexto#' : porBd ? `exploracion:bd:${porBd.id}#` : null
   const usadosPorId = prefijoId ? [...usados].filter((u) => u.startsWith(prefijoId)).length : 0
-  if (!porId && !sinTexto && usados.has('exploracion')) throw new EmisionBloqueadaError('fase', 'el avance autorizado de exploración ya se usó en este trabajo')
+  if (!porId && !sinTexto && !porBd && usados.has('exploracion')) throw new EmisionBloqueadaError('fase', 'el avance autorizado de exploración ya se usó en este trabajo')
   // Tope por regla (03/11/2026): 6 solo para la simulación de Vivienda de Fidelidade; el resto, `MAX_AVANCES_POR_ID` (3).
   if ((porId || sinTexto) && usadosPorId >= topeAvancesPaso(aut.entrada, Boolean(porId), sinTexto)) throw new EmisionBloqueadaError('fase', `el avance de paso autorizado de exploración ya se usó ${usadosPorId} veces en este trabajo`)
+  // 0.3.46: el de BD, su `maxUsos` (nunca por encima de MAX_USOS_AVANCE_BD).
+  if (porBd && usadosPorId >= topeUsosAvanceBd(porBd)) throw new EmisionBloqueadaError('fase', `el avance de BD ya se usó ${usadosPorId} veces en este trabajo`)
   await exigirSinCuentaBancaria(page)
-  if (!esAvanceAutorizado(aut.entrada, aut.el, aut.marco) || bloqueoAvance(aut.entrada, aut.el, aut.marco) !== null) {
+  if (!esAvanceAutorizado(aut.entrada, aut.el, aut.marco, permisosBd) || bloqueoAvance(aut.entrada, aut.el, aut.marco, permisosBd) !== null) {
     throw new EmisionBloqueadaError('boton', 'avance de exploración no autorizado para esta entrada y esta pantalla')
   }
   if ((await boton.count()) !== 1) throw new EmisionBloqueadaError('boton', 'avance de exploración: no hay exactamente un control')
@@ -4558,6 +4636,18 @@ export async function pulsarExploracionAutorizada(
     if (vivo.titulo) throw new EmisionBloqueadaError('boton', 'avance de exploración: un título vivo de la página es de emisión/contratación (no se avanza sin texto)')
     if (await hayTextoAccionFinalVivo(page, sinTexto.textoAccionFinal)) throw new EmisionBloqueadaError('boton', 'avance de exploración: la página muestra texto de acción final o datos bancarios (no se avanza sin texto)')
     comprobarBoton(desc)
+  } else if (porBd) {
+    const causa = await causaNoEsAvanceBdVivo(boton, porBd, desc)
+    if (causa) throw new EmisionBloqueadaError('boton', `avance de BD: el control vivo no es el autorizado (${causa})`)
+    // TOPE DURO del wizard de Pelayo y precio (pegajoso y vivo) / títulos vivos de emisión en TODOS los marcos, como el avance por id.
+    await exigirZonaWizardPelayo(boton, desc)
+    if (PRECIO_VISTO.has(guard)) throw new EmisionBloqueadaError('boton', 'avance de BD: ya se vio un precio en este trabajo')
+    const vivo = await vigilanciaVivaAvancePorId(page, NUNCA_TITULO_AVANCE_BD)
+    if (vivo.precio) {
+      PRECIO_VISTO.add(guard)
+      throw new EmisionBloqueadaError('boton', 'avance de BD: la página ya muestra un precio')
+    }
+    if (vivo.titulo) throw new EmisionBloqueadaError('boton', 'avance de BD: un título vivo de la página es de tarificación/emisión')
   }
   comprobarBoton(desc, { permitirAceptar: true })
   comprobarRotulosAccionFinal(desc)
@@ -4595,6 +4685,8 @@ export async function pulsarExploracionAutorizada(
   // 0.3.19: el avance sin texto con onclick (OsAjax de OutSystems hace un POST al propio formulario): su ÚNICO destino (el del formulario, mismo
   // origen y ruta) pasa además la inspección ESTRICTA del cuerpo (`cuerpoLlevaAccionFinal`: acción final, IBAN/cuenta/tarjeta) como extra.
   if (sinTexto && sinTexto.onclickForma !== undefined && endpoint) extras = [endpoint]
+  // 0.3.46: el avance de BD: su formulario (mismo origen) pasa además la inspección ESTRICTA del cuerpo (acción final, IBAN/cuenta/tarjeta).
+  if (porBd && endpoint) extras = [endpoint]
   // 0.3.22 (Fidelidade real 29/10/2026, 530656a4…): el formulario de la simulación envía a OTRA pantalla del flujo («Datos Cliente»,
   // `ClientData.aspx`). El destino del avance sin texto tiene que ser una de las rutas de la LISTA CERRADA de la regla (antes: cualquier ruta
   // del mismo origen) y SIN query (la red solo admite destinos exactos sin query: con ella el POST caería después, a medias). Se para ANTES
@@ -4612,7 +4704,7 @@ export async function pulsarExploracionAutorizada(
     const origen = accion.origin
     extras = [...new Set([endpoint, ...sinTexto.rutas.map((r) => `${origen}${r}`)])]
   }
-  if (!endpoint) throw new EmisionBloqueadaError('fase', 'avance de exploración: sin formulario de envío conocido del mismo origen')
+  if (!endpoint && !porBd) throw new EmisionBloqueadaError('fase', 'avance de exploración: sin formulario de envío conocido del mismo origen')
   // 0.3.19: la ayuda contextual de drvp00 (solo lectura) que la pantalla de destino pide al cargar; SOLO en los avances por id de drvp00.
   const ajaxAvance: readonly AjaxValidacionAvance[] = porId && porId.rutaMarco.startsWith('/drvp00/') ? [AJAX_AYUDA_APLICACIONES_ALLIANZ_DRVP00] : []
   const abrir = ABRIR_AVANCE.get(guard)
@@ -4626,7 +4718,8 @@ export async function pulsarExploracionAutorizada(
     d.dismiss().catch(() => {})
   }
   page.on('dialog', alDialogo)
-  abrir(hasta, [endpoint, ...extras], ajaxAvance)
+  // 0.3.46: un avance de BD sin formulario no abre ventana de red: lo que provoque el clic pasa por la red de siempre («aceptar» bloqueado).
+  if (endpoint) abrir(hasta, [endpoint, ...extras], ajaxAvance)
   try {
     await boton.click()
     // La pantalla cambió cuando el control ya no está (navegación, recarga del marco o re-pintado).
