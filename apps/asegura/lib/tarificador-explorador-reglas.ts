@@ -264,7 +264,8 @@ export function leerNotaFin(v: unknown): string | null {
   // 0.3.33: diagnóstico de la entrada de Pelayo (solo contadores y 0/1; forma CERRADA, sin texto libre).
   if (/^entrada pelayo: tarjetas=\d{1,2} clic=[01] cambio=[01] pestana=[01] dialogo=\d{1,2} modal=\d{1,2} reintento=[01]$/.test(v)) return v
   // 0.3.37: diagnóstico del clic de la tarjeta de ramo de Pelayo que caducó por accionabilidad (caja, visibilidad, estilos, qué tapa; forma CERRADA).
-  if (/^clic pelayo: ch=[01] bb=(?:-|\d{1,5}x\d{1,5}@-?\d{1,5},-?\d{1,5}) vis=[01] op=\d(?:\.\d{1,2})? vs=[vhco] dp=[a-z-]{1,20} pe=[a-z-]{1,20} anc=(?:-|[a-z0-9-]{1,20}\/(?:-|[a-z0-9_-]{1,24})\/\d(?:\.\d{1,2})?\/[a-z-]{1,20}) hit=(?:propio|hijo|ninguno|otro\/[a-z0-9-]{1,20}\/(?:-|[a-z0-9_-]{1,24})) cookie=[01] ifr=[01] shd=[01] anim=\d{1,2}$/.test(v)) return v
+  // 0.3.38: + `int=<tag>/<clases>/d<0|1>m<0|1>f<campos>x<cierres>/z<n>` (el interceptor: modal/diálogo, campos y botones de cierre; sin texto del portal).
+  if (/^clic pelayo: ch=[01] bb=(?:-|\d{1,5}x\d{1,5}@-?\d{1,5},-?\d{1,5}) vis=[01] op=\d(?:\.\d{1,2})? vs=[vhco] dp=[a-z-]{1,20} pe=[a-z-]{1,20} anc=(?:-|[a-z0-9-]{1,20}\/(?:-|[a-z0-9_-]{1,24})\/\d(?:\.\d{1,2})?\/[a-z-]{1,20}) hit=(?:propio|hijo|ninguno|otro\/[a-z0-9-]{1,20}\/(?:-|[a-z0-9_-]{1,24})) cookie=[01] ifr=[01] shd=[01] anim=\d{1,2}(?: int=[a-z0-9-]{1,20}\/(?:-|[a-z0-9_-]{1,24}(?:\.[a-z0-9_-]{1,24})?)\/d[01]m[01]f\dx\d\/z-?\d{1,5})?$/.test(v)) return v
   const m = /^frontera bancaria: campo «([^»\n\r]{1,40})»$/.exec(v)
   // Lista CERRADA: solo un nombre canónico de `CAMPOS_BANCARIOS` (nunca texto libre: podría llevar un IBAN).
   return m && CAMPOS_BANCARIOS.some((c) => c.nombre === m[1]) ? v : null

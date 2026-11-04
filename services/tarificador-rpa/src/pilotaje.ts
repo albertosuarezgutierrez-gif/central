@@ -39,6 +39,7 @@ import {
 import { cerrarPilotaje, enviarResultado, pedirComandoPilotaje, publicarEstadoPilotaje, type Config, type ResultadoComandoPilotaje, type Trabajo } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
 import { ClicNoAccionableError, cuerpoDiagnosticoClic, esTimeoutAccionabilidad, leerDiagnosticoClic } from './diagnostico-clic.ts'
+import { lineasInterceptor } from './modal-informativo.ts'
 import { clasificar } from './errores.ts'
 import { exigirSinVerificacion } from './verificacion.ts'
 import { capturarInventarioExploracion, type InventarioExploracion } from './inventario-dom.ts'
@@ -50,6 +51,7 @@ import {
   neutralizarOnclicksEntrada,
   precioVistoEn,
   pulsar,
+  cerrarModalInformativo,
   pulsarAccesoNseMapfre,
   pulsarEnlaceEntradaAutorizado,
   pulsarMenuOfertaNseMapfre,
@@ -137,6 +139,26 @@ export async function ejecutarComando(page: Page, captura: InventarioExploracion
     return hecho('volver')
   }
 
+  if (c.accion === 'cerrar_modal') {
+    // 0.3.38: cierre del modal INFORMATIVO visible (Escape › botón de cierre › fondo) por las puertas del guard. Con campos o términos de acción final: no se toca.
+    try {
+      await k.pausaAccion()
+      const r = await cerrarModalInformativo(page, k.guard)
+      k.guard.comprobar()
+      if (r.estado === 'cerrado') {
+        await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined)
+        return hecho(`modal cerrado (${r.via})`)
+      }
+      if (r.estado === 'sin_modal') return hecho('sin modal visible')
+      const intentos = r.estado === 'no_cerrado' ? [`intentos: ${r.intentos.join(',').slice(0, 120)}`] : []
+      return rechazo(r.estado === 'no_cerrable' ? `modal_no_cerrable_${r.motivo}` : 'modal_no_cerrado', [...intentos, ...(r.modal ? lineasInterceptor(r.modal).map((x) => textoDiagnostico(x, red)) : [])].slice(0, 10))
+    } catch (e) {
+      if (k.guard.violacion()) throw k.guard.violacion()
+      if (e instanceof EmisionBloqueadaError) return rechazo('guard', [textoDiagnostico(`${e.donde}: ${e.message}`, red)])
+      return rechazo('error', [textoDiagnostico(e instanceof Error ? e.message : String(e), red)])
+    }
+  }
+
   // pulsar / rellenar / seleccionar: el ref tiene que ser de ESTE inventario.
   const inv = captura.inventario
   const hit = indiceRefs(inv).get(c.ref)
@@ -149,7 +171,7 @@ export async function ejecutarComando(page: Page, captura: InventarioExploracion
     if (!('loc' in l0)) return rechazo('no_localizado', [l0.motivo])
     try {
       const d = await leerDiagnosticoClic(l0.loc)
-      return d ? { r: { estado: 'hecho', motivo: 'inspeccionado', detalle: [`diag: ${cuerpoDiagnosticoClic(d)}`] } } : rechazo('no_localizado', ['el nodo ya no está'])
+      return d ? { r: { estado: 'hecho', motivo: 'inspeccionado', detalle: [`diag: ${cuerpoDiagnosticoClic(d)}`, ...(d.int ? lineasInterceptor(d.int).map((x) => textoDiagnostico(x, red)) : [])].slice(0, 10) } } : rechazo('no_localizado', ['el nodo ya no está'])
     } finally {
       await l0.loc.evaluate((n, at) => n.removeAttribute(at), ATRIBUTO_MARCA, { timeout: 2_000 }).catch(() => undefined)
     }

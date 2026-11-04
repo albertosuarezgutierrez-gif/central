@@ -9,6 +9,7 @@
 //   cookie=<0|1> (lo que intercepta parece un banner de cookies) ifr=<0|1> shd=<0|1> anim=<animaciones en curso de la página>
 
 import type { Locator } from 'playwright'
+import { LIB_MODAL_PAGINA, RE_FRAGMENTO_INTERCEPTOR, evaluarModal, fragmentoInterceptor, type ModalLeido } from './modal-informativo.ts'
 
 export type DiagnosticoClic = {
   /** boundingBox redondeado (coordenadas de la página principal) o `null` (sin caja). */
@@ -24,6 +25,8 @@ export type DiagnosticoClic = {
   ifr: boolean
   shd: boolean
   anim: number
+  /** 0.3.38: el elemento que INTERCEPTA (solo si `hit.rel === 'otro'`): su contenedor modal/diálogo o él mismo, en forma cerrada y sin PII. */
+  int?: ModalLeido | null
 }
 
 const num = (x: unknown, min: number, max: number): number => {
@@ -50,18 +53,19 @@ export function cuerpoDiagnosticoClic(d: DiagnosticoClic): string {
   const hit = d.hit.rel === 'otro' ? `otro/${etiqueta(d.hit.tag, 20, 'x')}/${etiqueta(d.hit.cls, 24, '-')}` : d.hit.rel
   const b = (x: boolean) => (x ? 1 : 0)
   const vs = (['v', 'h', 'c', 'o'] as const).includes(d.vs) ? d.vs : 'o'
-  return `bb=${bb} vis=${b(d.vis)} op=${op2(d.op)} vs=${vs} dp=${palabra(d.dp)} pe=${palabra(d.pe)} anc=${anc} hit=${hit} cookie=${b(d.cookie)} ifr=${b(d.ifr)} shd=${b(d.shd)} anim=${num(d.anim, 0, 99)}`
+  return `bb=${bb} vis=${b(d.vis)} op=${op2(d.op)} vs=${vs} dp=${palabra(d.dp)} pe=${palabra(d.pe)} anc=${anc} hit=${hit} cookie=${b(d.cookie)} ifr=${b(d.ifr)} shd=${b(d.shd)} anim=${num(d.anim, 0, 99)}${d.int ? ` ${fragmentoInterceptor(d.int)}` : ''}`
 }
 
 /** Forma cerrada del cuerpo (la que acepta asegura dentro de la nota y el detalle del pilotaje). */
-export const RE_CUERPO_DIAGNOSTICO_CLIC = /^bb=(?:-|\d{1,5}x\d{1,5}@-?\d{1,5},-?\d{1,5}) vis=[01] op=\d(?:\.\d{1,2})? vs=[vhco] dp=[a-z-]{1,20} pe=[a-z-]{1,20} anc=(?:-|[a-z0-9-]{1,20}\/(?:-|[a-z0-9_-]{1,24})\/\d(?:\.\d{1,2})?\/[a-z-]{1,20}) hit=(?:propio|hijo|ninguno|otro\/[a-z0-9-]{1,20}\/(?:-|[a-z0-9_-]{1,24})) cookie=[01] ifr=[01] shd=[01] anim=\d{1,2}$/
+const BASE_CUERPO_DIAGNOSTICO_CLIC = /bb=(?:-|\d{1,5}x\d{1,5}@-?\d{1,5},-?\d{1,5}) vis=[01] op=\d(?:\.\d{1,2})? vs=[vhco] dp=[a-z-]{1,20} pe=[a-z-]{1,20} anc=(?:-|[a-z0-9-]{1,20}\/(?:-|[a-z0-9_-]{1,24})\/\d(?:\.\d{1,2})?\/[a-z-]{1,20}) hit=(?:propio|hijo|ninguno|otro\/[a-z0-9-]{1,20}\/(?:-|[a-z0-9_-]{1,24})) cookie=[01] ifr=[01] shd=[01] anim=\d{1,2}/
+export const RE_CUERPO_DIAGNOSTICO_CLIC = new RegExp(`^${BASE_CUERPO_DIAGNOSTICO_CLIC.source}(?: ${RE_FRAGMENTO_INTERCEPTOR})?$`)
 
 /** Nota del explorador para la tarjeta de ramo de Pelayo que no se pudo pulsar (`ch` = se probó el clic en el hijo de texto exacto). Pura. */
 export function notaClicPelayo(d: DiagnosticoClic, hijoProbado: boolean): string {
   return `clic pelayo: ch=${hijoProbado ? 1 : 0} ${cuerpoDiagnosticoClic(d)}`
 }
-/** Forma CERRADA de la nota (idéntica a la de asegura: `leerNotaFin`; la vigila un guardián de asegura). */
-export const RE_NOTA_CLIC_PELAYO = /^clic pelayo: ch=[01] bb=(?:-|\d{1,5}x\d{1,5}@-?\d{1,5},-?\d{1,5}) vis=[01] op=\d(?:\.\d{1,2})? vs=[vhco] dp=[a-z-]{1,20} pe=[a-z-]{1,20} anc=(?:-|[a-z0-9-]{1,20}\/(?:-|[a-z0-9_-]{1,24})\/\d(?:\.\d{1,2})?\/[a-z-]{1,20}) hit=(?:propio|hijo|ninguno|otro\/[a-z0-9-]{1,20}\/(?:-|[a-z0-9_-]{1,24})) cookie=[01] ifr=[01] shd=[01] anim=\d{1,2}$/
+/** Forma CERRADA de la nota (idéntica a la de asegura: `leerNotaFin`; la vigila un guardián de asegura que compara el LITERAL: no la construyas por partes). */
+export const RE_NOTA_CLIC_PELAYO = /^clic pelayo: ch=[01] bb=(?:-|\d{1,5}x\d{1,5}@-?\d{1,5},-?\d{1,5}) vis=[01] op=\d(?:\.\d{1,2})? vs=[vhco] dp=[a-z-]{1,20} pe=[a-z-]{1,20} anc=(?:-|[a-z0-9-]{1,20}\/(?:-|[a-z0-9_-]{1,24})\/\d(?:\.\d{1,2})?\/[a-z-]{1,20}) hit=(?:propio|hijo|ninguno|otro\/[a-z0-9-]{1,20}\/(?:-|[a-z0-9_-]{1,24})) cookie=[01] ifr=[01] shd=[01] anim=\d{1,2}(?: int=[a-z0-9-]{1,20}\/(?:-|[a-z0-9_-]{1,24}(?:\.[a-z0-9_-]{1,24})?)\/d[01]m[01]f\dx\d\/z-?\d{1,5})?$/
 
 /** El clic caducó por accionabilidad (invisible, inestable, tapado, pointer-events…) y no se pudo resolver por la vía estrecha. */
 export class ClicNoAccionableError extends Error {
@@ -83,7 +87,7 @@ export function esTimeoutAccionabilidad(e: unknown): boolean {
 }
 
 // Script de LECTURA (una cadena: sin `__name` de esbuild dentro de `evaluate`). Corre en el documento DEL elemento (iframe incluido).
-const CUERPO_DIAGNOSTICO = `
+const CUERPO_DIAGNOSTICO = LIB_MODAL_PAGINA + `
   const doc = el.ownerDocument, win = doc.defaultView;
   const limpia = (s, n) => String(s || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, n);
   const clase = (e) => limpia(((e.getAttribute && e.getAttribute('class')) || '').split(/\\s+/).filter(Boolean)[0] || '', 24);
@@ -121,10 +125,17 @@ const CUERPO_DIAGNOSTICO = `
       }
     }
   }
+  // 0.3.38: el INTERCEPTOR (contenedor modal/diálogo más externo hasta 10 niveles por encima del elemento que recibe el clic, o él mismo).
+  let intCrudo = null;
+  if (hit.rel === 'otro' && h) {
+    let cont = h;
+    for (let p = h, i = 0; p && i < 10; p = salto(p), i++) { if (p !== doc.body && p !== doc.documentElement && p.matches && p.matches(SEL_MODAL)) cont = p; }
+    try { intCrudo = leerModalCrudo(cont); } catch (e) { intCrudo = null; }
+  }
   let anim = 0;
   try { anim = doc.getAnimations().filter((a) => a.playState === 'running').length; } catch (e) { anim = 0; }
   return {
-    op: parseFloat(cs.opacity), vs: cs.visibility, dp: cs.display, pe: cs.pointerEvents, anc, hit, cookie, anim,
+    op: parseFloat(cs.opacity), vs: cs.visibility, dp: cs.display, pe: cs.pointerEvents, anc, hit, cookie, anim, int: intCrudo,
     ifr: win.parent !== win, shd: !!(raiz && raiz.host !== undefined),
   };
 `
@@ -141,7 +152,7 @@ export async function leerDiagnosticoClic(loc: Locator, timeoutMs = 2_000): Prom
     const crudo = (await loc.evaluate(SCRIPT_DIAGNOSTICO, undefined, { timeout: timeoutMs })) as {
       op: number; vs: string; dp: string; pe: string
       anc: { tag: string; cls: string; op: number; pe: string } | null
-      hit: DiagnosticoClic['hit']; cookie: boolean; anim: number; ifr: boolean; shd: boolean
+      hit: DiagnosticoClic['hit']; cookie: boolean; anim: number; ifr: boolean; shd: boolean; int?: unknown
     }
     const caja = await loc.boundingBox({ timeout: timeoutMs }).catch(() => null)
     const vis = await loc.isVisible({ timeout: timeoutMs }).catch(() => false)
@@ -150,6 +161,7 @@ export async function leerDiagnosticoClic(loc: Locator, timeoutMs = 2_000): Prom
       bb: caja ? { w: caja.width, h: caja.height, x: caja.x, y: caja.y } : null,
       vis, op: crudo.op, vs, dp: crudo.dp, pe: crudo.pe, anc: crudo.anc, hit: crudo.hit,
       cookie: crudo.cookie === true, ifr: crudo.ifr === true, shd: crudo.shd === true, anim: crudo.anim,
+      int: crudo.int ? evaluarModal(crudo.int) : null,
     }
   } catch {
     return null

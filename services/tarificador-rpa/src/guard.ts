@@ -11,6 +11,7 @@ import type { BrowserContext, Dialog, Frame, Locator, Page, Request } from 'play
 import { randomUUID } from 'node:crypto'
 import { ErrorTarificador } from './errores.ts'
 import { ClicNoAccionableError, esTimeoutAccionabilidad, leerDiagnosticoClic } from './diagnostico-clic.ts'
+import { LIB_MODAL_PAGINA, RE_ROTULO_CIERRE_NEUTRO, SEL_CTL_MODAL, SEL_FONDO_MODAL, SEL_MODAL, evaluarModal, veredictoModal, type ModalLeido } from './modal-informativo.ts'
 import { esTextoControlesTecnicos, SEL_DIALOGO_CONTROLES_TECNICOS } from './controles-tecnicos-mapfre.ts'
 import { indiceOpcionGenerica, indicesCompaniaActualCompuesta } from './compania-actual.ts'
 import {
@@ -1421,6 +1422,165 @@ export async function pulsarTarjetaRamoPelayo(boton: Locator, guard: GuardEmisio
   }
   // La prueba pasó: el control ya es accionable (terminó una animación o un overlay). Un clic normal, sin forzar nada.
   await boton.click({ timeout: pasoMs })
+}
+
+// ─────────── Cierre de un MODAL INFORMATIVO (0.3.38) ───────────
+// Hecho real (pilotaje Pelayo 608504fd): un `.pelayo-modal.no-footer` persistente intercepta el clic de la tarjeta de ramo. Este es el ÚNICO camino
+// que cierra un modal: tecla Escape › botón de cierre típico › clic en el fondo. NUNCA `force`, NUNCA `dispatchEvent`. Solo se intenta si el modal es
+// INFORMATIVO: sin campos de formulario y sin NINGÚN término prohibido del vocabulario de bloqueo en todo su texto/atributos
+// (`veredictoModal`); si no, no se toca nada y se devuelve el motivo (el diagnóstico lo lleva al operador).
+
+/** Lectura (solo lectura) de los modales visibles de un marco: cuántos, el índice del primero en `querySelectorAll(SEL_MODAL)` y su lectura cruda. */
+const SCRIPT_MODALES_VISIBLES = new Function(`${LIB_MODAL_PAGINA}
+  const v = modalesVisibles(document);
+  const todos = Array.from(document.querySelectorAll(SEL_MODAL));
+  return { n: v.length, idx: v.length ? todos.indexOf(v[0]) : -1, crudo: v.length ? leerModalCrudo(v[0]) : null };
+`) as () => { n: number; idx: number; crudo: unknown }
+const SCRIPT_LEER_MODAL = new Function('el', `${LIB_MODAL_PAGINA}
+  return leerModalCrudo(el);
+`) as (el: Element) => unknown
+/** ¿El control es de cierre típico, visible y está DENTRO de un modal? (la puerta del botón de cierre lo exige sobre el nodo vivo). */
+const SCRIPT_ES_CIERRE_EN_MODAL = new Function('el', `${LIB_MODAL_PAGINA}
+  const m = el.closest(SEL_MODAL);
+  return !!m && m !== el.ownerDocument.body && m !== el.ownerDocument.documentElement && esCierreM(el) && visM(el);
+`) as (el: Element) => boolean
+/** Fondo candidato: caja que cubre ≥ 50 % de la ventana, FUERA de todo modal visible. */
+const SCRIPT_ES_FONDO = new Function('el', `${LIB_MODAL_PAGINA}
+  const w = el.ownerDocument.defaultView;
+  const r = el.getBoundingClientRect();
+  return visM(el) && r.width * r.height >= 0.5 * w.innerWidth * w.innerHeight && !modalesVisibles(el.ownerDocument).some((m) => m.contains(el));
+`) as (el: Element) => boolean
+/** ¿La esquina del modal queda FUERA de su contenido (un hijo con caja que no la cubre)? Es decir: el propio contenedor hace de fondo. */
+const SCRIPT_MODAL_ES_SU_FONDO = new Function('el', `
+  const r = el.getBoundingClientRect();
+  const hijo = Array.from(el.children).find((c) => { const b = c.getBoundingClientRect(); return b.width > 0 && b.height > 0; });
+  if (!hijo) return false;
+  const b = hijo.getBoundingClientRect();
+  return b.left > r.left + 8 && b.top > r.top + 8;
+`) as (el: Element) => boolean
+
+export type ResultadoCierreModal =
+  | { estado: 'sin_modal' }
+  | { estado: 'cerrado'; via: 'escape' | 'boton' | 'backdrop'; intentos: string[] }
+  | { estado: 'no_cerrable'; motivo: 'no_es_modal' | 'con_campos' | 'termino_prohibido' | 'varios_modales' | 'modal_no_ubicado'; modal: ModalLeido | null }
+  | { estado: 'no_cerrado'; intentos: string[]; modal: ModalLeido | null }
+
+type ModalUbicado = { loc: Locator; leido: ModalLeido }
+
+async function ubicarModalVisible(page: Page): Promise<{ r: 'ninguno' } | { r: 'varios' } | { r: 'no_ubicado' } | { r: 'uno'; modal: ModalUbicado }> {
+  let total = 0
+  let unico: { f: Frame; idx: number; crudo: unknown } | null = null
+  for (const f of marcosVivos(page)) {
+    const r = await f.evaluate(SCRIPT_MODALES_VISIBLES).catch(() => null)
+    if (!r || !(r.n > 0)) continue
+    total += r.n
+    if (r.n === 1) unico = { f, idx: r.idx, crudo: r.crudo }
+  }
+  if (total === 0) return { r: 'ninguno' }
+  if (total > 1 || !unico) return { r: 'varios' }
+  const leido = evaluarModal(unico.crudo)
+  if (!leido || unico.idx < 0) return { r: 'no_ubicado' }
+  const loc = unico.f.locator(SEL_MODAL).nth(unico.idx)
+  const otra = evaluarModal(await loc.evaluate(SCRIPT_LEER_MODAL, undefined, { timeout: 2_000 }).catch(() => null))
+  if (!otra || otra.huella !== leido.huella) return { r: 'no_ubicado' }
+  return { r: 'uno', modal: { loc, leido: otra } }
+}
+
+async function modalesVisiblesAhora(page: Page): Promise<number> {
+  let total = 0
+  for (const f of marcosVivos(page)) total += (await f.evaluate(SCRIPT_MODALES_VISIBLES).catch(() => null))?.n ?? 0
+  return total
+}
+
+/**
+ * La puerta del BOTÓN DE CIERRE de un modal informativo. Acepta «Cerrar / Close / × / aria-label cerrar» como neutro SOLO si el control vivo está
+ * DENTRO de un modal y es de cierre típico (.close, .btn-close, [data-dismiss], [data-bs-dismiss], aria-label/title cerrar|close, «×»). Todas las
+ * demás barreras de `pulsar()` siguen (frontera de cuenta, manejadores con emisión, rótulos de acción final). «Cerrar sesión» NO es neutro.
+ */
+async function pulsarCierreModal(boton: Locator, guard: GuardEmision): Promise<void> {
+  guard.comprobar()
+  await exigirSinCuentaBancaria(boton.page())
+  if ((await boton.count()) !== 1) throw new EmisionBloqueadaError('boton', 'cierre de modal: no hay exactamente un control')
+  if (!(await boton.evaluate(SCRIPT_ES_CIERRE_EN_MODAL, undefined, { timeout: 2_000 }).catch(() => false))) throw new EmisionBloqueadaError('boton', 'cierre de modal: el control no es de cierre o no está dentro de un modal')
+  const desc = await descripcion(boton)
+  const rotulos = [desc[0], desc[1], desc[2], desc[3]].map((x) => (x ?? '').normalize('NFKC').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim()).filter((x) => x !== '')
+  if (rotulos.some((r) => !RE_ROTULO_CIERRE_NEUTRO.test(r))) throw new EmisionBloqueadaError('boton', 'cierre de modal: el rótulo del control no es neutro de cierre')
+  comprobarBoton(conRutasTolerables(guard, await conOnclickNeutralizado(guard, boton, desc)))
+  comprobarRotulosAccionFinal(desc)
+  comprobarRotulosPulsar([desc[0], desc[1], desc[2], desc[3], ...rotulosAccesibles(desc)], NOMBRES_ROTULOS_PULSAR)
+  await boton.click({ timeout: 5_000 })
+  guard.comprobar()
+}
+
+/** Clic en un FONDO (backdrop o el propio contenedor que lo hace): esquina del elemento, con las barreras de manejadores (sin mirar su texto: es el del modal, ya revisado). */
+async function pulsarFondoModal(fondo: Locator, guard: GuardEmision): Promise<void> {
+  guard.comprobar()
+  await exigirSinCuentaBancaria(fondo.page())
+  if ((await fondo.count()) !== 1) throw new EmisionBloqueadaError('boton', 'cierre de modal: no hay exactamente un fondo')
+  const desc = await descripcion(fondo)
+  comprobarBoton(conRutasTolerables(guard, await conOnclickNeutralizado(guard, fondo, desc)))
+  await fondo.click({ position: { x: 4, y: 4 }, timeout: 3_000 })
+  guard.comprobar()
+}
+
+/**
+ * Cierra el modal INFORMATIVO visible de la página (ver el comentario de la sección). `estado`: `sin_modal` (nada que cerrar), `cerrado` (+ vía),
+ * `no_cerrable` (con campos / término prohibido / no es modal / varios modales: NO se toca nada) o `no_cerrado` (se probó y sigue). Una violación
+ * del guard (red, frontera de cuenta) LANZA; un rechazo de una puerta se anota como intento fallido y se sigue con la vía siguiente.
+ */
+export async function cerrarModalInformativo(page: Page, guard: GuardEmision, esperaMs = 500): Promise<ResultadoCierreModal> {
+  guard.comprobar()
+  await exigirSinCuentaBancaria(page)
+  const u = await ubicarModalVisible(page)
+  if (u.r === 'ninguno') return { estado: 'sin_modal' }
+  if (u.r === 'varios') return { estado: 'no_cerrable', motivo: 'varios_modales', modal: null }
+  if (u.r === 'no_ubicado') return { estado: 'no_cerrable', motivo: 'modal_no_ubicado', modal: null }
+  const { loc, leido } = u.modal
+  const v = veredictoModal(leido)
+  if (!v.ok) return { estado: 'no_cerrable', motivo: v.motivo, modal: leido }
+  const intentos: string[] = []
+  const cerrado = async (): Promise<boolean> => {
+    await page.waitForTimeout(esperaMs)
+    guard.comprobar()
+    return (await modalesVisiblesAhora(page)) === 0
+  }
+  const intentar = async (via: string, f: () => Promise<void>): Promise<boolean> => {
+    try {
+      await f()
+    } catch (e) {
+      // Una violación de RED del guard o la frontera de cuenta bancaria PARAN el trabajo; el resto (puerta que rechaza, clic que caduca) es un intento fallido.
+      if (guard.violacion() || e instanceof ErrorFronteraEmision) throw e
+      intentos.push(`${via}:${e instanceof EmisionBloqueadaError ? 'rechazado' : esTimeoutAccionabilidad(e) ? 'no_accionable' : 'error'}`)
+      return false
+    }
+    intentos.push(via)
+    return cerrado()
+  }
+  // 1) Escape (nunca sobre un modal con campos: ya descartado arriba).
+  if (await intentar('escape', async () => { await page.keyboard.press('Escape') })) return { estado: 'cerrado', via: 'escape', intentos }
+  // 2) Botón de cierre típico: exactamente UNO entre los controles visibles del modal; se re-ubica por su índice y se re-verifica vivo en la puerta.
+  const cierres = leido.ctl.filter((c) => c.cierre)
+  if (leido.nCierre === 1 && cierres.length === 1) {
+    const boton = loc.locator(SEL_CTL_MODAL).nth(cierres[0].i)
+    if (await intentar('boton', () => pulsarCierreModal(boton, guard))) return { estado: 'cerrado', via: 'boton', intentos }
+  } else {
+    intentos.push(`boton:${leido.nCierre === 0 ? 'sin_control' : 'varios_controles'}`)
+  }
+  // 3) Fondo: UN backdrop a pantalla (fuera del modal) o el propio contenedor si deja margen alrededor de su contenido.
+  const fondos: Locator[] = []
+  for (const f of marcosVivos(page)) {
+    const c = f.locator(SEL_FONDO_MODAL)
+    const n = Math.min(await c.count().catch(() => 0), 20)
+    for (let i = 0; i < n; i++) if (await c.nth(i).evaluate(SCRIPT_ES_FONDO, undefined, { timeout: 1_000 }).catch(() => false)) fondos.push(c.nth(i))
+  }
+  const fondo = fondos.length === 1 ? fondos[0] : fondos.length === 0 && (await loc.evaluate(SCRIPT_MODAL_ES_SU_FONDO, undefined, { timeout: 1_000 }).catch(() => false)) ? loc : null
+  if (fondo) {
+    if (await intentar('backdrop', () => pulsarFondoModal(fondo, guard))) return { estado: 'cerrado', via: 'backdrop', intentos }
+  } else {
+    intentos.push(`backdrop:${fondos.length > 1 ? 'varios_fondos' : 'sin_fondo'}`)
+  }
+  const ahora = await ubicarModalVisible(page)
+  return { estado: 'no_cerrado', intentos, modal: ahora.r === 'uno' ? ahora.modal.leido : leido }
 }
 
 /** 0.3.33: etiquetas (normalizadas) de ramo de Pelayo que admiten UN reintento de clic. */

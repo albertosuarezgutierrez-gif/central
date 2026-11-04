@@ -92,9 +92,9 @@ const D = {
   anc: { tag: 'div', cls: 'envoltura', op: 1, pe: 'none' }, hit: { rel: 'otro', tag: 'div', cls: 'velo-modal' }, cookie: false, ifr: false, shd: false, anim: 2,
 } as const
 
-test('versión del explorador 0.3.37', async () => {
+test('versión del explorador 0.3.38', async () => {
   const { EXPLORADOR_VERSION } = await import('../src/explorador.ts')
-  assert.equal(EXPLORADOR_VERSION, '0.3.37')
+  assert.equal(EXPLORADOR_VERSION, '0.3.38')
 })
 
 test('diagnóstico: forma CERRADA, redondeada, acotada, sin forma de dato personal; la nota casa su regex', () => {
@@ -152,7 +152,7 @@ test('TAPADA por un velo: no se fuerza ni se pulsa nada; la nota dice qué inter
     assert.equal(await clics(dest), 0, 'el manejador de la tarjeta NO se ejecutó (sin force)')
     const nota = notas.at(-1)!
     assert.ok(RE_NOTA_CLIC_PELAYO.test(nota), nota)
-    assert.match(nota, /^clic pelayo: ch=0 bb=\d+x\d+@\d+,\d+ vis=1 op=1 vs=v dp=\w[\w-]* pe=auto anc=- hit=otro\/div\/velo-modal cookie=0 ifr=0 shd=0 anim=0$/)
+    assert.match(nota, /^clic pelayo: ch=0 bb=\d+x\d+@\d+,\d+ vis=1 op=1 vs=v dp=\w[\w-]* pe=auto anc=- hit=otro\/div\/velo-modal cookie=0 ifr=0 shd=0 anim=0 int=div\/velo-modal\/d0m1f0x0\/z0$/)
     assert.ok(logs.some((l) => l.startsWith('pelayo_clic_no_accionable ')))
   } finally { await context.close() }
 })
