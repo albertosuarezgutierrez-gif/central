@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-04T20:57:30Z",
-  "sha": "9dc8043ab24ce8d852170104e5f3bb56cb8690db",
+  "generadoEn": "2026-11-04T21:30:44Z",
+  "sha": "181602743dd37ffdbf0849eb2055b457dfadc06d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -81273,7 +81273,7 @@
         "next"
       ],
       "rutaApi": "/api/factura/anular",
-      "hash": "f36be20abc2b"
+      "hash": "60d202aeb0e3"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/factura/cerrar/route.ts",
@@ -81295,7 +81295,7 @@
         "next"
       ],
       "rutaApi": "/api/factura/cerrar",
-      "hash": "9b15b10d6973"
+      "hash": "ae1b9765c077"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/factura/cliente/lista/route.ts",
@@ -81383,7 +81383,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 138,
+          "linea": 159,
           "resumen": "GET — estado de conformidad del sistema"
         }
       ],
@@ -81391,7 +81391,7 @@
         "next"
       ],
       "rutaApi": "/api/factura/enviar-aeat",
-      "hash": "9fd2f180f5e0"
+      "hash": "847110606618"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/factura/lista/route.ts",
@@ -81435,7 +81435,7 @@
         "next"
       ],
       "rutaApi": "/api/factura/pago-parcial",
-      "hash": "6bfaa462dcaf"
+      "hash": "308beec5c2be"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/feedback/[token]/route.ts",
@@ -104672,32 +104672,90 @@
     {
       "ruta": "apps/ia-rest/src/lib/verifactu.ts",
       "ambito": "apps/ia-rest",
-      "resumen": "============================================================ ia.rest · VERIFACTU — Hash encadenado RD 1007/2023 Phase 1: registros locales + QR en ticket ✅ Phase 2: envío SOAP/XML a AEAT (cuando AEAT lo habilite ~2027) ============================================================ Spec: \"Sistemas Info",
+      "resumen": "============================================================ ia.rest · VERIFACTU — ADAPTADOR de la app sobre @central/core-fiscal Phase 1: registros locales + QR en ticket ✅ Phase 2: envío SOAP/XML a AEAT (cuando AEAT lo habilite) ============================================================ Lo GENÉR",
       "exporta": [
+        "numSerieIaRest",
+        "fechaHoraHusoDe",
+        "eslabonDeFila",
         "construirFactura",
+        "registroDeFactura",
+        "construirAnulacion",
         "generarXmlLROE"
       ],
       "funciones": [
         {
+          "nombre": "numSerieIaRest",
+          "kind": "function",
+          "exportada": true,
+          "params": "serie: string, numero: number",
+          "retorno": "string",
+          "linea": 75,
+          "resumen": "«T» + 42 → «T-00000042» (NumSerieFactura de ia.rest)."
+        },
+        {
+          "nombre": "fechaHoraHusoDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string | Date",
+          "retorno": "string",
+          "linea": 80,
+          "resumen": "Instante (ISO con o sin huso, tal como venga de la BD) → «AAAA-MM-DDThh:mm:ss±hh:mm» en hora de Madrid."
+        },
+        {
+          "nombre": "eslabonDeFila",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: { nif_emisor: string; numero_serie: string; numero_factura: number; fecha_expedicion: string; huella: string }",
+          "retorno": "EslabonAnterior",
+          "linea": 87,
+          "resumen": "Fila previa de `facturas_verifactu` → eslabón para encadenar el registro siguiente."
+        },
+        {
+          "nombre": "registroAltaDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: { nif_emisor: string; razon_social: string; numero_serie: string; numero_factura: number fechaHoraHuso: string; importe_total_centimos: number; tipo_iva: number base_centimos?: number; cuota_centimos?: number; anterior: EslabonAnterior |",
+          "retorno": "RegistroAlta",
+          "linea": 98
+        },
+        {
           "nombre": "construirFactura",
           "kind": "function",
           "exportada": true,
-          "params": "params: { nif_emisor: string razon_social: string numero_serie: string numero_factura: number huella_anterior: string | null primer_registro: boolean comanda_id: string mesa_label: string num_items: number importe_total: number tipo_iva?: n",
+          "params": "params: { nif_emisor: string razon_social: string numero_serie: string numero_factura: number /** Eslabón del registro anterior de la serie (`eslabonDeFila`); null = primer registro. */ anterior: EslabonAnterior | null comanda_id: string me",
           "retorno": "FacturaVeri",
-          "linea": 48
+          "linea": 124
+        },
+        {
+          "nombre": "registroDeFactura",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FacturaVeri, anterior: EslabonAnterior | null",
+          "retorno": "RegistroAlta",
+          "linea": 183,
+          "resumen": "Reconstruye el registro de alta desde una FacturaVeri guardada y comprueba que su huella es la guardada. Lanza si no coincide (fila alterada o emitida con el cálculo antiguo, no conforme): ese registr"
+        },
+        {
+          "nombre": "construirAnulacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "params: { factura: { nif_emisor: string; numero_serie: string; numero_factura: number; fecha_expedicion: string } anterior: EslabonAnterior | null ahora?: Date }",
+          "retorno": "RegistroAnulacion",
+          "linea": 212,
+          "resumen": "Registro de anulación de una factura de ia.rest. `anterior` = eslabón del último registro de la cadena. Hoy ia.rest encadena la anulación a la propia factura anulada (no al último registro de la serie"
         },
         {
           "nombre": "generarXmlLROE",
           "kind": "function",
           "exportada": true,
-          "params": "params: { factura: FacturaVeri nif_emisor: string razon_social: string }",
+          "params": "params: { factura: FacturaVeri nif_emisor: string razon_social: string /** Eslabón del registro anterior (`eslabonDeFila` de la factura previa); null si es el primero. */ anterior: EslabonAnterior | null }",
           "retorno": "string",
-          "linea": 118
+          "linea": 233
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2516c8663c5a"
+      "hash": "4f73df5965ff"
     },
     {
       "ruta": "apps/ia-rest/src/lib/voice-commands-guide.ts",
@@ -235701,46 +235759,428 @@
       "hash": "3a09aeba22c4"
     },
     {
-      "ruta": "packages/core-fiscal/src/es/aeat.ts",
+      "ruta": "packages/core-fiscal/src/es/huella.ts",
       "ambito": "packages/core-fiscal",
-      "resumen": "España — AEAT VeriFactu (RD 1007/2023). Primitivas PURAS reutilizables. Spec: \"Sistemas Informáticos de Facturación v1.0.3\" (AEAT), secc. 9.1.1. Lo específico de cada emisor (SistemaInformatico, identidad, now()/huso) NO vive aquí: eso es el adaptador en cada app. Aquí solo lógica pura.",
+      "resumen": "Huella (hash) de los registros de facturación VeriFactu. Lógica PURA. Fuente: AEAT, «Detalle de las especificaciones técnicas para generación de la huella o hash de los registros de facturación» (v0.1.2, 27/08/2024), desarrollo del art. 13 de la Orden HAC/1177/2024. - Cadena `campo=valor` unidos por",
       "exporta": [
-        "parseFechaLocalAEAT",
-        "calcularHuella",
-        "generarQrData"
+        "cadenaHuellaAlta",
+        "cadenaHuellaAnulacion",
+        "huellaAlta",
+        "huellaAnulacion",
+        "esHuellaValida"
       ],
       "funciones": [
         {
-          "nombre": "parseFechaLocalAEAT",
+          "nombre": "cadena",
           "kind": "function",
-          "exportada": true,
-          "params": "iso: string",
+          "exportada": false,
+          "params": "campos: T, orden: (keyof T)[]",
           "retorno": "string",
-          "linea": 23,
-          "resumen": "Pasa el ISO con offset a la fecha LOCAL del emisor en formato AEAT (`dd-mm-yyyy hh:mm:ss`). CRÍTICO: la spec exige hora LOCAL, no UTC, así que se parsea el string directamente sin `new Date()` (que de"
+          "linea": 48
         },
         {
-          "nombre": "calcularHuella",
+          "nombre": "sha256Mayus",
           "kind": "function",
-          "exportada": true,
-          "params": "reg: RegistroFactura",
+          "exportada": false,
+          "params": "s: string",
           "retorno": "string",
-          "linea": 37,
-          "resumen": "Huella SHA-256 encadenada (AEAT v1.0.3, secc. 9.1.1). Campos en orden obligatorio separados por `&`. Devuelve hex en mayúsculas."
+          "linea": 52
         },
         {
-          "nombre": "generarQrData",
+          "nombre": "cadenaHuellaAlta",
           "kind": "function",
           "exportada": true,
-          "params": "params: { nif: string serie: string numero: number fecha: string // YYYY-MM-DD importe: number }",
+          "params": "c: CamposHuellaAlta",
           "retorno": "string",
-          "linea": 54,
-          "resumen": "URL del QR de la factura (formato TIKE-CONT, Orden HAC/1177/2024)."
+          "linea": 57,
+          "resumen": "Cadena exacta que se hashea en un registro de alta (útil para auditoría y depuración)."
+        },
+        {
+          "nombre": "cadenaHuellaAnulacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CamposHuellaAnulacion",
+          "retorno": "string",
+          "linea": 61,
+          "resumen": "Cadena exacta que se hashea en un registro de anulación."
+        },
+        {
+          "nombre": "huellaAlta",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CamposHuellaAlta",
+          "retorno": "string",
+          "linea": 66,
+          "resumen": "Huella SHA-256 (hex MAYÚSCULAS) de un registro de alta."
+        },
+        {
+          "nombre": "huellaAnulacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CamposHuellaAnulacion",
+          "retorno": "string",
+          "linea": 70,
+          "resumen": "Huella SHA-256 (hex MAYÚSCULAS) de un registro de anulación."
+        },
+        {
+          "nombre": "esHuellaValida",
+          "kind": "function",
+          "exportada": true,
+          "params": "h: unknown",
+          "retorno": "h is string",
+          "linea": 75
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a1b924a04c43"
+      "hash": "fd52d016af49"
+    },
+    {
+      "ruta": "packages/core-fiscal/src/es/importe.ts",
+      "ambito": "packages/core-fiscal",
+      "resumen": "Importes y fechas en el formato que exige la AEAT (VeriFactu). Lógica PURA. Dinero: la API de VeriFactu trabaja SIEMPRE en CÉNTIMOS ENTEROS (number entero, puede ser negativo en una rectificativa por diferencias). Solo al escribir la huella, el QR o el XML se pasa a «12.34» (punto decimal, 2 decimal",
+      "exporta": [
+        "exigirCentimos",
+        "centimosAImporte",
+        "eurosACentimos",
+        "formatoTipoImpositivo",
+        "fechaAeat",
+        "exigirFechaHoraHuso",
+        "fechaHoraHuso"
+      ],
+      "funciones": [
+        {
+          "nombre": "exigirCentimos",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: number, campo: string",
+          "retorno": "number",
+          "linea": 15,
+          "resumen": "Comprueba que `c` es un número entero de céntimos. Lanza si no."
+        },
+        {
+          "nombre": "centimosAImporte",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: number, campo = 'importe'",
+          "retorno": "string",
+          "linea": 23,
+          "resumen": "Céntimos enteros → «12.34» (formato decimal AEAT). 5 → «0.05»; -1234 → «-12.34»."
+        },
+        {
+          "nombre": "eurosACentimos",
+          "kind": "function",
+          "exportada": true,
+          "params": "euros: number",
+          "retorno": "number",
+          "linea": 36,
+          "resumen": "Euros (number con decimales, p. ej. de una columna `numeric`) → céntimos enteros. Para ADAPTADORES de apps que aún guardan euros. Redondea al céntimo más cercano."
+        },
+        {
+          "nombre": "formatoTipoImpositivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipo: number",
+          "retorno": "string",
+          "linea": 44,
+          "resumen": "Tipo impositivo en puntos porcentuales (21, 10, 5.5…) → «21.00»."
+        },
+        {
+          "nombre": "fechaAeat",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechaIso: string",
+          "retorno": "string",
+          "linea": 57,
+          "resumen": "«2026-05-02» → «02-05-2026» (FechaExpedicionFactura, QR). Lanza si no es AAAA-MM-DD."
+        },
+        {
+          "nombre": "exigirFechaHoraHuso",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string",
+          "retorno": "string",
+          "linea": 64,
+          "resumen": "Valida FechaHoraHusoGenRegistro: «AAAA-MM-DDThh:mm:ss+hh:mm» (ISO 8601 con huso, sin milisegundos ni «Z»)."
+        },
+        {
+          "nombre": "fechaHoraHuso",
+          "kind": "function",
+          "exportada": true,
+          "params": "instante: Date, zona = 'Europe/Madrid'",
+          "retorno": "string",
+          "linea": 77,
+          "resumen": "sus 10 primeros caracteres son la fecha local (FechaExpedicionFactura de un ticket emitido al momento)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "42a62ff80fdd"
+    },
+    {
+      "ruta": "packages/core-fiscal/src/es/qr.ts",
+      "ambito": "packages/core-fiscal",
+      "resumen": "QR tributario VeriFactu: URL del servicio de cotejo de la AEAT. Lógica PURA. Orden HAC/1177/2024, art. 21 y especificación AEAT «Características del QR y especificaciones del servicio de cotejo»: URL `…/wlpl/TIKE-CONT/ValidarQR` (sistemas VERI*FACTU) o `…/ValidarQRNoVerifactu` (resto), con los parám",
+      "exporta": [
+        "urlQrCotejo"
+      ],
+      "funciones": [
+        {
+          "nombre": "urlQrCotejo",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosQr",
+          "retorno": "string",
+          "linea": 29,
+          "resumen": "Contenido del QR: URL de cotejo de la factura en la sede de la AEAT."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "fa3d269daf55"
+    },
+    {
+      "ruta": "packages/core-fiscal/src/es/registro.ts",
+      "ambito": "packages/core-fiscal",
+      "resumen": "Registros de facturación VeriFactu (alta y anulación): construcción, validación y encadenamiento. PURO. Normativa: RD 1007/2023 (Reglamento de sistemas informáticos de facturación) y Orden HAC/1177/2024. Estructura de campos: esquema SuministroInformacion.xsd de la AEAT (RegistroAlta / RegistroAnula",
+      "exporta": [
+        "esRectificativa",
+        "desglosarDesdeTotales",
+        "desglosarDesdeBases",
+        "totalesDesglose",
+        "construirRegistroAlta",
+        "construirRegistroAnulacion",
+        "eslabonDe",
+        "primerEslabonRoto"
+      ],
+      "funciones": [
+        {
+          "nombre": "esRectificativa",
+          "kind": "function",
+          "exportada": true,
+          "params": "t: TipoFactura",
+          "retorno": "boolean",
+          "linea": 21
+        },
+        {
+          "nombre": "agrupar",
+          "kind": "function",
+          "exportada": false,
+          "params": "lineas: T[], tipoDe: (l: T) => number",
+          "retorno": "Map<number, T[]>",
+          "linea": 96
+        },
+        {
+          "nombre": "desglosarDesdeTotales",
+          "kind": "function",
+          "exportada": true,
+          "params": "lineas: { totalCentimos: number; tipoIva: number }[]",
+          "retorno": "DetalleIva[]",
+          "linea": 111,
+          "resumen": "Desglose a partir de líneas con importe IVA INCLUIDO (tickets / simplificadas). Agrupa por tipo y, por grupo: base = round(total · 100 / (100 + tipo)), cuota = total − base (base + cuota = total, al c"
+        },
+        {
+          "nombre": "desglosarDesdeBases",
+          "kind": "function",
+          "exportada": true,
+          "params": "lineas: { baseCentimos: number; tipoIva: number }[]",
+          "retorno": "DetalleIva[]",
+          "linea": 122,
+          "resumen": "Desglose a partir de líneas con BASE imponible (facturas completas). Cuota por grupo: round(base · tipo / 100)."
+        },
+        {
+          "nombre": "exigirTexto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | undefined | null, campo: string, max: number",
+          "retorno": "string",
+          "linea": 133
+        },
+        {
+          "nombre": "validarIdFactura",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: IdFactura, campo: string",
+          "retorno": "void",
+          "linea": 140
+        },
+        {
+          "nombre": "validarAnterior",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: EslabonAnterior | null",
+          "retorno": "void",
+          "linea": 146
+        },
+        {
+          "nombre": "validarDatosAlta",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: DatosRegistroAlta",
+          "retorno": "void",
+          "linea": 152
+        },
+        {
+          "nombre": "totalesDesglose",
+          "kind": "function",
+          "exportada": true,
+          "params": "desglose: DetalleIva[]",
+          "retorno": "",
+          "linea": 207,
+          "resumen": "Totales del registro: CuotaTotal = Σ cuotas; ImporteTotal = Σ (base + cuota)."
+        },
+        {
+          "nombre": "construirRegistroAlta",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosRegistroAlta",
+          "retorno": "RegistroAlta",
+          "linea": 214,
+          "resumen": "Construye y valida un registro de ALTA y calcula su huella encadenada. Lanza ErrorVerifactu si no es válido."
+        },
+        {
+          "nombre": "construirRegistroAnulacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosRegistroAnulacion",
+          "retorno": "RegistroAnulacion",
+          "linea": 231,
+          "resumen": "Construye y valida un registro de ANULACIÓN y calcula su huella encadenada."
+        },
+        {
+          "nombre": "eslabonDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: RegistroFacturacion",
+          "retorno": "EslabonAnterior",
+          "linea": 246,
+          "resumen": "Eslabón para encadenar el SIGUIENTE registro a partir de este (alta o anulación)."
+        },
+        {
+          "nombre": "primerEslabonRoto",
+          "kind": "function",
+          "exportada": true,
+          "params": "registros: RegistroFacturacion[], inicio: EslabonAnterior | null = null",
+          "retorno": "number | null",
+          "linea": 255,
+          "resumen": "Comprueba una cadena ordenada de registros: el primero sin anterior (o con el eslabón dado), cada uno apuntando a la huella del previo y cada huella recalculable. Devuelve el índice del primer registr"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9a865c33f94a"
+    },
+    {
+      "ruta": "packages/core-fiscal/src/es/transporte.ts",
+      "ambito": "packages/core-fiscal",
+      "resumen": "Interfaz del TRANSPORTE a la AEAT (VeriFactu). Aquí no hay envío real ni firma: solo el contrato. Cada app inyecta su implementación (certificado del obligado o de un colaborador social, mTLS, reintentos). Regla de la casa: «no se sabe» ≠ «falló» ≠ «no se envió». Un timeout NO es un rechazo: es `inc",
+      "exporta": [
+        "transporteDesactivado"
+      ],
+      "funciones": [
+        {
+          "nombre": "transporteDesactivado",
+          "kind": "function",
+          "exportada": true,
+          "params": "motivo = 'Envío a la AEAT desactivado'",
+          "retorno": "TransporteVerifactu",
+          "linea": 40,
+          "resumen": "Transporte que no envía nada (fase actual): siempre `no_enviado` con el motivo dado."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8700b9d4219f"
+    },
+    {
+      "ruta": "packages/core-fiscal/src/es/xml-suministro.ts",
+      "ambito": "packages/core-fiscal",
+      "resumen": "XML de suministro VeriFactu (RegFactuSistemaFacturacion) según los esquemas de la AEAT. Lógica PURA. Esquemas: SuministroLR.xsd (prefijo `sum`, contenedor) + SuministroInformacion.xsd (prefijo `sum1`, registros). El orden de los elementos es el de la secuencia del XSD: no reordenar. Sin firma XAdES ",
+      "exporta": [
+        "xmlRegistroAlta",
+        "xmlRegistroAnulacion",
+        "xmlSuministroLR"
+      ],
+      "funciones": [
+        {
+          "nombre": "e",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 33
+        },
+        {
+          "nombre": "el",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "tag: string, valor: string",
+          "retorno": null,
+          "linea": 34
+        },
+        {
+          "nombre": "imp",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "c: number",
+          "retorno": null,
+          "linea": 35
+        },
+        {
+          "nombre": "idFacturaXml",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: IdFactura, envolvente: string",
+          "retorno": "string",
+          "linea": 37
+        },
+        {
+          "nombre": "encadenamientoXml",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: EslabonAnterior | null",
+          "retorno": "string",
+          "linea": 42
+        },
+        {
+          "nombre": "sistemaXml",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: SistemaInformatico",
+          "retorno": "string",
+          "linea": 49
+        },
+        {
+          "nombre": "xmlRegistroAlta",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: RegistroAlta, sistema: SistemaInformatico",
+          "retorno": "string",
+          "linea": 58,
+          "resumen": "Elemento `sum1:RegistroAlta` (sin contenedor)."
+        },
+        {
+          "nombre": "xmlRegistroAnulacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: RegistroAnulacion, sistema: SistemaInformatico",
+          "retorno": "string",
+          "linea": 97,
+          "resumen": "Elemento `sum1:RegistroAnulacion` (sin contenedor)."
+        },
+        {
+          "nombre": "xmlSuministroLR",
+          "kind": "function",
+          "exportada": true,
+          "params": "params: { obligado: ObligadoEmision registros: RegistroFacturacion[] sistema: SistemaInformatico soap?: boolean }",
+          "retorno": "string",
+          "linea": 111,
+          "resumen": "Documento `sum:RegFactuSistemaFacturacion` completo (cabecera + 1..1000 registros), con declaración XML. `soap: true` lo envuelve en un sobre SOAP 1.1 listo para el servicio VerifactuSOAP."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7b8accad3e49"
     },
     {
       "ruta": "packages/core-fiscal/src/iva.ts",
@@ -242225,6 +242665,402 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "11390f354b9f"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/partida/asiento.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "Asiento contable: INMUTABLE. Se corrige con un contraasiento (rectificar), nunca editando.",
+      "exporta": [
+        "ejercicioNatural",
+        "esFechaISO",
+        "totalesAsiento",
+        "validarAsiento",
+        "crearAsiento",
+        "rectificar"
+      ],
+      "funciones": [
+        {
+          "nombre": "ejercicioNatural",
+          "kind": "function",
+          "exportada": true,
+          "params": "anio: number, abierto = true",
+          "retorno": "EjercicioContable",
+          "linea": 41
+        },
+        {
+          "nombre": "esFechaISO",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: unknown",
+          "retorno": "s is string",
+          "linea": 45
+        },
+        {
+          "nombre": "totalesAsiento",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: Pick<Asiento, 'apuntes'>",
+          "retorno": "",
+          "linea": 51
+        },
+        {
+          "nombre": "validarAsiento",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: Asiento, plan: PlanDeCuentas, ejercicio: EjercicioContable",
+          "retorno": "string[]",
+          "linea": 59,
+          "resumen": "Devuelve la lista de problemas (vacía = válido). No lanza."
+        },
+        {
+          "nombre": "congelar",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: Asiento",
+          "retorno": "Asiento",
+          "linea": 88
+        },
+        {
+          "nombre": "crearAsiento",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: Asiento, plan: PlanDeCuentas, ejercicio: EjercicioContable",
+          "retorno": "Asiento",
+          "linea": 96,
+          "resumen": "Valida y devuelve el asiento congelado (inmutable). Lanza ErrorContable('asiento_invalido') si hay problemas."
+        },
+        {
+          "nombre": "rectificar",
+          "kind": "function",
+          "exportada": true,
+          "params": "original: Asiento, opts: { fecha: string; ejercicio?: number; concepto?: string; numero?: number },",
+          "retorno": "Asiento",
+          "linea": 111,
+          "resumen": "Contraasiento: mismos apuntes con debe/haber intercambiados. El original no se toca. `fecha` y `ejercicio` son los del contraasiento (pueden ser de otro ejercicio abierto)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d859320d7eb1"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/partida/dinero.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "Dinero en CÉNTIMOS ENTEROS. Nunca floats en el núcleo de doble partida. `Centimos` es un number que DEBE ser entero seguro; se valida en las fronteras.",
+      "exporta": [
+        "esCentimos",
+        "validarCentimos",
+        "aCentimos",
+        "aEuros",
+        "formatearCentimos",
+        "porcentajeDe"
+      ],
+      "funciones": [
+        {
+          "nombre": "esCentimos",
+          "kind": "function",
+          "exportada": true,
+          "params": "n: unknown",
+          "retorno": "n is Centimos",
+          "linea": 15
+        },
+        {
+          "nombre": "validarCentimos",
+          "kind": "function",
+          "exportada": true,
+          "params": "n: unknown, etiqueta = 'importe'",
+          "retorno": "Centimos",
+          "linea": 20,
+          "resumen": "Lanza si `n` no es un entero seguro. Devuelve el mismo valor (tipado)."
+        },
+        {
+          "nombre": "aCentimos",
+          "kind": "function",
+          "exportada": true,
+          "params": "euros: number",
+          "retorno": "Centimos",
+          "linea": 26,
+          "resumen": "Euros (decimal) → céntimos, redondeando al céntimo más próximo (mitades hacia fuera)."
+        },
+        {
+          "nombre": "aEuros",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Centimos",
+          "retorno": "number",
+          "linea": 33,
+          "resumen": "Céntimos → euros decimales (solo para interoperar con el código antiguo basado en floats)."
+        },
+        {
+          "nombre": "formatearCentimos",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Centimos",
+          "retorno": "string",
+          "linea": 38,
+          "resumen": "Formato español: 216249 → «2.162,49€» (miles con punto también en 4 cifras; coma decimal; € detrás)."
+        },
+        {
+          "nombre": "porcentajeDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "base: Centimos, porcentaje: number",
+          "retorno": "Centimos",
+          "linea": 48,
+          "resumen": "Cuota de IVA (o cualquier porcentaje) sobre una base en céntimos, redondeo al céntimo."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "85ff4bc1de11"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/partida/hechos.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "Puerto de «hechos contables» + reglas configurables hecho → cuentas. El resto de la app (facturación, banco, nóminas) emite HechoContable; este módulo lo traduce a Asiento. Importes siempre en céntimos. Abonos/devoluciones: no se admiten importes negativos; se rectifica el asiento.",
+      "exporta": [
+        "combinarReglas",
+        "asientoDesdeHecho"
+      ],
+      "funciones": [
+        {
+          "nombre": "combinarReglas",
+          "kind": "function",
+          "exportada": true,
+          "params": "base: ReglasAsiento, cambios: { [K in keyof ReglasAsiento]?: Partial<ReglasAsiento[K]> }",
+          "retorno": "ReglasAsiento",
+          "linea": 88,
+          "resumen": "Mezcla parcial de reglas sobre las PGC (útil para plantillas sectoriales)."
+        },
+        {
+          "nombre": "pos",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: Centimos, etiqueta: string",
+          "retorno": "Centimos",
+          "linea": 98
+        },
+        {
+          "nombre": "cabecera",
+          "kind": "function",
+          "exportada": false,
+          "params": "h: HechoBase, porDefecto: string",
+          "retorno": "Pick<Asiento, 'fecha' | 'ejercicio' | 'concepto'>",
+          "linea": 104
+        },
+        {
+          "nombre": "ap",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuenta: string, debe: Centimos, haber: Centimos, documento?: string",
+          "retorno": "ApunteAsiento | null",
+          "linea": 109
+        },
+        {
+          "nombre": "compactar",
+          "kind": "function",
+          "exportada": false,
+          "params": "xs: (ApunteAsiento | null)[]",
+          "retorno": "ApunteAsiento[]",
+          "linea": 114
+        },
+        {
+          "nombre": "sumaDesglose",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: readonly LineaIva[]",
+          "retorno": "",
+          "linea": 118
+        },
+        {
+          "nombre": "origen",
+          "kind": "function",
+          "exportada": false,
+          "params": "tipo: OrigenAsiento['tipo'], ref: string",
+          "retorno": "OrigenAsiento",
+          "linea": 132
+        },
+        {
+          "nombre": "asientoDesdeHecho",
+          "kind": "function",
+          "exportada": true,
+          "params": "hecho: HechoContable, reglas: ReglasAsiento = REGLAS_PGC",
+          "retorno": "Asiento",
+          "linea": 137,
+          "resumen": "Traduce un hecho a un asiento CUADRADO (por construcción; se comprueba igualmente). No valida contra el plan."
+        },
+        {
+          "nombre": "porCuenta",
+          "kind": "function",
+          "exportada": false,
+          "params": "pares: (readonly [string, Centimos])[]",
+          "retorno": "[string, Centimos][]",
+          "linea": 220,
+          "resumen": "Agrupa importes por cuenta conservando el orden de primera aparición."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "17e3e59d4151"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/partida/libros.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "Libros contables: diario, mayor, sumas y saldos, balance de situación y cuenta de PyG abreviados. Convención: saldo = debe − haber (positivo = deudor). Todo en céntimos.",
+      "exporta": [
+        "libroDiario",
+        "libroMayor",
+        "sumasYSaldos",
+        "balanceSituacion",
+        "cuentaPyG"
+      ],
+      "funciones": [
+        {
+          "nombre": "enPeriodo",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: Asiento, p?: Periodo",
+          "retorno": "boolean",
+          "linea": 13
+        },
+        {
+          "nombre": "ordenar",
+          "kind": "function",
+          "exportada": false,
+          "params": "asientos: readonly Asiento[]",
+          "retorno": "Asiento[]",
+          "linea": 17
+        },
+        {
+          "nombre": "libroDiario",
+          "kind": "function",
+          "exportada": true,
+          "params": "asientos: readonly Asiento[], periodo?: Periodo",
+          "retorno": "Asiento[]",
+          "linea": 27,
+          "resumen": "Libro diario: asientos ordenados por fecha + número (estable)."
+        },
+        {
+          "nombre": "libroMayor",
+          "kind": "function",
+          "exportada": true,
+          "params": "asientos: readonly Asiento[], cuenta: string, opts: Periodo & { subcuentas?: boolean; saldoInicial?: Centimos } = {},",
+          "retorno": "Mayor",
+          "linea": 55,
+          "resumen": "Mayor de una cuenta. Con `subcuentas` (por defecto) incluye las que cuelgan de ella por prefijo (mayor de 430 = 430 + 430000001…). `saldoInicial` permite arrancar en un periodo posterior."
+        },
+        {
+          "nombre": "acumular",
+          "kind": "function",
+          "exportada": false,
+          "params": "asientos: readonly Asiento[], periodo?: Periodo",
+          "retorno": "Map<string,",
+          "linea": 96
+        },
+        {
+          "nombre": "sumasYSaldos",
+          "kind": "function",
+          "exportada": true,
+          "params": "asientos: readonly Asiento[], periodo?: Periodo",
+          "retorno": "SumasYSaldos",
+          "linea": 110
+        },
+        {
+          "nombre": "saldoPorPrefijo",
+          "kind": "function",
+          "exportada": false,
+          "params": "m: Map<string, { debe: Centimos; haber: Centimos }>",
+          "retorno": "(cuenta: string)",
+          "linea": 133
+        },
+        {
+          "nombre": "rubricaDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuenta: string, tabla: readonly (readonly [string, string])[], porDefecto: string",
+          "retorno": "string",
+          "linea": 137
+        },
+        {
+          "nombre": "balanceSituacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "asientos: readonly Asiento[], hasta?: string",
+          "retorno": "BalanceSituacion",
+          "linea": 191,
+          "resumen": "Balance de situación abreviado a una fecha (acumulado desde el inicio de los datos recibidos). El resultado del ejercicio es el saldo de los grupos 6 y 7 aún sin cerrar. Cuentas de saldo contrario a s"
+        },
+        {
+          "nombre": "cuentaPyG",
+          "kind": "function",
+          "exportada": true,
+          "params": "asientos: readonly Asiento[], periodo?: Periodo",
+          "retorno": "CuentaPyG",
+          "linea": 257,
+          "resumen": "Cuenta de pérdidas y ganancias abreviada. Ingresos en positivo, gastos en negativo."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b1e8a71889d6"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/partida/plan.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "Plan de cuentas. La semilla (PGC PYMES, RD 1515/2007) es DATO, no lógica: las plantillas sectoriales (taller, hostelería, limpieza…) añaden filas con `crearPlan(SEMILLA_PGC_PYMES, extra)`.",
+      "exporta": [
+        "crearPlan",
+        "obtenerCuenta",
+        "crearSubcuenta"
+      ],
+      "funciones": [
+        {
+          "nombre": "filaACuenta",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: FilaSemilla",
+          "retorno": "Cuenta",
+          "linea": 131
+        },
+        {
+          "nombre": "crearPlan",
+          "kind": "function",
+          "exportada": true,
+          "params": "semilla: readonly FilaSemilla[] = SEMILLA_PGC_PYMES, extra: readonly FilaSemilla[] = []",
+          "retorno": "PlanDeCuentas",
+          "linea": 138,
+          "resumen": "Crea un plan a partir de la semilla (+ filas extra de plantillas sectoriales). Un código repetido es error."
+        },
+        {
+          "nombre": "obtenerCuenta",
+          "kind": "function",
+          "exportada": true,
+          "params": "plan: PlanDeCuentas, codigo: string",
+          "retorno": "Cuenta | undefined",
+          "linea": 148
+        },
+        {
+          "nombre": "buscarPadre",
+          "kind": "function",
+          "exportada": false,
+          "params": "plan: PlanDeCuentas, codigo: string",
+          "retorno": "Cuenta | undefined",
+          "linea": 153,
+          "resumen": "Cuenta existente más larga que sea prefijo estricto de `codigo`."
+        },
+        {
+          "nombre": "crearSubcuenta",
+          "kind": "function",
+          "exportada": true,
+          "params": "plan: PlanDeCuentas, codigo: string, nombre: string",
+          "retorno": "PlanDeCuentas",
+          "linea": 166,
+          "resumen": "hereda grupo y naturaleza. La cuenta padre directa pasa a NO admitir apuntes (queda como agrupadora). Devuelve un plan nuevo; no muta el original."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b8da68c904a0"
     },
     {
       "ruta": "packages/module-contabilidad/src/pyg.ts",
@@ -283417,7 +284253,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5793,
-    "funciones": 22940
+    "archivos": 5803,
+    "funciones": 23018
   }
 }
