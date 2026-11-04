@@ -748,7 +748,7 @@ test('0.3.5 · el explorador fija en el guard las rutas tolerables de SU entrada
   const { readFileSync } = await import('node:fs')
   const src = readFileSync(new URL('../src/explorador.ts', import.meta.url), 'utf8')
   const i = src.indexOf('const guard = await instalarGuardEmision(context)')
-  const j = src.indexOf('const tolerables = rutasAppTolerablesDe(exp.entrada)', i)
+  const j = src.indexOf('const tolerables = rutasAppTolerablesDe(entradaClave)', i)
   const k = src.indexOf('if (tolerables.length > 0) tolerarRutasApp(guard, tolerables)', j)
   const p = src.indexOf('const page = await context.newPage()', i)
   assert.ok(i > 0 && j > i && k > j && p > k, 'tolerarRutasApp con las rutas de la entrada, tras instalar el guard y antes de la página')
@@ -801,7 +801,7 @@ test('0.3.5b · solo los descriptores URL se neutralizan: posiciones de href/for
 
 // ─── 0.3.6 (real 28/10/2026 15:17, main-301931b) ────────────────────────────────────────────────────────────
 
-test('versión 0.3.36', () => assert.equal(EXPLORADOR_VERSION, '0.3.36'))
+test('versión 0.3.37', () => assert.equal(EXPLORADOR_VERSION, '0.3.37'))
 
 /** ePAC valida el NIF al SALIR del campo (change → petición asíncrona → campo oculto); «Aceptar» en el mismo lote llegaba antes. */
 const FIGURAS_NIF = PAGINA(`

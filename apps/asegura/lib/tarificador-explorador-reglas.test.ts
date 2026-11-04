@@ -730,3 +730,29 @@ test('guardián: la regex de la nota de entrada de asegura es IDÉNTICA a la del
   assert.ok(worker && asegura)
   assert.equal(asegura, worker)
 })
+
+// 0.3.37: diagnóstico del clic de la tarjeta de ramo de Pelayo (lo produce `notaClicPelayo` del worker): forma CERRADA, sin texto libre.
+const NOTA_CLIC_PELAYO = 'clic pelayo: ch=1 bb=240x120@10,301 vis=1 op=0.5 vs=v dp=block pe=auto anc=div/envoltura/1/none hit=otro/div/velo-modal cookie=0 ifr=0 shd=0 anim=2'
+test('cierre: la nota de diagnóstico del clic de Pelayo se conserva EXACTA; con texto añadido o libre se descarta', () => {
+  const base = { trabajoId: '0c6b8826-32b9-4b20-bea4-4d27979da4a2', motivoFin: 'tope', redNoGet: [], efectosEnPortal: [] }
+  for (const n of [NOTA_CLIC_PELAYO, 'clic pelayo: ch=0 bb=- vis=0 op=0 vs=h dp=none pe=none anc=- hit=ninguno cookie=1 ifr=1 shd=1 anim=99']) {
+    const r = leerPeticionCierre({ ...base, notaFin: n })
+    assert.ok(r.ok && r.p.notaFin === n, n)
+  }
+  for (const n of [`${NOTA_CLIC_PELAYO} ES1234`, ` ${NOTA_CLIC_PELAYO}`, `${NOTA_CLIC_PELAYO}\n`, NOTA_CLIC_PELAYO.replace('ch=1', 'ch=2'), NOTA_CLIC_PELAYO.replace('velo-modal', 'Velo Modal'), 'clic pelayo: texto libre', NOTA_CLIC_PELAYO.replace('anim=2', 'anim=100')]) {
+    const r = leerPeticionCierre({ ...base, notaFin: n })
+    assert.ok(r.ok && r.p.notaFin === null, n)
+  }
+})
+
+test('guardián: la regex de la nota del clic de asegura es IDÉNTICA a la del worker (RE_NOTA_CLIC_PELAYO)', () => {
+  const aqui = path.dirname(fileURLToPath(import.meta.url))
+  const extraer = (f: string, marca: string) => {
+    const linea = readFileSync(path.join(aqui, f), 'utf8').split('\n').find((l) => l.includes(marca) && /\/\^clic pelayo:/.test(l))
+    return /\/(\^clic pelayo:.*?\$)\//.exec(linea ?? '')?.[1]
+  }
+  const worker = extraer('../../../services/tarificador-rpa/src/diagnostico-clic.ts', 'RE_NOTA_CLIC_PELAYO =')
+  const asegura = extraer('tarificador-explorador-reglas.ts', 'if (/')
+  assert.ok(worker && asegura)
+  assert.equal(asegura, worker)
+})

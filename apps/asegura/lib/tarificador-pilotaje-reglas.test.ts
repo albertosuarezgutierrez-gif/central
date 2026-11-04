@@ -34,6 +34,11 @@ test('comando: lista cerrada de acciones y claves (nada de selectores, URLs ni �
   assert.equal(leerComandoPilotaje({ accion: 'seleccionar', ref: 'm0e1', valor: 'P' }).ok, true)
   assert.equal(leerComandoPilotaje({ accion: 'esperar', ms: 20_000 }).ok, false)
   assert.equal(leerComandoPilotaje({ accion: 'fin' }).ok, true)
+  // 0.3.37: `inspeccionar` (diagnóstico sin pulsar) lleva SOLO un ref del inventario.
+  assert.deepEqual(leerComandoPilotaje({ accion: 'inspeccionar', ref: 'm0e3' }), { ok: true, c: { accion: 'inspeccionar', ref: 'm0e3' } })
+  assert.equal(leerComandoPilotaje({ accion: 'inspeccionar' }).ok, false)
+  assert.equal(leerComandoPilotaje({ accion: 'inspeccionar', ref: 'm0e3', valor: 'x' }).ok, false)
+  assert.equal(leerComandoPilotaje({ accion: 'inspeccionar', ref: '#a' }).ok, false)
 })
 
 test('encolar: solo `entrada` de la lista cerrada; sin cliente ni riesgo (siempre sintética); sin login asistido', () => {

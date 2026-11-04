@@ -38,10 +38,11 @@ import {
 } from '@central/module-tarificacion'
 import { cerrarPilotaje, enviarResultado, pedirComandoPilotaje, publicarEstadoPilotaje, type Config, type ResultadoComandoPilotaje, type Trabajo } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
+import { ClicNoAccionableError, cuerpoDiagnosticoClic, esTimeoutAccionabilidad, leerDiagnosticoClic } from './diagnostico-clic.ts'
 import { clasificar } from './errores.ts'
 import { exigirSinVerificacion } from './verificacion.ts'
 import { capturarInventarioExploracion, type InventarioExploracion } from './inventario-dom.ts'
-import { ATRIBUTO_MARCA, PORTALES_EXPLORACION, elegirNxDropdown, localizar, valorParaControl, type CtxEntrada } from './explorador.ts'
+import { ATRIBUTO_MARCA, PORTALES_EXPLORACION, abrirSesionEntrada, crearCtxEntrada, elegirNxDropdown, entrarAlPortal, localizar, valorParaControl } from './explorador.ts'
 import {
   cerrarFaseEntrada,
   exigirCampoNoBancario,
@@ -142,6 +143,17 @@ export async function ejecutarComando(page: Page, captura: InventarioExploracion
   const nodo = captura.nodos.get(c.ref)
   if (!hit || !nodo) return rechazo('ref_no_existe')
   const el = hit.el
+  if (c.accion === 'inspeccionar') {
+    // 0.3.37: SOLO LECTURA. Diagnóstico de accionabilidad del control (forma cerrada, sin PII), sin pulsarlo ni desplazarlo.
+    const l0 = await localizar(nodo, el)
+    if (!('loc' in l0)) return rechazo('no_localizado', [l0.motivo])
+    try {
+      const d = await leerDiagnosticoClic(l0.loc)
+      return d ? { r: { estado: 'hecho', motivo: 'inspeccionado', detalle: [`diag: ${cuerpoDiagnosticoClic(d)}`] } } : rechazo('no_localizado', ['el nodo ya no está'])
+    } finally {
+      await l0.loc.evaluate((n, at) => n.removeAttribute(at), ATRIBUTO_MARCA, { timeout: 2_000 }).catch(() => undefined)
+    }
+  }
   if (c.accion !== 'pulsar') {
     const prohibido = motivoCampoProhibido(el)
     if (prohibido) return rechazo(prohibido)
@@ -217,6 +229,13 @@ export async function ejecutarComando(page: Page, captura: InventarioExploracion
     // Una violación de RED del guard (algo salió hacia emisión) cierra la sesión; el resto es un rechazo registrado.
     if (k.guard.violacion()) throw k.guard.violacion()
     if (e instanceof EmisionBloqueadaError) return rechazo('guard', [textoDiagnostico(`${e.donde}: ${e.message}`, red)])
+    // 0.3.37: el clic caducó por accionabilidad. La tarjeta de ramo de Pelayo ya agotó su clic robusto (guard.ts) y trae el diagnóstico; cualquier
+    // otro control se diagnostica aquí (el nodo sigue marcado). Todo en forma cerrada, sin PII.
+    if (e instanceof ClicNoAccionableError) return rechazo('clic_no_accionable', [e.diagnostico ? `diag: ${cuerpoDiagnosticoClic(e.diagnostico)}` : 'sin diagnóstico', `hijo probado: ${e.hijoProbado ? 1 : 0}`])
+    if (esTimeoutAccionabilidad(e)) {
+      const d = await leerDiagnosticoClic(loc)
+      return rechazo('clic_no_accionable', [...(d ? [`diag: ${cuerpoDiagnosticoClic(d)}`] : ['sin diagnóstico']), textoDiagnostico(e instanceof Error ? e.message : String(e), red)])
+    }
     return rechazo('error', [textoDiagnostico(e instanceof Error ? e.message : String(e), red)])
   } finally {
     await loc.evaluate((n, at) => n.removeAttribute(at), ATRIBUTO_MARCA, { timeout: 2_000 }).catch(() => undefined)
@@ -349,49 +368,12 @@ export async function ejecutarPilotaje(p: EntradaPilotaje): Promise<number> {
   let finP: FinPilotaje
   try {
     browser = await chromium.launch({ headless: true })
-    const context = await browser.newContext({ locale: 'es-ES', timezoneId: 'Europe/Madrid' })
-    const guard = await instalarGuardEmision(context)
-    const tolerables = rutasAppTolerablesDe(entradaClave)
-    if (tolerables.length > 0) tolerarRutasApp(guard, tolerables)
-    const neutras = neutralizacionesOnclickDe(entradaClave)
-    if (neutras.length > 0) neutralizarOnclicksEntrada(guard, neutras)
-    const page = await context.newPage()
-    page.setDefaultTimeout(TOPE_PASO_MS)
-    page.setDefaultNavigationTimeout(TOPE_PASO_MS)
-    page.on('dialog', (d) => { d.dismiss().catch(() => {}) })
-    const ctxEntrada: CtxEntrada = {
-      credenciales,
-      log: (m) => log(m),
-      pausa: () => dormirReal(azar(800, 2_500)),
-      pulsar: async (boton) => {
-        await dormirReal(azar(300, 1_200))
-        await pulsar(boton, guard)
-      },
-      exigirSinCaptcha: () => exigirSinCaptcha(page),
-      // `resto[0]` = opciones de la puerta (Pelayo: `{ reintento }`), si la entrada las pasa; la puerta las valida.
-      pulsarEnlaceEntrada: async (boton: Locator, ...resto: unknown[]) => {
-        await dormirReal(azar(300, 1_200))
-        await pulsarEnlaceEntradaAutorizado(boton, guard, trabajo.compania, resto[0] as { reintento?: boolean } | undefined)
-      },
-      pulsarAccesoNse: async (boton) => {
-        await dormirReal(azar(300, 1_200))
-        await pulsarAccesoNseMapfre(boton, guard, trabajo.compania)
-      },
-      pulsarMenuNse: async (boton) => {
-        await dormirReal(azar(300, 1_200))
-        await pulsarMenuOfertaNseMapfre(boton, guard, trabajo.compania)
-      },
-    }
+    // MISMO camino que el explorador (04/11/2026): sesión, ctx de entrada y login + entrada son las funciones del explorador, sin copia.
+    const { guard, page } = await abrirSesionEntrada(browser, entradaClave)
+    const ctxEntrada = crearCtxEntrada({ page, guard, compania: trabajo.compania, credenciales, log, dormir: dormirReal })
     let pagina = page
     try {
-      const devuelta = await portal.entrar(page, ctxEntrada, entrada)
-      if (devuelta && devuelta !== page) {
-        pagina = devuelta
-        pagina.setDefaultTimeout(TOPE_PASO_MS)
-        pagina.setDefaultNavigationTimeout(TOPE_PASO_MS)
-        pagina.on('dialog', (dlg) => { dlg.dismiss().catch(() => {}) })
-      }
-      cerrarFaseEntrada(guard)
+      pagina = await entrarAlPortal(page, portal, ctxEntrada, entrada, guard)
       log('pilotaje_entrada_ok', { entrada: entradaClave })
     } catch (e) {
       const c = clasificar(guard.violacion() ?? e)

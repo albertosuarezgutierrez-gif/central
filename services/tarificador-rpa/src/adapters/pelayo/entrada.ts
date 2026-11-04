@@ -19,6 +19,7 @@ import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
 import { exigirSinVerificacion } from '../../verificacion.ts'
 import { exigirSinRechazoCredenciales } from '../../credenciales.ts'
+import { ClicNoAccionableError, cuerpoDiagnosticoClic, notaClicPelayo, type DiagnosticoClic } from '../../diagnostico-clic.ts'
 import { pareceDatoPersonalInventario } from '@central/module-tarificacion'
 
 /** URL pública de entrada (dada por Alberto, 03/11/2026; no es secreta). */
@@ -419,7 +420,14 @@ export async function abrirPresupuestosPelayo(page: Page, ctx: CtxEntradaPelayo,
   throw new ErrorTarificador('portal', `pelayo/entrada: no se localiza el enlace «${RUTA_MENU_PELAYO[1]}» en el desplegable de «${RUTA_MENU_PELAYO[0]}» (${motivo}) (hueco)`)
 }
 
-export type ResultadoRamoPelayo = { estado: 'select' | 'pulsado' | 'no_elegido'; motivo?: string; /** 0.3.33: controles (tarjetas o desplegables) del ramo que se vieron. */ controles?: number }
+export type ResultadoRamoPelayo = {
+  estado: 'select' | 'pulsado' | 'no_elegido'
+  motivo?: string
+  /** 0.3.33: controles (tarjetas o desplegables) del ramo que se vieron. */
+  controles?: number
+  /** 0.3.37: la tarjeta NO fue accionable (clic robusto agotado): su diagnóstico cerrado (sin PII) y si se probó el hijo de texto exacto. */
+  clicNoAccionable?: { diagnostico: DiagnosticoClic | null; hijoProbado: boolean }
+}
 
 type RamoLocalizado = { selects: { sel: Locator; indice: number }[]; pulsables: Locator[] }
 
@@ -465,7 +473,14 @@ export async function elegirRamoPelayo(page: Page, ctx: CtxEntradaPelayo, ramo: 
   }
   if (pulsables.length === 0) return { estado: 'no_elegido', motivo: 'sin control del ramo', controles: 0 }
   if (pulsables.length > 1) return { estado: 'no_elegido', motivo: `${pulsables.length} controles del ramo`, controles: pulsables.length }
-  await ctx.pulsarEnlaceEntrada(pulsables[0])
+  try {
+    await ctx.pulsarEnlaceEntrada(pulsables[0])
+  } catch (e) {
+    // 0.3.37: la tarjeta no se dejó pulsar (invisible, inestable, tapada, pointer-events…) tras el clic robusto del guard: no es un error del
+    // trabajo; se vuelca la pantalla de selección tal cual (como `no_elegido`) y el diagnóstico viaja a la nota. Una violación del guard NO se atrapa.
+    if (!(e instanceof ClicNoAccionableError)) throw e
+    return { estado: 'no_elegido', motivo: 'tarjeta no accionable', controles: 1, clicNoAccionable: { diagnostico: e.diagnostico, hijoProbado: e.hijoProbado } }
+  }
   await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined)
   return { estado: 'pulsado', controles: 1 }
 }
@@ -518,6 +533,12 @@ export async function abrirNuevoPresupuestoPelayo(page: Page, ctx: CtxEntradaPel
   }
   if (r.estado === 'no_elegido') {
     await cierra(destino)
+    if (r.clicNoAccionable) {
+      // 0.3.37: el diagnóstico del clic (forma cerrada, sin PII) sustituye a la nota de contadores: es más específico (una sola nota viaja en `notaFin`).
+      const { diagnostico, hijoProbado } = r.clicNoAccionable
+      ctx.log(`pelayo_clic_no_accionable ${diagnostico ? cuerpoDiagnosticoClic(diagnostico) : 'sin_diagnostico'}`)
+      if (diagnostico) ctx.diagnostico?.(notaClicPelayo(diagnostico, hijoProbado))
+    }
     return destino
   }
   // El primer formulario (0.3.32): la tarjeta del ramo puede abrir una PESTAÑA nueva (sin href: `window.open`) o repintar la misma página (incl. iframe).

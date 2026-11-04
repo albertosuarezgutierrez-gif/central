@@ -19,7 +19,8 @@ export const BUCKET_PILOTAJE = 'tarificador-pilotaje'
 /** La captura es un PNG de la pantalla (≤4 MB, mismo tope que la evidencia de un atasco). */
 export const MAX_BYTES_CAPTURA_PILOTAJE = 4 * 1024 * 1024
 
-export const ACCIONES_PILOTAJE = ['pulsar', 'rellenar', 'seleccionar', 'esperar', 'volver', 'fin'] as const
+/** `inspeccionar` (0.3.37): diagnóstico de accionabilidad de un control SIN pulsarlo (caja, visibilidad, estilos, qué lo tapa). */
+export const ACCIONES_PILOTAJE = ['pulsar', 'rellenar', 'seleccionar', 'inspeccionar', 'esperar', 'volver', 'fin'] as const
 export type AccionPilotaje = (typeof ACCIONES_PILOTAJE)[number]
 export const EFECTOS_PULSAR = ['siguiente_pantalla', 'calcular', 'abrir_seccion', 'ver_resultado'] as const
 export type ComandoPilotaje = {
@@ -42,14 +43,14 @@ export function leerComandoPilotaje(v: unknown): { ok: true; c: ComandoPilotaje 
   if (!c) return { ok: false, errores: ['comando no es un objeto'] }
   const errores: string[] = []
   const accion = ACCIONES_PILOTAJE.find((a) => a === c.accion)
-  if (!accion) return { ok: false, errores: ['accion fuera de lista (pulsar|rellenar|seleccionar|esperar|volver|fin)'] }
+  if (!accion) return { ok: false, errores: ['accion fuera de lista (pulsar|rellenar|seleccionar|inspeccionar|esperar|volver|fin)'] }
   const permitidas: Record<AccionPilotaje, string[]> = {
-    pulsar: ['accion', 'ref', 'efecto'], rellenar: ['accion', 'ref', 'valor', 'dato'], seleccionar: ['accion', 'ref', 'valor'],
+    pulsar: ['accion', 'ref', 'efecto'], rellenar: ['accion', 'ref', 'valor', 'dato'], seleccionar: ['accion', 'ref', 'valor'], inspeccionar: ['accion', 'ref'],
     esperar: ['accion', 'ms'], volver: ['accion'], fin: ['accion'],
   }
   for (const k of Object.keys(c)) if (!permitidas[accion].includes(k)) errores.push(`clave «${k.slice(0, 30)}» no se admite en ${accion}`)
   const out: ComandoPilotaje = { accion }
-  if (accion === 'pulsar' || accion === 'rellenar' || accion === 'seleccionar') {
+  if (accion === 'pulsar' || accion === 'rellenar' || accion === 'seleccionar' || accion === 'inspeccionar') {
     if (typeof c.ref !== 'string' || !RE_REF.test(c.ref)) errores.push('ref tiene que ser un ref del inventario (p. ej. m0e10)')
     else out.ref = c.ref
   }
