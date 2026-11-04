@@ -14,8 +14,8 @@
   dirección + Catastro). «Tú ya fidelizas, porque tienes el seguro y tienes el taller».
 - **Límite jurídico:** el cliente final es del taller; **solo pasa a ser lead de ASegura con su consentimiento propio**
   (sección 6). La frase «el cliente pasa a serlo de los dos» se traduce a: dos casillas, dos finalidades, un registro.
-- **Cifras:** la tarifa de referencia (5 h = 250 €, es decir 50,00 €/h) es una inferencia; se confirma en la sección 11.
-  Los «2.000 €/mes» del audio NO son un precio pactado (duda 5 de la sección 11).
+- **Cifras:** la tarifa de referencia (5 h = 250 €, es decir 50,00 €/h) es una inferencia: la tarifa real la fija el taller en sus Ajustes (sección 3bis).
+  Los «2.000 €/mes» del audio NO son un precio pactado (duda 2 de la sección 11).
 
 ## 1. Decisiones cerradas (resumen operativo)
 1. `apps/taller` + `packages/module-taller`, schema `taller`, rol de BD propio, **multi-taller desde el inicio**,
@@ -40,6 +40,9 @@
 Toda tabla lleva `taller_id` (aislamiento multi-taller por RLS), `creado_en`, `actualizado_en`. Importes en céntimos.
 - **`talleres`**: razón social, nombre comercial, NIF, dirección (CP → provincia → municipio → calle Catastro), marca
   (`@central/brand`), tarifa €/h, serie de facturación, ajustes de aviso.
+- **`configuracion_taller`** y **catálogos** (sección 3bis): ajustes escalares como clave/valor tipado (precio hora y por tipo de
+  trabajo, IVA por defecto, intervalos de aviso, horario y huecos, textos de correo y resguardo, plantillas de presupuesto) y
+  catálogos `tipos_vehiculo` (recargo), `series_factura`, `medios_cobro` y `aceites` (familia, envase, €/litro). Cada cambio, en `auditoria`.
 - **`usuarios_taller`**: nombre, rol (`recepcion|mecanico|dueno|admin`), PIN (hash, único por taller), activo, intentos y bloqueo,
   enlace opcional a la persona en `rrhh`.
 - **`clientes`**: nombre, NIF, móvil, correo, dirección validada, `app_instalada`, referencia opcional al contacto de `seguros`
@@ -74,6 +77,34 @@ Toda tabla lleva `taller_id` (aislamiento multi-taller por RLS), `creado_en`, `a
   programado, enviado, error, `consentimiento_comercial` exigido o no.
 - **`consentimientos`**: ver sección 6. **`leads_enviados`**: id de consentimiento, id de lead en `seguros`, fecha, resultado.
 - **`auditoria`**: quién, qué, cuándo, antes/después (precios, baremos, aceptaciones y cierres de OT son inmutables tras facturar).
+
+## 3bis. Configuración autoservicio del taller (sin intervención de Alberto)
+**Principio.** Todo lo que varía entre talleres es **dato editable por el dueño** desde una pantalla «Ajustes» (rol `dueno`),
+nunca constante en código ni un cambio que tenga que hacer Alberto. Cada taller nace con **valores por defecto sensatos**
+(IVA 21 %, tarifa de partida 50,00 €/h marcada como sugerencia, intervalos de aviso habituales, horario de mañana y tarde)
+que el dueño cambia desde el primer día. Todo cambio queda en `auditoria` (antes/después).
+
+**Configurable por el taller:**
+- **Datos y marca:** razón social, NIF, dirección (CP → provincia → municipio → calle Catastro), logo y colores (`@central/brand`).
+  El «con Grupo ASegura» va siempre fijo: no es editable.
+- **Mano de obra:** precio hora y, si lo quiere, precio por tipo de trabajo.
+- **Vehículos:** tipos y recargos (`tipos_vehiculo`), que alimentan los precios de los paquetes.
+- **Paquetes y servicios:** composición, baremo de horas y precio por tipo de vehículo (`paquetes`, `baremos`).
+- **Aceites y granel:** familias, envases y precio por litro.
+- **IVA por línea:** tipo por defecto y excepciones por línea.
+- **Facturación:** series y numeración (sin huecos por serie) y medios de cobro habilitados.
+- **Personal:** mecánicos y recepción: alta, baja y reset de PIN por el dueño (el PIN se guarda como hash; el reset genera uno temporal).
+- **Proveedores:** nombre, correo de pedidos y contacto.
+- **Textos:** correo de avisos y pie del resguardo de depósito.
+- **Avisos:** intervalos de ITV, de revisión por km y de revisión por meses.
+- **Agenda:** horario y duración de los huecos de cita.
+- **Presupuestos:** plantillas (cabecera, condiciones, textos de paquetes).
+
+**No configurable por el taller:** el texto y la casilla de consentimiento de Grupo ASegura (versión controlada por la
+correduría, sección 6) y las reglas fiscales VeriFactu (`core-fiscal`).
+
+**Regla de implementación:** `module-taller` no contiene ningún precio, IVA, intervalo ni horario literal; todo se lee de
+configuración (guardián F1 (11)).
 
 ## 4. Flujos
 **4.1 Recepción (R1-R4, resguardo de depósito RD 1457/1986).** Matrícula → `resolverMatricula` (`core-vehiculos`) rellena marca,
@@ -179,13 +210,16 @@ aprobados por Alberto, datos del taller en mano.
 **F1 — Recepción, consentimiento, PIN, OT, presupuesto** (dimensionada para 1 mecánico; sin pantallas grandes ni huella). Alta de `apps/taller` (matriz, `vercel.json`, proyecto Vercel, rol y schema),
 `module-taller`, PIN extraído, recepción con fotos/km/daños/firma y resguardo PDF, consentimiento y registro, OT y partes de horas,
 presupuesto por paquetes con aceptación por enlace y cita, dictado con confirmación.
-*Hecho:* una recepción real de Global 2 de punta a punta en tablet; PDF legible; presupuesto aceptado por enlace en móvil a 320 px.
+*Hecho:* una recepción real de Global 2 de punta a punta en tablet; PDF legible; presupuesto aceptado por enlace en móvil a 320 px; el dueño cambia el precio hora en Ajustes y el siguiente
+presupuesto lo usa sin tocar código.
 *Tests y guardianes:* (1) **ningún lead a `seguros` sin consentimiento registrado** (visto fallar: quitar el registro y ver rojo);
 (2) servicio no condicionado: recepción se completa con ambas casillas sin marcar; (3) la matrícula es única por taller y
 toda tabla de negocio lleva `taller_id` (guardián de esquema); (4) aislamiento multi-taller: un PIN de un taller no abre
 datos de otro; (5) PIN: bloqueo tras N intentos; (6) matriz `tests.yml` incluye `taller` (`test/regression-matriz-typecheck.test.ts`);
 (7) `vercel.json` con `ignoreCommand` y `--sin-previews`; (8) secretos sin literal (`regression-secrets`); (9) dinero en formato
-español (2.162,49€); (10) cálculo del paquete por tipo de vehículo y del margen baremo − real con fechas relativas a hoy.
+español (2.162,49€); (10) cálculo del paquete por tipo de vehículo y del margen baremo − real con fechas relativas a hoy;
+(11) **ningún precio, IVA, intervalo ni horario literal en la lógica de `module-taller`**: un test escanea el módulo y falla ante
+cualquier literal de ese tipo fuera de configuración (visto fallar: meter un «50» a pelo y ver rojo).
 
 **F2 — Piezas, pedidos, stock, factura.** Artículos y granel, propuesta de pedido, envío con botón del dueño, albarán y recepción de
 pieza, petición y OCR de factura de proveedor, imputación a matrícula, factura VeriFactu con medio de cobro, ampliaciones con fotos.
@@ -227,7 +261,7 @@ consentimiento, lead auto/hogar a `seguros` con origen «taller», segunda oport
 Confirmado por Alberto (04/11/2026, ya no son dudas): nombre **Talleres de Automoción G2**; dirección Calle Cañada Real 14,
 Parque Industrial Parque Plata, 41900 Camas (Sevilla); **1 mecánico** y pocos coches (acaban de abrir).
 
-1. **Tarifa €/h real** (¿50,00 €/h?), y si se factura siempre el baremo aunque se tarde más.
+1. **Facturación si se tarda más que el baremo:** ¿se factura siempre el baremo aunque se tarde más?
 2. **Qué eran los «2.000 €/mes»**: coste del programa actual, de un servidor o una cuota; y si el trato es 100 % gratis.
 3. **Programa actual y migración:** cuál es, formato de exportación, histórico por matrícula, y qué pasó con las claves.
 4. **Origen de los baremos:** propios, comercial o experiencia; formato para cargarlos.
