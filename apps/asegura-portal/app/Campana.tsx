@@ -253,6 +253,8 @@ function nombreFuente(f: Avisos['fuentesIlegibles'][number]): string {
       return 'la ITV de tus vehículos'
     case 'patrimonio':
       return 'el calendario de tu patrimonio'
+    case 'presupuestos':
+      return 'el precio de tu renovación'
   }
 }
 

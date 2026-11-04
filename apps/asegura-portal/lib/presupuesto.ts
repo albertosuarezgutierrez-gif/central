@@ -44,7 +44,7 @@
 // desde fuera de este fichero.
 
 import { formatoTokenVistaValido, hashTokenVista } from '@central/module-seguros-portal'
-import { WHERE_CARTERA_VIVA, claveProducto, type GarantiasClasificadas } from '@central/module-seguros'
+import { WHERE_CARTERA_VIVA, claveProducto, primaConRecibos, vencimientoConRecibos, type GarantiasClasificadas } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
 
 import { hashCanal } from './auth'
@@ -97,10 +97,27 @@ export type ActualCliente = {
   /** El bien, descrito. NUNCA el número de póliza como identificador. */
   bien: string | null
   ubicacion: string | null
+  /** Con los recibos (`vencimientoConRecibos`): si ya renovó y solo llegó el recibo, el fin de ese recibo. */
   fechaVencimiento: Date | null
+  /**
+   * 🚨 La prima de HOY con los recibos (`primaConRecibos`, 04/11/2026), nunca la de la póliza sola: hay compañías que
+   * solo la mandan en el recibo de la renovación. `null` = no consta (nunca 0).
+   */
   primaAnual: number | null
+  /** La prima sale del recibo (la de la renovación ya emitida). */
+  primaDeRecibo: boolean
   /** `null` = no se ha podido leer el desglose; `[]` = leído y vacío. */
   coberturas: string[] | null
+}
+
+/**
+ * Modo RENOVACIÓN (2026-11-05b): «tu renovación actual» vs. alternativas de una póliza nuestra. `null` = presupuesto de
+ * siempre, o la migración no está (fail-closed: se pinta como siempre y NO se ofrece elegir sin firma).
+ */
+export type RenovacionCliente = {
+  /** Lo que ya eligió (sin firmar). `null` = no consta que haya elegido. */
+  eleccion: { tipo: 'renovacion' } | { tipo: 'opcion'; opcionId: string } | null
+  eleccionAt: Date | null
 }
 
 export type PresupuestoCliente = {
@@ -123,6 +140,8 @@ export type PresupuestoCliente = {
   actual: ActualCliente | null
   /** `true` cuando quien mira es Alberto con la vista de corredor. */
   vistaDeCorredor: boolean
+  /** Ver `RenovacionCliente`. */
+  renovacion: RenovacionCliente | null
   /** Lo que el cliente pidió, según lo anotó el corredor. `null` = no consta por escrito. */
   necesidades: string | null
   /** Entró con el CÓDIGO DEL WHATSAPP (no con su correo): puede firmar con ese mismo código. */
@@ -380,9 +399,10 @@ export async function presupuestoDeSesion(id: string): Promise<LecturaPresupuest
     const hoy = new Date()
     const caducado = p.venceEl.getTime() < hoy.getTime()
 
-    const [opciones, actual] = await Promise.all([
+    const [opciones, actual, renovacion] = await Promise.all([
       leerOpciones(p.id, p.correduriaId),
       p.polizaId === null ? Promise.resolve(null) : leerActual(p.polizaId, p.clienteId, p.correduriaId),
+      leerRenovacion(p.id, p.correduriaId),
     ])
 
     // ── El sello ──────────────────────────────────────────────────────────
@@ -414,6 +434,7 @@ export async function presupuestoDeSesion(id: string): Promise<LecturaPresupuest
         opciones,
         actual,
         vistaDeCorredor,
+        renovacion,
         necesidades: p.necesidades?.trim() || null,
         accesoWhatsapp: porWhatsapp,
         accesoTercero,
@@ -530,6 +551,27 @@ async function leerOpciones(presupuestoId: string, correduriaId: string): Promis
  * pintada como «lo que tienes hoy» sería una comparación contra un seguro que
  * ya no existe.
  */
+/**
+ * El modo renovación y la elección (columnas de 2026-11-05b, leídas en crudo: el schema no las declara para que su
+ * ausencia no tumbe el resto de lecturas del presupuesto). Solo se llama DESPUÉS de autorizar (`presupuestoDeSesion`).
+ * Sin la migración o con cualquier fallo → `null`: se pinta el presupuesto de siempre y no se ofrece elegir sin firma.
+ */
+async function leerRenovacion(presupuestoId: string, correduriaId: string): Promise<RenovacionCliente | null> {
+  try {
+    const [f] = await prisma.$queryRaw<{ modo: string | null; eleccion_cliente: string | null; eleccion_opcion_id: string | null; eleccion_at: Date | null }[]>`
+      select modo, eleccion_cliente, eleccion_opcion_id::text as eleccion_opcion_id, eleccion_at
+      from seguros.presupuesto where id = ${presupuestoId}::uuid and correduria_id = ${correduriaId}::uuid`
+    if (!f || f.modo !== 'renovacion') return null
+    const eleccion = f.eleccion_cliente === 'renovacion'
+      ? { tipo: 'renovacion' as const }
+      : f.eleccion_cliente === 'opcion' && f.eleccion_opcion_id ? { tipo: 'opcion' as const, opcionId: f.eleccion_opcion_id } : null
+    return { eleccion, eleccionAt: eleccion ? f.eleccion_at : null }
+  } catch (e) {
+    registrar('leerRenovacion', e)
+    return null
+  }
+}
+
 async function leerActual(polizaId: string, clienteId: string, correduriaId: string): Promise<ActualCliente | null> {
   // `WHERE_CARTERA_VIVA` va DENTRO del `AND`: es un `OR` de dos brazos y
   // esparcirlo al lado de los demás filtros lo convertiría en un `OR` que se
@@ -544,10 +586,39 @@ async function leerActual(polizaId: string, clienteId: string, correduriaId: str
       tipo: true,
       fechaVencimiento: true,
       primaAnual: true,
+      primaBruta: true,
+      fraccionamiento: true,
       datosEspecificos: true,
     },
   })
   if (!p) return null
+
+  // La prima y el vencimiento CON LOS RECIBOS (la misma regla que la cartera de asegura). Si los recibos no se leen, la
+  // prima de la póliza sola NO se da por buena: `null` (no consta) antes que enseñar la del año pasado como «la de hoy».
+  let primaAnual: number | null = null
+  let primaDeRecibo = false
+  let fechaVencimiento: Date | null = p.fechaVencimiento
+  try {
+    const recibos = (await prisma.polizaRecibo.findMany({
+      where: { polizaId, correduriaId },
+      select: { claseRecibo: true, situacion: true, primaTotal: true, fechaVencimiento: true },
+    })).map((r) => ({
+      claseRecibo: r.claseRecibo ?? null, situacion: r.situacion === null ? null : String(r.situacion), primaTotal: r.primaTotal ?? null,
+      fechaVencimiento: r.fechaVencimiento ? r.fechaVencimiento.toISOString().slice(0, 10) : null,
+    }))
+    const hoy = new Date().toISOString()
+    const dudosa = (p.datosEspecificos as { primaAnualDudosa?: unknown } | null)?.primaAnualDudosa === true
+    const r = primaConRecibos({
+      primaAnual: dudosa ? null : decimal(p.primaAnual), primaBruta: dudosa ? null : decimal(p.primaBruta),
+      fraccionamiento: p.fraccionamiento === null ? null : String(p.fraccionamiento),
+    }, recibos, hoy)
+    primaAnual = r.prima
+    primaDeRecibo = r.deRecibo
+    const v = vencimientoConRecibos(p.fechaVencimiento ? p.fechaVencimiento.toISOString().slice(0, 10) : null, recibos, hoy)
+    fechaVencimiento = v ? new Date(`${v.slice(0, 10)}T00:00:00Z`) : p.fechaVencimiento
+  } catch (e) {
+    registrar('leerActual/recibos', e)
+  }
 
   // 🚨 `null` = NO SE HA PODIDO LEER, nunca `[]`. Si esta consulta falla, la
   // tabla de garantías tiene que poder decir «no lo sé» en vez de pintar cada
@@ -575,8 +646,9 @@ async function leerActual(polizaId: string, clienteId: string, correduriaId: str
     // distinguen por la casa, no por un número de trece dígitos.
     bien,
     ubicacion,
-    fechaVencimiento: p.fechaVencimiento,
-    primaAnual: decimal(p.primaAnual),
+    fechaVencimiento,
+    primaAnual,
+    primaDeRecibo,
     coberturas,
   }
 }

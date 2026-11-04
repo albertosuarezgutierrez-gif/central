@@ -14,6 +14,8 @@ import { estudioParaPortal } from '@/lib/presupuesto-estudio-portal'
 import { actividadCliente } from '@/lib/presupuesto-actividad-servicio'
 import { puentePortalAutorizado } from '@/lib/puente-portal'
 import { auditado } from '@/lib/auditoria'
+import { elegirRenovacion } from '@/lib/renovacion-alternativas'
+import { validarEleccion } from '@/lib/renovacion-alternativas-reglas'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -36,6 +38,8 @@ const HEX_64 = /^[0-9a-f]{64}$/
  *        { accion:'resumen_ia',  identidadId, presupuestoId }                          → resumen IA (cacheado)
  *        { accion:'pregunta_ia', identidadId, presupuestoId, opcionA, opcionB, pregunta } → respuesta IA (tope diario)
  *        { accion:'llamadme',    identidadId, presupuestoId }                          → «Prefiero que me llaméis»
+ *        { accion:'elegir_renovacion', identidadId, presupuestoId, eleccion:'opcion'|'renovacion', opcionId? } → elige SIN firmar
+ *             (solo una renovación publicada; NO emite: el portal manda a Alberto el `aviso` que devuelve)
  *        { accion:'actividad',   identidadId, presupuestoId, garantias: string[], comparadas: string[] }
  *             → telemetría: qué garantías marca y qué opciones compara (se recorta al catálogo y a las visibles)
  * Como el resto del puente: NO acepta `clienteId`, la ficha sale de `portal_vinculo`.
@@ -85,7 +89,8 @@ export const POST = auditado(async (req: Request) => {
     }
     // `datos` y `datos_incorrectos` son del presupuesto, no de una opción: no piden `opcionId`.
     const sinOpcion = b?.accion === 'datos' || b?.accion === 'datos_incorrectos' || b?.accion === 'resumen_ia' ||
-      b?.accion === 'pregunta_ia' || b?.accion === 'llamadme' || b?.accion === 'actividad' || b?.accion === 'pdf' || b?.accion === 'estudio'
+      b?.accion === 'pregunta_ia' || b?.accion === 'llamadme' || b?.accion === 'actividad' || b?.accion === 'pdf' || b?.accion === 'estudio' ||
+      b?.accion === 'elegir_renovacion'
     // Quien entró con el código del WhatsApp llega con el token y SIN identidad: solo para estas acciones.
     const admiteWhatsapp = b?.accion === 'datos' || b?.accion === 'datos_incorrectos' || b?.accion === 'preparar' ||
       b?.accion === 'codigo' || b?.accion === 'firmar'
@@ -139,6 +144,14 @@ export const POST = auditado(async (req: Request) => {
     if (b?.accion === 'llamadme') {
       const r = await pideLlamada(correduria.id, identidadId, presupuestoId)
       return NextResponse.json(r, { status: STATUS[r.estado] ?? 500 })
+    }
+    // Renovación con alternativas (04/11/2026): elige SIN firmar. Solo con identidad (nunca por el token del WhatsApp): la
+    // ficha la resuelve `portal_vinculo`; el cuerpo solo trae la elección (opción o «me quedo con mi renovación»).
+    if (b?.accion === 'elegir_renovacion') {
+      const eleccion = validarEleccion(b)
+      if (!eleccion || !UUID.test(identidadId)) return NextResponse.json({ estado: 'invalido' }, { status: 422 })
+      const r = await elegirRenovacion(correduria.id, identidadId, presupuestoId, eleccion)
+      return NextResponse.json(r, { status: r.estado === 'sin_migracion' ? 503 : r.estado === 'caducado' ? 410 : STATUS[r.estado] ?? 500 })
     }
     if (b?.accion === 'actividad') {
       const r = await actividadCliente(correduria.id, identidadId, presupuestoId, { garantias: b.garantias, comparadas: b.comparadas })

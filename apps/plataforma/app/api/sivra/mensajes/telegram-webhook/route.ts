@@ -41,6 +41,7 @@ import { PREFIJO_CLP, decidirBotonClp, idDeEdicion } from '@/lib/correo/lead-cor
 import { guardarEdicionClp, resolverBotonClp } from '@/lib/correo/lead-correduria-pendiente'
 import { PREFIJO_CSG, decidirBotonCsg } from '@/lib/correo/contacto-sugerido'
 import { PREFIJO_FEX, decidirBotonFex, decidirFexEnAsegura, lineaTrasPulsarFex } from '@/lib/felicitaciones-exclientes-asegura'
+import { PREFIJO_CRV, decidirBotonCrv, estadoDe as estadoCrv, lineaTrasPublicarCrv, publicarRenovacionAsegura } from '@/lib/renovacion-asegura'
 import { PREFIJO_WAP, actorTitular, decidirBotonWap, idDeCorreccionWap, lineaTrasPulsarWap, mensajeOriginalDeCorreccionWap, resueltaParaQuitarBotones, resolverPropuestaEnAsegura, textoPedirCorreccionWap } from '@/lib/correduria/whatsapp-propuesta-tg'
 import { cuentaTitularTelegram } from '@/lib/correduria/whatsapp-propuesta-tg-cuenta'
 import { PREFIJO_RRC, decidirBotonRrc, decidirRrcCompaniaEnAsegura, decidirRrcEnAsegura, editarRrcCompaniaEnAsegura, editarRrcEnAsegura, idDeEdicionRrc, idDeEdicionRrcCompania, lineaPushRrc, lineaTrasPulsarRrc, textoPedirEdicionRrc, textoPedirEdicionRrcCompania } from '@/lib/regularizacion-rc-asegura'
@@ -1039,6 +1040,30 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
       after(async () => {
         const estado = await decidirFexEnAsegura({ decision: d.decision, clienteId: d.clienteId, anio: d.anio })
         const linea = lineaTrasPulsarFex(d.decision, estado)
+        if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${linea}`).catch(() => {})
+        else await tgSend(linea).catch(() => {})
+      })
+      return NextResponse.json({ ok: true })
+    }
+
+    // ── 🔁 Renovación con alternativas de Grupo ASegura: ✅ Enviar al cliente por la app (crv_pub:<presupuestoId>, 04/11/2026) ──
+    // Sale a un TERCERO (el cliente): solo la PERSONA autorizada (from.id = TELEGRAM_CHAT_ID). asegura exige que sea el
+    // ÚLTIMO mensaje de revisión del borrador (409 `no_vigente`), publica una sola vez (CAS) y NUNCA se reintenta desde aquí.
+    // 👁 Ver como el cliente y ✏️ Modificar son botones de ENLACE (a plataforma, con sesión): no llegan aquí.
+    if (prefix === PREFIJO_CRV) {
+      const d = decidirBotonCrv(cb, action, args, process.env.TELEGRAM_CHAT_ID)
+      if (!d.ok) {
+        await tgAnswerCallback(cb.id, d.toast)
+        return NextResponse.json({ ok: true })
+      }
+      await tgAnswerCallback(cb.id, '⏳ Publicando en su app…')
+      const original = escapeHtml(cb.message?.text ?? '')
+      const mensajeId: number | undefined = cb.message?.message_id
+      if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n⏳ <i>Pulsado…</i>`).catch(() => {})
+      after(async () => {
+        const r = await publicarRenovacionAsegura({ presupuestoId: d.presupuestoId, actor: 'telegram:titular', telegramMessageId: mensajeId ?? null }, 'sistema:telegram-renovacion')
+          .catch(() => ({ status: 502, json: null }))
+        const linea = lineaTrasPublicarCrv(estadoCrv(r))
         if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${linea}`).catch(() => {})
         else await tgSend(linea).catch(() => {})
       })

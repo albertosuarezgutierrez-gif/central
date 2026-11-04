@@ -41,7 +41,7 @@ export const TEXTO_SIN_IPID = 'La ficha informativa de este producto te la envia
  * 🚨 Y sin póliza actual **no se inventa este bloque ni se calcula ahorro
  * alguno**: `poliza_id IS NULL` es VENTA NUEVA, no «no tiene seguro».
  */
-export function Actual({ actual }: { actual: ActualCliente | null }) {
+export function Actual({ actual, titulo = 'Lo que tienes hoy' }: { actual: ActualCliente | null; titulo?: string }) {
   if (actual === null) {
     return (
       <section className="seccion">
@@ -55,7 +55,7 @@ export function Actual({ actual }: { actual: ActualCliente | null }) {
   }
   return (
     <section className="seccion">
-      <p className="antetitulo">Lo que tienes hoy</p>
+      <p className="antetitulo">{titulo}</p>
       <div style={{ margin: '4px 0 10px' }}><LogoCompania nombre={actual.compania} alto={36} /></div>
       <dl className="ficha-datos">
         {actual.bien !== null && (
@@ -82,6 +82,7 @@ export function Actual({ actual }: { actual: ActualCliente | null }) {
         <dd>
           {/* `eur(null)` da «—», nunca «0,00€»: un hueco no es un importe. */}
           {actual.primaAnual === null ? <span className="pendiente">no informada</span> : eur(actual.primaAnual)}
+          {actual.primaAnual !== null && actual.primaDeRecibo && <span className="suave"> (la del recibo de tu renovación)</span>}
         </dd>
       </dl>
     </section>
