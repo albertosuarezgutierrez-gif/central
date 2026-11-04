@@ -2114,7 +2114,8 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
         if (!(el.opciones ?? []).some((o) => o.valor !== null && o.valor === op.valor)) return void errores.push(`${donde}: el valor no está entre las opciones del inventario`)
         // 0.3.20: el `<select>` OCULTO tras un bootstrap-select (Allianz VMP, marca/modelo): solo si ni él ni la opción elegida nombran una
         // acción final (el worker lo elige sin verlo; su `change` y la red siguen pasando por el guard de siempre).
-        if (el.selectpicker === true) {
+        // 0.3.42: igual el `<select>` OCULTO que sostiene un custom element visible (`selectOculto`, Pelayo «Tipo de documento»).
+        if (el.selectpicker === true || el.selectOculto === true) {
           const texto = (el.opciones ?? []).find((o) => o.valor === op.valor)?.texto ?? null
           if ([...descripcionesElemento(el), op.valor, texto].some((d) => typeof d === 'string' && (pareceEmision(d) || RE_TEXTO_ACCION_FINAL_SIN_TEXTO.test(d.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase())))) {
             return void errores.push(`${donde}: desplegable de acción final`)
