@@ -278,3 +278,29 @@ Parque Industrial Parque Plata, 41900 Camas (Sevilla); **1 mecánico** y pocos c
 9. **Roles RGPD** (corresponsables o encargado) y contrato de colaboración con G2; plazo de arranque.
 10. **Tablets y pantallas:** nº y modelos, y si las 2 pantallas grandes muestran el tablero de coches en curso.
 11. **Distribuidor de recambios:** ¿con qué distribuidor(es) trabaja G2 y pueden pasar la tarifa en Excel/CSV?
+
+## 12. Ideas aprobadas (04/11/2026)
+Decisión de Alberto: aprobadas todas salvo la 2, que queda **PENDIENTE** (se estudia, no se implementa). Fase y criterio de «hecho» por idea:
+
+1. **Flota de G2 en el taller** (`module-flota`): mantenimiento, ITV y revisiones de sus furgonetas en la app del taller; seguro de flota de Grupo ASegura solo con consentimiento de la empresa. **F2.**
+   - Hecho: una furgoneta de G2 tiene revisiones e ITV visibles en la app y la oferta de seguro no sale sin consentimiento de empresa.
+2. **PENDIENTE — Taller de confianza de Grupo ASegura para siniestros** (derivar clientes con parte al taller; la correduría gestiona el siniestro; estudiar qué compañías permiten libre elección de taller). **No se implementa.**
+   - Hecho: n/a hasta que Alberto decida estudiarla; no hay código ni tablas para ella.
+3. **«¿Te mejoramos el seguro de este coche?»** en resguardo, presupuesto y correo de terminado; solo a quien tiene consentimiento ASegura; datos precargados por matrícula. **F3.**
+   - Hecho: el bloque no aparece sin consentimiento y, con él, la matrícula llega precargada.
+4. **Historial digital del vehículo** en la app del cliente (reparaciones, km, fotos) como motivo para instalar la app (push gratis). **F3.**
+   - Hecho: el cliente ve el historial de su coche tras un terminado y recibe el push correspondiente.
+5. **Aviso de ITV/revisión con enlace de cita** (reutiliza citas por enlace); vencimiento de seguro solo con consentimiento. **F3.**
+   - Hecho: un aviso de ITV con enlace de cita se genera con la fecha conocida; sin fecha no se avisa ni se muestra «vigente».
+6. **Enlace de reseña en Google** en el correo de terminado (URL configurable por el taller). **F2.**
+   - Hecho: el correo de terminado incluye el enlace configurado; sin URL configurada no aparece.
+7. **Coche de sustitución** reutilizando `module-alquiler`. **F2.**
+   - Hecho: se puede reservar un vehículo de sustitución asociado a una reparación en curso.
+8. **Garantía legal 3 meses / 2.000 km** (RD 1457/1986): aviso al recepcionar si el vehículo vuelve en garantía; plazos configurables. **F2.**
+   - Hecho: al recepcionar un coche dentro del plazo aparece el aviso; los plazos se cambian sin tocar código.
+9. **Panel de resultados del regalo** para Alberto en plataforma: por taller, coches, consentimientos, leads y pólizas cerradas. **F3.**
+   - Hecho: el panel muestra las cinco cifras por taller con datos reales de BD.
+10. **Alta de taller nuevo en minutos** desde plataforma: checklist de onboarding y plantilla de configuración. **F2.**
+   - Hecho: un taller nuevo queda operativo siguiendo el checklist sin intervención de Alberto.
+
+Descartado por ahora: cobros y señales online (comisiones y regulación).
