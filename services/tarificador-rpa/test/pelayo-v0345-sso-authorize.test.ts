@@ -109,4 +109,4 @@ test('0.3.45 · en la pantalla del SSO authorize no se pulsa nada', async () => 
   }
 })
 
-test('versión del explorador 0.3.48', () => assert.equal(EXPLORADOR_VERSION, '0.3.48'))
+test('versión del explorador 0.3.49', () => assert.equal(EXPLORADOR_VERSION, '0.3.49'))

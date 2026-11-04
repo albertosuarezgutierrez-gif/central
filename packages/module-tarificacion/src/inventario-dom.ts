@@ -299,10 +299,11 @@ export type InventarioDom = {
 
 /** 0.3.47: tope de líneas distintas de `bloqueosRed` por pantalla. */
 export const MAX_BLOQUEOS_RED_INVENTARIO = 40
-export const MOTIVOS_BLOQUEO_RED = ['url', 'cuerpo', 'navegacion'] as const
+/** 0.3.49: `pestana` = pestaña/ventana NUEVA de origen ajeno a la compañía que el pilotaje CERRÓ sin adoptar (método GET, tipo `document`). */
+export const MOTIVOS_BLOQUEO_RED = ['url', 'cuerpo', 'navegacion', 'pestana'] as const
 export type MotivoBloqueoRed = (typeof MOTIVOS_BLOQUEO_RED)[number]
 /** Forma EXACTA de una línea de `bloqueosRed` (lo que no case no se guarda). */
-export const RE_LINEA_BLOQUEO_RED = /^(?:[A-Z]{3,7}|OTRO) https?:\/\/[A-Za-z0-9.-]+(?::\d{1,5})?(?:\/[A-Za-z0-9._~!$&'()*+,:…-]*)* \[[a-z]{2,16} (?:url|cuerpo|navegacion)\]$/
+export const RE_LINEA_BLOQUEO_RED = /^(?:[A-Z]{3,7}|OTRO) https?:\/\/[A-Za-z0-9.-]+(?::\d{1,5})?(?:\/[A-Za-z0-9._~!$&'()*+,:…-]*)* \[[a-z]{2,16} (?:url|cuerpo|navegacion|pestana)\]$/
 
 /** Segmento de ruta para el registro: el que tiene forma de identificador/dato (≥4 cifras, largo, codificado, con @ o =) → `:id`. */
 function segmentoBloqueoRed(s: string): string {
