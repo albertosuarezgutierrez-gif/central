@@ -155,6 +155,15 @@ export type ContextoParaIA = {
   ultimo_saliente?: { origen: string; ramo: string | null; fecha: string | null; importe: number | null } | null
   /** Recibos devueltos/pendientes de pólizas EN VIGOR (D4: un lead o ex-cliente no lleva ninguno). `null` = no se sabe. */
   recibos_pendientes?: { ramo: string; estado: string; efecto: string | null; importe: number | null }[] | null
+  /**
+   * Casos PARECIDOS que el corredor ya resolvió (aprendizaje, `aprendizaje-reglas.ts`): qué dijo otro cliente (redactado),
+   * qué propuso la IA y qué decidió él (aplicada / modificada con su versión final y observación / descartada / deshecha).
+   * `null` = no se pudo leer el registro; ausente = aquí no puede haber propuestas.
+   */
+  casos_previos?: {
+    tipo: string; origen_saliente: string | null; mensaje_cliente: string | null; decision: string
+    propuesto: { fecha?: string }; final: { fecha?: string } | null; observacion_corredor: string | null
+  }[] | null
 }
 
 export const SISTEMA = `Eres el analista comercial de una correduría de seguros española. Lees una conversación de WhatsApp entre la correduría (Corredor) y una persona (Contacto) y devuelves SOLO un objeto JSON, sin texto alrededor.
@@ -178,6 +187,7 @@ Reglas:
   {"tipo":"proponerVencimiento","ramo":"…","fecha":"aaaa-mm-dd"}  (el contacto da la fecha de vencimiento de su seguro)
   Las tres «proponer…» no cambian nada: las revisa el corredor. Úsalas solo si el contacto lo dice claramente; para las de recibo, solo si hay recibos_pendientes o ultimo_saliente trata de un recibo.
 - ultimo_saliente es lo que el corredor le escribió antes (p. ej. un recibo devuelto): interpreta la respuesta en ese contexto.
+- casos_previos son decisiones reales del corredor ante mensajes parecidos: aprende de ellas. Si descartó propuestas como la que ibas a hacer, no la hagas; si las modificó, propón como él las dejó (p. ej. cómo interpreta «a final de mes»). Son otros clientes: no copies sus datos.
 - Nunca uses ids. Nunca marques una venta como ganada ni perdida. Nunca des un recibo por cobrado.
 
 Formato exacto:

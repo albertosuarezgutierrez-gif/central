@@ -20,7 +20,9 @@ import { ACTOR_IA, ORIGEN_TAREA_IA, ejecutar, planificar, type ClienteContexto, 
 import { purgarTextoConversacion } from './retencion'
 import { excluidaPorOptOut } from './optout'
 import { recibosPendientesDe, salienteVinculadoDe, type ReciboParaAnalisis, type SalienteParaAnalisis } from './salientes'
-import { avisarTelegram, crearPropuesta } from './propuestas'
+import { aplicarSiAutonoma, avisarTelegram, crearPropuesta, type ContextoAprendizaje } from './propuestas'
+import { casosResueltos } from './aprendizaje'
+import { casoParaIA, elegirCasos, extractoRedactado } from './aprendizaje-reglas'
 
 const ESTADOS_ABIERTOS = ['competencia', 'en_negociacion', 'pendiente_cliente']
 const MAX_INTENTOS = 3
@@ -186,6 +188,16 @@ async function analizarUna(correduriaId: string, c: Reclamada): Promise<number |
       ])
     : [null, null]
 
+  // Aprendizaje: el último mensaje del cliente, REDACTADO (para el registro y para buscar casos parecidos), y los casos
+  // que Alberto ya resolvió que más se le parecen. Solo cuando puede haber propuestas (ficha única y póliza en vigor).
+  const textoUltimaEntrante = (() => {
+    const f = filas.find((x) => x.direccion === 'entrante')
+    return f ? descifrar(f.contenido) : null
+  })()
+  const extracto = extractoRedactado(textoUltimaEntrante, [perfil, cliente?.nombre, cliente?.apellidos])
+  const contextoAprendizaje: ContextoAprendizaje = { origenSaliente: saliente?.origen ?? null, extracto }
+  const casos = fichaUnica && enVigor === true ? await casosResueltos(correduriaId) : undefined
+
   const contextoIA: ContextoParaIA = {
     tiene_ficha: cliente !== null,
     tipo_ficha: cliente?.tipo ?? null,
@@ -195,6 +207,8 @@ async function analizarUna(correduriaId: string, c: Reclamada): Promise<number |
     // Sin ids ni datos personales: de qué iba lo último que se le mandó, y los recibos por ramo/fecha/importe.
     ultimo_saliente: saliente ? { origen: saliente.origen, ramo: saliente.ramo, fecha: saliente.fecha, importe: saliente.importe } : null,
     recibos_pendientes: recibos ? recibos.map((r) => ({ ramo: r.ramo, estado: r.situacion, efecto: r.efecto, importe: r.importe })) : null,
+    // null = no se pudo leer el registro (≠ «no hay casos»); ausente = aquí no puede haber propuestas.
+    ...(casos === undefined ? {} : { casos_previos: casos === null ? null : elegirCasos(casos, contextoAprendizaje).map(casoParaIA) }),
   }
 
   let crudo: string
@@ -226,12 +240,15 @@ async function analizarUna(correduriaId: string, c: Reclamada): Promise<number |
     saliente: saliente ? { origen: saliente.origen, reciboId: saliente.reciboId, oportunidadId: saliente.oportunidadId } : null,
   }
   const plan = planificar(analisis, ctx)
-  const { resultados, clienteId: clienteFinal } = await ejecutar(plan, ctx, depsBd(correduriaId, c))
+  const { resultados, clienteId: clienteFinal } = await ejecutar(plan, ctx, depsBd(correduriaId, c, contextoAprendizaje))
 
   // Siempre aviso a Alberto (spec §1) de lo hecho y lo propuesto, con botones ✅/❌ por propuesta. Best effort.
   if (clienteFinal && plan.pasos.length > 0) {
     const hechos = resultados.filter((x) => x.resultado === 'hecho' && x.tipo !== 'proponer').map((x) => ETIQUETA_HECHO[x.tipo] ?? x.tipo)
-    const propuestas = resultados.filter((x) => x.tipo === 'proponer' && x.resultado === 'hecho' && x.id).map((x) => ({ id: x.id as string }))
+    const creadas = resultados.filter((x) => x.tipo === 'proponer' && x.resultado === 'hecho' && x.id).map((x) => x.id as string)
+    // Modo autónomo (apagado por defecto): solo con el flag y la racha del TIPO ≥ umbral; si no, quedan con sus botones.
+    const propuestas: { id: string; autonoma: boolean }[] = []
+    for (const id of creadas) propuestas.push({ id, autonoma: await aplicarSiAutonoma(correduriaId, id) })
     const nombrePila = (cliente?.nombre ?? '').trim().split(/\s+/)[0] || null
     await avisarTelegram(correduriaId, { clienteId: clienteFinal, nombrePila, hechos, propuestas })
   }
@@ -258,7 +275,7 @@ const ETIQUETA_HECHO: Record<string, string> = {
 
 // ── Las escrituras reales del ejecutor ─────────────────────────────────────────
 
-function depsBd(correduriaId: string, c: Reclamada): DepsEjecutor {
+function depsBd(correduriaId: string, c: Reclamada, aprendizaje: ContextoAprendizaje): DepsEjecutor {
   const db = prismaAsegura()
   const historial = (clienteId: string, texto: string) =>
     db.$executeRaw(Prisma.sql`
@@ -380,7 +397,7 @@ function depsBd(correduriaId: string, c: Reclamada): DepsEjecutor {
 
     async crearPropuesta(clienteId, p) {
       // SOLO la propuesta: nada de la cartera se toca hasta que Alberto pulse ✅ (resolverPropuesta).
-      const r = await crearPropuesta(correduriaId, { clienteId, conversacionId: c.id, tipo: p.propuesta, reciboId: p.reciboId, oportunidadId: p.oportunidadId, fecha: p.fecha })
+      const r = await crearPropuesta(correduriaId, { clienteId, conversacionId: c.id, tipo: p.propuesta, reciboId: p.reciboId, oportunidadId: p.oportunidadId, fecha: p.fecha }, aprendizaje)
       return r.ok ? { ok: true, id: r.id } : { ok: false, motivo: r.motivo }
     },
 

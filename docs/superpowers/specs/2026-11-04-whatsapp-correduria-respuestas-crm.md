@@ -67,6 +67,32 @@
   presupuesto: se genera AL PULSAR (callback que llama a `envio-presupuesto` canal `whatsapp_enlace` y responde con el botón URL),
   porque generarlo rota token y código.
 
+## 5 bis. Aprendizaje y autonomía (04/11/2026, decidido por Alberto)
+Mismo patrón que el agente de huéspedes de pisos (`apps/plataforma/lib/sivra/agente-huesped/`: aprendizajes, ✏️, auto-envío
+por regla pura). Reglas puras en `apps/asegura/lib/whatsapp/aprendizaje-reglas.ts`; consultas en `aprendizaje.ts`.
+- **✏️ Modificar** (`wap_ed:<uuid>`): plataforma pide la corrección con force_reply (marca `[wap <uuid>]`); la respuesta va a
+  `POST /api/operador/whatsapp/propuesta` `{decision:'modificar', correccion}` → `leerCorreccion` (fecha dd/mm[/aaaa] o
+  aaaa-mm-dd y/o observación; inválida → 422 sin tocar nada) → se aplica la versión corregida (payload con la fecha nueva,
+  observación en la nota y la tarea). Solo actor `humano:`.
+- **Registro** `seguros.whatsapp_aprendizaje` (SQL `apps/asegura/prisma/sql/2026-11-04b_whatsapp_aprendizaje.sql`, NO
+  aplicado; RLS sin policies, grants solo `prisma_seguros`, sin DELETE): una fila por propuesta con tipo, origen del saliente,
+  extracto REDACTADO (`redactarPii` + nombre, ≤300) del último mensaje del cliente, propuesta original, versión final,
+  observación redactada y resolución (`aplicada`/`descartada`/`modificada`, `autonoma`, `deshecha_at`). El extracto se anula
+  con la conversación (retención, purga «personal», supresión). Sin la tabla: no-op, `casos_previos: null`, nunca autónomo.
+- **Casos parecidos al prompt**: palabras de contenido en común + mismo origen del saliente (como `similitud-reglas.ts`, sin
+  embeddings ni servicios de pago), 6 como mucho con 2 huecos para los más recientes; solo con ficha única y póliza en vigor.
+- **Autonomía por TIPO** (`fecha_cobro`, `pagado`, `vencimiento`): racha = aprobadas ✅ SEGUIDAS sin modificar, calculada (no
+  guardada). ≥ umbral (`ASEGURA_WHATSAPP_AUTONOMIA_UMBRAL`, por defecto 20; fuera de [5, 1000] o mal formado = nunca) Y flag
+  global `ASEGURA_WHATSAPP_AUTONOMIA_ACTIVA=1` (apagado por defecto) → se aplica sola (actor `agente:whatsapp-ia-autonomo`) y
+  el aviso lleva **↩️ Deshacer** (`wap_un:<uuid>`): solo `TELEGRAM_CHAT_ID` + actor `humano:`, un uso (UPDATE condicionado),
+  vuelve al valor previo guardado en `resultado.previo`; si el dato se cambió después, 409 `cambiado_despues` (no se pisa).
+  Cualquier ❌, ✏️ o ↩️ reinicia la racha (el ↩️ cuenta en SU fecha). Una autónoma ni suma ni corta.
+- **NUNCA autónomo**: bots RPA de tarificación, Avant2 o cualquier envío a terceros (`TIPOS_AUTONOMIZABLES` = los tres tipos;
+  cepo de importaciones). Siguen: ningún envío por API de WhatsApp, una ficha exacta o nada, D4.
+- Cepos (`aprendizaje.test.ts`, `whatsapp-propuesta-tg.test.ts`), vistos en rojo: umbral/racha, reset por ❌/✏️/↩️, flag
+  apagado, deshacer un uso y solo titular, RPA nunca autónomo, prefijos `wap_*` únicos y plataforma = asegura.
+- Pendiente: tras ✏️ el mensaje original conserva sus botones (pulsarlos da 409 «ya resuelta»).
+
 ## 6. Media (para c)
 - `payload.ts`: conservar `media.id`, `mime_type`, `sha256` del mensaje `image|document` (no PII) en `crudoMinimizado`.
 - Descarga en `after()` de `procesar.ts` solo si la conversación tiene **una ficha** y no hay opt-out: `GET /{media-id}` → URL →
