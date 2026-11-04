@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-04T12:15:34Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-04T15:04:51Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 45 packages · 23 capacidades · 44 skills · 1887 rutas API.
+**Resumen:** 14 apps · 47 packages · 23 capacidades · 44 skills · 1900 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -53,20 +53,25 @@
 - **Tablas (2):** mariscos_envasados, mariscos_partidas
 - **Rutas API:** 4
 ### plataforma _(matriz)_
-- **Módulos que usa:** core-ai, core-catastro, core-consent, core-direccion, core-email, core-fiscal, core-identity, core-payments, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-seguros, module-seguros-portal, module-ses, module-subastas, module-tarificacion, module-trading
+- **Módulos que usa:** core-ai, core-catastro, core-consent, core-direccion, core-email, core-fiscal, core-identity, core-instagram, core-payments, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-seguros, module-seguros-portal, module-ses, module-subastas, module-tarificacion, module-trading
 - **Capacidades:** QR / portal cliente, Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
-- **Tablas (164):** agente_latidos, agente_reparaciones, agente_salud, agente_veredicto, agoda_hilos_correo, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cierres_mes, cima_liquidaciones, comisiones_cobertura, comisiones_devengo, comisiones_liquidacion_docs, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, consentimiento_registro, contable_accion, contable_feedback, contable_log…
-- **Rutas API:** 528
+- **Tablas (165):** agente_latidos, agente_reparaciones, agente_salud, agente_veredicto, agoda_hilos_correo, ai_usos, asegura_instagram_borradores, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cierres_mes, cima_liquidaciones, comisiones_cobertura, comisiones_devengo, comisiones_liquidacion_docs, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, consentimiento_registro, contable_accion, contable_feedback…
+- **Rutas API:** 531
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Informes, Notificaciones (push), Asistente / copiloto IA
 - **Tablas (17):** rrhh.acceso_otps, rrhh.avisos, rrhh.avisos_admin, rrhh.contratos_laborales, rrhh.documentos, rrhh.empleados, rrhh.empresas, rrhh.firma_otps, rrhh.firmas, rrhh.incidencias_mes, rrhh.incidencias_ubicacion, rrhh.material_empleado, rrhh.mensajes, rrhh.nominas, rrhh.push_subscriptions, rrhh.solicitudes, rrhh.usuarios_rrhh
-- **Rutas API:** 86
+- **Rutas API:** 88
 ### sivra
 - **Módulos que usa:** core-ai, core-email, core-identity, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
 - **Capacidades:** Eventos / catering / BEO, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, Marketing (blog/IG/SEO), Almacén / stock / ASN, Proveedores / compras, Asistente / copiloto IA
 - **Tablas (1):** gastos_fijos
 - **Rutas API:** 91
+### taller
+- **Módulos que usa:** core-catastro, core-direccion, core-identity, module-taller
+- **Capacidades:** —
+- **Tablas (46):** sin, taller.aceites, taller.ampliaciones_fotos, taller.articulos, taller.auditoria, taller.avisos, taller.baremos, taller.bloqueos_codigo, taller.bloqueos_pin, taller.cierres_agenda, taller.citas, taller.clientes, taller.cobros, taller.configuracion, taller.consentimientos, taller.dictados, taller.facturas, taller.horario_citas, taller.invitaciones_cita, taller.iva_por_defecto, taller.leads_enviados, taller.medios_cobro, taller.movimientos_stock, taller.ordenes_trabajo, taller.ot_fotos, taller.ot_lineas, taller.ot_notas, taller.ot_propuesta_lineas, taller.ot_propuestas, taller.paquete_piezas…
+- **Rutas API:** 8
 ### transporte
 - **Módulos que usa:** core-catastro, core-direccion, core-identity, module-flota, module-geo, module-transporte
 - **Capacidades:** —
@@ -78,13 +83,13 @@
   - Lo usan: asegura, asegura-portal, ia-rest, ialimp, plataforma, rrhh, sivra
   - Depende de: —
 - **core-catastro** (core) → `@central/core-catastro`
-  - Lo usan: asegura, asegura-portal, ia-rest, ialimp, plataforma, transporte
+  - Lo usan: asegura, asegura-portal, ia-rest, ialimp, plataforma, taller, transporte
   - Depende de: module-subastas
 - **core-consent** (core) → `@central/core-consent`
   - Lo usan: asegura-web, housesevillana, ia-rest, plataforma
   - Depende de: —
 - **core-direccion** (core) → `@central/core-direccion`
-  - Lo usan: asegura, asegura-portal, ia-rest, ialimp, plataforma, transporte
+  - Lo usan: asegura, asegura-portal, ia-rest, ialimp, plataforma, taller, transporte
   - Depende de: core-catastro
 - **core-email** (core) → `@central/core-email`
   - Lo usan: asegura, asegura-portal, ialimp, plataforma, rrhh, sivra
@@ -96,8 +101,11 @@
   - Lo usan: ia-rest, ialimp, plataforma
   - Depende de: —
 - **core-identity** (core) → `@central/core-identity`
-  - Lo usan: almacen, alquiler, asegura, asegura-portal, ialimp, mariscos, plataforma, rrhh, sivra, transporte
+  - Lo usan: almacen, alquiler, asegura, asegura-portal, ialimp, mariscos, plataforma, rrhh, sivra, taller, transporte
   - Depende de: module-seguros, module-seguros-portal
+- **core-instagram** (core) → `@central/core-instagram`
+  - Lo usan: plataforma
+  - Depende de: —
 - **core-payments** (core) → `@central/core-payments`
   - Lo usan: ia-rest, ialimp, plataforma
   - Depende de: —
@@ -197,6 +205,9 @@
 - **module-subastas** (module) → `@central/module-subastas`
   - Lo usan: plataforma
   - Depende de: core-catastro, module-concursos
+- **module-taller** (module) → `@central/module-taller`
+  - Lo usan: taller
+  - Depende de: module-presupuestos
 - **module-tarificacion** (module) → `@central/module-tarificacion`
   - Lo usan: asegura, asegura-portal, plataforma
   - Depende de: core-catastro, module-seguros
@@ -257,28 +268,28 @@
 - **writing-plans** — Use when you have a spec or requirements for a multi-step task, before touching code
 
 ## Avisos de arquitectura
-- ⚠️ **TPV / comanda**: en ia-rest; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, ialimp, mariscos, rrhh, sivra, transporte.
-- ⚠️ **KDS (cocina)**: en ia-rest; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, ialimp, mariscos, rrhh, sivra, transporte.
-- ⚠️ **Eventos / catering / BEO**: en almacen, ia-rest, sivra; falta en alquiler, asegura, asegura-portal, asegura-web, housesevillana, ialimp, mariscos, rrhh, transporte.
-- ⚠️ **Reservas**: en ia-rest; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, ialimp, mariscos, rrhh, sivra, transporte.
-- ⚠️ **QR / portal cliente**: en asegura, asegura-portal, ia-rest; falta en almacen, alquiler, asegura-web, housesevillana, ialimp, mariscos, rrhh, sivra, transporte.
-- ⚠️ **Feedback / propinas**: en ia-rest; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, ialimp, mariscos, rrhh, sivra, transporte.
-- ⚠️ **Equipo limpiadoras**: en ialimp, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, ia-rest, mariscos, rrhh, transporte.
-- ⚠️ **Agenda / auto-asignación**: en ia-rest, ialimp, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, rrhh, transporte.
-- ⚠️ **Pricing dinámico**: en sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, ia-rest, ialimp, mariscos, rrhh, transporte.
-- ⚠️ **Mercado / ingest**: en sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, ia-rest, ialimp, mariscos, rrhh, transporte.
-- ⚠️ **CRM / leads / cotizador**: en ia-rest, ialimp; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, rrhh, sivra, transporte.
-- ⚠️ **Marketing (blog/IG/SEO)**: en ia-rest, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, ialimp, mariscos, rrhh, transporte.
-- ⚠️ **RRHH / equipo**: en ia-rest, ialimp; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, rrhh, sivra, transporte.
-- ⚠️ **Almacén / stock / ASN**: en almacen, alquiler, ia-rest, ialimp, sivra; falta en asegura, asegura-portal, asegura-web, housesevillana, mariscos, rrhh, transporte.
-- ⚠️ **Proveedores / compras**: en ia-rest, ialimp, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, rrhh, transporte.
-- ⚠️ **Contabilidad**: en ia-rest, ialimp; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, rrhh, sivra, transporte.
-- ⚠️ **Facturación / VeriFactu**: en asegura-portal, ia-rest, ialimp; falta en almacen, alquiler, asegura, asegura-web, housesevillana, mariscos, rrhh, sivra, transporte.
-- ⚠️ **Hardware bridge**: en ia-rest; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, ialimp, mariscos, rrhh, sivra, transporte.
-- ⚠️ **Escáner / OCR**: en asegura-portal, ia-rest, ialimp; falta en almacen, alquiler, asegura, asegura-web, housesevillana, mariscos, rrhh, sivra, transporte.
-- ⚠️ **Informes**: en ialimp, rrhh; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, ia-rest, mariscos, sivra, transporte.
-- ⚠️ **Notificaciones (push)**: en asegura-portal, ia-rest, ialimp, rrhh; falta en almacen, alquiler, asegura, asegura-web, housesevillana, mariscos, sivra, transporte.
-- ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
+- ⚠️ **TPV / comanda**: en ia-rest; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, ialimp, mariscos, rrhh, sivra, taller, transporte.
+- ⚠️ **KDS (cocina)**: en ia-rest; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, ialimp, mariscos, rrhh, sivra, taller, transporte.
+- ⚠️ **Eventos / catering / BEO**: en almacen, ia-rest, sivra; falta en alquiler, asegura, asegura-portal, asegura-web, housesevillana, ialimp, mariscos, rrhh, taller, transporte.
+- ⚠️ **Reservas**: en ia-rest; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, ialimp, mariscos, rrhh, sivra, taller, transporte.
+- ⚠️ **QR / portal cliente**: en asegura, asegura-portal, ia-rest; falta en almacen, alquiler, asegura-web, housesevillana, ialimp, mariscos, rrhh, sivra, taller, transporte.
+- ⚠️ **Feedback / propinas**: en ia-rest; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, ialimp, mariscos, rrhh, sivra, taller, transporte.
+- ⚠️ **Equipo limpiadoras**: en ialimp, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, ia-rest, mariscos, rrhh, taller, transporte.
+- ⚠️ **Agenda / auto-asignación**: en ia-rest, ialimp, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, rrhh, taller, transporte.
+- ⚠️ **Pricing dinámico**: en sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, ia-rest, ialimp, mariscos, rrhh, taller, transporte.
+- ⚠️ **Mercado / ingest**: en sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, ia-rest, ialimp, mariscos, rrhh, taller, transporte.
+- ⚠️ **CRM / leads / cotizador**: en ia-rest, ialimp; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, rrhh, sivra, taller, transporte.
+- ⚠️ **Marketing (blog/IG/SEO)**: en ia-rest, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, ialimp, mariscos, rrhh, taller, transporte.
+- ⚠️ **RRHH / equipo**: en ia-rest, ialimp; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, rrhh, sivra, taller, transporte.
+- ⚠️ **Almacén / stock / ASN**: en almacen, alquiler, ia-rest, ialimp, sivra; falta en asegura, asegura-portal, asegura-web, housesevillana, mariscos, rrhh, taller, transporte.
+- ⚠️ **Proveedores / compras**: en ia-rest, ialimp, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, rrhh, taller, transporte.
+- ⚠️ **Contabilidad**: en ia-rest, ialimp; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, rrhh, sivra, taller, transporte.
+- ⚠️ **Facturación / VeriFactu**: en asegura-portal, ia-rest, ialimp; falta en almacen, alquiler, asegura, asegura-web, housesevillana, mariscos, rrhh, sivra, taller, transporte.
+- ⚠️ **Hardware bridge**: en ia-rest; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, ialimp, mariscos, rrhh, sivra, taller, transporte.
+- ⚠️ **Escáner / OCR**: en asegura-portal, ia-rest, ialimp; falta en almacen, alquiler, asegura, asegura-web, housesevillana, mariscos, rrhh, sivra, taller, transporte.
+- ⚠️ **Informes**: en ialimp, rrhh; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, ia-rest, mariscos, sivra, taller, transporte.
+- ⚠️ **Notificaciones (push)**: en asegura-portal, ia-rest, ialimp, rrhh; falta en almacen, alquiler, asegura, asegura-web, housesevillana, mariscos, sivra, taller, transporte.
+- ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, taller, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - (04/11/2026) 04/11/2026) Portal cliente · hoja QR: logo de compañía + cobalto
