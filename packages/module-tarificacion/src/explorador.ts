@@ -758,8 +758,9 @@ export function normalizarOpcionElegir(opcion: unknown, el: ElementoInventario):
       sinValor = true
     } else if (texto === null) return { ok: true, valor: valor! } // La forma de siempre: las comprobaciones de opción van después, en el validador.
   }
-  if (el.tag === 'nx-dropdown') {
-    if (sinValor) return { ok: false, error: `${forma}: en un nx-dropdown la opción es su texto` }
+  // 0.3.43: igual el desplegable CUSTOM sin <select> (`desplegableCustom`, Pelayo `pelayo-smart-select`): su opción es su TEXTO.
+  if (el.tag === 'nx-dropdown' || el.desplegableCustom === true) {
+    if (sinValor) return { ok: false, error: `${forma}: en un ${el.tag === 'nx-dropdown' ? 'nx-dropdown' : 'desplegable custom'} la opción es su texto` }
     if (cadena !== null) return { ok: true, valor: cadena }
     if (valor !== null && plano(valor) !== plano(texto!)) return { ok: false, error: `${forma}: valor y texto no son de la misma opción` }
     return { ok: true, valor: texto! }
@@ -2093,7 +2094,7 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
         if (claveIncompatibleConCampo(a.dato, el)) return void errores.push(`${donde}: la clave de contacto no encaja con ese campo`)
         acciones.push({ accion: 'rellenar', ref, dato: a.dato })
       } else if (tipo === 'elegir') {
-        if (el.tag !== 'select' && el.tag !== 'nx-dropdown') return void errores.push(`${donde}: elegir solo en <select> o nx-dropdown`)
+        if (el.tag !== 'select' && el.tag !== 'nx-dropdown' && el.desplegableCustom !== true) return void errores.push(`${donde}: elegir solo en <select>, nx-dropdown o desplegable custom`)
         // 0.3.22 (Allianz VMP real, 6b3176de…): formas INEQUÍVOCAS (cadena, { texto }) resueltas contra las opciones del inventario.
         const norm = normalizarOpcionElegir(a.opcion, el)
         if (!norm.ok) return void errores.push(`${donde}: ${norm.error}`)
@@ -2108,6 +2109,21 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
           if (pareceDatoPersonalInventario(v)) return void errores.push(`${donde}: la opción tiene forma de dato personal`)
           const abiertas = el.opciones ?? []
           if (abiertas.length > 0 && !abiertas.some((o) => o.texto !== null && o.texto.replace(/\s+/g, ' ').trim() === v)) return void errores.push(`${donde}: el texto no está entre las opciones capturadas del desplegable`)
+          acciones.push({ accion: 'elegir', ref, opcion: { valor: v } })
+          return
+        }
+        if (el.desplegableCustom === true) {
+          // 0.3.43 (Pelayo `pelayo-smart-select`): custom element de desplegable sin <select>. `valor` = el TEXTO EXACTO (espacios colapsados) de
+          // la opción. Con opciones inventariadas (sus `li`/role=option, aunque ocultas) tiene que ser EXACTAMENTE una de ellas; el worker lo repite
+          // vivo y, si no casa, no pulsa nada. Mismo veto de acción final que el selectpicker: ni el desplegable ni la opción nombran una.
+          const v = op.valor.replace(/\s+/g, ' ').trim()
+          if (v === '' || v.length > 80) return void errores.push(`${donde}: la opción de un desplegable custom tiene que ser un texto de 1 a 80 caracteres`)
+          if (pareceDatoPersonalInventario(v)) return void errores.push(`${donde}: la opción tiene forma de dato personal`)
+          const ops = el.opciones ?? []
+          if (ops.length > 0 && ops.filter((o) => o.texto !== null && o.texto.replace(/\s+/g, ' ').trim() === v).length !== 1) return void errores.push(`${donde}: el texto no es exactamente una de las opciones del desplegable`)
+          if ([...descripcionesElemento(el), v].some((d) => typeof d === 'string' && (pareceEmision(d) || RE_TEXTO_ACCION_FINAL_SIN_TEXTO.test(d.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase())))) {
+            return void errores.push(`${donde}: desplegable de acción final`)
+          }
           acciones.push({ accion: 'elegir', ref, opcion: { valor: v } })
           return
         }

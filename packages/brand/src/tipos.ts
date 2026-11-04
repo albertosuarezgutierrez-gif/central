@@ -8,6 +8,11 @@ export interface PaletaMarca {
   primarioInk: string
   /** Fondo tenue del primario (rgba con alfa bajo), para chips/estados activos. */
   primarioSuave: string
+  /**
+   * Texto/icono SOBRE un relleno de `primario` (botón primario, chip activo). Opcional: si falta, la app
+   * usa el suyo (blanco). Hace falta cuando el primario es CLARO (p. ej. el lima de G2: blanco sobre él da 1,3:1).
+   */
+  sobrePrimario?: string
   /** Color de ACENTO decorativo (p. ej. el oro/bronce): filetes, bordes, monograma. */
   acento: string
   acentoInk: string
@@ -53,6 +58,24 @@ export interface LogosMarca {
   lockup?: string
 }
 
+/**
+ * Sello de co-marca (decisión de Alberto, 04/11/2026): la marca del cliente manda y Grupo ASegura aparece
+ * SUTILMENTE, como línea pequeña («con Grupo ASegura»), igual que `apps/rrhh/lib/marca-empresa.ts`. Los colores y
+ * la tipografía de marca ASegura viven SOLO en este sello, nunca en el resto de la UI del cliente.
+ */
+export interface CoMarcaMarca {
+  /** Texto literal del sello. Se escribe «Grupo ASegura» (A y S mayúsculas). */
+  texto: string
+  /** Color del sello sobre superficie clara (cobalto #3364ee). */
+  color: string
+  /** Color del sello sobre superficie oscura. */
+  colorOscuro: string
+  /** Familia tipográfica del sello (la de ASegura, no la del cliente). */
+  fuente: string
+  /** Enlace a Google Fonts de la fuente del sello (opcional). */
+  googleFontsHref?: string
+}
+
 export interface Marca {
   id: string
   nombre: string
@@ -66,6 +89,8 @@ export interface Marca {
   logos: LogosMarca
   /** Radio base de esquinas (p. ej. '14px'). */
   radio: string
+  /** Sello «con Grupo ASegura». Opcional: las marcas sin co-marca no lo declaran. */
+  coMarca?: CoMarcaMarca
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

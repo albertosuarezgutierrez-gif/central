@@ -7,7 +7,7 @@
 // (catálogo), nunca cuál está elegida. Lo crudo pasa por `sanearInventarioDom` (@central/module-tarificacion): lista
 // blanca de claves, filtro de datos personales, truncados y tope de 60 KB.
 
-import { sanearInventarioDom, MAX_BYTES_INVENTARIO_DOM, MAX_MARCOS_INVENTARIO, MAX_OPCIONES_CRUDAS_SELECT, type InventarioDom } from '@central/module-tarificacion'
+import { sanearInventarioDom, MAX_BYTES_INVENTARIO_DOM, MAX_MARCOS_INVENTARIO, MAX_OPCIONES_CRUDAS_SELECT, RE_TAG_DESPLEGABLE_CUSTOM, type InventarioDom } from '@central/module-tarificacion'
 import type { ElementHandle, Frame, JSHandle, Page } from 'playwright'
 import { redactarMediadorProfundo } from './privacidad-mediador.ts'
 import { LIB_MODAL_PAGINA } from './modal-informativo.ts'
@@ -53,7 +53,7 @@ export const envoltorioSelectOculto = (sel: Element): Element | null => {
 }
 
 /** 0.3.42: tag de un custom element de DESPLEGABLE (Stencil/Angular: `pelayo-select`, `x-dropdown`, `ui-combobox`, `date-picker`…); nunca sus opciones. */
-export const RE_TAG_DESPLEGABLE = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*-(?:select|dropdown|combo|combobox|picker|listbox)$/
+export const RE_TAG_DESPLEGABLE = RE_TAG_DESPLEGABLE_CUSTOM
 
 /**
  * Extractor que corre EN EL MARCO. Va como TEXTO (no como función) a propósito: tsx envuelve las funciones con nombre
@@ -310,6 +310,22 @@ function extractor(explora: boolean): string {
     }
     // nx-dropdown (ndbx, Allianz ePAC) ABIERTO: sus opciones son las del panel visible (\`nx-dropdown-item\` / role=option). Cerrado no
     // las tiene en el DOM: el worker lo abre al ejecutar un \`elegir\` y, si la opción no está, lo deja abierto para el paso siguiente.
+    // 0.3.43 (Pelayo \`pelayo-smart-select\`): custom element de DESPLEGABLE sin <select> dentro (tag de desplegable o role listbox/combobox; no
+    // nx-dropdown): \`desplegableCustom\` y los TEXTOS de sus opciones (li / role=option de su shadow, AUNQUE ocultas; nunca valores). El saneado filtra PII.
+    if (EXPLORA && tag !== 'nx-dropdown' && tag.indexOf('-') > 0 && (RE_DESP.test(tag) || role === 'listbox' || role === 'combobox') && !conSelectDentro(el)) {
+      e.desplegableCustom = true;
+      const ops = [];
+      const rs = [el];
+      if (el.shadowRoot) rs.push(el.shadowRoot);
+      for (let k = 0; k < rs.length && k < 20 && ops.length < 41; k++) {
+        for (const x of Array.from(rs[k].querySelectorAll('li,[role=option]'))) { if (ops.indexOf(x) < 0 && ops.length < 41) ops.push(x); }
+        for (const x of Array.from(rs[k].querySelectorAll('*'))) if (x.shadowRoot && rs.length < 20) rs.push(x.shadowRoot);
+      }
+      if (ops.length > 0) {
+        e.opciones = ops.slice(0, 40).map((o) => ({ valor: null, texto: corta(o.textContent || '', 200) })).filter((o) => o.texto);
+        e.opcionesTotal = ops.length;
+      }
+    }
     if (EXPLORA && tag === 'nx-dropdown' && el.getAttribute('aria-expanded') === 'true') {
       const items = Array.from(document.querySelectorAll('nx-dropdown-item,[role=option]')).filter(visible).slice(0, 40);
       e.opciones = items.map((o) => ({ valor: null, texto: corta(o.innerText || o.textContent || '', 200) }));
