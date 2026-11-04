@@ -29,6 +29,7 @@ import {
   textoRechazo,
   type ValidacionRespuesta,
   type ContextoValidacion,
+  type PermisosNavegacion,
   type IncidenciaEjecucion,
   type InventarioDom,
   type RespuestaExplorador,
@@ -118,6 +119,8 @@ export type EntradaPaso = {
   incidencias?: IncidenciaEjecucion[]
   /** Vista aria ya saneada (opcional). */
   vistaAria?: string
+  /** 0.3.45: permisos de navegación de BD YA validados de ESTA entrada (los mismos que revalida el worker). Sin la clave = solo código. */
+  permisos?: PermisosNavegacion | null
   /**
    * `login` = fase de LOGIN ASISTIDO (14/10/2026): prompt y validador propios (`validarRespuestaLogin`: solo claves
    * `credencial.*`), SIN memoria, y como mucho `MAX_PANTALLAS_LOGIN` pasos de login. La ruta ya comprobó la entrada.
@@ -181,7 +184,7 @@ export async function ejecutarPaso<B>(e: EntradaPaso, d: DepsPaso<B>): Promise<S
   // Con datos reales, el riesgo entra en la validación: elegir/marcar solo sobre uso/régimen/tipo con valor conocido.
   // `presupuestoEnCurso` (guardado del presupuesto, 14/10/2026) sale de los pasos YA guardados: se fija dentro del lock (tx1) y
   // tx2 solo registra si nada cambió (mismo nº de pasos), así que vale para las dos.
-  const ctx: ContextoValidacion = { inventario, ramo: e.ramo, entrada: e.entrada, datosReales: e.conDatosReales ? { riesgo: e.riesgo ?? null } : null, presupuestoEnCurso: false }
+  const ctx: ContextoValidacion = { inventario, ramo: e.ramo, entrada: e.entrada, datosReales: e.conDatosReales ? { riesgo: e.riesgo ?? null } : null, presupuestoEnCurso: false, permisos: e.permisos ?? null }
   const topes = topesExplorador(d.env)
   const login = e.fase === 'login'
   const parar = login ? respuestaPararLogin : respuestaParar

@@ -31,6 +31,7 @@ import {
   type MarcoInventario,
 } from './inventario-dom.ts'
 import { etiquetaIdHogar, type CampoIdHogar } from './riesgo-oportunidad.ts'
+import { avanceTextoBdAutorizado, MAX_RUTAS_BD, permisosVacios, rutasHrefBd, validarPermisosNavegacion, type PermisoIgnorado, type PermisoRutaBd, type PermisosNavegacion, type ResultadoPermisos } from './permisos-navegacion.ts'
 
 // ─── Entradas ────────────────────────────────────────────────────────────────
 
@@ -1378,6 +1379,8 @@ export type ContextoValidacion = {
   presupuestoEnCurso?: boolean
   /** `true` si en un paso ANTERIOR de este trabajo se vio un importe en cualquier marco: ningún avance por id más (precio pegajoso). */
   precioVisto?: boolean
+  /** 0.3.45: permisos de navegación de BD YA validados de ESTA entrada (`permisosNavegacionDe`). Sin la clave = solo código. */
+  permisos?: PermisosNavegacion | null
 }
 
 /** ¿Algún paso anterior (validado) pulsó un `guardar_presupuesto`? Para {@link ContextoValidacion.presupuestoEnCurso}. */
@@ -1574,10 +1577,12 @@ export function esAceptarDivAutorizado(entrada: string, el: ElementoInventario, 
  * la pantalla (marco del botón) y que no haya ningún título de tarificación/emisión. Lo demás del guard (onclick
  * `validar_aceptar`, `btnAccept`, `idbtnAceptar`…) sigue bloqueando aunque esté autorizado.
  */
-export function esAvanceAutorizado(entrada: string, el: ElementoInventario, marco: MarcoInventario): boolean {
+export function esAvanceAutorizado(entrada: string, el: ElementoInventario, marco: MarcoInventario, permisos?: PermisosNavegacion | null): boolean {
   const e = esEntradaExploracion(entrada) ? ENTRADAS_EXPLORACION[entrada] : null
   // 0.3.18: el input submit sin rótulo de una entrada que lo declara (no tiene `texto`).
   if (e && avanceSinTextoAutorizado(entrada, el, marco) !== null) return true
+  // 0.3.45: avance por texto EXACTO de BD (`permisos-navegacion.ts`), SOLO de ESTA entrada; `bloqueoAvance` sigue mirando la emisión dura.
+  if (e && avanceBdDeEntrada(entrada, el, marco, permisos) !== null) return true
   if (!e || typeof el.texto !== 'string') return false
   // Lista de títulos en el TOPE = recortada: el título de Tarificar podría ser justo el que no llegó → ningún «Aceptar» POR TÍTULO.
   // (El avance por identidad exacta decide por su cuenta si tolera el recorte; ver `toleraTitulosRecortados`.)
@@ -1879,21 +1884,70 @@ export function rutasAppTolerablesDe(entrada: string): readonly RutaTolerable[] 
 }
 
 /**
+ * 0.3.45: los permisos de navegación de BD de UNA entrada, validados contra su compañía de CÓDIGO (`permisos-navegacion.ts`). Entrada
+ * desconocida = todo ignorado. Lo llaman asegura (al leer la BD) y el worker (al recibir el trabajo). PURA.
+ */
+export function permisosNavegacionDe(entrada: string, filas: unknown): ResultadoPermisos {
+  const compania = esEntradaExploracion(entrada) ? ENTRADAS_EXPLORACION[entrada].compania : ''
+  return validarPermisosNavegacion(entrada, compania, filas)
+}
+
+/** Entradas de código de una compañía y ramo (tarificación real: sus permisos de RUTA de BD). PURA. */
+export function entradasDeCompaniaRamo(compania: string, ramo: string): string[] {
+  return Object.keys(ENTRADAS_EXPLORACION).filter((k) => ENTRADAS_EXPLORACION[k].compania === compania && ENTRADAS_EXPLORACION[k].ramo === ramo)
+}
+
+/**
+ * 0.3.45 TARIFICACIÓN REAL: las rutas de BD de TODAS las entradas de esa compañía y ramo, revalidadas cada una con su entrada y unidas
+ * bajo la primera (misma compañía: el origen se valida igual). Los AVANCES de BD no aplican a tarificar (los adaptadores pulsan por código):
+ * se descartan siempre. Sin entradas = nada. PURA.
+ */
+export function permisosTarificacionDe(compania: string, ramo: string, filas: unknown): ResultadoPermisos {
+  const entradas = entradasDeCompaniaRamo(compania, ramo)
+  const vacio = permisosVacios(entradas[0] ?? '')
+  if (filas === undefined || filas === null) return { permisos: vacio, ignorados: [] }
+  if (!Array.isArray(filas)) return { permisos: vacio, ignorados: [{ id: null, motivo: 'no_es_lista' }] }
+  const entradaDe = (f: unknown) => (typeof f === 'object' && f !== null ? (f as { entrada?: unknown }).entrada : undefined)
+  const idDe = (f: unknown) => (typeof f === 'object' && f !== null && typeof (f as { id?: unknown }).id === 'string' ? String((f as { id: string }).id).slice(0, 36) : null)
+  const ignorados: PermisoIgnorado[] = []
+  const rutas: PermisoRutaBd[] = []
+  for (const e of entradas) {
+    const r = permisosNavegacionDe(e, filas.filter((f) => entradaDe(f) === e))
+    ignorados.push(...r.ignorados, ...r.permisos.avances.map((a) => ({ id: a.id, motivo: 'no_aplica_tarificar' as const })))
+    rutas.push(...r.permisos.rutas)
+  }
+  for (const f of filas) if (!entradas.includes(entradaDe(f) as string)) ignorados.push({ id: idDe(f), motivo: 'entrada_distinta' })
+  return { permisos: Object.freeze({ entrada: vacio.entrada, rutas: Object.freeze(rutas.slice(0, MAX_RUTAS_BD)), avances: Object.freeze([]) }), ignorados }
+}
+
+/** Avance de BD de ESTA entrada (los permisos de otra entrada no cuentan). PURA. */
+function avanceBdDeEntrada(entrada: string, el: ElementoInventario, marco: MarcoInventario, permisos: PermisosNavegacion | null | undefined) {
+  return permisos && permisos.entrada === entrada ? avanceTextoBdAutorizado(permisos, el, marco) : null
+}
+
+/** Rutas tolerables en HREF: las de código ∪ las `pulsable` de BD de ESTA entrada. PURA. */
+function rutasHrefDe(entrada: string, permisos: PermisosNavegacion | null | undefined): readonly RutaTolerable[] {
+  const codigo = rutasAppTolerablesDe(entrada)
+  return permisos && permisos.entrada === entrada && esEntradaExploracion(entrada) ? [...codigo, ...rutasHrefBd(permisos)] : codigo
+}
+
+
+/**
  * `descripcionesElemento` con la RUTA del href neutralizada si la entrada declara esa ruta de aplicación (solo `hrefRuta`, y solo si
  * la ventana del marco es del origen de la regla: la ruta es relativa a ella).
  */
-function descripcionesEnEntrada(entrada: string, el0: ElementoInventario, marco: MarcoInventario): string[] {
+function descripcionesEnEntrada(entrada: string, el0: ElementoInventario, marco: MarcoInventario, permisos?: PermisosNavegacion | null): string[] {
   const origen = /^([a-z][a-z0-9+.-]*:\/\/[^/?#]+)/i.exec(marco.url)?.[1]?.toLowerCase() ?? null
   // 0.3.19: la subcadena exacta del onclick de UN control exacto de la entrada (`neutralizacionesOnclick`); el resto se mira igual.
   const neutro = onclickNeutralizado(neutralizacionesOnclickDe(entrada), { tag: el0.tag, id: el0.id, name: el0.name, texto: el0.texto, onclick: el0.onclick, origen, ruta: rutaDeMarco(marco.url) })
   const el = neutro === null ? el0 : { ...el0, onclick: neutro }
-  const reglas = rutasAppTolerablesDe(entrada)
+  const reglas = rutasHrefDe(entrada, permisos)
   if (reglas.length === 0 || typeof el.hrefRuta !== 'string') return descripcionesElemento(el)
   return descripcionesElemento({ ...el, hrefRuta: neutralizarRutaTolerable(el.hrefRuta, reglas, origen) ?? undefined })
 }
 
 /** `null` = el botón se puede pulsar en exploración; si no, por qué no. */
-export function bloqueoAvance(entrada: string, el: ElementoInventario, marco: MarcoInventario): string | null {
+export function bloqueoAvance(entrada: string, el: ElementoInventario, marco: MarcoInventario, permisos?: PermisosNavegacion | null): string | null {
   // Hace falta saber QUÉ es el botón: al menos una descripción visible (texto o aria) entera, no recortada por el saneado.
   // 0.3.18: salvo el input submit sin rótulo que la entrada declara (`avancesSinTexto`; el resto de comprobaciones sigue igual).
   if (![el.texto, el.ariaLabel].some((d) => typeof d === 'string' && d.trim() !== '' && !truncado(d)) && avanceSinTextoAutorizado(entrada, el, marco) === null) return 'sin_descripcion_completa'
@@ -1904,14 +1958,14 @@ export function bloqueoAvance(entrada: string, el: ElementoInventario, marco: Ma
   if (zona) return zona
   // 0.3.41: «Nueva contratación» del modal de «Datos del Tomador» de Pelayo (abre el wizard, no emite): regla EXACTA y solo con la clave.
   if (esEntradaExploracion(entrada) && ENTRADAS_EXPLORACION[entrada].nuevaContratacionPelayo === true && esNuevaContratacionPelayoInventario(el, marco)) return null
-  const desc = descripcionesEnEntrada(entrada, el, marco)
+  const desc = descripcionesEnEntrada(entrada, el, marco, permisos)
   const cat = clasificarAccionPortal(desc)
   // Emisión dura (patrón del guard: emitir, contratar, archivar, proyecto ampliado, pago fraccionado, validar_aceptar…; y la
   // categoría EMISIÓN de la lista única: firmar, pagar, tramitar, confirmar, domiciliar…): siempre.
   //   «Archivar» y «Proyecto ampliado» (GUARDAR) no se pulsan como navegación: caen abajo en `guardar_solo_en_resultado`.
   if (desc.some((d) => pareceEmision(d, { permitirAceptar: true, permitirGuardarPresupuesto: true })) || cat.emision) return 'boton_de_emision'
   // «Aceptar» (y lo que solo cae por él): solo el autorizado.
-  if (desc.some((d) => pareceEmision(d)) && !esAvanceAutorizado(entrada, el, marco)) return 'aceptar_no_autorizado'
+  if (desc.some((d) => pareceEmision(d)) && !esAvanceAutorizado(entrada, el, marco, permisos)) return 'aceptar_no_autorizado'
   // Lista única, categoría PROHIBIDA (enviar, salir…). «Proyecto ampliado» ya NO está aquí: es GUARDAR (excepción estrecha EMISION_PROJ).
   if (cat.prohibida) return 'boton_prohibido'
   // GUARDAR PRESUPUESTO (grabar, guardar, imprimir, descargar…): nunca como navegación; solo con `efectoEsperado:
@@ -1932,10 +1986,10 @@ export function navegacionLibreInventario(el: ElementoInventario, marco: MarcoIn
  * o es el sustantivo del desplegable de menú). El worker lo pulsa ENTONCES por `pulsarNavegacionLibre` (guard.ts: regla viva, vocabulario
  * del worker y tope por control), nunca por el `pulsar` genérico. Pura.
  */
-export function requiereNavegacionLibre(entrada: string, el: ElementoInventario, marco: MarcoInventario): boolean {
+export function requiereNavegacionLibre(entrada: string, el: ElementoInventario, marco: MarcoInventario, permisos?: PermisosNavegacion | null): boolean {
   if (!navegacionLibreInventario(el, marco).ok) return false
   const clasico = esAvanzable(el) || esAceptarDivAutorizado(entrada, el, marco) || esEnlaceAvanzable(entrada, el, marco)
-  return !clasico || bloqueoAvance(entrada, el, marco) !== null
+  return !clasico || bloqueoAvance(entrada, el, marco, permisos) !== null
 }
 
 export type PantallaGuardado = {
@@ -2167,7 +2221,7 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
         if (a.confianza !== 'alta' && a.confianza !== 'media') return void errores.push(`${donde}: avanzar exige confianza alta o media`)
         const bloqueo0 = efecto === 'guardar_presupuesto'
           ? bloqueoGuardadoPresupuesto(el, { tipoPantalla: pantalla.tipo, hayImportes: importes.size > 0, presupuestoEnCurso: ctx.presupuestoEnCurso === true })
-          : bloqueoAvance(ctx.entrada, el, marco)
+          : bloqueoAvance(ctx.entrada, el, marco, ctx.permisos)
         // El ÚNICO bloqueo clásico que la navegación libre levanta: `boton_de_emision` por el sustantivo de un DESPLEGABLE de menú
         // («Contratación» de Pelayo), con todo lo demás del control limpio (lo exige `navegacionLibre`).
         const bloqueo = bloqueo0 === 'boton_de_emision' && efecto !== 'guardar_presupuesto' && libre?.ok === true && libre.exentoMenu ? null : bloqueo0
@@ -2178,7 +2232,7 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
           return void errores.push(`${donde}: ${bloqueo}${causa ? ` (${causa})` : ''}`)
         }
         // Avance por id (ePAC drvp00) con un importe en CUALQUIER marco del inventario (o ya visto antes en este trabajo): nunca.
-        if (efecto !== 'guardar_presupuesto' && (avancePorIdAutorizado(ctx.entrada, el, marco) || avanceSinTextoAutorizado(ctx.entrada, el, marco)) && (importes.size > 0 || ctx.precioVisto === true)) {
+        if (efecto !== 'guardar_presupuesto' && (avancePorIdAutorizado(ctx.entrada, el, marco) || avanceSinTextoAutorizado(ctx.entrada, el, marco) || avanceBdDeEntrada(ctx.entrada, el, marco, ctx.permisos)) && (importes.size > 0 || ctx.precioVisto === true)) {
           return void errores.push(`${donde}: avance_por_id_con_precio`)
         }
         acciones.push({ accion: 'avanzar', ref, efectoEsperado: efecto, confianza: a.confianza })

@@ -34,6 +34,8 @@ import {
   riesgoTomadorDeMediador,
   rutasAppTolerablesDe,
   validarRespuestaExplorador,
+  permisosNavegacionDe,
+  resumenPermisos,
   type Credenciales,
   type InventarioDom,
 } from '@central/module-tarificacion'
@@ -60,6 +62,7 @@ import {
   pulsarMenuOfertaNseMapfre,
   registrarPrecioVisto,
   tolerarRutasApp,
+  permisosNavegacionEn,
   type GuardEmision,
 } from './guard.ts'
 import { TOPES_PILOTAJE, esCampoTexto, leerComando, loteExploradorDe, motivoCampoProhibido, motivoValorLiteralProhibido, textoDiagnostico, type ComandoPilotaje } from './pilotaje-reglas.ts'
@@ -203,7 +206,7 @@ export async function ejecutarComando(page: Page, captura: InventarioExploracion
   const lote = loteExploradorDe(c, el)
   if (lote !== null) {
     // EL validador del explorador, contra el inventario PROPIO: lista blanca, emisión, avance por id con precio, opciones…
-    const v = validarRespuestaExplorador(lote, { inventario: inv, ramo: k.ramo, entrada: k.entrada, datosReales: null, presupuestoEnCurso: false, precioVisto: precioVistoEn(k.guard) })
+    const v = validarRespuestaExplorador(lote, { inventario: inv, ramo: k.ramo, entrada: k.entrada, datosReales: null, presupuestoEnCurso: false, precioVisto: precioVistoEn(k.guard), permisos: permisosNavegacionEn(k.guard) })
     // 🚨 Barrera NECESARIA, no redundante (medido 03/11/2026): `pulsar()` de guard.ts deja pasar un «Confirmar» genérico (solo
     //    bloquea el de Generali); quien lo para es la categoría EMISIÓN de este validador. No se quita ni se salta.
     if (!v.ok) return rechazo('validador', (v.errores ?? []).map((e) => textoDiagnostico(e, red)))
@@ -415,7 +418,11 @@ export async function ejecutarPilotaje(p: EntradaPilotaje): Promise<number> {
   try {
     browser = await chromium.launch({ headless: true })
     // MISMO camino que el explorador (04/11/2026): sesión, ctx de entrada y login + entrada son las funciones del explorador, sin copia.
-    const { guard, page } = await abrirSesionEntrada(browser, entradaClave)
+    // 0.3.45: permisos de BD de la entrada, REVALIDADOS (rutas GET/href; un avance de BD pasa el validador pero el pilotaje solo pulsa por
+    // `pulsar()`, que sigue bloqueando «aceptar»: el avance de BD es del explorador). Sin valores en el log.
+    const rp = permisosNavegacionDe(entradaClave, trabajo.permisosNavegacion)
+    if (rp.ignorados.length > 0 || rp.permisos.rutas.length > 0 || rp.permisos.avances.length > 0) log('permisos_navegacion', resumenPermisos(rp))
+    const { guard, page } = await abrirSesionEntrada(browser, entradaClave, rp.permisos)
     const ctxEntrada = crearCtxEntrada({ page, guard, compania: trabajo.compania, credenciales, log, dormir: dormirReal })
     let pagina = page
     try {
