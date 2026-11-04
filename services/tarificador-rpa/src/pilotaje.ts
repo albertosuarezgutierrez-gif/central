@@ -39,7 +39,7 @@ import {
 } from '@central/module-tarificacion'
 import { cerrarPilotaje, enviarResultado, pedirComandoPilotaje, publicarEstadoPilotaje, type Config, type ResultadoComandoPilotaje, type Trabajo } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
-import { ClicNoAccionableError, cuerpoDiagnosticoClic, esTimeoutAccionabilidad, leerDiagnosticoClic } from './diagnostico-clic.ts'
+import { ClicNoAccionableError, cuerpoDiagnosticoClic, esTimeoutAccionabilidad, leerDiagnosticoClic, leerTagsModal, lineasTagsModal } from './diagnostico-clic.ts'
 import { lineasInterceptor } from './modal-informativo.ts'
 import { fallosDeRed, leerEntornoNavegador, lineasEntorno } from './entorno-navegador.ts'
 import { clasificar } from './errores.ts'
@@ -185,7 +185,9 @@ export async function ejecutarComando(page: Page, captura: InventarioExploracion
     if (!('loc' in l0)) return rechazo('no_localizado', [l0.motivo])
     try {
       const d = await leerDiagnosticoClic(l0.loc)
-      return d ? { r: { estado: 'hecho', motivo: 'inspeccionado', detalle: [`diag: ${cuerpoDiagnosticoClic(d)}`, ...lineasEntorno(await leerEntornoNavegador(page), fallosDeRed(page.context())), ...(d.int ? lineasInterceptor(d.int).map((x) => textoDiagnostico(x, red)) : [])].slice(0, 10) } } : rechazo('no_localizado', ['el nodo ya no está'])
+      // 0.3.42: TAGS de los controles del interior del modal (forma cerrada, sin textos), justo tras `diag:` para que el tope de 10 no los corte.
+      const tags = await leerTagsModal(l0.loc)
+      return d ? { r: { estado: 'hecho', motivo: 'inspeccionado', detalle: [`diag: ${cuerpoDiagnosticoClic(d)}`, ...(tags ? lineasTagsModal(tags) : []), ...lineasEntorno(await leerEntornoNavegador(page), fallosDeRed(page.context())), ...(d.int ? lineasInterceptor(d.int).map((x) => textoDiagnostico(x, red)) : [])].slice(0, 10) } } : rechazo('no_localizado', ['el nodo ya no está'])
     } finally {
       await l0.loc.evaluate((n, at) => n.removeAttribute(at), ATRIBUTO_MARCA, { timeout: 2_000 }).catch(() => undefined)
     }
@@ -247,7 +249,8 @@ export async function ejecutarComando(page: Page, captura: InventarioExploracion
         if (r === 'no_encontrada') return rechazo('opcion_no_encontrada')
       } else {
         if (opcionValidada === null) return rechazo('validador')
-        const elegidas = await loc.selectOption({ value: opcionValidada }, { timeout: 10_000, ...(el.selectpicker === true ? { force: true } : {}) })
+        // 0.3.20/0.3.42: el <select> OCULTO (bootstrap-select o custom element) ya se comprobó VIVO en `localizar`: `selectOption` forzado.
+        const elegidas = await loc.selectOption({ value: opcionValidada }, { timeout: 10_000, ...(el.selectpicker === true || el.selectOculto === true ? { force: true } : {}) })
         if (elegidas.length !== 1 || elegidas[0] !== opcionValidada) return rechazo('opcion_no_aplicada')
       }
       await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined)

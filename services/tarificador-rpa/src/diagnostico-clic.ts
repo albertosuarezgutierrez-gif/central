@@ -142,6 +142,94 @@ const CUERPO_DIAGNOSTICO = LIB_MODAL_PAGINA + `
 // Función REAL (no cadena: Playwright no invoca una cadena con el elemento) creada a partir del cuerpo, sin pasar por esbuild.
 const SCRIPT_DIAGNOSTICO = new Function('el', CUERPO_DIAGNOSTICO) as (el: Element) => unknown
 
+// ─── 0.3.42: TAGS de los controles del interior del MODAL (Pelayo «Tipo de documento» que el inventario no veía) ─────────────────────
+// Forma CERRADA, sin texto alguno del portal (ni rótulos, ni opciones, ni valores): por control, `tag[:type][@role][^prof][~][!]`
+// (prof = nivel de shadowRoot bajo el modal, `~` = oculto, `!` = deshabilitado). Incluye los custom elements (tag con guion).
+
+export type TagControlModal = { tag: string; type: string; role: string; prof: number; oculto: boolean; deshabilitado: boolean }
+/** Máximo de controles que se listan (el resto va como `+N`) y de líneas de detalle. */
+export const MAX_TAGS_MODAL = 30
+const MAX_LINEAS_TAGS_MODAL = 3
+const MAX_LARGO_LINEA_TAGS = 190
+
+const CUERPO_TAGS_MODAL = LIB_MODAL_PAGINA + `
+  const doc = el.ownerDocument;
+  const m = modalDe(el) || (esContM(el) ? el : null) || modalesVisibles(doc)[0] || null;
+  if (!m) return null;
+  const out = [];
+  const SEL_C = 'input,select,textarea,button,a,[role],[tabindex],[onclick],label';
+  const visto = (e) => {
+    const w = e.ownerDocument.defaultView, cs = w.getComputedStyle(e), r = e.getBoundingClientRect();
+    return !(cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) === 0 || (r.width <= 1 && r.height <= 1));
+  };
+  let total = 0;
+  const andar = (raiz, prof) => {
+    for (const e of Array.from(raiz.querySelectorAll('*'))) {
+      const t = String(e.localName || '');
+      if (t.indexOf('-') > 0 || e.matches(SEL_C)) {
+        total++;
+        if (out.length < 400) out.push({ tag: t, type: String(e.getAttribute('type') || ''), role: String(e.getAttribute('role') || ''), prof: prof, oculto: !visto(e), deshabilitado: e.disabled === true || e.getAttribute('aria-disabled') === 'true' });
+      }
+      if (e.shadowRoot && prof < 6) andar(e.shadowRoot, prof + 1);
+    }
+  };
+  andar(m, 0);
+  if (m.shadowRoot) andar(m.shadowRoot, 1);
+  return { ctl: out, total: total };
+`
+const SCRIPT_TAGS_MODAL = new Function('el', CUERPO_TAGS_MODAL) as (el: Element) => unknown
+
+/**
+ * Lee los TAGS de los controles del modal que contiene al elemento (o del primer modal visible de su documento), entrando en los shadowRoot
+ * abiertos. SOLO LECTURA; nunca lanza (`null` sin modal o sin nodo). Los textos del portal no salen de la página.
+ */
+export async function leerTagsModal(loc: Locator, timeoutMs = 2_000): Promise<TagControlModal[] | null> {
+  try {
+    const crudo = (await loc.evaluate(SCRIPT_TAGS_MODAL, undefined, { timeout: timeoutMs })) as { ctl?: unknown; total?: unknown } | null
+    if (!crudo || !Array.isArray(crudo.ctl)) return null
+    const ctl: TagControlModal[] = crudo.ctl.slice(0, 400).map((x) => {
+      const o = (x ?? {}) as Record<string, unknown>
+      return { tag: String(o.tag ?? ''), type: String(o.type ?? ''), role: String(o.role ?? ''), prof: num(o.prof, 0, 9), oculto: o.oculto === true, deshabilitado: o.deshabilitado === true }
+    })
+    return ctl
+  } catch {
+    return null
+  }
+}
+
+/** Un control → `tag[:type][@role][^prof][~][!]` (alfabetos cerrados). Pura. */
+export function fichaTagModal(c: TagControlModal): string {
+  const tag = etiqueta(c.tag, 30, 'x')
+  const type = String(c.type ?? '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 12)
+  const role = String(c.role ?? '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 16)
+  const prof = num(c.prof, 0, 9)
+  return `${tag}${type ? `:${type}` : ''}${role ? `@${role}` : ''}${prof > 0 ? `^${prof}` : ''}${c.oculto ? '~' : ''}${c.deshabilitado ? '!' : ''}`
+}
+
+/**
+ * Líneas `modal-ctl[ i/n]: <ficha> <ficha> …` (≤3 líneas de ≤190 car., ≤{@link MAX_TAGS_MODAL} controles; los que no caben, `+N` al final).
+ * Sin truncar a unos pocos: es lo que hay en el modal. Pura.
+ */
+export function lineasTagsModal(ctl: readonly TagControlModal[]): string[] {
+  const fichas = ctl.slice(0, MAX_TAGS_MODAL).map(fichaTagModal)
+  const lineas: string[][] = [[]]
+  let usados = 0
+  for (const f of fichas) {
+    const actual = lineas[lineas.length - 1]
+    // reserva para el prefijo «modal-ctl 3/3: » y el « +NNN» final
+    if ([...actual, f].join(' ').length > MAX_LARGO_LINEA_TAGS - 22) {
+      if (lineas.length >= MAX_LINEAS_TAGS_MODAL) break
+      lineas.push([f])
+    } else actual.push(f)
+    usados++
+  }
+  const resto = ctl.length - usados
+  if (usados === 0 && resto === 0) return ['modal-ctl: -']
+  if (resto > 0) lineas[lineas.length - 1].push(`+${resto}`)
+  const n = lineas.length
+  return lineas.map((l, i) => `modal-ctl${n > 1 ? ` ${i + 1}/${n}` : ''}: ${l.join(' ')}`)
+}
+
 /**
  * Lee el diagnóstico del control SIN pulsarlo ni desplazarlo (boundingBox, visibilidad, estilos calculados del elemento y de su primer
  * ancestro con opacidad<1 o pointer-events:none, qué hay en `elementFromPoint` del centro, iframe/shadow, animaciones en curso). Nunca

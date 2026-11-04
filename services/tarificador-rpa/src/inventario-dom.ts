@@ -14,6 +14,48 @@ import { LIB_MODAL_PAGINA } from './modal-informativo.ts'
 import { controlOcultoDeEtiqueta, SEL_ERROR_EPAC, SELECTOR_AVANCE_SERVLET, SELECTOR_DIALOGO, tituloDialogoVivo } from './guard.ts'
 
 /**
+ * 0.3.42 (Pelayo real 04/11/2026, «Tipo de documento» del modal «Datos del Tomador»): ¿es `sel` un `<select>` nativo OCULTO (display:none,
+ * visibility:hidden, opacidad 0 o caja ≤1 px) que sostiene un CUSTOM ELEMENT visible? Devuelve ese custom element (el más cercano subiendo
+ * por el light DOM y por el host de cada shadowRoot ABIERTO, ≤20 saltos) si es visible, NO es un modal/diálogo/fondo y envuelve EXACTAMENTE
+ * un `<select>` (light DOM + su shadow + un nivel de shadow anidado); si no, `null`. SOLO LECTURA. Corre en la página (extractor y `localizar`):
+ * función ANÓNIMA sin funciones con nombre dentro (tsx las envuelve en `__name`, que no existe en la página).
+ */
+export const envoltorioSelectOculto = (sel: Element): Element | null => {
+  if (!sel || sel.tagName !== 'SELECT' || !sel.isConnected) return null
+  const win = sel.ownerDocument.defaultView
+  if (!win) return null
+  const cs = win.getComputedStyle(sel)
+  const r = sel.getBoundingClientRect()
+  if (!(cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) === 0 || (r.width <= 1 && r.height <= 1))) return null
+  let n: Element | null = sel
+  for (let i = 0; i < 20 && n; i++) {
+    const actual: Element = n
+    const raiz: Node | null = actual.getRootNode ? actual.getRootNode() : null
+    n = actual.parentElement || ((raiz as ShadowRoot | null)?.host ?? null)
+    if (!n) return null
+    const t = String(n.localName || '')
+    if (t.indexOf('-') < 1) continue
+    if (/modal|dialog|popup|aviso|backdrop|overlay|mask|veil|scrim/.test(t)) return null
+    const ch = win.getComputedStyle(n)
+    const rh = n.getBoundingClientRect()
+    if (ch.display === 'none' || ch.visibility === 'hidden' || rh.width <= 1 || rh.height <= 1) return null
+    let selects = n.querySelectorAll('select').length
+    const raices: ShadowRoot[] = n.shadowRoot ? [n.shadowRoot] : []
+    for (const h of Array.from(n.querySelectorAll('*'))) if (h.shadowRoot) raices.push(h.shadowRoot)
+    // Cada shadowRoot anidado se mete en la cola (tope 50 raíces): un select en cualquiera de ellas cuenta.
+    for (let k = 0; k < raices.length && k < 50; k++) {
+      selects += raices[k].querySelectorAll('select').length
+      for (const h of Array.from(raices[k].querySelectorAll('*'))) if (h.shadowRoot && raices.length < 50) raices.push(h.shadowRoot)
+    }
+    return selects === 1 ? n : null
+  }
+  return null
+}
+
+/** 0.3.42: tag de un custom element de DESPLEGABLE (Stencil/Angular: `pelayo-select`, `x-dropdown`, `ui-combobox`, `date-picker`…); nunca sus opciones. */
+export const RE_TAG_DESPLEGABLE = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*-(?:select|dropdown|combo|combobox|picker|listbox)$/
+
+/**
  * Extractor que corre EN EL MARCO. Va como TEXTO (no como función) a propósito: tsx envuelve las funciones con nombre
  * en `__name`, que no existe en la página. Visible = con caja y sin `display:none`/`visibility:hidden` (un control
  * estilizado sin caja se acepta si tiene `<label>`: su etiqueta es lo que se ve).
@@ -38,7 +80,22 @@ function extractor(explora: boolean): string {
   // AngularJS (14/10/2026, fallo a5f06f70): las tarjetas de wmediadores son \`div.card-link[ng-click]\` con un \`<p>\` dentro (ni
   // <a> ni <button>); sin esto el inventario solo veía el menú superior. Su manejador viaja como \`onclick\` (el saneado lo
   // admite y la IA/el validador lo miran igual). En exploración un div no es avanzable (\`esAvanzable\`): no amplía acciones.
-  const SEL = 'input,select,textarea,button,a,[role=button],[role=link],[role=tab],[role=menuitem],[role=option],[role=combobox],[role=checkbox],mat-icon,td[onclick],[ng-click],[data-ng-click],label' + (EXPLORA ? ',' + SEL_SERVLET : '');
+  // 0.3.42: también [role=listbox] (desplegables ARIA de web components).
+  const SEL = 'input,select,textarea,button,a,[role=button],[role=link],[role=tab],[role=menuitem],[role=option],[role=combobox],[role=listbox],[role=checkbox],mat-icon,td[onclick],[ng-click],[data-ng-click],label' + (EXPLORA ? ',' + SEL_SERVLET : '');
+  // 0.3.42 (Pelayo «Tipo de documento»): el <select> OCULTO que sostiene un custom element visible (envoltorioSelectOculto) y los custom elements de
+  // DESPLEGABLE (tag select/dropdown/combo/picker/listbox) que NO envuelven un <select> (ARIA puro): se inventarían. Solo en exploración.
+  const envSel = (${envoltorioSelectOculto.toString()});
+  const RE_DESP = ${RE_TAG_DESPLEGABLE.toString()};
+  const conSelectDentro = (h) => {
+    if (h.querySelector('select')) return true;
+    const rs = h.shadowRoot ? [h.shadowRoot] : [];
+    for (let k = 0; k < rs.length && k < 20; k++) {
+      if (rs[k].querySelector('select')) return true;
+      for (const x of Array.from(rs[k].querySelectorAll('*'))) if (x.shadowRoot && rs.length < 20) rs.push(x.shadowRoot);
+    }
+    return false;
+  };
+  const esDesplegableCustom = (h) => EXPLORA && RE_DESP.test(String(h.localName || '')) && !conSelectDentro(h);
   const ngClick = (el) => el.getAttribute('ng-click') || el.getAttribute('data-ng-click');
   const esDivServlet = (el) => EXPLORA && el.matches(SEL_SERVLET);
   // EXPLORACIÓN: título del DIÁLOGO/modal más cercano (la MISMA función y el MISMO selector que la comprobación viva de
@@ -85,6 +142,8 @@ function extractor(explora: boolean): string {
   // <pelayo-input>/<pelayo-select>/<pelayo-button> anidados). Las refs se siguen re-resolviendo por handle (el handle es el nodo real, esté donde esté).
   const todos = (raiz, acc, prof) => {
     for (const el of Array.from(raiz.querySelectorAll(SEL))) acc.push(el);
+    // 0.3.42: custom elements de desplegable sin <select> dentro (si no casaron ya por su role).
+    if (EXPLORA) for (const h of Array.from(raiz.querySelectorAll('*'))) if (String(h.localName || '').indexOf('-') > 0 && !h.matches(SEL) && esDesplegableCustom(h)) acc.push(h);
     if (prof > 5 || acc.length > 2000) return acc;
     for (const h of Array.from(raiz.querySelectorAll('*'))) if (h.shadowRoot) todos(h.shadowRoot, acc, prof + 1);
     return acc;
@@ -167,10 +226,13 @@ function extractor(explora: boolean): string {
     // y su \`button.dropdown-toggle\` sin texto NO (la IA elige sobre el select). Solo en exploración.
     const sp = EXPLORA && tag === 'select' ? selectpickerDe(el) : null;
     if (EXPLORA && tag === 'button' && botonDeSelectpicker(el)) continue;
+    // 0.3.42: <select> OCULTO de un custom element visible (pelayo-select…): se inventaría con \`selectOculto\` (el custom element no, si no tiene role).
+    let so = null;
+    if (EXPLORA && tag === 'select' && !sp) { try { so = envSel(el); } catch (err) { so = null; } }
     const cs = getComputedStyle(el);
-    if (!sp && (cs.display === 'none' || cs.visibility === 'hidden')) continue;
+    if (!sp && !so && (cs.display === 'none' || cs.visibility === 'hidden')) continue;
     const r = el.getBoundingClientRect();
-    if (!sp && r.width === 0 && r.height === 0 && !(el.labels && el.labels.length)) continue;
+    if (!sp && !so && r.width === 0 && r.height === 0 && !(el.labels && el.labels.length)) continue;
     // EXPLORACIÓN (28/10/2026, ePAC drvp00): la etiqueta de un control de elección OCULTO se inventaría COMO ese control (tag input,
     // su type, id/name; texto y etiqueta, los de la label). El NODO es la label (la resolución vive en guard.ts: \`controlOcultoDeEtiqueta\`).
     const rdo = EXPLORA && tag === 'label' ? ctlOculto(el) : null;
@@ -201,6 +263,13 @@ function extractor(explora: boolean): string {
     } else if (el.getAttribute('aria-labelledby')) {
       const rz = raizDe(el);
       e.etiqueta = corta(el.getAttribute('aria-labelledby').split(/\\s+/).map((id) => { const x = (rz.getElementById ? rz.getElementById(id) : null) || document.getElementById(id); return x ? (x.innerText || x.textContent || '') : ''; }).join(' '), 200);
+    }
+    // 0.3.42: el select oculto toma la etiqueta/placeholder de SU custom element (atributos label/aria-label/placeholder) antes que el texto del contenedor.
+    if (so) {
+      const a = so.getAttribute('label') || so.getAttribute('aria-label');
+      if (!e.etiqueta && a) e.etiqueta = corta(a, 200);
+      if (!e.placeholder && so.getAttribute('placeholder')) e.placeholder = so.getAttribute('placeholder');
+      e.selectOculto = true;
     }
     if (!e.etiqueta && (tag === 'input' || tag === 'select' || tag === 'textarea')) { const es = etiquetaShadow(el); if (es) e.etiqueta = es; }
     const divServlet = esDivServlet(el);
