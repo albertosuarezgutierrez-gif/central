@@ -61,3 +61,6 @@ Actualizado: 04/11/2026
 5. **Alarma de compañía sin precio** — Telegram si una compañía lleva 3 días sin precio o encadena errores (datos del panel de estado).
 6. **Re-tarificación de cartera en vigor a 45 días del vencimiento** — bot primero; Avant2 solo con el botón 💶.
 Pendiente de Alberto: capturas del panel de Avant2 (prompt de Claude en Chrome), URLs de los pasos de Pelayo, compañías principales por volumen, consulta del código 2115 de Generali a Codeoscopic.
+
+## Decisión (04/11/2026, Alberto): comisiones fuera de Avant2
+Avant2 se usa SOLO para tarificar y emitir. La comisión (de compañía y de correduría) no se toma de Avant2 (`brokerFee` no se usa ni se completa): sale de los movimientos de banco de Alberto y de CIMA.
