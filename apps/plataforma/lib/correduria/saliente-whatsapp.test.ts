@@ -1,6 +1,7 @@
+import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { cuerpoSaliente, deEnlaceWa, registrarSaliente, registrarSalienteDeEnlace, RUTA_SALIENTE } from './saliente-whatsapp.ts'
+import { registroWaCabecera, cuerpoSaliente, deEnlaceWa, registrarSaliente, registrarSalienteDeEnlace, RUTA_SALIENTE } from './saliente-whatsapp.ts'
 
 const R = '3f2b8c1e-9a4d-4e6f-8b7a-1c2d3e4f5a6b'
 const O = '0b6c1f7e-3a52-4d7e-9f0a-1c2d3e4f5a6b'
@@ -66,4 +67,16 @@ test('registro desde el wa.me: saca teléfono y texto; sin número no llama', ()
   registrarSalienteDeEnlace({ origen: 'presupuesto', oportunidadId: O }, 'https://wa.me/?text=x', f)
   assert.equal(cuerpos.length, 1)
   assert.deepEqual(cuerpos[0], { origen: 'presupuesto', telefono: '+34600112233', texto: 'Tu presupuesto', oportunidadId: O })
+})
+
+test('cabecera de la ficha: el WhatsApp genérico se registra CON el clienteId de la ficha', () => {
+  const id = '11111111-1111-4111-8111-111111111111'
+  assert.deepEqual(cuerpoSaliente(registroWaCabecera(id), '+34600111222', 'hola'), { origen: 'generico', telefono: '+34600111222', texto: 'hola', clienteId: id })
+  assert.equal(cuerpoSaliente(registroWaCabecera(null), '+34600111222', 'hola')?.clienteId, undefined)
+})
+
+test('CEPO cabecera: Cabecera.tsx pasa el registro con el clienteId a AccionesContacto', () => {
+  const src = readFileSync(new URL('../../app/(usuario)/correduria/cliente/[id]/Cabecera.tsx', import.meta.url), 'utf8')
+  assert.ok(src.includes('registro={registroWaCabecera(clienteId)}'))
+  assert.ok(src.includes('<Contacto clienteId={ficha.id}'))
 })

@@ -2,7 +2,8 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { parseCallback } from '@central/core-telegram'
 import { readFileSync } from 'node:fs'
-import { ACCIONES_WAP, PREFIJO_WAP, actorTitular, decidirBotonWap, idDeCorreccionWap, lineaTrasPulsarWap, resolverPropuestaEnAsegura, textoPedirCorreccionWap } from './whatsapp-propuesta-tg.ts'
+import { cuerpoEditMessage } from '@central/core-telegram'
+import { ACCIONES_WAP, mensajeOriginalDeCorreccionWap, resueltaParaQuitarBotones, PREFIJO_WAP, actorTitular, decidirBotonWap, idDeCorreccionWap, lineaTrasPulsarWap, resolverPropuestaEnAsegura, textoPedirCorreccionWap } from './whatsapp-propuesta-tg.ts'
 
 const ID = '3f2b8c1e-9a4d-4e6f-8b7a-1c2d3e4f5a6b'
 const CUENTA = '0b6c1f7e-3a52-4d7e-9f0a-1c2d3e4f5a6b'
@@ -149,4 +150,35 @@ test('CEPO webhook: la respuesta ✏️ comprueba el chat autorizado ANTES de ll
   assert.ok(guarda > 0 && guarda < resp.indexOf('resolverPropuestaEnAsegura('))
   const rama = webhook.slice(webhook.indexOf('if (prefix === PREFIJO_WAP)'))
   assert.ok(rama.indexOf('decidirBotonWap(cb, action, args, process.env.TELEGRAM_CHAT_ID)') < rama.indexOf('tgAskForReply(textoPedirCorreccionWap('))
+})
+
+test('✏️: la marca lleva el id del mensaje original y sigue ligando la propuesta', () => {
+  const t = textoPedirCorreccionWap(ID, 4321)
+  assert.equal(idDeCorreccionWap(t), ID)
+  assert.equal(mensajeOriginalDeCorreccionWap(t), 4321)
+  assert.equal(mensajeOriginalDeCorreccionWap(textoPedirCorreccionWap(ID)), null)
+  assert.equal(mensajeOriginalDeCorreccionWap(textoPedirCorreccionWap(ID, 0)), null)
+  assert.equal(mensajeOriginalDeCorreccionWap(null), null)
+})
+
+test('al resolver (aplicar, descartar, modificar, deshacer, 409/410/404) se quitan los botones; pendiente → se conservan', () => {
+  for (const r of [{ status: 200, estado: 'aplicada' }, { status: 200, estado: 'descartada' }, { status: 200, estado: 'modificada' }, { status: 200, estado: 'deshecha' }, { status: 409, estado: 'x' }, { status: 410, estado: 'x' }, { status: 404, estado: 'x' }]) {
+    assert.equal(resueltaParaQuitarBotones(r), true, JSON.stringify(r))
+  }
+  for (const r of [{ status: 422, estado: 'correccion_invalida' }, { status: 502, estado: 'red' }, { status: 503, estado: 'x' }, { status: 0, estado: 'sin_actor' }]) {
+    assert.equal(resueltaParaQuitarBotones(r), false, JSON.stringify(r))
+  }
+})
+
+test('CEPO botones: la edición del mensaje tras resolver NO lleva inline_keyboard (con botones sí)', () => {
+  const sin = cuerpoEditMessage('1', 7, 'texto\n\n✅ Aplicada')
+  assert.equal('reply_markup' in sin, false)
+  assert.equal(JSON.stringify(sin).includes('inline_keyboard'), false)
+  assert.ok(JSON.stringify(cuerpoEditMessage('1', 7, 't', [[{ texto: 'a', callback: 'wap_ok:x' }]])).includes('inline_keyboard'))
+  // Las ediciones de la rama wap_ del webhook van sin `botones`.
+  const webhook = readFileSync(new URL('../../app/api/sivra/mensajes/telegram-webhook/route.ts', import.meta.url), 'utf8')
+  const rama = webhook.slice(webhook.indexOf('if (prefix === PREFIJO_WAP)'), webhook.indexOf('if (prefix === PREFIJO_RRC)'))
+  assert.ok(rama.includes('tgEditMessage(mensajeId,'))
+  assert.equal(/botones\s*:/.test(rama), false)
+  assert.ok(webhook.includes('tgQuitarBotones(originalId)'))
 })

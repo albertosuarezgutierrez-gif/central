@@ -18,11 +18,12 @@
 --
 -- 🔐 Sin PII: ni texto ni número (solo hashes: el del teléfono es el índice ciego de siempre, `wa_telefono_hash`).
 -- 🛡️ Aislamiento: las dos tablas llevan correduria_id y todo el código las filtra por ella (BYPASSRLS).
--- ⚠️ NO APLICADA. El código es fail-closed sin ella: los dos endpoints responden 503 `sin_migracion`; el casado del echo,
---    la descarga de media y las propuestas no hacen nada (se registra y sigue, nunca tumba el procesado del webhook).
---    Aplicar por MCP `Supabase` (proyecto central, schema seguros), NO `Supabase_asegura`. Requiere 2026-10-05b.
+-- ✅ APLICADA en producción el 04/11/2026 (MCP Supabase, proyecto central, schema seguros). Antes de aplicarla, el código
+--    era fail-closed: los dos endpoints respondían 503 `sin_migracion`; el casado del echo, la descarga de media y las
+--    propuestas no hacían nada (se registraba y seguía, nunca tumbaba el procesado del webhook). Requiere 2026-10-05b.
 --
 -- Se deshace con:
+--   DROP TABLE IF EXISTS seguros.whatsapp_aprendizaje; -- (2026-11-04b) antes, por su FK a whatsapp_propuestas
 --   DROP TABLE IF EXISTS seguros.whatsapp_propuestas;
 --   DROP TABLE IF EXISTS seguros.whatsapp_salientes_previstos;
 --   ALTER TABLE seguros.poliza_recibos DROP COLUMN IF EXISTS fecha_prometida_pago;

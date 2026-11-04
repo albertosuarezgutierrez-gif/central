@@ -14,9 +14,9 @@
 --    nombre del contacto) y recortados a 300. Se ANULAN con la conversación: retención (WHATSAPP_RETENCION_DIAS),
 --    purga por «personal» y supresión (`retencion.ts`). Ni ids de recibo ni importes: solo fechas y el tipo.
 -- 🛡️ Aislamiento: correduria_id en la fila y en toda sentencia (BYPASSRLS).
--- ⚠️ NO APLICADA. El código es fail-closed sin ella: no registra (no-op), no inyecta casos (`casos_previos: null`) y la
---    autonomía NUNCA se activa (racha ilegible = con permiso). Aplicar por MCP `Supabase` (proyecto central, schema
---    seguros), NO `Supabase_asegura`. Además la autonomía exige ASEGURA_WHATSAPP_AUTONOMIA_ACTIVA=1 (apagada por defecto).
+-- ✅ APLICADA en producción el 04/11/2026 (MCP Supabase, proyecto central, schema seguros). Antes de aplicarla, el código
+--    era fail-closed: no registraba (no-op), no inyectaba casos (`casos_previos: null`) y la autonomía no se activaba.
+--    La autonomía sigue exigiendo ASEGURA_WHATSAPP_AUTONOMIA_ACTIVA=1 (apagada por defecto).
 --
 -- Se deshace con:
 --   DROP TABLE IF EXISTS seguros.whatsapp_aprendizaje;

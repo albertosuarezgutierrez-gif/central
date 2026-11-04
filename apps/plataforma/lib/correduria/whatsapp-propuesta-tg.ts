@@ -37,15 +37,35 @@ export function decidirBotonWap(
   return { ok: true, id: args[0].toLowerCase(), decision: DECISION[accion as (typeof ACCIONES_WAP)[number]] }
 }
 
-/** El mensaje que pide la corrección (force_reply). La marca liga la respuesta a la propuesta. PURO. */
-export function textoPedirCorreccionWap(id: string): string {
-  return `✏️ Responde a este mensaje con la corrección: una fecha (dd/mm/aaaa) y/o una observación. Se aplicará la versión corregida y quedará anotada para que la IA aprenda. [wap ${id}]`
+/**
+ * El mensaje que pide la corrección (force_reply). La marca liga la respuesta a la propuesta y, si se conoce, al mensaje
+ * ORIGINAL con botones (`[wap <uuid> m<id>]`) para poder quitárselos al resolver. PURO.
+ */
+export function textoPedirCorreccionWap(id: string, mensajeOriginalId?: number | null): string {
+  const m = Number.isInteger(mensajeOriginalId) && (mensajeOriginalId as number) > 0 ? ` m${mensajeOriginalId}` : ''
+  return `✏️ Responde a este mensaje con la corrección: una fecha (dd/mm/aaaa) y/o una observación. Se aplicará la versión corregida y quedará anotada para que la IA aprenda. [wap ${id}${m}]`
 }
 
 /** Id de la propuesta si el mensaje citado es nuestra petición de corrección. PURO. */
 export function idDeCorreccionWap(citado: string | null | undefined): string | null {
-  const m = /\[wap ([0-9a-f-]{36})\]/i.exec(citado ?? '')
+  const m = /\[wap ([0-9a-f-]{36})(?: m\d+)?\]/i.exec(citado ?? '')
   return m && UUID.test(m[1]) ? m[1].toLowerCase() : null
+}
+
+/** Id del mensaje original (el de los botones) que lleva la marca de la petición de corrección, o `null`. PURO. */
+export function mensajeOriginalDeCorreccionWap(citado: string | null | undefined): number | null {
+  const m = /\[wap [0-9a-f-]{36} m(\d+)\]/i.exec(citado ?? '')
+  const n = m ? Number(m[1]) : NaN
+  return Number.isSafeInteger(n) && n > 0 ? n : null
+}
+
+/**
+ * ¿Quedó la propuesta resuelta (o ya imposible de resolver) y por tanto el mensaje original NO debe conservar sus botones?
+ * Una corrección inválida o un fallo de red/asegura dejan la propuesta pendiente: ahí los botones se quedan. PURO.
+ */
+export function resueltaParaQuitarBotones(r: ResultadoWap): boolean {
+  if (r.status === 200) return true
+  return r.status === 404 || r.status === 409 || r.status === 410
 }
 
 /** `humano:<cuentaId>` del titular, o `null` si la cuenta no es un uuid (entonces no se aplica nada). PURO. */
