@@ -92,7 +92,7 @@ export async function POST(req: Request) {
       const r = await registrarEventosWebhook(correduria.id, eventos, { importarHistorial: importarHistorial(), canalActivo: activo })
       console.log(
         `[webhooks/whatsapp] cuenta: aplicados=${r.cuentas.aplicados} otra_waba=${r.cuentas.otraWaba} ignorados=${r.cuentas.ignorados}` +
-          ` historial: no_compartido=${r.historial.noCompartido} descartados=${r.historial.descartados} crudo=${r.historial.guardadosCrudo} error_meta=${r.historial.errorMeta}` +
+          ` historial: no_compartido=${r.historial.noCompartido} descartados=${r.historial.descartados} importados=${r.historial.importados} hilos_sin_ficha=${r.historial.sinFicha} error_meta=${r.historial.errorMeta}` +
           ` contactos_acuse=${r.contactosSync}`,
       )
     } catch (e) {

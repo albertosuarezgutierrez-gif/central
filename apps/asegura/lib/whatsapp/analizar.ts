@@ -8,7 +8,7 @@
 // Un fallo de la IA no avanza `analizada_hasta`; al tercero seguido se salta ese tramo (y se dice).
 
 import { cleanJSON } from '@central/core-ai'
-import { WHERE_CARTERA_EN_VIGOR, telefonoParaFicha } from '@central/module-seguros'
+import { WHERE_CARTERA_EN_VIGOR, telefonoParaFicha, telefonoVerificadoPorCodigo, telefonoVerificadoPorNombre } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
 import { Prisma } from '../generated/asegura-client'
 import { prismaAsegura } from '../asegura-db'
@@ -23,6 +23,11 @@ import { recibosPendientesDe, salienteVinculadoDe, type ReciboParaAnalisis, type
 import { aplicarSiAutonoma, avisarTelegram, crearPropuesta, type ContextoAprendizaje } from './propuestas'
 import { casosResueltos } from './aprendizaje'
 import { casoParaIA, elegirCasos, extractoRedactado } from './aprendizaje-reglas'
+import { respuestaIaActiva } from './config'
+import { avisoVencimientoDisponible } from './aviso-vencimiento-reglas'
+import { clasificarOptOut, decidirRespuesta, elegirTelefonoSiniestro, esBaja, esSiniestro, puedeResponder, ramoDePercance, sistemaRespuesta, TEXTO_MOTIVO, type Pre } from './respuesta-reglas'
+import { enviarRespuesta, leerEstadoRespuesta, marcarOptOut, type ResultadoRespuesta } from './respuesta'
+import { redactarPii } from '@central/module-seguros'
 
 const ESTADOS_ABIERTOS = ['competencia', 'en_negociacion', 'pendiente_cliente']
 const MAX_INTENTOS = 3
@@ -41,7 +46,7 @@ function descifrar(v: string | null | undefined): string | null {
   }
 }
 
-type Reclamada = { opt_out_conv?: boolean; id: string; estado: string; cliente_id: string | null; clientes_candidatos: number | null; perfil: string | null; telefono: string | null; intentos: number; telefono_hash?: string | null }
+type Reclamada = { analizada_hasta?: Date | null; opt_out_conv?: boolean; id: string; estado: string; cliente_id: string | null; clientes_candidatos: number | null; perfil: string | null; telefono: string | null; intentos: number; telefono_hash?: string | null }
 
 export type ResumenAnalisis = { analizadas: number; fallidas: number; saltadas: number; acciones: number }
 
@@ -64,7 +69,7 @@ export async function analizarPendientes(correduriaId: string, limite = 10): Pro
         for update skip locked)
     returning c.id::text as id, c.estado, c.cliente_id::text as cliente_id, c.clientes_candidatos,
               c.wa_perfil_nombre_cifrado as perfil, c.wa_telefono_cifrado as telefono, c.analisis_intentos as intentos,
-              c.wa_opt_out_at is not null as opt_out_conv, c.wa_telefono_hash as telefono_hash`)
+              c.wa_opt_out_at is not null as opt_out_conv, c.wa_telefono_hash as telefono_hash, c.analizada_hasta`)
   const r: ResumenAnalisis = { analizadas: 0, fallidas: 0, saltadas: 0, acciones: 0 }
   for (const c of reclamadas) {
     try {
@@ -124,6 +129,12 @@ async function clienteVivo(correduriaId: string, clienteId: string): Promise<(Cl
   return null
 }
 
+/** Teléfono de dar parte de la compañía, SOLO del catálogo verificado (código DGS o nombre exacto). */
+function telefonoSiniestrosDe(codigoDgs: string | null, aseguradora: string | null): string | null {
+  const c = (codigoDgs ? telefonoVerificadoPorCodigo(codigoDgs) : null) ?? (aseguradora ? telefonoVerificadoPorNombre(aseguradora) : null)
+  return c?.siniestros ?? null
+}
+
 async function analizarUna(correduriaId: string, c: Reclamada): Promise<number | 'saltada' | 'fallida'> {
   const db = prismaAsegura()
   const hasta = await hastaDe(c.id)
@@ -139,9 +150,14 @@ async function analizarUna(correduriaId: string, c: Reclamada): Promise<number |
     return 'saltada'
   }
 
-  const filas = await db.$queryRaw<{ direccion: 'entrante' | 'saliente'; contenido: string; enviado_at: Date }[]>(Prisma.sql`
-    select direccion, contenido, enviado_at from mensajes
+  // El historial importado (Coexistence) solo sirve de contexto en una conversación con UNA ficha exacta.
+  const fichaUnicaConv = cliente !== null && c.clientes_candidatos === 1
+  const filas = await db.$queryRaw<{ direccion: 'entrante' | 'saliente'; contenido: string; enviado_at: Date; tipo: string | null }[]>(Prisma.sql`
+    select direccion, contenido, enviado_at, tipo from mensajes
      where conversacion_id = ${c.id}::uuid and direccion is not null and texto_purgado_at is null and enviado_at is not null
+       and (${fichaUnicaConv} or coalesce(metadata->>'origen', '') <> 'historial')
+       -- Una respuesta de la IA que no consta como entregada (reservada, incierta o fallida) NO cuenta como dicha.
+       and not (coalesce(metadata->>'ia', '') = 'true' and coalesce(estado, '') in ('enviando', 'incierto', 'fallido'))
      order by enviado_at desc limit 40`)
   const mensajes: MensajeTranscripcion[] = []
   for (const f of filas) {
@@ -196,7 +212,29 @@ async function analizarUna(correduriaId: string, c: Reclamada): Promise<number |
   })()
   const extracto = extractoRedactado(textoUltimaEntrante, [perfil, cliente?.nombre, cliente?.apellidos])
   const contextoAprendizaje: ContextoAprendizaje = { origenSaliente: saliente?.origen ?? null, extracto }
-  const casos = fichaUnica && enVigor === true ? await casosResueltos(correduriaId) : undefined
+  // Puede haber propuestas con póliza en vigor (recibos) o con una oportunidad abierta (vencimiento de un lead: D4 ajustada).
+  const casos = fichaUnica && (enVigor === true || oportunidades.length > 0) ? await casosResueltos(correduriaId) : undefined
+
+  // Respuesta automática (ASEGURA_WHATSAPP_RESPUESTA_ACTIVA=1). Con el flag apagado no se lee nada más ni cambia el prompt.
+  const flagRespuesta = respuestaIaActiva()
+  // La respuesta solo promete avisos si el aviso de vencimiento por plantilla está de verdad disponible.
+  const promesaAviso = avisoVencimientoDisponible()
+  let pre: Pre = { ok: false, motivo: 'flag_apagado' }
+  let entranteId: string | null = null
+  let tipoEntrante = 'text'
+  if (flagRespuesta && cliente) {
+    const est = await leerEstadoRespuesta(correduriaId, c.id, {
+      flag: true, tipoFicha: cliente.tipo, clientesCandidatos: c.clientes_candidatos, estadoConversacion: c.estado, optOut: false,
+    }).catch((e) => {
+      console.error('[whatsapp-ia] estado de respuesta no leído:', e instanceof Error ? e.name : 'error')
+      return null
+    })
+    if (est && est !== 'sin_migracion') {
+      pre = puedeResponder(est)
+      entranteId = est.ultimaEntrante?.id ?? null
+      tipoEntrante = est.ultimaEntrante?.tipo ?? 'text'
+    } else pre = { ok: false, motivo: 'sin_migracion' }
+  }
 
   const contextoIA: ContextoParaIA = {
     tiene_ficha: cliente !== null,
@@ -204,16 +242,22 @@ async function analizarUna(correduriaId: string, c: Reclamada): Promise<number |
     lead_estado: cliente?.tipo === 'lead' ? cliente.leadEstado : null,
     ramos_contratados: cliente ? ramos : null,
     oportunidades_abiertas: oportunidades.map((o) => ({ ramo: o.ramo, estado: o.estado, vencimiento: o.fecha })),
-    // Sin ids ni datos personales: de qué iba lo último que se le mandó, y los recibos por ramo/fecha/importe.
-    ultimo_saliente: saliente ? { origen: saliente.origen, ramo: saliente.ramo, fecha: saliente.fecha, importe: saliente.importe } : null,
-    recibos_pendientes: recibos ? recibos.map((r) => ({ ramo: r.ramo, estado: r.situacion, efecto: r.efecto, importe: r.importe })) : null,
+    // Sin ids ni datos personales: de qué iba lo último que se le mandó, y los recibos por ramo/fecha/importe. Con la
+    // respuesta automática encendida, SIN importes (revisión PR #5528: lo que la IA no ve no lo puede decir).
+    ultimo_saliente: saliente ? { origen: saliente.origen, ramo: saliente.ramo, fecha: saliente.fecha, importe: flagRespuesta ? null : saliente.importe } : null,
+    recibos_pendientes: recibos ? recibos.map((r) => ({ ramo: r.ramo, estado: r.situacion, efecto: r.efecto, importe: flagRespuesta ? null : r.importe })) : null,
     // null = no se pudo leer el registro (≠ «no hay casos»); ausente = aquí no puede haber propuestas.
     ...(casos === undefined ? {} : { casos_previos: casos === null ? null : elegirCasos(casos, contextoAprendizaje).map(casoParaIA) }),
   }
 
   let crudo: string
   try {
-    crudo = await iaTexto(construirPrompt(contextoIA, transcripcion), { system: SISTEMA, maxTokens: 900, timeoutMs: 45_000, privado: true })
+    crudo = await iaTexto(construirPrompt(contextoIA, transcripcion), {
+      system: pre.ok ? SISTEMA + sistemaRespuesta({ promesaAviso }) : SISTEMA,
+      maxTokens: pre.ok ? 1100 : 900,
+      timeoutMs: 45_000,
+      privado: true,
+    })
   } catch {
     await fallo(correduriaId, c, hasta, 'ia_no_responde')
     return 'fallida'
@@ -242,22 +286,80 @@ async function analizarUna(correduriaId: string, c: Reclamada): Promise<number |
   const plan = planificar(analisis, ctx)
   const { resultados, clienteId: clienteFinal } = await ejecutar(plan, ctx, depsBd(correduriaId, c, contextoAprendizaje))
 
+  // Respuesta automática: solo si `pre.ok` (todas las guardas previas) y la decisión posterior lo permite.
+  const descartaPersonal = plan.pasos.some((x) => x.tipo === 'descartarPersonal')
+  // Opt-out de los MENSAJES («no me escribáis», «stop»): solo del entrante NUEVO de este tramo (no de uno ya analizado).
+  const ultimaEntranteAt = filas.find((f) => f.direccion === 'entrante')?.enviado_at ?? null
+  const entranteNuevo = ultimaEntranteAt !== null && (!c.analizada_hasta || ultimaEntranteAt.getTime() > c.analizada_hasta.getTime())
+  const optOut = flagRespuesta && entranteNuevo ? clasificarOptOut(analisis.intencion, textoUltimaEntrante) : null
+  const baja = flagRespuesta && fichaUnica && analisis.es_comercial && optOut !== 'opt_out' && esBaja(analisis.intencion, textoUltimaEntrante)
+  // Percance (siniestro/avería/inundación…): Telegram urgente SIEMPRE; la respuesta solo con el flag y ficha única.
+  const siniestroDetectado = entranteNuevo && !descartaPersonal && analisis.es_comercial && optOut === null && !baja && esSiniestro(analisis.intencion, textoUltimaEntrante)
+  let siniestro: { telefono: string | null } | null = null
+  if (siniestroDetectado && flagRespuesta && fichaUnica && cliente && pre.ok) {
+    // Solo pólizas EN VIGOR de la ficha; si no se leen (null) → sin teléfono («Alberto le llama»).
+    const candidatas = await db.poliza
+      .findMany({ where: { AND: [{ correduriaId, clienteId: cliente.id }, WHERE_CARTERA_EN_VIGOR] }, select: { tipo: true, aseguradora: true, codigoEntidadDgs: true } })
+      .then((ps) => ps.map((x) => ({ tipo: String(x.tipo), aseguradora: x.aseguradora, codigoDgs: x.codigoEntidadDgs })))
+      .catch(() => null)
+    const ramo = analisis.producto ?? ramoDePercance(textoUltimaEntrante)
+    siniestro = { telefono: elegirTelefonoSiniestro(candidatas, ramo, telefonoSiniestrosDe) }
+  }
+  let respuestaAviso: { estado: ResultadoRespuesta | 'no_enviada'; texto?: string; motivo?: string } | undefined
+  if (pre.ok && entranteId) {
+    const d = decidirRespuesta({
+      esComercial: analisis.es_comercial, descartaPersonal, baja, siniestro, optOut, tipoEntrante, respuestaIA: analisis.respuesta, promesaAviso,
+      nombrePila: cliente?.nombre ?? null,
+      redactar: (t) => redactarPii(t),
+    })
+    if (d.enviar) {
+      const r = await enviarRespuesta(correduriaId, { conversacionId: c.id, entranteId, telefonoCifrado: c.telefono, texto: d.texto, clase: d.clase }).catch((e) => {
+        console.error('[whatsapp-ia] respuesta:', e instanceof Error ? e.name : 'error')
+        return 'fallida' as const
+      })
+      respuestaAviso = r === 'enviada' || r === 'fallida' || r === 'incierta' ? { estado: r, texto: d.texto } : { estado: r }
+    } else {
+      respuestaAviso = { estado: 'no_enviada', motivo: TEXTO_MOTIVO[d.motivo] ?? d.motivo }
+    }
+  }
+  // El opt-out se marca DESPUÉS de la confirmación (la reserva exige conversación sin opt-out) y aunque no se contestara.
+  const avisoOptOut: string[] = []
+  if (optOut === 'opt_out') {
+    const m = await marcarOptOut(correduriaId, c.id, fichaUnica && cliente ? cliente.id : null).catch((e) => {
+      console.error('[whatsapp-ia] opt-out:', e instanceof Error ? e.name : 'error')
+      return 'error' as const
+    })
+    avisoOptOut.push(m === 'marcado' ? 'Pidió que no le escribamos: WhatsApp en opt-out (ni IA ni avisos)' : 'Pidió que no le escribamos, pero NO se pudo marcar el opt-out: márcalo tú')
+  } else if (optOut === 'ambiguo') {
+    avisoOptOut.push('Pide que no le escribamos y habla de baja de póliza: no he marcado nada ni contestado, decide tú')
+  }
+  const urgente = [
+    baja ? 'Pide la BAJA / no renovar. La IA NO ha cambiado nada: la oposición a la prórroga exige escrito del tomador al menos 1 mes antes del vencimiento (art. 22 LCS).' : null,
+    siniestroDetectado ? 'Cuenta un PERCANCE (siniestro/avería): llámale. La IA no afirma cobertura ni abre parte; solo le da, si es fiable, el teléfono de su compañía.' : null,
+  ].filter((x): x is string => x !== null).join(' ') || undefined
+
   // Siempre aviso a Alberto (spec §1) de lo hecho y lo propuesto, con botones ✅/❌ por propuesta. Best effort.
-  if (clienteFinal && plan.pasos.length > 0) {
-    const hechos = resultados.filter((x) => x.resultado === 'hecho' && x.tipo !== 'proponer').map((x) => ETIQUETA_HECHO[x.tipo] ?? x.tipo)
+  if (clienteFinal && (plan.pasos.length > 0 || respuestaAviso || urgente || avisoOptOut.length > 0)) {
+    const hechos = [...resultados.filter((x) => x.resultado === 'hecho' && x.tipo !== 'proponer').map((x) => ETIQUETA_HECHO[x.tipo] ?? x.tipo), ...avisoOptOut]
     const creadas = resultados.filter((x) => x.tipo === 'proponer' && x.resultado === 'hecho' && x.id).map((x) => x.id as string)
     // Modo autónomo (apagado por defecto): solo con el flag y la racha del TIPO ≥ umbral; si no, quedan con sus botones.
+    // Una ficha SIN póliza en vigor (lead: D4 ajustada) nunca se aplica sola, aunque haya racha: siempre ✅ de Alberto.
     const propuestas: { id: string; autonoma: boolean }[] = []
-    for (const id of creadas) propuestas.push({ id, autonoma: await aplicarSiAutonoma(correduriaId, id) })
+    for (const id of creadas) propuestas.push({ id, autonoma: await aplicarSiAutonoma(correduriaId, id, enVigor) })
     const nombrePila = (cliente?.nombre ?? '').trim().split(/\s+/)[0] || null
-    await avisarTelegram(correduriaId, { clienteId: clienteFinal, nombrePila, hechos, propuestas })
+    await avisarTelegram(correduriaId, {
+      clienteId: clienteFinal, nombrePila, hechos, propuestas,
+      ...(respuestaAviso ? { respuesta: respuestaAviso, conversacionId: c.id } : {}),
+      ...(urgente ? { urgente } : {}),
+    })
   }
 
-  const descartada = plan.pasos.some((x) => x.tipo === 'descartarPersonal')
-  // Una conversación personal no guarda ni el resumen: solo que se clasificó así.
-  const guardado = descartada
+  // Una conversación personal no guarda ni el resumen: solo que se clasificó así. La `respuesta` propuesta por la IA no
+  // se guarda aquí (la enviada ya está, cifrada, en `mensajes`).
+  const { respuesta: _respuesta, ...sinRespuesta } = analisis
+  const guardado = descartaPersonal
     ? { es_comercial: false, acciones: resultados }
-    : { ...analisis, acciones: resultados }
+    : { ...sinRespuesta, acciones: resultados }
   await cerrar(Prisma.sql`, analisis = ${JSON.stringify(guardado)}::jsonb, analizada_at = now(), analisis_modelo = ${`${viaIA()}:asegura`},
                              analisis_intentos = 0, analisis_error = null`)
   return resultados.filter((x: ResultadoPaso) => x.resultado === 'hecho').length

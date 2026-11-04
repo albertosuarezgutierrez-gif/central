@@ -19,8 +19,10 @@ export const CALLBACK_DESCARTAR = `${PREFIJO_WAP}_no`
 export const CALLBACK_MODIFICAR = `${PREFIJO_WAP}_ed`
 /** ↩️ Deshacer una propuesta aplicada SOLA (modo autónomo). Un uso; solo el titular. */
 export const CALLBACK_DESHACER = `${PREFIJO_WAP}_un`
+/** 🔇 Silenciar la respuesta automática de la IA en UNA conversación (`wap_si:<conversacion uuid>`). Solo el titular. */
+export const CALLBACK_SILENCIAR = `${PREFIJO_WAP}_si`
 /** Todas las acciones `wap_<acción>` que emite asegura (plataforma acepta exactamente estas; lo fija un test). */
-export const ACCIONES_WAP = ['ok', 'no', 'ed', 'un'] as const
+export const ACCIONES_WAP = ['ok', 'no', 'ed', 'un', 'si'] as const
 
 export const TIPOS_PROPUESTA = ['fecha_cobro', 'pagado', 'vencimiento'] as const
 export type TipoPropuesta = (typeof TIPOS_PROPUESTA)[number]
@@ -34,6 +36,8 @@ export type DecisionEndpoint =
   | { id: string; decision: Decision }
   | { id: string; decision: 'modificar'; correccion: string }
   | { id: string; decision: 'deshacer' }
+  /** `id` = la CONVERSACIÓN (no una propuesta): silencia la respuesta automática de la IA en ella. */
+  | { id: string; decision: 'silenciar' }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -44,11 +48,12 @@ export function validarResolucion(b: unknown): ({ ok: true } & DecisionEndpoint)
   const id = o.id.toLowerCase()
   if (o.decision === 'aplicar' || o.decision === 'descartar') return { ok: true, id, decision: o.decision }
   if (o.decision === 'deshacer') return { ok: true, id, decision: 'deshacer' }
+  if (o.decision === 'silenciar') return { ok: true, id, decision: 'silenciar' }
   if (o.decision === 'modificar') {
     if (typeof o.correccion !== 'string' || !o.correccion.trim() || o.correccion.length > 500) return { ok: false, motivo: 'correccion: texto de 1 a 500 caracteres' }
     return { ok: true, id, decision: 'modificar', correccion: o.correccion }
   }
-  return { ok: false, motivo: 'decision debe ser aplicar, descartar, modificar o deshacer' }
+  return { ok: false, motivo: 'decision debe ser aplicar, descartar, modificar, deshacer o silenciar' }
 }
 
 /** ✅ / ❌ / ✏️: `wap_ok|no|ed:<uuid>` (43 bytes, bajo el tope de 64 de Telegram). */
@@ -66,6 +71,11 @@ export function botonDeshacer(id: string, etiqueta?: string): { texto: string; c
   return [{ texto: `↩️ Deshacer${etiqueta ? ` ${etiqueta}` : ''}`, callback: `${CALLBACK_DESHACER}:${id}` }]
 }
 
+/** 🔇 El botón de silenciar la IA en una conversación (`wap_si:<uuid de la conversación>`, 43 bytes). */
+export function botonSilenciar(conversacionId: string): { texto: string; callback: string }[] {
+  return [{ texto: '🔇 Silenciar IA aquí', callback: `${CALLBACK_SILENCIAR}:${conversacionId}` }]
+}
+
 /** De un `callback_data` de Telegram, la decisión y el id; cualquier otra cosa → null (no es nuestro o está mal). */
 export function leerCallbackPropuesta(data: string): { id: string; decision: Decision } | null {
   const m = /^wap_(ok|no):([0-9a-f-]{36})$/i.exec(data)
@@ -73,9 +83,9 @@ export function leerCallbackPropuesta(data: string): { id: string; decision: Dec
   return { id: m[2].toLowerCase(), decision: m[1] === 'ok' ? 'aplicar' : 'descartar' }
 }
 
-/** Cualquier `wap_<acción>:<uuid>` nuestro (las cuatro de `ACCIONES_WAP`); otra cosa → null. */
+/** Cualquier `wap_<acción>:<uuid>` nuestro (las de `ACCIONES_WAP`); otra cosa → null. */
 export function leerCallbackWap(data: string): { id: string; accion: (typeof ACCIONES_WAP)[number] } | null {
-  const m = /^wap_(ok|no|ed|un):([0-9a-f-]{36})$/i.exec(data)
+  const m = /^wap_(ok|no|ed|un|si):([0-9a-f-]{36})$/i.exec(data)
   if (!m || !UUID.test(m[2])) return null
   return { id: m[2].toLowerCase(), accion: m[1].toLowerCase() as (typeof ACCIONES_WAP)[number] }
 }

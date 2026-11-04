@@ -9,10 +9,17 @@
 //   WHATSAPP_RETENCION_DIAS    días que se conserva el texto de los mensajes (por defecto 730).
 //   WHATSAPP_APP_ID            id de la app de Meta (canje del `code` del Embedded Signup; con requireSecret).
 //   WHATSAPP_GRAPH_API_VERSION versión de la Graph API para el alta (`vNN.N`; ver graph.ts).
-//   WHATSAPP_IMPORTAR_HISTORIAL '1' = el historial que comparta la app del móvil se GUARDA en crudo (sin
-//                              importar: no hay importador). Otra cosa = se descarta y solo se cuenta.
+//   WHATSAPP_IMPORTAR_HISTORIAL '1' = el historial que comparta la app del móvil (Coexistence, «compartir 6 meses»)
+//                              se IMPORTA, pero SOLO los hilos cuyo teléfono casa con UNA ficha (`historial.ts`); el
+//                              resto se descarta sin guardar texto (solo se cuenta). Nunca se guarda el crudo.
+//   ASEGURA_WHATSAPP_RESPUESTA_ACTIVA '1' = la IA CONTESTA sola (texto libre filtrado, ventana de 24 h) a un lead/cliente
+//                              con ficha única que responde (`respuesta-reglas.ts`, `respuesta.ts`, `whatsapp-salida/texto.ts`). Otra cosa
+//                              = no se envía nada a Meta (comportamiento anterior). Exige además ACTIVO e IA_ACTIVO.
+//   La respuesta solo PROMETE avisos futuros («le aviso antes del vencimiento») si `avisoVencimientoDisponible()`
+//   (`aviso-vencimiento-reglas.ts`): si no, el filtro la rechaza.
 //
-// No hay token de ENVÍO: este canal no manda nada a Meta.
+// Nada de `lib/whatsapp/` envía: el transporte vive en `lib/whatsapp-salida/` (`texto.ts`, `plantilla.ts`). El token es
+// el de negocio guardado cifrado en `corredurias.wa_access_token`.
 
 type Env = Record<string, string | undefined>
 
@@ -27,6 +34,11 @@ export function whatsappActivo(env: Env = process.env): boolean {
 /** Historial de Coexistence: sin '1' se descarta sin guardar texto (decisión de Alberto: «No compartir chats»). */
 export function importarHistorial(env: Env = process.env): boolean {
   return env.WHATSAPP_IMPORTAR_HISTORIAL === '1'
+}
+
+/** Respuesta automática de la IA (decisión de Alberto 04/11/2026). Apagada por defecto; exige también canal e IA. */
+export function respuestaIaActiva(env: Env = process.env): boolean {
+  return env.ASEGURA_WHATSAPP_RESPUESTA_ACTIVA === '1' && whatsappActivo(env) && iaWhatsappActiva(env)
 }
 
 export function iaWhatsappActiva(env: Env = process.env): boolean {

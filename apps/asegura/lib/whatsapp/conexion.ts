@@ -9,9 +9,9 @@
 // 🔐 El token de negocio se guarda CIFRADO (`encryptField`, prefijo `v1:`), nunca en claro, y nunca sale
 // por el puerto. SQL sin prefijo de schema: la conexión ya trae `?schema=seguros`.
 
-import { createHash } from 'node:crypto'
 import { Prisma } from '../generated/asegura-client'
 import { prismaAsegura } from '../asegura-db'
+import { importarHistorial } from './historial'
 import { decisionHistorial, estadoDeEventoCuenta, textoAvisoConexion, type EstadoConexion, type Eventos } from './eventos'
 
 export type Conexion = {
@@ -162,20 +162,21 @@ export async function marcarAvisoEnviado(correduriaId: string, eventoAt: Date): 
 
 export type ResumenEventos = {
   cuentas: { aplicados: number; otraWaba: number; ignorados: number }
-  historial: { noCompartido: number; descartados: number; guardadosCrudo: number; errorMeta: number }
+  historial: { noCompartido: number; descartados: number; importados: number; sinFicha: number; errorMeta: number }
   contactosSync: number
   noAdmitidos: number
 }
 
 /**
  * Los eventos de cuenta del webhook (sin datos personales; se registran aunque el canal esté apagado).
- * `importarHistorial` y `canalActivo`: el historial solo se guarda en crudo con los DOS a '1'.
+ * `importarHistorial` y `canalActivo`: el historial solo se IMPORTA con los DOS a '1', y solo los hilos de ficha única
+ * (`historial.ts`); el crudo no se guarda nunca.
  */
 export async function registrarEventosWebhook(correduriaId: string, ev: Eventos, opciones: { importarHistorial: boolean; canalActivo: boolean }): Promise<ResumenEventos> {
   const db = prismaAsegura()
   const r: ResumenEventos = {
     cuentas: { aplicados: 0, otraWaba: 0, ignorados: 0 },
-    historial: { noCompartido: 0, descartados: 0, guardadosCrudo: 0, errorMeta: 0 },
+    historial: { noCompartido: 0, descartados: 0, importados: 0, sinFicha: 0, errorMeta: 0 },
     contactosSync: ev.contactosSync,
     noAdmitidos: ev.noAdmitidos,
   }
@@ -198,27 +199,35 @@ export async function registrarEventosWebhook(correduriaId: string, ev: Eventos,
   for (const h of ev.historial) {
     const d = decisionHistorial(h, opciones.importarHistorial && opciones.canalActivo)
     if (d === 'vacio') continue
-    if (d === 'guardar_crudo') {
-      const valor = JSON.stringify(h.valor)
-      const id = `historial:${createHash('sha256').update(valor, 'utf8').digest('hex').slice(0, 40)}`
-      await db.$executeRaw(Prisma.sql`
-        insert into channel_inbound_messages
-          (channel, direction, external_message_id, event_type, event_timestamp, processing_status, correduria_id, payload)
-        values ('whatsapp', 'inbound', ${id}, 'history', (now() at time zone 'UTC'), 'historial_sin_importar', ${correduriaId}::uuid, ${valor}::jsonb)
-        on conflict (channel, direction, external_message_id) do nothing`)
-      r.historial.guardadosCrudo++
+    // Hilos/mensajes que NO se guardan: todos si se descarta; los sin ficha única si se importa.
+    let hilosFuera = d === 'descartado' ? h.hilos : 0
+    let mensajesFuera = d === 'descartado' ? h.mensajes : 0
+    if (d === 'importar') {
+      // `valor` lleva SOLO este trozo (`extraerEventos`); un reintento de Meta no duplica (dedupe por wamid).
+      const imp = await importarHistorial(correduriaId, h.valor)
+      r.historial.importados += imp.mensajesImportados
+      r.historial.sinFicha += imp.hilosDescartados
+      hilosFuera = imp.hilosDescartados
+      mensajesFuera = imp.mensajesDescartados
     } else if (d === 'descartado') r.historial.descartados++
     else if (d === 'no_compartido') r.historial.noCompartido++
     else r.historial.errorMeta++
-    const resultado = d === 'guardar_crudo' ? 'guardado_crudo' : d
-    // 'no_compartido' manda: un trozo posterior no lo pisa.
-    await db.$executeRaw(Prisma.sql`
-      update corredurias set
-        wa_historial_resultado = case when wa_historial_resultado = 'no_compartido' then wa_historial_resultado else ${resultado} end,
+    // 'importado' necesita el CHECK ampliado de 2026-11-04c; sin él se registra solo el recuento (no tumba el webhook).
+    const resultado = d === 'importar' ? 'importado' : d
+    const contar = Prisma.sql`
         wa_historial_resultado_at = now(),
-        wa_historial_hilos_descartados = coalesce(wa_historial_hilos_descartados, 0) + ${d === 'descartado' ? h.hilos : 0},
-        wa_historial_mensajes_descartados = coalesce(wa_historial_mensajes_descartados, 0) + ${d === 'descartado' ? h.mensajes : 0}
-       where id = ${correduriaId}::uuid`)
+        wa_historial_hilos_descartados = coalesce(wa_historial_hilos_descartados, 0) + ${hilosFuera},
+        wa_historial_mensajes_descartados = coalesce(wa_historial_mensajes_descartados, 0) + ${mensajesFuera}`
+    // 'no_compartido' manda: un trozo posterior no lo pisa.
+    try {
+      await db.$executeRaw(Prisma.sql`
+        update corredurias set
+          wa_historial_resultado = case when wa_historial_resultado = 'no_compartido' then wa_historial_resultado else ${resultado} end, ${contar}
+         where id = ${correduriaId}::uuid`)
+    } catch (e) {
+      if (d !== 'importar') throw e
+      await db.$executeRaw(Prisma.sql`update corredurias set ${contar} where id = ${correduriaId}::uuid`)
+    }
   }
 
   if (ev.contactosSync > 0) {

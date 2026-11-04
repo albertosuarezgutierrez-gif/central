@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'
 
-import { crearClienteMedia, debeEncolarMedia, decidirDniLeido, maxPolizasDia, mimeAdmitido, urlMediaDeMeta, type FetchLike } from './media.ts'
+import { crearClienteMedia, debeEncolarMedia, decidirDniLeido, maxPolizasDia, textoAvisoPolizaRecibida, mimeAdmitido, urlMediaDeMeta, type FetchLike } from './media.ts'
 import { crudoMinimizado, mediaDeMensaje } from './payload.ts'
 
 const sinComentarios = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').filter((l) => !/^\s*(\/\/|\*)/.test(l)).join('\n')
@@ -115,4 +115,16 @@ test('payload: el crudo minimizado CONSERVA id/mime/sha256 del media y nada más
   assert.ok(!JSON.stringify(min).includes('12345678Z'))
   assert.equal(mediaDeMensaje({ type: 'audio', audio: { id: '1' } }), null)
   assert.equal(mediaDeMensaje({ type: 'image', image: { id: 'no-numerico' } }), null)
+})
+
+test('CEPO póliza por WhatsApp: avisa a Alberto, nunca lanza bots ni presupuesto, y el cableado existe', () => {
+  const creada = textoAvisoPolizaRecibida({ estado: 'creada' }) as string
+  assert.match(creada, /oportunidad creada/)
+  assert.match(creada, /lanzas tú/)
+  assert.match(textoAvisoPolizaRecibida({ estado: 'actualizada', completada: true }) as string, /oportunidad actualizada/)
+  assert.match(textoAvisoPolizaRecibida({ estado: 'no_es_seguro' }) as string, /no he podido leer/)
+  assert.equal(textoAvisoPolizaRecibida({ estado: 'revisar' }), null, 'ya avisó el lector')
+  const src = sinComentarios(readFileSync(new URL('./media-procesar.ts', import.meta.url), 'utf8'))
+  assert.match(src, /textoAvisoPolizaRecibida\(r\)/)
+  assert.doesNotMatch(src, /tarificacion_trabajos|lanzarTarific|\/messages/)
 })

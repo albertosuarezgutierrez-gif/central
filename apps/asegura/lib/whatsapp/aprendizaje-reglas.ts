@@ -98,14 +98,19 @@ export const SQL_RACHA_SIN_NEUTRAS =
  */
 export const SQL_CASOS_SOLO_HUMANOS = `(not autonoma and resuelta_por like '${PREFIJO_ACTOR_HUMANO}%')`
 
-export type VeredictoAutonomia = { autonoma: true } | { autonoma: false; motivo: 'flag_apagado' | 'umbral_invalido' | 'tipo_no_autonomizable' | 'racha_ilegible' | 'racha_corta' }
+export type VeredictoAutonomia = { autonoma: true } | { autonoma: false; motivo: 'flag_apagado' | 'umbral_invalido' | 'tipo_no_autonomizable' | 'racha_ilegible' | 'racha_corta' | 'sin_poliza_en_vigor' }
 
 /**
  * ¿Se aplica SOLA esta propuesta? Todas las puertas, en orden; cualquiera cerrada → con permiso (botones ✅/✏️/❌).
  * `racha` null = no se pudo leer (tabla sin aplicar, error) → nunca autónomo.
  */
-export function decidirAutonomia(a: { flag: string | undefined; umbral: string | undefined; tipo: string; racha: number | null }): VeredictoAutonomia {
+export function decidirAutonomia(a: {
+  flag: string | undefined; umbral: string | undefined; tipo: string; racha: number | null
+  /** ¿La ficha tiene póliza EN VIGOR? Un lead (false) o «no se sabe» (null) NUNCA va solo (revisión PR #5528). */
+  polizaEnVigor: boolean | null
+}): VeredictoAutonomia {
   if (!autonomiaActiva(a.flag)) return { autonoma: false, motivo: 'flag_apagado' }
+  if (a.polizaEnVigor !== true) return { autonoma: false, motivo: 'sin_poliza_en_vigor' }
   const umbral = leerUmbral(a.umbral)
   if (umbral === null) return { autonoma: false, motivo: 'umbral_invalido' }
   if (!(TIPOS_AUTONOMIZABLES as readonly string[]).includes(a.tipo)) return { autonoma: false, motivo: 'tipo_no_autonomizable' }

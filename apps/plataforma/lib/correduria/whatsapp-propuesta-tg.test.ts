@@ -19,7 +19,7 @@ test('parseo: los callbacks de asegura (`wap_ok:<uuid>` / `wap_no:<uuid>`) llega
 })
 
 test('parseo: acción o id raros → botón no válido', () => {
-  assert.equal(decidirBotonWap(cb(CHAT), 'si', [ID], CHAT).ok, false)
+  assert.equal(decidirBotonWap(cb(CHAT), 'xx', [ID], CHAT).ok, false)
   assert.equal(decidirBotonWap(cb(CHAT), 'ok', ['no-es-uuid'], CHAT).ok, false)
   assert.equal(decidirBotonWap(cb(CHAT), 'ok', [ID, 'extra'], CHAT).ok, false)
   assert.equal(decidirBotonWap(cb(CHAT), 'ok', [], CHAT).ok, false)
@@ -98,7 +98,15 @@ test('wap_ed y wap_un: se parsean y se mapean a modificar / deshacer', () => {
   assert.deepEqual(decidirBotonWap(cb(CHAT), ed.action, ed.args, CHAT), { ok: true, id: ID, decision: 'modificar' })
   const un = parseCallback(`wap_un:${ID}`)
   assert.deepEqual(decidirBotonWap(cb(CHAT), un.action, un.args, CHAT), { ok: true, id: ID, decision: 'deshacer' })
-  assert.deepEqual([...ACCIONES_WAP], ['ok', 'no', 'ed', 'un'])
+  assert.deepEqual([...ACCIONES_WAP], ['ok', 'no', 'ed', 'un', 'si'])
+})
+
+test('wap_si (🔇 silenciar la IA en una conversación): solo el titular, se mapea a silenciar y dice qué pasó', () => {
+  const si = parseCallback(`wap_si:${ID}`)
+  assert.deepEqual(decidirBotonWap(cb(CHAT), si.action, si.args, CHAT), { ok: true, id: ID, decision: 'silenciar' })
+  assert.deepEqual(decidirBotonWap(cb('999'), si.action, si.args, CHAT), { ok: false, toast: 'Solo el titular puede hacerlo' })
+  assert.match(lineaTrasPulsarWap('silenciar', { status: 200, estado: 'silenciada' }), /silenciada/)
+  assert.match(lineaTrasPulsarWap('silenciar', { status: 503, estado: 'sin_migracion' }), /No se ha podido silenciar|asegura no está lista/)
 })
 
 test('CEPO ↩️ deshacer y ✏️ modificar: solo el titular (otro from.id o sin chat → no)', () => {

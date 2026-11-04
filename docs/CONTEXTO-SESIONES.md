@@ -100,6 +100,13 @@ Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; ti
 original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados revisado/falta_roto/devuelto + bloque en ficha. `rrhh.material_empleado`
 (0028, aplicada). Pendiente fase 2: revisión periódica mensual.
 
+## (04/11/2026) Correduría · WhatsApp: recepción real OK + IA que responde (PR #5528, flags apagados)
+- Recepción end-to-end OK (#5517/#5521): APP_SECRET mal pegado (10 chars) y app no suscrita a la WABA de prueba (`subscribed_apps`). Ficha PRUEBA META (6bca46c1…) enlazada a mano: el móvil de Alberto está en 5 fichas → `clientes_candidatos>1` = sin ficha (por diseño). Borrarla tras aprobar Meta.
+- La IA ya crea oportunidades (Auto en PRUEBA META). Propuestas de recibo exigen póliza en vigor + ficha única.
+- Decisiones Alberto: la IA CONTESTA sola (lista cerrada de frases, sin precios/coberturas/trámites; bajas → «Alberto lo gestiona» + 🚨), cambios de datos con ✅; historial Coexistence: COMPARTIR 6 meses (solo hilos con ficha única, cifrado).
+- #5528: respuesta IA, opt-out real, pausa 4 h tras Alberto, aviso vencimiento por plantilla (`aviso_vencimiento_poliza`), resumen diario 19:00, siniestro → tlf asistencia + 🚨, foto póliza → aviso. Migraciones 2026-11-04 avisos y 04c respuesta_ia SIN aplicar (OK de Alberto).
+- Pendiente: vídeo + App Review; tras aprobar: Embedded Signup (compartir historial), borrar env WHATSAPP_PHONE_NUMBER_ID, aplicar SQL, encender flags.
+
 ## (04/11/2026) Portal cliente · hoja QR: logo de compañía + cobalto
 - `/hoja/[token]`: cada póliza pinta `LogoCompania` (nunca el nombre en texto; sin logo cae a texto). Regla de Alberto: compañía = LOGO.
 - Hoja en marca: cobalto `--brand`, Quicksand/Nunito Sans; impresión ya no fuerza negro (`print-color-adjust: exact`). QR sigue negro sobre blanco.

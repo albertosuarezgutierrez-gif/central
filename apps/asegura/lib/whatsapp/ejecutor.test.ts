@@ -225,14 +225,26 @@ test('el recibo del vínculo manda sobre la ambigüedad; sin vínculo y con dos 
   assert.equal(sinVinculo.rechazos[0].motivo, 'recibo_ambiguo')
 })
 
-test('CEPO D4: ficha SIN póliza en vigor (lead/ex-cliente) o «no se sabe» → ninguna propuesta', () => {
-  const acciones = [{ tipo: 'proponerPagado' }, { tipo: 'proponerFechaCobro', fecha: '2026-10-20' }, { tipo: 'proponerVencimiento', ramo: 'auto', fecha: '2027-03-01' }]
+test('CEPO D4: ficha SIN póliza en vigor (lead/ex-cliente) o «no se sabe» → ninguna propuesta de RECIBO', () => {
+  const acciones = [{ tipo: 'proponerPagado' }, { tipo: 'proponerFechaCobro', fecha: '2026-10-20' }]
+  for (const enVigor of [false, null, undefined]) {
+    const plan = planificar(analisis({ acciones }), ctxCliente({ enVigor, recibosPendientes: [{ id: RECIBO, ramo: 'auto', situacion: 'devuelto' }] }))
+    assert.equal(plan.pasos.length, 0, `enVigor=${enVigor}`)
+    assert.deepEqual(plan.rechazos.map((r) => r.motivo), ['sin_poliza_en_vigor', 'sin_poliza_en_vigor'])
+  }
+})
+
+test('D4 ajustada: vencimiento de un lead SIN póliza en vigor pero con oportunidad abierta del ramo → propuesta', () => {
   const opp = [{ id: OPP_AUTO, ramo: 'auto', estado: 'competencia', fechaFinVigencia: null }]
   for (const enVigor of [false, null, undefined]) {
-    const plan = planificar(analisis({ acciones }), ctxCliente({ enVigor, oportunidadesAbiertas: opp }))
-    assert.equal(plan.pasos.length, 0, `enVigor=${enVigor}`)
-    assert.deepEqual(plan.rechazos.map((r) => r.motivo), ['sin_poliza_en_vigor', 'sin_poliza_en_vigor', 'sin_poliza_en_vigor'])
+    const plan = planificar(analisis({ acciones: [{ tipo: 'proponerVencimiento', ramo: 'auto', fecha: '2027-03-01' }] }), ctxCliente({ enVigor, oportunidadesAbiertas: opp }))
+    assert.deepEqual(plan.pasos, [{ tipo: 'proponer', propuesta: 'vencimiento', reciboId: null, oportunidadId: OPP_AUTO, fecha: '2027-03-01' }], `enVigor=${enVigor}`)
   }
+  // Sin oportunidad abierta del ramo sigue sin haber nada; y con teléfono compartido tampoco.
+  const sinOpp = planificar(analisis({ acciones: [{ tipo: 'proponerVencimiento', ramo: 'auto', fecha: '2027-03-01' }] }), ctxCliente({ enVigor: false }))
+  assert.deepEqual(sinOpp.rechazos.map((r) => r.motivo), ['sin_oportunidad_abierta'])
+  const compartido = planificar(analisis({ acciones: [{ tipo: 'proponerVencimiento', ramo: 'auto', fecha: '2027-03-01' }] }), ctxCliente({ enVigor: false, clientesCandidatos: 2, oportunidadesAbiertas: opp }))
+  assert.deepEqual(compartido.rechazos.map((r) => r.motivo), ['ficha_no_unica'])
 })
 
 test('D4: a un lead sí se le abre oportunidad (a) aunque no reciba propuestas', () => {

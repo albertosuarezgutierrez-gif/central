@@ -24,7 +24,7 @@ import { enlaceFichaCliente } from '../datos-cotizados'
 import type { ResultadoLecturaPoliza } from '../documentos/extraer-poliza'
 import { versionGraph } from './graph'
 import { iaWhatsappActiva } from './config'
-import { crearClienteMedia, decidirDniLeido, maxPolizasDia, type FetchLike } from './media'
+import { crearClienteMedia, decidirDniLeido, maxPolizasDia, textoAvisoPolizaRecibida, type FetchLike } from './media'
 import { ACTOR_IA } from './ejecutor'
 
 export type ResumenMedia = { estado: 'ok' | 'sin_migracion' | 'sin_token'; descargados: number; descartados: number; errores: number; leidos: number }
@@ -130,7 +130,7 @@ export async function procesarMediaPendiente(correduriaId: string, opciones: { l
   return r
 }
 
-async function tokenCorreduria(correduriaId: string): Promise<string | null> {
+export async function tokenCorreduria(correduriaId: string): Promise<string | null> {
   const [c] = await prismaAsegura().$queryRaw<{ token: string | null }[]>(Prisma.sql`
     select wa_access_token as token from corredurias where id = ${correduriaId}::uuid`)
   // Solo el cifrado (`v1:`): un token en claro heredado no se usa.
@@ -188,5 +188,10 @@ async function trasLectura(correduriaId: string, clienteId: string, documentoId:
       insert into historial_interno (correduria_id, cliente_id, tipo, texto)
       values (${correduriaId}::uuid, ${clienteId}::uuid, cast('contacto' as tipo_historial_interno),
               ${'Documento/imagen recibido por WhatsApp (no es una póliza legible) — archivado en Documentos'})`)
+  }
+  // Aviso a Alberto (best effort): sin él la lectura rellena la ficha pero nadie se entera de que ha llegado la póliza.
+  const aviso = textoAvisoPolizaRecibida(r)
+  if (aviso !== null) {
+    await tgSend(`${aviso}\n<a href="${enlaceFichaCliente(clienteId)}">ficha</a>`, { html: true }).catch(() => null)
   }
 }

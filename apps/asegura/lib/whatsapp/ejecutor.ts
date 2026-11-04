@@ -19,7 +19,8 @@
 // NUNCA escriben en la cartera: el paso `proponer` solo crea una fila en `whatsapp_propuestas` que Alberto aplica con su
 // botón. Tres guardas, en este orden:
 //   · UNA ficha exacta (`clientesCandidatos === 1` y ficha ya existente) o nada;
-//   · D4: solo con póliza EN VIGOR (`enVigor === true`; null = «no se sabe» → no);
+//   · D4: las de RECIBO solo con póliza EN VIGOR (`enVigor === true`; null = «no se sabe» → no); la de vencimiento solo
+//     necesita una oportunidad ABIERTA de la ficha (ajuste 04/11/2026: un lead con oportunidad abierta también);
 //   · el ancla la pone el SERVIDOR: el recibo/oportunidad del saliente vinculado (si está entre los de la ficha en vigor)
 //     o el ÚNICO candidato; varios sin vínculo → `ambiguo`, nunca se elige.
 
@@ -214,8 +215,10 @@ type AccionPropuesta = Extract<Accion, { tipo: 'proponerFechaCobro' | 'proponerP
 export function planificarPropuesta(a: AccionPropuesta, ctx: ContextoEjecucion): Extract<Paso, { tipo: 'proponer' }> | { motivo: string } {
   // Una ficha exacta o nada: ni lead recién creado, ni teléfono compartido, ni «no se miró».
   if (ctx.cliente === null || ctx.clientesCandidatos !== 1) return { motivo: 'ficha_no_unica' }
-  // D4: un lead o ex-cliente (sin póliza en vigor) no recibe propuestas; «no se sabe» tampoco.
-  if (ctx.enVigor !== true) return { motivo: 'sin_poliza_en_vigor' }
+  // D4 (ajustada 04/11/2026): el VENCIMIENTO se ancla a una oportunidad ABIERTA de esta ficha (típico de un lead: «mi
+  // seguro de la otra compañía vence en marzo»), así que no exige póliza en vigor. Lo de RECIBOS sí: un lead o ex-cliente
+  // (sin póliza en vigor) no recibe propuestas de cobro; «no se sabe» tampoco.
+  if (a.tipo !== 'proponerVencimiento' && ctx.enVigor !== true) return { motivo: 'sin_poliza_en_vigor' }
   if (a.tipo === 'proponerVencimiento') {
     if (a.fecha < ctx.hoy) return { motivo: 'fecha_pasada' }
     const delVinculo = ctx.saliente?.oportunidadId ? ctx.oportunidadesAbiertas.find((o) => o.id === ctx.saliente?.oportunidadId && o.ramo === a.ramo) : undefined
