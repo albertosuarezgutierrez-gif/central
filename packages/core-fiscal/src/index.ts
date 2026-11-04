@@ -3,13 +3,12 @@
 // jurisdicción": otras jurisdicciones se añaden como submódulos (es/, pt/, …).
 
 // Universal
-export { calcularFiscal } from './iva'
-export { escapeXml } from './xml'
+export { calcularFiscal } from './iva.ts'
+export { escapeXml } from './xml.ts'
 
 // España / AEAT VeriFactu (también accesible vía '@central/core-fiscal/es')
-export { calcularHuella, generarQrData, parseFechaLocalAEAT } from './es/aeat'
-export type { RegistroFactura } from './es/aeat'
+export * from './es/index.ts'
 
 // Validación documental (ES): NIF/NIE/CIF e IBAN
-export { validarNifCif, validarIban } from './validacion'
-export type { Validacion } from './validacion'
+export { validarNifCif, validarIban } from './validacion.ts'
+export type { Validacion } from './validacion.ts'

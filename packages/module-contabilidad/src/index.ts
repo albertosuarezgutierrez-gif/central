@@ -37,3 +37,6 @@ export { calcularRentabilidad } from './rentabilidad.ts'
 
 // Recurrentes
 export { generarFechasRecurrente } from './recurrentes.ts'
+
+// Núcleo de DOBLE PARTIDA (partida): dinero en céntimos, plan de cuentas, asientos, hechos→asientos, libros.
+export * from './partida/index.ts'

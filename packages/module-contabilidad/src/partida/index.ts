@@ -1,0 +1,5 @@
+export * from './dinero.ts'
+export * from './plan.ts'
+export * from './asiento.ts'
+export * from './hechos.ts'
+export * from './libros.ts'

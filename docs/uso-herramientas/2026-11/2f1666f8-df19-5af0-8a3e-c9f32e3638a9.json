@@ -1,57 +1,59 @@
 {
  "sesion": "2f1666f8-df19-5af0-8a3e-c9f32e3638a9",
  "inicio": "2026-11-04T10:28:02.762Z",
- "fin": "2026-11-04T20:07:51.659Z",
- "llamadas": 1092,
+ "fin": "2026-11-04T21:00:31.226Z",
+ "llamadas": 1213,
  "categorias": {
   "agente:Explore": {
-   "llamadas": 1,
-   "chars_in": 1794,
-   "chars_out": 2038,
+   "llamadas": 2,
+   "chars_in": 3942,
+   "chars_out": 4415,
    "errores": 0,
-   "archivos_citados": 1,
-   "chars_citados": 54191,
+   "archivos_citados": 2,
+   "chars_citados": 116850,
    "tools": {
-    "Agent": 1
+    "Agent": 2
    }
   },
   "agente:general-purpose": {
-   "llamadas": 16,
-   "chars_in": 43728,
-   "chars_out": 47279,
+   "llamadas": 18,
+   "chars_in": 49853,
+   "chars_out": 53846,
    "errores": 0,
-   "archivos_citados": 37,
-   "chars_citados": 383925,
+   "archivos_citados": 42,
+   "chars_citados": 469190,
    "tools": {
-    "Agent": 16
+    "Agent": 18
    }
   },
   "otro": {
-   "llamadas": 159,
-   "chars_in": 128985,
-   "chars_out": 857337,
+   "llamadas": 178,
+   "chars_in": 150029,
+   "chars_out": 957819,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 30,
-    "SubagentHandback": 38,
+    "ToolSearch": 34,
+    "SubagentHandback": 41,
     "SendMessage": 10,
-    "ReadNotifications": 62,
+    "ReadNotifications": 66,
     "AskUserQuestion": 2,
     "Monitor": 16,
-    "TaskStop": 1
+    "TaskStop": 1,
+    "SendUserFile": 1,
+    "WebSearch": 7
    }
   },
   "bash": {
-   "llamadas": 675,
-   "chars_in": 1157133,
-   "chars_out": 4004597,
+   "llamadas": 756,
+   "chars_in": 1235864,
+   "chars_out": 4487700,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 675
+    "Bash": 756
    }
   },
   "mcp:Google_Drive": {
@@ -70,15 +72,15 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 40,
-   "chars_in": 4709,
-   "chars_out": 246748,
+   "llamadas": 50,
+   "chars_in": 5944,
+   "chars_out": 1062377,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 26,
-    "Grep": 12,
+    "Read": 35,
+    "Grep": 13,
     "Glob": 2
    }
   },
@@ -106,32 +108,32 @@
    }
   },
   "mcp:github": {
-   "llamadas": 20,
-   "chars_in": 6847,
-   "chars_out": 49993,
+   "llamadas": 24,
+   "chars_in": 8524,
+   "chars_out": 58806,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__github__list_pull_requests": 2,
-    "mcp__github__create_pull_request": 3,
-    "mcp__github__pull_request_read": 8,
-    "mcp__github__update_pull_request": 2,
+    "mcp__github__create_pull_request": 4,
+    "mcp__github__pull_request_read": 9,
+    "mcp__github__update_pull_request": 3,
     "mcp__github__get_job_logs": 2,
-    "mcp__github__merge_pull_request": 3
+    "mcp__github__merge_pull_request": 4
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 9,
-   "chars_in": 1303,
-   "chars_out": 2603,
+   "llamadas": 11,
+   "chars_in": 1747,
+   "chars_out": 2950,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__claude-code-remote__subscribe_pr_activity": 4,
+    "mcp__claude-code-remote__subscribe_pr_activity": 5,
     "mcp__claude-code-remote__unsubscribe_pr_activity": 1,
-    "mcp__claude-code-remote__send_later": 3,
+    "mcp__claude-code-remote__send_later": 4,
     "mcp__claude-code-remote__delete_trigger": 1
    }
   },
@@ -193,9 +195,9 @@
    }
   },
   "mcp:Vercel": {
-   "llamadas": 30,
-   "chars_in": 4993,
-   "chars_out": 105230,
+   "llamadas": 32,
+   "chars_in": 5187,
+   "chars_out": 119977,
    "errores": 1,
    "archivos_citados": 0,
    "chars_citados": 0,
@@ -209,9 +211,9 @@
     "mcp__Vercel__update_project": 1,
     "mcp__Vercel__add_project_domain": 1,
     "mcp__Vercel__create_project_env": 4,
-    "mcp__Vercel__list_deployments": 5,
+    "mcp__Vercel__list_deployments": 6,
     "mcp__Vercel__get_deployment": 2,
-    "mcp__Vercel__web_fetch_vercel_url": 4,
+    "mcp__Vercel__web_fetch_vercel_url": 5,
     "mcp__Vercel__get_runtime_logs": 1,
     "mcp__Vercel__create_deployment": 1
    }

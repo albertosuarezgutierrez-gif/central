@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getRestauranteId } from '@/lib/session'
-import { generarXmlLROE, VERIFACTU_STATUS } from '@/lib/verifactu'
+import { generarXmlLROE, eslabonDeFila, VERIFACTU_STATUS, type EslabonAnterior } from '@/lib/verifactu'
 
 export const runtime = 'nodejs'
 
@@ -43,29 +43,50 @@ export async function POST(req: NextRequest) {
   const nif_emisor  = rest?.nif ?? 'B00000000'
   const razon_social = rest?.razon_social ?? rest?.nombre ?? 'Restaurante'
 
-  // Generar XML LROE
-  const xml = generarXmlLROE({
-    factura: {
-      numero_serie:    factura.numero_serie,
-      numero_factura:  factura.numero_factura,
-      fecha_expedicion: factura.fecha_expedicion,
-      razon_social:    factura.razon_social,
-      nif_emisor:      factura.nif_emisor,
-      importe_total:   Number(factura.importe_total),
-      base_imponible:  Number(factura.base_imponible),
-      cuota_iva:       Number(factura.cuota_iva),
-      tipo_iva:        Number(factura.tipo_iva),
-      huella:          factura.huella,
-      huella_anterior: factura.huella_anterior,
-      primer_registro: factura.primer_registro,
-      qr_data:         factura.qr_data,
-      comanda_id:      factura.comanda_id,
-      mesa_label:      factura.mesa_label,
-      num_items:       factura.num_items,
-    },
-    nif_emisor,
-    razon_social,
-  })
+  // Eslabón anterior (la factura previa de la cadena, identificada por su huella)
+  let anterior: EslabonAnterior | null = null
+  if (!factura.primer_registro) {
+    const { data: previa } = await supabase
+      .from('facturas_verifactu')
+      .select('nif_emisor, numero_serie, numero_factura, fecha_expedicion, huella')
+      .eq('local_id', rid)
+      .eq('huella', factura.huella_anterior)
+      .maybeSingle()
+    if (!previa) {
+      return NextResponse.json({ error: 'Cadena VeriFactu: no se encuentra la factura anterior' }, { status: 422 })
+    }
+    anterior = eslabonDeFila(previa)
+  }
+
+  // Generar XML de suministro (lanza si la huella guardada no se puede recalcular: ese registro no se envía)
+  let xml: string
+  try {
+    xml = generarXmlLROE({
+      factura: {
+        numero_serie:    factura.numero_serie,
+        numero_factura:  factura.numero_factura,
+        fecha_expedicion: factura.fecha_expedicion,
+        razon_social:    factura.razon_social,
+        nif_emisor:      factura.nif_emisor,
+        importe_total:   Number(factura.importe_total),
+        base_imponible:  Number(factura.base_imponible),
+        cuota_iva:       Number(factura.cuota_iva),
+        tipo_iva:        Number(factura.tipo_iva),
+        huella:          factura.huella,
+        huella_anterior: factura.huella_anterior,
+        primer_registro: factura.primer_registro,
+        qr_data:         factura.qr_data,
+        comanda_id:      factura.comanda_id,
+        mesa_label:      factura.mesa_label,
+        num_items:       factura.num_items,
+      },
+      nif_emisor,
+      razon_social,
+      anterior,
+    })
+  } catch (e) {
+    return NextResponse.json({ error: 'Registro VeriFactu no válido', detalle: String(e) }, { status: 422 })
+  }
 
   // Guardar XML siempre (para auditoría)
   await supabase.from('facturas_verifactu')

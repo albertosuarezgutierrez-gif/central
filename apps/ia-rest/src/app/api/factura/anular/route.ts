@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getRestauranteId } from '@/lib/session'
-import { calcularHuella } from '@/lib/verifactu'
+import { construirAnulacion, eslabonDeFila } from '@/lib/verifactu'
 
 export const runtime = 'nodejs'
 
@@ -36,23 +36,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Ya anulada' }, { status: 422 })
   }
 
-  // Hash de anulación: mismo cálculo pero con TipoFactura=A (anulación)
-  const huellaAnulacion = calcularHuella({
-    nif_emisor:       factura.nif_emisor,
-    numero_serie:     factura.numero_serie,
-    numero_factura:   factura.numero_factura,
-    fecha_expedicion: new Date().toISOString(),
-    importe_total:    0,
-    cuota_iva:        0,
-    huella_anterior:  factura.huella,
-  })
+  // Registro de anulación VeriFactu (huella propia: IDEmisorFacturaAnulada, NumSerieFacturaAnulada,
+  // FechaExpedicionFacturaAnulada, Huella anterior, FechaHoraHusoGenRegistro). Un único instante para la
+  // huella y para fecha_anulacion: así la huella es recalculable desde la fila.
+  // ⚠️ Pendiente: la spec encadena la anulación al ÚLTIMO registro de la cadena del emisor; ia.rest la encadena
+  // a la propia factura anulada y la siguiente alta no la incluye (la RPC solo mira altas).
+  const ahora = new Date()
+  const anulacion = construirAnulacion({ factura, anterior: eslabonDeFila(factura), ahora })
 
   const { data: updated, error: errUpd } = await supabase
     .from('facturas_verifactu')
     .update({
       anulada:          true,
-      fecha_anulacion:  new Date().toISOString(),
-      huella_anulacion: huellaAnulacion,
+      fecha_anulacion:  ahora.toISOString(),
+      huella_anulacion: anulacion.huella,
     })
     .eq('id', factura_id)
     .select()

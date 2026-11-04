@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getRestauranteId, getSession } from '@/lib/session'
-import { construirFactura } from '@/lib/verifactu'
+import { construirFactura, eslabonDeFila, type EslabonAnterior } from '@/lib/verifactu'
 import { crearPrintJobCuenta } from '@/lib/courier'
 
 export const runtime = 'nodejs'
@@ -92,11 +92,25 @@ export async function POST(req: NextRequest) {
     numero: number; huella_ant: string | null; es_primera: boolean
   }
 
+  // ── 5b. Eslabón anterior de la cadena VeriFactu ─────────
+  // El registro de alta lleva la identificación (NIF, número, fecha) Y la huella del anterior.
+  let anterior: EslabonAnterior | null = null
+  if (!es_primera) {
+    const { data: previa } = await supabase
+      .from('facturas_verifactu').select('nif_emisor, numero_serie, numero_factura, fecha_expedicion, huella')
+      .eq('local_id', restaurante_id).eq('numero_serie', 'T').eq('numero_factura', numero - 1).maybeSingle()
+    if (!previa || previa.huella !== huella_ant) {
+      console.error('[factura/cerrar] Cadena VeriFactu: no se encuentra el registro anterior', { numero })
+      return NextResponse.json({ error: 'Cadena VeriFactu: no se encuentra la factura anterior' }, { status: 500 })
+    }
+    anterior = eslabonDeFila(previa)
+  }
+
   // ── 6. Construir y guardar factura ──────────────────────
   const facturaData = construirFactura({
     nif_emisor, razon_social,
     numero_serie: 'T', numero_factura: numero,
-    huella_anterior: huella_ant, primer_registro: es_primera,
+    anterior,
     comanda_id, mesa_label, num_items: items.length, importe_total,
   })
 
