@@ -40,3 +40,14 @@ test('validarConfig detecta referencias rotas y valores inválidos', () => {
   assert.ok(e.some((x) => x.includes('día 7')))
   assert.ok(e.some((x) => x.includes('14:00-09:00')))
 })
+
+test('seguridadLogin: de alta es válida y valores 0 o ausentes se rechazan', async () => {
+  const { configDeAlta, validarConfig } = await import('../src/index.ts')
+  const c = configDeAlta()
+  assert.deepEqual(validarConfig(c), [])
+  c.seguridadLogin.maxFallosTaller = 0
+  assert.ok(validarConfig(c).some((e) => e.includes('seguridadLogin.maxFallosTaller')))
+  const d = configDeAlta() as unknown as Record<string, unknown>
+  delete d.seguridadLogin
+  assert.ok(validarConfig(d as never).some((e) => e.includes('seguridadLogin')))
+})

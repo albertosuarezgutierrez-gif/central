@@ -52,7 +52,8 @@ test('5 fallos bloquean; el bloqueo PERSISTE en BD (otra transacción) y para el
   for (let i = 0; i < 4; i++) assert.equal((await login('0001')).ok, false)
   const r5 = await login('0001')
   assert.ok(!r5.ok && r5.motivo === 'bloqueado')
-  const filas = bd.filas('bloqueoPin')
+  // Además de la fila de la IP hay la del tope del TALLER (clave `<taller>:#taller`, ver tope-taller.test.ts).
+  const filas = bd.filas('bloqueoPin').filter((f) => !f.clave.endsWith(':#taller'))
   assert.equal(filas.length, 1)
   assert.equal(filas[0].clave, `${T}:1.2.3.4`)
   assert.equal(filas[0].tallerId, T)
@@ -63,13 +64,13 @@ test('5 fallos bloquean; el bloqueo PERSISTE en BD (otra transacción) y para el
   assert.ok((await login('4826', '9.9.9.9')).ok, 'la clave es taller:ip')
   // Vencido el bloqueo, entra y la fila se borra.
   assert.ok((await login('4826', '1.2.3.4', new Date('2026-11-04T10:20:00Z'))).ok)
-  assert.equal(bd.filas('bloqueoPin').length, 0)
+  assert.equal(bd.filas('bloqueoPin').filter((f) => !f.clave.endsWith(':#taller')).length, 0)
 })
 
 test('toma el candado de transacción sobre la clave ANTES de leer el bloqueo', async () => {
   const { bd, login } = await montar()
   await login('0001')
-  const i = bd.llamadasRaw.findIndex((s) => s.includes('pg_advisory_xact_lock(hashtext('))
+  const i = bd.llamadasRaw.findIndex((s) => s.includes('pg_advisory_xact_lock(hashtext(') && s.endsWith(`:: ${T}:1.2.3.4`))
   assert.ok(i > 0, 'sin candado: intentos en paralelo burlarían el bloqueo')
   assert.ok(bd.llamadasRaw[i].endsWith(`:: ${T}:1.2.3.4`))
   assert.match(bd.llamadasRaw[0], /set_config/, 'el ajuste RLS va primero')

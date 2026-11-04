@@ -52,6 +52,9 @@ model Configuracion {
   textoFirmaCorreo               String   @default("") @map("texto_firma_correo")
   textoConsentimientoComercial   String   @map("texto_consentimiento_comercial")
   versionConsentimientoComercial String   @map("version_consentimiento_comercial")
+  loginMaxFallosTaller           Int      @default(30) @map("login_max_fallos_taller")
+  loginVentanaMinutos            Int      @default(15) @map("login_ventana_minutos")
+  loginBloqueoTallerMinutos      Int      @default(15) @map("login_bloqueo_taller_minutos")
   creadoEn                       DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
   actualizadoEn                  DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
 
@@ -267,5 +270,231 @@ model Auditoria {
   actualizadoEn DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
 
   @@map("auditoria")
+  @@schema("taller")
+}
+
+// ─── F1: clientes, vehículos, recepción, OT, partes, presupuestos, consentimientos ───────────────────────────
+// Espejo exacto de 0001_schema_taller.sql. Columnas GENERADAS (matricula_normalizada, partes_horas.minutos) no se escriben.
+
+model Cliente {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId            String   @map("taller_id") @db.Uuid
+  nombre              String
+  nif                 String?
+  movil               String?
+  correo              String?
+  cp                  String?
+  provincia           String?
+  municipio           String?
+  via                 String?
+  numero              String?
+  referenciaCatastral String?  @map("referencia_catastral")
+  appInstalada        Boolean  @default(false) @map("app_instalada")
+  segurosContactoId   String?  @map("seguros_contacto_id") @db.Uuid
+  creadoEn            DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn       DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("clientes")
+  @@schema("taller")
+}
+
+model Vehiculo {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId             String    @map("taller_id") @db.Uuid
+  matricula            String
+  matriculaNormalizada String    @default(dbgenerated()) @map("matricula_normalizada")
+  bastidor             String?
+  marca                String?
+  modelo               String?
+  version              String?
+  tipoVehiculoId       String?   @map("tipo_vehiculo_id") @db.Uuid
+  combustible          String?
+  fechaMatriculacion   DateTime? @map("fecha_matriculacion") @db.Date
+  datosExternos        Json?     @map("datos_externos")
+  clienteId            String?   @map("cliente_id") @db.Uuid
+  kmActuales           Int?      @map("km_actuales")
+  itvHasta             DateTime? @map("itv_hasta") @db.Date
+  seguroHasta          DateTime? @map("seguro_hasta") @db.Date
+  aseguradora          String?
+  proximaRevisionKm    Int?      @map("proxima_revision_km")
+  proximaRevisionFecha DateTime? @map("proxima_revision_fecha") @db.Date
+  litrosAceiteMl       Int?      @map("litros_aceite_ml")
+  creadoEn             DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn        DateTime  @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@unique([tallerId, matriculaNormalizada])
+  @@map("vehiculos")
+  @@schema("taller")
+}
+
+model Recepcion {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId         String    @map("taller_id") @db.Uuid
+  vehiculoId       String    @map("vehiculo_id") @db.Uuid
+  clienteId        String    @map("cliente_id") @db.Uuid
+  usuarioId        String?   @map("usuario_id") @db.Uuid
+  kmEntrada        Int?      @map("km_entrada")
+  nivelCombustible String?   @map("nivel_combustible")
+  objetos          String?
+  motivo           String?
+  danos            Json?
+  firmaRuta        String?   @map("firma_ruta")
+  firmadoEn        DateTime? @map("firmado_en") @db.Timestamptz(6)
+  resguardoPdfRuta String?   @map("resguardo_pdf_ruta")
+  seguroDeclarado  Json?     @map("seguro_declarado")
+  recibidoEn       DateTime  @default(now()) @map("recibido_en") @db.Timestamptz(6)
+  creadoEn         DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn    DateTime  @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("recepciones")
+  @@schema("taller")
+}
+
+model RecepcionFoto {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId      String   @map("taller_id") @db.Uuid
+  recepcionId   String   @map("recepcion_id") @db.Uuid
+  orden         Int
+  posicion      String?
+  ruta          String
+  huellaSha256  String   @map("huella_sha256")
+  capturadaEn   DateTime @map("capturada_en") @db.Timestamptz(6)
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("recepcion_fotos")
+  @@schema("taller")
+}
+
+model OrdenTrabajo {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId      String    @map("taller_id") @db.Uuid
+  numero        Int
+  recepcionId   String    @map("recepcion_id") @db.Uuid
+  vehiculoId    String    @map("vehiculo_id") @db.Uuid
+  presupuestoId String?   @map("presupuesto_id") @db.Uuid
+  estado        String    @default("recepcion")
+  terminadoEn   DateTime? @map("terminado_en") @db.Timestamptz(6)
+  entregadoEn   DateTime? @map("entregado_en") @db.Timestamptz(6)
+  creadoEn      DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime  @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@unique([tallerId, numero])
+  @@map("ordenes_trabajo")
+  @@schema("taller")
+}
+
+model OtLinea {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId         String    @map("taller_id") @db.Uuid
+  otId             String    @map("ot_id") @db.Uuid
+  tipo             String
+  descripcion      String
+  cantidad         Int
+  unidad           String
+  baseCent         BigInt    @map("base_cent")
+  ivaCodigo        String    @map("iva_codigo")
+  ivaPuntosBasicos Int       @map("iva_puntos_basicos")
+  cuotaIvaCent     BigInt    @map("cuota_iva_cent")
+  totalCent        BigInt    @map("total_cent")
+  baremoMinutos    Int?      @map("baremo_minutos")
+  minutosReales    Int?      @map("minutos_reales")
+  articuloId       String?   @map("articulo_id") @db.Uuid
+  pedidoLineaId    String?   @map("pedido_linea_id") @db.Uuid
+  origen           String
+  aceptadaEn       DateTime? @map("aceptada_en") @db.Timestamptz(6)
+  creadoEn         DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn    DateTime  @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("ot_lineas")
+  @@schema("taller")
+}
+
+model ParteHoras {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId      String    @map("taller_id") @db.Uuid
+  otId          String    @map("ot_id") @db.Uuid
+  mecanicoId    String    @map("mecanico_id") @db.Uuid
+  inicio        DateTime  @db.Timestamptz(6)
+  fin           DateTime? @db.Timestamptz(6)
+  creadoEn      DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime  @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("partes_horas")
+  @@schema("taller")
+}
+
+model Presupuesto {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId           String    @map("taller_id") @db.Uuid
+  vehiculoId         String    @map("vehiculo_id") @db.Uuid
+  clienteId          String?   @map("cliente_id") @db.Uuid
+  origen             String
+  estado             String    @default("borrador")
+  presupuestoPadreId String?   @map("presupuesto_padre_id") @db.Uuid
+  tipoVehiculoCodigo String?   @map("tipo_vehiculo_codigo")
+  precioHoraCent     BigInt?   @map("precio_hora_cent")
+  baseCent           BigInt    @default(0) @map("base_cent")
+  cuotaIvaCent       BigInt    @default(0) @map("cuota_iva_cent")
+  totalCent          BigInt    @default(0) @map("total_cent")
+  pdfRuta            String?   @map("pdf_ruta")
+  tokenHash          String?   @unique @map("token_hash")
+  caducaEn           DateTime? @map("caduca_en") @db.Timestamptz(6)
+  aceptadoEn         DateTime? @map("aceptado_en") @db.Timestamptz(6)
+  aceptadoIp         String?   @map("aceptado_ip") @db.Inet
+  aceptadoTexto      String?   @map("aceptado_texto")
+  aceptadoFirmaRuta  String?   @map("aceptado_firma_ruta")
+  creadoEn           DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn      DateTime  @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("presupuestos")
+  @@schema("taller")
+}
+
+model PresupuestoLinea {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId         String   @map("taller_id") @db.Uuid
+  presupuestoId    String   @map("presupuesto_id") @db.Uuid
+  orden            Int
+  tipo             String
+  descripcion      String
+  paqueteCodigo    String?  @map("paquete_codigo")
+  referencia       String?
+  cantidad         Int
+  unidad           String
+  baremoMinutos    Int?     @map("baremo_minutos")
+  precioCerrado    Boolean  @default(false) @map("precio_cerrado")
+  baseCent         BigInt   @map("base_cent")
+  ivaCodigo        String   @map("iva_codigo")
+  ivaPuntosBasicos Int      @map("iva_puntos_basicos")
+  cuotaIvaCent     BigInt   @map("cuota_iva_cent")
+  totalCent        BigInt   @map("total_cent")
+  creadoEn         DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn    DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("presupuesto_lineas")
+  @@schema("taller")
+}
+
+/// Solo-añadir (trigger en BD; el rol solo puede UPDATE de retirado_en/motivo_retirada).
+model Consentimiento {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId       String    @map("taller_id") @db.Uuid
+  clienteId      String    @map("cliente_id") @db.Uuid
+  finalidad      String
+  otorgado       Boolean
+  versionTexto   String    @map("version_texto")
+  textoMostrado  String    @map("texto_mostrado")
+  canal          String
+  firmaRuta      String?   @map("firma_ruta")
+  ip             String?   @db.Inet
+  userAgent      String?   @map("user_agent")
+  otorgadoEn     DateTime  @default(now()) @map("otorgado_en") @db.Timestamptz(6)
+  retiradoEn     DateTime? @map("retirado_en") @db.Timestamptz(6)
+  motivoRetirada String?   @map("motivo_retirada")
+  creadoEn       DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn  DateTime  @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("consentimientos")
   @@schema("taller")
 }

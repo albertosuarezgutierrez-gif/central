@@ -14,6 +14,9 @@ export const IVA_GENERAL_PB = 2100
 export const IVA_REDUCIDO_PB = 1000
 export const IVA_EXENTO_PB = 0
 
+/** Tope de login por taller de un taller nuevo (el dueño lo cambia; el login lo lee de la configuración). */
+export const SEGURIDAD_LOGIN_ALTA = { maxFallosTaller: 30, ventanaMinutos: 15, bloqueoMinutos: 15 } as const
+
 /** Construye la configuración de alta. Siempre devuelve un objeto NUEVO (nunca compartas el de otro taller). */
 export function configDeAlta(): ConfigTaller {
   return {
@@ -63,5 +66,6 @@ export function configDeAlta(): ConfigTaller {
       versionTextoComercialTaller: 'taller-borrador-1',
     },
     validezPresupuestoDias: 30,
+    seguridadLogin: { ...SEGURIDAD_LOGIN_ALTA },
   }
 }

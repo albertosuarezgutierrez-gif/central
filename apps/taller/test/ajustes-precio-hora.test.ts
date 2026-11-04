@@ -22,6 +22,7 @@ async function tallerDeAlta() {
     revisionFechaAntelacionDias: 0, revisionKmAntelacion: 0, seguroAntelacionDias: 0, recordatorioCitaHoras: 0,
     citaDuracionHuecoMinutos: 1, citaPuestos: 1, textoPieResguardo: '', textoPieFactura: '', textoCondicionesPresupuesto: '',
     textoFirmaCorreo: '', textoConsentimientoComercial: 'x', versionConsentimientoComercial: 'x',
+    loginMaxFallosTaller: 30, loginVentanaMinutos: 15, loginBloqueoTallerMinutos: 15,
   })
   const conTaller = crearConTaller(bd.cliente)
   await conTaller(T, (tx: any) => guardarConfig(tx, T, a)) // catálogos de alta

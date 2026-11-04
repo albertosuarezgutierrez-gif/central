@@ -73,3 +73,35 @@ h1 { font-family: var(--serif); font-size: 28px; margin: 0 0 16px; }
 .ok { color: var(--ok, #3fb950); font-size: 14px; margin: 0; }
 .pin-grande { font-size: 22px; letter-spacing: 4px; }
 .campo textarea { padding: 8px 10px; min-height: 88px; resize: vertical; }
+
+/* F1: listas, formularios de pantalla completa, firma, resguardo imprimible. */
+.lista-simple { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 8px; }
+.lista-simple li { min-height: 44px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 6px 12px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radio); }
+.lista-simple a { color: var(--text); font-weight: 600; min-height: 44px; display: inline-flex; align-items: center; }
+.formulario { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.formulario fieldset { border: 1px solid var(--border); border-radius: var(--radio); padding: 12px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin: 0; min-width: 0; }
+.formulario legend { font-weight: 600; padding: 0 6px; }
+.dos-col { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+.firma-lienzo { width: 100%; height: 180px; background: #fff; border: 1px solid var(--border); border-radius: var(--radio); touch-action: none; display: block; }
+.casilla { display: flex; gap: 10px; align-items: flex-start; min-height: 44px; padding: 8px 0; }
+.casilla input { width: 24px; height: 24px; flex: none; margin-top: 2px; }
+.fotos-mini { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 120px), 1fr)); }
+.fotos-mini figure { margin: 0; font-size: 12px; color: var(--muted); }
+.fotos-mini img { width: 100%; height: 90px; object-fit: cover; border-radius: var(--radio); }
+.aviso-error { color: var(--danger); margin: 0; }
+.estado { display: inline-block; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--border); font-size: 13px; }
+.tabla-scroll { overflow-x: auto; }
+.tabla-scroll table { border-collapse: collapse; width: 100%; min-width: 480px; }
+.tabla-scroll th, .tabla-scroll td { text-align: left; padding: 8px; border-bottom: 1px solid var(--border); font-size: 14px; }
+.num { text-align: right !important; white-space: nowrap; }
+.datos { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px 12px; }
+.datos dt { font-weight: 600; margin-top: 8px; }
+.datos dd { margin: 0; word-break: break-word; }
+@media (min-width: 560px) { .datos { grid-template-columns: 180px minmax(0, 1fr); } .datos dt { margin-top: 0; } }
+.pie-resguardo { white-space: pre-wrap; font-size: 13px; color: var(--muted); }
+.enlace-copia { word-break: break-all; padding: 10px; background: var(--panel2); border-radius: var(--radio); user-select: all; }
+@media print {
+  .no-imprimir, .cabecera { display: none !important; }
+  body { background: #fff; color: #000; }
+  .contenido { max-width: none; padding: 0; }
+}

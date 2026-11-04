@@ -131,6 +131,11 @@ export async function leerConfig(tx: TxConfig, tallerId: string): Promise<Config
       versionTextoComercialTaller: cfg.versionConsentimientoComercial,
     },
     validezPresupuestoDias: cfg.validezPresupuestoDias,
+    seguridadLogin: {
+      maxFallosTaller: cfg.loginMaxFallosTaller,
+      ventanaMinutos: cfg.loginVentanaMinutos,
+      bloqueoMinutos: cfg.loginBloqueoTallerMinutos,
+    },
   }
 }
 
@@ -165,6 +170,9 @@ export async function guardarConfig(tx: TxConfig, tallerId: string, c: ConfigTal
       textoFirmaCorreo: c.textos.firmaCorreo,
       textoConsentimientoComercial: c.textos.textoConsentimientoComercialTaller,
       versionConsentimientoComercial: c.textos.versionTextoComercialTaller,
+      loginMaxFallosTaller: c.seguridadLogin.maxFallosTaller,
+      loginVentanaMinutos: c.seguridadLogin.ventanaMinutos,
+      loginBloqueoTallerMinutos: c.seguridadLogin.bloqueoMinutos,
     },
   })
 

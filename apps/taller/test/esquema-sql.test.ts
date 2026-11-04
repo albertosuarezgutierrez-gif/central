@@ -115,3 +115,12 @@ test('espejo: 0002 siembra exactamente configDeAlta()', () => {
 test('0002: el taller piloto y Calle Socorro no se confunden (dirección del piloto, Camas)', () => {
   assert.match(ALTAS, /'41900', 'Sevilla', 'Camas', 'Calle Cañada Real', '14'/)
 })
+
+test('espejo: 0003 (tope de login por taller) ≡ seguridadLogin de configDeAlta()', () => {
+  const sql = readFileSync(join(DIR, '0003_seguridad_login.sql'), 'utf8')
+  const d = (col: string) => Number(sql.match(new RegExp(`${col}\\s+integer NOT NULL DEFAULT (\\d+)`))?.[1])
+  const a = configDeAlta().seguridadLogin
+  assert.equal(d('login_max_fallos_taller'), a.maxFallosTaller)
+  assert.equal(d('login_ventana_minutos'), a.ventanaMinutos)
+  assert.equal(d('login_bloqueo_taller_minutos'), a.bloqueoMinutos)
+})

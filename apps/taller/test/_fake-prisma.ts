@@ -20,7 +20,9 @@ export function crearBdFake() {
   const coincide = (f: any, where: any) =>
     Object.entries(where ?? {}).every(([k, v]) =>
       v !== null && typeof v === 'object' && !(v instanceof Date)
-        ? Object.entries(v as object).every(([k2, v2]) => f[k2] === v2) // clave compuesta (tallerId_codigo…)
+        ? 'in' in (v as object)
+          ? ((v as { in: unknown[] }).in).includes(f[k]) // { in: [...] }
+          : Object.entries(v as object).every(([k2, v2]) => f[k2] === v2) // clave compuesta (tallerId_codigo…)
         : f[k] === v,
     )
 
@@ -29,14 +31,26 @@ export function crearBdFake() {
     const visible = (m: string, f: any) => (m === 'taller' ? f.id === ajuste.v : f.tallerId === ajuste.v)
     const filas = (m: string, where: any) => tabla(m).filter((f) => visible(m, f) && coincide(f, where))
     const copia = (f: any) => (f ? { ...f } : null)
+    // orderBy simple ({campo: 'asc'|'desc'}) y take, como Prisma.
+    const ordenar = (xs: any[], a?: any) => {
+      let r = xs
+      const ob = Array.isArray(a?.orderBy) ? a.orderBy[0] : a?.orderBy
+      if (ob) {
+        const [campo, dir] = Object.entries(ob)[0] as [string, string]
+        r = [...r].sort((x, y) => (x[campo] < y[campo] ? -1 : x[campo] > y[campo] ? 1 : 0) * (dir === 'desc' ? -1 : 1))
+      }
+      return typeof a?.take === 'number' ? r.slice(0, a.take) : r
+    }
 
     const delegado = (m: string) => {
       const d = {
-        findMany: async (a?: any) => filas(m, a?.where).map(copia),
-        findFirst: async (a?: any) => copia(filas(m, a?.where)[0]),
+        findMany: async (a?: any) => ordenar(filas(m, a?.where), a).map(copia),
+        findFirst: async (a?: any) => copia(ordenar(filas(m, a?.where), a)[0]),
         findUnique: async (a: any) => copia(filas(m, a?.where)[0]),
         create: async ({ data }: any) => {
           const fila = { ...(CON_ACTIVO.has(m) ? { activo: true } : {}), id: `id-${++n}`, ...data }
+          // Columna GENERADA de 0001 (matricula_normalizada ≡ normalizarMatricula, cepo en esquema-sql.test.ts).
+          if (m === 'vehiculo') fila.matriculaNormalizada = String(fila.matricula).replace(/[^A-Za-z0-9]/g, '').toUpperCase()
           if (!visible(m, fila)) throw new Error(`new row violates row-level security policy for "${m}"`)
           tabla(m).push(fila)
           return copia(fila)

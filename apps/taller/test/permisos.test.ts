@@ -1,0 +1,111 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Permisos por rol, aplicados en SERVIDOR (rol re-leído en BD). Cepos vistos fallar el 04/11/2026:
+// (1) en lib/permisos.ts añadir 'mecanico' a MATRIZ.presupuestos: rojo en 'mecánico → presupuestos rechazado' y en la matriz.
+// (2) quitar `conPermiso('presupuestos'` de una acción de presupuestos: rojo en 'toda acción exige permiso'. Restaurados → verde.
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { join } from 'node:path'
+import { CAPACIDADES, exigir, SinPermisoError, tienePermiso, type Capacidad } from '../lib/permisos.ts'
+import { montar, T, T2 } from './_escenario.ts'
+
+const roles = ['dueno', 'admin', 'recepcion', 'mecanico'] as const
+const esperado: Record<Capacidad, string[]> = {
+  recepcion: ['dueno', 'admin', 'recepcion'],
+  ordenes_ver: ['dueno', 'admin', 'recepcion', 'mecanico'],
+  ordenes_gestionar: ['dueno'],
+  partes: ['dueno', 'mecanico'],
+  presupuestos: ['dueno', 'admin', 'recepcion'],
+  precios_ver: ['dueno', 'admin', 'recepcion'],
+  contacto_cliente_ver: ['dueno', 'admin', 'recepcion'],
+  margenes_ver: ['dueno'],
+}
+
+test('matriz de permisos = la decisión de Alberto', () => {
+  for (const cap of CAPACIDADES) {
+    assert.deepEqual(roles.filter((r) => tienePermiso(r, cap)), esperado[cap], cap)
+  }
+  assert.equal(tienePermiso('invitado', 'ordenes_ver'), false)
+  assert.equal(tienePermiso(null, 'ordenes_ver'), false)
+})
+
+test('el mecánico no ve precios, contacto del cliente, presupuestos ni márgenes; el admin no ve márgenes', () => {
+  for (const cap of ['presupuestos', 'precios_ver', 'contacto_cliente_ver', 'margenes_ver', 'recepcion'] as const) {
+    assert.equal(tienePermiso('mecanico', cap), false, cap)
+  }
+  assert.equal(tienePermiso('admin', 'margenes_ver'), false)
+  assert.equal(tienePermiso('recepcion', 'ordenes_gestionar'), false, 'recepción: OT solo ver')
+})
+
+test('mecánico → presupuestos rechazado EN SERVIDOR (rol leído de la BD, no de la cookie)', async () => {
+  const m = montar()
+  await m.conTaller(T, async (tx: any) => {
+    // La «sesión» dice dueño, pero la BD dice que ese usuario es mecánico: manda la BD.
+    await assert.rejects(exigir(tx, { tallerId: T, usuarioId: m.mec.id, rol: 'dueno' }, 'presupuestos'), SinPermisoError)
+    assert.equal(await exigir(tx, { tallerId: T, usuarioId: m.dueno.id, rol: 'mecanico' }, 'presupuestos'), 'dueno')
+    await assert.rejects(exigir(tx, { tallerId: T, usuarioId: m.mec.id, rol: 'mecanico' }, 'margenes_ver'), SinPermisoError)
+    await assert.rejects(exigir(tx, { tallerId: T, usuarioId: m.baja.id, rol: 'dueno' }, 'ordenes_ver'), SinPermisoError, 'baja = sin acceso')
+    await assert.rejects(exigir(tx, { tallerId: T, usuarioId: 'no-existe', rol: 'dueno' }, 'ordenes_ver'), SinPermisoError)
+  })
+  // y un usuario de OTRO taller no existe para este (RLS)
+  await m.conTaller(T2, async (tx: any) => {
+    await assert.rejects(exigir(tx, { tallerId: T2, usuarioId: m.dueno.id, rol: 'dueno' }, 'ordenes_ver'), SinPermisoError)
+  })
+})
+
+// ── Guardián de fuentes: ninguna acción de servidor sin permiso ──────────────────────────────────────────────────
+const APP = join(import.meta.dirname, '..', 'app')
+function ficheros(dir: string): string[] {
+  return readdirSync(dir).flatMap((f) => {
+    const p = join(dir, f)
+    return statSync(p).isDirectory() ? ficheros(p) : [p]
+  })
+}
+const acciones = ficheros(APP).filter((f) => f.endsWith('acciones.ts'))
+
+test('el guardián tiene qué vigilar', () => assert.ok(acciones.length >= 4, acciones.join(',')))
+
+test('toda acción de servidor exige permiso (salvo Ajustes, que exige dueño, y la pública por token)', () => {
+  for (const f of acciones) {
+    const src = readFileSync(f, 'utf8')
+    const exportadas = [...src.matchAll(/export async function (\w+)/g)].length
+    assert.ok(exportadas > 0, f)
+    if (f.includes(`${'/'}p${'/'}`)) {
+      assert.ok(src.includes('tallerDeToken('), `${f}: la pública valida el token`)
+      continue
+    }
+    if (f.includes('ajustes')) { assert.ok(src.includes("usuarioConRol(tx as never, s, ['dueno'])"), f); continue }
+    const llamadas = [...src.matchAll(/conPermiso\('(\w+)'/g)].map((x) => x[1] as Capacidad)
+    assert.ok(llamadas.length >= exportadas, `${f}: ${exportadas} acciones y solo ${llamadas.length} conPermiso`)
+    for (const c of llamadas) assert.ok(CAPACIDADES.includes(c), c)
+  }
+})
+
+test('presupuestos exige «presupuestos»; cambiar estado exige «ordenes_gestionar»; partes, «partes»', () => {
+  const lee = (r: string) => readFileSync(join(APP, r), 'utf8')
+  assert.ok([...lee('presupuestos/acciones.ts').matchAll(/conPermiso\('(\w+)'/g)].every((x) => x[1] === 'presupuestos'))
+  const o = lee('ordenes/acciones.ts')
+  assert.match(o, /conPermiso\('ordenes_gestionar'[\s\S]*cambiarEstadoOt/)
+  assert.match(o, /conPermiso\('partes'[\s\S]*abrirParteMecanico/)
+  assert.match(o, /conPermiso\('partes'[\s\S]*cerrarParteMecanico/)
+})
+
+test('páginas: presupuestos y recepción piden su capacidad; la ficha de OT no enseña contacto ni precios sin permiso', () => {
+  const lee = (r: string) => readFileSync(join(APP, r), 'utf8')
+  assert.match(lee('presupuestos/page.tsx'), /paraPagina\('presupuestos'/)
+  assert.match(lee('presupuestos/[id]/page.tsx'), /paraPagina\('presupuestos'/)
+  assert.match(lee('presupuestos/nuevo/page.tsx'), /paraPagina\('presupuestos'/)
+  assert.match(lee('recepcion/page.tsx'), /paraPagina\('recepcion'/)
+  const ot = lee('ordenes/[id]/page.tsx')
+  assert.match(ot, /verContacto: tienePermiso\(c\.rol, 'contacto_cliente_ver'\)/)
+  assert.match(ot, /verPrecios && <th/)
+  assert.match(ot, /tienePermiso\(c\.rol, 'margenes_ver'\)/)
+})
+
+test('la página pública devuelve 404 con token inválido o desconocido', () => {
+  const src = readFileSync(join(APP, 'p/[token]/page.tsx'), 'utf8')
+  assert.match(src, /if \(!tallerId\) notFound\(\)/)
+  assert.match(src, /if \(!datos \|\| !datos\.v\.ok\) notFound\(\)/)
+  assert.ok(!src.includes('getSession'), 'la pública no usa sesión')
+  assert.ok(readFileSync(join(import.meta.dirname, '..', 'middleware.ts'), 'utf8').includes("'/p/'"))
+})

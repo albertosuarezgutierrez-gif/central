@@ -110,6 +110,13 @@ export interface TextosTaller {
   versionTextoComercialTaller: string
 }
 
+/** Tope de seguridad del login POR TALLER (además del bloqueo por IP): N fallos totales en una ventana → login del taller bloqueado. */
+export interface SeguridadLogin {
+  maxFallosTaller: number
+  ventanaMinutos: number
+  bloqueoMinutos: number
+}
+
 export interface ConfigTaller {
   precioHoraCent: number
   ivas: TipoIva[]
@@ -123,6 +130,7 @@ export interface ConfigTaller {
   horarioCitas: HorarioCitas
   textos: TextosTaller
   validezPresupuestoDias: number
+  seguridadLogin: SeguridadLogin
 }
 
 const esEnteroNoNeg = (n: unknown): n is number => typeof n === 'number' && Number.isInteger(n) && n >= 0
@@ -200,6 +208,10 @@ export function validarConfig(c: ConfigTaller): string[] {
   }
 
   if (!esEnteroPos(c.validezPresupuestoDias)) e.push('validezPresupuestoDias inválido')
+  for (const [k, v] of Object.entries(c.seguridadLogin ?? {})) {
+    if (!esEnteroPos(v)) e.push(`seguridadLogin.${k} debe ser un entero > 0`)
+  }
+  if (!c.seguridadLogin) e.push('falta seguridadLogin')
   if (!c.textos.versionTextoComercialTaller.trim() || !c.textos.textoConsentimientoComercialTaller.trim()) {
     e.push('falta el texto/versión del consentimiento comercial del taller')
   }

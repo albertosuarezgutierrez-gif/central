@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { COOKIE_NAME, leerCookie } from './lib/sesion-cookie'
 
 // Gate de sesión: todo exige PIN salvo el login y su API.
-const PUBLIC = ['/login', '/api/auth', '/brand']
+// `/p/<token>`: enlace público de aceptación de presupuesto (sin login; la autorización es el token).
+const PUBLIC = ['/login', '/api/auth', '/brand', '/p/']
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
