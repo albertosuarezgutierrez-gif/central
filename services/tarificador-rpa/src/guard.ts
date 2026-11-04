@@ -47,6 +47,9 @@ import {
   type PestanaPersonasLeida,
 } from './adapters/generali/reglas.ts'
 import {
+  bloqueoZonaWizardPelayo,
+  esTextoNuevaContratacionPelayo,
+  esUbicacionNuevaContratacionPelayo,
   EmisionBloqueadaError,
   MaquinaFases,
   bloqueoAvance,
@@ -643,7 +646,9 @@ export function tolerarRutasApp(guard: GuardEmision, reglas: readonly RutaTolera
   for (const r of reglas) {
     if (!/^https:\/\/[a-z0-9.-]+$/.test(r.origen) || !/^\/[\w./-]+\/$/.test(r.prefijo)) throw new EmisionBloqueadaError('fase', 'ruta tolerable no válida')
   }
-  const copia = Object.freeze(reglas.map((r) => Object.freeze({ origen: r.origen, prefijo: r.prefijo })))
+  // 0.3.41: `rutasExactas` (si la hay) viaja en la copia: sin ella la regla se ABRIRÍA a cualquier resto (fail-open). Cada resto, ruta simple.
+  for (const r of reglas) if (r.rutasExactas !== undefined && !r.rutasExactas.every((x) => /^[\w-]*(?:\/[\w-]+)*$/.test(x))) throw new EmisionBloqueadaError('fase', 'ruta tolerable no válida')
+  const copia = Object.freeze(reglas.map((r) => Object.freeze({ origen: r.origen, prefijo: r.prefijo, ...(r.rutasExactas !== undefined ? { rutasExactas: Object.freeze([...r.rutasExactas]) } : {}) })))
   RUTAS_TOLERABLES.set(guard, copia)
   fijar(copia)
 }
@@ -866,6 +871,10 @@ export async function pulsar(boton: Locator, guard: GuardEmision): Promise<void>
   await exigirSinCuentaBancaria(boton.page())
   // La MISMA descripción que el resto de puertas: control + ng-click + manejadores de sus ancestros cercanos.
   const desc = await descripcion(boton)
+  // 0.3.41 TOPE DURO del wizard de Pelayo (apps.pelayo.com): fuera de los pasos de la lista exacta, o un paso 4-7, no se pulsa nada.
+  await exigirZonaWizardPelayo(boton, desc)
+  // 0.3.41: «Nueva contratación» del modal de «Datos del Tomador» de Pelayo: SU puerta estrecha (abre el wizard; no emite).
+  if (esTextoNuevaContratacionPelayo(desc[0])) return pulsarNuevaContratacionPelayo(boton, guard, desc)
   // 0.3.19: la subcadena exacta del onclick de UN control exacto de la entrada (Mapfre NSE), antes de mirar nada (ver `neutralizarOnclicksEntrada`).
   comprobarBoton(conRutasTolerables(guard, await conOnclickNeutralizado(guard, boton, desc)))
   // Revisión adversarial (03/11/2026): el guard bloquea POR SÍ SOLO (sin depender del validador del explorador) un RÓTULO de acción
@@ -886,6 +895,83 @@ export async function pulsar(boton: Locator, guard: GuardEmision): Promise<void>
   guard.comprobar()
 }
 
+/**
+ * 0.3.41 TOPE DURO del wizard de Pelayo sobre el control VIVO: la URL de la página y la del marco del control, con sus rótulos
+ * (`bloqueoZonaWizardPelayo`: en https://apps.pelayo.com solo los pasos de la lista exacta, nunca «Precio final», «Intervinientes», «Medios
+ * de pago» ni «Contratar»). Fuera de ese host no hace nada. Lanza `EmisionBloqueadaError` (no es violación de red: el comando se rechaza).
+ */
+export async function exigirZonaWizardPelayo(boton: Locator, desc: readonly (string | null)[]): Promise<void> {
+  const rotulos = [desc[0], desc[1], desc[2], ...rotulosAccesibles(desc)]
+  const urlMarco = await boton.evaluate(() => location.href).catch(() => null)
+  for (const u of [boton.page().url(), urlMarco]) {
+    const m = u === null ? null : bloqueoZonaWizardPelayo(u, rotulos)
+    if (m) throw new EmisionBloqueadaError('boton', `wizard de Pelayo: ${m}`)
+  }
+}
+
+/** Tope de pulsaciones de «Nueva contratación» de Pelayo por trabajo (abrir el wizard; un reintento). */
+export const MAX_NUEVA_CONTRATACION_PELAYO = 2
+const NUEVA_CONTRATACION_USADAS = new WeakMap<GuardEmision, number>()
+
+/**
+ * 0.3.41 «NUEVA CONTRATACIÓN» DE PELAYO (Alberto, 04/11/2026: solo abre el wizard de apps.pelayo.com; no emite). La ÚNICA excepción al
+ * «contrat» del guard para un botón, y solo si, VIVO: la página y el marco están en https://mediadores.pelayo.com/portalmediador-nuevo-presupuesto;
+ * el control es un `<button>` (o input button/submit) habilitado cuyo texto ENTERO es «Nueva contratación»; está DENTRO de un `<pelayo-modal>`
+ * (subiendo por shadow hosts) cuyo texto (también el de sus shadowRoot) contiene «Datos del Tomador»; sin href ni onclick. El resto de la
+ * descripción (id, name, title, value, manejadores de ancestros, nombre accesible) pasa `comprobarBoton` y los rótulos de acción final SIN
+ * ningún permiso; solo se retiran los rótulos que son EXACTAMENTE «Nueva contratación». Ninguna ventana de red: la navegación al wizard pasa
+ * por la ruta tolerada exacta (`RUTA_TOLERABLE_WIZARD_AUTOS_PELAYO`); cualquier otra petición con «contrat» sigue abortando. ≤ 2 por trabajo.
+ */
+async function pulsarNuevaContratacionPelayo(boton: Locator, guard: GuardEmision, desc: readonly (string | null)[]): Promise<void> {
+  const fallo = (m: string) => new EmisionBloqueadaError('boton', `«Nueva contratación» de Pelayo: ${m}`)
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw fallo('con una ventana de red abierta')
+  const usadas = NUEVA_CONTRATACION_USADAS.get(guard) ?? 0
+  if (usadas >= MAX_NUEVA_CONTRATACION_PELAYO) throw fallo(`tope de ${MAX_NUEVA_CONTRATACION_PELAYO} por trabajo`)
+  if ((await boton.count()) !== 1) throw fallo('no hay exactamente un control')
+  const urlMarco = await boton.evaluate(() => location.href).catch(() => '')
+  if (!esUbicacionNuevaContratacionPelayo(boton.page().url()) || !esUbicacionNuevaContratacionPelayo(urlMarco)) throw fallo('fuera de la pantalla de nuevo presupuesto')
+  if ((typeof desc[6] === 'string' && desc[6] !== '') || (typeof desc[7] === 'string' && desc[7] !== '')) throw fallo('el control tiene href u onclick')
+  const vivo = await boton
+    .evaluate((n) => {
+      // Sin funciones con nombre dentro de `evaluate` (tsx inyecta `__name`, que no existe en la página).
+      const el = n as HTMLButtonElement
+      const tag = el.tagName
+      const tipo = (el.getAttribute('type') ?? '').toLowerCase()
+      const deshabilitado = el.disabled === true || el.getAttribute('aria-disabled') === 'true'
+      let p: Element | null = el
+      let modal: Element | null = null
+      for (let i = 0; p && i < 60; i++) {
+        if (p.tagName === 'PELAYO-MODAL') { modal = p; break }
+        p = p.parentElement ?? (((p.getRootNode() as ShadowRoot).host as Element | undefined) ?? null)
+      }
+      if (!modal) return { tag, tipo, deshabilitado, texto: null as string | null }
+      const pila: Node[] = [modal]
+      let texto = ''
+      for (let k = 0; pila.length > 0 && k < 20_000 && texto.length < 50_000; k++) {
+        const x = pila.pop()!
+        if (x.nodeType === 3) { texto += ` ${x.textContent ?? ''}`; continue }
+        const sr = (x as Element).shadowRoot
+        if (sr) for (const c of Array.from(sr.childNodes)) pila.push(c)
+        for (const c of Array.from(x.childNodes)) pila.push(c)
+      }
+      return { tag, tipo, deshabilitado, texto }
+    })
+    .catch(() => null)
+  if (!vivo) throw fallo('no se pudo leer el control vivo')
+  if (!(vivo.tag === 'BUTTON' || (vivo.tag === 'INPUT' && (vivo.tipo === 'button' || vivo.tipo === 'submit')))) throw fallo('no es un botón')
+  if (vivo.deshabilitado) throw fallo('el botón está deshabilitado')
+  if (vivo.texto === null) throw fallo('fuera de un <pelayo-modal>')
+  if (!vivo.texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').includes('datos del tomador')) throw fallo('el modal no es el de «Datos del Tomador»')
+  // Solo se retiran los rótulos que son EXACTAMENTE «Nueva contratación»; todo lo demás, sin permisos.
+  const resto = desc.map((d, i) => ((i <= 3 || i >= desc.length - 3) && esTextoNuevaContratacionPelayo(d) ? null : d))
+  comprobarBoton(conRutasTolerables(guard, await conOnclickNeutralizado(guard, boton, resto)))
+  comprobarRotulosAccionFinal(resto)
+  comprobarRotulosPulsar([resto[0], resto[1], resto[2], resto[3], ...rotulosAccesibles(resto)], NOMBRES_ROTULOS_PULSAR)
+  NUEVA_CONTRATACION_USADAS.set(guard, usadas + 1)
+  await boton.click()
+  guard.comprobar()
+}
+
 /** Nombre de cada rótulo que mira `pulsar()` (para el mensaje: nunca el texto). */
 const NOMBRES_ROTULOS_PULSAR: readonly string[] = Object.freeze(['texto', 'aria-label', 'title', 'value', 'aria-labelledby', 'alt de hijos', 'alt'])
 
@@ -902,6 +988,7 @@ export async function redispararCambioMarcado(control: Locator, guard: GuardEmis
   guard.comprobar()
   await exigirSinCuentaBancaria(control.page())
   const desc = await descripcion(control)
+  await exigirZonaWizardPelayo(control, desc)
   comprobarBoton(conRutasTolerables(guard, await conOnclickNeutralizado(guard, control, desc)))
   comprobarRotulosAccionFinal(desc)
   // Revisión de seguridad (30/10/2026): `input`/`change` BURBUJEAN y `descripcion` solo ve onclick/ng-click/href (3 ancestros). Aquí se leen
@@ -4344,6 +4431,8 @@ export async function pulsarNavegacionLibre(boton: Locator, guard: GuardEmision,
   const r = navegacionLibre(vivo.c, { urlMarco: vivo.url })
   const exento = r.ok && r.exentoMenu
   const desc = await descripcion(boton)
+  // 0.3.41 TOPE DURO del wizard de Pelayo (también por la navegación libre).
+  await exigirZonaWizardPelayo(boton, desc)
   // Posiciones 0-3 de `descripcion` (texto, aria-label, title, value): las ÚNICAS que la excepción del menú puede quitar, y solo el sustantivo exacto.
   comprobarBoton(conRutasTolerables(guard, desc.map((d, i) => (exento && i <= 3 && SUSTANTIVOS_MENU_NAVEGACION.includes(rotuloSinAdornos(d)) ? null : d))))
   comprobarRotulosAccionFinal(desc)
