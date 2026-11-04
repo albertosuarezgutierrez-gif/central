@@ -1,6 +1,6 @@
 // MODO PILOTADO del tarificador RPA (03/11/2026) — reglas PURAS del worker. El bucle está en `pilotaje.ts`.
 //
-// El operador manda comandos {accion: pulsar|rellenar|seleccionar|inspeccionar|esperar|volver|fin, ref?, valor?, dato?, efecto?, ms?} por la BD.
+// El operador manda comandos {accion: pulsar|rellenar|seleccionar|inspeccionar|cerrar_modal|esperar|volver|fin, ref?, valor?, dato?, efecto?, ms?} por la BD.
 // Aquí se REVALIDAN enteros (asegura solo miró la forma; un comando escrito por SQL ni eso) y se traducen al lenguaje de acciones
 // del explorador para pasar por SU validador (`validarRespuestaExplorador`, contra el inventario PROPIO de la pantalla). Ninguna
 // regla de aquí autoriza un clic: los clics van SIEMPRE por las puertas de guard.ts (`pulsar`, `pulsarExploracionAutorizada`,
@@ -12,7 +12,8 @@ import { pareceDatoPersonalInventario, senalCuentaBancaria, descripcionesElement
 export const TOPES_PILOTAJE = Object.freeze({ maxComandos: 60, maxMs: 30 * 60_000, esperaComandoMs: 10 * 60_000, pollMs: 2_000 })
 
 /** `inspeccionar` (0.3.37): diagnóstico de accionabilidad de un control SIN pulsarlo; nunca toca el portal. */
-export const ACCIONES_PILOTAJE = ['pulsar', 'rellenar', 'seleccionar', 'inspeccionar', 'esperar', 'volver', 'fin'] as const
+/** `cerrar_modal` (0.3.38): cierra un modal INFORMATIVO (sin campos ni términos de acción final) por Escape › botón de cierre › fondo; sin ref. */
+export const ACCIONES_PILOTAJE = ['pulsar', 'rellenar', 'seleccionar', 'inspeccionar', 'cerrar_modal', 'esperar', 'volver', 'fin'] as const
 export type AccionPilotaje = (typeof ACCIONES_PILOTAJE)[number]
 /** `guardar_presupuesto` NO: el guardado del presupuesto tiene su puerta y su PDF en el explorador, no se pilota. */
 export const EFECTOS_PULSAR = ['siguiente_pantalla', 'calcular', 'abrir_seccion', 'ver_resultado'] as const
@@ -23,6 +24,7 @@ export type ComandoPilotaje =
   | { accion: 'rellenar'; ref: string; dato: string }
   | { accion: 'seleccionar'; ref: string; valor: string }
   | { accion: 'inspeccionar'; ref: string }
+  | { accion: 'cerrar_modal' }
   | { accion: 'esperar'; ms: number }
   | { accion: 'volver' }
   | { accion: 'fin' }
@@ -38,7 +40,7 @@ export function leerComando(v: unknown): { ok: true; c: ComandoPilotaje } | { ok
   const accion = ACCIONES_PILOTAJE.find((a) => a === c.accion)
   if (!accion) return { ok: false, errores: ['accion fuera de lista'] }
   const permitidas: Record<AccionPilotaje, string[]> = {
-    pulsar: ['accion', 'ref', 'efecto'], rellenar: ['accion', 'ref', 'valor', 'dato'], seleccionar: ['accion', 'ref', 'valor'], inspeccionar: ['accion', 'ref'],
+    pulsar: ['accion', 'ref', 'efecto'], rellenar: ['accion', 'ref', 'valor', 'dato'], seleccionar: ['accion', 'ref', 'valor'], inspeccionar: ['accion', 'ref'], cerrar_modal: ['accion'],
     esperar: ['accion', 'ms'], volver: ['accion'], fin: ['accion'],
   }
   const errores: string[] = []
@@ -49,6 +51,7 @@ export function leerComando(v: unknown): { ok: true; c: ComandoPilotaje } | { ok
   switch (accion) {
     case 'fin':
     case 'volver':
+    case 'cerrar_modal':
       return { ok: true, c: { accion } }
     case 'esperar': {
       if (c.ms === undefined) return { ok: true, c: { accion, ms: 2_000 } }

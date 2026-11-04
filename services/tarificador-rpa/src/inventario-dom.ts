@@ -9,6 +9,7 @@
 
 import { sanearInventarioDom, MAX_BYTES_INVENTARIO_DOM, MAX_MARCOS_INVENTARIO, MAX_OPCIONES_CRUDAS_SELECT, type InventarioDom } from '@central/module-tarificacion'
 import type { ElementHandle, Frame, JSHandle, Page } from 'playwright'
+import { LIB_MODAL_PAGINA } from './modal-informativo.ts'
 import { controlOcultoDeEtiqueta, SEL_ERROR_EPAC, SELECTOR_AVANCE_SERVLET, SELECTOR_DIALOGO, tituloDialogoVivo } from './guard.ts'
 
 /**
@@ -26,6 +27,8 @@ import { controlOcultoDeEtiqueta, SEL_ERROR_EPAC, SELECTOR_AVANCE_SERVLET, SELEC
 function extractor(explora: boolean): string {
   return `(() => {
   const EXPLORA = ${explora ? 'true' : 'false'};
+  // 0.3.38: librería de MODALES (SEL_MODAL, modalesVisibles, esCierreM…), la misma que usa el diagnóstico de clic y el cierre de modales del guard.
+  ${LIB_MODAL_PAGINA}
   // EXPLORACIÓN: también el avance del servlet de Allianz (un div con id y onclick, no un button; selector de guard.ts).
   // SOLO ese selector exacto; el módulo solo lo deja avanzar si es el avance autorizado de Datos básicos.
   const SEL_SERVLET = ${JSON.stringify(SELECTOR_AVANCE_SERVLET)};
@@ -86,6 +89,22 @@ function extractor(explora: boolean): string {
     return acc;
   };
   const lista = todos(document, [], 0);
+  // 0.3.38 (Pelayo real 608504fd: un .pelayo-modal persistente tapaba las tarjetas y el inventario no lo veía): en EXPLORACIÓN, los controles de CIERRE de
+  // un modal/diálogo VISIBLE se inventarían aunque no tengan texto (aria-label «Cerrar», clase close/btn-close, data-dismiss, «×»), sean del tag que sean.
+  // Solo se LEE; pulsarlos sigue pasando por las puertas del guard (cerrar_modal del pilotaje).
+  const extrasCierre = new Set();
+  if (EXPLORA) {
+    try {
+      for (const m of modalesVisibles(document)) {
+        for (const c of Array.from(m.querySelectorAll(SEL_CTL))) {
+          if (lista.length >= 2000) break;
+          if (lista.includes(c) || !esCierreM(c) || !visM(c)) continue;
+          lista.push(c);
+          extrasCierre.add(c);
+        }
+      }
+    } catch (err) { /* sin modales legibles: el inventario sigue como antes */ }
+  }
   for (let i = 0; i < lista.length && out.length < 600; i++) {
     const el = lista[i];
     const tag = el.tagName.toLowerCase();
@@ -134,6 +153,7 @@ function extractor(explora: boolean): string {
     // Un [ng-click] que no es control de texto (fila, tarjeta…) puede envolver nombres: su texto, CORTO (80); el saneado lo filtra.
     if (CON_TEXTO[tag] || (role && ROLES_CON_TEXTO[role]) || divServlet) e.texto = corta(el.innerText || el.textContent || '', 200);
     else if (ng) e.texto = corta(el.innerText || el.textContent || '', 80);
+    else if (extrasCierre.has(el)) { e.texto = corta(el.innerText || el.textContent || '', 40); e.clase = corta(clasesDe(el).split(/\\s+/).filter(Boolean).slice(0, 3).join(' '), 40); }
     // 0.3.17: el onclick COMPLETO (hasta 8001 car.; el saneado lo parte en onclick hasta 2000 + onclickCompleto hasta 8000, y más de 8000 queda recortado) de avances (td/button/a/div del servlet) e inputs que no son de texto (casillas,
     // elecciones, botones input): el saneado lo deja entero si cabe en 2000 y, si no, lo recorta con «…» (= no se pulsa ni se marca).
     // El validador mira emisión, acción final y envío sobre TODO el texto; la IA lo ve recortado a 200 (inventarioParaPrompt).

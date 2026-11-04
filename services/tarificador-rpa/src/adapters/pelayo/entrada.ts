@@ -56,6 +56,8 @@ export type CtxEntradaPelayo = Pick<ContextoPortal, 'credenciales' | 'pausa' | '
   pulsarEnlaceEntrada: (boton: Locator, opciones?: { reintento?: boolean }) => Promise<void>
   /** 0.3.33: nota de diagnóstico de la elección del ramo (forma CERRADA `RE_NOTA_ENTRADA_PELAYO`, solo contadores); el worker la lleva al mapa (huecos). */
   diagnostico?: (nota: string) => void
+  /** 0.3.38: cierra un modal INFORMATIVO visible (sin campos ni términos de acción final) por la puerta del guard; ver `cerrarModalInformativo`. */
+  cerrarModal?: (page: Page) => Promise<{ estado: string }>
 }
 
 const sinTildes = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase()
@@ -464,6 +466,13 @@ async function esperarRamo(page: Page, rotulos: readonly string[], ms: number): 
  */
 export async function elegirRamoPelayo(page: Page, ctx: CtxEntradaPelayo, ramo: string, ms = 0): Promise<ResultadoRamoPelayo> {
   const { selects, pulsables } = await esperarRamo(page, rotulosRamoPelayo(ramo), ms)
+  // 0.3.38 (Pelayo real 608504fd): un modal PERSISTENTE (`.pelayo-modal`) tapaba las tarjetas. Si es INFORMATIVO (sin campos ni términos de acción final)
+  // se cierra por la puerta del guard (Escape › botón de cierre › fondo) ANTES de elegir; si no, no se toca y el diagnóstico del clic lo describe.
+  if (ctx.cerrarModal) {
+    const c = (await ctx.cerrarModal(page)) as { estado: string; via?: string; motivo?: string }
+    if (c.estado !== 'sin_modal') ctx.log(`pelayo_modal ${c.estado}${c.via ? ` ${c.via}` : ''}${c.motivo ? ` ${c.motivo}` : ''}`)
+    if (c.estado === 'cerrado') await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => undefined)
+  }
   if (selects.length > 1) return { estado: 'no_elegido', motivo: `${selects.length} desplegables con la opción del ramo`, controles: selects.length }
   if (selects.length === 1) {
     await ctx.pausa()
