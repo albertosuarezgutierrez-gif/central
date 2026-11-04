@@ -10,9 +10,10 @@ import type { SeleccionVehiculo } from './formulario-auto.ts'
 /**
  * Ramos que el canal RPA sabe tarificar. Se amplía cuando haya un adaptador de otro ramo. 'hogar' (14/10/2026): contrato
  * `FormularioHogar` (formulario-hogar.ts); el adaptador de Allianz Hogar vive tras su flag apagado y asegura todavía NO
- * acepta trabajos de hogar (`validarEntradaRamo`): ampliar el contrato no enciende nada.
+ * acepta trabajos de hogar (`validarEntradaRamo`): ampliar el contrato no enciende nada. 'patinete' (03/11/2026): contrato
+ * `FormularioPatinete` (formulario-patinete.ts); adaptador de Allianz tras su flag APAGADO; asegura NO lo admite aún.
  */
-export type RamoRpa = 'comunidades' | 'auto' | 'moto' | 'hogar'
+export type RamoRpa = 'comunidades' | 'auto' | 'moto' | 'hogar' | 'patinete'
 
 /** Dirección del riesgo (la del EDIFICIO, no la del tomador). */
 export type DireccionRiesgo = {

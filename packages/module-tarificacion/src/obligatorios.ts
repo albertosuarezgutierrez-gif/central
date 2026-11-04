@@ -124,11 +124,24 @@ const BASE_COMUNIDADES: readonly CampoObligatorio[] = [
   campo('capitalContinente', 'valor de reposición de la edificación (€)', 'riesgo'),
 ]
 
+/** `validarFormularioPatinete` (03/11/2026): tomador (ficha), CP, conductor y las tres declaraciones explícitas del VMP. */
+const BASE_PATINETE: readonly CampoObligatorio[] = [
+  campo('tomador.documentoIdentidad', 'DNI/NIE del tomador', 'personas', { origen: 'ficha' }),
+  campo('conductor.fechaNacimiento', 'fecha de nacimiento del conductor', 'personas'),
+  campo('codigoPostal', 'CP de circulación del patinete', 'riesgo'),
+  campo('vmp.marca', 'marca del patinete', 'riesgo'),
+  campo('vmp.modelo', 'modelo del patinete', 'riesgo'),
+  campo('vmp.usoProfesional', 'si el uso es profesional', 'riesgo'),
+  campo('vmp.homologado', 'si el patinete está homologado por la DGT', 'riesgo'),
+  campo('vmp.velocidadLimitada25', 'confirmación de velocidad limitada a 25 km/h', 'riesgo'),
+]
+
 const BASE_POR_RAMO: Readonly<Record<string, readonly CampoObligatorio[]>> = {
   auto: BASE_AUTO,
   moto: BASE_MOTO,
   hogar: BASE_HOGAR,
   comunidades: BASE_COMUNIDADES,
+  patinete: BASE_PATINETE,
 }
 
 /** Obligatorios de FORMA de un ramo (sin compañía). `null` = ramo sin validador conocido aquí. PURA. */
@@ -285,6 +298,9 @@ const DECLARACIONES: readonly Declaracion[] = [
   // no consta, se supone «A» y se declara (no bloquea).
   { compania: 'mapfre', ramo: 'moto', propios: () => [...MAPFRE_TOMADOR, ...MAPFRE_AUTO_FIGURAS], llegaAPrecio: true, nota: 'mismo plan NSEI que el coche (que dio precio real)' },
   { compania: 'mapfre', ramo: 'hogar', propios: () => MAPFRE_HOGAR, llegaAPrecio: false, nota: 'v0.3.0 por CP y m²; se enciende con MAPFRE_HOGAR_ACTIVO=true (pasa a la máquina por envDeMaquina)' },
+  // Allianz Movilidad Personal / VMP (03/11/2026, tras su flag APAGADO): llega a «Figuras Intervinientes»; el avance y el precio no tienen
+  // mapa ni avance autorizado (nunca se ha visto un precio). Todo lo que lee lo exige ya `validarFormularioPatinete`.
+  { compania: 'allianz', ramo: 'patinete', propios: () => [], llegaAPrecio: false, nota: 'flag apagado; sin precio visto (03/11/2026)' },
   // Occident hogar (hueco, sin registrar): lee documento, nacimiento, CP, vía y tipo de vivienda; todos ya en la forma de hogar
   // (21/10/2026: `planFormularioHogar` lee ya el `FormularioHogar` canónico, `tomador.documentoIdentidad`).
   { compania: 'occident', ramo: 'hogar', propios: () => [], llegaAPrecio: false, nota: 'sin registrar' },

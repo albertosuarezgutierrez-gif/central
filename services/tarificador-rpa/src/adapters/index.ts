@@ -6,6 +6,7 @@ import { mapfreAuto, mapfreMoto } from './mapfre/auto.ts'
 import { ALLIANZ_HOGAR_ACTIVO, allianzHogar } from './allianz/hogar.ts'
 import { MAPFRE_HOGAR_ACTIVO, mapfreHogar } from './mapfre/hogar.ts'
 import { GENERALI_AUTO_ACTIVO, generaliAuto } from './generali/auto.ts'
+import { ALLIANZ_PATINETE_ACTIVO, allianzPatinete } from './allianz/patinete.ts'
 
 /** Los adaptadores que trae compilados esta imagen (de cualquier ramo: el runner valida el riesgo con el del ramo, ramo.ts). */
 export const adaptadores = crearRegistro<AdaptadorRegistrado>()
@@ -33,6 +34,10 @@ if (MAPFRE_HOGAR_ACTIVO) adaptadores.registrar(mapfreHogar)
 // selector, tomador, antecedentes y PRECIO) es hueco con inventario. Se registra SOLO con su flag (generali/auto.ts, ENCENDIDO por
 // Alberto el 18/10/2026). La fila `seguros.companias_integracion` generali/auto sigue siendo la puerta de BD: sin ella no corre nada.
 if (GENERALI_AUTO_ACTIVO) adaptadores.registrar(generaliAuto)
+// Allianz PATINETE / VMP (03/11/2026, v0.1.0): rellena «Datos Básicos» y «Riesgo VMP» (mapa de las exploraciones IA) y PARA en el avance
+// (el guard no autoriza el «Aceptar» de /drvp00/ para tarificar) y en el precio (nunca visto): huecos declarados en `allianz/patinete.ts`.
+// SOLO con su flag (APAGADO; lo enciende Alberto). Apagado, un trabajo de patinete cae como `datos` («sin adaptador») sin abrir el navegador.
+if (ALLIANZ_PATINETE_ACTIVO) adaptadores.registrar(allianzPatinete)
 // Pelayo (03/11/2026): solo la ENTRADA del explorador (`pelayo/entrada.ts`). Auto y hogar SIN implementar (`pelayo/ramos.ts`: `tarificar`
 // lanza «Pelayo: ramo X aún no implementado», flag `PELAYO_ACTIVO` apagado) y SIN registrar aquí: se registran bajo su flag cuando haya
 // adaptador real (un registro hoy exigiría la capa de respaldo IA y los obligatorios, que un esqueleto no tiene).
