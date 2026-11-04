@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(04/11/2026) Instagram de ia.rest → Grupo ASegura.** Alberto reabre la decisión del 07/09 (LinkedIn sí, IG no); sigue sin haber perfil de IG.
+Nuevo `packages/core-instagram` (Graph API parametrizada) + plataforma `lib/correduria/instagram-asegura*.ts`, cron `/api/cron/asegura-instagram`
+(L/X/V 07:13 UTC por `cron-dispatch`), imagen `/api/publico/asegura-ig/[id]`, botones `asig_` en el webhook Telegram de sivra, lista en Redes.
+Cepo `revisarCopy` obligatorio (regenera 1 vez → `rechazado_copy`). Sin `ASEGURA_INSTAGRAM_ACCESS_TOKEN`/`_USER_ID` → «Aprobar» = `aprobado_manual`.
+ia-rest: quitados crons `instagram` e `instagram-ideas` (metricas/refresh siguen; código intacto).
+PENDIENTE: aplicar `apps/plataforma/prisma/sql/2026-11-04_asegura_instagram_borradores.sql` (sin ella el cron da 503 y avisa).
+
 **(03/11/2026, 6) Patinete Allianz — adaptador de tarificación (APAGADO).** `allianz/patinete.ts` v0.1.0 + `FormularioPatinete` (module-tarificacion) + `RamoRpa 'patinete'`; flag `ALLIANZ_PATINETE_ACTIVO=false`, sin registrar. Rellena «Datos Básicos» y «Riesgo VMP» (ids de las exploraciones; la mejor, f6209c2d, hizo bucle porque nunca marcó `checkVMP` «velocidad ≤25 km/h»). HUECOS: el avance entre pantallas (guard.ts solo autoriza `drpc18`/Moto, no `/drvp00/`) y la pantalla de PRECIO (ninguna exploración la vio): `ofertaVmp` listo, `leerOfertasVmp` es el hueco. Uso profesional / no homologado / sin límite 25 km/h → a Alberto. Sin SQL nuevo (fila allianz/patinete ya existe, 2026-10-28b).
 
 **(03/11/2026) Tarificador — plan acordado con Alberto.** Prueba de fuego primero: Pelayo auto/hogar con el guard nuevo (navegación libre normalizada + paradas de emisión intactas, explorador 0.3.36, agente-architect). Si pasa → plantilla de alta de compañía: secretos Fly + URL → mapeo → agente genera adaptador contra riesgo canónico → prueba en borrador (objetivo 1-2 días/compañía-ramo; Generali necesita grabación manual de Alberto). Después, por orden: (1) retarificación por lotes de cartera viva que vence en 60 días con aviso si otra compañía mejora; (2) vigilante nocturno de huellas de portales; (3) caché de precio 24 h por riesgo+compañía; (4) comprobador de coherencia del presupuesto antes de Telegram (precio ×3/÷3, garantías básicas, nunca «No figura»); (5) tablero de estado de bots en /correduria. No meter más compañías hasta validar Pelayo. Pendientes: Fidelidade hogar (nombre_via repintado), Generali auto (grabación), Mapfre BASICar sin precio, patinete web solicitud (Allianz primero).

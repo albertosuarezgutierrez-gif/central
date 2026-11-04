@@ -768,6 +768,9 @@ importers:
       '@anthropic-ai/sdk':
         specifier: ^0.52.0
         version: 0.52.0
+      '@central/brand':
+        specifier: workspace:*
+        version: link:../../packages/brand
       '@central/core-ai':
         specifier: workspace:*
         version: link:../../packages/core-ai
@@ -786,6 +789,9 @@ importers:
       '@central/core-identity':
         specifier: workspace:*
         version: link:../../packages/core-identity
+      '@central/core-instagram':
+        specifier: workspace:*
+        version: link:../../packages/core-instagram
       '@central/core-payments':
         specifier: workspace:*
         version: link:../../packages/core-payments
@@ -986,7 +992,7 @@ importers:
         specifier: ^19.0.0
         version: 19.2.4(react@19.2.4)
       sharp:
-        specifier: ^0.35.3
+        specifier: '>=0.35.0'
         version: 0.35.3(@types/node@20.19.42)
       web-push:
         specifier: ^3.6.7
@@ -1254,6 +1260,8 @@ importers:
       jose:
         specifier: ^5.9.3
         version: 5.10.0
+
+  packages/core-instagram: {}
 
   packages/core-payments:
     dependencies:
@@ -4244,12 +4252,12 @@ packages:
   fast-xml-builder@1.2.0:
     resolution: {integrity: sha512-00aAWieqff+ZJhsXA4g1g7M8k+7AYoMUUHF+/zFb5U6Uv/P0Vl4QZo84/IcufzYalLuEj9928bXN9PbbFzMF0Q==}
 
-  fast-xml-parser@5.11.1:
-    resolution: {integrity: sha512-TBw6K/fxoQGGjCmZDw9w/ZwP3uDcnTM4YH/g+PFRWr8sbe5idXtxNN6vITh4+1ruCZaho6uBFurElsA7F0zzgw==}
-    hasBin: true
-
   fast-xml-parser@5.10.1:
     resolution: {integrity: sha512-IEMIf7298kXuZSRFoGfMYrl7is8LpavODgbNz1cwIudv7KwVFnuU+UsMporfq6PD6aXSlawZlARiA3UywCTfMw==}
+    hasBin: true
+
+  fast-xml-parser@5.11.1:
+    resolution: {integrity: sha512-TBw6K/fxoQGGjCmZDw9w/ZwP3uDcnTM4YH/g+PFRWr8sbe5idXtxNN6vITh4+1ruCZaho6uBFurElsA7F0zzgw==}
     hasBin: true
 
   fast-xml-parser@5.8.0:
@@ -9132,15 +9140,6 @@ snapshots:
       path-expression-matcher: 1.5.0
       xml-naming: 0.1.0
 
-  fast-xml-parser@5.11.1:
-    dependencies:
-      '@nodable/entities': 3.0.0
-      fast-xml-builder: 1.2.0
-      is-unsafe: 2.0.0
-      path-expression-matcher: 1.6.2
-      strnum: 2.4.2
-      xml-naming: 0.3.0
-
   fast-xml-parser@5.10.1:
     dependencies:
       '@nodable/entities': 3.0.0
@@ -9148,6 +9147,15 @@ snapshots:
       is-unsafe: 2.0.0
       path-expression-matcher: 1.6.2
       strnum: 2.4.1
+      xml-naming: 0.3.0
+
+  fast-xml-parser@5.11.1:
+    dependencies:
+      '@nodable/entities': 3.0.0
+      fast-xml-builder: 1.2.0
+      is-unsafe: 2.0.0
+      path-expression-matcher: 1.6.2
+      strnum: 2.4.2
       xml-naming: 0.3.0
 
   fast-xml-parser@5.8.0:

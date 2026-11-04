@@ -48,6 +48,8 @@ import { resolverBotonFactura } from '@/lib/sivra/facturas/telegram-acciones'
 import { PREFIJO_CIERRE_MES, interpretarCallbackCierre, hoyMadrid, nombreUnidad, etiquetaMes } from '@/lib/cierre-mes'
 import { cerrarMes, cuentaDeLosPisos } from '@/lib/cierre-mes-db'
 import { ENV_FIRMA_AUTORIZACION } from '@central/module-tarificacion'
+import { PREFIJO_ASIG, interpretarCallbackAsig } from '@/lib/correduria/instagram-asegura'
+import { resolverBotonAsig } from '@/lib/correduria/instagram-asegura-tg'
 
 export const dynamic = 'force-dynamic'
 // El reenvío a ia-rest puede tardar (publicar un Reel espera a que Instagram
@@ -1204,6 +1206,35 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
       }))
       await tgAnswerCallback(cb.id, r.ok ? (r.sinCambio ? 'Ya estaba bien' : 'Ventana repuesta ✅') : 'No se pudo')
       await tgSend(`🔑 <b>Acceso</b>\n${escapeHtml(textoResultadoReponer(reservaRef, r))}`).catch(() => {})
+      return NextResponse.json({ ok: true })
+    }
+
+    // ── 📸 Instagram de Grupo ASegura (asig_aprobar|descartar|regenerar:<uuid>) ──
+    // Publica (o entrega para publicar a mano) SOLO con el botón de la persona autorizada. Transiciones
+    // atómicas en BD: dos pulsaciones = una publicación. Se contesta YA y se trabaja en after().
+    if (prefix === PREFIJO_ASIG) {
+      if (String(cb.from?.id ?? '') !== String(process.env.TELEGRAM_CHAT_ID ?? '')) {
+        await tgAnswerCallback(cb.id, 'No autorizado')
+        return NextResponse.json({ ok: true })
+      }
+      const c = interpretarCallbackAsig(cb.data)
+      if (!c.ok) {
+        await tgAnswerCallback(cb.id, c.motivo)
+        return NextResponse.json({ ok: true })
+      }
+      await tgAnswerCallback(cb.id, c.accion === 'aprobar' ? '⏳ Aprobando…' : c.accion === 'regenerar' ? '⏳ Escribiendo otro…' : '🗑️ Descartando…')
+      const mid: number | undefined = cb.message?.message_id
+      const original = escapeHtml(cb.message?.text ?? '')
+      if (mid) await tgEditMessage(mid, `${original}\n\n⏳ <i>Pulsado…</i>`).catch(() => {})
+      after(async () => {
+        const r = await resolverBotonAsig(c).catch((e) => {
+          console.error('[tg] instagram asegura:', e instanceof Error ? e.message : e)
+          return { linea: '⚠️ <i>Fallo interno: mira /correduria → Redes antes de repetir.</i>', botones: undefined, aparte: undefined }
+        })
+        if (mid) await tgEditMessage(mid, `${original}\n\n${r.linea}`, r.botones ? { botones: r.botones } : {}).catch(() => {})
+        else await tgSend(r.linea).catch(() => {})
+        if (r.aparte) await tgSend(r.aparte).catch(() => {})
+      })
       return NextResponse.json({ ok: true })
     }
 

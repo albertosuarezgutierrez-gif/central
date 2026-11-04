@@ -181,6 +181,10 @@ export const CRON_JOBS: CronJob[] = [
   // de las diferencias que esperan decisión. Detrás de las dos franjas del pull (05:30/11:30 UTC).
   { path: '/api/cron/cima-sincro', schedule: '50 12 * * *' },
   { path: '/api/cron/correduria-ingesta', schedule: '45 6 * * *' },
+  // Instagram de Grupo ASegura (04/11/2026): L/X/V 07:13 UTC = 08:13 de Madrid en invierno (09:13 en
+  // verano). Genera UNA pieza, la pasa por el cepo de copy y la manda a Telegram (`asig_*`): nada se
+  // publica sin el botón de Alberto. Sustituye a los crons `instagram`/`instagram-ideas` de ia-rest.
+  { path: '/api/cron/asegura-instagram', schedule: '13 7 * * 1,3,5' },
   // RESPALDO del pull de CIMA (23/09/2026): el pull principal corre en GitHub Actions del repo
   // `asegura` (05:30/11:30) y el 22/09 se quedó ~45 h sin runner porque el presupuesto de Actions
   // de la cuenta se agotó. Este mira 2,5 h después de cada franja (los `schedule` de Actions arrancan
