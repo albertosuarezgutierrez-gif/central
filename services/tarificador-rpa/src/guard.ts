@@ -74,6 +74,7 @@ import {
   rutaDeMarco,
   esLanzadorAplicacionNseMapfre,
   neutralizarRutaTolerable,
+  urlParaMensaje,
   detalleCuerpoToleradoConAccionReal,
   textoDetalleCuerpo,
   RE_ACCION_REAL_TRAS_PREFIJO,
@@ -552,7 +553,10 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
         // 0.3.23 (real 30/10/2026: la lista salía cortada): cada nombre con la CLASE de su valor (vacío/false/true/num/otro) y el detalle
         // va DELANTE y FUERA del recorte de 200 del texto (tercer argumento): solo la URL se recorta.
         const que = detalleTolerado ? textoDetalleCuerpo(detalleTolerado) : ''
-        violacion ??= que ? new EmisionBloqueadaError('url', url, que) : new EmisionBloqueadaError('url', porCuerpo ? `${url} [acción en el cuerpo de la petición]` : url)
+        // 0.3.44 (privacidad): la URL del mensaje va SIN query ni fragmento (`urlParaMensaje`: origen + ruta); la query de Pelayo lleva
+        // identificadores del agente/petición en base64 y el mensaje acaba en `tarificacion_trabajos.error`.
+        const urlMsg = urlParaMensaje(url)
+        violacion ??= que ? new EmisionBloqueadaError('url', urlMsg, que) : new EmisionBloqueadaError('url', porCuerpo ? `${urlMsg} [acción en el cuerpo de la petición]` : urlMsg)
         await route.abort('blockedbyclient')
         return
       }

@@ -80,7 +80,7 @@ async function abrir(v: Variante): Promise<{ page: Page; guard: GuardEmision; ce
 
 const elementos = (inv: InventarioDom) => inv.marcos.flatMap((m) => m.elementos)
 
-test('versión del explorador 0.3.43', () => assert.equal(EXPLORADOR_VERSION, '0.3.43'))
+test('versión del explorador 0.3.44', () => assert.equal(EXPLORADOR_VERSION, '0.3.44'))
 
 for (const v of ['none', 'cero'] as const) {
   test(`inventario (${v}): el <select> OCULTO del custom element anidado en el shadow del modal se lista con sus opciones (texto) y «selectOculto»`, async () => {
