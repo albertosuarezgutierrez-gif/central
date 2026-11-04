@@ -61,5 +61,5 @@ test('el pilotaje NO reimplementa la entrada: usa las funciones del explorador y
   for (const f of ['abrirSesionEntrada(', 'crearCtxEntrada(', 'entrarAlPortal(']) assert.ok(codigo.includes(f), `pilotaje.ts tiene que llamar a ${f}`)
   for (const prohibido of ['newContext(', 'portal.entrar(', 'loginPelayo', 'instalarGuardEmision(', 'context.newPage(']) assert.ok(!codigo.includes(prohibido), `pilotaje.ts no puede contener ${prohibido}`)
   const explorador = readFileSync(new URL('../src/explorador.ts', import.meta.url), 'utf8')
-  assert.ok(explorador.includes('await abrirSesionEntrada(browser, exp.entrada)') && explorador.includes('crearCtxEntrada({'), 'el explorador usa las mismas funciones')
+  assert.ok(explorador.includes('await abrirSesionEntrada(browser, exp.entrada, rp.permisos)') && explorador.includes('crearCtxEntrada({'), 'el explorador usa las mismas funciones')
 })
