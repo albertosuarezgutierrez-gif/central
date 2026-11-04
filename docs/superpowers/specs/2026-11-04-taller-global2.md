@@ -229,6 +229,12 @@ cerrar OT con granel (no antes, no dos veces); (3) factura inmutable tras emitir
 ampliación no entra en la factura sin aceptación; (5) cobro dividido suma el total; (6) línea sin horas reales no calcula margen
 (`null`, no 0).
 
+**Ahorro en piezas (decisiones de Alberto).** Dentro de F2:
+- (a) **Petición de precio por correo** a 2-3 proveedores desde la OT, con el patrón de la spec de consultas a compañías por correo (PR #4759). El dueño elige proveedores y pulsa Enviar: nada sale sin su botón. Las respuestas (PDF/Excel) se leen y se ordenan por precio.
+- (b) **Historial de precios** por referencia y proveedor, desde albaranes y facturas (OCR de `module-asn`). Al pedir una pieza, aviso «la última vez X€ en proveedor B».
+- (c) **Compra a granel** de lo de más rotación (aceite, filtros, pastillas) con stock mínimo y aviso al bajar de él.
+- **En estudio (no entra en F2):** catálogo o consulta por matrícula del distribuidor. Opción preferida: el distribuidor pasa su listado o tarifa (Excel/CSV) y se importa periódicamente al catálogo del taller, con importador configurable por el dueño y columnas mapeables. Alternativas: API o pedido electrónico oficial del distribuidor; bot sobre su portal solo con permiso escrito (riesgo de ToS y credenciales). Sin TecDoc de pago en el piloto.
+
 **F3 — Avisos y puente a seguros.** Cola de avisos (terminado, ITV, revisión, seguro, cita), push + correo, retirada de
 consentimiento, lead auto/hogar a `seguros` con origen «taller», segunda oportunidad en la app, panel de conversión.
 *Hecho:* un aviso real de ITV y uno de «terminado» recibidos por un cliente de prueba; un lead con consentimiento visible en la cartera de la correduría.
@@ -271,3 +277,4 @@ Parque Industrial Parque Plata, 41900 Camas (Sevilla); **1 mecánico** y pocos c
 8. «**Cobro dinámico / divididos**»: ¿pago fraccionado o financiación?
 9. **Roles RGPD** (corresponsables o encargado) y contrato de colaboración con G2; plazo de arranque.
 10. **Tablets y pantallas:** nº y modelos, y si las 2 pantallas grandes muestran el tablero de coches en curso.
+11. **Distribuidor de recambios:** ¿con qué distribuidor(es) trabaja G2 y pueden pasar la tarifa en Excel/CSV?
