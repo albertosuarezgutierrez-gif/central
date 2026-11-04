@@ -52,3 +52,24 @@ h1 { font-family: var(--serif); font-size: 28px; margin: 0 0 16px; }
 .tecla:active:not(:disabled) { background: var(--brand-soft); }
 .tecla:disabled { opacity: .5; }
 .tecla-sec { font-size: 18px; color: var(--muted); }
+
+/* Ajustes: secciones plegables (nada se monta abierto de golpe), fichas en vez de tablas (≥320 px). */
+.ajustes { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-bottom: 16px; }
+.seccion { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radio); }
+.seccion > summary { min-height: 48px; display: flex; align-items: center; padding: 0 16px; cursor: pointer; font-weight: 600; }
+.seccion-cuerpo { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 0 16px 16px; }
+.lista { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); }
+.ficha { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radio); background: var(--panel2); }
+.ficha.inactiva { opacity: .6; }
+.campo { display: grid; gap: 4px; font-size: 14px; color: var(--muted); }
+.campo input, .campo select, .campo textarea, .fila input {
+  min-height: 44px; width: 100%; padding: 0 10px; font: inherit; color: var(--text);
+  background: var(--bg); border: 1px solid var(--border); border-radius: var(--radio);
+}
+.fila { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.fila input { flex: 1 1 180px; width: auto; }
+.check { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.check input { width: 22px; height: 22px; }
+.ok { color: var(--ok, #3fb950); font-size: 14px; margin: 0; }
+.pin-grande { font-size: 22px; letter-spacing: 4px; }
+.campo textarea { padding: 8px 10px; min-height: 88px; resize: vertical; }

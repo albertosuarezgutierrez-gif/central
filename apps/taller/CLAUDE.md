@@ -8,8 +8,8 @@
 - **Multi-taller desde el inicio:** toda lectura/escritura lleva `taller_id`; la clave de negocio es la matrícula.
 - **Marca:** logo y colores del taller (`MARCA_TALLERES_G2` de `@central/brand`); «con Grupo ASegura» va fijo y pequeño
   (`coMarca`), no es editable. Resolución por taller en `lib/marca.ts`.
-- **Login por PIN** (`@central/core-identity/pin`): 4 dígitos, bloqueo tras N fallos. `lib/pin-store.ts` es un stub en memoria
-  hasta conectar el schema `taller`. Secreto `TALLER_SESSION_SECRET` vía `requireSecret`, nunca literal.
+- **Login por PIN** (`@central/core-identity/pin`): 4 dígitos, bloqueo tras N fallos. PinStore real en `lib/pin-store-bd.ts`
+  (login en una transacción con `pg_advisory_xact_lock`); el stub `lib/pin-store.ts` es solo para tests. Acceso a BD siempre por `conTaller()` (RLS). Secreto `TALLER_SESSION_SECRET` vía `requireSecret`, nunca literal.
 - **Consentimiento:** el cliente final es del taller; solo pasa a lead de ASegura con su casilla propia, y el servicio
   nunca se condiciona a marcarla. Ningún lead a `seguros` sin consentimiento registrado.
 - **Configuración autoservicio:** precios, IVA, intervalos y horarios son datos que edita el dueño en Ajustes; ningún

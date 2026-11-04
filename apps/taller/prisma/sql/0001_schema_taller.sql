@@ -1,8 +1,8 @@
 -- Vertical TALLER DE VEHÍCULOS — schema `taller` (F1). Spec: docs/superpowers/specs/2026-11-04-taller-global2.md
 --
--- ⛔ NO APLICADA. Borrador de F1 que vive junto a `packages/module-taller` hasta que exista `apps/taller`;
---    entonces se MUEVE a `apps/taller/prisma/sql/AAAA-MM-DD_taller_schema.sql` (convención de almacen/mariscos/asegura)
---    y se aplica a mano (preview → prod tras OK de Alberto). No toca ninguna tabla existente.
+-- ⛔ NO APLICADA. Orden: 0001 (este: schema, RLS) → 0002_altas_iniciales.sql (rol prisma_taller, permisos, taller
+--    piloto). Se aplican a mano como `postgres` (preview → prod tras OK de Alberto). No toca ninguna tabla existente.
+--    0001 NO es idempotente (CREATE TABLE sin IF NOT EXISTS): se aplica UNA vez; 0002 sí lo es.
 --
 -- Diseño:
 --   · Multi-taller: TODA tabla lleva `taller_id` (en `talleres`, su `id`) y las FK entre tablas de negocio son
@@ -10,8 +10,7 @@
 --   · RLS activado y FORZADO en todas las tablas. La política compara con `taller.taller_actual()`, que lee
 --     `current_setting('taller.taller_id', true)`. La app hace `SELECT set_config('taller.taller_id', $1, true)`
 --     al principio de CADA transacción. Sin ajuste → NULL → cero filas (falla CERRADO).
---   · Rol `prisma_taller`: LOGIN, NOBYPASSRLS, sin contraseña (inerte hasta `ALTER ROLE … PASSWORD`, y en el MISMO
---     paso la DATABASE_URL de su proyecto Vercel). Mismo patrón que `prisma_asegura_portal`.
+--   · Rol `prisma_taller` y sus permisos: en 0002 (LOGIN, NOBYPASSRLS, sin contraseña).
 --   · Dinero en céntimos (bigint), IVA en puntos básicos (integer), tiempo en minutos, granel en mililitros.
 --     Sin DEFAULT de precio/IVA/intervalo en columnas: los valores de alta los pone la app desde `configDeAlta()`.
 --   · Fechas de vencimiento NULL = «no se sabe» (nunca «sin vencimiento»).
@@ -224,6 +223,18 @@ CREATE TABLE taller.usuarios_taller (
   creado_en        timestamptz NOT NULL DEFAULT now(),
   actualizado_en   timestamptz NOT NULL DEFAULT now(),
   UNIQUE (taller_id, id)
+);
+
+-- Bloqueo del login por PIN (persistente: en serverless la memoria no se comparte). `clave` = «taller:ip»
+-- (la decide la app). La fila se lee bajo `pg_advisory_xact_lock` en la MISMA transacción del login.
+CREATE TABLE taller.bloqueos_pin (
+  taller_id        uuid NOT NULL REFERENCES taller.talleres(id) ON DELETE CASCADE,
+  clave            text NOT NULL,
+  intentos         integer NOT NULL DEFAULT 0 CHECK (intentos >= 0),
+  bloqueado_hasta  timestamptz,
+  creado_en        timestamptz NOT NULL DEFAULT now(),
+  actualizado_en   timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (taller_id, clave)
 );
 
 CREATE TABLE taller.proveedores (
@@ -788,29 +799,9 @@ BEGIN
   END LOOP;
 END $$;
 
--- ─── Rol de la app: LOGIN, NOBYPASSRLS, sin contraseña (inerte) ─────────────
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'prisma_taller') THEN
-    CREATE ROLE prisma_taller WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
-  END IF;
-END $$;
-ALTER ROLE prisma_taller SET search_path = taller, public;
-
-GRANT USAGE ON SCHEMA taller TO prisma_taller;
-GRANT EXECUTE ON FUNCTION taller.taller_actual() TO prisma_taller;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA taller TO prisma_taller;
--- Alta/baja de talleres: solo el operador (no la app del taller).
-REVOKE INSERT, DELETE ON taller.talleres FROM prisma_taller;
--- Solo-añadir: sin UPDATE/DELETE (consentimientos: UPDATE solo de las columnas de retirada).
-REVOKE UPDATE, DELETE ON taller.consentimientos, taller.leads_enviados, taller.auditoria FROM prisma_taller;
-GRANT UPDATE (retirado_en, motivo_retirada, actualizado_en) ON taller.consentimientos TO prisma_taller;
-
 COMMIT;
 
 -- ── Verificación tras aplicar (solo lectura) ─────────────────────────────────
--- SELECT rolbypassrls FROM pg_roles WHERE rolname = 'prisma_taller';                  → false
 -- SELECT relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
 --  WHERE n.nspname = 'taller' AND c.relkind = 'r' AND NOT (c.relrowsecurity AND c.relforcerowsecurity); → 0 filas
--- SELECT has_table_privilege('prisma_taller', 'taller.consentimientos', 'DELETE');    → false
--- Como prisma_taller SIN set_config: SELECT count(*) FROM taller.vehiculos;             → 0 (falla cerrado)
+-- (las del rol, tras 0002: ver el final de 0002_altas_iniciales.sql)

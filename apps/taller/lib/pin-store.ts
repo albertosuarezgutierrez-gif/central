@@ -1,6 +1,5 @@
-// Adaptador PinStore (puerto de @central/core-identity/pin). STUB EN MEMORIA.
-// TODO(F1): sustituir por la implementación sobre el schema `taller` (credenciales con `taller_id`,
-// bloqueo persistente). En serverless la memoria no se comparte entre instancias: esto NO es válido en producción real.
+// Adaptador PinStore STUB EN MEMORIA — SOLO PARA TESTS. La app usa lib/pin-store-bd.ts (schema `taller`,
+// bloqueo persistente). En serverless la memoria no se comparte entre instancias: nunca lo importes desde app/.
 import {
   ESTADO_BLOQUEO_INICIAL,
   hashPin,

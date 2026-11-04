@@ -1,5 +1,5 @@
 // @central/module-taller — dominio PURO del taller de vehículos (spec docs/superpowers/specs/2026-11-04-taller-global2.md).
-// Sin BD, sin secretos, sin LLM. La app (apps/taller, aún no creada) aporta los adaptadores sobre el schema `taller`.
+// Sin BD, sin secretos, sin LLM. La app (apps/taller) aporta los adaptadores y el SQL del schema `taller` (apps/taller/prisma/sql).
 
 export * from './config.ts'
 export { configDeAlta } from './defaults.ts'
