@@ -6,7 +6,7 @@
 import { Prisma } from '../generated/asegura-client'
 import { prismaAsegura } from '../asegura-db'
 import { esColumnaAusente, esTablaAusente } from '../pg-error'
-import { calcularRacha, type CasoAprendido, type EventoRacha, type Resolucion } from './aprendizaje-reglas'
+import { PREFIJO_INTENTO_DESHACER, SQL_CASOS_SOLO_HUMANOS, SQL_RACHA_SIN_NEUTRAS, calcularRacha, type CasoAprendido, type EventoRacha, type Resolucion } from './aprendizaje-reglas'
 import type { TipoPropuesta } from './propuestas-reglas'
 
 const faltaMigracion = (e: unknown) => esTablaAusente(e) || esColumnaAusente(e)
@@ -61,26 +61,53 @@ export async function registrarResolucion(
   }
 }
 
-/** ↩️ Deshacer de una autónoma: queda como reinicio de la racha. Best effort. */
+/**
+ * ↩️ Deshacer HECHO de una autónoma: queda como reinicio de la racha. Pisa un intento fallido anterior (un reintento que
+ * sí revirtió es «deshecha»). Best effort.
+ */
 export async function registrarDeshecha(correduriaId: string, propuestaId: string, actor: string): Promise<void> {
   try {
     await prismaAsegura().$executeRaw(Prisma.sql`
       update whatsapp_aprendizaje set deshecha_at = now(), deshecha_por = ${actor.slice(0, 120)}
-       where correduria_id = ${correduriaId}::uuid and propuesta_id = ${propuestaId}::uuid and autonoma and deshecha_at is null`)
+       where correduria_id = ${correduriaId}::uuid and propuesta_id = ${propuestaId}::uuid and autonoma
+         and (deshecha_at is null or deshecha_por like ${`${PREFIJO_INTENTO_DESHACER}%`})`)
   } catch (e) {
     silencioso('deshacer', e)
   }
 }
 
-/** Racha de aprobadas seguidas de ese tipo. `null` = no se pudo leer (→ nunca autónomo). */
+/**
+ * ↩️ pulsado pero NO revertido (cambiado después / fallo): no es «deshecha», pero CORTA la racha (pulsarlo es
+ * desconfianza). Se marca en `deshecha_at` (lo que lee la racha) con `deshecha_por = 'intento_fallido:<motivo>:<actor>'`,
+ * que los casos NO cuentan como deshecha. Best effort.
+ */
+export async function registrarIntentoDeshacer(correduriaId: string, propuestaId: string, actor: string, motivo: string): Promise<void> {
+  try {
+    await prismaAsegura().$executeRaw(Prisma.sql`
+      update whatsapp_aprendizaje set deshecha_at = now(), deshecha_por = ${`${PREFIJO_INTENTO_DESHACER}${motivo}:${actor}`.slice(0, 120)}
+       where correduria_id = ${correduriaId}::uuid and propuesta_id = ${propuestaId}::uuid and autonoma and deshecha_at is null`)
+  } catch (e) {
+    silencioso('intento de deshacer', e)
+  }
+}
+
+/**
+ * Racha de aprobadas seguidas de ese tipo. `null` = no se pudo leer (→ nunca autónomo).
+ * Las NEUTRAS no se leen (`SQL_RACHA_SIN_NEUTRAS`): ni las aplicadas solas sin deshacer ni las aplicadas por un actor que
+ * no es una persona. Si se leyeran, un tipo en autonomía llenaría la ventana de `LECTURA_RACHA` con neutras y la racha
+ * caería a 0 sin que nadie la cortara.
+ */
 export async function rachaDe(correduriaId: string, tipo: TipoPropuesta): Promise<number | null> {
   try {
-    const filas = await prismaAsegura().$queryRaw<{ resolucion: Resolucion; autonoma: boolean; deshecha_at: Date | null; resuelta_at: Date }[]>(Prisma.sql`
-      select resolucion, autonoma, deshecha_at, resuelta_at from whatsapp_aprendizaje
+    const filas = await prismaAsegura().$queryRaw<{ resolucion: Resolucion; autonoma: boolean; deshecha_at: Date | null; resuelta_at: Date; resuelta_por: string | null }[]>(Prisma.sql`
+      select resolucion, autonoma, deshecha_at, resuelta_at, resuelta_por from whatsapp_aprendizaje
        where correduria_id = ${correduriaId}::uuid and tipo = ${tipo} and resolucion is not null
+         and ${Prisma.raw(SQL_RACHA_SIN_NEUTRAS)}
        order by coalesce(deshecha_at, resuelta_at) desc
        limit ${LECTURA_RACHA}`)
-    const eventos: EventoRacha[] = filas.map((f) => ({ resolucion: f.resolucion, autonoma: f.autonoma, deshechaAt: f.deshecha_at, resueltaAt: f.resuelta_at }))
+    const eventos: EventoRacha[] = filas.map((f) => ({
+      resolucion: f.resolucion, autonoma: f.autonoma, deshechaAt: f.deshecha_at, resueltaAt: f.resuelta_at, actor: f.resuelta_por,
+    }))
     return calcularRacha(eventos)
   } catch (e) {
     silencioso('racha', e)
@@ -99,6 +126,7 @@ export async function casosResueltos(correduriaId: string): Promise<CasoAprendid
              observacion, resuelta_at
         from whatsapp_aprendizaje
        where correduria_id = ${correduriaId}::uuid and resolucion is not null and extracto is not null
+         and ${Prisma.raw(SQL_CASOS_SOLO_HUMANOS)}
        order by resuelta_at desc limit ${LECTURA_CASOS}`)
     return filas.map((f) => ({
       tipo: f.tipo, origenSaliente: f.origen_saliente, extracto: f.extracto, resolucion: f.resolucion, autonoma: f.autonoma,

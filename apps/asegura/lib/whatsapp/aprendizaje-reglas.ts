@@ -29,8 +29,15 @@ export const ACTOR_AUTONOMO = 'agente:whatsapp-ia-autonomo'
 
 export type Resolucion = 'aplicada' | 'descartada' | 'modificada'
 
-/** Un evento de la racha: una resolución (o un ↩️ Deshacer, que es otro evento en SU fecha). */
-export type EventoRacha = { resolucion: Resolucion; autonoma: boolean; deshechaAt: Date | null; resueltaAt: Date }
+/**
+ * Un evento de la racha: una resolución (o un ↩️ Deshacer —hecho o solo intentado—, que es otro evento en SU fecha).
+ * `actor` = `resuelta_por` (`humano:<cuentaId>`, `agente:…`, `sistema:…`).
+ */
+export type EventoRacha = { resolucion: Resolucion; autonoma: boolean; deshechaAt: Date | null; resueltaAt: Date; actor: string | null }
+
+/** Solo una PERSONA da confianza: una aplicada por un agente o el sistema no suma. */
+export const PREFIJO_ACTOR_HUMANO = 'humano:'
+export const esActorHumano = (actor: string | null | undefined): boolean => typeof actor === 'string' && actor.startsWith(PREFIJO_ACTOR_HUMANO)
 
 /** `1` exacto. Cualquier otra cosa (vacío, `true`, `si`) → apagado. */
 export function autonomiaActiva(valor: string | undefined): boolean {
@@ -48,7 +55,7 @@ export function leerUmbral(valor: string | undefined): number | null {
 
 /**
  * Racha de aprobadas SEGUIDAS sin modificar (de la más reciente hacia atrás) hasta el primer reinicio.
- *   · ✅ aplicada por Alberto → +1.
+ *   · ✅ aplicada por una PERSONA (`humano:…`) → +1. Aplicada por otro actor (`agente:`, `sistema:`) → neutra.
  *   · ❌ descartada, ✏️ modificada → corta (reinicio).
  *   · ↩️ deshecha (de una autónoma) → corta, en la fecha del deshacer (no en la de la aplicación).
  *   · aplicada SOLA y no deshecha → ni suma ni corta (la autonomía no se alimenta a sí misma).
@@ -62,7 +69,8 @@ export function calcularRacha(eventos: readonly EventoRacha[]): number {
       if (e.deshechaAt) marcas.push({ at: e.deshechaAt.getTime(), tipo: 'corte' })
       continue
     }
-    marcas.push({ at: e.resueltaAt.getTime(), tipo: e.resolucion === 'aplicada' ? 'mas' : 'corte' })
+    if (e.resolucion === 'aplicada') marcas.push({ at: e.resueltaAt.getTime(), tipo: esActorHumano(e.actor) ? 'mas' : 'neutro' })
+    else marcas.push({ at: e.resueltaAt.getTime(), tipo: 'corte' })
   }
   // Más reciente primero; a igual instante, el corte manda (estado conservador).
   marcas.sort((a, b) => b.at - a.at || (a.tipo === 'corte' ? -1 : b.tipo === 'corte' ? 1 : 0))
@@ -73,6 +81,22 @@ export function calcularRacha(eventos: readonly EventoRacha[]): number {
   }
   return n
 }
+
+/** `deshecha_por` de un ↩️ que NO pudo revertir: corta la racha pero no es «deshecha». */
+export const PREFIJO_INTENTO_DESHACER = 'intento_fallido:'
+
+/**
+ * Filtro SQL de la racha: fuera las neutras (aplicadas solas sin ↩️ y aplicadas por un actor que no es una persona),
+ * que no suman ni cortan y agotarían la ventana de lectura. Las cortes (descartadas, modificadas, ↩️) siempre entran.
+ */
+export const SQL_RACHA_SIN_NEUTRAS =
+  `(resolucion <> 'aplicada' or deshecha_at is not null or (not autonoma and resuelta_por like '${PREFIJO_ACTOR_HUMANO}%'))`
+
+/**
+ * Filtro SQL de los casos que entran al prompt: SOLO los que decidió una persona. Fuera las aplicadas solas (nadie las
+ * revisó: su extracto podría colar instrucciones que la IA se aplicaría a sí misma en bucle).
+ */
+export const SQL_CASOS_SOLO_HUMANOS = `(not autonoma and resuelta_por like '${PREFIJO_ACTOR_HUMANO}%')`
 
 export type VeredictoAutonomia = { autonoma: true } | { autonoma: false; motivo: 'flag_apagado' | 'umbral_invalido' | 'tipo_no_autonomizable' | 'racha_ilegible' | 'racha_corta' }
 
@@ -100,7 +124,8 @@ export type Correccion = { fecha: string | null; observacion: string | null }
 const pad = (n: number) => String(n).padStart(2, '0')
 
 /**
- * Lo que Alberto contesta al ✏️: una fecha (aaaa-mm-dd, dd/mm/aaaa, dd-mm-aa, dd/mm) y/o una observación (el resto).
+ * Lo que Alberto contesta al ✏️: una fecha AL PRINCIPIO (aaaa-mm-dd, dd/mm/aaaa, dd-mm-aa, dd/mm; separador / o -) y/o
+ * una observación (el resto).
  * Para `pagado` no hay fecha que corregir: todo el texto es observación. `dd/mm` sin año = la próxima vez que llegue
  * esa fecha (hoy incluido). Vacío, demasiado largo o una fecha que no existe → `null` (no se aplica nada).
  */
@@ -110,8 +135,10 @@ export function leerCorreccion(texto: string, tipo: TipoPropuesta, hoy: string):
   if (tipo === 'pagado') return { fecha: null, observacion: t.slice(0, MAX_OBSERVACION) }
   let fecha: string | null = null
   let resto = t
-  const iso = /\b(\d{4})-(\d{2})-(\d{2})\b/.exec(t)
-  const es = /\b(\d{1,2})[/.-](\d{1,2})(?:[/.-](\d{2}|\d{4}))?\b/.exec(t)
+  // Solo una fecha AL PRINCIPIO, con separador / o - (aaaa-mm-dd, dd/mm, dd/mm/aaaa, dd-mm-aa). Un número dentro de la
+  // observación («50.00», «el 3/2») no es la fecha corregida: es observación.
+  const iso = /^(\d{4})-(\d{2})-(\d{2})(?![\d/-])/.exec(t)
+  const es = /^(\d{1,2})[/-](\d{1,2})(?:[/-](\d{4}|\d{2}))?(?![\d/-])/.exec(t)
   if (iso) {
     fecha = `${iso[1]}-${iso[2]}-${iso[3]}`
     resto = t.replace(iso[0], ' ')
@@ -136,6 +163,25 @@ export function leerCorreccion(texto: string, tipo: TipoPropuesta, hoy: string):
 // ── Contexto sin PII ─────────────────────────────────────────────────────────────
 
 export const MAX_EXTRACTO = 300
+
+/**
+ * La observación de ✏️ para el aprendizaje (que luego entra al prompt): redactada, también del nombre del cliente.
+ * `nombres` null = no se pudieron leer → no se guarda (estado conservador: mejor sin observación que con un nombre).
+ */
+export function observacionParaAprendizaje(observacion: string | null, nombres: readonly (string | null | undefined)[] | null): string | null {
+  if (!observacion || nombres === null) return null
+  return extractoRedactado(observacion, nombres)
+}
+
+/**
+ * Texto de un caso previo tal como entra al prompt: es DATO NO FIABLE (lo escribió otro cliente o el corredor). Se
+ * vuelve a redactar (defensa en profundidad: filas antiguas o sin redactar) y se le quitan los delimitadores del bloque
+ * (`<<<` / `>>>`) para que no pueda cerrarlo y colar instrucciones fuera.
+ */
+export function datoNoFiable(texto: string | null | undefined): string | null {
+  const r = redactarPii(texto ?? '', { nombres: [] }).replace(/<{2,}|>{2,}/g, ' ').replace(/\s+/g, ' ').trim()
+  return r ? r.slice(0, MAX_EXTRACTO) : null
+}
 
 /** Extracto del mensaje del cliente para el registro: redactado (DNI, IBAN, teléfonos, nombre…), una línea, ≤300. */
 export function extractoRedactado(texto: string | null | undefined, nombres: readonly (string | null | undefined)[] = []): string | null {
@@ -218,5 +264,8 @@ export function casoParaIA(c: CasoAprendido): {
   propuesto: { fecha?: string }; final: { fecha?: string } | null; observacion_corredor: string | null
 } {
   const decision = c.autonoma ? (c.deshecha ? 'aplicada_sola_y_deshecha_por_el_corredor' : 'aplicada_sola') : c.resolucion
-  return { tipo: c.tipo, origen_saliente: c.origenSaliente, mensaje_cliente: c.extracto, decision, propuesto: c.propuesto, final: c.final, observacion_corredor: c.observacion }
+  return {
+    tipo: c.tipo, origen_saliente: c.origenSaliente, mensaje_cliente: datoNoFiable(c.extracto), decision, propuesto: c.propuesto, final: c.final,
+    observacion_corredor: datoNoFiable(c.observacion),
+  }
 }

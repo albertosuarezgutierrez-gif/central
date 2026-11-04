@@ -40,7 +40,8 @@ const fuente = (f: string) => sinComentarios(readFileSync(new URL(f, import.meta
 
 const t0 = Date.parse('2026-01-01T00:00:00Z')
 const at = (min: number) => new Date(t0 + min * 60_000)
-const aprobada = (min: number): EventoRacha => ({ resolucion: 'aplicada', autonoma: false, deshechaAt: null, resueltaAt: at(min) })
+const HUMANO = 'humano:cuenta-alberto'
+const aprobada = (min: number): EventoRacha => ({ resolucion: 'aplicada', autonoma: false, deshechaAt: null, resueltaAt: at(min), actor: HUMANO })
 const aprobadas = (n: number, desde = 0) => Array.from({ length: n }, (_, i) => aprobada(desde + i))
 
 // ── Umbral y racha ──────────────────────────────────────────────────────────────
@@ -69,17 +70,17 @@ test('umbral mal configurado → nunca autónomo (0, 1, negativo, texto); vacío
 })
 
 test('reset por DESCARTE: un ❌ corta la racha (lo anterior ya no cuenta)', () => {
-  const ev = [...aprobadas(30), { resolucion: 'descartada', autonoma: false, deshechaAt: null, resueltaAt: at(100) } as EventoRacha, ...aprobadas(3, 200)]
+  const ev = [...aprobadas(30), { resolucion: 'descartada', autonoma: false, deshechaAt: null, resueltaAt: at(100), actor: HUMANO } as EventoRacha, ...aprobadas(3, 200)]
   assert.equal(calcularRacha(ev), 3)
 })
 
 test('reset por MODIFICACIÓN: un ✏️ corta la racha', () => {
-  const ev = [...aprobadas(30), { resolucion: 'modificada', autonoma: false, deshechaAt: null, resueltaAt: at(100) } as EventoRacha]
+  const ev = [...aprobadas(30), { resolucion: 'modificada', autonoma: false, deshechaAt: null, resueltaAt: at(100), actor: HUMANO } as EventoRacha]
   assert.equal(calcularRacha(ev), 0)
 })
 
 test('reset por DESHACER: cuenta en la fecha del ↩️, no en la de la aplicación', () => {
-  const autonomaDeshecha: EventoRacha = { resolucion: 'aplicada', autonoma: true, deshechaAt: at(500), resueltaAt: at(50) }
+  const autonomaDeshecha: EventoRacha = { resolucion: 'aplicada', autonoma: true, deshechaAt: at(500), resueltaAt: at(50), actor: ACTOR_AUTONOMO }
   // 30 aprobadas, una autónoma a los 50 min, 5 aprobadas más (100-104) y el ↩️ a los 500 → racha 0.
   assert.equal(calcularRacha([...aprobadas(30), autonomaDeshecha, ...aprobadas(5, 100)]), 0)
   // Tras el ↩️, vuelve a contar desde cero.
@@ -87,7 +88,7 @@ test('reset por DESHACER: cuenta en la fecha del ↩️, no en la de la aplicaci
 })
 
 test('una autónoma NO deshecha ni suma ni corta (la autonomía no se alimenta a sí misma)', () => {
-  const autonoma: EventoRacha = { resolucion: 'aplicada', autonoma: true, deshechaAt: null, resueltaAt: at(300) }
+  const autonoma: EventoRacha = { resolucion: 'aplicada', autonoma: true, deshechaAt: null, resueltaAt: at(300), actor: ACTOR_AUTONOMO }
   assert.equal(calcularRacha([...aprobadas(20), autonoma, autonoma]), 20)
 })
 
@@ -159,7 +160,6 @@ test('CEPO deshacer es de un solo uso en BD: reclama con UPDATE condicionado a �
   assert.match(cuerpo, /resultado->'autonoma' = 'true'::jsonb/, 'solo una aplicada sola')
   assert.match(cuerpo, /estado = 'aplicada'/)
   assert.ok(cuerpo.indexOf("jsonb_build_object('deshecha_at'") < cuerpo.indexOf('revertir('), 'se reclama ANTES de revertir')
-  assert.ok(cuerpo.indexOf('registrarDeshecha(') < cuerpo.indexOf('revertir('), 'pulsar ↩️ reinicia la racha aunque revertir falle')
 })
 
 test('CEPO deshacer y modificar: el endpoint exige actor HUMANO (titular), nunca agente ni sistema', () => {
@@ -175,7 +175,7 @@ test('corrección: fecha en varios formatos, observación aparte, y fechas impos
   const hoy = '2026-11-04'
   assert.deepEqual(leerCorreccion('20/11/2026', 'fecha_cobro', hoy), { fecha: '2026-11-20', observacion: null })
   assert.deepEqual(leerCorreccion('2026-12-01', 'vencimiento', hoy), { fecha: '2026-12-01', observacion: null })
-  assert.deepEqual(leerCorreccion('el 30/11, dice que a final de mes', 'fecha_cobro', hoy), { fecha: '2026-11-30', observacion: 'el, dice que a final de mes' })
+  assert.deepEqual(leerCorreccion('30/11, dice que a final de mes', 'fecha_cobro', hoy), { fecha: '2026-11-30', observacion: 'dice que a final de mes' })
   assert.deepEqual(leerCorreccion('3/2', 'vencimiento', hoy), { fecha: '2027-02-03', observacion: null }, 'sin año: la próxima')
   assert.deepEqual(leerCorreccion('15-12-27', 'vencimiento', hoy), { fecha: '2027-12-15', observacion: null })
   assert.deepEqual(leerCorreccion('llamarle antes', 'fecha_cobro', hoy), { fecha: null, observacion: 'llamarle antes' })

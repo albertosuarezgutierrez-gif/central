@@ -960,6 +960,12 @@ export async function crearOportunidad(
  * cerrada no se edita: se reabre antes, que es una acción con su rastro.
  * Cada cambio deja antes/después en el historial (la compañía solo que cambió).
  */
+/**
+ * La tarea de seguimiento que tocó `editarOportunidad(... { reprogramar: true })`: creada (`desde: null`) o movida
+ * (`desde` = su fecha anterior). Con el id, quien la reprogramó puede deshacerlo (↩️ de WhatsApp).
+ */
+export type TareaReprogramada = { accion: 'crear' | 'mover'; fecha: string; tareaId: string; desde: string | null }
+
 export async function editarOportunidad(
   correduriaId: string,
   id: string,
@@ -968,7 +974,7 @@ export async function editarOportunidad(
   // `reprogramar`: al cambiar el vencimiento, la próxima tarea de seguimiento va a 45 días antes
   // (`planTareaTrasVencimiento`). Opcional: la corrección de otros campos no toca las tareas.
   opciones: { reprogramar?: boolean; hoy?: Date } = {},
-): Promise<{ ok: true; oportunidad: OportunidadSeguimiento; tarea: { accion: 'crear' | 'mover'; fecha: string } | null } | Fallo> {
+): Promise<{ ok: true; oportunidad: OportunidadSeguimiento; tarea: TareaReprogramada | null } | Fallo> {
   if (!UUID.test(id)) return { ok: false, estado: 'invalido', motivo: 'id de oportunidad no válido', status: 422 }
   const v = validarEdicionOportunidad(datos)
   if (!v.ok) return { ok: false, estado: 'invalido', motivo: v.motivo, status: 422 }
@@ -1066,7 +1072,7 @@ export async function editarOportunidad(
           updated_at = now()
         where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`)
     }
-    let tarea: { accion: 'crear' | 'mover'; fecha: string } | null = null
+    let tarea: TareaReprogramada | null = null
     if (opciones.reprogramar && detalle.fechaFinVigencia) {
       // La próxima de seguimiento (la misma que enseña la tarjeta). Se MUEVE, no se cierra: una
       // llamada cerrada cuenta como intento en `planLlamada`.
@@ -1082,7 +1088,7 @@ export async function editarOportunidad(
           update gestiones set fecha_limite = (${plan.fecha}::date + time '23:59:59') at time zone 'Europe/Madrid', updated_at = now()
           where id = ${plan.tareaId}::uuid and correduria_id = ${correduriaId}::uuid`)
         detalle.tarea = { tareaId: plan.tareaId, antes: plan.desde, despues: plan.fecha }
-        tarea = { accion: 'mover', fecha: plan.fecha }
+        tarea = { accion: 'mover', fecha: plan.fecha, tareaId: plan.tareaId, desde: plan.desde }
       } else if (plan.accion === 'crear') {
         const [nueva] = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
           insert into gestiones (correduria_id, tipo, prioridad, estado, observaciones, fecha_limite, cliente_id, oportunidad_id, origen_trigger)
@@ -1091,7 +1097,7 @@ export async function editarOportunidad(
                   ${fila.clienteId}::uuid, ${id}::uuid, 'central:seguimiento')
           returning id::text as id`)
         detalle.tarea = { tareaId: nueva.id, creada: plan.fecha }
-        tarea = { accion: 'crear', fecha: plan.fecha }
+        tarea = { accion: 'crear', fecha: plan.fecha, tareaId: nueva.id, desde: null }
       }
     }
     await tx.$executeRaw(Prisma.sql`

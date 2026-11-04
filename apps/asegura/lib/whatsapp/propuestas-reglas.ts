@@ -148,3 +148,92 @@ export async function cerrarSiFallaDevolver(devolver: () => Promise<void>, desca
     await descartar()
   }
 }
+
+// ── ✏️ Fecha corregida: solo se persiste tras aplicar con éxito ─────────────────────
+
+/**
+ * La fecha con la que se APLICA: la corregida por ✏️ si la hay (y el tipo lleva fecha), si no la propuesta. El `payload`
+ * de la fila NO se toca al reclamar: solo tras aplicar con éxito; si aplicar falla, vuelve a pendiente con el ORIGINAL.
+ */
+export function fechaAlAplicar(tipo: TipoPropuesta, original: string | null, corregida: string | null): string | null {
+  if (tipo === 'pagado') return original
+  return corregida ?? original
+}
+
+// ── ↩️ Deshacer: qué se revierte (puro; lo ejecuta `revertir` dentro de UNA transacción con las filas bloqueadas) ──
+
+/** La tarea de seguimiento que tocó aplicar un vencimiento (`editarOportunidad` con `reprogramar`). */
+export type TareaSeguimientoPrevia = { id: string; accion: 'crear' | 'mover'; fecha: string; desde: string | null }
+
+/** Lee `previo.tareaSeguimiento` (guardado al aplicar). Ausente o mal formado → `null` (no se toca ninguna tarea). */
+export function tareaSeguimientoDe(previo: Record<string, unknown>): TareaSeguimientoPrevia | null {
+  const t = previo.tareaSeguimiento as Record<string, unknown> | null | undefined
+  if (!t || typeof t !== 'object') return null
+  const id = typeof t.id === 'string' && /^[0-9a-f-]{36}$/i.test(t.id) ? t.id : null
+  const accion = t.accion === 'crear' || t.accion === 'mover' ? t.accion : null
+  const fecha = typeof t.fecha === 'string' && fechaIsoReal(t.fecha) ? t.fecha : null
+  const desde = typeof t.desde === 'string' && fechaIsoReal(t.desde) ? t.desde : null
+  if (!id || !accion || !fecha) return null
+  if (accion === 'mover' && !desde) return null
+  return { id, accion, fecha, desde: accion === 'mover' ? desde : null }
+}
+
+/** Lo que hay AHORA (leído con `for update` en la misma transacción que revierte). `null` = la fila no existe. */
+export type EstadoParaRevertir = {
+  oportunidad?: { fecha: string | null; estado: string } | null
+  recibo?: { prometida: string | null } | null
+  /** La tarea de seguimiento de `previo.tareaSeguimiento`, si la hay. */
+  tareaSeguimiento?: { fecha: string | null; estado: string } | null
+}
+
+export type PasoRevertir =
+  | { paso: 'vencimiento'; fecha: string | null }
+  | { paso: 'prometida'; fecha: string | null }
+  | { paso: 'cerrar_tarea_ia'; id: string }
+  | { paso: 'cerrar_tarea_seguimiento'; id: string }
+  | { paso: 'mover_tarea_seguimiento'; id: string; fecha: string }
+
+export type PlanRevertir = { ok: true; pasos: PasoRevertir[] } | { ok: false; estado: 'cambiado_despues' | 'fallo_al_deshacer' }
+
+const texto = (v: unknown): string | null => (typeof v === 'string' && v ? v : null)
+
+/**
+ * Qué deshacer de una propuesta aplicada SOLA. Si el dato que escribió ya no es el que dejó (alguien lo cambió después)
+ * → `cambiado_despues` y NADA se toca. La tarea de seguimiento solo se revierte si sigue como la dejó aplicar (abierta y
+ * en la fecha puesta): una que alguien movió o cerró después es de esa persona y no se pisa.
+ */
+export function planRevertir(p: {
+  tipo: TipoPropuesta; aplicada: string | null; previo: Record<string, unknown>; tareaIaId: string | null; actual: EstadoParaRevertir
+}): PlanRevertir {
+  const pasos: PasoRevertir[] = []
+  if (p.tipo === 'vencimiento') {
+    const o = p.actual.oportunidad
+    if (!o) return { ok: false, estado: 'fallo_al_deshacer' }
+    if (o.estado === 'ganada' || o.estado === 'perdida') return { ok: false, estado: 'cambiado_despues' }
+    if (o.fecha !== p.aplicada) return { ok: false, estado: 'cambiado_despues' }
+    pasos.push({ paso: 'vencimiento', fecha: texto(p.previo.fechaFinVigencia) })
+    const t = tareaSeguimientoDe(p.previo)
+    const ahora = p.actual.tareaSeguimiento
+    if (t && ahora && ahora.estado !== 'cerrada' && ahora.fecha === t.fecha) {
+      if (t.accion === 'crear') pasos.push({ paso: 'cerrar_tarea_seguimiento', id: t.id })
+      else if (t.desde) pasos.push({ paso: 'mover_tarea_seguimiento', id: t.id, fecha: t.desde })
+    }
+    return { ok: true, pasos }
+  }
+  if (p.tipo === 'fecha_cobro') {
+    const r = p.actual.recibo
+    if (!r) return { ok: false, estado: 'fallo_al_deshacer' }
+    if (r.prometida !== p.aplicada) return { ok: false, estado: 'cambiado_despues' }
+    pasos.push({ paso: 'prometida', fecha: texto(p.previo.fechaPrometida) })
+  }
+  if (p.tareaIaId) pasos.push({ paso: 'cerrar_tarea_ia', id: p.tareaIaId })
+  return { ok: true, pasos }
+}
+
+/**
+ * Qué queda en el aprendizaje tras pulsar ↩️. Solo un deshacer HECHO es «deshecha»; si no se pudo revertir (cambiado
+ * después, fallo) es un INTENTO: no se registra como deshecha, pero la racha se corta igual (pulsar ↩️ es desconfianza).
+ */
+export function registroTrasDeshacer(r: 'ok' | 'cambiado_despues' | 'fallo_al_deshacer'): 'deshecha' | 'intento_fallido' {
+  return r === 'ok' ? 'deshecha' : 'intento_fallido'
+}

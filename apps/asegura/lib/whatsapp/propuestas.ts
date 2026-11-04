@@ -18,9 +18,10 @@ import { editarOportunidad } from '../oportunidad-seguimiento'
 import { enlaceFichaCliente } from '../datos-cotizados'
 import { eur } from '../dinero'
 import { ORIGEN_TAREA_IA } from './ejecutor'
-import { botonDeshacer, botonesPropuesta, cerrarSiFallaDevolver, lineaPropuesta, payloadPropuesta, puedeDeshacer, puedeResolver, tareaAlAplicar, type Decision, type TipoPropuesta } from './propuestas-reglas'
-import { ACTOR_AUTONOMO, ENV_AUTONOMIA, ENV_UMBRAL, autonomiaActiva, decidirAutonomia, extractoRedactado, leerCorreccion, type Resolucion } from './aprendizaje-reglas'
-import { rachaDe, registrarContexto, registrarDeshecha, registrarResolucion } from './aprendizaje'
+import { decryptField } from '@central/module-seguros-pii'
+import { botonDeshacer, botonesPropuesta, cerrarSiFallaDevolver, fechaAlAplicar, lineaPropuesta, payloadPropuesta, planRevertir, puedeDeshacer, puedeResolver, registroTrasDeshacer, tareaAlAplicar, tareaSeguimientoDe, type Decision, type EstadoParaRevertir, type TipoPropuesta } from './propuestas-reglas'
+import { ACTOR_AUTONOMO, ENV_AUTONOMIA, ENV_UMBRAL, autonomiaActiva, decidirAutonomia, leerCorreccion, observacionParaAprendizaje, type Resolucion } from './aprendizaje-reglas'
+import { rachaDe, registrarContexto, registrarDeshecha, registrarIntentoDeshacer, registrarResolucion } from './aprendizaje'
 
 const faltaMigracion = (e: unknown) => esTablaAusente(e) || esColumnaAusente(e)
 
@@ -174,19 +175,16 @@ export async function resolverPropuesta(
     observacion = c.observacion
   }
 
+  // Se reclama SIN tocar el `payload`: la fecha corregida por ✏️ solo se persiste tras aplicar con éxito (si aplicar
+  // falla, la propuesta vuelve a pendiente con el payload ORIGINAL).
   let reclamada: FilaPropuesta | undefined
   try {
     ;[reclamada] = await db.$queryRaw<FilaPropuesta[]>(Prisma.sql`
-      with antes as (
-        select payload->>'fecha' as fecha_original from whatsapp_propuestas where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid
-      )
-      update whatsapp_propuestas set estado = ${nuevo}, resuelta_at = now(), resuelta_por = ${actor.slice(0, 120)},
-             payload = case when ${nuevaFecha}::text is not null and tipo <> 'pagado'
-                            then jsonb_set(payload, '{fecha}', to_jsonb(${nuevaFecha}::text)) else payload end
+      update whatsapp_propuestas set estado = ${nuevo}, resuelta_at = now(), resuelta_por = ${actor.slice(0, 120)}
        where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'pendiente'
          and (${decision} = 'descartar' or caduca_at > ${ahora})
       returning id::text as id, tipo, estado, caduca_at, cliente_id::text as cliente_id, recibo_id::text as recibo_id,
-                oportunidad_id::text as oportunidad_id, payload->>'fecha' as fecha, (select fecha_original from antes) as fecha_original`)
+                oportunidad_id::text as oportunidad_id, payload->>'fecha' as fecha, payload->>'fecha' as fecha_original`)
   } catch (e) {
     if (faltaMigracion(e)) return { ok: false, estado: 'sin_migracion', status: 503 }
     throw e
@@ -205,10 +203,11 @@ export async function resolverPropuesta(
     return { ok: false, estado: 'ya_resuelta', status: 409, motivo: actual.estado }
   }
   const propuesto = reclamada.fecha_original ? { fecha: reclamada.fecha_original } : {}
+  // La observación de ✏️ va al aprendizaje (y de ahí al prompt) REDACTADA, también del nombre del cliente.
+  const observacionAprendida = observacion ? observacionParaAprendizaje(observacion, await nombresDe(correduriaId, id)) : null
   const aprender = (resolucion: Resolucion, final: { fecha?: string } | null) =>
     registrarResolucion(correduriaId, {
-      propuestaId: id, tipo: reclamada!.tipo, resolucion, autonoma, actor, propuesto, final,
-      observacion: observacion ? extractoRedactado(observacion) : null,
+      propuestaId: id, tipo: reclamada!.tipo, resolucion, autonoma, actor, propuesto, final, observacion: observacionAprendida,
     })
 
   if (decision === 'descartar') {
@@ -217,9 +216,11 @@ export async function resolverPropuesta(
     return { ok: true, estado: 'descartada', tipo: reclamada.tipo, resultado: {} }
   }
 
+  // Lo que se APLICA: con la fecha corregida por ✏️ (todavía no escrita en el payload).
+  const efectiva: FilaPropuesta = { ...reclamada, fecha: fechaAlAplicar(reclamada.tipo, reclamada.fecha_original, nuevaFecha) }
   let resultado: Record<string, unknown>
   try {
-    const r = await aplicar(correduriaId, reclamada, actor, ahora, observacion)
+    const r = await aplicar(correduriaId, efectiva, actor, ahora, observacion)
     if (!r.ok) {
       await cerrarSinEfecto(correduriaId, id, { error: r.motivo })
       return { ok: false, estado: r.motivo === 'sin_ancla' ? 'sin_ancla' : 'fallo_al_aplicar', status: r.status, motivo: r.motivo }
@@ -231,11 +232,14 @@ export async function resolverPropuesta(
     return { ok: false, estado: faltaMigracion(e) ? 'sin_migracion' : 'fallo_al_aplicar', status: faltaMigracion(e) ? 503 : 500 }
   }
   if (autonoma) resultado = { ...resultado, autonoma: true }
-  if (decision === 'modificar') resultado = { ...resultado, modificada: { fechaOriginal: reclamada.fecha_original, fechaFinal: reclamada.fecha, conObservacion: observacion !== null } }
+  if (decision === 'modificar') resultado = { ...resultado, modificada: { fechaOriginal: reclamada.fecha_original, fechaFinal: efectiva.fecha, conObservacion: observacion !== null } }
+  // Aplicada con éxito: AHORA se persiste la fecha con la que se aplicó (la corregida por ✏️, si la hubo).
   await db.$executeRaw(Prisma.sql`
-    update whatsapp_propuestas set resultado = ${JSON.stringify(resultado)}::jsonb
+    update whatsapp_propuestas set resultado = ${JSON.stringify(resultado)}::jsonb,
+           payload = case when ${efectiva.fecha}::text is not null and tipo <> 'pagado'
+                          then jsonb_set(payload, '{fecha}', to_jsonb(${efectiva.fecha}::text)) else payload end
      where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`)
-  await aprender(decision === 'modificar' ? 'modificada' : 'aplicada', reclamada.fecha ? { fecha: reclamada.fecha } : {})
+  await aprender(decision === 'modificar' ? 'modificada' : 'aplicada', efectiva.fecha ? { fecha: efectiva.fecha } : {})
   return { ok: true, estado: decision === 'modificar' ? 'modificada' : 'aplicada', tipo: reclamada.tipo, resultado }
 }
 
@@ -277,7 +281,7 @@ type FilaDeshacer = {
  * se reclama con un UPDATE condicionado); si alguien cambió el dato después, no se pisa (409 `cambiado_despues`).
  * Si revertir falla, la marca se quita para poder reintentar. Siempre reinicia la racha de ese tipo.
  */
-export async function deshacerPropuesta(correduriaId: string, id: string, actor: string, ahora: Date = new Date()): Promise<ResultadoDeshacer> {
+export async function deshacerPropuesta(correduriaId: string, id: string, actor: string, _ahora: Date = new Date()): Promise<ResultadoDeshacer> {
   const db = prismaAsegura()
   let fila: FilaDeshacer | undefined
   try {
@@ -300,66 +304,134 @@ export async function deshacerPropuesta(correduriaId: string, id: string, actor:
     const v = puedeDeshacer(actual)
     return v.ok ? { ok: false, estado: 'ya_deshecha', status: 409 } : { ok: false, estado: v.estado, status: v.status }
   }
-  // Pulsar ↩️ ya es la señal: la racha de ese tipo vuelve a 0 aunque revertir no pueda hacerse.
-  await registrarDeshecha(correduriaId, id, actor)
   const soltar = () =>
     db.$executeRaw(Prisma.sql`
       update whatsapp_propuestas set resultado = resultado - 'deshecha_at' - 'deshecha_por'
        where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`).catch(() => 0)
+  let r: 'ok' | 'cambiado_despues' | 'fallo_al_deshacer'
   try {
-    const r = await revertir(correduriaId, fila, actor, ahora)
-    if (r !== 'ok') {
-      await soltar()
-      return { ok: false, estado: r, status: r === 'cambiado_despues' ? 409 : 500 }
-    }
+    r = await revertir(correduriaId, fila, actor)
   } catch (e) {
     console.error('[whatsapp-ia] deshacer propuesta:', e instanceof Error ? e.name : 'error')
+    r = 'fallo_al_deshacer'
+  }
+  // Pulsar ↩️ ya es la señal: la racha de ese tipo se corta SIEMPRE. Pero solo un deshacer HECHO queda como «deshecha»;
+  // si no se pudo revertir (cambiado después, fallo) queda como intento fallido.
+  if (registroTrasDeshacer(r) === 'deshecha') await registrarDeshecha(correduriaId, id, actor)
+  else await registrarIntentoDeshacer(correduriaId, id, actor, r)
+  if (r !== 'ok') {
     await soltar()
-    return { ok: false, estado: 'fallo_al_deshacer', status: 500 }
+    return { ok: false, estado: r, status: r === 'cambiado_despues' ? 409 : 500 }
   }
   return { ok: true, estado: 'deshecha', tipo: fila.tipo }
 }
 
 const texto = (v: unknown): string | null => (typeof v === 'string' && v ? v : null)
 
-async function revertir(correduriaId: string, p: FilaDeshacer, actor: string, ahora: Date): Promise<'ok' | 'cambiado_despues' | 'fallo_al_deshacer'> {
+/**
+ * Revierte en UNA transacción: bloquea (`for update`) lo que escribió aplicar, comprueba que sigue como lo dejó
+ * (`planRevertir`: si no, `cambiado_despues` y nada cambia) y lo devuelve al previo. Sin hueco entre comprobar y
+ * escribir (sin TOCTOU). Un vencimiento NO pasa por `editarOportunidad` (abriría otra transacción y reprogramaría
+ * de nuevo): vuelve la fecha y deshace exactamente la tarea de seguimiento que aplicar creó o movió.
+ */
+async function revertir(correduriaId: string, p: FilaDeshacer, actor: string): Promise<'ok' | 'cambiado_despues' | 'fallo_al_deshacer'> {
   const previo = (p.resultado.previo ?? {}) as Record<string, unknown>
-  const tareaId = texto(p.resultado.tareaId)
-  if (p.tipo === 'vencimiento') {
-    if (!p.oportunidad_id) return 'fallo_al_deshacer'
-    const [o] = await prismaAsegura().$queryRaw<{ fecha: string | null }[]>(Prisma.sql`
-      select to_char(fecha_fin_vigencia, 'YYYY-MM-DD') as fecha from oportunidades
-       where id = ${p.oportunidad_id}::uuid and correduria_id = ${correduriaId}::uuid`)
-    if (!o) return 'fallo_al_deshacer'
-    if (o.fecha !== p.fecha) return 'cambiado_despues'
-    const anterior = texto(previo.fechaFinVigencia)
-    const r = await editarOportunidad(correduriaId, p.oportunidad_id, { fechaFinVigencia: anterior }, actor, { reprogramar: anterior !== null, hoy: ahora })
-    if (!r.ok) return 'fallo_al_deshacer'
-    await historial(correduriaId, p.cliente_id, `WhatsApp: deshecho el vencimiento aplicado solo (vuelve a ${anterior ?? 'sin fecha'}) — por ${actor}`).catch(() => {})
-    return 'ok'
-  }
+  const tareaIaId = p.tipo === 'vencimiento' ? null : texto(p.resultado.tareaId)
+  const tareaSeg = p.tipo === 'vencimiento' ? tareaSeguimientoDe(previo) : null
   return prismaAsegura().$transaction(async (tx) => {
-    if (p.tipo === 'fecha_cobro') {
+    const actual: EstadoParaRevertir = {}
+    if (p.tipo === 'vencimiento') {
+      if (!p.oportunidad_id) return 'fallo_al_deshacer' as const
+      const [o] = await tx.$queryRaw<{ fecha: string | null; estado: string }[]>(Prisma.sql`
+        select to_char(fecha_fin_vigencia, 'YYYY-MM-DD') as fecha, estado::text as estado from oportunidades
+         where id = ${p.oportunidad_id}::uuid and correduria_id = ${correduriaId}::uuid for update`)
+      actual.oportunidad = o ?? null
+      if (tareaSeg) {
+        const [t] = await tx.$queryRaw<{ fecha: string | null; estado: string }[]>(Prisma.sql`
+          select to_char(fecha_limite at time zone 'Europe/Madrid', 'YYYY-MM-DD') as fecha, estado::text as estado from gestiones
+           where id = ${tareaSeg.id}::uuid and correduria_id = ${correduriaId}::uuid and oportunidad_id = ${p.oportunidad_id}::uuid
+             and origen_trigger = 'central:seguimiento'
+           for update`)
+        actual.tareaSeguimiento = t ?? null
+      }
+    } else if (p.tipo === 'fecha_cobro') {
       if (!p.recibo_id) return 'fallo_al_deshacer' as const
-      // Solo si nadie la ha cambiado después: lo que haya puesto una persona no se pisa.
-      const n = await tx.$executeRaw(Prisma.sql`
-        update poliza_recibos set fecha_prometida_pago = ${texto(previo.fechaPrometida)}::date, updated_at = now()
-         where id = ${p.recibo_id}::uuid and correduria_id = ${correduriaId}::uuid
-           and fecha_prometida_pago is not distinct from ${p.fecha}::date`)
-      if (n === 0) return 'cambiado_despues' as const
+      const [r] = await tx.$queryRaw<{ prometida: string | null }[]>(Prisma.sql`
+        select to_char(fecha_prometida_pago, 'YYYY-MM-DD') as prometida from poliza_recibos
+         where id = ${p.recibo_id}::uuid and correduria_id = ${correduriaId}::uuid for update`)
+      actual.recibo = r ?? null
     }
-    if (tareaId) {
-      await tx.$executeRaw(Prisma.sql`
-        update gestiones set estado = 'cerrada', observaciones = coalesce(observaciones, '') || ${`\n— Deshecha (propuesta de WhatsApp aplicada sola) por ${actor}`}, updated_at = now()
-         where id = ${tareaId}::uuid and correduria_id = ${correduriaId}::uuid and origen_trigger = ${ORIGEN_TAREA_IA}
-           and estado::text in ('pendiente', 'en_curso')`)
+    const plan = planRevertir({ tipo: p.tipo, aplicada: p.fecha, previo, tareaIaId, actual })
+    if (!plan.ok) return plan.estado
+    const nota = `\n— Deshecha (propuesta de WhatsApp aplicada sola) por ${actor}`
+    for (const paso of plan.pasos) {
+      if (paso.paso === 'vencimiento') {
+        await tx.$executeRaw(Prisma.sql`
+          update oportunidades set fecha_fin_vigencia = ${paso.fecha}::date, updated_at = now()
+           where id = ${p.oportunidad_id}::uuid and correduria_id = ${correduriaId}::uuid`)
+        await tx.$executeRaw(Prisma.sql`
+          insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
+          values (${correduriaId}::uuid, ${p.oportunidad_id}::uuid, 'editada', cast(${actual.oportunidad!.estado} as estado_comercial),
+                  cast(${actual.oportunidad!.estado} as estado_comercial),
+                  ${JSON.stringify({ fechaFinVigencia: { antes: p.fecha, despues: paso.fecha }, deshecho: 'whatsapp_autonoma' })}::jsonb, ${actor})`)
+      } else if (paso.paso === 'prometida') {
+        await tx.$executeRaw(Prisma.sql`
+          update poliza_recibos set fecha_prometida_pago = ${paso.fecha}::date, updated_at = now()
+           where id = ${p.recibo_id}::uuid and correduria_id = ${correduriaId}::uuid`)
+      } else if (paso.paso === 'cerrar_tarea_ia') {
+        await tx.$executeRaw(Prisma.sql`
+          update gestiones set estado = 'cerrada', observaciones = coalesce(observaciones, '') || ${nota}, updated_at = now()
+           where id = ${paso.id}::uuid and correduria_id = ${correduriaId}::uuid and origen_trigger = ${ORIGEN_TAREA_IA}
+             and estado::text in ('pendiente', 'en_curso')`)
+      } else if (paso.paso === 'cerrar_tarea_seguimiento') {
+        await tx.$executeRaw(Prisma.sql`
+          update gestiones set estado = 'cerrada', observaciones = coalesce(observaciones, '') || ${nota}, updated_at = now()
+           where id = ${paso.id}::uuid and correduria_id = ${correduriaId}::uuid and origen_trigger = 'central:seguimiento'
+             and estado::text <> 'cerrada'`)
+      } else {
+        await tx.$executeRaw(Prisma.sql`
+          update gestiones set fecha_limite = (${paso.fecha}::date + time '23:59:59') at time zone 'Europe/Madrid', updated_at = now()
+           where id = ${paso.id}::uuid and correduria_id = ${correduriaId}::uuid and origen_trigger = 'central:seguimiento'
+             and estado::text <> 'cerrada'`)
+      }
     }
+    const que = p.tipo === 'vencimiento' ? `el vencimiento (vuelve a ${texto(previo.fechaFinVigencia) ?? 'sin fecha'})` : `la propuesta «${p.tipo}»`
     await tx.$executeRaw(Prisma.sql`
       insert into historial_interno (correduria_id, cliente_id, tipo, texto)
       values (${correduriaId}::uuid, ${p.cliente_id}::uuid, cast('contacto' as tipo_historial_interno),
-              ${`WhatsApp: deshecha la propuesta «${p.tipo}» aplicada sola — por ${actor}`.slice(0, 2000)})`)
+              ${`WhatsApp: deshecho ${que} aplicado solo — por ${actor}`.slice(0, 2000)})`)
     return 'ok' as const
   })
+}
+
+/**
+ * Nombres con los que redactar la observación de ✏️ (nombre y apellidos de la ficha y el perfil de WhatsApp de la
+ * conversación). `null` = no se pudieron leer: la observación no se guarda (estado conservador).
+ */
+async function nombresDe(correduriaId: string, propuestaId: string): Promise<(string | null)[] | null> {
+  try {
+    const [f] = await prismaAsegura().$queryRaw<{ nombre: string | null; apellidos: string | null; perfil: string | null }[]>(Prisma.sql`
+      select c.nombre, c.apellidos, v.wa_perfil_nombre_cifrado as perfil
+        from whatsapp_propuestas w
+        join clientes c on c.id = w.cliente_id and c.correduria_id = ${correduriaId}::uuid
+        left join conversaciones v on v.id = w.conversacion_id and v.correduria_id = ${correduriaId}::uuid
+       where w.id = ${propuestaId}::uuid and w.correduria_id = ${correduriaId}::uuid`)
+    if (!f) return null
+    let perfil: string | null = null
+    if (f.perfil) {
+      if (!f.perfil.startsWith('v1:')) perfil = f.perfil
+      else {
+        try {
+          perfil = decryptField(f.perfil)
+        } catch {
+          return null
+        }
+      }
+    }
+    return [f.nombre, f.apellidos, perfil]
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -408,7 +480,15 @@ async function aplicar(correduriaId: string, p: FilaPropuesta, actor: string, ah
     const r = await editarOportunidad(correduriaId, p.oportunidad_id, { fechaFinVigencia: p.fecha }, actor, { reprogramar: true, hoy: ahora })
     if (!r.ok) return { ok: false, motivo: r.estado, status: r.status }
     if (nota) await historial(correduriaId, p.cliente_id, `WhatsApp: vencimiento ${p.fecha}${nota} (aplicado por ${actor})`).catch(() => {})
-    return { ok: true, resultado: { oportunidadId: p.oportunidad_id, tarea: r.tarea, previo: { fechaFinVigencia: antes?.fecha ?? null } } }
+    // ↩️ necesita saber QUÉ tarea de seguimiento tocó (creada o movida, y desde qué fecha) para deshacerlo exacto.
+    const tareaSeguimiento = r.tarea ? { id: r.tarea.tareaId, accion: r.tarea.accion, fecha: r.tarea.fecha, desde: r.tarea.desde } : null
+    return {
+      ok: true,
+      resultado: {
+        oportunidadId: p.oportunidad_id, tarea: r.tarea ? { accion: r.tarea.accion, fecha: r.tarea.fecha } : null,
+        previo: { fechaFinVigencia: antes?.fecha ?? null, tareaSeguimiento },
+      },
+    }
   }
   if (!p.recibo_id) return { ok: false, motivo: 'sin_ancla', status: 409 }
   const tareaBase = tareaAlAplicar(p.tipo, p.fecha, hoy)
