@@ -774,3 +774,34 @@ en el markdown que lo generó; aquí solo lo que cambia lo que `central` puede d
 Para resolver lo que sigue como «NO DOCUMENTADO» (catálogos completos de moto, unidad de
 `deathBenefit`, facturación): llamar al catálogo real en INT con credenciales, o preguntar a
 `soporteapi@codeoscopic.com` (el `@avant2.es` rebota desde 2026; no usar).
+
+## Revisión 04/11/2026 (portal INT accesible desde el contenedor; solo lo nuevo o contradictorio)
+
+Spec bajada por `curl` (sin credenciales) y guardada en `docs/avant2/` (ver su README). Cifras exactas de HOY:
+**110 paths, 130 operaciones, 397 schemas** (el doc decía 111 paths / 131 operaciones; la diferencia es de conteo,
+los ramos y catálogos coinciden). `GET {url}` (File) es la operación 130.
+- **Configuración por API: solo LECTURA de la `config`, ninguna escritura.** `GET /insurance-lines/{id}/products` →
+  `ProductWithoutBrokerFeeConfig_V1 {id, name, description, imageUrl, configs[{id, name, imageUrl, favorite}],
+  supports{policyApplication}}`. `Config_V1` es solo `{id}`. No hay endpoint para fijar opciones por defecto,
+  preemisión, descuentos ni comisiones por compañía: se hace en el panel de Avant2 (el overview lo confirma:
+  «allows you to configure these default options for most products»).
+- **Pisar por petición:** `POST /insurances` y `POST /insurances/{id}/offers` aceptan `QuoteOptions_V1
+  {config:{id}, options[]}` (`ReRateOfferRequestQuoteProduct_V1`); `InsuranceProductOption_V1` = `id,type,label,included,
+  visible,value,textValue,deductible,deductibleType,formattedOptions,formattedValue`.
+- **Product Form: dos etapas** (UI del portal): `PREISSUANCE` = «Render quoted product options» (`render(quote)`, sobre
+  una cotización existente) y `QUOTATION` = «Render default product options» (`render(insurance, product{config:{id}})`,
+  muestra las opciones POR DEFECTO configuradas en la organización). Tercer parámetro opcional `initialOptions`. El
+  iframe usa `https://product-form.avant.codeoscopic.io/js.js`, CSP `frame-src *.codeoscopic.io`, clase `AvantProductForm`
+  (`render`, `getProductOptions`, `destroy`). `POST /product-form-requests` (`X-User-Email` OBLIGATORIO) recibe
+  `{method, path, params[{name,value}], body}`; el iframe pide por ahí también las listas de **descuentos** y subformularios:
+  los descuentos NO tienen endpoint REST propio (`discount`/`bonus`/`webhook`/`preissuance` = 0 apariciones en el YAML).
+- **Comisiones:** `ProductConfig_V1.brokerFee {defaultFee, minFee, maxFee}` (`Fee_V1 {type, value}`) es la comisión DE LA
+  CORREDURÍA al cliente, no la de la compañía; `PATCH /insurances/{id}/quotes/{quoteId}` la cambia por cotización.
+  `commissionUser` (`CommissionUser_V1`) = quién cobra la póliza. No hay API de comisiones de compañía.
+- **Compañías/vendors:** `GET /insurance-vendors` → `{id,name,description}` (sin `imageUrl` en este endpoint; `InsuranceVendor_V1`
+  sí lo trae dentro de productos); `GET /insurance-companies` → `{code (DGS), name}`; solo hay `/car|motorcycle/insurance-companies`
+  por ramo. El portal NO lista compañías por ramo de hogar/vida/salud/decesos: se saca de `products` de cada ramo.
+- **Ramos soportados en el esquema** (`*RiskPatch_V1`): Car, Motorcycle, Home, Health, Burial, TermLife (los mismos 6).
+- **`X-Client-App`** sigue «will be mandatory eventually». El overview sigue remitiendo credenciales a `soporteapi@avant2.es`
+  (el doc ya anotaba que rebota; el email del contacto del `info` es `soporteapi@codeoscopic.com`). Su «Changelog» está vacío.
+- **Confirmado sin cambios:** cero webhooks en la spec, `GET /vehicles` sigue pidiendo créditos, TBM en `Brokerage`.

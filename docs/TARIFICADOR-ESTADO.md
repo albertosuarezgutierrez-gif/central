@@ -34,6 +34,7 @@ Actualizado: 04/11/2026
 
 ## 3. Abierto ahora (04/11/2026)
 
+- **Avant2:** spec y overview en `docs/avant2/`; qué se lee/fija por API y checklist del panel en `docs/AVANT2-CONFIGURACION.md`.
 - **a)** Resuelto: Avant2 auto parado por diseño (bot primero), no por fallo. Para ver qué compañías tiene activas la cuenta: `GET /api/operador/codeoscopic/companias` (gratis, requiere secreto de operador).
 - **b)** Consulta GET /insurance-vendors (gratis) para saber qué compañías tiene activas la cuenta.
 - **c)** PR #5534: permisos de navegación en BD (0.3.46). Migración 2026-11-04d NO aplicada.
