@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { textoFotoPurgada } from '@central/module-taller'
 import { eurosACent } from '@/lib/ajustes'
+import { claseEstado } from '../../_ui'
 import { descartarPropuestaAccion, enviarPropuestaAccion, proponerAmpliacionAccion } from '../acciones'
 
 type Linea = { descripcion: string; referencia: string; cantidad: string }
@@ -75,7 +76,7 @@ export function GestionPropuesta({ p, puedeGestionar }: { p: PropuestaVista; pue
   const completos = cents.every((x) => x.c !== null)
   return (
     <div className="ficha">
-      <p><strong>{p.autor}</strong> <span className="estado">{p.estado.replace('_', ' ')}</span></p>
+      <p><strong>{p.autor}</strong> <span className={claseEstado(p.estado)}>{p.estado.replace('_', ' ')}</span></p>
       {p.explicacion && <p>{p.explicacion}</p>}
       <ul className="lista-simple">
         {p.lineas.map((l) => (

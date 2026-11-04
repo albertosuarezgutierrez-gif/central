@@ -6,7 +6,7 @@
 
 ## Reglas
 - **Multi-taller desde el inicio:** toda lectura/escritura lleva `taller_id`; la clave de negocio es la matrícula.
-- **Marca:** logo y colores del taller (`MARCA_TALLERES_G2` de `@central/brand`); «con Grupo ASegura» va fijo y pequeño
+- **Marca (04/11/2026, misma sintonía que rrhh):** base `emitirRootCss(MARCA_ASEGURA)` + Quicksand/Nunito Sans; encima solo el ACENTO del taller (`lib/marca-css.ts`, logo y verde de `MARCA_TALLERES_G2`, texto negro sobre lima, `--brand-ink` oscurecido AA); «con Grupo ASegura» va fijo y pequeño
   (`coMarca`), no es editable. Resolución por taller en `lib/marca.ts`.
 - **Login taller → usuario → PIN** (`@central/core-identity/pin`): (1) el dispositivo recuerda el **código del taller** (8 caracteres, lo genera el alta,
   el dueño lo edita/regenera en Ajustes; cookie firmada con el CÓDIGO, no el id: regenerarlo revoca los móviles); (2) se elige el usuario (solo activos);

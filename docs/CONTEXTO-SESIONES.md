@@ -20,6 +20,8 @@ Nuevo `packages/core-instagram` (Graph API parametrizada) + plataforma `lib/corr
 Cepo `revisarCopy` obligatorio (regenera 1 vez → `rechazado_copy`). Sin `ASEGURA_INSTAGRAM_ACCESS_TOKEN`/`_USER_ID` → «Aprobar» = `aprobado_manual`.
 ia-rest: quitados crons `instagram` e `instagram-ideas` (metricas/refresh siguen; código intacto).
 Migración `asegura_instagram_borradores` APLICADA (04/11). PR #5492 mergeado.
+**(04/11/2026)** — Taller G2 en producción: dueño Manuel dado de alta (plataforma /operador/clientes); empresa RRHH «Talleres de Automoción G2, S.L.» (1a641ea7-…, fichaje on, vinculada con el taller en ambos sentidos, responsable Pilar ya existente); `TALLER_STORAGE_SERVICE_KEY` puesta y redeploy READY (ojo: «Redeploy» del último commit [skip vercel] se CANCELA; redeploy del deployment bueno). Rediseño UI con la sintonía de rrhh (base ASegura + acento G2). PENDIENTE: fichas en /correduria (S.L. + relaciones, dirección Camas de Global 2 Instalaciones), prueba de foto/firma en móvil.
+
 **(04/11/2026)** — Taller G2, infra y alta del dueño: PR #5502 mergeado (cfbcbae71). Infra completa: SQL taller 0001-0008 + rrhh 0029/0030 aplicadas, Vercel `taller` con dominio taller.grupoasegura.es READY, RLS auditado OK.
 Firma de retirada al entregar + purga diaria de fotos con plazo configurable (≥90 días, alta 180).
 Arreglo del alta (`apps/taller/lib/alta-taller.ts`): `tallerId` opcional completa un taller existente (fija NIF si es NULL, 409 si es otro); con config y 0 dueños activos crea el dueño con PIN (antes 409). Sin SQL nuevo. Tests en `test/alta-taller.test.ts`.

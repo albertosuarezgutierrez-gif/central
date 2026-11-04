@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { formatearEur } from '@central/module-taller'
 import { paraPagina } from '@/lib/contexto'
 import { Cabecera } from '../_marca'
+import { claseEstado } from '../_ui'
 
 export const dynamic = 'force-dynamic'
 const PAGINA = 50
@@ -38,7 +39,7 @@ export default async function Pagina({ searchParams }: { searchParams: Promise<{
             {datos.ps.length === 0 ? <p className="tenue">Todavía no hay presupuestos.</p> : (
               <ul className="lista-simple">
                 {datos.ps.map((p) => (
-                  <li key={p.id}><a href={`/presupuestos/${p.id}`}>{p.matricula}</a><span className="estado">{p.estado}</span><span>{formatearEur(p.total)}</span></li>
+                  <li key={p.id}><a href={`/presupuestos/${p.id}`}>{p.matricula}</a><span className={claseEstado(p.estado)}>{p.estado}</span><strong>{formatearEur(p.total)}</strong></li>
                 ))}
               </ul>
             )}
