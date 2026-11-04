@@ -7,6 +7,7 @@ import { conPermiso, configDe, mensajeDeAcceso } from '@/lib/contexto'
 import { direccionOpcional } from '@/lib/direccion'
 import { ipDeCabecera } from '@/lib/ip'
 import { notificadorRegistro } from '@/lib/notificador'
+import { vincularCitaARecepcion, type TxCitas } from '@/lib/citas'
 import { buscarPorMatricula, crearRecepcion, ErrorRecepcion, type FotoEntrada, type TxRecepcion } from '@/lib/recepcion'
 
 export type Respuesta<T = object> = ({ ok: true } & T) | { ok: false; errores: string[] }
@@ -47,6 +48,7 @@ const COMBUSTIBLE = ['', 'vacio', '1/4', '1/2', '3/4', 'lleno'] as const
 const Datos = z.object({
   matricula: z.string().min(1).max(20),
   clienteId: z.string().uuid().nullable(),
+  citaId: z.string().uuid().nullable().optional(),
   nombre: z.string().max(200),
   movil: z.string().max(30),
   correo: z.string().max(200),
@@ -95,7 +97,7 @@ export async function guardarRecepcion(fd: FormData): Promise<Respuesta<{ recepc
     const r = await conPermiso('recepcion', async (tx, c) => {
       const config = await configDe(tx, c.tallerId)
       if (!config) throw new ErrorRecepcion('El taller no tiene configuración de alta')
-      return crearRecepcion(tx as unknown as TxRecepcion, {
+      const rec = await crearRecepcion(tx as unknown as TxRecepcion, {
         tallerId: c.tallerId, usuarioId: c.usuarioId, matricula: d.matricula, clienteId: d.clienteId,
         cliente: { nombre: d.nombre, movil: d.movil, correo: d.correo }, direccion: dir.direccion, km, combustible: d.combustible || null,
         objetos: d.objetos, motivo: d.motivo, danos: d.danos.trim() ? { nota: d.danos } : null,
@@ -107,6 +109,9 @@ export async function guardarRecepcion(fd: FormData): Promise<Respuesta<{ recepc
         config, almacen: almacenActivo(), notificador: notificadorRegistro(tx as never, c.usuarioId),
         textoTaller: { version: config.textos.versionTextoComercialTaller, texto: config.textos.textoConsentimientoComercialTaller },
       })
+      // El coche llega con cita: la cita pasa a «realizada» y queda enlazada a esta recepción (una sentencia condicionada).
+      if (d.citaId) await vincularCitaARecepcion(tx as unknown as TxCitas, { tallerId: c.tallerId, citaId: d.citaId, recepcionId: rec.recepcionId, ahora: new Date() })
+      return rec
     })
     revalidatePath('/recepcion')
     revalidatePath('/ordenes')

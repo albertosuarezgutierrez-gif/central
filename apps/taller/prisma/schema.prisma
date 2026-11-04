@@ -66,6 +66,15 @@ model Configuracion {
   marcaLogoRuta                  String?  @map("marca_logo_ruta")
   marcaColorPrimario             String?  @map("marca_color_primario")
   marcaColorSecundario           String?  @map("marca_color_secundario")
+  agendaZonaHoraria              String   @default("Europe/Madrid") @map("agenda_zona_horaria")
+  agendaMaxCochesFranja          Int      @default(2) @map("agenda_max_coches_franja")
+  agendaOcupablePb               Int      @default(8500) @map("agenda_ocupable_pb")
+  agendaMargenMinutos            Int      @default(15) @map("agenda_margen_minutos")
+  agendaAntelacionMinHoras       Int      @default(12) @map("agenda_antelacion_min_horas")
+  agendaAntelacionMaxDias        Int      @default(60) @map("agenda_antelacion_max_dias")
+  agendaConfirmacion             String   @default("manual") @map("agenda_confirmacion")
+  agendaDiagnosticoMinutos       Int      @default(60) @map("agenda_diagnostico_minutos")
+  agendaInvitacionCaducaDias     Int      @default(14) @map("agenda_invitacion_caduca_dias")
   creadoEn                       DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
   actualizadoEn                  DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
 
@@ -588,5 +597,65 @@ model AmpliacionFoto {
   actualizadoEn DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
 
   @@map("ampliaciones_fotos")
+  @@schema("taller")
+}
+
+// ─── 0007: citas por enlace y agenda con capacidad ───────────────────────────────────────────────────────────
+/// Festivos / cierres del taller (fecha LOCAL).
+model CierreAgenda {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId      String   @map("taller_id") @db.Uuid
+  fecha         DateTime @db.Date
+  motivo        String   @default("")
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("cierres_agenda")
+  @@schema("taller")
+}
+
+/// Cita (0001 + 0007). `pedida` = pendiente de que el taller la acepte; `confirmada` = aceptada.
+model Cita {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId         String    @map("taller_id") @db.Uuid
+  clienteId        String?   @map("cliente_id") @db.Uuid
+  vehiculoId       String    @map("vehiculo_id") @db.Uuid
+  presupuestoId    String?   @map("presupuesto_id") @db.Uuid
+  inicio           DateTime  @db.Timestamptz(6)
+  duracionMinutos  Int       @map("duracion_minutos")
+  puesto           Int       @default(1)
+  motivo           String?
+  estado           String    @default("pedida")
+  servicio         String?
+  origen           String    @default("taller")
+  invitacionId     String?   @map("invitacion_id") @db.Uuid
+  recepcionId      String?   @map("recepcion_id") @db.Uuid
+  motivoCancelacion String?  @map("motivo_cancelacion")
+  llegadaEn        DateTime? @map("llegada_en") @db.Timestamptz(6)
+  creadoEn         DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn    DateTime  @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("citas")
+  @@schema("taller")
+}
+
+/// Invitación a pedir cita por enlace. SOLO el hash del token (256 bits); un solo uso; caduca.
+model InvitacionCita {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId      String    @map("taller_id") @db.Uuid
+  nombre        String
+  correo        String?
+  matricula     String?
+  tokenHash     String    @unique @map("token_hash")
+  creadaPor     String    @map("creada_por") @db.Uuid
+  creadaEn      DateTime  @default(now()) @map("creada_en") @db.Timestamptz(6)
+  caducaEn      DateTime  @map("caduca_en") @db.Timestamptz(6)
+  usadaEn       DateTime? @map("usada_en") @db.Timestamptz(6)
+  revocadaEn    DateTime? @map("revocada_en") @db.Timestamptz(6)
+  citaId        String?   @map("cita_id") @db.Uuid
+  envio         String    @default("registrado")
+  actualizadoEn DateTime  @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("invitaciones_cita")
   @@schema("taller")
 }

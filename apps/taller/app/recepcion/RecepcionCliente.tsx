@@ -20,19 +20,21 @@ async function comprimir(file: File): Promise<Blob> {
   return new Promise((ok, ko) => c.toBlob((b) => (b ? ok(b) : ko(new Error('foto'))), 'image/jpeg', 0.8))
 }
 
-export function RecepcionCliente({ textoAsegura, textoTaller }: { textoAsegura: string; textoTaller: string }) {
-  const [matricula, setMatricula] = useState('')
+export type InicialCita = { citaId: string; matricula: string; clienteId: string | null; nombre: string; movil: string; correo: string; motivo: string }
+
+export function RecepcionCliente({ textoAsegura, textoTaller, inicial }: { textoAsegura: string; textoTaller: string; inicial?: InicialCita | null }) {
+  const [matricula, setMatricula] = useState(inicial?.matricula ?? '')
   const [ficha, setFicha] = useState<FichaMatricula | null>(null)
   const [buscada, setBuscada] = useState(false)
-  const [clienteId, setClienteId] = useState<string | null>(null)
-  const [nombre, setNombre] = useState('')
-  const [movil, setMovil] = useState('')
-  const [correo, setCorreo] = useState('')
+  const [clienteId, setClienteId] = useState<string | null>(inicial?.clienteId ?? null)
+  const [nombre, setNombre] = useState(inicial?.nombre ?? '')
+  const [movil, setMovil] = useState(inicial?.movil ?? '')
+  const [correo, setCorreo] = useState(inicial?.correo ?? '')
   const [direccion, setDireccion] = useState<Direccion>({ ...DIRECCION_VACIA })
   const [km, setKm] = useState('')
   const [combustible, setCombustible] = useState('')
   const [objetos, setObjetos] = useState('')
-  const [motivo, setMotivo] = useState('')
+  const [motivo, setMotivo] = useState(inicial?.motivo ?? '')
   const [danos, setDanos] = useState('')
   const [segVigente, setSegVigente] = useState<'' | 'si' | 'no'>('')
   const [segAseg, setSegAseg] = useState('')
@@ -98,7 +100,7 @@ export function RecepcionCliente({ textoAsegura, textoTaller }: { textoAsegura: 
     iniciar(async () => {
       const fd = new FormData()
       fd.set('datos', JSON.stringify({
-        matricula, clienteId, nombre, movil, correo, direccion, km, combustible, objetos, motivo, danos,
+        matricula, clienteId, citaId: inicial?.citaId ?? null, nombre, movil, correo, direccion, km, combustible, objetos, motivo, danos,
         seguro: { vigente: segVigente, aseguradora: segAseg, vence: segVence },
         casillas: { asegura: cAsegura, taller: cTaller },
         fotoPosiciones: fotos.map((f) => f.posicion),

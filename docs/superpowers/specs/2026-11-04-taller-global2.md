@@ -151,7 +151,7 @@ cita, ITV, revisión) no requieren consentimiento comercial; los que promocionen
 histórico de recepciones y se corrigen en cada visita. Marca del taller en cada mensaje.
 
 **4.9 Cita (R28).** Hueco libre del calendario del taller, confirmación por correo con `.ics`, recordatorio 24 h antes.
-Evitar solapes por puesto y duración estimada del paquete.
+Evitar solapes por puesto y duración estimada del paquete. Desde 04/11/2026 el reparto es por capacidad, no por puesto: ver «Citas por enlace y agenda con capacidad» (§8, F1).
 
 ## 5. Direcciones y Catastro
 Toda dirección (taller, cliente, factura) sigue la regla del CLAUDE.md: CP → provincia → municipio → calle del Catastro →
@@ -209,7 +209,7 @@ aprobados por Alberto, datos del taller en mano.
 
 **F1 — Recepción, consentimiento, PIN, OT, presupuesto** (dimensionada para 1 mecánico; sin pantallas grandes ni huella). Alta de `apps/taller` (matriz, `vercel.json`, proyecto Vercel, rol y schema),
 `module-taller`, PIN extraído, recepción con fotos/km/daños/firma y resguardo PDF, consentimiento y registro, OT y partes de horas,
-presupuesto por paquetes con aceptación por enlace y cita, dictado con confirmación.
+presupuesto por paquetes con aceptación por enlace y cita, dictado con confirmación, **citas por enlace y agenda con capacidad** (sección siguiente).
 *Hecho:* una recepción real de Global 2 de punta a punta en tablet; PDF legible; presupuesto aceptado por enlace en móvil a 320 px; el dueño cambia el precio hora en Ajustes y el siguiente
 presupuesto lo usa sin tocar código.
 *Tests y guardianes:* (1) **ningún lead a `seguros` sin consentimiento registrado** (visto fallar: quitar el registro y ver rojo);
@@ -220,6 +220,39 @@ datos de otro; (5) PIN: bloqueo tras N intentos; (6) matriz `tests.yml` incluye 
 español (2.162,49€); (10) cálculo del paquete por tipo de vehículo y del margen baremo − real con fechas relativas a hoy;
 (11) **ningún precio, IVA, intervalo ni horario literal en la lógica de `module-taller`**: un test escanea el módulo y falla ante
 cualquier literal de ese tipo fuera de configuración (visto fallar: meter un «50» a pelo y ver rojo).
+
+### Citas por enlace y agenda con capacidad (decidido por Alberto, 04/11/2026; cierre de F1)
+**Qué es.** El taller invita a un cliente a pedir cita por un enlace y la agenda reparte los huecos sin cuellos de botella. No se planifica
+mecánico a mecánico: se reparte por **franja de entrada** y por **capacidad diaria en horas-mecánico**.
+
+**Motor (`module-taller/src/agenda.ts`, puro, `ahora` inyectado).** Una franja se ofrece si (1) caben más coches en ella
+(`maxCochesPorFranja`) y (2) el día tiene capacidad libre para el servicio:
+`capacidad del día = puestos × minutos de horario del día × % ocupable`; `ocupado = trabajo pendiente de las OT abiertas + citas pedidas/confirmadas`;
+se ofrece si `capacidad − ocupado ≥ baremo del paquete + margen`. El trabajo pendiente de las OT (baremo − horas ya trabajadas; una OT sin baremo
+cuenta como un diagnóstico, nunca como 0) se reparte desde hoy llenando la capacidad de cada día en orden. Simplificación asumida: la capacidad del día
+no se prorratea por la hora actual (la antelación mínima cubre el mismo día). Nunca ofrece franjas pasadas, fuera del horario semanal, en cierres
+ni fuera de la antelación mínima/máxima. Servicio «diagnóstico / no sé» con duración configurable (código reservado `diagnostico`).
+
+**Configuración editable por el dueño (Ajustes → Agenda; defaults en `configDeAlta().agenda`, espejo en 0007):** horario semanal y duración de la franja de entrada
+(`horarioCitas`), `puestos` = mecánicos/puestos activos, festivos y cierres, máx. coches por franja, % ocupable (alta 85 %), margen entre trabajos,
+antelación mínima (horas) y máxima (días), confirmación automática o manual (alta: **manual**), duración del diagnóstico y días de validez del enlace.
+
+**Flujo.** (1) Recepción o dueño pulsa «Invitar a pedir cita» (nombre, correo opcional, matrícula opcional): se crea la invitación con token de 256 bits
+(`<taller>.<32 bytes>`; en BD solo el SHA-256), caducidad configurable y un solo uso. El correo pasa por el puerto `Notificador`; **hoy no hay transporte
+de correo cableado en apps/taller**, así que el envío queda REGISTRADO (no sale nada) y la pantalla enseña el enlace para copiarlo. (2) El cliente abre
+`/c/<token>` (marca del taller + sello «con Grupo ASegura»), escribe la **matrícula** (normalizada y validada; si el vehículo existe lo enlaza, si no lo crea solo con la
+matrícula: APIVehículo/`core-vehiculos` no está cableado en el taller), elige servicio y ve los huecos del motor. (3) Confirma: reserva **atómica** (candado de transacción
+por taller → relee citas y OT → recomprueba la franja → consume el token con un UPDATE condicionado → inserta la cita; dos clientes a la última plaza: uno recibe 409 y
+conserva su token). (4) La cita entra `pedida` (pendiente) o `confirmada` según la política. Casillas de consentimiento propias (ASegura y taller), **sin marcar**, canal `cita_enlace`,
+una fila solo por casilla marcada y solo si no la tenía; nunca se atribuye a un titular ajeno el consentimiento de quien escribió su matrícula.
+(5) Agenda `/citas` (día/semana): coches por franja y % de capacidad del día (rojo si se pasa), aceptar/rechazar/cancelar/mover (mismas reglas del motor, sin
+antelación mínima) y «Ha llegado» → recepción precargada que enlaza la cita (`realizada`).
+
+**Seguridad.** `/c/[token]` es público: límite de fallos por IP con el patrón del código del taller (`enlace:<ip>`, 10 fallos → 1 h; token malo, caducado, usado o IP bloqueada = el mismo 404);
+RLS por el taller del token; SQL **0007** sin aplicar (se aplica a mano, preview → prod tras OK de Alberto).
+
+**Tests y guardianes (visto fallar cada uno):** no ofrece hueco con franja llena; no ofrece si la capacidad diaria está agotada; nunca franjas pasadas; doble reserva de la última plaza
+→ una falla; token caducado/usado/revocado → 404; sin casillas marcadas no se crea consentimiento; espejo 0007 ≡ `configDeAlta()`; el token no está en ninguna columna ni en la auditoría.
 
 **F2 — Piezas, pedidos, stock, factura.** Artículos y granel, propuesta de pedido, envío con botón del dueño, albarán y recepción de
 pieza, petición y OCR de factura de proveedor, imputación a matrícula, factura VeriFactu con medio de cobro, ampliaciones con fotos.

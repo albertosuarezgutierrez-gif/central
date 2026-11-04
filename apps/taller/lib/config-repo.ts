@@ -29,6 +29,7 @@ export type TxConfig = {
   serieFactura: Delegado
   medioCobro: Delegado
   horarioCita: Delegado
+  cierreAgenda: Delegado
   auditoria: Delegado
 }
 
@@ -53,7 +54,7 @@ const aHora = (s: string) => new Date(`1970-01-01T${s}:00.000Z`)
 /** null si el taller no tiene fila de configuración (no se inventa una: la crea el alta, 0002). */
 export async function leerConfig(tx: TxConfig, tallerId: string): Promise<ConfigTaller | null> {
   const w = { where: { tallerId } }
-  const [cfg, ivas, ivaDef, tipos, aceites, paquetes, precios, piezas, series, medios, franjas] = await Promise.all([
+  const [cfg, ivas, ivaDef, tipos, aceites, paquetes, precios, piezas, series, medios, franjas, cierres] = await Promise.all([
     tx.configuracion.findUnique({ where: { tallerId } }),
     tx.tipoIva.findMany({ where: { tallerId, activo: true } }),
     tx.ivaPorDefecto.findMany(w),
@@ -65,6 +66,7 @@ export async function leerConfig(tx: TxConfig, tallerId: string): Promise<Config
     tx.serieFactura.findMany(w),
     tx.medioCobro.findMany(w),
     tx.horarioCita.findMany(w),
+    tx.cierreAgenda.findMany(w),
   ])
   if (!cfg) return null
 
@@ -122,6 +124,20 @@ export async function leerConfig(tx: TxConfig, tallerId: string): Promise<Config
       duracionHuecoMinutos: cfg.citaDuracionHuecoMinutos,
       puestos: cfg.citaPuestos,
     },
+    agenda: {
+      zonaHoraria: cfg.agendaZonaHoraria,
+      cierres: cierres
+        .map((x) => ({ fecha: (x.fecha as Date).toISOString().split('T')[0], motivo: x.motivo as string }))
+        .sort((a, b) => a.fecha.localeCompare(b.fecha)),
+      maxCochesPorFranja: cfg.agendaMaxCochesFranja,
+      ocupablePuntosBasicos: cfg.agendaOcupablePb,
+      margenEntreTrabajosMinutos: cfg.agendaMargenMinutos,
+      antelacionMinimaHoras: cfg.agendaAntelacionMinHoras,
+      antelacionMaximaDias: cfg.agendaAntelacionMaxDias,
+      confirmacion: cfg.agendaConfirmacion,
+      duracionDiagnosticoMinutos: cfg.agendaDiagnosticoMinutos,
+      invitacionCaducaDias: cfg.agendaInvitacionCaducaDias,
+    },
     textos: {
       pieResguardo: cfg.textoPieResguardo,
       pieFactura: cfg.textoPieFactura,
@@ -162,6 +178,15 @@ export function escalaresDeConfig(c: ConfigTaller) {
     recordatorioCitaHoras: c.intervalosAvisos.recordatorioCitaHoras,
     citaDuracionHuecoMinutos: c.horarioCitas.duracionHuecoMinutos,
     citaPuestos: c.horarioCitas.puestos,
+    agendaZonaHoraria: c.agenda.zonaHoraria,
+    agendaMaxCochesFranja: c.agenda.maxCochesPorFranja,
+    agendaOcupablePb: c.agenda.ocupablePuntosBasicos,
+    agendaMargenMinutos: c.agenda.margenEntreTrabajosMinutos,
+    agendaAntelacionMinHoras: c.agenda.antelacionMinimaHoras,
+    agendaAntelacionMaxDias: c.agenda.antelacionMaximaDias,
+    agendaConfirmacion: c.agenda.confirmacion,
+    agendaDiagnosticoMinutos: c.agenda.duracionDiagnosticoMinutos,
+    agendaInvitacionCaducaDias: c.agenda.invitacionCaducaDias,
     textoPieResguardo: c.textos.pieResguardo,
     textoPieFactura: c.textos.pieFactura,
     textoCondicionesPresupuesto: c.textos.condicionesPresupuesto,
@@ -252,6 +277,11 @@ export async function guardarConfig(tx: TxConfig, tallerId: string, c: ConfigTal
   await tx.horarioCita.deleteMany({ where: { tallerId } })
   for (const f of c.horarioCitas.franjas) {
     await tx.horarioCita.create({ data: { tallerId, diaSemana: f.diaSemana, desde: aHora(f.desde), hasta: aHora(f.hasta) } })
+  }
+
+  await tx.cierreAgenda.deleteMany({ where: { tallerId } })
+  for (const x of c.agenda.cierres) {
+    await tx.cierreAgenda.create({ data: { tallerId, fecha: new Date(`${x.fecha}T00:00:00.000Z`), motivo: x.motivo.trim() } })
   }
 }
 

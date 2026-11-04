@@ -19,6 +19,22 @@ export const SEGURIDAD_LOGIN_ALTA = {
   maxFallosTaller: 30, ventanaMinutos: 15, bloqueoMinutos: 15, maxFallosUsuario: 5, bloqueoUsuarioMinutos: 300, sesionMinutos: 300, inactividadMinutos: 30,
 } as const
 
+/**
+ * Agenda de un taller nuevo. Confirmación MANUAL por defecto: hasta que el dueño decida otra cosa, ninguna cita pedida por un
+ * cliente se da por buena sin que el taller la acepte.
+ */
+export const AGENDA_ALTA = {
+  zonaHoraria: 'Europe/Madrid',
+  maxCochesPorFranja: 2,
+  ocupablePuntosBasicos: 8500,
+  margenEntreTrabajosMinutos: 15,
+  antelacionMinimaHoras: 12,
+  antelacionMaximaDias: 60,
+  confirmacion: 'manual',
+  duracionDiagnosticoMinutos: 60,
+  invitacionCaducaDias: 14,
+} as const
+
 /** Construye la configuración de alta. Siempre devuelve un objeto NUEVO (nunca compartas el de otro taller). */
 export function configDeAlta(): ConfigTaller {
   return {
@@ -57,6 +73,7 @@ export function configDeAlta(): ConfigTaller {
     },
     // Sin franjas: el taller pone su horario antes de abrir citas (no se inventa uno).
     horarioCitas: { franjas: [], duracionHuecoMinutos: 30, puestos: 1 },
+    agenda: { ...AGENDA_ALTA, cierres: [] },
     textos: {
       pieResguardo: '',
       pieFactura: '',

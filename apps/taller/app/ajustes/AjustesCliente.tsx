@@ -549,6 +549,75 @@ function Horario({ c }: { c: ConfigTaller }) {
   )
 }
 
+// ── Agenda con capacidad ─────────────────────────────────────────────────────
+function Agenda({ c }: { c: ConfigTaller }) {
+  const a = c.agenda
+  const [cierres, setCierres] = useState(a.cierres.map((x) => ({ ...x })))
+  const [nuevaFecha, setNuevaFecha] = useState('')
+  const [nuevoMotivo, setNuevoMotivo] = useState('')
+  const [v, setV] = useState({
+    maxCochesPorFranja: String(a.maxCochesPorFranja), ocupable: pbAPorcentaje(a.ocupablePuntosBasicos), margen: String(a.margenEntreTrabajosMinutos),
+    antMinHoras: String(a.antelacionMinimaHoras), antMaxDias: String(a.antelacionMaximaDias), diagnostico: String(a.duracionDiagnosticoMinutos),
+    caducaDias: String(a.invitacionCaducaDias),
+  })
+  const [confirmacion, setConfirmacion] = useState(a.confirmacion)
+  const g = useGuardar()
+  const campo = (k: keyof typeof v, et: string, modo: 'numeric' | 'decimal' = 'numeric') => (
+    <Campo etiqueta={et}><input inputMode={modo} value={v[k]} onChange={(e) => setV({ ...v, [k]: e.target.value })} /></Campo>
+  )
+  const guardar = () => {
+    const ent = (t: string) => (/^\d+$/.test(t.trim()) ? Number(t.trim()) : null)
+    const pb = porcentajeAPb(v.ocupable)
+    const n = { max: ent(v.maxCochesPorFranja), margen: ent(v.margen), min: ent(v.antMinHoras), maxDias: ent(v.antMaxDias), diag: ent(v.diagnostico), caduca: ent(v.caducaDias) }
+    if (pb === null || Object.values(n).some((x) => x === null)) return g.setMsg({ ok: false, texto: 'Todos los campos son números (el % puede llevar coma)' })
+    g.guardar(() => guardarAjuste({
+      seccion: 'agenda',
+      agenda: {
+        zonaHoraria: a.zonaHoraria, cierres, maxCochesPorFranja: n.max!, ocupablePuntosBasicos: pb, margenEntreTrabajosMinutos: n.margen!,
+        antelacionMinimaHoras: n.min!, antelacionMaximaDias: n.maxDias!, confirmacion, duracionDiagnosticoMinutos: n.diag!, invitacionCaducaDias: n.caduca!,
+      },
+    }))
+  }
+  return (
+    <Seccion titulo="Agenda: citas por enlace y capacidad">
+      <p className="tenue">
+        El cliente solo ve franjas con entrada libre y horas-mecánico suficientes en el día (puestos × horario × % ocupable, menos el trabajo ya abierto).
+        El horario y los puestos se editan arriba, en «Horario de citas».
+      </p>
+      {campo('maxCochesPorFranja', 'Coches que pueden entrar por franja')}
+      {campo('ocupable', '% de horas-mecánico ocupable (el resto es colchón)', 'decimal')}
+      {campo('margen', 'Margen entre trabajos (minutos, se suma a cada servicio)')}
+      {campo('diagnostico', 'Duración del «diagnóstico / no sé» (minutos)')}
+      {campo('antMinHoras', 'Antelación mínima para reservar (horas)')}
+      {campo('antMaxDias', 'Antelación máxima para reservar (días)')}
+      {campo('caducaDias', 'Días que vale el enlace de invitación')}
+      <Campo etiqueta="Al reservar el cliente, la cita…">
+        <select value={confirmacion} onChange={(e) => setConfirmacion(e.target.value as 'automatica' | 'manual')}>
+          <option value="manual">queda pendiente hasta que el taller la acepte</option>
+          <option value="automatica">se confirma sola</option>
+        </select>
+      </Campo>
+      <h3>Festivos y cierres</h3>
+      <ListaPerezosa items={cierres} vacia="Sin cierres" render={(x, i) => (
+        <div key={x.fecha} className="fila">
+          <span>{x.fecha}{x.motivo ? ` · ${x.motivo}` : ''}</span>
+          <button type="button" className="btn btn-sec" onClick={() => setCierres(cierres.filter((_, j) => j !== i))}>Quitar</button>
+        </div>
+      )} />
+      <div className="fila">
+        <input type="date" aria-label="Fecha de cierre" value={nuevaFecha} onChange={(e) => setNuevaFecha(e.target.value)} />
+        <input placeholder="Motivo (opcional)" value={nuevoMotivo} onChange={(e) => setNuevoMotivo(e.target.value)} />
+        <button type="button" className="btn btn-sec" disabled={!nuevaFecha || cierres.some((x) => x.fecha === nuevaFecha)} onClick={() => {
+          setCierres([...cierres, { fecha: nuevaFecha, motivo: nuevoMotivo }].sort((x, y) => x.fecha.localeCompare(y.fecha)))
+          setNuevaFecha(''); setNuevoMotivo('')
+        }}>Añadir cierre</button>
+      </div>
+      <button type="button" className="btn" disabled={g.pendiente} onClick={guardar}>Guardar agenda</button>
+      {g.aviso}
+    </Seccion>
+  )
+}
+
 // ── Textos y plantilla de presupuesto ────────────────────────────────────────
 function Textos({ c }: { c: ConfigTaller }) {
   const [t, setT] = useState({
@@ -715,6 +784,7 @@ export function AjustesCliente({ datos }: { datos: DatosAjustes }) {
       <Series c={c} />
       <MediosCobro c={c} />
       <Horario c={c} />
+      <Agenda c={c} />
       <Avisos c={c} />
       <Textos c={c} />
       <Marca m={datos.marca} />

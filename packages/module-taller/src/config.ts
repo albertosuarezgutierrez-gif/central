@@ -100,6 +100,42 @@ export interface HorarioCitas {
   puestos: number
 }
 
+/** Cómo entra una cita pedida por el cliente: se confirma sola o queda `pedida` hasta que el taller la acepte. */
+export const CONFIRMACIONES_CITA = ['automatica', 'manual'] as const
+export type ConfirmacionCita = (typeof CONFIRMACIONES_CITA)[number]
+
+/** Día de cierre o festivo del taller (fecha local 'AAAA-MM-DD'): no se ofrece ni una franja ese día. */
+export interface CierreAgenda {
+  fecha: string
+  motivo: string
+}
+
+/**
+ * Agenda con CAPACIDAD (spec «Citas por enlace y agenda con capacidad»). Se reparte por franja de entrada y por horas-mecánico
+ * del día, no por mecánico concreto. El horario semanal y la duración de la franja de entrada son `horarioCitas`; `puestos` =
+ * mecánicos/puestos activos. Todo lo de aquí lo edita el dueño en Ajustes.
+ */
+export interface ConfigAgenda {
+  /** Zona horaria IANA del taller: los horarios y los cierres son hora local. */
+  zonaHoraria: string
+  cierres: CierreAgenda[]
+  /** Máximo de coches que pueden ENTRAR en una misma franja. */
+  maxCochesPorFranja: number
+  /** % de las horas-mecánico del día que se puede ocupar con citas y trabajo pendiente, en pb (el resto es colchón). */
+  ocupablePuntosBasicos: number
+  /** Minutos que se suman a cada trabajo (limpieza, entrega, imprevistos). */
+  margenEntreTrabajosMinutos: number
+  /** El cliente no puede reservar con menos de estas horas de antelación. */
+  antelacionMinimaHoras: number
+  /** …ni con más de estos días. */
+  antelacionMaximaDias: number
+  confirmacion: ConfirmacionCita
+  /** Duración del servicio «diagnóstico / no sé qué le pasa» (y de una OT abierta sin baremo). */
+  duracionDiagnosticoMinutos: number
+  /** Días que vale el enlace de invitación a pedir cita. */
+  invitacionCaducaDias: number
+}
+
 export interface TextosTaller {
   pieResguardo: string
   pieFactura: string
@@ -136,6 +172,7 @@ export interface ConfigTaller {
   mediosCobro: MedioCobro[]
   intervalosAvisos: IntervalosAvisos
   horarioCitas: HorarioCitas
+  agenda: ConfigAgenda
   textos: TextosTaller
   validezPresupuestoDias: number
   seguridadLogin: SeguridadLogin
@@ -150,6 +187,46 @@ function duplicados(codigos: string[]): string[] {
   const rep = new Set<string>()
   for (const c of codigos) (vistos.has(c) ? rep : vistos).add(c)
   return [...rep]
+}
+
+/** Fecha 'AAAA-MM-DD' que existe de verdad (no 2026-02-30). */
+export function esFechaIso(f: unknown): f is string {
+  if (typeof f !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(f)) return false
+  const [y, m, d] = f.split('-').map(Number)
+  const t = new Date(Date.UTC(y, m - 1, d))
+  return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d
+}
+
+/** Servicio reservado de la agenda: «diagnóstico / no sé». Ningún paquete puede llamarse así. */
+export const SERVICIO_DIAGNOSTICO = 'diagnostico'
+
+function zonaValida(z: unknown): boolean {
+  if (typeof z !== 'string' || !z.trim()) return false
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: z })
+    return true
+  } catch {
+    return false
+  }
+}
+
+function validarAgenda(c: ConfigTaller): string[] {
+  const e: string[] = []
+  const a = c.agenda
+  if (!a) return ['falta la configuración de agenda']
+  if (!zonaValida(a.zonaHoraria)) e.push('agenda.zonaHoraria inválida')
+  for (const d of duplicados(a.cierres.map((x) => x.fecha))) e.push(`cierre duplicado: ${d}`)
+  for (const x of a.cierres) if (!esFechaIso(x.fecha)) e.push(`cierre con fecha inválida: ${String(x.fecha)}`)
+  if (!esEnteroPos(a.maxCochesPorFranja)) e.push('agenda.maxCochesPorFranja debe ser un entero > 0')
+  if (!esEnteroPos(a.ocupablePuntosBasicos) || a.ocupablePuntosBasicos > PUNTOS_BASICOS_100) e.push('agenda.ocupablePuntosBasicos fuera de rango (1-100 %)')
+  if (!esEnteroNoNeg(a.margenEntreTrabajosMinutos)) e.push('agenda.margenEntreTrabajosMinutos debe ser un entero ≥ 0')
+  if (!esEnteroNoNeg(a.antelacionMinimaHoras)) e.push('agenda.antelacionMinimaHoras debe ser un entero ≥ 0')
+  if (!esEnteroPos(a.antelacionMaximaDias)) e.push('agenda.antelacionMaximaDias debe ser un entero > 0')
+  if (!(CONFIRMACIONES_CITA as readonly string[]).includes(a.confirmacion)) e.push('agenda.confirmacion inválida')
+  if (!esEnteroPos(a.duracionDiagnosticoMinutos)) e.push('agenda.duracionDiagnosticoMinutos debe ser un entero > 0')
+  if (!esEnteroPos(a.invitacionCaducaDias)) e.push('agenda.invitacionCaducaDias debe ser un entero > 0')
+  if (c.paquetes.some((p) => p.codigo === SERVICIO_DIAGNOSTICO)) e.push(`el código de paquete «${SERVICIO_DIAGNOSTICO}» está reservado`)
+  return e
 }
 
 /** Valida una configuración completa. Devuelve la lista de errores (vacía = válida). */
@@ -214,6 +291,8 @@ export function validarConfig(c: ConfigTaller): string[] {
     if (!Number.isInteger(f.diaSemana) || f.diaSemana < 0 || f.diaSemana > 6) e.push(`franja con día ${f.diaSemana} inválido`)
     if (!HHMM.test(f.desde) || !HHMM.test(f.hasta) || f.desde >= f.hasta) e.push(`franja ${f.desde}-${f.hasta} inválida`)
   }
+
+  e.push(...validarAgenda(c))
 
   if (!esEnteroPos(c.validezPresupuestoDias)) e.push('validezPresupuestoDias inválido')
   for (const [k, v] of Object.entries(c.seguridadLogin ?? {})) {

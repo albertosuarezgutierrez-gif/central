@@ -9,6 +9,7 @@ export const dynamic = 'force-dynamic'
 
 const SECCIONES = [
   { href: '/recepcion', titulo: 'Recepción', desc: 'Entrada de vehículos' },
+  { href: '/citas', titulo: 'Citas', desc: 'Agenda e invitaciones' },
   { href: '/ordenes', titulo: 'Órdenes', desc: 'Órdenes de trabajo' },
   { href: '/presupuestos', titulo: 'Presupuestos', desc: 'Presupuestos y paquetes' },
   { href: '/ajustes', titulo: 'Ajustes', desc: 'Configuración del taller' },

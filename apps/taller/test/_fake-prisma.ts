@@ -19,19 +19,47 @@ export function crearBdFake() {
   let transacciones = 0
   const tabla = (m: string) => (tablas[m] ??= [])
 
+  // Operadores de Prisma que usa la app: { in }, { gt, gte, lt, lte, not } y claves compuestas (tallerId_codigo…).
+  const operador = (valor: any, v: Record<string, any>): boolean =>
+    Object.entries(v).every(([op, x]) => {
+      if (op === 'in') return (x as unknown[]).includes(valor)
+      if (op === 'gt') return valor != null && valor > x
+      if (op === 'gte') return valor != null && valor >= x
+      if (op === 'lt') return valor != null && valor < x
+      if (op === 'lte') return valor != null && valor <= x
+      if (op === 'not') return valor !== x
+      return valor?.[op] === x
+    })
+
   const coincide = (f: any, where: any) =>
     Object.entries(where ?? {}).every(([k, v]) =>
       v !== null && typeof v === 'object' && !(v instanceof Date)
-        ? 'in' in (v as object)
-          ? ((v as { in: unknown[] }).in).includes(f[k]) // { in: [...] }
-          : 'gt' in (v as object)
-            ? f[k] != null && f[k] > (v as { gt: any }).gt // { gt: fecha }
+        ? Object.keys(v as object).some((o) => ['in', 'gt', 'gte', 'lt', 'lte', 'not'].includes(o))
+          ? operador(f[k], v as Record<string, any>)
           : Object.entries(v as object).every(([k2, v2]) => f[k2] === v2) // clave compuesta (tallerId_codigo…)
-        : f[k] === v,
+        : v === null ? f[k] == null : f[k] === v, // columna NULL = campo ausente (el fake no rellena los NULL)
     )
+
+  // Candados de aviso por clave (emulan pg_advisory_xact_lock). Se sueltan al terminar la transacción que los tomó.
+  const candados = new Map<string, Promise<void>>()
+  const propios = new WeakMap<Array<() => void>, Set<string>>()
+  async function tomarCandado(clave: string, liberar: Array<() => void>) {
+    // Re-entrante dentro de la misma transacción, como en Postgres.
+    const mios = propios.get(liberar) ?? propios.set(liberar, new Set()).get(liberar)!
+    if (mios.has(clave)) return
+    while (candados.has(clave)) await candados.get(clave)
+    mios.add(clave)
+    let suelta!: () => void
+    candados.set(clave, new Promise<void>((r) => (suelta = r)))
+    liberar.push(() => {
+      candados.delete(clave)
+      suelta()
+    })
+  }
 
   function crearTx() {
     const ajuste = { v: null as string | null }
+    const liberar: Array<() => void> = []
     const visible = (m: string, f: any) => (m === 'taller' ? f.id === ajuste.v : f.tallerId === ajuste.v)
     const filas = (m: string, where: any) => tabla(m).filter((f) => visible(m, f) && coincide(f, where))
     const copia = (f: any) => (f ? { ...f } : null)
@@ -96,8 +124,11 @@ export function crearBdFake() {
         if (prop === '$executeRaw')
           return async (s: TemplateStringsArray, ...vals: unknown[]) => {
             llamadasRaw.push(`${s.join('?')} :: ${vals.map(String).join(',')}`)
+            // pg_advisory_xact_lock: quien llega después ESPERA a que la transacción dueña termine (commit o rollback).
+            if (s.join('?').includes('pg_advisory_xact_lock')) await tomarCandado(String(vals[0]), liberar)
             return 1
           }
+        if (prop === '__liberar') return () => liberar.splice(0).forEach((f) => f())
         if (prop === '__ajuste') return ajuste.v
         return delegado(prop)
       },
@@ -110,11 +141,14 @@ export function crearBdFake() {
       async $transaction<R>(fn: (tx: any) => Promise<R>): Promise<R> {
         transacciones++
         const antes = structuredClone(tablas)
+        const tx = crearTx()
         try {
-          return await fn(crearTx())
+          return await fn(tx)
         } catch (e) {
           tablas = antes
           throw e
+        } finally {
+          tx.__liberar()
         }
       },
     },

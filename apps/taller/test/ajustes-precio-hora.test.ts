@@ -129,3 +129,26 @@ test('el dueño edita horario, textos, series e IVA; lo que rompería datos se r
   assert.deepEqual(c2!.ivas.map((i) => i.codigo).sort(), ['general', 'reducido'])
   assert.equal(c2!.series.length, 3)
 })
+
+test('el dueño edita la agenda (cierres incluidos) y vuelve igual al leerla; una agenda imposible se rechaza', async () => {
+  const { conTaller } = await tallerDeAlta()
+  const ok = await conTaller(T, async (tx: any) => {
+    const antes = (await leerConfig(tx, T))!
+    const r = aplicarAjuste(antes, {
+      seccion: 'agenda',
+      agenda: { ...antes.agenda, maxCochesPorFranja: 3, ocupablePuntosBasicos: 9000, confirmacion: 'automatica', cierres: [{ fecha: '2026-12-25', motivo: ' Navidad ' }, { fecha: '2026-12-08', motivo: '' }] },
+    })
+    assert.ok(r.ok, JSON.stringify(r))
+    await guardarConfig(tx, T, r.config)
+    return (await leerConfig(tx, T))!.agenda
+  })
+  assert.equal(ok.maxCochesPorFranja, 3)
+  assert.equal(ok.ocupablePuntosBasicos, 9000)
+  assert.equal(ok.confirmacion, 'automatica')
+  assert.deepEqual(ok.cierres, [{ fecha: '2026-12-08', motivo: '' }, { fecha: '2026-12-25', motivo: 'Navidad' }])
+  const mala = await conTaller(T, async (tx: any) => {
+    const antes = (await leerConfig(tx, T))!
+    return aplicarAjuste(antes, { seccion: 'agenda', agenda: { ...antes.agenda, ocupablePuntosBasicos: 0, cierres: [{ fecha: '2026-13-40', motivo: '' }] } })
+  })
+  assert.equal(mala.ok, false)
+})

@@ -21,6 +21,7 @@
   nunca se condiciona a marcarla. Ningún lead a `seguros` sin consentimiento registrado.
 - **Configuración autoservicio:** precios, IVA, intervalos y horarios son datos que edita el dueño en Ajustes; ningún
   literal de ese tipo en código (spec 3bis).
+- **Citas por enlace (`/c/[token]`, público) y agenda `/citas`:** motor por capacidad en `module-taller/src/agenda.ts`; la reserva es atómica (candado `cita:<taller>` + UPDATE condicionado del token) y el enlace solo guarda hash. No hay transporte de correo: la invitación se REGISTRA y se enseña el enlace. Límite por IP `enlace:<ip>`. Spec: «Citas por enlace y agenda con capacidad». SQL 0007 sin aplicar.
 - **Sin WhatsApp:** avisos por push de la app + correo. Nada sale a terceros ni a proveedores sin botón del dueño.
 - Dinero en formato español (`2.162,49€`); UI usable a ≥320 px, botones ≥44 px.
 - Vercel: `vercel.json` con `ignoreCommand` y `--sin-previews`; app en la matriz de `tests.yml`.

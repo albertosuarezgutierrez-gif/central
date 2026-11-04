@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   ESTADOS_OT, FINALIDADES_CONSENTIMIENTO, CANALES_CONSENTIMIENTO, TIPOS_AVISO_SERVICIO, TIPOS_AVISO_COMERCIAL,
-  normalizarMatricula, configDeAlta,
+  normalizarMatricula, configDeAlta, ESTADOS_CITA,
 } from '@central/module-taller'
 
 const DIR = join(import.meta.dirname, '..', 'prisma', 'sql')
@@ -67,7 +67,15 @@ test('espejo: estados de OT', () => {
   assert.deepEqual([...m[1].matchAll(/'([^']+)'/g)].map((x) => x[1]), [...ESTADOS_OT])
 })
 test('espejo: finalidades de consentimiento', () => assert.deepEqual(listaCheck('finalidad'), [...FINALIDADES_CONSENTIMIENTO]))
-test('espejo: canales de consentimiento', () => assert.deepEqual(listaCheck('canal'), [...CANALES_CONSENTIMIENTO]))
+test('espejo: canales de consentimiento (0001 + ampliación de 0007)', () => {
+  // 0001 trae los tres primeros; 0007 sustituye la restricción añadiendo «cita_enlace». La lista vigente es la de 0007.
+  const s7 = readFileSync(join(DIR, '0007_citas_enlace.sql'), 'utf8')
+  const m = s7.match(/ADD CONSTRAINT consentimientos_canal_check CHECK \(canal IN \(([^)]*)\)\)/)
+  assert.ok(m, 'no encuentro la restricción de canal en 0007')
+  const lista = [...m[1].matchAll(/'([^']+)'/g)].map((x) => x[1])
+  assert.deepEqual(lista, [...CANALES_CONSENTIMIENTO])
+  assert.deepEqual(listaCheck('canal'), lista.slice(0, 3), '0001 sigue siendo la base')
+})
 test('espejo: tipos de aviso', () => {
   const m = SQL.match(/tipo\s+text NOT NULL CHECK \(tipo IN \(('terminado'[^)]*)\)\)/)
   assert.ok(m)
@@ -167,4 +175,40 @@ test('0004: PIN temporal y propuestas sin precio', () => {
   assert.match(S4, /ADD COLUMN IF NOT EXISTS debe_cambiar_pin boolean NOT NULL DEFAULT false/)
   const prop = tablas4.find((t) => t.nombre === 'ot_propuesta_lineas')!
   assert.doesNotMatch(prop.cuerpo, /precio|_cent/, 'el mecánico no ve ni escribe precios')
+})
+
+// ── 0007: citas por enlace y agenda con capacidad ─────────────────────────────────────────────────────────────
+const S7 = readFileSync(join(DIR, '0007_citas_enlace.sql'), 'utf8')
+
+test('0007: tablas nuevas con taller_id NOT NULL, RLS forzado, política por taller y concedidas al rol', () => {
+  const tablas7 = [...S7.matchAll(/CREATE TABLE IF NOT EXISTS taller\.(\w+) \(([\s\S]*?)\n\);/g)].map((m) => ({ nombre: m[1], cuerpo: m[2] }))
+  assert.deepEqual(tablas7.map((t) => t.nombre).sort(), ['cierres_agenda', 'invitaciones_cita'])
+  for (const t of tablas7) {
+    assert.match(t.cuerpo, /taller_id\s+uuid NOT NULL/, t.nombre)
+    assert.match(S7, new RegExp(`'${t.nombre}'`), `${t.nombre} entra en el bucle de RLS`)
+  }
+  assert.match(S7, /FORCE ROW LEVEL SECURITY/)
+  assert.match(S7, /USING \(taller_id = taller\.taller_actual\(\)\) WITH CHECK/)
+  assert.match(S7, /GRANT SELECT, INSERT, UPDATE, DELETE ON taller\.cierres_agenda, taller\.invitaciones_cita TO prisma_taller;/)
+  assert.ok(!/REFERENCES taller\.\w+\(id\)/.test(S7.replace(/REFERENCES taller\.talleres/g, '')), 'FK compuestas (taller_id, x)')
+})
+
+test('espejo: 0007 (agenda) ≡ AGENDA_ALTA de configDeAlta()', () => {
+  const d = (col: string) => S7.match(new RegExp(`${col}\\s+(?:integer|text) NOT NULL DEFAULT '?([\\w/]+)'?`))?.[1]
+  const a = configDeAlta().agenda
+  assert.equal(d('agenda_zona_horaria'), a.zonaHoraria)
+  assert.equal(Number(d('agenda_max_coches_franja')), a.maxCochesPorFranja)
+  assert.equal(Number(d('agenda_ocupable_pb')), a.ocupablePuntosBasicos)
+  assert.equal(Number(d('agenda_margen_minutos')), a.margenEntreTrabajosMinutos)
+  assert.equal(Number(d('agenda_antelacion_min_horas')), a.antelacionMinimaHoras)
+  assert.equal(Number(d('agenda_antelacion_max_dias')), a.antelacionMaximaDias)
+  assert.equal(d('agenda_confirmacion'), a.confirmacion)
+  assert.equal(Number(d('agenda_diagnostico_minutos')), a.duracionDiagnosticoMinutos)
+  assert.equal(Number(d('agenda_invitacion_caduca_dias')), a.invitacionCaducaDias)
+})
+
+test('espejo: estados de cita ≡ ESTADOS_CITA', () => {
+  const m = SCHEMA.match(/estado\s+text NOT NULL DEFAULT 'pedida' CHECK \(estado IN \(([^)]*)\)\)/)
+  assert.ok(m)
+  assert.deepEqual([...m[1].matchAll(/'([^']+)'/g)].map((x) => x[1]), [...ESTADOS_CITA])
 })

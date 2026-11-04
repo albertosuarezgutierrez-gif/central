@@ -12,7 +12,7 @@
 export const FINALIDADES_CONSENTIMIENTO = ['asegura', 'taller_comercial'] as const
 export type FinalidadConsentimiento = (typeof FINALIDADES_CONSENTIMIENTO)[number]
 
-export const CANALES_CONSENTIMIENTO = ['recepcion', 'presupuesto_casa', 'app'] as const
+export const CANALES_CONSENTIMIENTO = ['recepcion', 'presupuesto_casa', 'app', 'cita_enlace'] as const
 export type CanalConsentimiento = (typeof CANALES_CONSENTIMIENTO)[number]
 
 /**

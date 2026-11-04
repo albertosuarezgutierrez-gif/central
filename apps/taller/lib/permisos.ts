@@ -24,6 +24,7 @@ export const CAPACIDADES = [
   'precios_ver', // precios de venta, totales, IVA
   'contacto_cliente_ver', // teléfono, correo, NIF del cliente
   'margenes_ver', // baremo vs horas reales y margen
+  'citas', // agenda: invitar a pedir cita, aceptar/rechazar/mover, convertir en recepción
 ] as const
 export type Capacidad = (typeof CAPACIDADES)[number]
 
@@ -39,6 +40,7 @@ const MATRIZ: Readonly<Record<Capacidad, readonly string[]>> = {
   precios_ver: ['dueno', 'admin', 'recepcion'],
   contacto_cliente_ver: ['dueno', 'admin', 'recepcion'],
   margenes_ver: ['dueno'],
+  citas: ['dueno', 'admin', 'recepcion'],
 }
 
 export function tienePermiso(rol: string | null | undefined, cap: Capacidad): boolean {

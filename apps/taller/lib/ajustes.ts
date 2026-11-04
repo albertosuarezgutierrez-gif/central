@@ -3,7 +3,7 @@
 // ConfigTaller, que SIEMPRE pasa por `validarConfig` de module-taller. Sin BD.
 import {
   TIPOS_LINEA, validarConfig,
-  type Aceite, type ConfigTaller, type FranjaHorario, type IntervalosAvisos, type SeguridadLogin, type MedioCobro, type SerieFactura, type TipoIva,
+  type Aceite, type ConfigAgenda, type ConfigTaller, type FranjaHorario, type IntervalosAvisos, type SeguridadLogin, type MedioCobro, type SerieFactura, type TipoIva,
   type TipoLinea, type TipoVehiculo,
 } from '@central/module-taller'
 
@@ -60,6 +60,7 @@ export type CambioAjustes =
   | { seccion: 'ivas'; ivas: TipoIva[] }
   | { seccion: 'series'; series: SerieFactura[] }
   | { seccion: 'seguridad_login'; seguridad: SeguridadLogin }
+  | { seccion: 'agenda'; agenda: ConfigAgenda }
   | { seccion: 'horario'; franjas: FranjaHorario[]; duracionHuecoMinutos: number; puestos: number }
   | {
       seccion: 'textos'
@@ -163,6 +164,10 @@ export function aplicarAjuste(antes: ConfigTaller, cambio: CambioAjustes): Resul
         const sig = c.horarioCitas.franjas[i + 1]
         if (sig && sig.diaSemana === f.diaSemana && sig.desde < f.hasta) previos.push(`franjas solapadas el día ${f.diaSemana}`)
       }
+      break
+    case 'agenda':
+      // Cierres ordenados y sin duplicar; el resto lo valida validarConfig (rangos, zona horaria, confirmación).
+      c.agenda = { ...cambio.agenda, cierres: cambio.agenda.cierres.map((x) => ({ fecha: x.fecha, motivo: x.motivo.trim() })).sort((a, b) => a.fecha.localeCompare(b.fecha)) }
       break
     case 'textos':
       c.textos = { ...c.textos, ...cambio.textos }

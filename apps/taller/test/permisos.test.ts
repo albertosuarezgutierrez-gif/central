@@ -23,6 +23,7 @@ const esperado: Record<Capacidad, string[]> = {
   precios_ver: ['dueno', 'admin', 'recepcion'],
   contacto_cliente_ver: ['dueno', 'admin', 'recepcion'],
   margenes_ver: ['dueno'],
+  citas: ['dueno', 'admin', 'recepcion'],
 }
 
 test('matriz de permisos = la decisión de Alberto', () => {
@@ -74,6 +75,11 @@ test('toda acción de servidor exige permiso (salvo Ajustes, que exige dueño, y
     const src = readFileSync(f, 'utf8')
     const exportadas = [...src.matchAll(/export async function (\w+)/g)].length
     assert.ok(exportadas > 0, f)
+    if (f.includes(`${'/'}c${'/'}`)) {
+      assert.ok(src.includes('tallerPorEnlaceLimitado('), `${f}: la pública de cita pasa por el límite por IP`)
+      assert.ok(src.includes('tallerDeToken('), `${f}: valida el token`)
+      continue
+    }
     if (f.includes(`${'/'}p${'/'}`)) {
       assert.ok(src.includes('tallerDeToken('), `${f}: la pública valida el token`)
       continue

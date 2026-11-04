@@ -14,24 +14,36 @@ export interface StoreCodigo {
 const MIN = 60_000
 export const claveCodigo = (ip: string) => `codigo:${ip}`
 
-/** Taller del código, o null si es inexistente O la IP está bloqueada (indistinguible). */
-export async function resolverCodigoLimitado(
-  store: StoreCodigo, o: { codigo: string; ip: string; ahora: Date; porCodigo(c: string): Promise<string | null> },
-): Promise<string | null> {
-  const clave = claveCodigo(o.ip)
-  const f = await store.leer(clave)
+export type LimitePorIp = { maxFallos: number; ventanaMinutos: number; bloqueoMinutos: number }
+
+/**
+ * Patrón común de «límite de fallos por IP»: devuelve lo que resuelva `resolver`, o null si no resuelve O la IP está bloqueada
+ * (las dos cosas, indistinguibles). Un acierto limpia la cuenta; un fallo la suma y, al llegar al máximo, bloquea.
+ * Lo usan el código del taller (`codigo:<ip>`) y los enlaces públicos de cita (`enlace:<ip>`, limite-enlace.ts).
+ */
+export async function resolverConLimite<T>(
+  store: StoreCodigo, o: { clave: string; limite: LimitePorIp; ahora: Date; resolver(): Promise<T | null> },
+): Promise<T | null> {
+  const f = await store.leer(o.clave)
   if (f?.bloqueadoHasta && f.bloqueadoHasta.getTime() > o.ahora.getTime()) return null
-  const id = await o.porCodigo(o.codigo)
-  if (id) {
-    if (f) await store.borrar(clave)
-    return id
+  const r = await o.resolver()
+  if (r !== null) {
+    if (f) await store.borrar(o.clave)
+    return r
   }
-  const vencida = !f || f.bloqueadoHasta !== null || o.ahora.getTime() - f.creadoEn.getTime() >= LIMITE_CODIGO.ventanaMinutos * MIN
+  const vencida = !f || f.bloqueadoHasta !== null || o.ahora.getTime() - f.creadoEn.getTime() >= o.limite.ventanaMinutos * MIN
   const intentos = (vencida ? 0 : f!.intentos) + 1
-  await store.guardar(clave, {
+  await store.guardar(o.clave, {
     intentos,
-    bloqueadoHasta: intentos >= LIMITE_CODIGO.maxFallos ? new Date(o.ahora.getTime() + LIMITE_CODIGO.bloqueoMinutos * MIN) : null,
+    bloqueadoHasta: intentos >= o.limite.maxFallos ? new Date(o.ahora.getTime() + o.limite.bloqueoMinutos * MIN) : null,
     creadoEn: vencida ? o.ahora : f!.creadoEn,
   })
   return null
+}
+
+/** Taller del código, o null si es inexistente O la IP está bloqueada (indistinguible). */
+export function resolverCodigoLimitado(
+  store: StoreCodigo, o: { codigo: string; ip: string; ahora: Date; porCodigo(c: string): Promise<string | null> },
+): Promise<string | null> {
+  return resolverConLimite(store, { clave: claveCodigo(o.ip), limite: LIMITE_CODIGO, ahora: o.ahora, resolver: () => o.porCodigo(o.codigo) })
 }

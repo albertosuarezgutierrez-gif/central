@@ -1,9 +1,10 @@
 import { SalirBoton } from './_salir'
-import { marcaActual } from '@/lib/marca-servidor'
+import { marcaActual, marcaDelTaller } from '@/lib/marca-servidor'
 
 /** Logo del taller (el suyo si lo subió) + sello fijo «con Grupo ASegura» (no editable). */
-export async function Cabecera({ conSalir = false }: { conSalir?: boolean }) {
-  const m = await marcaActual()
+export async function Cabecera({ conSalir = false, tallerId }: { conSalir?: boolean; tallerId?: string }) {
+  // Páginas públicas por token (sin sesión ni dispositivo): la marca es la del taller del token.
+  const m = tallerId ? await marcaDelTaller(tallerId) : await marcaActual()
   return (
     <header className="cabecera">
       <a href="/" className="marca">

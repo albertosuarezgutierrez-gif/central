@@ -1,6 +1,8 @@
-// Salidas hacia terceros (correo) tras un PUERTO. F1: NO se envía nada real; la implementación «registrar» deja constancia
+// Salidas hacia terceros (correo) tras un PUERTO. Hoy NO hay transporte de correo cableado en el taller (apps/taller no depende de
+// core-email): `notificadorRegistro` es la única implementación, por eso la pantalla de invitaciones enseña el enlace para copiarlo.
+// F1: NO se envía nada real; la implementación «registrar» deja constancia
 // en `auditoria` (entidad `salida_pendiente`) de lo que SE ENVIARÍA, para que F3 lo conecte sin tocar los flujos.
-export type Salida = { tallerId: string; tipo: 'resguardo' | 'presupuesto'; a: string; asunto: string; texto: string; referencia?: string }
+export type Salida = { tallerId: string; tipo: 'resguardo' | 'presupuesto' | 'invitacion_cita' | 'cita'; a: string; asunto: string; texto: string; referencia?: string }
 export interface Notificador {
   enviar(s: Salida): Promise<void>
 }

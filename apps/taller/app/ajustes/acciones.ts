@@ -99,6 +99,15 @@ const Cambio = z.discriminatedUnion('seccion', [
     puestos: ent,
   }),
   z.object({
+    seccion: z.literal('agenda'),
+    agenda: z.object({
+      zonaHoraria: z.string().max(60),
+      cierres: z.array(z.object({ fecha: z.string().max(10), motivo: z.string().max(200) })).max(400),
+      maxCochesPorFranja: ent, ocupablePuntosBasicos: ent, margenEntreTrabajosMinutos: ent, antelacionMinimaHoras: ent,
+      antelacionMaximaDias: ent, confirmacion: z.enum(['automatica', 'manual']), duracionDiagnosticoMinutos: ent, invitacionCaducaDias: ent,
+    }),
+  }),
+  z.object({
     seccion: z.literal('textos'),
     textos: z.object({
       pieResguardo: z.string().max(4000), pieFactura: z.string().max(4000),
