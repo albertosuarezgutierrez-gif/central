@@ -120,7 +120,7 @@ export async function registrarResultadoVehiculo(trabajoId: string, r: Resultado
       update seguros.tarificacion_trabajos
       set estado = 'ok', riesgo = '{}'::jsonb, error = null, lease_hasta = null, terminado_at = now(), updated_at = now(),
           bot_version = coalesce(${botVersion}, bot_version)
-      where id = ${f.id}::uuid and estado = 'en_curso' and modo = ${MODO_VEHICULO}`
+      where id = ${f.id}::uuid and correduria_id = ${f.correduria_id}::uuid and estado = 'en_curso' and modo = ${MODO_VEHICULO}`
     return { estado: 'registrado' as const }
   }, { timeout: 15_000, maxWait: 10_000 })
 }
