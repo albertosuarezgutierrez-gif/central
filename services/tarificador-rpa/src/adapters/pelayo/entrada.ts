@@ -21,6 +21,7 @@ import { exigirSinVerificacion } from '../../verificacion.ts'
 import { exigirSinRechazoCredenciales } from '../../credenciales.ts'
 import { ClicNoAccionableError, cuerpoDiagnosticoClic, notaClicPelayo, type DiagnosticoClic } from '../../diagnostico-clic.ts'
 import { pareceDatoPersonalInventario } from '@central/module-tarificacion'
+import { redactarMediador } from '../../privacidad-mediador.ts'
 
 /** URL pública de entrada (dada por Alberto, 03/11/2026; no es secreta). */
 export const URL_PORTAL_PELAYO = 'https://mediadores.pelayo.com/portalmediador-pagina-inicio/'
@@ -56,6 +57,8 @@ export type CtxEntradaPelayo = Pick<ContextoPortal, 'credenciales' | 'pausa' | '
   pulsarEnlaceEntrada: (boton: Locator, opciones?: { reintento?: boolean }) => Promise<void>
   /** 0.3.33: nota de diagnóstico de la elección del ramo (forma CERRADA `RE_NOTA_ENTRADA_PELAYO`, solo contadores); el worker la lleva al mapa (huecos). */
   diagnostico?: (nota: string) => void
+  /** 0.3.38: cierra un modal INFORMATIVO visible (sin campos ni términos de acción final) por la puerta del guard; ver `cerrarModalInformativo`. */
+  cerrarModal?: (page: Page) => Promise<{ estado: string }>
 }
 
 const sinTildes = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase()
@@ -97,7 +100,7 @@ export function opcionRamoPelayo(opciones: readonly string[], rotulos: readonly 
 export function rotulosSeguros(textos: readonly string[], max = 30): string[] {
   const out: string[] = []
   for (const t of textos) {
-    const n = String(t ?? '').replace(/\s+/g, ' ').trim()
+    const n = redactarMediador(String(t ?? '').replace(/\s+/g, ' ').trim())
     if (!n || n.length > 40 || /\d{5,}/.test(n) || pareceDatoPersonalInventario(n) || out.includes(n)) continue
     out.push(n)
     if (out.length >= max) break
@@ -222,46 +225,72 @@ export async function loginPelayo(page: Page, ctx: CtxEntradaPelayo, esperas: Es
 }
 
 /** Estructura de la pantalla (SIN PII): títulos, rótulos de botones/enlaces, nº de campos y opciones de cada <select> visible. */
-export type EstructuraPelayo = { ruta: string; titulos: string[]; acciones: string[]; campos: number; selects: { etiqueta: string; opciones: string[] }[] }
+export type EstructuraPelayo = { ruta: string; titulos: string[]; acciones: string[]; campos: number; selects: { etiqueta: string; opciones: string[] }[]; /** 0.3.40: nº de campos de un modal de web component que cubre la ventana (0 = no hay). */ modal?: number }
 
 // Script en TEXTO (no función): tsx envuelve las funciones con nombre en `__name`, que en la página no existe.
 const SCRIPT_ESTRUCTURA = `(() => {
   const vis = (el) => { const cs = getComputedStyle(el); if (cs.display === 'none' || cs.visibility === 'hidden') return false; const b = el.getBoundingClientRect(); return b.width > 0 || b.height > 0; };
   const txt = (el) => String((el && (el.textContent || el.value || el.getAttribute('aria-label'))) || '').replace(/\\s+/g, ' ').trim();
-  const t = Array.from(document.querySelectorAll('h1,h2,h3,legend')).filter(vis).slice(0, 10).map(txt);
-  const a = Array.from(document.querySelectorAll('button,a,[role=button],[role=tab],[role=menuitem],input[type=submit],input[type=button]')).filter(vis).slice(0, 80).map(txt);
-  const c = Array.from(document.querySelectorAll('input:not([type=hidden]),select,textarea')).filter(vis).length;
-  const s = Array.from(document.querySelectorAll('select')).filter(vis).slice(0, 10).map((sel) => {
-    const lab = sel.id ? document.querySelector('label[for="' + CSS.escape(sel.id) + '"]') : sel.closest('label');
+  // 0.3.40: TAMBIÉN dentro de shadowRoot ABIERTOS (web components anidados, p. ej. el <pelayo-modal> del formulario de presupuesto).
+  const deep = (sel) => {
+    const acc = [];
+    const rec = (raiz, prof) => {
+      for (const el of Array.from(raiz.querySelectorAll(sel))) acc.push(el);
+      if (prof > 5 || acc.length > 1500) return;
+      for (const h of Array.from(raiz.querySelectorAll('*'))) if (h.shadowRoot) rec(h.shadowRoot, prof + 1);
+    };
+    rec(document, 0);
+    return acc;
+  };
+  const CAMPOS = 'input:not([type=hidden]),select,textarea';
+  const t = deep('h1,h2,h3,legend,[class*="modal-title"],[class*="title"]').filter(vis).slice(0, 20).map(txt).filter((x, i, l) => x.length > 0 && x.length < 80 && l.indexOf(x) === i).slice(0, 10);
+  const a = deep('button,a,[role=button],[role=tab],[role=menuitem],input[type=submit],input[type=button]').filter(vis).slice(0, 80).map(txt);
+  const todosCampos = deep(CAMPOS).filter(vis);
+  const c = todosCampos.length;
+  // Modal de web component (custom element que cubre >= 50 % de la ventana) con campos dentro: es la pantalla actual.
+  let modal = 0;
+  for (const m of Array.from(document.querySelectorAll('*'))) {
+    if (String(m.localName || '').indexOf('-') < 1 || !vis(m)) continue;
+    const r = m.getBoundingClientRect();
+    if (r.width * r.height < 0.5 * window.innerWidth * window.innerHeight) continue;
+    const cuenta = (raiz, prof) => { let k = Array.from(raiz.querySelectorAll(CAMPOS)).length; if (prof < 5) for (const h of Array.from(raiz.querySelectorAll('*'))) if (h.shadowRoot) k += cuenta(h.shadowRoot, prof + 1); return k; };
+    const n = cuenta(m, 0) + (m.shadowRoot ? cuenta(m.shadowRoot, 1) : 0);
+    if (n > 0) { modal = Math.max(modal, n); }
+  }
+  const s = deep('select').filter(vis).slice(0, 10).map((sel) => {
+    const raiz = sel.getRootNode && sel.getRootNode().nodeType === 11 ? sel.getRootNode() : document;
+    const lab = sel.id ? raiz.querySelector('label[for="' + CSS.escape(sel.id) + '"]') : sel.closest('label');
     return { etiqueta: txt(lab) || sel.getAttribute('name') || '', opciones: Array.from(sel.options).slice(0, 40).map((o) => String(o.textContent || '').replace(/\\s+/g, ' ').trim()) };
   });
-  return { t, a, c, s };
+  return { t, a, c, s, modal };
 })()`
 
-type EstructuraCruda = { t: string[]; a: string[]; c: number; s: { etiqueta: string; opciones: string[] }[] }
+type EstructuraCruda = { t: string[]; a: string[]; c: number; s: { etiqueta: string; opciones: string[] }[]; modal?: number }
 
 export async function estructuraPantallaPelayo(page: Page): Promise<EstructuraPelayo> {
   const titulos: string[] = []
   const acciones: string[] = []
   const selects: { etiqueta: string; opciones: string[] }[] = []
   let campos = 0
+  let modal = 0
   for (const r of raices(page)) {
     const d = ((await r.evaluate(SCRIPT_ESTRUCTURA).catch(() => null)) as EstructuraCruda | null) ?? { t: [], a: [], c: 0, s: [] }
     titulos.push(...d.t)
     acciones.push(...d.a)
     campos += d.c
+    modal = Math.max(modal, Number(d.modal) || 0)
     for (const x of d.s) selects.push({ etiqueta: rotulosSeguros([x.etiqueta], 1)[0] ?? '', opciones: rotulosSeguros(x.opciones, 40) })
   }
   let ruta = ''
   try {
     ruta = new URL(page.url()).pathname.slice(0, 80)
   } catch { /* sin ruta */ }
-  return { ruta: rotulosSeguros([ruta], 1)[0] ?? '', titulos: rotulosSeguros(titulos, 10), acciones: rotulosSeguros(acciones, 30), campos, selects }
+  return { ruta: rotulosSeguros([ruta], 1)[0] ?? '', titulos: rotulosSeguros(titulos, 10), acciones: rotulosSeguros(acciones, 30), campos, selects, ...(modal > 0 ? { modal } : {}) }
 }
 
 /** 0.3.32: huella de la pantalla (ruta + títulos + acciones + nº de campos + desplegables) para saber si el clic del ramo la CAMBIÓ. Sin valores. Pura. */
 export function huellaPantallaPelayo(e: EstructuraPelayo): string {
-  return JSON.stringify([e.ruta, e.titulos, e.acciones, e.campos, e.selects.map((x) => [x.etiqueta, x.opciones.length])])
+  return JSON.stringify([e.ruta, e.titulos, e.acciones, e.campos, e.selects.map((x) => [x.etiqueta, x.opciones.length]), ...(e.modal ? [e.modal] : [])])
 }
 
 /** 0.3.32: ¿la pantalla de después es otra que la de antes? (otra ruta, otros títulos/acciones, otro nº de campos o de desplegables). Pura. */
@@ -464,6 +493,13 @@ async function esperarRamo(page: Page, rotulos: readonly string[], ms: number): 
  */
 export async function elegirRamoPelayo(page: Page, ctx: CtxEntradaPelayo, ramo: string, ms = 0): Promise<ResultadoRamoPelayo> {
   const { selects, pulsables } = await esperarRamo(page, rotulosRamoPelayo(ramo), ms)
+  // 0.3.38 (Pelayo real 608504fd): un modal PERSISTENTE (`.pelayo-modal`) tapaba las tarjetas. Si es INFORMATIVO (sin campos ni términos de acción final)
+  // se cierra por la puerta del guard (Escape › botón de cierre › fondo) ANTES de elegir; si no, no se toca y el diagnóstico del clic lo describe.
+  if (ctx.cerrarModal) {
+    const c = (await ctx.cerrarModal(page)) as { estado: string; via?: string; motivo?: string }
+    if (c.estado !== 'sin_modal') ctx.log(`pelayo_modal ${c.estado}${c.via ? ` ${c.via}` : ''}${c.motivo ? ` ${c.motivo}` : ''}`)
+    if (c.estado === 'cerrado') await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => undefined)
+  }
   if (selects.length > 1) return { estado: 'no_elegido', motivo: `${selects.length} desplegables con la opción del ramo`, controles: selects.length }
   if (selects.length === 1) {
     await ctx.pausa()

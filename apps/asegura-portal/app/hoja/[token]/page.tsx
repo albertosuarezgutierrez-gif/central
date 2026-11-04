@@ -14,6 +14,7 @@ import { candidatasEnVivo, hojaPorToken, sellarUso } from '@/lib/hojas'
 
 import { MEDIADOR } from '@central/module-seguros'
 import { MarcaAsegura } from '@/app/MarcaAsegura'
+import { LogoCompania } from '@/app/(portal)/boveda/presupuesto/[id]/LogoCompania'
 import QRCode from 'qrcode'
 
 import { enlaceDeHoja } from '@/lib/enlace-hoja'
@@ -204,7 +205,11 @@ export default async function Hoja({ params }: { params: Promise<{ token: string
           const canal = canalDeCompania(p.compania, companias)
           return (
             <li key={p.id} className="hoja-poliza">
-              <h2>{p.compania}</h2>
+              {/* Regla de Alberto: de la compañía, su LOGO y no su nombre. El nombre va en `alt`;
+                  sin logo, LogoCompania cae al nombre (no se esconde ninguna compañía). */}
+              <h2>
+                <LogoCompania nombre={p.compania} alto={32} />
+              </h2>
               {/* `etiquetaRamo`, no el enum: el mismo seguro no puede
                   llamarse «Auto» en pantalla y `auto` en el papel. */}
               <p className="hoja-ramo">{etiquetaRamo(p.ramo)}</p>

@@ -6,6 +6,7 @@ import { Ico, FILA } from '../../iconos'
 import type { RamoSolicitud } from '@central/module-seguros'
 import { interpretarSolicitudesDatos, type SolicitudesDatos } from '@/lib/seguimiento-asegura'
 import { enlaceWhatsappConMensaje } from '@/lib/telefono-wa'
+import { registrarSaliente } from '@/lib/correduria/saliente-whatsapp'
 import { resultadoPedirDatos } from '@/lib/correduria/pedir-datos'
 import { fmt } from './piezas'
 import { RespuestasSolicitud } from './RespuestasSolicitud'
@@ -27,7 +28,7 @@ const PANTALLA_TARIFICAR: Partial<Record<RamoSolicitud, string>> = {
 
 export default function PedirDatos({ oportunidadId, clienteId, telefono = null, ramo }: { oportunidadId: string; clienteId: string; telefono?: string | null; ramo: RamoSolicitud }) {
   const [lectura, setLectura] = useState<SolicitudesDatos | null>(null)
-  const [nuevo, setNuevo] = useState<{ url: string; mensaje: string; caduca: string } | null>(null)
+  const [nuevo, setNuevo] = useState<{ url: string; mensaje: string; caduca: string; id: string | null } | null>(null)
   const [ocupado, setOcupado] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
   const [copiado, setCopiado] = useState(false)
@@ -57,7 +58,7 @@ export default function PedirDatos({ oportunidadId, clienteId, telefono = null, 
     const r = await post({ oportunidadId, reemitir: true })
     setOcupado(false)
     const res = resultadoPedirDatos(r.status, r.json)
-    if (res.ok) setNuevo({ url: res.url, mensaje: res.mensaje, caduca: res.caduca })
+    if (res.ok) setNuevo({ url: res.url, mensaje: res.mensaje, caduca: res.caduca, id: typeof r.json?.id === 'string' ? r.json.id : null })
     setAviso(res.aviso)
     void cargar()
   }
@@ -97,7 +98,7 @@ export default function PedirDatos({ oportunidadId, clienteId, telefono = null, 
           <input readOnly value={nuevo.url} onFocus={(e) => e.currentTarget.select()} style={{ minHeight: 44, padding: '0 8px', borderRadius: 8, border: '1px solid var(--border)', width: '100%', boxSizing: 'border-box' }} />
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button type="button" onClick={() => void copiar(nuevo.mensaje)} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>{copiado ? 'Copiado' : 'Copiar mensaje'}</button>
-            <a href={waDirecto ?? `https://wa.me/?text=${encodeURIComponent(nuevo.mensaje)}`} target="_blank" rel="noreferrer" style={{ ...btnStyle('secundario', 'sm'), minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>WhatsApp</a>
+            <a href={waDirecto ?? `https://wa.me/?text=${encodeURIComponent(nuevo.mensaje)}`} target="_blank" rel="noreferrer" onClick={() => { if (waDirecto) registrarSaliente({ origen: 'solicitud_datos', clienteId, oportunidadId, solicitudId: nuevo.id }, telefono, nuevo.mensaje) }} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>WhatsApp</a>
           </div>
           {!waDirecto && (
             <div style={{ fontSize: 12, color: 'var(--muted)' }}>

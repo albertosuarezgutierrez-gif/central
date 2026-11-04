@@ -8,6 +8,7 @@ import { estadoCaducidadCarnet, urlRetarificar, RAMOS_PRESUPUESTO, type CarnetFi
 import type { ContactosCliente, IdentidadFicha } from '@/lib/cliente-edicion-asegura'
 import { PageHeader, BtnLink, Badge, btnStyle, cardStyle, type Tono } from '@/components/ui'
 import AccionesContacto from '../../AccionesContacto'
+import { registroWaCabecera } from '@/lib/correduria/saliente-whatsapp'
 import VerDniCompleto from './VerDniCompleto'
 import EditarFicha from './EditarFicha'
 import PedirPresupuestoBot from './PedirPresupuestoBot'
@@ -77,7 +78,7 @@ export default function Cabecera({ ficha, resumen, seguros, idsConChip }: {
                     diga el enum. */}
                 <EstadoCabecera estado={ficha.estado} cotizacionesVivas={ficha.cotizacionesVivas} cliente={esCliente} />
                 <RamosContratados tiposVivos={tiposVivos} />
-                <Contacto nombre={ficha.nombre} esCliente={esCliente} c={contacto} intervinientes={intervinientes} piiClave={ficha.piiClave} contactos={ficha.contactos} polizas={ficha.polizas} />
+                <Contacto clienteId={ficha.id} nombre={ficha.nombre} esCliente={esCliente} c={contacto} intervinientes={intervinientes} piiClave={ficha.piiClave} contactos={ficha.contactos} polizas={ficha.polizas} />
                 {/* DNI, nacimiento y carnés se consultan, no se trabajan: plegados
                     (26/09/2026, en móvil la línea ocupaba 5-6 renglones). */}
                 {/* Abierto de serie si un carné caduca o ya caducó: un aviso no se pliega.
@@ -163,6 +164,8 @@ function SiguientePaso({ ficha, resumen, tiposVivos, seguros }: { ficha: Ficha; 
         riesgo: devuelta.objeto?.estado === 'conocido' ? { titulo: devuelta.objeto.titulo, detalle: devuelta.objeto.detalle } : null,
         paraTercero: tercero,
       }}
+      reciboId={devuelta.recibos?.ultimo?.id ?? null}
+      polizaId={devuelta.id}
       importe={devuelta.recibos?.ultimo?.importe ?? null}
       fechaEfecto={devuelta.recibos?.ultimo?.fechaEfecto ?? null}
       tipoMotivo={null}
@@ -477,7 +480,9 @@ const CAUSA_PII: Record<string, string> = {
   sin_muestra: 'no hay ningún dato cifrado con el que probar la clave',
 }
 
-function Contacto({ nombre, esCliente, c, intervinientes, piiClave, contactos, polizas }: {
+function Contacto({ clienteId, nombre, esCliente, c, intervinientes, piiClave, contactos, polizas }: {
+  /** Ficha a la que pertenece el WhatsApp de la cabecera: se registra como `generico` CON su clienteId. */
+  clienteId: string
   /** Para el `aria-label` de los iconos: «Llamar a Jose Suárez». */
   nombre: string
   /** Decide QUÉ mensaje se abre en WhatsApp. Lo calcula la cabecera, con el
@@ -542,7 +547,7 @@ function Contacto({ nombre, esCliente, c, intervinientes, piiClave, contactos, p
           sigue el número y de quién es, que es lo que se LEE. El WhatsApp lo
           pinta ahí dentro `BotonWhatsapp`, y solo si el número es un móvil
           (ver `lib/telefono-wa.ts`): no se repite suelto al lado del número. */}
-      <AccionesContacto telefono={ef.telefono} email={ef.email} quien={nombre} mensaje={mensajeWa} />
+      <AccionesContacto telefono={ef.telefono} email={ef.email} quien={nombre} mensaje={mensajeWa} registro={registroWaCabecera(clienteId)} />
       {ef.telefono ? (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
           {/* Texto para LEER, no un segundo enlace (25/09/2026): el icono de al

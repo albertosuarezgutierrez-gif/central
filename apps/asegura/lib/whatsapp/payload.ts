@@ -12,8 +12,9 @@
 // Zod NO es `.strict()` aquí a propósito: Meta añade campos sin avisar y un campo nuevo no puede
 // tumbar la recepción. Se valida lo que se USA; lo demás pasa. Lo estricto es la salida de la IA.
 //
-// Los tipos no-texto (imagen, audio, documento…) NO se descargan: se guarda el tipo y un marcador
-// (`[imagen]`), con el pie de foto si lo trae.
+// Los tipos no-texto (imagen, audio, documento…) NO se descargan AQUÍ: se guarda el tipo y un marcador
+// (`[imagen]`), con el pie de foto si lo trae. De `image`/`document` se CONSERVA (04/11/2026, spec §6) el id del media
+// de Meta, su mime y su sha256 (no son datos personales) para que `media-procesar.ts` lo descargue después.
 
 import { z } from 'zod'
 
@@ -147,6 +148,24 @@ export function extraerMensajes(body: WebhookWhatsapp, phoneNumberId: string): E
   return out
 }
 
+/** Tipos de media que se descargan (para leer una póliza): imagen y documento. Audio/vídeo/sticker, no. */
+export const TIPOS_MEDIA_DESCARGABLE = ['image', 'document'] as const
+
+export type MediaMensaje = { id: string; mime: string | null; sha256: string | null }
+
+/** El media de un mensaje `image`/`document` (id de Meta, mime y sha256). El NOMBRE del fichero no: puede llevar datos. */
+export function mediaDeMensaje(m: Record<string, unknown>): MediaMensaje | null {
+  const tipo = typeof m.type === 'string' ? m.type : ''
+  if (!(TIPOS_MEDIA_DESCARGABLE as readonly string[]).includes(tipo)) return null
+  const c = m[tipo]
+  if (!c || typeof c !== 'object') return null
+  const o = c as { id?: unknown; mime_type?: unknown; sha256?: unknown }
+  if (typeof o.id !== 'string' || !/^\d{1,30}$/.test(o.id)) return null
+  const mime = typeof o.mime_type === 'string' ? o.mime_type.toLowerCase().split(';')[0].trim().slice(0, 100) : null
+  const sha256 = typeof o.sha256 === 'string' && o.sha256.length <= 100 ? o.sha256 : null
+  return { id: o.id, mime: mime || null, sha256 }
+}
+
 /**
  * El crudo SIN datos personales, para lo que se conserva después de procesar: ids, tipos y fechas.
  * Fuera el texto, el pie, el nombre del perfil y los números (de los dos lados).
@@ -157,9 +176,14 @@ export function crudoMinimizado(crudo: unknown): Record<string, unknown> {
   return {
     field: typeof c.field === 'string' ? c.field : null,
     phone_number_id: (c.metadata as { phone_number_id?: unknown } | undefined)?.phone_number_id ?? null,
-    message: { id: m.id ?? null, type: m.type ?? null, timestamp: m.timestamp ?? null, ...originalDe(m) },
+    message: { id: m.id ?? null, type: m.type ?? null, timestamp: m.timestamp ?? null, ...originalDe(m), ...mediaMinimo(m) },
     minimizado: true,
   }
+}
+
+function mediaMinimo(m: Record<string, unknown>): { media?: MediaMensaje } {
+  const media = mediaDeMensaje(m)
+  return media ? { media } : {}
 }
 
 /** De una edición o un borrado se conserva a QUÉ mensaje apuntaba (un wamid, sin texto). */

@@ -1,6 +1,8 @@
 // Reglas PURAS de la sesión del responsable (26/10/2026): duración con «Recordar este dispositivo», última empresa
 // recordada (Pilar, varias empresas) y enmascarado de correos para los logs. Sin BD ni Next → testeable.
 
+/** La casilla «Recordar este dispositivo» llega MARCADA (Pilar tenía que meter el código a diario). */
+export const RECORDAR_POR_DEFECTO = true
 export const SESION_RESPONSABLE_DIAS = 30
 /** Con la casilla «Recordar este dispositivo» marcada. Sin ella, se mantiene la duración de siempre. */
 export const SESION_RECORDADA_DIAS = 90

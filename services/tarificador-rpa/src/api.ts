@@ -1,6 +1,7 @@
 // Cliente HTTP del worker hacia apps/asegura. El ÚNICO canal del worker con la casa: sin BD.
 
 import type { AtascoWorker, CandidatoVersion, IncidenciaEjecucion, InventarioDom, OfertaNormalizada, OpcionPoblacion, PasoTraza, Recorrido, ResultadoAdaptador, SeleccionVehiculo, TipoError, VehiculoConfirmado } from '@central/module-tarificacion'
+import { redactarMediadorProfundo as sinMediador } from './privacidad-mediador.ts'
 
 export type Config = { jobId: string; apiUrl: string; secreto: string }
 
@@ -148,7 +149,7 @@ export async function enviarResultado(c: Config, cuerpo: CuerpoResultado): Promi
       const res = await fetch(`${c.apiUrl}/api/tarificador/resultado`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${c.secreto}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(cuerpo),
+        body: JSON.stringify(sinMediador(cuerpo)),
         signal: AbortSignal.timeout(30_000),
       })
       ultimo = res.status
@@ -237,7 +238,7 @@ export async function pedirPaso(
       res = await fetch(`${c.apiUrl}/api/tarificador/explorador/paso`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${c.secreto}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(cuerpo),
+        body: JSON.stringify(sinMediador(cuerpo)),
         signal: AbortSignal.timeout(75_000),
       })
     } catch {
@@ -278,7 +279,7 @@ export async function cerrarExploracion(c: Config, cuerpo: CuerpoCierre, esperar
       const res = await fetch(`${c.apiUrl}/api/tarificador/explorador/cierre`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${c.secreto}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(cuerpo),
+        body: JSON.stringify(sinMediador(cuerpo)),
         signal: AbortSignal.timeout(30_000),
       })
       const ocupado = res.status === 409 && ((await res.json().catch(() => null)) as { motivo?: unknown } | null)?.motivo === 'paso_en_curso'
@@ -315,7 +316,7 @@ export async function publicarEstadoPilotaje(c: Config, cuerpo: CuerpoEstadoPilo
       const res = await fetch(`${c.apiUrl}/api/tarificador/pilotaje/estado`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${c.secreto}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(cuerpo),
+        body: JSON.stringify(sinMediador(cuerpo)),
         signal: AbortSignal.timeout(30_000),
       })
       if (res.status === 200) return 'ok'
@@ -364,7 +365,7 @@ export async function cerrarPilotaje(c: Config, cuerpo: CuerpoCierrePilotaje, es
       const res = await fetch(`${c.apiUrl}/api/tarificador/pilotaje/cierre`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${c.secreto}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(cuerpo),
+        body: JSON.stringify(sinMediador(cuerpo)),
         signal: AbortSignal.timeout(30_000),
       })
       ultimo = res.status

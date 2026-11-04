@@ -86,10 +86,11 @@ test('`inspeccionar` devuelve el diagnóstico (qué tapa la tarjeta) SIN pulsar 
     const insp = publicados[1].resultadoAnterior!
     assert.equal(insp.estado, 'hecho', JSON.stringify(insp))
     assert.equal(insp.motivo, 'inspeccionado')
-    assert.equal(insp.detalle?.length, 1)
+    // 0.3.38: tras `diag:` van las líneas del interceptor (`int:`, `int-texto:`…). 0.3.42: y los tags de los controles del modal (`modal-ctl:`).
+    assert.ok(insp.detalle!.length >= 2 && insp.detalle!.length <= 10 && insp.detalle!.slice(1).every((l) => /^(?:int(?:-texto|-ctl|-shd)?|entorno|red-fallida|modal-ctl(?: \d\/\d)?): /.test(l)), insp.detalle!.join('\n'))
     const cuerpo = insp.detalle![0].replace(/^diag: /, '')
     assert.ok(RE_CUERPO_DIAGNOSTICO_CLIC.test(cuerpo), cuerpo)
-    assert.match(cuerpo, / vis=1 .* hit=otro\/div\/velo-modal cookie=0 ifr=0 shd=0 anim=0$/)
+    assert.match(cuerpo, / vis=1 .* hit=otro\/div\/velo-modal cookie=0 ifr=0 shd=0 anim=0 int=div\/velo-modal\/d0m1f0x0\/z0$/)
     const pul = publicados[2].resultadoAnterior!
     assert.equal(pul.estado, 'rechazado', JSON.stringify(pul))
     assert.equal(pul.motivo, 'clic_no_accionable')

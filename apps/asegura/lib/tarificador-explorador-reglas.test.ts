@@ -735,11 +735,11 @@ test('guardián: la regex de la nota de entrada de asegura es IDÉNTICA a la del
 const NOTA_CLIC_PELAYO = 'clic pelayo: ch=1 bb=240x120@10,301 vis=1 op=0.5 vs=v dp=block pe=auto anc=div/envoltura/1/none hit=otro/div/velo-modal cookie=0 ifr=0 shd=0 anim=2'
 test('cierre: la nota de diagnóstico del clic de Pelayo se conserva EXACTA; con texto añadido o libre se descarta', () => {
   const base = { trabajoId: '0c6b8826-32b9-4b20-bea4-4d27979da4a2', motivoFin: 'tope', redNoGet: [], efectosEnPortal: [] }
-  for (const n of [NOTA_CLIC_PELAYO, 'clic pelayo: ch=0 bb=- vis=0 op=0 vs=h dp=none pe=none anc=- hit=ninguno cookie=1 ifr=1 shd=1 anim=99']) {
+  for (const n of [NOTA_CLIC_PELAYO, `${NOTA_CLIC_PELAYO} int=div/pelayo-modal.no-footer/d0m1f0x1/z99`, `${NOTA_CLIC_PELAYO} int=div/-/d1m1f9x9/z-5`, 'clic pelayo: ch=0 bb=- vis=0 op=0 vs=h dp=none pe=none anc=- hit=ninguno cookie=1 ifr=1 shd=1 anim=99']) {
     const r = leerPeticionCierre({ ...base, notaFin: n })
     assert.ok(r.ok && r.p.notaFin === n, n)
   }
-  for (const n of [`${NOTA_CLIC_PELAYO} ES1234`, ` ${NOTA_CLIC_PELAYO}`, `${NOTA_CLIC_PELAYO}\n`, NOTA_CLIC_PELAYO.replace('ch=1', 'ch=2'), NOTA_CLIC_PELAYO.replace('velo-modal', 'Velo Modal'), 'clic pelayo: texto libre', NOTA_CLIC_PELAYO.replace('anim=2', 'anim=100')]) {
+  for (const n of [`${NOTA_CLIC_PELAYO} int=div/pelayo-modal/d0m1f0x1/z99 texto libre`, `${NOTA_CLIC_PELAYO} int=div/Pelayo Modal/d0m1f0x1/z99`, `${NOTA_CLIC_PELAYO} int=div/a.b.c/d0m1f0x1/z99`, `${NOTA_CLIC_PELAYO} int=div/-/d2m1f0x1/z99`, `${NOTA_CLIC_PELAYO} ES1234`, ` ${NOTA_CLIC_PELAYO}`, `${NOTA_CLIC_PELAYO}\n`, NOTA_CLIC_PELAYO.replace('ch=1', 'ch=2'), NOTA_CLIC_PELAYO.replace('velo-modal', 'Velo Modal'), 'clic pelayo: texto libre', NOTA_CLIC_PELAYO.replace('anim=2', 'anim=100')]) {
     const r = leerPeticionCierre({ ...base, notaFin: n })
     assert.ok(r.ok && r.p.notaFin === null, n)
   }

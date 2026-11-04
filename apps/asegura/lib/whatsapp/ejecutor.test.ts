@@ -39,6 +39,7 @@ function deps(sobre: Partial<DepsEjecutor> = {}) {
     async crearTarea() { llamadas.push('crearTarea'); return { ok: true, id: 'tarea' } },
     async rellenarNombre() { llamadas.push('rellenarNombre'); return true },
     async anotarNota() { llamadas.push('anotarNota') },
+    async crearPropuesta() { llamadas.push('crearPropuesta'); return { ok: true, id: 'prop' } },
     async auditar(e) { auditadas.push({ accion: e.accion, resultado: e.resultado, motivo: e.motivo }) },
     ...sobre,
   }
@@ -169,4 +170,97 @@ test('la transcripción va redactada y sin el nombre del contacto', () => {
   assert.ok(corta.length <= 300)
   assert.ok(corta.includes('mensaje 29'))
   assert.ok(!corta.includes('mensaje 0 '))
+})
+
+// ── Propuestas b1-b3 (04/11/2026, spec §5, D1/D4) ───────────────────────────────
+
+const RECIBO = '44444444-4444-4444-8444-444444444444'
+const RECIBO_2 = '55555555-5555-4555-8555-555555555555'
+const RECIBO_NO_VIGOR = '66666666-6666-4666-8666-666666666666'
+
+function ctxCliente(p: Partial<ContextoEjecucion> = {}): ContextoEjecucion {
+  return ctx({
+    cliente: { id: CLIENTE, tipo: 'cliente', leadEstado: null, fuente: 'cima', nombre: 'Pepe' },
+    enVigor: true,
+    recibosPendientes: [{ id: RECIBO, ramo: 'auto', situacion: 'devuelto' }],
+    saliente: null,
+    ...p,
+  })
+}
+
+test('b1-b3 NUNCA escriben: solo crean la propuesta (ni tarea, ni oportunidad, ni nota)', async () => {
+  const plan = planificar(
+    analisis({ acciones: [{ tipo: 'proponerFechaCobro', fecha: '2026-10-15' }, { tipo: 'proponerVencimiento', ramo: 'auto', fecha: '2027-03-01' }] }),
+    ctxCliente({ oportunidadesAbiertas: [{ id: OPP_AUTO, ramo: 'auto', estado: 'competencia', fechaFinVigencia: null }] }),
+  )
+  assert.deepEqual(plan.rechazos, [])
+  assert.deepEqual(plan.pasos.map((p) => p.tipo), ['proponer', 'proponer'])
+  const { d, llamadas } = deps()
+  await ejecutar(plan, ctxCliente(), d)
+  assert.deepEqual(llamadas, ['crearPropuesta', 'crearPropuesta'])
+})
+
+test('b2 «ya lo pagué» → propuesta `pagado` con el recibo del SERVIDOR', () => {
+  const plan = planificar(analisis({ acciones: [{ tipo: 'proponerPagado' }] }), ctxCliente())
+  assert.deepEqual(plan.pasos, [{ tipo: 'proponer', propuesta: 'pagado', reciboId: RECIBO, oportunidadId: null, fecha: null }])
+})
+
+test('IA con id inventado → rechazo (`.strict()`): la IA no da ids', () => {
+  const plan = planificar(analisis({ acciones: [{ tipo: 'proponerPagado', recibo_id: RECIBO_2 }, { tipo: 'proponerFechaCobro', fecha: '2026-10-20', reciboId: RECIBO }] }), ctxCliente())
+  assert.deepEqual(plan.pasos, [])
+  assert.deepEqual(plan.rechazos.map((r) => r.motivo), ['invalida', 'invalida'])
+})
+
+test('el recibo del vínculo que NO es de una póliza en vigor de la ficha → rechazo (no cae a otro)', () => {
+  const plan = planificar(analisis({ acciones: [{ tipo: 'proponerPagado' }] }), ctxCliente({ saliente: { origen: 'recibo_devuelto', reciboId: RECIBO_NO_VIGOR, oportunidadId: null } }))
+  assert.deepEqual(plan.pasos, [])
+  assert.equal(plan.rechazos[0].motivo, 'recibo_no_en_vigor')
+})
+
+test('el recibo del vínculo manda sobre la ambigüedad; sin vínculo y con dos recibos → ambiguo', () => {
+  const dos = [{ id: RECIBO, ramo: 'auto', situacion: 'devuelto' }, { id: RECIBO_2, ramo: 'hogar', situacion: 'pendiente' }]
+  const conVinculo = planificar(analisis({ acciones: [{ tipo: 'proponerPagado' }] }), ctxCliente({ recibosPendientes: dos, saliente: { origen: 'recibo_devuelto', reciboId: RECIBO_2, oportunidadId: null } }))
+  assert.equal((conVinculo.pasos[0] as { reciboId: string }).reciboId, RECIBO_2)
+  const sinVinculo = planificar(analisis({ acciones: [{ tipo: 'proponerPagado' }] }), ctxCliente({ recibosPendientes: dos }))
+  assert.equal(sinVinculo.rechazos[0].motivo, 'recibo_ambiguo')
+})
+
+test('CEPO D4: ficha SIN póliza en vigor (lead/ex-cliente) o «no se sabe» → ninguna propuesta', () => {
+  const acciones = [{ tipo: 'proponerPagado' }, { tipo: 'proponerFechaCobro', fecha: '2026-10-20' }, { tipo: 'proponerVencimiento', ramo: 'auto', fecha: '2027-03-01' }]
+  const opp = [{ id: OPP_AUTO, ramo: 'auto', estado: 'competencia', fechaFinVigencia: null }]
+  for (const enVigor of [false, null, undefined]) {
+    const plan = planificar(analisis({ acciones }), ctxCliente({ enVigor, oportunidadesAbiertas: opp }))
+    assert.equal(plan.pasos.length, 0, `enVigor=${enVigor}`)
+    assert.deepEqual(plan.rechazos.map((r) => r.motivo), ['sin_poliza_en_vigor', 'sin_poliza_en_vigor', 'sin_poliza_en_vigor'])
+  }
+})
+
+test('D4: a un lead sí se le abre oportunidad (a) aunque no reciba propuestas', () => {
+  const plan = planificar(analisis({ acciones: [{ tipo: 'createOpportunity', ramo: 'hogar' }, { tipo: 'proponerPagado' }] }), ctx({ enVigor: false }))
+  assert.deepEqual(plan.pasos.map((p) => p.tipo), ['createOpportunity'])
+})
+
+test('CEPO una ficha exacta o nada: teléfono compartido, «no se miró» o lead recién creado → ninguna propuesta', () => {
+  for (const clientesCandidatos of [2, 0, null]) {
+    const plan = planificar(analisis({ acciones: [{ tipo: 'proponerPagado' }] }), ctxCliente({ clientesCandidatos }))
+    assert.deepEqual(plan.pasos, [], `candidatos=${clientesCandidatos}`)
+    assert.equal(plan.rechazos[0].motivo, 'ficha_no_unica')
+  }
+  const nuevo = planificar(analisis({ acciones: [{ tipo: 'proponerPagado' }] }), ctxCliente({ cliente: null, estadoConversacion: 'pendiente_clasificar', clientesCandidatos: 0, enVigor: true }))
+  assert.deepEqual(nuevo.pasos.map((p) => p.tipo), ['crearLead'])
+})
+
+test('b3 vencimiento: oportunidad del vínculo o la única del ramo; fecha pasada o igual → rechazo', () => {
+  const opps = [{ id: OPP_AUTO, ramo: 'auto', estado: 'competencia', fechaFinVigencia: '2027-01-01' }]
+  const ok = planificar(analisis({ acciones: [{ tipo: 'proponerVencimiento', ramo: 'auto', fecha: '2027-03-01' }] }), ctxCliente({ oportunidadesAbiertas: opps }))
+  assert.deepEqual(ok.pasos, [{ tipo: 'proponer', propuesta: 'vencimiento', reciboId: null, oportunidadId: OPP_AUTO, fecha: '2027-03-01' }])
+  assert.equal(planificar(analisis({ acciones: [{ tipo: 'proponerVencimiento', ramo: 'auto', fecha: '2026-01-01' }] }), ctxCliente({ oportunidadesAbiertas: opps })).rechazos[0].motivo, 'fecha_pasada')
+  assert.equal(planificar(analisis({ acciones: [{ tipo: 'proponerVencimiento', ramo: 'auto', fecha: '2027-01-01' }] }), ctxCliente({ oportunidadesAbiertas: opps })).rechazos[0].motivo, 'nada_que_cambiar')
+  assert.equal(planificar(analisis({ acciones: [{ tipo: 'proponerVencimiento', ramo: 'hogar', fecha: '2027-03-01' }] }), ctxCliente({ oportunidadesAbiertas: opps })).rechazos[0].motivo, 'sin_oportunidad_abierta')
+})
+
+test('la misma propuesta dos veces en un análisis → una sola', () => {
+  const plan = planificar(analisis({ acciones: [{ tipo: 'proponerPagado' }, { tipo: 'proponerPagado' }] }), ctxCliente())
+  assert.equal(plan.pasos.length, 1)
+  assert.equal(plan.rechazos[0].motivo, 'repetida')
 })

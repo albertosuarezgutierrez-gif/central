@@ -16,6 +16,7 @@ export default function WhatsappLead({ lead, onRegistrado }: { lead: LeadVencimi
     <BotonWhatsapp
       telefono={wa.telefono}
       mensaje={wa.mensaje}
+      registro={{ origen: 'lead', oportunidadId: lead.oportunidadId, clienteId: lead.clienteId }}
       onAbrir={() => {
         // Sin `await` ni `preventDefault`: WhatsApp se abre aunque el registro tarde o falle.
         fetch('/api/correduria/oportunidad/whatsapp', {

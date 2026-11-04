@@ -205,6 +205,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <nav className="pie-lista" aria-label="Información legal">
                 <Link href="/legal/informacion-mediador">Información del mediador</Link>
                 <Link href="/legal/privacidad">Privacidad</Link>
+                <Link href="/legal/condiciones">Condiciones de uso</Link>
+                <Link href="/legal/eliminacion-datos">Eliminación de datos</Link>
                 <Link href="/legal/aviso-legal">Aviso legal</Link>
                 {/* 🚨 Sin este enlace la política de cookies queda huérfana —
                     solo se llegaba desde Google— y con ella el ÚNICO botón para

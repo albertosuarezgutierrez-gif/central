@@ -6,6 +6,7 @@ import { correduriaUnica } from '@/lib/cartera'
 import { iaWhatsappActiva, whatsappActivo } from '@/lib/whatsapp/config'
 import { procesarPendientes } from '@/lib/whatsapp/procesar'
 import { analizarPendientes } from '@/lib/whatsapp/analizar'
+import { procesarMediaPendiente } from '@/lib/whatsapp/media-procesar'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -30,9 +31,15 @@ export async function GET(req: Request) {
     const correduria = await correduriaUnica()
     if (!correduria) return NextResponse.json({ estado: 'error', motivo: 'sin correduría' }, { status: 500 })
     const rescate = await procesarPendientes(correduria.id)
-    if (!iaWhatsappActiva()) return NextResponse.json({ estado: 'ok', rescate, ia: 'inactiva' })
+    // Media (imagen/PDF) de los entrantes con UNA ficha: descarga, archivo y lectura (spec §6). SIEMPRE, no solo si el
+    // rescate procesó algo: los mensajes ya procesados por el `after()` dejan su media en cola. Nunca tumba el cron.
+    const media = await procesarMediaPendiente(correduria.id).catch((e) => {
+      console.error('[whatsapp] media:', e instanceof Error ? e.name : 'error')
+      return { estado: 'error' as const }
+    })
+    if (!iaWhatsappActiva()) return NextResponse.json({ estado: 'ok', rescate, media, ia: 'inactiva' })
     const analisis = await analizarPendientes(correduria.id)
-    return NextResponse.json({ estado: 'ok', rescate, ia: 'activa', analisis })
+    return NextResponse.json({ estado: 'ok', rescate, media, ia: 'activa', analisis })
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('cron/whatsapp-analizar', e) }, { status: 500 })
   }

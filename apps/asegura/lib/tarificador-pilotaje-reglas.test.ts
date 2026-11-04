@@ -39,6 +39,10 @@ test('comando: lista cerrada de acciones y claves (nada de selectores, URLs ni �
   assert.equal(leerComandoPilotaje({ accion: 'inspeccionar' }).ok, false)
   assert.equal(leerComandoPilotaje({ accion: 'inspeccionar', ref: 'm0e3', valor: 'x' }).ok, false)
   assert.equal(leerComandoPilotaje({ accion: 'inspeccionar', ref: '#a' }).ok, false)
+  // 0.3.38: `cerrar_modal` (cierra un modal informativo) no lleva ningún otro campo.
+  assert.deepEqual(leerComandoPilotaje({ accion: 'cerrar_modal' }), { ok: true, c: { accion: 'cerrar_modal' } })
+  assert.equal(leerComandoPilotaje({ accion: 'cerrar_modal', ref: 'm0e3' }).ok, false)
+  assert.equal(leerComandoPilotaje({ accion: 'cerrar_modal', forzar: true }).ok, false)
 })
 
 test('encolar: solo `entrada` de la lista cerrada; sin cliente ni riesgo (siempre sintética); sin login asistido', () => {

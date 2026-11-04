@@ -22,7 +22,9 @@ export const repoSesionResponsable: RepoSesionResponsable = {
   },
   async rotarJti(usuario_id, actual, nuevo) {
     await prisma.$executeRaw(Prisma.sql`
-      UPDATE rrhh.usuarios_rrhh SET session_jti = ${nuevo} WHERE id = ${usuario_id}::uuid AND session_jti = ${actual}`)
+      UPDATE rrhh.usuarios_rrhh
+      SET session_jti = array_to_string(array_replace(string_to_array(session_jti, ','), ${actual}, ${nuevo}), ',')
+      WHERE id = ${usuario_id}::uuid AND ${actual} = ANY(string_to_array(session_jti, ','))`)
   },
 }
 

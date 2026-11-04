@@ -9,7 +9,51 @@
 
 import { sanearInventarioDom, MAX_BYTES_INVENTARIO_DOM, MAX_MARCOS_INVENTARIO, MAX_OPCIONES_CRUDAS_SELECT, type InventarioDom } from '@central/module-tarificacion'
 import type { ElementHandle, Frame, JSHandle, Page } from 'playwright'
+import { redactarMediadorProfundo } from './privacidad-mediador.ts'
+import { LIB_MODAL_PAGINA } from './modal-informativo.ts'
 import { controlOcultoDeEtiqueta, SEL_ERROR_EPAC, SELECTOR_AVANCE_SERVLET, SELECTOR_DIALOGO, tituloDialogoVivo } from './guard.ts'
+
+/**
+ * 0.3.42 (Pelayo real 04/11/2026, «Tipo de documento» del modal «Datos del Tomador»): ¿es `sel` un `<select>` nativo OCULTO (display:none,
+ * visibility:hidden, opacidad 0 o caja ≤1 px) que sostiene un CUSTOM ELEMENT visible? Devuelve ese custom element (el más cercano subiendo
+ * por el light DOM y por el host de cada shadowRoot ABIERTO, ≤20 saltos) si es visible, NO es un modal/diálogo/fondo y envuelve EXACTAMENTE
+ * un `<select>` (light DOM + su shadow + un nivel de shadow anidado); si no, `null`. SOLO LECTURA. Corre en la página (extractor y `localizar`):
+ * función ANÓNIMA sin funciones con nombre dentro (tsx las envuelve en `__name`, que no existe en la página).
+ */
+export const envoltorioSelectOculto = (sel: Element): Element | null => {
+  if (!sel || sel.tagName !== 'SELECT' || !sel.isConnected) return null
+  const win = sel.ownerDocument.defaultView
+  if (!win) return null
+  const cs = win.getComputedStyle(sel)
+  const r = sel.getBoundingClientRect()
+  if (!(cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) === 0 || (r.width <= 1 && r.height <= 1))) return null
+  let n: Element | null = sel
+  for (let i = 0; i < 20 && n; i++) {
+    const actual: Element = n
+    const raiz: Node | null = actual.getRootNode ? actual.getRootNode() : null
+    n = actual.parentElement || ((raiz as ShadowRoot | null)?.host ?? null)
+    if (!n) return null
+    const t = String(n.localName || '')
+    if (t.indexOf('-') < 1) continue
+    if (/modal|dialog|popup|aviso|backdrop|overlay|mask|veil|scrim/.test(t)) return null
+    const ch = win.getComputedStyle(n)
+    const rh = n.getBoundingClientRect()
+    if (ch.display === 'none' || ch.visibility === 'hidden' || rh.width <= 1 || rh.height <= 1) return null
+    let selects = n.querySelectorAll('select').length
+    const raices: ShadowRoot[] = n.shadowRoot ? [n.shadowRoot] : []
+    for (const h of Array.from(n.querySelectorAll('*'))) if (h.shadowRoot) raices.push(h.shadowRoot)
+    // Cada shadowRoot anidado se mete en la cola (tope 50 raíces): un select en cualquiera de ellas cuenta.
+    for (let k = 0; k < raices.length && k < 50; k++) {
+      selects += raices[k].querySelectorAll('select').length
+      for (const h of Array.from(raices[k].querySelectorAll('*'))) if (h.shadowRoot && raices.length < 50) raices.push(h.shadowRoot)
+    }
+    return selects === 1 ? n : null
+  }
+  return null
+}
+
+/** 0.3.42: tag de un custom element de DESPLEGABLE (Stencil/Angular: `pelayo-select`, `x-dropdown`, `ui-combobox`, `date-picker`…); nunca sus opciones. */
+export const RE_TAG_DESPLEGABLE = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*-(?:select|dropdown|combo|combobox|picker|listbox)$/
 
 /**
  * Extractor que corre EN EL MARCO. Va como TEXTO (no como función) a propósito: tsx envuelve las funciones con nombre
@@ -26,6 +70,8 @@ import { controlOcultoDeEtiqueta, SEL_ERROR_EPAC, SELECTOR_AVANCE_SERVLET, SELEC
 function extractor(explora: boolean): string {
   return `(() => {
   const EXPLORA = ${explora ? 'true' : 'false'};
+  // 0.3.38: librería de MODALES (SEL_MODAL, modalesVisibles, esCierreM…), la misma que usa el diagnóstico de clic y el cierre de modales del guard.
+  ${LIB_MODAL_PAGINA}
   // EXPLORACIÓN: también el avance del servlet de Allianz (un div con id y onclick, no un button; selector de guard.ts).
   // SOLO ese selector exacto; el módulo solo lo deja avanzar si es el avance autorizado de Datos básicos.
   const SEL_SERVLET = ${JSON.stringify(SELECTOR_AVANCE_SERVLET)};
@@ -34,7 +80,22 @@ function extractor(explora: boolean): string {
   // AngularJS (14/10/2026, fallo a5f06f70): las tarjetas de wmediadores son \`div.card-link[ng-click]\` con un \`<p>\` dentro (ni
   // <a> ni <button>); sin esto el inventario solo veía el menú superior. Su manejador viaja como \`onclick\` (el saneado lo
   // admite y la IA/el validador lo miran igual). En exploración un div no es avanzable (\`esAvanzable\`): no amplía acciones.
-  const SEL = 'input,select,textarea,button,a,[role=button],[role=link],[role=tab],[role=menuitem],[role=option],[role=combobox],[role=checkbox],mat-icon,td[onclick],[ng-click],[data-ng-click],label' + (EXPLORA ? ',' + SEL_SERVLET : '');
+  // 0.3.42: también [role=listbox] (desplegables ARIA de web components).
+  const SEL = 'input,select,textarea,button,a,[role=button],[role=link],[role=tab],[role=menuitem],[role=option],[role=combobox],[role=listbox],[role=checkbox],mat-icon,td[onclick],[ng-click],[data-ng-click],label' + (EXPLORA ? ',' + SEL_SERVLET : '');
+  // 0.3.42 (Pelayo «Tipo de documento»): el <select> OCULTO que sostiene un custom element visible (envoltorioSelectOculto) y los custom elements de
+  // DESPLEGABLE (tag select/dropdown/combo/picker/listbox) que NO envuelven un <select> (ARIA puro): se inventarían. Solo en exploración.
+  const envSel = (${envoltorioSelectOculto.toString()});
+  const RE_DESP = ${RE_TAG_DESPLEGABLE.toString()};
+  const conSelectDentro = (h) => {
+    if (h.querySelector('select')) return true;
+    const rs = h.shadowRoot ? [h.shadowRoot] : [];
+    for (let k = 0; k < rs.length && k < 20; k++) {
+      if (rs[k].querySelector('select')) return true;
+      for (const x of Array.from(rs[k].querySelectorAll('*'))) if (x.shadowRoot && rs.length < 20) rs.push(x.shadowRoot);
+    }
+    return false;
+  };
+  const esDesplegableCustom = (h) => EXPLORA && RE_DESP.test(String(h.localName || '')) && !conSelectDentro(h);
   const ngClick = (el) => el.getAttribute('ng-click') || el.getAttribute('data-ng-click');
   const esDivServlet = (el) => EXPLORA && el.matches(SEL_SERVLET);
   // EXPLORACIÓN: título del DIÁLOGO/modal más cercano (la MISMA función y el MISMO selector que la comprobación viva de
@@ -77,15 +138,85 @@ function extractor(explora: boolean): string {
   };
   const out = [];
   const nodos = [];
-  // DIAGNÓSTICO (no exploración): también dentro de shadow DOM ABIERTO (componentes web). En exploración no: sus refs se
-  // re-resuelven por handle y el bucle IA queda como estaba.
+  // Diagnóstico Y exploración (0.3.40): también dentro de shadow DOM ABIERTO, recursivo (web components de Stencil/Angular: <pelayo-modal> con
+  // <pelayo-input>/<pelayo-select>/<pelayo-button> anidados). Las refs se siguen re-resolviendo por handle (el handle es el nodo real, esté donde esté).
   const todos = (raiz, acc, prof) => {
     for (const el of Array.from(raiz.querySelectorAll(SEL))) acc.push(el);
-    if (EXPLORA || prof > 4 || acc.length > 2000) return acc;
+    // 0.3.42: custom elements de desplegable sin <select> dentro (si no casaron ya por su role).
+    if (EXPLORA) for (const h of Array.from(raiz.querySelectorAll('*'))) if (String(h.localName || '').indexOf('-') > 0 && !h.matches(SEL) && esDesplegableCustom(h)) acc.push(h);
+    if (prof > 5 || acc.length > 2000) return acc;
     for (const h of Array.from(raiz.querySelectorAll('*'))) if (h.shadowRoot) todos(h.shadowRoot, acc, prof + 1);
     return acc;
   };
-  const lista = todos(document, [], 0);
+  // Todos los nodos que casan con \`sel\` en el documento y en sus shadowRoot abiertos (títulos del modal, etc.).
+  const todosSel = (raiz, sel, acc, prof) => {
+    for (const el of Array.from(raiz.querySelectorAll(sel))) acc.push(el);
+    if (prof > 5 || acc.length > 2000) return acc;
+    for (const h of Array.from(raiz.querySelectorAll('*'))) if (h.shadowRoot) todosSel(h.shadowRoot, sel, acc, prof + 1);
+    return acc;
+  };
+  const raizDe = (el) => { const r = el.getRootNode && el.getRootNode(); return r && r.nodeType === 11 ? r : document; };
+  const dentroDe = (el, cont) => {
+    for (let n = el, i = 0; n && i < 80; i++) {
+      if (n === cont) return true;
+      n = n.parentElement || ((n.getRootNode && n.getRootNode().host) || null);
+    }
+    return false;
+  };
+  let lista = todos(document, [], 0);
+  // 0.3.38 (Pelayo real 608504fd: un .pelayo-modal persistente tapaba las tarjetas y el inventario no lo veía): en EXPLORACIÓN, los controles de CIERRE de
+  // un modal/diálogo VISIBLE se inventarían aunque no tengan texto (aria-label «Cerrar», clase close/btn-close, data-dismiss, «×»), sean del tag que sean.
+  // Solo se LEE; pulsarlos sigue pasando por las puertas del guard (cerrar_modal del pilotaje).
+  const extrasCierre = new Set();
+  if (EXPLORA) {
+    try {
+      for (const m of modalesVisibles(document)) {
+        const sub = [];
+        recorrer(m, sub, [], 0);
+        if (m.shadowRoot) recorrer(m.shadowRoot, sub, [], 1);
+        for (const c of sub.filter((x) => x.matches(SEL_CTL))) {
+          if (lista.length >= 2000) break;
+          if (lista.includes(c) || !esCierreM(c) || !visM(c)) continue;
+          lista.push(c);
+          extrasCierre.add(c);
+        }
+      }
+    } catch (err) { /* sin modales legibles: el inventario sigue como antes */ }
+  }
+  // 0.3.40 (Pelayo real 0a3ffed6): un MODAL de web component (custom element que cubre >= 50 % de la ventana) con CAMPOS dentro es la pantalla actual: se inventaría
+  // SOLO su contenido (las tarjetas de detrás están tapadas, no son accionables). Solo custom elements: los diálogos de light DOM siguen como antes.
+  let modalActivo = null;
+  if (EXPLORA) {
+    try {
+      for (const m of modalesVisibles(document)) {
+        if (String(m.localName || '').indexOf('-') < 1) continue;
+        const rm = m.getBoundingClientRect();
+        if (rm.width * rm.height < 0.5 * window.innerWidth * window.innerHeight) continue;
+        const sub = [];
+        recorrer(m, sub, [], 0);
+        if (m.shadowRoot) recorrer(m.shadowRoot, sub, [], 1);
+        if (sub.some((x) => x.matches('input:not([type=hidden]),select,textarea'))) { modalActivo = m; break; }
+      }
+    } catch (err) { modalActivo = null; }
+    if (modalActivo) lista = lista.filter((x) => dentroDe(x, modalActivo));
+  }
+  // Etiqueta de un campo DENTRO de un shadowRoot cuando no tiene <label> (0.3.40): label[for] de su misma raíz, el atributo label/placeholder/aria-label del host,
+  // o el texto corto del contenedor más cercano que tenga UN solo campo.
+  const etiquetaShadow = (el) => {
+    const raiz = raizDe(el);
+    if (raiz === document) return null;
+    if (el.id) { const l = raiz.querySelector('label[for="' + CSS.escape(el.id) + '"]'); if (l) return corta(l.innerText || l.textContent || '', 200); }
+    const lc = el.closest('label');
+    if (lc) return corta(lc.innerText || lc.textContent || '', 200);
+    for (let c = el.parentElement, k = 0; c && k < 3; c = c.parentElement, k++) {
+      if (c.querySelectorAll('input:not([type=hidden]),select,textarea').length !== 1) break;
+      const t = corta(c.innerText || c.textContent || '', 80);
+      if (t) return t;
+    }
+    const h = raiz.host;
+    if (h) { const a = h.getAttribute('label') || h.getAttribute('aria-label') || h.getAttribute('placeholder'); if (a) return corta(a, 200); }
+    return null;
+  };
   for (let i = 0; i < lista.length && out.length < 600; i++) {
     const el = lista[i];
     const tag = el.tagName.toLowerCase();
@@ -95,10 +226,13 @@ function extractor(explora: boolean): string {
     // y su \`button.dropdown-toggle\` sin texto NO (la IA elige sobre el select). Solo en exploración.
     const sp = EXPLORA && tag === 'select' ? selectpickerDe(el) : null;
     if (EXPLORA && tag === 'button' && botonDeSelectpicker(el)) continue;
+    // 0.3.42: <select> OCULTO de un custom element visible (pelayo-select…): se inventaría con \`selectOculto\` (el custom element no, si no tiene role).
+    let so = null;
+    if (EXPLORA && tag === 'select' && !sp) { try { so = envSel(el); } catch (err) { so = null; } }
     const cs = getComputedStyle(el);
-    if (!sp && (cs.display === 'none' || cs.visibility === 'hidden')) continue;
+    if (!sp && !so && (cs.display === 'none' || cs.visibility === 'hidden')) continue;
     const r = el.getBoundingClientRect();
-    if (!sp && r.width === 0 && r.height === 0 && !(el.labels && el.labels.length)) continue;
+    if (!sp && !so && r.width === 0 && r.height === 0 && !(el.labels && el.labels.length)) continue;
     // EXPLORACIÓN (28/10/2026, ePAC drvp00): la etiqueta de un control de elección OCULTO se inventaría COMO ese control (tag input,
     // su type, id/name; texto y etiqueta, los de la label). El NODO es la label (la resolución vive en guard.ts: \`controlOcultoDeEtiqueta\`).
     const rdo = EXPLORA && tag === 'label' ? ctlOculto(el) : null;
@@ -127,13 +261,23 @@ function extractor(explora: boolean): string {
     if (el.labels && el.labels.length) {
       e.etiqueta = corta(Array.from(el.labels).map((l) => l.innerText || l.textContent || '').join(' '), 200);
     } else if (el.getAttribute('aria-labelledby')) {
-      e.etiqueta = corta(el.getAttribute('aria-labelledby').split(/\\s+/).map((id) => { const x = document.getElementById(id); return x ? (x.innerText || x.textContent || '') : ''; }).join(' '), 200);
+      const rz = raizDe(el);
+      e.etiqueta = corta(el.getAttribute('aria-labelledby').split(/\\s+/).map((id) => { const x = (rz.getElementById ? rz.getElementById(id) : null) || document.getElementById(id); return x ? (x.innerText || x.textContent || '') : ''; }).join(' '), 200);
     }
+    // 0.3.42: el select oculto toma la etiqueta/placeholder de SU custom element (atributos label/aria-label/placeholder) antes que el texto del contenedor.
+    if (so) {
+      const a = so.getAttribute('label') || so.getAttribute('aria-label');
+      if (!e.etiqueta && a) e.etiqueta = corta(a, 200);
+      if (!e.placeholder && so.getAttribute('placeholder')) e.placeholder = so.getAttribute('placeholder');
+      e.selectOculto = true;
+    }
+    if (!e.etiqueta && (tag === 'input' || tag === 'select' || tag === 'textarea')) { const es = etiquetaShadow(el); if (es) e.etiqueta = es; }
     const divServlet = esDivServlet(el);
     const ng = ngClick(el);
     // Un [ng-click] que no es control de texto (fila, tarjeta…) puede envolver nombres: su texto, CORTO (80); el saneado lo filtra.
     if (CON_TEXTO[tag] || (role && ROLES_CON_TEXTO[role]) || divServlet) e.texto = corta(el.innerText || el.textContent || '', 200);
     else if (ng) e.texto = corta(el.innerText || el.textContent || '', 80);
+    else if (extrasCierre.has(el)) { e.texto = corta(el.innerText || el.textContent || '', 40); e.clase = corta(clasesDe(el).split(/\\s+/).filter(Boolean).slice(0, 3).join(' '), 40); }
     // 0.3.17: el onclick COMPLETO (hasta 8001 car.; el saneado lo parte en onclick hasta 2000 + onclickCompleto hasta 8000, y más de 8000 queda recortado) de avances (td/button/a/div del servlet) e inputs que no son de texto (casillas,
     // elecciones, botones input): el saneado lo deja entero si cabe en 2000 y, si no, lo recorta con «…» (= no se pulsa ni se marca).
     // El validador mira emisión, acción final y envío sobre TODO el texto; la IA lo ve recortado a 200 (inventarioParaPrompt).
@@ -208,11 +352,15 @@ function extractor(explora: boolean): string {
   }
   if (!EXPLORA) return out;
   const titulos = [];
-  for (const h of Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,h6,legend,th,caption'))) {
+  // 0.3.40: también los de los shadowRoot abiertos, y los del MODAL activo (rótulos de clase title/titulo/header: «Nueva contratación»).
+  const SEL_TIT = 'h1,h2,h3,h4,h5,h6,legend,th,caption';
+  const candTit = todosSel(document, SEL_TIT, [], 0);
+  if (modalActivo) for (const x of todosSel(modalActivo.shadowRoot || modalActivo, '[class*="title"],[class*="titulo"],[class*="header"] > *:first-child,[role=heading]', [], 0)) if (candTit.indexOf(x) < 0) candTit.push(x);
+  for (const h of candTit) {
     if (titulos.length >= 40) break;
     if (!visible(h)) continue;
     const t = corta(h.innerText || h.textContent || '', 200);
-    if (t) titulos.push({ texto: t, tag: h.tagName.toLowerCase() });
+    if (t && !titulos.some((x) => x.texto === t)) titulos.push({ texto: t, tag: h.tagName.toLowerCase().replace(/[^a-z0-9-]/g, '') });
   }
   const importes = [];
   const RE = /^(?:€\\s*)?-?[\\d.,]{1,15}\\s*(?:€|eur(?:os)?)?$/i;
@@ -275,7 +423,7 @@ export async function capturarInventarioDom(page: Pick<Page, 'frames'>, maxBytes
       const elementos = await conTope(f.evaluate(EXTRACTOR_INVENTARIO) as Promise<unknown>, Math.min(msPorMarco, resta))
       marcos.push({ url: f.url(), nombre: f.name() || null, elementos: Array.isArray(elementos) ? elementos : [], ...(Array.isArray(elementos) ? {} : { ilegible: true }) })
     }
-    return sanearInventarioDom({ marcos }, maxBytes)
+    return sanearInventarioDom(redactarMediadorProfundo({ marcos }), maxBytes)
   } catch {
     return null
   }
@@ -346,7 +494,7 @@ export async function capturarInventarioExploracion(page: Pick<Page, 'frames'>, 
       porMarco.push({ marco: f, nodos })
     }
     // 0.3.21: pistas NO personales del catálogo (`pistasOpcionesInventario`): las opciones que casan se conservan más allá del tope.
-    const inventario = sanearInventarioDom({ marcos }, maxBytes, { refs: true, pistasOpciones })
+    const inventario = sanearInventarioDom(redactarMediadorProfundo({ marcos }), maxBytes, { refs: true, pistasOpciones })
     if (!inventario) {
       await liberar()
       return null

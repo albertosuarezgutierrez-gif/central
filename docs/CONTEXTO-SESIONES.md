@@ -19,6 +19,10 @@ Cepo `revisarCopy` obligatorio (regenera 1 vez → `rechazado_copy`). Sin `ASEGU
 ia-rest: quitados crons `instagram` e `instagram-ideas` (metricas/refresh siguen; código intacto).
 PENDIENTE: aplicar `apps/plataforma/prisma/sql/2026-11-04_asegura_instagram_borradores.sql` (sin ella el cron da 503 y avisa).
 
+**(04/11/2026, 4)** — RRHH documentos INTERNOS: columna `rrhh.documentos.visible_empleado` (default true, SQL 0029 aplicado). Oculto ⇒ el empleado no lo lista, no obtiene URL firmada, no se le avisa ni cuenta; firma ⇒ debe ser visible; nóminas siempre visibles. Casilla «Interno» al subir (suelto, envío, distribuir PDF) y Ocultar/Mostrar en la ficha (`PATCH …/documentos/[docId]/visibilidad`). Helper `lib/visibilidad-documento.ts`.
+**(04/11/2026, 3)** — RRHH: Pilar tenía que meter código varias veces al día AUNQUE marcara «Recordar»: la sesión era de UN solo dispositivo (`session_jti` se sobrescribía en cada login o cambio de empresa → el otro móvil/PC quedaba fuera). Ahora `session_jti` guarda hasta 5 jti (uno por dispositivo, coma), logout solo revoca el suyo, cambiar empresa reemplaza el suyo; «Recordar» (90 días) marcado por defecto. Sin migración; sesiones viejas siguen válidas. NO reconocer por IP (decisión).
+**(04/11/2026, 2)** — RRHH «Distribuir documentos desde PDF» (`lib/distribuir-documentos.ts`, panel arriba de /admin/documentos): un PDF con documentos de todos → IA identifica empleado por página (solo empleados activos de la empresa de sesión; verificado en código por DNI o nombre completo), páginas consecutivas del mismo = 1 documento, no identificadas se listan y NO se asignan; firma opcional con el flujo `solo_empleado`; dedupe por `envio_id` determinista (re-subir = «ya estaba»). Nóminas (#5500) arreglado y mergeado.
+**(04/11/2026)** — RRHH: «Distribuir nóminas desde PDF» fallaba en todas las páginas (`detached ArrayBuffer`): `extraerTextoPorPagina` pasaba a pdfjs una vista del buffer y pdfjs lo transfiere; luego pdf-lib no podía recortar páginas. Arreglo: copia (`bytes.slice(0)`) + test que lo reproduce. Sin escrituras parciales: re-subir el PDF no duplica. También cubre `envio-documentos.ts`.
 **(03/11/2026, 6) Patinete Allianz — adaptador de tarificación (APAGADO).** `allianz/patinete.ts` v0.1.0 + `FormularioPatinete` (module-tarificacion) + `RamoRpa 'patinete'`; flag `ALLIANZ_PATINETE_ACTIVO=false`, sin registrar. Rellena «Datos Básicos» y «Riesgo VMP» (ids de las exploraciones; la mejor, f6209c2d, hizo bucle porque nunca marcó `checkVMP` «velocidad ≤25 km/h»). HUECOS: el avance entre pantallas (guard.ts solo autoriza `drpc18`/Moto, no `/drvp00/`) y la pantalla de PRECIO (ninguna exploración la vio): `ofertaVmp` listo, `leerOfertasVmp` es el hueco. Uso profesional / no homologado / sin límite 25 km/h → a Alberto. Sin SQL nuevo (fila allianz/patinete ya existe, 2026-10-28b).
 
 **(03/11/2026) Tarificador — plan acordado con Alberto.** Prueba de fuego primero: Pelayo auto/hogar con el guard nuevo (navegación libre normalizada + paradas de emisión intactas, explorador 0.3.36, agente-architect). Si pasa → plantilla de alta de compañía: secretos Fly + URL → mapeo → agente genera adaptador contra riesgo canónico → prueba en borrador (objetivo 1-2 días/compañía-ramo; Generali necesita grabación manual de Alberto). Después, por orden: (1) retarificación por lotes de cartera viva que vence en 60 días con aviso si otra compañía mejora; (2) vigilante nocturno de huellas de portales; (3) caché de precio 24 h por riesgo+compañía; (4) comprobador de coherencia del presupuesto antes de Telegram (precio ×3/÷3, garantías básicas, nunca «No figura»); (5) tablero de estado de bots en /correduria. No meter más compañías hasta validar Pelayo. Pendientes: Fidelidade hogar (nombre_via repintado), Generali auto (grabación), Mapfre BASICar sin precio, patinete web solicitud (Allianz primero).
@@ -84,6 +88,25 @@ Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; ti
 **(22/10/2026)** — RRHH · «Mi material» con foto (Pilar): empleado sube foto (cámara, compresión cliente ~1600px, magic bytes, ≤8MB server / ≤4MB
 original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados revisado/falta_roto/devuelto + bloque en ficha. `rrhh.material_empleado`
 (0028, aplicada). Pendiente fase 2: revisión periódica mensual.
+
+## (04/11/2026) Portal cliente · hoja QR: logo de compañía + cobalto
+- `/hoja/[token]`: cada póliza pinta `LogoCompania` (nunca el nombre en texto; sin logo cae a texto). Regla de Alberto: compañía = LOGO.
+- Hoja en marca: cobalto `--brand`, Quicksand/Nunito Sans; impresión ya no fuerza negro (`print-color-adjust: exact`). QR sigue negro sobre blanco.
+- Pendiente: `FilaPoliza.tsx`/`resumen` aún muestran «Compañía · ramo» en texto (no tocado). Impresión sin probar visualmente.
+
+## (04/11/2026) Correduría · WhatsApp: SQL APLICADOS en prod + remates
+- Con OK expreso de Alberto: aplicados en prod (MCP Supabase, central) `2026-11-04_whatsapp_respuestas_crm.sql` y `2026-11-04b_whatsapp_aprendizaje.sql`, tras validarlos ×2 + rollback en Postgres local. RLS on, sin DELETE en propuestas/aprendizaje, crm_seguros sin acceso.
+- Remates: botones fuera tras ✏️, clienteId en botón de cabecera, motivo `fuera_de_correduria`. Flags siguen APAGADOS. Pendiente Alberto: número → WhatsApp Business + alta Meta (prompt Chrome).
+
+## (04/11/2026) Correduría · WhatsApp: aprendizaje + autonomía gradual
+- Como el agente de pisos: cada ✅/❌/✏️/↩️ de Alberto queda en `whatsapp_aprendizaje`; casos parecidos (sin embeddings) al prompt; autonomía POR TIPO (fecha_cobro/pagado/vencimiento) tras N aprobadas seguidas (`ASEGURA_WHATSAPP_AUTONOMIA_UMBRAL`, 20) con ↩️ Deshacer; flag `ASEGURA_WHATSAPP_AUTONOMIA_ACTIVA` apagado. Bots RPA y envíos NUNCA autónomos (cepo).
+- SQL `apps/asegura/prisma/sql/2026-11-04b_whatsapp_aprendizaje.sql` SIN aplicar (fail-closed). Spec §5 bis.
+
+## (04/11/2026) Correduría · WhatsApp: respuestas del cliente → propuestas CRM — PR #5486
+- Enfoque Alberto: él envía por wa.me (coste 0); el cliente contesta → el agente crea oportunidad / PROPONE fecha de cobro, «ya pagado», vencimiento (Telegram `wap_` ✅/❌) / lee la póliza (media) → presupuesto con bots RPA siempre con botón. Nada se envía por API (cepos).
+- Hecho: parte A (apps/asegura: casado echo↔saliente, media, propuestas, endpoints operador) + parte B (plataforma: registro de salientes en botones wa.me, handler `wap_`). Spec `docs/superpowers/specs/2026-11-04-whatsapp-correduria-respuestas-crm.md`.
+- ⚠️ SQL `apps/asegura/prisma/sql/2026-11-04_whatsapp_respuestas_crm.sql` SIN aplicar (pide OK de Alberto). Sin él, 503 `sin_migracion` y no-op. `fecha_prometida_pago` fuera del modelo Prisma a propósito (SQL crudo).
+- Pendiente: tarea 7 (/datos acotado a lo que falta al bot + presupuesto desde aviso); Alberto: número → WhatsApp Business + app Meta revisada/publicada (verificación empresa ✅ 04/11).
 
 ## (03/11/2026) Correduría · regularización RC fase 3 (respuesta a Occident + cierre manual) — ✅ PR #5472 mergeado
 - Al completar el cliente: borrador a la compañía → Telegram ✏️/🏁 (✅ solo cuando hay buzón elegido de contactos activos del Directorio; anti-replay `compania_version`). 🏁 Resuelta cierra solicitud + tarea (también clave antigua `suplemento:<póliza>` del mismo periodo).

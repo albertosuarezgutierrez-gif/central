@@ -31,6 +31,7 @@ import {
   nombresCredencial,
   pistasOpcionesInventario,
   resolverDato,
+  riesgoTomadorDeMediador,
   rutasAppTolerablesDe,
   validarRespuestaExplorador,
   type Credenciales,
@@ -38,7 +39,9 @@ import {
 } from '@central/module-tarificacion'
 import { cerrarPilotaje, enviarResultado, pedirComandoPilotaje, publicarEstadoPilotaje, type Config, type ResultadoComandoPilotaje, type Trabajo } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
-import { ClicNoAccionableError, cuerpoDiagnosticoClic, esTimeoutAccionabilidad, leerDiagnosticoClic } from './diagnostico-clic.ts'
+import { ClicNoAccionableError, cuerpoDiagnosticoClic, esTimeoutAccionabilidad, leerDiagnosticoClic, leerTagsModal, lineasTagsModal } from './diagnostico-clic.ts'
+import { lineasInterceptor } from './modal-informativo.ts'
+import { fallosDeRed, leerEntornoNavegador, lineasEntorno } from './entorno-navegador.ts'
 import { clasificar } from './errores.ts'
 import { exigirSinVerificacion } from './verificacion.ts'
 import { capturarInventarioExploracion, type InventarioExploracion } from './inventario-dom.ts'
@@ -50,6 +53,7 @@ import {
   neutralizarOnclicksEntrada,
   precioVistoEn,
   pulsar,
+  cerrarModalInformativo,
   pulsarAccesoNseMapfre,
   pulsarEnlaceEntradaAutorizado,
   pulsarMenuOfertaNseMapfre,
@@ -59,6 +63,8 @@ import {
 } from './guard.ts'
 import { TOPES_PILOTAJE, esCampoTexto, leerComando, loteExploradorDe, motivoCampoProhibido, motivoValorLiteralProhibido, textoDiagnostico, type ComandoPilotaje } from './pilotaje-reglas.ts'
 import type { Log } from './log.ts'
+// Datos canónicos del mediador: el MISMO fichero puro que ya copia el Dockerfile para `privacidad-mediador.ts` (nada nuevo que copiar).
+import { MEDIADOR } from '../../../packages/module-seguros/src/mediador.ts'
 
 /** Versión del modo pilotado (va en `bot_version`). */
 export const PILOTAJE_VERSION = '0.1.0'
@@ -103,6 +109,16 @@ export type ContextoPilotaje = {
 
 type Ejecucion = { r: ResultadoComandoPilotaje; fin?: boolean }
 
+/**
+ * 0.3.41 (Pelayo «Datos del Tomador»): el `riesgo` con el que se RESUELVEN los datos del pilotaje. El trabajo lleva `riesgo = '{}'` (CHECK
+ * `trabajo_pilotaje_riesgo_vacio`); con una entrada `tomadorMediador` el tomador se arma aquí, EN MEMORIA, desde `MEDIADOR` con el mismo
+ * mapeo que asegura (`riesgoTomadorDeMediador`). 🔑 Solo lo lee `resolverDato` justo antes de escribir en el portal: nunca va a la BD, al
+ * log, al inventario ni al resultado (que solo lleva códigos). Sin la marca = `{}` (lo personal sin sintético para). Pura.
+ */
+export function riesgoResolverPilotaje(entrada: string): Record<string, unknown> {
+  return entradaConTomadorMediador(entrada) ? riesgoTomadorDeMediador(MEDIADOR.identidad) : {}
+}
+
 const rechazo = (motivo: string, detalle?: string[]): Ejecucion => ({ r: { estado: 'rechazado', motivo, ...(detalle?.length ? { detalle: detalle.slice(0, 10) } : {}) } })
 const hecho = (motivo: string): Ejecucion => ({ r: { estado: 'hecho', motivo } })
 
@@ -137,6 +153,26 @@ export async function ejecutarComando(page: Page, captura: InventarioExploracion
     return hecho('volver')
   }
 
+  if (c.accion === 'cerrar_modal') {
+    // 0.3.38: cierre del modal INFORMATIVO visible (Escape › botón de cierre › fondo) por las puertas del guard. Con campos o términos de acción final: no se toca.
+    try {
+      await k.pausaAccion()
+      const r = await cerrarModalInformativo(page, k.guard)
+      k.guard.comprobar()
+      if (r.estado === 'cerrado') {
+        await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined)
+        return hecho(`modal cerrado (${r.via})`)
+      }
+      if (r.estado === 'sin_modal') return hecho('sin modal visible')
+      const intentos = r.estado === 'no_cerrado' ? [`intentos: ${r.intentos.join(',').slice(0, 120)}`] : []
+      return rechazo(r.estado === 'no_cerrable' ? `modal_no_cerrable_${r.motivo}` : 'modal_no_cerrado', [...intentos, ...(r.modal ? lineasInterceptor(r.modal).map((x) => textoDiagnostico(x, red)) : [])].slice(0, 10))
+    } catch (e) {
+      if (k.guard.violacion()) throw k.guard.violacion()
+      if (e instanceof EmisionBloqueadaError) return rechazo('guard', [textoDiagnostico(`${e.donde}: ${e.message}`, red)])
+      return rechazo('error', [textoDiagnostico(e instanceof Error ? e.message : String(e), red)])
+    }
+  }
+
   // pulsar / rellenar / seleccionar: el ref tiene que ser de ESTE inventario.
   const inv = captura.inventario
   const hit = indiceRefs(inv).get(c.ref)
@@ -149,7 +185,9 @@ export async function ejecutarComando(page: Page, captura: InventarioExploracion
     if (!('loc' in l0)) return rechazo('no_localizado', [l0.motivo])
     try {
       const d = await leerDiagnosticoClic(l0.loc)
-      return d ? { r: { estado: 'hecho', motivo: 'inspeccionado', detalle: [`diag: ${cuerpoDiagnosticoClic(d)}`] } } : rechazo('no_localizado', ['el nodo ya no está'])
+      // 0.3.42: TAGS de los controles del interior del modal (forma cerrada, sin textos), justo tras `diag:` para que el tope de 10 no los corte.
+      const tags = await leerTagsModal(l0.loc)
+      return d ? { r: { estado: 'hecho', motivo: 'inspeccionado', detalle: [`diag: ${cuerpoDiagnosticoClic(d)}`, ...(tags ? lineasTagsModal(tags) : []), ...lineasEntorno(await leerEntornoNavegador(page), fallosDeRed(page.context())), ...(d.int ? lineasInterceptor(d.int).map((x) => textoDiagnostico(x, red)) : [])].slice(0, 10) } } : rechazo('no_localizado', ['el nodo ya no está'])
     } finally {
       await l0.loc.evaluate((n, at) => n.removeAttribute(at), ATRIBUTO_MARCA, { timeout: 2_000 }).catch(() => undefined)
     }
@@ -188,7 +226,7 @@ export async function ejecutarComando(page: Page, captura: InventarioExploracion
     if (c.accion === 'rellenar') {
       let valor = valorLiteral
       if (valor === null && 'dato' in c) {
-        const d = resolverDato(c.dato, { ramo: k.ramo, tomadorMediador: entradaConTomadorMediador(k.entrada), conDatosReales: false, riesgo: {}, env: k.env, hoy: new Date() })
+        const d = resolverDato(c.dato, { ramo: k.ramo, tomadorMediador: entradaConTomadorMediador(k.entrada), conDatosReales: false, riesgo: riesgoResolverPilotaje(k.entrada), env: k.env, hoy: new Date() })
         if (!d.ok) return rechazo('sin_dato', [d.motivo])
         valor = d.valor
       }
@@ -211,7 +249,8 @@ export async function ejecutarComando(page: Page, captura: InventarioExploracion
         if (r === 'no_encontrada') return rechazo('opcion_no_encontrada')
       } else {
         if (opcionValidada === null) return rechazo('validador')
-        const elegidas = await loc.selectOption({ value: opcionValidada }, { timeout: 10_000, ...(el.selectpicker === true ? { force: true } : {}) })
+        // 0.3.20/0.3.42: el <select> OCULTO (bootstrap-select o custom element) ya se comprobó VIVO en `localizar`: `selectOption` forzado.
+        const elegidas = await loc.selectOption({ value: opcionValidada }, { timeout: 10_000, ...(el.selectpicker === true || el.selectOculto === true ? { force: true } : {}) })
         if (elegidas.length !== 1 || elegidas[0] !== opcionValidada) return rechazo('opcion_no_aplicada')
       }
       await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined)

@@ -160,6 +160,13 @@ export type ElementoInventario = {
    */
   selectpicker?: true
   /**
+   * 0.3.42 (Pelayo real 04/11/2026, «Tipo de documento» del modal «Datos del Tomador»): `<select>` nativo OCULTO (display:none, sin caja u
+   * opacidad 0) que sostiene un CUSTOM ELEMENT visible (el más cercano, cruzando shadow roots abiertos, que no es un modal y envuelve UN solo
+   * select; p. ej. `<pelayo-select>` que pinta su propia caja). Solo en `select`. Como `selectpicker`: el worker lo elige con `selectOption`
+   * forzado tras comprobarlo VIVO; la IA/el operador lo usan con `elegir`/`seleccionar` como cualquier `<select>`.
+   */
+  selectOculto?: true
+  /**
    * Título accesible del DIÁLOGO/MODAL que contiene al control (14/10/2026; el más cercano: `SELECTOR_DIALOGO` de guard.ts),
    * saneado. Solo si el crudo lo trae. Sirve para el «Guardar» de un modal autorizado por entrada (`guardadosEnDialogo`).
    */
@@ -405,6 +412,7 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
       if (el.invalido === true) pon('mensajeError', texto(eo.mensajeError, 160))
       if (eo.autocompletar === true && (tag === 'input' || tag === 'textarea')) el.autocompletar = true
       if (eo.selectpicker === true && tag === 'select') el.selectpicker = true
+      if (eo.selectOculto === true && tag === 'select') el.selectOculto = true
       // Elemento que MUESTRA el usuario/mediador (cabecera: id/name/aria «usuario», «mediador», «perfil»…): su texto fuera.
       if (el.texto !== undefined && tag !== 'input' && tag !== 'select' && tag !== 'textarea'
         && [eo.id, eo.name, eo.ariaLabel].some((x) => typeof x === 'string' && PATRON_ELEMENTO_USUARIO.test(x))) {

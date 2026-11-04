@@ -9,6 +9,8 @@
 //   · `borrarConversacion`: derecho de supresión. Borra la conversación, sus mensajes y su crudo.
 //     Lo que la IA ya escribió en la FICHA (tareas, notas, oportunidades) es dato de la cartera y se
 //     suprime por el procedimiento de la ficha, no aquí.
+//   · En los tres casos, el EXTRACTO (redactado) del registro de aprendizaje (`whatsapp_aprendizaje`, SQL 2026-11-04b)
+//     se anula con la conversación; la fila queda (es la racha de autonomía), sin texto del cliente.
 
 import { Prisma } from '../generated/asegura-client'
 import { prismaAsegura } from '../asegura-db'
@@ -32,6 +34,7 @@ export async function purgarTextoConversacion(correduriaId: string, conversacion
              payload_minimizado_at = coalesce(payload_minimizado_at, now()),
              message_text = null, lead_name = null, lead_phone = null
        where conversacion_id = ${conversacionId}::uuid and correduria_id = ${correduriaId}::uuid`)
+    await anularExtractos(tx, correduriaId, conversacionId)
     if (opciones.descartar) {
       // Solo si sigue SIN ficha: una conversación con ficha no se descarta por la IA.
       await tx.$executeRaw(Prisma.sql`
@@ -61,7 +64,26 @@ export async function purgarPorRetencion(correduriaId: string, dias: number, lot
         where channel = 'whatsapp' and correduria_id = ${correduriaId}::uuid and payload_minimizado_at is null
           and received_at < (now() at time zone 'UTC') - make_interval(days => ${RETENCION_CRUDO_DIAS}::int)
         limit ${lote})`)
+  const [ap] = await db.$queryRaw<{ existe: boolean }[]>(Prisma.sql`select to_regclass('whatsapp_aprendizaje') is not null as existe`)
+  if (ap?.existe) {
+    await db.$executeRaw(Prisma.sql`
+      update whatsapp_aprendizaje set extracto = null, observacion = null
+       where correduria_id = ${correduriaId}::uuid and (extracto is not null or observacion is not null)
+         and creada_at < now() - make_interval(days => ${dias}::int)`)
+  }
   return { mensajes, crudos }
+}
+
+type Tx = Parameters<Parameters<ReturnType<typeof prismaAsegura>['$transaction']>[0]>[0]
+
+/** El extracto redactado del registro de aprendizaje, fuera con la conversación. Sin la tabla (SQL sin aplicar), nada. */
+async function anularExtractos(tx: Tx, correduriaId: string, conversacionId: string): Promise<void> {
+  // Se comprueba ANTES para no abortar la transacción con un «relation does not exist».
+  const [ap] = await tx.$queryRaw<{ existe: boolean }[]>(Prisma.sql`select to_regclass('whatsapp_aprendizaje') is not null as existe`)
+  if (!ap?.existe) return
+  await tx.$executeRaw(Prisma.sql`
+    update whatsapp_aprendizaje set extracto = null, observacion = null
+     where correduria_id = ${correduriaId}::uuid and conversacion_id = ${conversacionId}::uuid`)
 }
 
 export type ResultadoBorrado = { ok: true; mensajes: number; crudos: number } | { ok: false; motivo: 'no_encontrada' }
@@ -75,6 +97,30 @@ export async function borrarConversacion(correduriaId: string, conversacionId: s
     if (!conv) return { ok: false as const, motivo: 'no_encontrada' as const }
     const crudos = await tx.$executeRaw(Prisma.sql`
       delete from channel_inbound_messages where conversacion_id = ${conversacionId}::uuid and correduria_id = ${correduriaId}::uuid`)
+    // 04/11/2026 (SQL 2026-11-04, si está aplicado; se comprueba ANTES para no abortar la transacción): los salientes
+    // previstos casados con sus echos y los ficheros que el cliente mandó por WhatsApp (spec §8: la supresión los incluye).
+    // Una PÓLIZA ya leída (tipo 'poliza') alimentó una oportunidad: es dato de la cartera y va por el procedimiento de
+    // la ficha (y otras tablas la referencian sin ON DELETE); aquí solo se borran los ficheros que no pasaron de 'otro'.
+    const [ext] = await tx.$queryRaw<{ salientes: boolean; media: boolean }[]>(Prisma.sql`
+      select to_regclass('whatsapp_salientes_previstos') is not null as salientes,
+             exists (select 1 from information_schema.columns where table_schema = current_schema() and table_name = 'mensajes'
+                      and column_name = 'media_documento_id') as media`)
+    if (ext?.salientes) {
+      await tx.$executeRaw(Prisma.sql`
+        delete from whatsapp_salientes_previstos s
+         where s.correduria_id = ${correduriaId}::uuid
+           and (s.mensaje_id in (select id from mensajes where conversacion_id = ${conversacionId}::uuid)
+                or s.telefono_hash = (select wa_telefono_hash from conversaciones where id = ${conversacionId}::uuid and correduria_id = ${correduriaId}::uuid))`)
+    }
+    if (ext?.media) {
+      await tx.$executeRaw(Prisma.sql`
+        delete from documentos d
+         where d.correduria_id = ${correduriaId}::uuid and d.subido_por = 'cliente' and d.notas = 'Recibido por WhatsApp' and d.tipo = 'otro'
+           and d.id in (select media_documento_id from mensajes where conversacion_id = ${conversacionId}::uuid and media_documento_id is not null)
+           and not exists (select 1 from tarificador_fichas x where x.origen_documento_id = d.id)
+           and not exists (select 1 from solicitud_regularizacion x where x.documento_id = d.id)`)
+    }
+    await anularExtractos(tx, correduriaId, conversacionId)
     // Las trazas del bot heredado apuntan a conversaciones (FK): las de esta, fuera también.
     await tx.$executeRaw(Prisma.sql`delete from bot_turn_traces where conversacion_id = ${conversacionId}::uuid`)
     const mensajes = await tx.$executeRaw(Prisma.sql`delete from mensajes where conversacion_id = ${conversacionId}::uuid`)

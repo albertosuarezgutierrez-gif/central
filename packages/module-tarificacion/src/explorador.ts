@@ -18,6 +18,7 @@
 import { neutralizarRutaTolerable, pareceEmision, type RutaTolerable } from './guard-emision.ts'
 import { clasificarAccionPortal, descripcionesSinExcepcionProyecto, fronteraEmisionPorCampos, MOTIVO_FRONTERA_CUENTA, referenciaPresupuestoValida } from './acciones-portal.ts'
 import { navegacionLibre, type ResultadoNavegacionLibre } from './navegacion-libre.ts'
+import { bloqueoZonaWizardPelayo, esNuevaContratacionPelayoInventario, RUTA_TOLERABLE_WIZARD_AUTOS_PELAYO } from './pelayo-contratacion.ts'
 import {
   MAX_TITULOS_MARCO,
   conOnclickCompleto,
@@ -172,9 +173,10 @@ export type EntradaExploracion = {
   /** 0.3.19: subcadena exacta del onclick de UN control exacto que no cuenta como acción (ver {@link NeutralizacionOnclick}). Sin la clave = ninguna. */
   neutralizacionesOnclick?: readonly NeutralizacionOnclick[]
   /**
-   * TOMADOR = EL MEDIADOR (Alberto, 28/10/2026: «datos del mediador con su consentimiento»). SOLO las exploraciones de
-   * patinete, y SOLO sintéticas (sin cliente). El NIF, el nombre y la fecha de nacimiento NO viven aquí: asegura los toma
-   * de `MEDIADOR` (`@central/module-seguros`) y los pone en `riesgo.tomador` al encolar; el resolver los lee de ahí.
+   * TOMADOR = EL MEDIADOR (Alberto, 28/10/2026: «datos del mediador con su consentimiento»). Las exploraciones de patinete y
+   * (0.3.41, 04/11/2026) las de Pelayo Auto/Hogar, y SOLO sintéticas (sin cliente). El NIF, el nombre, la fecha de nacimiento y
+   * el contacto NO viven aquí: salen de `MEDIADOR` (`@central/module-seguros`) por {@link riesgoTomadorDeMediador}; asegura los
+   * pone en `riesgo.tomador` en la respuesta al worker (exploración) y el worker los arma EN MEMORIA (pilotaje). Nunca en BD.
    */
   tomadorMediador?: true
   /**
@@ -182,6 +184,12 @@ export type EntradaExploracion = {
    * asegura (queda en el mapa) y PARA con `tope` SIN ejecutar el lote de la IA: ni rellenar, ni elegir, ni avanzar. Sin la clave = bucle normal.
    */
   soloLectura?: true
+  /**
+   * 0.3.41 (Pelayo Auto, recorrido de Alberto 04/11/2026): el botón «Nueva contratación» del modal de «Datos del Tomador» SOLO abre el
+   * wizard (no emite): se admite como avance por la regla EXACTA de `pelayo-contratacion.ts` (texto entero, `<button>`, ruta y pantalla).
+   * El wizard tiene su TOPE DURO (`bloqueoZonaWizardPelayo`, nunca más allá de «Precio final») para TODA entrada. Sin la clave = no.
+   */
+  nuevaContratacionPelayo?: true
 }
 
 /**
@@ -419,14 +427,21 @@ export const ENTRADAS_EXPLORACION: Readonly<Record<string, EntradaExploracion>> 
   // Pelayo (portal de mediadores, Alberto 03/11/2026): login › menú «Contratación» › «Presupuestos» › «Nuevo Presupuesto» › selector de
   // RAMO (Auto / Hogar) › primer formulario de datos. El recorrido va fijo en el código de Pelayo (`pelayo/entrada.ts`) y sus clics por la
   // puerta EXACTA del guard (`ENLACES_ENTRADA_AUTORIZADOS.pelayo`, origen https://mediadores.pelayo.com, en orden, una vez). 0.3.36: ya NO es
-  // de solo lectura: tras el ramo la IA explora con la navegación libre del guard (la emisión sigue bloqueada).
+  // de solo lectura: tras el ramo la IA explora con la navegación libre del guard (la emisión sigue bloqueada). 0.3.41 (04/11/2026): la
+  // primera pantalla es «Datos del Tomador» (NIF obligatorio) → tomador = el MEDIADOR (Alberto, sus datos como tomador de prueba).
   'pelayo:presupuestos:auto': Object.freeze({
     compania: 'pelayo', ramo: 'auto', producto: 'auto', pestana: 'Contratación', productoMenu: 'Auto',
     avancesAutorizados: Object.freeze([]),
+    tomadorMediador: true as const,
+    // 0.3.41: «Nueva contratación» navega a https://apps.pelayo.com/contratacion-autos/<paso>: la ruta tolerada SOLO con restos exactos
+    // (`rutasExactas`; hoy la raíz y `vehicle`), y el botón por su regla exacta. Hogar: no se sabe dónde vive su wizard → nada.
+    rutasAppTolerables: Object.freeze([RUTA_TOLERABLE_WIZARD_AUTOS_PELAYO]),
+    nuevaContratacionPelayo: true as const,
   }),
   'pelayo:presupuestos:hogar': Object.freeze({
     compania: 'pelayo', ramo: 'hogar', producto: 'hogar', pestana: 'Contratación', productoMenu: 'Hogar',
     avancesAutorizados: Object.freeze([]),
+    tomadorMediador: true as const,
   }),
 })
 
@@ -579,9 +594,47 @@ const DATOS_PATINETE: readonly DatoCatalogo[] = [
   D({ clave: 'vmp.homologado', descripcion: 'Patinete homologado por la DGT (Sí/No): radio «homologado»', tipo: 'opcion', personal: false, fuente: 'sintetico', sintetico: 'Sí', rutaRiesgo: 'vmp.homologado' }),
 ]
 
-/** ¿Esta entrada usa al MEDIADOR como tomador? (solo las de patinete; ver {@link EntradaExploracion.tomadorMediador}). */
+/** ¿Esta entrada usa al MEDIADOR como tomador? (patinete y Pelayo; ver {@link EntradaExploracion.tomadorMediador}). */
 export function entradaConTomadorMediador(entrada: string): boolean {
   return esEntradaExploracion(entrada) && ENTRADAS_EXPLORACION[entrada].tomadorMediador === true
+}
+
+export type IdentidadTomadorMediador = { nombre: string; nif: string; fechaNacimiento?: string; telefono?: string; email?: string }
+export type RiesgoTomadorMediador = { tomador: Record<string, string> }
+
+/**
+ * `riesgo` de una exploración/pilotaje SINTÉTICO con `tomadorMediador`: solo el tomador, a partir de la identidad del mediador
+ * (`MEDIADOR.identidad` de module-seguros; este módulo no la importa: la pasa quien llama, asegura o el worker). PURA. Un dato que
+ * no viene (o que no se puede separar sin adivinar) se OMITE: el resolver para con `dato_sensible_requerido`; nada se inventa.
+ * El nombre se parte solo si son EXACTAMENTE tres palabras (nombre + dos apellidos); si no, solo `nombreCompleto`. El NIF va también
+ * en `documentoIdentidad` (la ruta de `tomador.nif` del catálogo de AUTO). Teléfono español «+34…» → los 9 dígitos nacionales.
+ * 🔑 Solo vive en memoria/respuesta: nunca se escribe en BD, log, inventario ni resultado.
+ */
+export function riesgoTomadorDeMediador(m: IdentidadTomadorMediador): RiesgoTomadorMediador {
+  const t: Record<string, string> = {}
+  const nif = m.nif.trim()
+  if (nif) {
+    t.nif = nif
+    t.documentoIdentidad = nif
+  }
+  const completo = m.nombre.trim().replace(/\s+/g, ' ')
+  if (completo) {
+    t.nombreCompleto = completo
+    const partes = completo.split(' ')
+    if (partes.length === 3) {
+      t.nombre = partes[0]!
+      t.apellido1 = partes[1]!
+      t.apellido2 = partes[2]!
+    }
+  }
+  const nac = m.fechaNacimiento?.trim()
+  if (nac && /^\d{4}-\d{2}-\d{2}$/.test(nac)) t.fechaNacimiento = nac
+  const tlf = m.telefono?.replace(/[\s.-]/g, '') ?? ''
+  const nacional = /^(?:\+34|0034)?([6-9]\d{8})$/.exec(tlf)
+  if (nacional) t.telefono = nacional[1]!
+  const email = m.email?.trim() ?? ''
+  if (RE_EMAIL.test(email)) t.email = email
+  return { tomador: t }
 }
 
 /** Fecha de efecto y contacto: los comunes. En auto, el NIF y la fecha de nacimiento del tomador salen del formulario de auto (arriba y comunes). */
@@ -880,7 +933,9 @@ function resolverDatoCrudo(clave: string, ctx: ContextoDatos): DatoResuelto {
   const d = catalogoDe(ctx.ramo).find((x) => x.clave === clave)
   if (!d) return { ok: false, motivo: 'clave_desconocida' }
   if (d.fuente === 'entorno') {
-    const v = (d.env ? ctx.env[d.env] : undefined)?.trim() ?? ''
+    // 0.3.41: con tomador = MEDIADOR (sintético), el contacto es el SUYO (`riesgo.tomador.telefono/email`); si no viene, el de entorno.
+    const delMediador = !ctx.conDatosReales && ctx.tomadorMediador === true ? enRuta(ctx.riesgo, d.clave === 'contacto.email' ? 'tomador.email' : 'tomador.telefono') : null
+    const v = delMediador ?? (d.env ? ctx.env[d.env] : undefined)?.trim() ?? ''
     const ok = d.clave === 'contacto.email' ? RE_EMAIL.test(v) : RE_TELEFONO.test(v)
     return ok ? { ok: true, valor: v } : { ok: false, motivo: 'dato_no_disponible' }
   }
@@ -1842,6 +1897,11 @@ export function bloqueoAvance(entrada: string, el: ElementoInventario, marco: Ma
   if (![el.texto, el.ariaLabel].some((d) => typeof d === 'string' && d.trim() !== '' && !truncado(d)) && avanceSinTextoAutorizado(entrada, el, marco) === null) return 'sin_descripcion_completa'
   // Un onclick recortado puede esconder la llamada de emisión en la parte que no llegó.
   if (typeof el.onclick === 'string' && truncado(el.onclick)) return 'onclick_truncado'
+  // 0.3.41 TOPE DURO del wizard de Pelayo (todas las entradas): en apps.pelayo.com solo se pulsa en los pasos de la lista exacta, nunca un paso 4-7.
+  const zona = bloqueoZonaWizardPelayo(marco.url, [el.texto, el.ariaLabel])
+  if (zona) return zona
+  // 0.3.41: «Nueva contratación» del modal de «Datos del Tomador» de Pelayo (abre el wizard, no emite): regla EXACTA y solo con la clave.
+  if (esEntradaExploracion(entrada) && ENTRADAS_EXPLORACION[entrada].nuevaContratacionPelayo === true && esNuevaContratacionPelayoInventario(el, marco)) return null
   const desc = descripcionesEnEntrada(entrada, el, marco)
   const cat = clasificarAccionPortal(desc)
   // Emisión dura (patrón del guard: emitir, contratar, archivar, proyecto ampliado, pago fraccionado, validar_aceptar…; y la
@@ -2054,7 +2114,8 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
         if (!(el.opciones ?? []).some((o) => o.valor !== null && o.valor === op.valor)) return void errores.push(`${donde}: el valor no está entre las opciones del inventario`)
         // 0.3.20: el `<select>` OCULTO tras un bootstrap-select (Allianz VMP, marca/modelo): solo si ni él ni la opción elegida nombran una
         // acción final (el worker lo elige sin verlo; su `change` y la red siguen pasando por el guard de siempre).
-        if (el.selectpicker === true) {
+        // 0.3.42: igual el `<select>` OCULTO que sostiene un custom element visible (`selectOculto`, Pelayo «Tipo de documento»).
+        if (el.selectpicker === true || el.selectOculto === true) {
           const texto = (el.opciones ?? []).find((o) => o.valor === op.valor)?.texto ?? null
           if ([...descripcionesElemento(el), op.valor, texto].some((d) => typeof d === 'string' && (pareceEmision(d) || RE_TEXTO_ACCION_FINAL_SIN_TEXTO.test(d.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase())))) {
             return void errores.push(`${donde}: desplegable de acción final`)
@@ -2074,6 +2135,8 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
         if (typeof el.onclick === 'string' && truncado(el.onclick)) return void errores.push(`${donde}: onclick_truncado`)
         const desc = descripcionesElemento(el)
         if (desc.some((d) => pareceEmision(d, { permitirAceptar: true })) || onclickEnviaFormulario(el.onclick, el)) return void errores.push(`${donde}: casilla de acción final`)
+        const zonaMarcar = bloqueoZonaWizardPelayo(marco.url, [el.texto, el.ariaLabel, el.etiqueta])
+        if (zonaMarcar) return void errores.push(`${donde}: ${zonaMarcar}`)
         acciones.push({ accion: 'marcar', ref })
       } else {
         if (i !== lista.length - 1) return void errores.push(`${donde}: avanzar va el ÚLTIMO (y solo uno)`)

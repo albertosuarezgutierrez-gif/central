@@ -4,6 +4,7 @@
 // elige empresa; el empleado, empresa + PIN) y, solo en el responsable, la contraseña opcional y «Recordar este dispositivo».
 import { useState, type ReactNode } from 'react'
 import Boton from '@/components/ui/Boton'
+import { RECORDAR_POR_DEFECTO } from '@/lib/sesion-responsable-reglas'
 
 export type DatosElegir = Record<string, unknown> & { empresas?: { id: string; nombre: string }[]; opciones?: { empleado_id: string; empresa_nombre: string; necesita_pin: boolean }[] }
 export type ContextoElegir = { datos: DatosElegir; email: string; recordar: boolean; volver: () => void; caducado: () => void }
@@ -47,7 +48,7 @@ export default function AccesoOtp({ solicitarUrl, verificarUrl, passwordUrl, irA
   const [email, setEmail] = useState('')
   const [codigo, setCodigo] = useState('')
   const [password, setPassword] = useState('')
-  const [recordar, setRecordar] = useState(false)
+  const [recordar, setRecordar] = useState(RECORDAR_POR_DEFECTO)
   const [datos, setDatos] = useState<DatosElegir>({})
   const [err, setErr] = useState('')
   const [cargando, setCargando] = useState(false)
@@ -87,7 +88,7 @@ export default function AccesoOtp({ solicitarUrl, verificarUrl, passwordUrl, irA
   const casilla = conRecordar && (
     <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm text-ink-2">
       <input type="checkbox" checked={recordar} onChange={e => setRecordar(e.target.checked)} className="h-5 w-5" />
-      Recordar este dispositivo (90 días)
+      Recordar este dispositivo (90 días; sin marcar, 30)
     </label>
   )
   const error = err && <p role="alert" className="text-sm text-alert">{err}</p>

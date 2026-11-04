@@ -27,7 +27,10 @@ export async function extraerTextoPorPagina(bytes: ArrayBuffer): Promise<string[
   // `workerSrc = ''` rompía pdfjs 4 en Node («Setting up fake worker failed», medido el
   // 29/09/2026): el fake worker se busca en `globalThis.pdfjsWorker`.
   ;(globalThis as { pdfjsWorker?: unknown }).pdfjsWorker = worker
-  const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(bytes), useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true })
+  // COPIA propia: pdfjs transfiere (detach) el buffer que recibe; si fuera el mismo `bytes`,
+  // el `PDFDocument.load(bytes)` posterior de `extraerPagina` fallaría con
+  // «Cannot perform Construct on a detached ArrayBuffer» (producción 04/11/2026).
+  const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(bytes.slice(0)), useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true })
   const doc = await loadingTask.promise
   const paginas: string[] = []
   for (let i = 1; i <= doc.numPages; i++) {
@@ -38,18 +41,25 @@ export async function extraerTextoPorPagina(bytes: ArrayBuffer): Promise<string[
   return paginas
 }
 
-/** Pregunta a NIM qué empleado aparece en el texto de la página. */
-async function identificarEmpleado(textoPagina: string, nombresEmpleados: string[]): Promise<string | null> {
+/**
+ * Pregunta a la IA qué empleado aparece en el texto de la página. Compartido con «Distribuir documentos desde PDF»
+ * (`opts.documento`: tipo de documento para el prompt; `opts.estricto`: SOLO coincidencia exacta con la lista,
+ * sin el emparejado parcial por nombre de pila de las nóminas).
+ */
+export async function identificarEmpleado(
+  textoPagina: string, nombresEmpleados: string[], opts: { documento?: string; estricto?: boolean } = {},
+): Promise<string | null> {
+  const doc = opts.documento ?? 'nómina'
   if (!nombresEmpleados.length) return null
   const lista = nombresEmpleados.map((n, i) => `${i + 1}. ${n}`).join('\n')
   const res = await iaChat([
     {
       role: 'system',
-      content: 'Eres un asistente que identifica a qué empleado pertenece una nómina. Responde ÚNICAMENTE con el nombre exacto del empleado de la lista, o la palabra NINGUNO si no encuentras coincidencia.',
+      content: `Eres un asistente que identifica a qué empleado pertenece ${doc === 'nómina' ? 'una nómina' : 'una página de un documento (' + doc + ')'}. Responde ÚNICAMENTE con el nombre exacto del empleado de la lista, o la palabra NINGUNO si no encuentras coincidencia clara.`,
     },
     {
       role: 'user',
-      content: `Lista de empleados:\n${lista}\n\nTexto de la nómina:\n${textoPagina.slice(0, 2000)}\n\n¿A qué empleado pertenece esta nómina?`,
+      content: `Lista de empleados:\n${lista}\n\nTexto de la página:\n${textoPagina.slice(0, 2000)}\n\n¿A qué empleado pertenece esta página?`,
     },
   ])
   const resp = (res ?? '').trim()
@@ -57,6 +67,7 @@ async function identificarEmpleado(textoPagina: string, nombresEmpleados: string
   // Busca la coincidencia más cercana en la lista
   const exacto = nombresEmpleados.find(n => n.toLowerCase() === resp.toLowerCase())
   if (exacto) return exacto
+  if (opts.estricto) return null
   // Coincidencia parcial (el modelo puede devolver apellido primero, etc.)
   const parcial = nombresEmpleados.find(n =>
     n.toLowerCase().includes(resp.toLowerCase()) || resp.toLowerCase().includes(n.toLowerCase().split(' ')[0])
@@ -64,13 +75,18 @@ async function identificarEmpleado(textoPagina: string, nombresEmpleados: string
   return parcial ?? null
 }
 
-/** Extrae una sola página del PDF original como PDF independiente. */
-async function extraerPagina(bytesOriginal: ArrayBuffer, numeroPagina: number): Promise<Uint8Array> {
+/** Extrae el rango de páginas [desde, hasta] (1-based, ambas incluidas) como PDF independiente. */
+export async function extraerPaginas(bytesOriginal: ArrayBuffer, desde: number, hasta: number): Promise<Uint8Array> {
   const srcDoc = await PDFDocument.load(bytesOriginal)
   const newDoc = await PDFDocument.create()
-  const [page] = await newDoc.copyPages(srcDoc, [numeroPagina - 1])
-  newDoc.addPage(page)
+  const idx = Array.from({ length: hasta - desde + 1 }, (_, i) => desde - 1 + i)
+  for (const page of await newDoc.copyPages(srcDoc, idx)) newDoc.addPage(page)
   return newDoc.save()
+}
+
+/** Extrae una sola página del PDF original como PDF independiente. */
+async function extraerPagina(bytesOriginal: ArrayBuffer, numeroPagina: number): Promise<Uint8Array> {
+  return extraerPaginas(bytesOriginal, numeroPagina, numeroPagina)
 }
 
 /** Punto de entrada: distribuye el PDF entre los empleados de la empresa. */

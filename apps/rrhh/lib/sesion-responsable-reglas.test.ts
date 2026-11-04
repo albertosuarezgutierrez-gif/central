@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   diasSesion, opcionesCookieSesion, leerCookie, empresaDeEntrada, enmascararEmail, COOKIE_ULTIMA_EMPRESA,
-  SESION_RECORDADA_DIAS, SESION_RESPONSABLE_DIAS,
+  SESION_RECORDADA_DIAS, SESION_RESPONSABLE_DIAS, RECORDAR_POR_DEFECTO,
 } from './sesion-responsable-reglas'
 
 const A = '11111111-1111-1111-1111-111111111111'
@@ -18,6 +18,13 @@ describe('duración de la sesión del responsable', () => {
   it('solo `true` estricto alarga (un "true" en texto o un 1 no)', () => {
     expect(diasSesion('true' as never)).toBe(30)
     expect(diasSesion(1 as never)).toBe(30)
+  })
+})
+
+describe('cookie persistente y casilla por defecto', () => {
+  it('la casilla llega marcada y la cookie NUNCA es de navegador (maxAge > 0 con y sin casilla)', () => {
+    expect(RECORDAR_POR_DEFECTO).toBe(true)
+    for (const r of [true, false, undefined, null]) expect(opcionesCookieSesion(r).maxAge).toBeGreaterThan(0)
   })
 })
 

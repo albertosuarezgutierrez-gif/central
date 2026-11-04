@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-11-03T22:22:43Z",
+  "generadoEn": "2026-11-04T12:15:34Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -679,7 +679,7 @@
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 4
       },
       "sivra": {
         "estado": "no",
@@ -1025,7 +1025,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 23
+        "evidencias": 25
       },
       "asegura-portal": {
         "estado": "usado",
@@ -1053,7 +1053,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 43
+        "evidencias": 44
       },
       "rrhh": {
         "estado": "usado",
@@ -1543,7 +1543,7 @@
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 6
+        "evidencias": 7
       },
       "sivra": {
         "estado": "no",
@@ -2299,7 +2299,7 @@
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "sivra": {
         "estado": "no",
@@ -2321,7 +2321,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 342
+        "evidencias": 346
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2329,7 +2329,7 @@
       },
       "asegura-web": {
         "estado": "usado",
-        "evidencias": 32
+        "evidencias": 34
       },
       "housesevillana": {
         "estado": "no",
@@ -2375,7 +2375,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 68
+        "evidencias": 71
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2591,7 +2591,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 78
+        "evidencias": 79
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4426,6 +4426,8 @@
       "/api/operador/whatsapp/alta",
       "/api/operador/whatsapp/conexion",
       "/api/operador/whatsapp/conversaciones",
+      "/api/operador/whatsapp/propuesta",
+      "/api/operador/whatsapp/saliente-previsto",
       "/api/portal/anulacion",
       "/api/portal/anulacion/solicitar",
       "/api/portal/carnets",
@@ -5575,6 +5577,7 @@
       "/api/correduria/tarificador/ultimo-riesgo",
       "/api/correduria/vencimientos",
       "/api/correduria/whatsapp-conexion",
+      "/api/correduria/whatsapp-saliente",
       "/api/cron/agentes-latido",
       "/api/cron/banca-alertas",
       "/api/cron/blog-asegura",
@@ -5863,6 +5866,7 @@
       "/api/admin/cuenta/documentos/[id]",
       "/api/admin/documentos/analizar",
       "/api/admin/documentos/asignar",
+      "/api/admin/documentos/distribuir-pdf",
       "/api/admin/documentos/staging",
       "/api/admin/empleados",
       "/api/admin/empleados/[id]",
@@ -5874,6 +5878,7 @@
       "/api/admin/empleados/[id]/documentos/[docId]/descargar-firmado",
       "/api/admin/empleados/[id]/documentos/[docId]/firmar-empresa",
       "/api/admin/empleados/[id]/documentos/[docId]/solicitar-firma",
+      "/api/admin/empleados/[id]/documentos/[docId]/visibilidad",
       "/api/admin/empleados/[id]/documentos/confirm",
       "/api/admin/empleados/[id]/documentos/generar",
       "/api/admin/empleados/[id]/documentos/presign",
@@ -6211,8 +6216,11 @@
       "seguros.tarificador_pilotaje_sesiones",
       "seguros.tarificador_sesiones",
       "seguros.usuarios",
+      "seguros.whatsapp_aprendizaje",
       "seguros.whatsapp_kb_chunks",
-      "seguros.whatsapp_outbound_messages"
+      "seguros.whatsapp_outbound_messages",
+      "seguros.whatsapp_propuestas",
+      "seguros.whatsapp_salientes_previstos"
     ],
     "asegura-portal": [
       "seguros.cliente_relaciones_permiso_volcado",
@@ -7279,7 +7287,7 @@
     "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1882,
+    "apis": 1887,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

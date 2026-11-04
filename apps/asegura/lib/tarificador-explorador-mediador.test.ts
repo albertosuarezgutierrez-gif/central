@@ -1,16 +1,18 @@
-// Tomador = MEDIADOR en las exploraciones de patinete (28/10/2026). `node --test`. Los datos salen de `MEDIADOR`
+// Tomador = MEDIADOR en las exploraciones de patinete (28/10/2026) y de Pelayo Auto/Hogar (0.3.41, 04/11/2026). `node --test`. Los datos salen de `MEDIADOR`
 // (`@central/module-seguros`): este test NO repite ningún literal, los importa, y vigila que nadie más lo escriba.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { ENTRADAS_EXPLORACION, entradaConTomadorMediador, resolverDato } from '@central/module-tarificacion'
+import { ENTRADAS_EXPLORACION, entradaConTomadorMediador, redactarValoresInventario, resolverDato, valoresSensiblesExploracion, type InventarioDom } from '@central/module-tarificacion'
 import { MEDIADOR } from '@central/module-seguros'
 import { riesgoTomadorMediador } from './tarificador-explorador-mediador.ts'
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..')
 const ENTRADAS_PATINETE = ['allianz:autos:movilidad_personal', 'mapfre:automoviles:patinetes']
+const ENTRADAS_PELAYO = ['pelayo:presupuestos:auto', 'pelayo:presupuestos:hogar']
+const ENTRADAS_MEDIADOR = [...ENTRADAS_PATINETE, ...ENTRADAS_PELAYO]
 const ctx = (ramo: string, tomadorMediador: boolean, riesgo: unknown) => ({ ramo, conDatosReales: false, tomadorMediador, riesgo, env: {}, hoy: new Date('2026-10-28T10:00:00Z') })
 
 test('el riesgo del tomador sale de MEDIADOR (nif, nombre y fecha de nacimiento), nunca de un literal', () => {
@@ -23,10 +25,10 @@ test('el riesgo del tomador sale de MEDIADOR (nif, nombre y fecha de nacimiento)
   assert.equal(`${tomador.nombre} ${tomador.apellido1} ${tomador.apellido2}`, id.nombre, 'tres palabras = nombre + dos apellidos')
 })
 
-test('el resolver del explorador pone el NIF y la fecha de MEDIADOR (fecha en dd/mm/aaaa) solo con la marca de la entrada', () => {
+test('el resolver del explorador pone el NIF y la fecha de MEDIADOR (fecha en dd/mm/aaaa) solo con la marca de la entrada (patinete y Pelayo)', () => {
   const r = riesgoTomadorMediador()
   const [a, m, d] = MEDIADOR.identidad.fechaNacimiento.split('-')
-  for (const entrada of ENTRADAS_PATINETE) {
+  for (const entrada of ENTRADAS_MEDIADOR) {
     const def = ENTRADAS_EXPLORACION[entrada]
     const marca = entradaConTomadorMediador(entrada)
     assert.equal(marca, true, entrada)
@@ -34,7 +36,7 @@ test('el resolver del explorador pone el NIF y la fecha de MEDIADOR (fecha en dd
     assert.deepEqual(resolverDato('tomador.fecha_nacimiento', ctx(def.ramo, marca, r)), { ok: true, valor: `${d}/${m}/${a}` }, entrada)
   }
   // Ninguna otra entrada: ni con el riesgo del mediador a mano se resuelve el NIF.
-  for (const [k, def] of Object.entries(ENTRADAS_EXPLORACION).filter(([k]) => !ENTRADAS_PATINETE.includes(k))) {
+  for (const [k, def] of Object.entries(ENTRADAS_EXPLORACION).filter(([k]) => !ENTRADAS_MEDIADOR.includes(k))) {
     assert.deepEqual(resolverDato('tomador.nif', ctx(def.ramo, entradaConTomadorMediador(k), r)), { ok: false, motivo: 'dato_sensible_requerido' }, k)
   }
 })
@@ -86,4 +88,41 @@ test('cableado: el reclamo del worker y el redactado del inventario añaden al m
   assert.ok(!/riesgoTomadorMediador/.test(e), 'el encolado no escribe los datos del mediador en la BD')
   const p = readFileSync(path.join(RAIZ, 'apps/asegura/app/api/tarificador/explorador/paso/route.ts'), 'utf8')
   assert.match(p, /valoresSensiblesExploracion\(\{[^}]*tomadorMediador/, 'el NIF del mediador se quita del inventario antes de la IA y de la BD')
+})
+
+// 0.3.41 · Pelayo «Datos del Tomador»: tras rellenar, el portal puede ENSEÑAR el NIF, el nombre o el móvil del mediador (resumen,
+// aviso, rótulo). El inventario que se GUARDA (estado del pilotaje y paso del explorador) pasa por `redactarValoresInventario` con los
+// valores de `valoresPilotaje` = `valoresSensiblesExploracion({ riesgo: riesgoTomadorMediador(), tomadorMediador })`: ninguno sobrevive.
+function inventarioQueEnsena(textos: string[]): InventarioDom {
+  return {
+    version: 1, totalElementos: textos.length, recortado: null, textosDescartados: 0,
+    marcos: [{
+      url: 'https://mediadores.pelayo.com/portalmediador-presupuestos/', nombre: null, titulos: ['Datos del Tomador'], titulosPantalla: textos, avisosPortal: textos,
+      elementos: textos.map((t, i) => ({ ref: `e${i}`, tag: 'span', texto: t, etiqueta: t })),
+    }],
+  } as unknown as InventarioDom
+}
+
+test('Pelayo (pilotaje y exploración): el NIF, el nombre, los apellidos, el móvil y el correo del mediador NO salen en el inventario guardado', () => {
+  const id = MEDIADOR.identidad
+  const r = riesgoTomadorMediador()
+  const sueltos = [id.nif, id.nombre, r.tomador.apellido1!, r.tomador.apellido2!, r.tomador.telefono!, id.telefono, id.email]
+  assert.ok(sueltos.every((x) => typeof x === 'string' && x.length >= 3), 'el mapeo trae todos los datos que se van a rellenar')
+  const ensenados = [`NIF ${id.nif}`, `Tomador: ${id.nombre}`, `Apellido 1 ${r.tomador.apellido1}`, `Apellido 2 ${r.tomador.apellido2}`, `Teléfono ${id.telefono}`, `Móvil ${r.tomador.telefono}`, `Email ${id.email}`]
+  for (const entrada of ENTRADAS_PELAYO) {
+    const tomadorMediador = entradaConTomadorMediador(entrada)
+    assert.equal(tomadorMediador, true, entrada)
+    // Lo MISMO que `valoresPilotaje` (tarificador-pilotaje.ts) y la ruta del paso del explorador.
+    const valores = valoresSensiblesExploracion({ conDatosReales: false, riesgo: riesgoTomadorMediador(), env: {}, tomadorMediador })
+    assert.ok(valores !== null, entrada)
+    const guardado = JSON.stringify(redactarValoresInventario(inventarioQueEnsena(ensenados), valores!))
+    for (const x of sueltos) assert.ok(!guardado.includes(x), `${entrada}: un dato del mediador sobrevive a la redacción`)
+    assert.ok(guardado.includes('Datos del Tomador'), 'el rótulo del formulario sí queda (el mapa sigue sirviendo)')
+  }
+})
+
+test('cableado del pilotaje: la redacción de asegura usa el riesgo del mediador con la marca de la entrada', () => {
+  const t = readFileSync(path.join(RAIZ, 'apps/asegura/lib/tarificador-pilotaje.ts'), 'utf8')
+  assert.match(t, /valoresSensiblesExploracion\(\{ conDatosReales: false, riesgo: tomadorMediador \? riesgoTomadorMediador\(\) : null, env, tomadorMediador \}\)/)
+  assert.match(t, /redactarValoresInventario\(p\.inventario, valores\)/)
 })

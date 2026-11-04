@@ -17,8 +17,11 @@ export type ContextoWhatsappDevuelto = Omit<EntradaWhatsappDevuelto, 'importe' |
   quien: string | null
 }
 
-export default function WhatsappReciboDevuelto({ ctx, importe, fechaEfecto, tipoMotivo, grande = false }: {
+export default function WhatsappReciboDevuelto({ ctx, reciboId, polizaId, importe, fechaEfecto, tipoMotivo, grande = false }: {
   ctx: ContextoWhatsappDevuelto
+  /** El recibo devuelto y su póliza: ancla del «saliente previsto» (spec 2026-11-04 §4). Sin ellos se registra `generico`. */
+  reciboId: string | null
+  polizaId: string | null
   importe: number | null
   fechaEfecto: string | null
   tipoMotivo: string | null
@@ -40,6 +43,7 @@ export default function WhatsappReciboDevuelto({ ctx, importe, fechaEfecto, tipo
         mensaje={mensaje}
         compacto={!grande}
         rotulo={grande ? 'WhatsApp' : undefined}
+        registro={{ origen: 'recibo_devuelto', clienteId, reciboId, polizaId }}
         onAbrir={() => {
           // Sin `await`: WhatsApp se abre aunque la nota tarde o falle.
           const texto = `💬 WhatsApp abierto por el recibo devuelto${importe !== null ? ` de ${eur(importe)}` : ''}${quien ? ` (a ${quien})` : ''}. Pendiente de confirmar que se envió y de su respuesta.`

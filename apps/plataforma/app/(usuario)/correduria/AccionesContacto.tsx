@@ -2,6 +2,7 @@ import { Phone, Mail } from 'lucide-react'
 import { btnIcono } from '@/components/ui'
 import { accionesContacto } from '@/lib/acciones-contacto'
 import BotonWhatsapp from './BotonWhatsapp'
+import type { RegistroSaliente } from '@/lib/correduria/saliente-whatsapp'
 
 /**
  * Llamar · WhatsApp · escribir, al lado del nombre de un cliente.
@@ -21,7 +22,7 @@ import BotonWhatsapp from './BotonWhatsapp'
  * Server-safe: son enlaces, no handlers. Se puede montar desde un server
  * component sin arrastrar `'use client'`.
  */
-export default function AccionesContacto({ telefono, email, ilegible, quien, mensaje, onWhatsapp, tam = 'sm' }: {
+export default function AccionesContacto({ telefono, email, ilegible, quien, mensaje, onWhatsapp, registro, tam = 'sm' }: {
   telefono?: string | null
   email?: string | null
   /** El contacto cifrado que asegura no pudo descifrar: no se ofrece nada. */
@@ -32,6 +33,8 @@ export default function AccionesContacto({ telefono, email, ilegible, quien, men
   mensaje?: string | null
   /** Se dispara al pulsar WhatsApp, sin bloquear la apertura. Ver `onAbrir` de `BotonWhatsapp`. */
   onWhatsapp?: () => void
+  /** Origen y ancla del «saliente previsto» (ver `registro` de `BotonWhatsapp`). */
+  registro?: RegistroSaliente | null
   tam?: 'sm' | 'md'
 }) {
   const a = accionesContacto({ telefono, email, ilegible, mensaje })
@@ -50,7 +53,7 @@ export default function AccionesContacto({ telefono, email, ilegible, quien, men
           <Phone size={px} strokeWidth={1.75} aria-hidden />
         </a>
       )}
-      {telefono && !ilegible && <BotonWhatsapp telefono={telefono} mensaje={mensaje} onAbrir={onWhatsapp} compacto={tam === 'sm'} />}
+      {telefono && !ilegible && <BotonWhatsapp telefono={telefono} mensaje={mensaje} onAbrir={onWhatsapp} registro={registro} compacto={tam === 'sm'} />}
       {a.email && (
         <a href={a.email} style={estilo} aria-label={`Escribir a ${quien}`} title={`Escribir a ${quien}`}>
           <Mail size={px} strokeWidth={1.75} aria-hidden />

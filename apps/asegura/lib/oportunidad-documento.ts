@@ -153,13 +153,24 @@ const fmt = (iso: string) => iso.split('-').reverse().join('/')
 
 /** Lee el fichero (probando el DNI de la ficha si el PDF tiene contraseña) y sigue con lo leído. */
 export async function oportunidadDesdeFichero(
-  e: EntradaOportunidadDocumento & { fichero: { contenido: Buffer; mime: string; nombre: string } },
+  e: EntradaOportunidadDocumento & {
+    fichero: { contenido: Buffer; mime: string; nombre: string }
+    /**
+     * Guarda opcional (04/11/2026, WhatsApp): con lo LEÍDO y antes de tocar nada. Si devuelve un desenlace, se devuelve
+     * ese y NO se crea/actualiza nada (p. ej. el DNI del tomador es de OTRA ficha que la de la conversación → `revisar`).
+     */
+    antesDeActuar?: (lectura: ResultadoLecturaPoliza) => Promise<ResultadoOportunidadDocumento | null>
+  },
 ): Promise<ResultadoOportunidadDocumento> {
   try {
     const clienteSube = e.clienteSube
     const lectura = await leerPoliza(e.fichero.contenido, e.fichero.mime, e.fichero.nombre, {
       contrasenas: clienteSube ? () => contrasenasDeLaFicha(e.correduriaId, clienteSube) : undefined,
     })
+    if (e.antesDeActuar) {
+      const parar = await e.antesDeActuar(lectura)
+      if (parar) return parar
+    }
     const r = await oportunidadDesdeLecturaConIdentidad({ ...e, lectura })
     // Con la MARCA de identidad (05/10/2026): con ella, esta póliza acredita la identidad de su ficha.
     if (e.documentoId && lectura.fase !== 'ninguno') await guardarExtraccion(e.correduriaId, e.documentoId, lectura.bruto ?? null, r.marca)

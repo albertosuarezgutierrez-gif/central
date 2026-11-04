@@ -54,3 +54,23 @@ describe('vigencia de la sesión del responsable', () => {
     expect(motivoRechazoSesion({ jti: 'x' }, null)).toBe('usuario_inexistente')
   })
 })
+
+import { jtiEnLista, jtisVigentes, MAX_SESIONES_SIMULTANEAS } from './sesion-responsable-vigencia'
+describe('varios dispositivos a la vez (lista de jti)', () => {
+  it('vale cualquier jti de la lista; NULL, vacío y ausente no', () => {
+    expect(jtiEnLista('a,b,c', 'b')).toBe(true)
+    expect(jtiEnLista('a,b,c', 'd')).toBe(false)
+    expect(jtiEnLista(null, 'a')).toBe(false)
+    expect(jtiEnLista('', '')).toBe(false)
+    expect(jtiEnLista('a', undefined)).toBe(false)
+    expect(jtiEnLista('ab', 'a')).toBe(false)
+  })
+  it('motivoRechazoSesion acepta el jti de otro dispositivo de la lista y rechaza el revocado', () => {
+    expect(motivoRechazoSesion({ jti: 'movil' }, { session_jti: 'pc,movil', empresa_autorizada: true })).toBeNull()
+    expect(motivoRechazoSesion({ jti: 'movil' }, { session_jti: 'pc,xxxx', empresa_autorizada: true })).toBe('sesion_cerrada')
+  })
+  it('tope razonable y parseo', () => {
+    expect(MAX_SESIONES_SIMULTANEAS).toBeGreaterThanOrEqual(2)
+    expect(jtisVigentes(' a, ,b ')).toEqual(['a', 'b'])
+  })
+})
