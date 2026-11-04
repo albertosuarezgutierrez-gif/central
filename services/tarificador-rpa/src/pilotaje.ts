@@ -45,6 +45,7 @@ import { fallosDeRed, leerEntornoNavegador, lineasEntorno } from './entorno-nave
 import { clasificar } from './errores.ts'
 import { exigirSinVerificacion } from './verificacion.ts'
 import { capturarInventarioExploracion, type InventarioExploracion } from './inventario-dom.ts'
+import { elegirDesplegableCustom, MOTIVO_DESPLEGABLE_CUSTOM } from './desplegable-custom.ts'
 import { ATRIBUTO_MARCA, PORTALES_EXPLORACION, abrirSesionEntrada, crearCtxEntrada, elegirNxDropdown, entrarAlPortal, localizar, valorParaControl } from './explorador.ts'
 import {
   cerrarFaseEntrada,
@@ -247,6 +248,12 @@ export async function ejecutarComando(page: Page, captura: InventarioExploracion
         // Abrir y pulsar la opción de texto exacto: ambas por `k.pulsar` (guard).
         const r = await elegirNxDropdown(nodo.marco, loc, opcionValidada ?? c.valor, k.pulsar)
         if (r === 'no_encontrada') return rechazo('opcion_no_encontrada')
+      } else if (el.desplegableCustom === true) {
+        // 0.3.43: custom element de desplegable sin <select> (Pelayo `pelayo-smart-select`): disparador + opción de texto EXACTO por `k.pulsar`.
+        if (opcionValidada === null) return rechazo('validador')
+        const r = await elegirDesplegableCustom(nodo.marco, loc, opcionValidada, k.pulsar)
+        if (r === 'no_encontrada') return rechazo('opcion_no_encontrada', [MOTIVO_DESPLEGABLE_CUSTOM[r]])
+        if (r !== 'ok') return rechazo(r === 'no_aplicada' ? 'opcion_no_aplicada' : r === 'accion_final' ? 'validador' : 'no_localizado', [MOTIVO_DESPLEGABLE_CUSTOM[r]])
       } else {
         if (opcionValidada === null) return rechazo('validador')
         // 0.3.20/0.3.42: el <select> OCULTO (bootstrap-select o custom element) ya se comprobó VIVO en `localizar`: `selectOption` forzado.

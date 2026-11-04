@@ -621,6 +621,8 @@ export {
   contieneValorSensible,
   normalizarParaRedactar,
   MIN_VALOR_REDACTAR,
+  RE_TAG_DESPLEGABLE_CUSTOM,
+  esTagDesplegableCustom,
   type OpcionesSaneado,
   type ImporteInventario,
   type InventarioDom,
