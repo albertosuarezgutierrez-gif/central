@@ -1,33 +1,33 @@
 {
  "sesion": "957270f5-f49e-5302-a163-011ebf581077",
  "inicio": "2026-11-03T08:56:45.765Z",
- "fin": "2026-11-03T09:31:25.394Z",
- "llamadas": 199,
+ "fin": "2026-11-04T10:09:25.667Z",
+ "llamadas": 236,
  "categorias": {
   "otro": {
-   "llamadas": 24,
-   "chars_in": 32726,
-   "chars_out": 135270,
+   "llamadas": 39,
+   "chars_in": 35401,
+   "chars_out": 257624,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 6,
-    "SubagentHandback": 6,
+    "ToolSearch": 8,
+    "SubagentHandback": 7,
     "AskUserQuestion": 1,
     "SendUserFile": 2,
-    "ReadNotifications": 9
+    "ReadNotifications": 21
    }
   },
   "bash": {
-   "llamadas": 128,
-   "chars_in": 149978,
-   "chars_out": 636223,
+   "llamadas": 144,
+   "chars_in": 156659,
+   "chars_out": 767252,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 128
+    "Bash": 144
    }
   },
   "mcp:Supabase": {
@@ -64,14 +64,14 @@
    }
   },
   "agente:general-purpose": {
-   "llamadas": 5,
-   "chars_in": 17801,
-   "chars_out": 15674,
+   "llamadas": 6,
+   "chars_in": 19938,
+   "chars_out": 18006,
    "errores": 0,
    "archivos_citados": 4,
    "chars_citados": 62831,
    "tools": {
-    "Agent": 5
+    "Agent": 6
    }
   },
   "lectura-directa": {
@@ -86,27 +86,30 @@
    }
   },
   "mcp:github": {
-   "llamadas": 2,
-   "chars_in": 1789,
-   "chars_out": 182,
+   "llamadas": 4,
+   "chars_in": 2059,
+   "chars_out": 8367,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__github__create_pull_request": 1,
-    "mcp__github__update_pull_request": 1
+    "mcp__github__update_pull_request": 1,
+    "mcp__github__pull_request_read": 1,
+    "mcp__github__merge_pull_request": 1
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 2,
-   "chars_in": 299,
-   "chars_out": 347,
+   "llamadas": 5,
+   "chars_in": 678,
+   "chars_out": 2764,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__claude-code-remote__subscribe_pr_activity": 1,
-    "mcp__claude-code-remote__send_later": 1
+    "mcp__claude-code-remote__send_later": 2,
+    "mcp__claude-code-remote__delete_trigger": 2
    }
   },
   "agente:agente-architect": {
