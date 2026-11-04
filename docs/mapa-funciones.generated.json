@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-04T21:52:55Z",
-  "sha": "c11c399661dc329ea577bd8f13dc2789a7bdce63",
+  "generadoEn": "2026-11-04T22:26:33Z",
+  "sha": "26b364146552ec6d102521682f31b2222854f660",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -71177,7 +71177,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "",
-          "linea": 42,
+          "linea": 43,
           "resumen": "Forma de un comando (operador → BD → worker). Fail-closed: clave desconocida o acción fuera de lista → error. PURA."
         },
         {
@@ -71186,7 +71186,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "ResultadoComando | null",
-          "linea": 89
+          "linea": 90
         },
         {
           "nombre": "redactarTextoPilotaje",
@@ -71194,7 +71194,7 @@
           "exportada": true,
           "params": "t: string, valores: readonly string[]",
           "retorno": "string",
-          "linea": 102,
+          "linea": 103,
           "resumen": "Campos de DIAGNÓSTICO nuevos (motivo/detalle del resultado, URL): la misma barrera que `redactarValoresInventario` aplica a cada texto del inventario (`contieneValorSensible` con los valores sensibles"
         },
         {
@@ -71203,7 +71203,7 @@
           "exportada": true,
           "params": "r: ResultadoComando | null, valores: readonly string[]",
           "retorno": "ResultadoComando | null",
-          "linea": 105
+          "linea": 106
         },
         {
           "nombre": "leerPeticionEncolarPilotaje",
@@ -71211,7 +71211,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "",
-          "linea": 112,
+          "linea": 113,
           "resumen": "Cuerpo de `POST /api/operador/tarificador/pilotaje`: `{ entrada }` y nada más (sintética siempre). PURA."
         },
         {
@@ -71220,7 +71220,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "",
-          "linea": 137,
+          "linea": 138,
           "resumen": "Cuerpo de `POST /api/tarificador/pilotaje/estado` (worker). PURA."
         },
         {
@@ -71229,7 +71229,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 164,
+          "linea": 165,
           "resumen": "Solo origen + ruta (la query puede llevar tokens o datos): nunca se guarda entera. PURA."
         },
         {
@@ -71238,7 +71238,7 @@
           "exportada": true,
           "params": "b64: string",
           "retorno": "boolean",
-          "linea": 176,
+          "linea": 177,
           "resumen": "¿Es un PNG (firma de 8 bytes) en base64 y cabe en el tope? PURA."
         },
         {
@@ -71247,7 +71247,7 @@
           "exportada": true,
           "params": "sesionId: string, n: number",
           "retorno": "string",
-          "linea": 183,
+          "linea": 184,
           "resumen": "Ruta del objeto en el bucket: `pilotaje/<sesion>/<n>.png` (la misma forma que exige el CHECK de la tabla). PURA."
         },
         {
@@ -71256,7 +71256,7 @@
           "exportada": true,
           "params": "k: { ahora: Date; inicio: Date | null; leaseMs: number }",
           "retorno": "Date",
-          "linea": 189,
+          "linea": 190,
           "resumen": "Lease renovado de una sesión: `ahora + leaseMs`, nunca más allá de inicio + 30 min + margen. PURA."
         },
         {
@@ -71265,7 +71265,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "",
-          "linea": 202,
+          "linea": 203,
           "resumen": "Cuerpo de `POST /api/tarificador/pilotaje/cierre` (worker). PURA."
         },
         {
@@ -71274,13 +71274,13 @@
           "exportada": true,
           "params": "r: ResultadoComando | null",
           "retorno": "'hecho' | 'rechazado' | null",
-          "linea": 218,
+          "linea": 219,
           "resumen": "Estado de una fila tras el resultado de su comando. PURA."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b2d5f6a80e95"
+      "hash": "93e6804a74ba"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-pilotaje.ts",
