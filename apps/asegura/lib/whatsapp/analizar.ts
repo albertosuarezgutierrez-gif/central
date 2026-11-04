@@ -23,6 +23,10 @@ import { recibosPendientesDe, salienteVinculadoDe, type ReciboParaAnalisis, type
 import { aplicarSiAutonoma, avisarTelegram, crearPropuesta, type ContextoAprendizaje } from './propuestas'
 import { casosResueltos } from './aprendizaje'
 import { casoParaIA, elegirCasos, extractoRedactado } from './aprendizaje-reglas'
+import { promesaAvisoActiva, respuestaIaActiva } from './config'
+import { decidirRespuesta, esBaja, puedeResponder, sistemaRespuesta, TEXTO_MOTIVO, type Pre } from './respuesta-reglas'
+import { enviarRespuesta, leerEstadoRespuesta, type ResultadoRespuesta } from './respuesta'
+import { redactarPii } from '@central/module-seguros'
 
 const ESTADOS_ABIERTOS = ['competencia', 'en_negociacion', 'pendiente_cliente']
 const MAX_INTENTOS = 3
@@ -139,9 +143,12 @@ async function analizarUna(correduriaId: string, c: Reclamada): Promise<number |
     return 'saltada'
   }
 
-  const filas = await db.$queryRaw<{ direccion: 'entrante' | 'saliente'; contenido: string; enviado_at: Date }[]>(Prisma.sql`
-    select direccion, contenido, enviado_at from mensajes
+  // El historial importado (Coexistence) solo sirve de contexto en una conversación con UNA ficha exacta.
+  const fichaUnicaConv = cliente !== null && c.clientes_candidatos === 1
+  const filas = await db.$queryRaw<{ direccion: 'entrante' | 'saliente'; contenido: string; enviado_at: Date; tipo: string | null }[]>(Prisma.sql`
+    select direccion, contenido, enviado_at, tipo from mensajes
      where conversacion_id = ${c.id}::uuid and direccion is not null and texto_purgado_at is null and enviado_at is not null
+       and (${fichaUnicaConv} or coalesce(metadata->>'origen', '') <> 'historial')
      order by enviado_at desc limit 40`)
   const mensajes: MensajeTranscripcion[] = []
   for (const f of filas) {
@@ -196,7 +203,28 @@ async function analizarUna(correduriaId: string, c: Reclamada): Promise<number |
   })()
   const extracto = extractoRedactado(textoUltimaEntrante, [perfil, cliente?.nombre, cliente?.apellidos])
   const contextoAprendizaje: ContextoAprendizaje = { origenSaliente: saliente?.origen ?? null, extracto }
-  const casos = fichaUnica && enVigor === true ? await casosResueltos(correduriaId) : undefined
+  // Puede haber propuestas con póliza en vigor (recibos) o con una oportunidad abierta (vencimiento de un lead: D4 ajustada).
+  const casos = fichaUnica && (enVigor === true || oportunidades.length > 0) ? await casosResueltos(correduriaId) : undefined
+
+  // Respuesta automática (ASEGURA_WHATSAPP_RESPUESTA_ACTIVA=1). Con el flag apagado no se lee nada más ni cambia el prompt.
+  const flagRespuesta = respuestaIaActiva()
+  const promesaAviso = promesaAvisoActiva()
+  let pre: Pre = { ok: false, motivo: 'flag_apagado' }
+  let entranteId: string | null = null
+  let tipoEntrante = 'text'
+  if (flagRespuesta && cliente) {
+    const est = await leerEstadoRespuesta(correduriaId, c.id, {
+      flag: true, tipoFicha: cliente.tipo, clientesCandidatos: c.clientes_candidatos, estadoConversacion: c.estado, optOut: false,
+    }).catch((e) => {
+      console.error('[whatsapp-ia] estado de respuesta no leído:', e instanceof Error ? e.name : 'error')
+      return null
+    })
+    if (est && est !== 'sin_migracion') {
+      pre = puedeResponder(est)
+      entranteId = est.ultimaEntrante?.id ?? null
+      tipoEntrante = est.ultimaEntrante?.tipo ?? 'text'
+    } else pre = { ok: false, motivo: 'sin_migracion' }
+  }
 
   const contextoIA: ContextoParaIA = {
     tiene_ficha: cliente !== null,
@@ -213,7 +241,12 @@ async function analizarUna(correduriaId: string, c: Reclamada): Promise<number |
 
   let crudo: string
   try {
-    crudo = await iaTexto(construirPrompt(contextoIA, transcripcion), { system: SISTEMA, maxTokens: 900, timeoutMs: 45_000, privado: true })
+    crudo = await iaTexto(construirPrompt(contextoIA, transcripcion), {
+      system: pre.ok ? SISTEMA + sistemaRespuesta({ promesaAviso }) : SISTEMA,
+      maxTokens: pre.ok ? 1100 : 900,
+      timeoutMs: 45_000,
+      privado: true,
+    })
   } catch {
     await fallo(correduriaId, c, hasta, 'ia_no_responde')
     return 'fallida'
@@ -242,22 +275,50 @@ async function analizarUna(correduriaId: string, c: Reclamada): Promise<number |
   const plan = planificar(analisis, ctx)
   const { resultados, clienteId: clienteFinal } = await ejecutar(plan, ctx, depsBd(correduriaId, c, contextoAprendizaje))
 
+  // Respuesta automática: solo si `pre.ok` (todas las guardas previas) y la decisión posterior lo permite.
+  const descartaPersonal = plan.pasos.some((x) => x.tipo === 'descartarPersonal')
+  const baja = flagRespuesta && fichaUnica && analisis.es_comercial && esBaja(analisis.intencion, textoUltimaEntrante)
+  let respuestaAviso: { estado: ResultadoRespuesta | 'no_enviada'; texto?: string; motivo?: string } | undefined
+  if (pre.ok && entranteId) {
+    const d = decidirRespuesta({
+      esComercial: analisis.es_comercial, descartaPersonal, baja, tipoEntrante, respuestaIA: analisis.respuesta, promesaAviso,
+      redactar: (t) => redactarPii(t),
+    })
+    if (d.enviar) {
+      const r = await enviarRespuesta(correduriaId, { conversacionId: c.id, entranteId, telefonoCifrado: c.telefono, texto: d.texto, clase: d.clase }).catch((e) => {
+        console.error('[whatsapp-ia] respuesta:', e instanceof Error ? e.name : 'error')
+        return 'fallida' as const
+      })
+      respuestaAviso = r === 'enviada' || r === 'fallida' ? { estado: r, texto: d.texto } : { estado: r }
+    } else {
+      respuestaAviso = { estado: 'no_enviada', motivo: TEXTO_MOTIVO[d.motivo] ?? d.motivo }
+    }
+  }
+  const urgente = baja
+    ? 'Pide la BAJA / no renovar. La IA NO ha cambiado nada: la oposición a la prórroga exige escrito del tomador al menos 1 mes antes del vencimiento (art. 22 LCS).'
+    : undefined
+
   // Siempre aviso a Alberto (spec §1) de lo hecho y lo propuesto, con botones ✅/❌ por propuesta. Best effort.
-  if (clienteFinal && plan.pasos.length > 0) {
+  if (clienteFinal && (plan.pasos.length > 0 || respuestaAviso || urgente)) {
     const hechos = resultados.filter((x) => x.resultado === 'hecho' && x.tipo !== 'proponer').map((x) => ETIQUETA_HECHO[x.tipo] ?? x.tipo)
     const creadas = resultados.filter((x) => x.tipo === 'proponer' && x.resultado === 'hecho' && x.id).map((x) => x.id as string)
     // Modo autónomo (apagado por defecto): solo con el flag y la racha del TIPO ≥ umbral; si no, quedan con sus botones.
     const propuestas: { id: string; autonoma: boolean }[] = []
     for (const id of creadas) propuestas.push({ id, autonoma: await aplicarSiAutonoma(correduriaId, id) })
     const nombrePila = (cliente?.nombre ?? '').trim().split(/\s+/)[0] || null
-    await avisarTelegram(correduriaId, { clienteId: clienteFinal, nombrePila, hechos, propuestas })
+    await avisarTelegram(correduriaId, {
+      clienteId: clienteFinal, nombrePila, hechos, propuestas,
+      ...(respuestaAviso ? { respuesta: respuestaAviso, conversacionId: c.id } : {}),
+      ...(urgente ? { urgente } : {}),
+    })
   }
 
-  const descartada = plan.pasos.some((x) => x.tipo === 'descartarPersonal')
-  // Una conversación personal no guarda ni el resumen: solo que se clasificó así.
-  const guardado = descartada
+  // Una conversación personal no guarda ni el resumen: solo que se clasificó así. La `respuesta` propuesta por la IA no
+  // se guarda aquí (la enviada ya está, cifrada, en `mensajes`).
+  const { respuesta: _respuesta, ...sinRespuesta } = analisis
+  const guardado = descartaPersonal
     ? { es_comercial: false, acciones: resultados }
-    : { ...analisis, acciones: resultados }
+    : { ...sinRespuesta, acciones: resultados }
   await cerrar(Prisma.sql`, analisis = ${JSON.stringify(guardado)}::jsonb, analizada_at = now(), analisis_modelo = ${`${viaIA()}:asegura`},
                              analisis_intentos = 0, analisis_error = null`)
   return resultados.filter((x: ResultadoPaso) => x.resultado === 'hecho').length

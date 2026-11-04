@@ -130,7 +130,7 @@ export async function procesarMediaPendiente(correduriaId: string, opciones: { l
   return r
 }
 
-async function tokenCorreduria(correduriaId: string): Promise<string | null> {
+export async function tokenCorreduria(correduriaId: string): Promise<string | null> {
   const [c] = await prismaAsegura().$queryRaw<{ token: string | null }[]>(Prisma.sql`
     select wa_access_token as token from corredurias where id = ${correduriaId}::uuid`)
   // Solo el cifrado (`v1:`): un token en claro heredado no se usa.

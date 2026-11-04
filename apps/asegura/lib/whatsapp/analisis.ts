@@ -89,6 +89,9 @@ export const zAnalisis = z
     datos_extraidos: nulo(z.record(z.string().regex(/^[a-z][a-z0-9_]{0,40}$/), valorDato)),
     // Cada acción se valida APARTE: una mal formada se rechaza sin tirar el análisis.
     acciones: z.array(z.unknown()).max(10).default([]),
+    // Respuesta automática (solo se pide con ASEGURA_WHATSAPP_RESPUESTA_ACTIVA=1): SIN validar aquí, como cada acción,
+    // para que una respuesta mal formada no tire el análisis; la valida y filtra `respuesta-reglas.ts`. null = no responder.
+    respuesta: z.unknown().default(null),
   })
   .strict()
 export type Analisis = z.infer<typeof zAnalisis>

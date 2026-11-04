@@ -7,6 +7,7 @@ import { auditado } from '@/lib/auditoria'
 import { CABECERA_ACTOR, leerActor } from '@/lib/actor'
 import { validarResolucion } from '@/lib/whatsapp/propuestas-reglas'
 import { deshacerPropuesta, resolverPropuesta } from '@/lib/whatsapp/propuestas'
+import { silenciarConversacion } from '@/lib/whatsapp/respuesta'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,6 +21,8 @@ export const dynamic = 'force-dynamic'
  *   → 200 { estado:'modificada' } (aplicada la versión corregida) · 422 correccion_invalida · el resto, como aplicar
  *   POST { id, decision: 'deshacer' }  (↩️ `wap_un`: solo una aplicada SOLA, un uso)
  *   → 200 { estado:'deshecha' } · 409 no_autonoma | ya_deshecha | sin_previo | cambiado_despues · 404 · 503
+ *   POST { id: <conversacionId>, decision: 'silenciar' }  (🔇 `wap_si`: la IA deja de CONTESTAR sola en esa conversación)
+ *   → 200 { estado:'silenciada'|'ya_silenciada' } · 404 no_encontrada · 503 sin_migracion. Solo una persona.
  * Aplicar `pagado` NUNCA cierra la devolución (eso es «cobrado de nuevo», a mano); ningún efecto envía nada al cliente.
  */
 export const POST = auditado(async (req: Request) => {
@@ -30,14 +33,19 @@ export const POST = auditado(async (req: Request) => {
   // Aplicar escribe en la cartera: solo con un actor identificado (el botón de una persona).
   if (actor.tipo === 'desconocido') return NextResponse.json({ estado: 'invalido', motivo: `falta ${CABECERA_ACTOR}` }, { status: 422 })
   // ✏️ y ↩️ son decisiones del TITULAR (botón de Telegram): nunca de un agente ni del sistema.
-  if ((v.decision === 'modificar' || v.decision === 'deshacer') && actor.tipo !== 'humano') {
-    return NextResponse.json({ estado: 'invalido', motivo: 'solo una persona puede modificar o deshacer' }, { status: 403 })
+  if ((v.decision === 'modificar' || v.decision === 'deshacer' || v.decision === 'silenciar') && actor.tipo !== 'humano') {
+    return NextResponse.json({ estado: 'invalido', motivo: 'solo una persona puede modificar, deshacer o silenciar' }, { status: 403 })
   }
   try {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
     const correduria = await correduriaUnica()
     if (!correduria) return NextResponse.json({ estado: 'error', motivo: 'sin correduría' }, { status: 503 })
     const quien = `${actor.tipo}:${actor.id}`
+    if (v.decision === 'silenciar') {
+      const s = await silenciarConversacion(correduria.id, v.id, quien)
+      if (s === 'silenciada' || s === 'ya_silenciada') return NextResponse.json({ estado: s })
+      return NextResponse.json({ estado: s }, { status: s === 'no_encontrada' ? 404 : 503 })
+    }
     if (v.decision === 'deshacer') {
       const d = await deshacerPropuesta(correduria.id, v.id, quien)
       if (d.ok) return NextResponse.json({ estado: d.estado, tipo: d.tipo })

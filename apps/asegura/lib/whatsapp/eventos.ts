@@ -4,7 +4,8 @@
 //   · `history`             → historial que la app del móvil comparte al conectar Coexistence. Alberto
 //                             pulsa «No compartir chats» → llega con el error 2593109: se REGISTRA y nada
 //                             más. Si trae hilos y WHATSAPP_IMPORTAR_HISTORIAL≠'1' → se descarta sin
-//                             guardar texto: solo se cuentan hilos y mensajes.
+//                             guardar texto: solo se cuentan hilos y mensajes. Con '1' (Alberto comparte 6
+//                             meses, 04/11/2026) se IMPORTAN solo los hilos con UNA ficha (`historial.ts`).
 //   · `smb_app_state_sync`  → contactos de la app del móvil. NO se importa nada (la fuente de la agenda es
 //                             Google Contacts): solo acuse (cuántos llegaron).
 //   · `account_update`      → PARTNER_REMOVED / ACCOUNT_OFFBOARDED / ACCOUNT_RECONNECTED → estado de la
@@ -66,7 +67,7 @@ export type EventoHistorial = {
   mensajes: number
   fase: number | null
   progreso: number | null
-  /** El `value` tal cual (solo se guarda si WHATSAPP_IMPORTAR_HISTORIAL='1'). */
+  /** El `value` tal cual (NUNCA se guarda: con WHATSAPP_IMPORTAR_HISTORIAL='1' se lee con `hilosDeHistorial`). */
   valor: unknown
 }
 export type EventoCuenta = { wabaId: string | null; evento: string; motivo: string | null }
@@ -117,7 +118,8 @@ export function extraerEventos(body: WebhookWhatsapp, phoneNumberId: string | nu
             mensajes: hilos.reduce((n, h) => n + (h.messages?.length ?? 0), 0),
             fase: t.metadata?.phase ?? null,
             progreso: t.metadata?.progress ?? null,
-            valor: cambio.value,
+            // SOLO este trozo (así cada trozo se importa una vez, no N veces el `value` entero).
+            valor: { history: [t] },
           })
         }
       } else if (cambio.field === 'smb_app_state_sync') {
@@ -145,11 +147,58 @@ export function extraerEventos(body: WebhookWhatsapp, phoneNumberId: string | nu
 }
 
 /** Qué se hace con un trozo de historial. 2593109 manda sobre todo: Alberto dijo «No compartir chats». */
-export function decisionHistorial(h: EventoHistorial, importar: boolean): 'no_compartido' | 'descartado' | 'guardar_crudo' | 'error_meta' | 'vacio' {
+export function decisionHistorial(h: EventoHistorial, importar: boolean): 'no_compartido' | 'descartado' | 'importar' | 'error_meta' | 'vacio' {
   if (h.errores.includes(ERROR_HISTORIAL_NO_COMPARTIDO)) return 'no_compartido'
   if (h.errores.length > 0) return 'error_meta'
   if (h.hilos === 0) return 'vacio'
-  return importar ? 'guardar_crudo' : 'descartado'
+  return importar ? 'importar' : 'descartado'
+}
+
+// ── Hilos del historial (para importar SOLO los de ficha única) ─────────────────
+
+export type MensajeHistorial = { wamid: string; direccion: 'entrante' | 'saliente'; tipo: string; texto: string; fecha: Date }
+export type HiloHistorial = { waId: string; mensajes: MensajeHistorial[] }
+
+const WA_ID = /^\d{8,15}$/
+const WAMID_H = /^[\w.=:+/-]{1,255}$/
+/** Tope por hilo (los MÁS RECIENTES): la IA solo usa los últimos 40; el resto sería texto guardado sin uso. */
+export const MAX_MENSAJES_HILO = 200
+
+/**
+ * Del `value` de un evento `history`, los hilos con su contraparte (`threads[].id` = wa_id del contacto) y sus mensajes.
+ * Dirección: `from` = el contacto → entrante; otro (el número de la empresa) → saliente. Mal formado → se salta.
+ * Solo los posteriores a `desde` (6 meses), y como mucho MAX_MENSAJES_HILO por hilo. PURO.
+ */
+export function hilosDeHistorial(valor: unknown, desde: Date): HiloHistorial[] {
+  const v = (valor && typeof valor === 'object' ? valor : {}) as { history?: unknown }
+  const trozos = Array.isArray(v.history) ? v.history : []
+  const out: HiloHistorial[] = []
+  for (const t of trozos) {
+    const hilos = t && typeof t === 'object' && Array.isArray((t as { threads?: unknown }).threads) ? (t as { threads: unknown[] }).threads : []
+    for (const h of hilos) {
+      const hilo = (h && typeof h === 'object' ? h : {}) as { id?: unknown; messages?: unknown }
+      if (typeof hilo.id !== 'string' || !WA_ID.test(hilo.id)) continue
+      const mensajes: MensajeHistorial[] = []
+      for (const m of Array.isArray(hilo.messages) ? hilo.messages : []) {
+        const x = (m && typeof m === 'object' ? m : {}) as Record<string, unknown> & { type?: unknown }
+        if (typeof x.id !== 'string' || !WAMID_H.test(x.id) || typeof x.type !== 'string') continue
+        if (x.type === 'edit' || x.type === 'revoke' || x.type === 'reaction' || x.type === 'system') continue
+        if (!/^\d{1,12}$/.test(String(x.timestamp))) continue
+        const fecha = new Date(Number(x.timestamp) * 1000)
+        if (fecha.getTime() < desde.getTime()) continue
+        mensajes.push({
+          wamid: x.id,
+          direccion: x.from === hilo.id ? 'entrante' : 'saliente',
+          tipo: x.type.slice(0, 30),
+          texto: textoDeMensaje(x as Record<string, unknown> & { type: string; text?: { body: string } }),
+          fecha,
+        })
+      }
+      mensajes.sort((a, b) => a.fecha.getTime() - b.fecha.getTime())
+      if (mensajes.length > 0) out.push({ waId: hilo.id, mensajes: mensajes.slice(-MAX_MENSAJES_HILO) })
+    }
+  }
+  return out
 }
 
 // ── account_update ──────────────────────────────────────────────────────────────

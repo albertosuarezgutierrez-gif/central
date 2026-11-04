@@ -19,7 +19,7 @@ import { enlaceFichaCliente } from '../datos-cotizados'
 import { eur } from '../dinero'
 import { ORIGEN_TAREA_IA } from './ejecutor'
 import { decryptField } from '@central/module-seguros-pii'
-import { botonDeshacer, botonesPropuesta, cerrarSiFallaDevolver, fechaAlAplicar, lineaPropuesta, payloadPropuesta, planRevertir, puedeDeshacer, puedeResolver, registroTrasDeshacer, tareaAlAplicar, tareaSeguimientoDe, type Decision, type EstadoParaRevertir, type TipoPropuesta } from './propuestas-reglas'
+import { botonDeshacer, botonSilenciar, botonesPropuesta, cerrarSiFallaDevolver, fechaAlAplicar, lineaPropuesta, payloadPropuesta, planRevertir, puedeDeshacer, puedeResolver, registroTrasDeshacer, tareaAlAplicar, tareaSeguimientoDe, type Decision, type EstadoParaRevertir, type TipoPropuesta } from './propuestas-reglas'
 import { ACTOR_AUTONOMO, ENV_AUTONOMIA, ENV_UMBRAL, autonomiaActiva, decidirAutonomia, leerCorreccion, observacionParaAprendizaje, type Resolucion } from './aprendizaje-reglas'
 import { rachaDe, registrarContexto, registrarDeshecha, registrarIntentoDeshacer, registrarResolucion } from './aprendizaje'
 
@@ -87,9 +87,17 @@ type ResumenPropuesta = { id: string; tipo: TipoPropuesta; ramo: string | null; 
  */
 export async function avisarTelegram(
   correduriaId: string,
-  a: { clienteId: string; nombrePila: string | null; hechos: string[]; propuestas: { id: string; autonoma?: boolean }[] },
+  a: {
+    clienteId: string; nombrePila: string | null; hechos: string[]; propuestas: { id: string; autonoma?: boolean }[]
+    /** Respuesta automática (solo con ASEGURA_WHATSAPP_RESPUESTA_ACTIVA=1): qué se contestó o por qué no. */
+    respuesta?: { estado: string; texto?: string; motivo?: string }
+    /** La conversación (para el botón 🔇 Silenciar IA). */
+    conversacionId?: string
+    /** Línea urgente (baja / oposición a la prórroga). Sin datos personales. */
+    urgente?: string
+  },
 ): Promise<'avisado' | 'sin_telegram' | 'nada' | 'error'> {
-  if (a.hechos.length === 0 && a.propuestas.length === 0) return 'nada'
+  if (a.hechos.length === 0 && a.propuestas.length === 0 && !a.respuesta && !a.urgente) return 'nada'
   try {
     const db = prismaAsegura()
     const ids = a.propuestas.map((p) => p.id)
@@ -107,12 +115,15 @@ export async function avisarTelegram(
     // Las aplicadas SOLAS (modo autónomo) se dicen como tales y solo llevan ↩️ Deshacer.
     const solas = new Set(a.propuestas.filter((p) => p.autonoma).map((p) => p.id))
     const lineas = [
-      `💬 <b>WhatsApp</b> · ${quien} — <a href="${enlaceFichaCliente(a.clienteId)}">ficha</a>`,
+      `${a.urgente ? '🚨 ' : ''}💬 <b>WhatsApp</b> · ${quien} — <a href="${enlaceFichaCliente(a.clienteId)}">ficha</a>`,
+      ...(a.urgente ? [`🚨 <b>${escapeHtml(a.urgente)}</b>`] : []),
       ...a.hechos.map((h) => `· ${escapeHtml(h)}`),
       ...resumen.map((r, i) => `${i + 1}. ${solas.has(r.id) ? '🤖 <b>Aplicada sola:</b> ' : ''}${escapeHtml(lineaPropuesta(r.tipo, r))}`),
+      ...(a.respuesta ? [lineaRespuesta(a.respuesta)] : []),
     ]
     const etiqueta = (i: number) => (resumen.length > 1 ? String(i + 1) : undefined)
     const botones = resumen.map((r, i) => (solas.has(r.id) ? botonDeshacer(r.id, etiqueta(i)) : botonesPropuesta(r.id, etiqueta(i))))
+    if (a.respuesta && a.conversacionId) botones.push(botonSilenciar(a.conversacionId))
     const msg = await tgSendButtons(lineas.join('\n'), botones)
     if (msg === null) return 'sin_telegram'
     if (ids.length) {
@@ -127,6 +138,14 @@ export async function avisarTelegram(
   }
 }
 
+/** Lo que contestó (o no) la IA. El texto ya pasó el filtro (sin datos personales); se escapa para HTML. */
+function lineaRespuesta(r: { estado: string; texto?: string; motivo?: string }): string {
+  if (r.estado === 'enviada' && r.texto) return `🤖 <b>Respondí:</b> «${escapeHtml(r.texto)}»`
+  if (r.estado === 'fallida') return '🤖 ⚠️ Intenté responder y Meta no lo aceptó: no se reintenta. Contesta tú si hace falta.'
+  if (r.estado === 'no_enviada') return `🤖 No he contestado (${escapeHtml(r.motivo ?? 'sin motivo')}): contesta tú si hace falta.`
+  if (r.estado === 'ya_respondida') return '🤖 No he contestado: ya había respuesta o escribiste tú.'
+  return `🤖 No he contestado (${escapeHtml(r.estado)}).`
+}
 
 export type ResolucionPropuesta =
   | { ok: true; estado: 'aplicada' | 'descartada' | 'modificada'; tipo: TipoPropuesta; resultado: Record<string, unknown> }

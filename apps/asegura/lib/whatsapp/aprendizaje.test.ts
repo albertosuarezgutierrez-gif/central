@@ -26,8 +26,10 @@ import {
   CALLBACK_DESCARTAR,
   CALLBACK_DESHACER,
   CALLBACK_MODIFICAR,
+  CALLBACK_SILENCIAR,
   TIPOS_PROPUESTA,
   botonDeshacer,
+  botonSilenciar,
   botonesPropuesta,
   leerCallbackWap,
   puedeDeshacer,
@@ -200,13 +202,13 @@ test('CEPO modificar reinicia la racha: resolverPropuesta registra «modificada�
 
 // ── Prefijos `wap_*` ──────────────────────────────────────────────────────────
 
-test('CEPO prefijos wap_*: cuatro acciones distintas, ≤64 bytes, ida y vuelta, y nada ajeno', () => {
-  const callbacks = [CALLBACK_APLICAR, CALLBACK_DESCARTAR, CALLBACK_MODIFICAR, CALLBACK_DESHACER]
-  assert.equal(new Set(callbacks).size, 4, 'callbacks repetidos')
+test('CEPO prefijos wap_*: cinco acciones distintas, ≤64 bytes, ida y vuelta, y nada ajeno', () => {
+  const callbacks = [CALLBACK_APLICAR, CALLBACK_DESCARTAR, CALLBACK_MODIFICAR, CALLBACK_DESHACER, CALLBACK_SILENCIAR]
+  assert.equal(new Set(callbacks).size, 5, 'callbacks repetidos')
   assert.deepEqual(callbacks.map((c) => c.split('_')[1]), [...ACCIONES_WAP])
   for (const c of callbacks) assert.match(c, /^wap_[a-z]{2}$/)
-  const todos = [...botonesPropuesta(ID), ...botonDeshacer(ID)]
-  assert.equal(new Set(todos.map((b) => b.callback)).size, 4)
+  const todos = [...botonesPropuesta(ID), ...botonDeshacer(ID), ...botonSilenciar(ID)]
+  assert.equal(new Set(todos.map((b) => b.callback)).size, 5)
   for (const b of todos) {
     assert.ok(Buffer.byteLength(b.callback) <= 64)
     const l = leerCallbackWap(b.callback)
