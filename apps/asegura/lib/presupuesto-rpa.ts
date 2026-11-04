@@ -34,6 +34,7 @@ import { caducidadOfertas, type FilaOferta } from './ofertas-reglas'
 import { leerOportunidadParaOfertas } from './oportunidad-ofertas'
 import { autocompletarNecesidades } from './presupuesto'
 import { gastoIaAuto } from './ia-tope-estudio'
+import { comprobarCoherenciaPrecios, fechaEfectoDeRiesgos, lineasRevisar, type AvisoCoherencia } from './tarificacion-coherencia'
 import { cargarPropuestaOportunidad, referenciaOportunidad } from './propuesta-oportunidad'
 import { trabajosVigentes, type TrabajoParaPropuesta } from './propuesta-oportunidad-reglas'
 import { URL_PLATAFORMA_DEFECTO } from './datos-cotizados'
@@ -227,6 +228,9 @@ async function preparar(correduriaId: string, oportunidadId: string, opts: Opcio
 
   // 01/11/2026: ofertas sin NINGUNA garantía leída → borrador INCOMPLETO (el PDF no sale con una columna entera «No figura»; Alberto lo sabe por Telegram).
   const incompletas = ofertasSinGarantiasRpa(opciones.map((o) => ({ compania: o.compania, producto: o.producto, coberturas: leidaDe.get(claveRpaDeFila(vivas.find((v) => v.id === o.ofertaId)?.datosExtra) ?? '')?.oferta.coberturas ?? [], avisos: leidaDe.get(claveRpaDeFila(vivas.find((v) => v.id === o.ofertaId)?.datosExtra) ?? '')?.oferta.avisos })))
+  // 04/11/2026: comprobador de COHERENCIA de los precios (prima absurda, modalidades al revés, desviación, precio repetido,
+  // fraccionado descuadrado, efecto pasado). NO bloquea: va al Telegram como «⚠️ Revisar» y se guarda en `estudio.rpa.coherencia`.
+  const coherencia = avisosCoherencia(vivas, leidaDe, op.ramo ?? op.ramoOferta, filas, ahora)
   const { venceEl } = calcularVencimiento({ creadoAt: ahora, fechaEfecto: null, expiraOferta: cad.expira })
   // El token en claro no se guarda ni se devuelve: es un borrador; el aviso (`accion:'avisar'`) genera el enlace.
   const tokenHash = await hashTokenVista(generarTokenVista())
@@ -241,7 +245,7 @@ async function preparar(correduriaId: string, oportunidadId: string, opts: Opcio
     actualId: null,
     comparacion,
     narrativa,
-    rpa: { tarificaciones, trabajos, sinIa, ...(incompletas.length ? { incompleto: incompletas } : {}), ...(descartadas.length ? { companiasSinLeer: descartadas } : {}), analisis },
+    rpa: { tarificaciones, trabajos, sinIa, ...(incompletas.length ? { incompleto: incompletas } : {}), ...(coherencia ? { coherencia } : {}), ...(descartadas.length ? { companiasSinLeer: descartadas } : {}), analisis },
   }
 
   // 3. El borrador (bajo cerrojo: dos trabajos que acaban a la vez no dejan dos).
@@ -311,9 +315,38 @@ async function preparar(correduriaId: string, oportunidadId: string, opts: Opcio
         conservados: hecho.conservados,
         alertas,
         incompletas,
+        revisar: coherencia ? lineasRevisar(coherencia) : [],
       }))
     : false
   return { estado: 'creado', presupuestoId: hecho.creado.id, referencia: hecho.creado.referencia ?? null, ofertas: opciones.length, narrativa: narrativa.fuente, sinIa, avisado, sustituidos: hecho.sustituidos, conservados: hecho.conservados }
+}
+
+/**
+ * Los avisos de coherencia de las ofertas vivas leídas. `null` = no se pudo comprobar (no se afirma «sin avisos»). Nunca lanza.
+ * La fecha de efecto sale del riesgo de los trabajos de estas ofertas (la más temprana).
+ */
+function avisosCoherencia(
+  vivas: readonly { datosExtra: unknown }[],
+  leidaDe: ReadonlyMap<string, OfertaRpaLeida>,
+  ramo: string | null,
+  filas: readonly { id: string; riesgo: unknown }[],
+  ahora: Date,
+): AvisoCoherencia[] | null {
+  try {
+    const usadas = vivas.map((f) => leidaDe.get(claveRpaDeFila(f.datosExtra) ?? '')).filter((l): l is OfertaRpaLeida => !!l)
+    const trabajos = new Set(usadas.map((l) => l.trabajoId))
+    return comprobarCoherenciaPrecios(
+      usadas.map((l) => ({
+        compania: l.oferta.compania, producto: l.oferta.producto, primaAnualEur: l.oferta.primaAnualEur,
+        fraccionamiento: l.oferta.fraccionamiento, importeReciboEur: l.oferta.importeReciboEur, coberturas: l.oferta.coberturas,
+      })),
+      { ramo, fechaEfecto: fechaEfectoDeRiesgos(filas.filter((f) => trabajos.has(f.id)).map((f) => f.riesgo)) },
+      { hoy: ahora.toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' }) },
+    )
+  } catch (e) {
+    registrarErrorCartera('presupuesto/rpa/coherencia', e)
+    return null
+  }
 }
 
 type BaseAviso = { cliente: string | null; referencia: string; ramo: string; enlace: string }

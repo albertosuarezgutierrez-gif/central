@@ -55,7 +55,7 @@ const PAGINA_NAV = (destino: string, metodo: 'get' | 'post') => `<!doctype html>
 <script>document.getElementById('ir').addEventListener('click', () => { ${metodo === 'get' ? `location.href = ${JSON.stringify(destino)}` : `document.getElementById('f').submit()`} })</script>
 </body></html>`
 
-test('versión del explorador 0.3.46', () => assert.equal(EXPLORADOR_VERSION, '0.3.46'))
+test('versión del explorador 0.3.48', () => assert.equal(EXPLORADOR_VERSION, '0.3.48'))
 
 test('ruta exacta de BD: la navegación GET pasa; sin el permiso, el guard la corta', async () => {
   for (const [p, esperaViolacion] of [[permisos([filaRuta()]), false], [null, true]] as const) {

@@ -31,7 +31,7 @@ export type ExploracionTrabajo = { entrada: string; conDatosReales: boolean }
 /** `leaseHasta` (ISO): hasta cuándo asegura acepta el resultado; el runner no reintenta si no cabe. */
 export type Trabajo = {
   id: string; compania: string; ramo: string; riesgo: unknown; leaseHasta?: string
-  modo?: 'tarificar' | 'emision' | 'exploracion' | 'humo' | 'pilotaje'; emision?: EmisionTrabajo; exploracion?: ExploracionTrabajo
+  modo?: 'tarificar' | 'emision' | 'exploracion' | 'humo' | 'pilotaje' | 'vehiculo'; emision?: EmisionTrabajo; exploracion?: ExploracionTrabajo
   /** MODO PILOTADO (03/11/2026): la entrada cerrada; la sesión es siempre sintética (riesgo `{}`). */
   pilotaje?: { entrada: string }
   /**
@@ -45,7 +45,7 @@ export type Trabajo = {
  * Modos que ESTA imagen sabe ejecutar. Viajan en la cabecera `X-Tarificador-Modos` al pedir el trabajo: asegura solo
  * sirve un trabajo de exploración a un worker que lo declara (una imagen vieja lo trataría como `tarificar`).
  */
-export const MODOS_SOPORTADOS = ['tarificar', 'emision', 'exploracion', 'humo', 'pilotaje'] as const
+export const MODOS_SOPORTADOS = ['tarificar', 'emision', 'exploracion', 'humo', 'pilotaje', 'vehiculo'] as const
 export const CABECERA_MODOS = 'X-Tarificador-Modos'
 
 const ESPERAS_PEDIR_MS = [2_000, 4_000, 8_000]
@@ -155,6 +155,34 @@ export async function enviarResultado(c: Config, cuerpo: CuerpoResultado): Promi
         method: 'POST',
         headers: { Authorization: `Bearer ${c.secreto}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(sinMediador(cuerpo)),
+        signal: AbortSignal.timeout(30_000),
+      })
+      ultimo = res.status
+      if (res.status < 500) return res.status
+    } catch {
+      ultimo = 0
+    }
+    await new Promise((r) => setTimeout(r, 2_000 * (i + 1)))
+  }
+  return ultimo
+}
+
+// ─── Consulta de vehículo por matrícula (04/11/2026, src/vehiculo.ts) ───────
+
+/** Solo datos de CATÁLOGO del vehículo (nunca la matrícula). `sin_resultado` = el portal no lo encontró (no se inventa). */
+export type CuerpoVehiculo =
+  | { trabajoId: string; resultado: 'vehiculo'; estado: 'ok'; vehiculo: { marca: string; modelo: string; version: string | null; fechaMatriculacion: string | null; combustible: string | null }; botVersion?: string }
+  | { trabajoId: string; resultado: 'vehiculo'; estado: 'sin_resultado'; botVersion?: string }
+
+/** Cierre de una consulta de vehículo (`/api/tarificador/vehiculo/resultado`); un FALLO va por `enviarResultado` (`error`). */
+export async function enviarResultadoVehiculo(c: Config, cuerpo: CuerpoVehiculo): Promise<number> {
+  let ultimo = 0
+  for (let i = 0; i < 3; i++) {
+    try {
+      const res = await fetch(`${c.apiUrl}/api/tarificador/vehiculo/resultado`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${c.secreto}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(cuerpo),
         signal: AbortSignal.timeout(30_000),
       })
       ultimo = res.status

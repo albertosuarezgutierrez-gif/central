@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-11-04T18:33:23Z",
+  "generadoEn": "2026-11-04T15:29:52Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2882,7 +2882,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 82
+        "evidencias": 79
       },
       "asegura-portal": {
         "estado": "usado",
@@ -6632,8 +6632,6 @@
       "seguros.tarificador_imagen",
       "seguros.tarificador_intervenciones",
       "seguros.tarificador_pausas",
-      "seguros.tarificador_permisos_navegacion",
-      "seguros.tarificador_permisos_navegacion_auditoria",
       "seguros.tarificador_pilotaje_pasos",
       "seguros.tarificador_pilotaje_sesiones",
       "seguros.tarificador_sesiones",

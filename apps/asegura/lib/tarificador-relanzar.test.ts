@@ -87,7 +87,7 @@ test('workflow relanzar: manual, uuid validado, secreto solo en env y por stdin,
 
 test('workflow relanzar: accion=explorar valida la entrada, llama a /exploracion y solo manda {entrada} (sintética)', () => {
   const wf = readFileSync(join(APP, '../../.github/workflows/tarificador-relanzar.yml'), 'utf8')
-  assert.match(wf, /options: \[relanzar, probar, explorar, presupuesto, pilotar\]/)
+  assert.match(wf, /options: \[relanzar, probar, explorar, presupuesto, pilotar, catalogo_avant2\]/)
   assert.match(wf, /ENTRADA: \$\{\{ inputs\.entrada \}\}/)
   assert.match(wf, /\^\[a-z_\]\+:\[a-z_\]\+:\[a-z_\]\+\$/, 'entrada sin validar por regex')
   assert.match(wf, /ruta="exploracion"/)

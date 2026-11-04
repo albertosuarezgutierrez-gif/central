@@ -16,6 +16,10 @@
 #   · accion=pilotar  → POST /api/operador/tarificador/pilotaje { entrada } (03/11/2026): UNA sesión del MODO PILOTADO (SINTÉTICA):
 #     login + entrada y luego el worker espera comandos pantalla a pantalla (seguros.tarificador_pilotaje_pasos; ver
 #     services/tarificador-rpa/scripts/pilotar.mjs). Mismos interruptores que explorar. Todo comando pasa por el guard.
+#   · accion=catalogo_avant2 → POST /api/operador/codeoscopic/catalogo/instantanea (sin cuerpo, 04/11/2026): INSTANTÁNEA del
+#     catálogo POR COMPAÑÍA de Avant2 en seguros.codeoscopic_catalogo. SOLO GET GRATIS de una lista cerrada (ramos, vendors,
+#     productos+configs por ramo, compañías DGS, formas/frecuencias de pago); nunca POST /insurances ni /vehicles. Sin datos
+#     personales: imprime solo el resumen (nº de compañías/productos por ramo). 503 sin_migracion si falta el SQL 2026-11-04f.
 # Secreto de repo REQUERIDO: ASEGURA_OPERADOR_SECRET (el Bearer del puerto de operador de asegura; ningún otro workflow
 # lo usaba antes). Secreto/variable OPCIONAL: ASEGURA_URL (por defecto https://central-asegura.vercel.app).
 # Nunca se imprime el secreto ni el riesgo: solo el estado HTTP y un JSON FILTRADO a claves sin datos personales.
@@ -25,10 +29,10 @@ on:
   workflow_dispatch:
     inputs:
       accion:
-        description: 'relanzar (trabajo existente), probar (copia el riesgo del último trabajo del cliente), explorar (mapa del formulario, SINTÉTICO), presupuesto (borrador de una oportunidad) o pilotar (sesión pilotada, SINTÉTICA)'
+        description: 'relanzar (trabajo existente), probar (copia el riesgo del último trabajo del cliente), explorar (mapa del formulario, SINTÉTICO), presupuesto (borrador de una oportunidad), pilotar (sesión pilotada, SINTÉTICA) o catalogo_avant2 (instantánea GRATIS del catálogo por compañía de Avant2)'
         required: true
         type: choice
-        options: [relanzar, probar, explorar, presupuesto, pilotar]
+        options: [relanzar, probar, explorar, presupuesto, pilotar, catalogo_avant2]
         default: relanzar
       trabajo_id:
         description: 'accion=relanzar: uuid del trabajo (atascado)'
@@ -103,6 +107,9 @@ jobs:
             presupuesto)
               [[ "$OPORTUNIDAD_ID" =~ $uuid ]] || { echo "::error::oportunidad_id no es un uuid"; exit 1; }
               [ -z "$IMAGEN" ] || { echo "::error::imagen solo vale con accion=probar"; exit 1; } ;;
+            catalogo_avant2)
+              # Sin entradas: catálogo GRATIS, sin cliente ni riesgo. Cualquier otro campo relleno es un error de uso.
+              [ -z "$IMAGEN$TRABAJO_ID$CLIENTE_ID$OPORTUNIDAD_ID$ENTRADA" ] || { echo "::error::catalogo_avant2 no lleva más campos"; exit 1; } ;;
             probar)
               [[ "$CLIENTE_ID" =~ $uuid ]] || { echo "::error::cliente_id no es un uuid"; exit 1; }
               [[ "$COMPANIA" =~ $corto ]] || { echo "::error::compania no válida"; exit 1; }
@@ -110,14 +117,21 @@ jobs:
               if [ -n "$IMAGEN" ] && ! [[ "$IMAGEN" =~ $imagen_rama ]]; then
                 echo "::error::imagen no válida: registry.fly.io/asegura-tarificador:rama-<sha7> (nunca main-*)"; exit 1
               fi ;;
-            *) echo "::error::accion tiene que ser relanzar, probar, explorar, presupuesto o pilotar"; exit 1 ;;
+            *) echo "::error::accion tiene que ser relanzar, probar, explorar, presupuesto, pilotar o catalogo_avant2"; exit 1 ;;
           esac
           case "$ASEGURA_URL" in https://*) ;; *) echo "::error::ASEGURA_URL tiene que ser https"; exit 1 ;; esac
 
       - name: Llamar a asegura
         run: |
           set -uo pipefail
-          if [ "$ACCION" = "relanzar" ]; then
+          prefijo="tarificador"
+          max_time=60
+          if [ "$ACCION" = "catalogo_avant2" ]; then
+            prefijo="codeoscopic/catalogo"
+            ruta="instantanea"
+            cuerpo='{}'
+            max_time=150
+          elif [ "$ACCION" = "relanzar" ]; then
             ruta="relanzar"
             cuerpo=$(jq -cn --arg t "$TRABAJO_ID" '{trabajoId: $t}')
           elif [ "$ACCION" = "presupuesto" ]; then
@@ -133,13 +147,13 @@ jobs:
             ruta="probar"
             cuerpo=$(jq -cn --arg c "$CLIENTE_ID" --arg o "$COMPANIA" --arg r "$RAMO" --arg i "$IMAGEN" '{clienteId: $c, compania: $o, ramo: $r} + (if $i == "" then {} else {imagen: $i} end)')
           fi
-          url="${ASEGURA_URL%/}/api/operador/tarificador/${ruta}"
+          url="${ASEGURA_URL%/}/api/operador/${prefijo}/${ruta}"
           # El Bearer va por stdin (`--config -`): ni en la línea de órdenes ni en el log.
           http=$(printf 'header = "Authorization: Bearer %s"\n' "$ASEGURA_OPERADOR_SECRET" | curl -sS --config - \
-            -o respuesta.json -w '%{http_code}' --max-time 60 -X POST "$url" \
+            -o respuesta.json -w '%{http_code}' --max-time "$max_time" -X POST "$url" \
             -H 'content-type: application/json' -H 'x-actor: agente:claude-actions' --data "$cuerpo") || http="000"
           echo "HTTP ${http} · accion=${ACCION}"
           # Solo claves sin PII, con valores acotados; lo demás no se imprime.
-          jq -c 'if type == "object" then (with_entries(select(.key | IN("estado","motivo","mensaje","trabajoId","atascosDescartados","lanzado","duplicado","detalle","imagenPrueba","exploracionId","presupuestoId","conDatosReales"))) | map_values(if type == "string" then .[0:300] else . end)) + (if (.errores | type) == "array" then {campos: [.errores[] | tostring | split(":")[0] | .[0:60]]} else {} end) else {estado: "respuesta_no_objeto"} end' respuesta.json 2>/dev/null || echo '{"estado":"respuesta_no_json"}'
+          jq -c 'if type == "object" then (with_entries(select(.key | IN("estado","motivo","mensaje","trabajoId","atascosDescartados","lanzado","duplicado","detalle","imagenPrueba","exploracionId","presupuestoId","conDatosReales","instantaneaId","llamadasHechas","resumen","gastado"))) | map_values(if type == "string" then .[0:300] else . end)) + (if (.errores | type) == "array" then {campos: [.errores[] | tostring | split(":")[0] | .[0:60]]} else {} end) else {estado: "respuesta_no_objeto"} end' respuesta.json 2>/dev/null || echo '{"estado":"respuesta_no_json"}'
           rm -f respuesta.json
           case "$http" in 2*) exit 0 ;; *) exit 1 ;; esac

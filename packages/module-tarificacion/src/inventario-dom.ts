@@ -288,6 +288,47 @@ export type InventarioDom = {
   recortado: { elementosDescartados: number; maxBytes: number } | null
   /** Textos/atributos quitados por tener forma de dato personal (solo la cuenta, nunca el valor). */
   textosDescartados: number
+  /**
+   * 0.3.47 SOLO MODO PILOTADO: peticiones que el guard ABORTÓ (nunca llegaron al servidor) desde la pantalla anterior, en forma cerrada
+   * `MÉTODO origen+ruta [tipo motivo]` (`lineaBloqueoRed`: sin query, fragmento ni cuerpo; segmentos con forma de id → `:id`). Ausente = no hubo.
+   */
+  bloqueosRed?: string[]
+  /** 0.3.47: cuántas líneas distintas no cupieron en `bloqueosRed` (tope {@link MAX_BLOQUEOS_RED_INVENTARIO}) o se quitaron al redactar. */
+  bloqueosRedOmitidos?: number
+}
+
+/** 0.3.47: tope de líneas distintas de `bloqueosRed` por pantalla. */
+export const MAX_BLOQUEOS_RED_INVENTARIO = 40
+export const MOTIVOS_BLOQUEO_RED = ['url', 'cuerpo', 'navegacion'] as const
+export type MotivoBloqueoRed = (typeof MOTIVOS_BLOQUEO_RED)[number]
+/** Forma EXACTA de una línea de `bloqueosRed` (lo que no case no se guarda). */
+export const RE_LINEA_BLOQUEO_RED = /^(?:[A-Z]{3,7}|OTRO) https?:\/\/[A-Za-z0-9.-]+(?::\d{1,5})?(?:\/[A-Za-z0-9._~!$&'()*+,:…-]*)* \[[a-z]{2,16} (?:url|cuerpo|navegacion)\]$/
+
+/** Segmento de ruta para el registro: el que tiene forma de identificador/dato (≥4 cifras, largo, codificado, con @ o =) → `:id`. */
+function segmentoBloqueoRed(s: string): string {
+  if (s === '') return ''
+  if (/\d{4,}/.test(s) || s.length > 40 || /[%@=]/.test(s) || (/^[A-Za-z0-9_-]{16,}$/.test(s) && /\d/.test(s))) return ':id'
+  return /^[A-Za-z0-9._~!$&'()*+,:-]+$/.test(s) ? s : ':id'
+}
+
+/**
+ * 0.3.47: línea del registro de bloqueos de red del pilotaje: método + origen + ruta (SIN query, fragmento, credenciales, `;matriz` ni
+ * cuerpo; segmentos con forma de id → `:id`) + tipo de recurso + motivo. `null` = URL ilegible o no http(s). Pura.
+ */
+export function lineaBloqueoRed(metodo: string, url: string, tipo: string, motivo: MotivoBloqueoRed): string | null {
+  let u: URL
+  try {
+    u = new URL(url)
+  } catch {
+    return null
+  }
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') return null
+  const m = /^[A-Z]{3,7}$/.test(metodo) ? metodo : 'OTRO'
+  const t = /^[a-z]{2,16}$/.test(tipo) ? tipo : 'otro'
+  let ruta = (u.pathname.split(';', 1)[0] ?? '').split('/').map(segmentoBloqueoRed).join('/')
+  if (ruta.length > 140) ruta = ruta.slice(0, 139) + '…'
+  const linea = `${m} ${u.protocol}//${u.host}${ruta} [${t} ${motivo}]`
+  return RE_LINEA_BLOQUEO_RED.test(linea) ? linea : null
 }
 
 const obj = (v: unknown): Record<string, unknown> | null => (typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null)
@@ -528,14 +569,29 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
 
   // Tope de bytes: se quitan elementos del FINAL del marco con más elementos hasta caber (recorte explícito).
   // TextEncoder (no Buffer): el index del módulo también llega al navegador.
+  // 0.3.47 (pilotaje): registro de bloqueos de red. Solo líneas de forma EXACTA y sin forma de dato personal; deduplicado; tope 40.
+  // Fuera del tope de bytes (como `onclickCompleto`): ≤40×~200 B, no recorta elementos.
+  const bloqueos: string[] = []
+  let bloqueosOmitidos = typeof c.bloqueosRedOmitidos === 'number' && Number.isInteger(c.bloqueosRedOmitidos) && c.bloqueosRedOmitidos > 0 ? Math.min(c.bloqueosRedOmitidos, 100_000) : 0
+  if (Array.isArray(c.bloqueosRed)) {
+    for (const b of c.bloqueosRed.slice(0, MAX_BLOQUEOS_RED_INVENTARIO * 4)) {
+      const s = typeof b === 'string' && RE_LINEA_BLOQUEO_RED.test(b) ? texto(b, 240) : undefined
+      if (s === undefined || s !== b) { bloqueosOmitidos++; continue }
+      if (bloqueos.includes(s)) continue
+      if (bloqueos.length >= MAX_BLOQUEOS_RED_INVENTARIO) { bloqueosOmitidos++; continue }
+      bloqueos.push(s)
+    }
+  }
   const cod = new TextEncoder()
-  const bytes = (v: unknown) => cod.encode(JSON.stringify(v, (k, x) => (k === 'onclickCompleto' ? undefined : x))).length
+  const bytes = (v: unknown) => cod.encode(JSON.stringify(v, (k, x) => (k === 'onclickCompleto' || k === 'bloqueosRed' ? undefined : x))).length
   const armar = (rec: InventarioDom['recortado']): InventarioDom => ({
     version: 1,
     marcos,
     totalElementos: marcos.reduce((n, m) => n + m.elementos.length, 0),
     recortado: rec,
     textosDescartados: descartados,
+    ...(bloqueos.length > 0 ? { bloqueosRed: bloqueos } : {}),
+    ...(bloqueosOmitidos > 0 ? { bloqueosRedOmitidos: bloqueosOmitidos } : {}),
   })
   const tope = Math.max(1024, maxBytes)
   // Reserva para la cabecera y el propio objeto `recortado`.
@@ -628,7 +684,16 @@ export function redactarValoresInventario(inv: InventarioDom, valores: readonly 
     if (m.importes) out.importes = m.importes.map((i) => (i.etiqueta === undefined || limpio(i.etiqueta) ? i : { ref: i.ref, eur: i.eur }))
     return out
   })
-  return { ...inv, marcos, textosDescartados: inv.textosDescartados + quitados }
+  // 0.3.47: el registro de bloqueos de red del pilotaje pasa por la MISMA barrera (una línea con un valor conocido se quita entera).
+  const out: InventarioDom = { ...inv, marcos, textosDescartados: inv.textosDescartados + quitados }
+  if (inv.bloqueosRed) {
+    const b = inv.bloqueosRed.filter(limpio)
+    const omit = (inv.bloqueosRedOmitidos ?? 0) + inv.bloqueosRed.length - b.length
+    if (b.length > 0) out.bloqueosRed = b
+    else delete out.bloqueosRed
+    if (omit > 0) out.bloqueosRedOmitidos = omit
+  }
+  return out
 }
 
 /** Claves del riesgo (sin mayúsculas ni `_`) cuyo valor es de la PERSONA o de SU dirección/vehículo. `tipoVia` no está. */

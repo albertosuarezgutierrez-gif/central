@@ -55,6 +55,7 @@ import { pulsarMediadorGenerali, pulsarEntrarGenerali, entrarTurismosGenerali, c
   guardarPresupuestoTurismosAllianz, buscarBotonDescargaProyecto, pulsarDescargaProyectoAuto, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto, esUrlOktaSmsGenerali, type GuardEmision } from './guard.ts'
 import { puertoCodigoHttp, relevarCodigoSmsGenerali, type Relevo } from './relevo-sms.ts'
 import { conRedaccionMediador } from './privacidad-mediador.ts'
+import { ejecutarVehiculo } from './vehiculo.ts'
 import { crearLog } from './log.ts'
 import { localizarContinuarConRespaldo, pulsarContinuarSeguro } from './continuar.ts'
 import { elegirOpcionMatSelect, leerOpcionesMatSelect } from './mat-select.ts'
@@ -612,6 +613,8 @@ async function main(): Promise<number> {
   if (trabajo.modo === 'humo') return ejecutarHumo({ cfg, trabajo, env, log, redactar })
   // MODO PILOTADO (03/11/2026, src/pilotaje.ts): login + entrada y comandos de una persona/agente, todos por el guard.
   if (trabajo.modo === 'pilotaje') return ejecutarPilotaje({ cfg, trabajo, env, log, redactar })
+  // CONSULTA DE VEHÍCULO (04/11/2026, src/vehiculo.ts): login Allianz + pantalla del vehículo de Turismos, leer y parar (sin tarificar).
+  if (trabajo.modo === 'vehiculo') return ejecutarVehiculo({ cfg, trabajo, env, log, redactar })
 
   // Documento del tomador (Mapfre: lo pone asegura desde la ficha, 14/10/2026): SECRETO DEL TRABAJO. Fuera de mensajes,
   // URL y HTML de evidencia, y sin captura de pantalla (una imagen no se redacta). Nunca se loguea.

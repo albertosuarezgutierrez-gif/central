@@ -106,7 +106,7 @@ test('pedirTrabajo declara los modos de ESTA imagen (asegura solo sirve una expl
     return new Response(JSON.stringify({ trabajo }), { status: 200 })
   }) as typeof fetch
   await pedirTrabajo(cfg, esperar)
-  assert.equal(cabecera, 'tarificar,emision,exploracion,humo,pilotaje')
+  assert.equal(cabecera, 'tarificar,emision,exploracion,humo,pilotaje,vehiculo')
 })
 
 test('pedirPaso: 200 = ok; 404 = perdido; 409 se reintenta UNA vez; red caída = parar (sin reintento ciego)', async () => {

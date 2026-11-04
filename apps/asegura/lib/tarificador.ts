@@ -51,6 +51,7 @@ import { purgarEvidenciaCaducada, purgarRecorridosCaducados, purgarRiesgoTrabajo
 import { atascoParaFallo, caducarAtascos, caducarPausas, evaluarCorte, guardarAtasco, pausarTrasHumo, pausaViva, sqlSinPausa } from './tarificador-robustez'
 import { PREFIJO_HUMO_NO_SOPORTADO, estadoTrasFalloHumo, humoPideParar } from './tarificador-humo-reglas'
 import { entradaDePilotaje } from './tarificador-pilotaje'
+import { COMPANIA_VEHICULO, MODO_VEHICULO, normalizarMatriculaConsulta } from './tarificador-vehiculo-reglas'
 import {
   CLAVE_ESPERA_VEHICULO,
   ESTADOS_ORIGEN_VIVOS,
@@ -524,7 +525,7 @@ async function destruirMaquina(cfg: ConfigFly, machineId: string, f: typeof fetc
 // ─── Lo que ve el worker ─────────────────────────────────────────────────────
 
 export type TrabajoParaWorker = {
-  id: string; compania: string; ramo: string; riesgo: unknown; leaseHasta: string; modo: 'tarificar' | 'emision' | 'exploracion' | 'humo' | 'pilotaje'
+  id: string; compania: string; ramo: string; riesgo: unknown; leaseHasta: string; modo: 'tarificar' | 'emision' | 'exploracion' | 'humo' | 'pilotaje' | 'vehiculo'
   /** Solo en `modo = 'pilotaje'` (03/11/2026): la entrada cerrada (sesión siempre sintética). */
   pilotaje?: { entrada: string }
   /** Solo en `modo = 'exploracion'`: la entrada cerrada y si va ligada a una petición real (la verdad: `cliente_id`). */
@@ -560,6 +561,12 @@ export async function trabajoParaWorker(id: string, modosWorker: readonly string
     if (!entrada) return null
     const permisosNavegacion = await permisosNavegacionParaWorker('pilotaje', { id: f.id, compania: f.compania, ramo: f.ramo, entrada })
     return { id: f.id, compania: f.compania, ramo: f.ramo, riesgo: {}, leaseHasta: f.lease_hasta.toISOString(), modo, pilotaje: { entrada }, ...(permisosNavegacion ? { permisosNavegacion } : {}) }
+  }
+  // CONSULTA DE VEHÍCULO (04/11/2026): SOLO la matrícula normalizada (nada de la cartera, sin permisos de BD). Ilegible → no se sirve.
+  if (modo === 'vehiculo') {
+    const matricula = normalizarMatriculaConsulta((f.riesgo as { matricula?: unknown } | null)?.matricula)
+    if (!matricula || f.compania !== COMPANIA_VEHICULO) return null
+    return { id: f.id, compania: f.compania, ramo: f.ramo, riesgo: { matricula }, leaseHasta: f.lease_hasta.toISOString(), modo }
   }
   let riesgo = f.riesgo
   // NIF del tomador (Mapfre auto/moto, 14/10/2026): se descifra AQUÍ, solo para la respuesta (canal del worker, con su
@@ -690,6 +697,9 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
     if (!deHumo && r.tipo === 'humo') return { res: { estado: 'conflicto' as const, motivo: 'solo una prueba de humo termina «humo»' }, traza: null }
     // MODO PILOTADO (03/11/2026): termina por /api/tarificador/pilotaje/cierre; por aquí solo un error (pasa por `marcarFallo`).
     if (t.modo === 'pilotaje' && r.tipo !== 'error') return { res: { estado: 'conflicto' as const, motivo: 'trabajo pilotado: usa /api/tarificador/pilotaje/cierre' }, traza: null }
+    // CONSULTA DE VEHÍCULO (04/11/2026): termina por /api/tarificador/vehiculo/resultado; por aquí solo un error (sin evidencia ni traza).
+    const deVehiculo = t.modo === MODO_VEHICULO
+    if (deVehiculo && r.tipo !== 'error') return { res: { estado: 'conflicto' as const, motivo: 'consulta de vehículo: usa /api/tarificador/vehiculo/resultado' }, traza: null }
     if (deExploracion && r.tipo === 'ok') return { res: { estado: 'conflicto' as const, motivo: 'trabajo de exploración: no devuelve ofertas' }, traza: null }
     if (!deExploracion && r.tipo === 'explorado') return { res: { estado: 'conflicto' as const, motivo: 'solo una exploración termina «explorado»' }, traza: null }
     // Un resultado tardío (el barrido ya dio el lease por vencido) NO pisa lo decidido.
@@ -747,7 +757,7 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
 
     if (r.tipo === 'error') {
       // Una exploración no guarda captura ni HTML como documento (puede no tener cliente y no hacen falta para el mapa).
-      const evidencia = deExploracion || deHumo ? null : { trabajo: t, captura: r.captura, capturaConDatos: r.capturaConDatos, html: r.html }
+      const evidencia = deExploracion || deHumo || deVehiculo ? null : { trabajo: t, captura: r.captura, capturaConDatos: r.capturaConDatos, html: r.html }
       // Defensa en profundidad: el recorrido se vuelve a sanear con los valores del riesgo de ESTE trabajo (ya leído arriba).
       if (r.error.recorrido) {
         const { recorrido: _crudo, ...resto } = r.error
@@ -755,7 +765,7 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
         r.error = limpio && limpio.capturas.length > 0 ? { ...resto, recorrido: limpio } : resto
       }
       const { estado } = await marcarFallo(tx, t.id, t.intentos, r.error, evidencia, conBot ? r.botVersion : null, conBot)
-      return { res: { estado: 'registrado' as const, estadoTrabajo: estado }, traza: deHumo ? null : { t, captura: r.captura ? 'con_captura' as const : null } }
+      return { res: { estado: 'registrado' as const, estadoTrabajo: estado }, traza: deHumo || deVehiculo ? null : { t, captura: r.captura ? 'con_captura' as const : null } }
     }
 
     const docs: string[] = []
@@ -966,6 +976,9 @@ async function marcarFallo(
   const deHumo = modoFila[0]?.modo === 'humo'
   // MODO PILOTADO (03/11/2026): nunca se reintenta solo (una sesión interactiva no se relanza a ciegas) y su sesión se cierra.
   const dePilotaje = modoFila[0]?.modo === 'pilotaje'
+  // CONSULTA DE VEHÍCULO (04/11/2026): como el humo, sin reintento (el operador vuelve a pedirla) y se purga; atasco y corte ya
+  // solo valen para `tarificar` (decidirAtasco / evaluarCorte).
+  const deVehiculo = modoFila[0]?.modo === MODO_VEHICULO
   let estado = deEmision ? estadoTrasErrorEmision() : estadoTrasError(error.tipo, intentos)
   if (deExploracion) {
     const cab = await db.$queryRaw<{ cerrada: boolean }[]>`select (cerrada_at is not null) as cerrada from seguros.tarificador_exploraciones where trabajo_id = ${id}::uuid`
@@ -973,7 +986,7 @@ async function marcarFallo(
   }
   // ATASCO (F2): un hueco del portal con checkpoint, en un trabajo de tarificar, con el interruptor y bajo el tope de rondas →
   // `atascado` (espera la elección de Alberto) en vez de `error_definitivo`. El checkpoint NO va al `error` jsonb.
-  if (deHumo || dePilotaje) estado = estadoTrasFalloHumo()
+  if (deHumo || dePilotaje || deVehiculo) estado = estadoTrasFalloHumo()
   if (dePilotaje) {
     await db.$executeRaw`update seguros.tarificador_pilotaje_sesiones s set cerrada_at = now(), motivo_fin = 'error_portal'
       from seguros.tarificacion_trabajos t

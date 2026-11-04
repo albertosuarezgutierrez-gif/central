@@ -75,6 +75,7 @@ import {
   esLanzadorAplicacionNseMapfre,
   neutralizarRutaTolerable,
   urlParaMensaje,
+  lineaBloqueoRed,
   detalleCuerpoToleradoConAccionReal,
   textoDetalleCuerpo,
   RE_ACCION_REAL_TRAS_PREFIJO,
@@ -502,6 +503,8 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
   let tolerables: readonly RutaTolerable[] = []
   // 0.3.46: rutas EXACTAS de BD (`permisos-navegacion.ts`), SOLO para navegaciones GET (`fijarPermisosNavegacion`); nunca en POST ni cuerpos.
   let tolerablesBdGet: readonly RutaTolerable[] = []
+  // 0.3.47: registro de bloqueos del MODO PILOTADO. `null` = modo normal (tarificar, exploración, emisión, humo: un bloqueo tumba el trabajo).
+  let regPilotaje: RegistroBloqueosPilotaje | null = null
   // La ventana se cierra en cuanto el MARCO PRINCIPAL navega a otro origen (el SSO redirige al portal tras el login: el
   // portal ya no está en la fase de login). `request` también salta en cada salto de una redirección (route no lo ve).
   context.on('request', (req) => {
@@ -560,6 +563,33 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
       if ((porUrl || porCuerpo) && Date.now() < ventanaHasta && av === null && gv === null) {
         // Consecuencia del ÚNICO clic autorizado (ventana abierta por pulsarEmisionAutorizada): pasa.
         await route.continue()
+        return
+      }
+      if ((porUrl || porCuerpo) && regPilotaje !== null && av === null && gv === null) {
+        // 0.3.47 MODO PILOTADO (solo lo activa `buclePilotaje`): la petición se ABORTA igual (nunca sale: fail-closed) pero se REGISTRA
+        // (método + origen + ruta, sin query/fragmento/cuerpo) en vez de tumbar la sesión. Una navegación se aborta con `aborted` (la
+        // página se queda donde está; `blockedbyclient` cargaría la página de error) y cuenta para el tope anti-bucle del paso: la
+        // navegación de documento principal número TOPE+1 del mismo paso sí es una violación (cierra la sesión).
+        const nav = req.isNavigationRequest()
+        let principal = true
+        if (nav) {
+          try {
+            principal = req.frame().parentFrame() === null
+          } catch {
+            principal = true // marco ilegible: cuenta para el tope (conservador)
+          }
+        }
+        const navPrincipal = nav && principal
+        const linea = lineaBloqueoRed(req.method(), url, req.resourceType(), nav ? 'navegacion' : porCuerpo ? 'cuerpo' : 'url')
+        if (linea === null) regPilotaje.omitidas++
+        else if (!regPilotaje.lineas.includes(linea)) {
+          if (regPilotaje.lineas.length < MAX_BLOQUEOS_RED_PILOTAJE) regPilotaje.lineas.push(linea)
+          else regPilotaje.omitidas++
+        }
+        if (navPrincipal && ++regPilotaje.navegacionesPaso > TOPE_NAVEGACIONES_BLOQUEADAS_PASO_PILOTAJE) {
+          violacion ??= new EmisionBloqueadaError('fase', `pilotaje: más de ${TOPE_NAVEGACIONES_BLOQUEADAS_PASO_PILOTAJE} navegaciones bloqueadas en el mismo paso; última: ${urlParaMensaje(url)}`)
+        }
+        await route.abort(nav ? 'aborted' : 'blockedbyclient')
         return
       }
       if (porUrl || porCuerpo) {
@@ -639,6 +669,15 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
     },
   }
   FIJAR_TOLERABLES.set(g, (r) => { tolerables = r })
+  REGISTRO_PILOTAJE.set(g, {
+    activar: () => { regPilotaje ??= { lineas: [], omitidas: 0, navegacionesPaso: 0 } },
+    vaciar: () => {
+      if (!regPilotaje) return { lineas: [], omitidas: 0 }
+      const r = { lineas: [...regPilotaje.lineas], omitidas: regPilotaje.omitidas }
+      regPilotaje = { lineas: [], omitidas: 0, navegacionesPaso: 0 }
+      return r
+    },
+  })
   FIJAR_TOLERABLES_BD_GET.set(g, (r) => { tolerablesBdGet = r })
   ABRIR_VENTANA.set(g, (ms) => { ventanaHasta = Date.now() + Math.min(ms, VENTANA_RED_EMISION_MS) })
   ABRIR_AVANCE.set(g, (hasta, endpoints, ajax = []) => { avance = { hasta: Math.min(hasta, Date.now() + VENTANA_RED_AVANCE_MS), endpoints, ajax } })
@@ -654,6 +693,31 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
 }
 
 const FIJAR_TOLERABLES = new WeakMap<GuardEmision, (r: readonly RutaTolerable[]) => void>()
+
+// ─── 0.3.47 MODO PILOTADO: abortar y REGISTRAR en vez de cerrar ────────────────────────────────────────────────────────────────
+// Para descubrir en UNA sesión qué endpoints usa un wizard (Pelayo auto: todo su backend lleva «contratacion» en la ruta), una petición
+// que el guard bloquea por URL o cuerpo (fuera de cualquier ventana de avance/guardado) se ABORTA como siempre —nunca llega al
+// servidor— y se apunta en un registro por paso (deduplicado, ≤40 líneas, forma cerrada `lineaBloqueoRed`) que el bucle publica en el
+// inventario del paso siguiente (`bloqueosRed`). La navegación de documento principal bloqueada también (la página se queda donde
+// está), con tope anti-bucle: la 6.ª del mismo paso cierra la sesión. Solo `buclePilotaje` lo activa; nada más cambia.
+
+/** Navegaciones de documento principal bloqueadas toleradas por paso de pilotaje; la siguiente cierra la sesión. */
+export const TOPE_NAVEGACIONES_BLOQUEADAS_PASO_PILOTAJE = 5
+/** Líneas distintas del registro por paso (las demás solo se cuentan). */
+export const MAX_BLOQUEOS_RED_PILOTAJE = 40
+type RegistroBloqueosPilotaje = { lineas: string[]; omitidas: number; navegacionesPaso: number }
+const REGISTRO_PILOTAJE = new WeakMap<GuardEmision, { activar(): void; vaciar(): { lineas: string[]; omitidas: number } }>()
+
+/** Activa el registro del MODO PILOTADO en este guard (irreversible para el guard). SOLO lo llama `buclePilotaje`. */
+export function activarRegistroBloqueosPilotaje(guard: GuardEmision): void {
+  const r = REGISTRO_PILOTAJE.get(guard)
+  if (!r) throw new EmisionBloqueadaError('fase', 'guard sin registro de pilotaje')
+  r.activar()
+}
+/** Devuelve lo registrado desde la última llamada y EMPIEZA PASO (reinicia el tope de navegaciones). Sin activar: vacío. */
+export function vaciarBloqueosPilotaje(guard: GuardEmision): { lineas: string[]; omitidas: number } {
+  return REGISTRO_PILOTAJE.get(guard)?.vaciar() ?? { lineas: [], omitidas: 0 }
+}
 const FIJAR_TOLERABLES_BD_GET = new WeakMap<GuardEmision, (r: readonly RutaTolerable[]) => void>()
 const RUTAS_HREF_BD = new WeakMap<GuardEmision, readonly RutaTolerable[]>()
 const PERMISOS_BD = new WeakMap<GuardEmision, PermisosNavegacion>()

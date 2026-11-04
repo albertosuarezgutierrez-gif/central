@@ -97,7 +97,7 @@ test('el pilotaje solo se sirve a un worker que lo declara, y solo se reclama co
 
 test('cableado: un pilotaje nunca se reintenta solo, solo termina por su cierre, y no se le descifra nada del tomador', () => {
   const t = readFileSync(new URL('./tarificador.ts', import.meta.url), 'utf8')
-  assert.match(t, /if \(deHumo \|\| dePilotaje\) estado = estadoTrasFalloHumo\(\)/, 'fallo de pilotaje = error_definitivo')
+  assert.match(t, /if \(deHumo \|\| dePilotaje( \|\| deVehiculo)?\) estado = estadoTrasFalloHumo\(\)/, 'fallo de pilotaje = error_definitivo')
   assert.match(t, /t\.modo === 'pilotaje' && r\.tipo !== 'error'\) return \{ res: \{ estado: 'conflicto'/, 'por /resultado solo un error')
   const i = t.indexOf("if (modo === 'pilotaje') {")
   const j = t.indexOf('necesitaNifTomador(f.compania')

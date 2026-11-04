@@ -12,7 +12,11 @@
 //          · rellenar/seleccionar → datos FICTICIOS (clave del catálogo o literal inocuo), nunca en un campo de cuenta, tarjeta o
 //            firma (`exigirCampoNoBancario` de guard.ts sobre el control VIVO antes de escribir);
 //          · esperar/volver/fin.
-//        Un rechazo (validador, guard, frontera) se REGISTRA como resultado y NO se ejecuta; una violación de red del guard cierra.
+//        Un rechazo (validador, guard, frontera) se REGISTRA como resultado y NO se ejecuta.
+//   0.3.47: una petición que el guard de RED bloquea (XHR/fetch/beacon/script, y también una navegación) se ABORTA igual —nunca
+//   sale— pero se REGISTRA (`bloqueosRed` del inventario de la pantalla siguiente: método + origen + ruta, sin query ni cuerpo) en
+//   vez de cerrar; más de 5 navegaciones de documento principal bloqueadas en el mismo paso SÍ cierran (anti-bucle), como el resto
+//   de violaciones de red (ventanas de avance/guardado), que siguen cerrando igual.
 //   Topes DUROS: 60 comandos y 30 min por sesión.
 //
 // 🚨 TARIFICAR ≠ EMITIR: aquí no hay `.click()` ni navegación a URLs libres; ningún comando llega al portal sin el guard.
@@ -28,6 +32,7 @@ import {
   indiceRefs,
   loginAsistidoDe,
   neutralizacionesOnclickDe,
+  pareceDatoPersonalInventario,
   nombresCredencial,
   pistasOpcionesInventario,
   resolverDato,
@@ -57,6 +62,8 @@ import {
   precioVistoEn,
   pulsar,
   cerrarModalInformativo,
+  activarRegistroBloqueosPilotaje,
+  vaciarBloqueosPilotaje,
   pulsarAccesoNseMapfre,
   pulsarEnlaceEntradaAutorizado,
   pulsarMenuOfertaNseMapfre,
@@ -310,7 +317,10 @@ export async function buclePilotaje(page: Page, k: ContextoPilotaje): Promise<Fi
   let captura: InventarioExploracion | null = null
   /** `nUltimo` = la pantalla publicada cuyo comando está pendiente de informar. */
   const fin = (motivo: MotivoFinPilotaje, extra: Partial<FinPilotaje> = {}): FinPilotaje => ({ motivo, nUltimo: n > 0 ? n : null, comandos, ...(resultado ? { resultadoUltimo: resultado } : {}), ...extra })
+  const red = k.redactar ?? ((x: string) => x)
   try {
+    // 0.3.47: desde aquí, lo que el guard de red bloquee se aborta y se REGISTRA (no cierra salvo el tope de navegaciones del paso).
+    activarRegistroBloqueosPilotaje(k.guard)
     for (;;) {
       if (ahora() - inicio >= t.maxMs) return fin('tope_tiempo')
       k.guard.comprobar()
@@ -319,7 +329,15 @@ export async function buclePilotaje(page: Page, k: ContextoPilotaje): Promise<Fi
       await captura?.liberar()
       captura = await capturarInventarioExploracion(page, undefined, undefined, undefined, pistas)
       if (!captura) return fin('error_portal', { error: { tipo: 'portal', mensaje: 'no se pudo leer el inventario de la pantalla' } })
-      const inv = captura.inventario
+      // 0.3.47: lo bloqueado desde la pantalla anterior (y su comando) va en ESTE inventario; vaciar empieza paso (tope de navegaciones).
+      // Una línea que la redacción del worker cambiaría no se publica a medias: se cuenta como omitida (asegura redacta otra vez).
+      const bloq = vaciarBloqueosPilotaje(k.guard)
+      const lineas = bloq.lineas.filter((x) => red(x) === x && !pareceDatoPersonalInventario(x))
+      const omitidas = bloq.omitidas + bloq.lineas.length - lineas.length
+      const inv: InventarioDom = lineas.length > 0 || omitidas > 0
+        ? { ...captura.inventario, ...(lineas.length > 0 ? { bloqueosRed: lineas } : {}), ...(omitidas > 0 ? { bloqueosRedOmitidos: omitidas } : {}) }
+        : captura.inventario
+      if (lineas.length > 0 || omitidas > 0) k.log('pilotaje_bloqueos_red', { n: n + 1, lineas: lineas.length, omitidas })
       if (inv.marcos.some((m) => (m.importes?.length ?? 0) > 0)) registrarPrecioVisto(k.guard)
       // OTP/CAPTCHA/pantalla de emisión o de cuenta bancaria: se publica (para el mapa) y se cierra; no admite comando.
       const parada = detectarParada(inv)
