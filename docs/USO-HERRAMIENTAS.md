@@ -171,22 +171,22 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 428 | 81.248 | 70.412.568 | 0 | 0 |
-| `otro` | 422 | 18.903 | 38.212.380 | 21.502.739 | 0 |
-| `lectura-directa` | 362 | 12.215 | 34.588.090 | 0 | 0 |
-| `sql` | 277 | 9.218 | 5.248.419 | 3.040.710 | 37 |
-| `mcp:github` | 359 | 9.058 | 6.577.565 | 58.257.529 | 125 |
-| `escritura` | 260 | 7.034 | 111.288.750 | 0 | 0 |
-| `mcp:Vercel` | 93 | 1.577 | 1.365.805 | 237.328 | 51 |
+| `bash` | 428 | 81.612 | 70.760.769 | 0 | 0 |
+| `otro` | 422 | 18.937 | 38.243.730 | 21.502.739 | 0 |
+| `lectura-directa` | 362 | 12.233 | 34.796.419 | 0 | 0 |
+| `sql` | 277 | 9.299 | 5.303.117 | 3.040.710 | 37 |
+| `mcp:github` | 359 | 9.067 | 6.580.528 | 58.257.529 | 125 |
+| `escritura` | 260 | 7.047 | 111.366.322 | 0 | 0 |
+| `mcp:Vercel` | 93 | 1.579 | 1.369.491 | 237.328 | 51 |
 | `mcp:Gmail` | 74 | 1.532 | 1.656.992 | 0 | 101 |
-| `agente:general-purpose` | 160 | 1.515 | 897.467 | 28.452.692 | 0 |
+| `agente:general-purpose` | 160 | 1.522 | 901.976 | 28.517.996 | 0 |
 | `mcp:Booking-com` | 53 | 1.505 | 6.179.360 | 0 | 0 |
-| `mcp:claude-code-remote` | 94 | 1.502 | 208.615 | 2.985.432 | 0 |
+| `mcp:claude-code-remote` | 94 | 1.505 | 208.733 | 2.985.432 | 0 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
 | `mcp:Google_Drive` | 29 | 994 | 1.117.580 | 0 | 77 |
 | `mcp:Interactive-Brokers--IBKR-` | 18 | 716 | 834.704 | 0 | 0 |
 | `mcp:Supabase` | 162 | 554 | 208.191 | 33.495 | 9 |
-| `agente:agente-architect` | 94 | 546 | 382.374 | 13.336.338 | 0 |
+| `agente:agente-architect` | 94 | 548 | 384.064 | 13.368.114 | 0 |
 | `mcp:Google-Drive` | 37 | 178 | 185.960 | 0 | 2 |
 | `agente:agente-mecanico` | 67 | 171 | 89.654 | 8.202.670 | 0 |
 | `mcp:Booking_com` | 5 | 166 | 443.032 | 0 | 0 |
@@ -194,7 +194,7 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:Resend` | 11 | 98 | 86.009 | 0 | 0 |
 | `mcp:idealista` | 3 | 94 | 255.209 | 0 | 34 |
 | `mcp:OpenSEO` | 6 | 94 | 77.612 | 0 | 2 |
-| `agente:Explore` | 42 | 91 | 44.056 | 2.231.269 | 0 |
+| `agente:Explore` | 42 | 92 | 44.650 | 2.246.933 | 0 |
 | `mcp:Trivago` | 3 | 53 | 8.707.439 | 0 | 1 |
 | `mcp:posthog` | 5 | 47 | 64.610 | 0 | 1 |
 | `agente:jefe-contabilidad` | 5 | 46 | 21.986 | 584.358 | 0 |
