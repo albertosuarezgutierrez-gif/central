@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
-import { redactarPii } from '@central/module-seguros'
+import { redactarPii, telefonoVerificadoPorCodigo, telefonoVerificadoPorNombre } from '@central/module-seguros'
 import {
   ACUSE_GENERICO,
   CONFIRMACION_OPT_OUT,
@@ -17,6 +17,11 @@ import {
   RESPUESTA_BAJA,
   VENTANA_MS,
   decidirRespuesta,
+  IDS_SOLO_SERVIDOR,
+  elegirTelefonoSiniestro,
+  esSiniestro,
+  ramoDePercance,
+  telefonoApto,
   esBaja,
   filtrarContenido,
   puedeResponder,
@@ -309,4 +314,70 @@ test('CEPO idempotencia en BD: la reserva va bajo índice único y antes del env
   assert.ok(reserva > 0 && envio > reserva, 'la reserva va ANTES del envío')
   assert.equal((src.match(/\.enviarTexto\(/g) ?? []).length, 1, 'un solo intento')
   assert.doesNotMatch(src, /console\.(log|error|warn)\([^)]*(telefono|texto|token)/i, 'ni teléfono ni texto ni token en logs')
+})
+
+// ── Siniestro (04/11/2026) ─────────────────────────────────────────────────────
+
+const buscarCatalogo = (cod: string | null, nom: string | null) =>
+  (cod ? telefonoVerificadoPorCodigo(cod) : null)?.siniestros ?? (nom ? telefonoVerificadoPorNombre(nom)?.siniestros : null) ?? null
+const decideSin = (p: Parameters<typeof decidirRespuesta>[0]) => decidirRespuesta(p)
+const baseSin = { esComercial: true, descartaPersonal: false, baja: false, tipoEntrante: 'text', respuestaIA: 'acuse', promesaAviso: false, redactar } as const
+
+test('CEPO siniestro: detecta el percance por la IA o por palabras claras, no una pregunta de cobertura ni una negación', () => {
+  assert.equal(esSiniestro('siniestro', 'hola'), true)
+  for (const t of ['He tenido un accidente con el coche', 'Se me ha inundado la cocina', 'Me han robado la moto', 'Choque con otro coche']) assert.equal(esSiniestro(null, t), true, t)
+  for (const t of ['¿Cubre el seguro un accidente?', 'Nunca he tenido un siniestro', 'Sin siniestros este año', 'Gracias']) assert.equal(esSiniestro(null, t), false, t)
+  assert.equal(ramoDePercance('Se me ha inundado la cocina'), 'hogar')
+  assert.equal(ramoDePercance('He chocado con el coche'), 'auto')
+  assert.equal(ramoDePercance('Se me cayó la moto'), 'moto')
+  assert.equal(ramoDePercance('Choque y se inundó el piso'), null)
+})
+
+test('CEPO siniestro: teléfono solo con UNA póliza candidata y dato del catálogo verificado; si no, null', () => {
+  const mapfre = { tipo: 'hogar', aseguradora: 'Mapfre', codigoDgs: 'C0058' }
+  assert.equal(elegirTelefonoSiniestro([mapfre], 'hogar', buscarCatalogo), '918 365 365')
+  assert.equal(elegirTelefonoSiniestro([mapfre], null, buscarCatalogo), '918 365 365')
+  assert.equal(elegirTelefonoSiniestro([mapfre], 'auto', buscarCatalogo), null, 'ramo distinto: no es SU póliza del percance')
+  assert.equal(elegirTelefonoSiniestro([mapfre, { ...mapfre, tipo: 'auto' }], null, buscarCatalogo), null, 'varias candidatas sin ramo')
+  assert.equal(elegirTelefonoSiniestro([mapfre, { ...mapfre, tipo: 'auto' }], 'auto', buscarCatalogo), '918 365 365', 'el ramo desambigua')
+  assert.equal(elegirTelefonoSiniestro([mapfre, { ...mapfre }], 'hogar', buscarCatalogo), null, 'dos del mismo ramo')
+  assert.equal(elegirTelefonoSiniestro([{ tipo: 'hogar', aseguradora: 'Compañía Inventada', codigoDgs: null }], 'hogar', buscarCatalogo), null, 'sin ficha verificada')
+  assert.equal(elegirTelefonoSiniestro(null, 'hogar', buscarCatalogo), null, 'pólizas no leídas ≠ sin pólizas')
+  assert.equal(elegirTelefonoSiniestro([], null, buscarCatalogo), null)
+  assert.equal(telefonoApto('918 365 365'), '918 365 365')
+  assert.equal(telefonoApto('+34 915 811 823'), '+34 915 811 823')
+  for (const t of ['llame al 91', '918365365 ext 4', 'http://x.es', '', null, 12345678]) assert.equal(telefonoApto(t), null, String(t))
+})
+
+test('CEPO siniestro: con teléfono, la frase lleva ESE número; sin él, «Alberto le llama ahora»; nunca cobertura ni «siniestro»', () => {
+  const con = decideSin({ ...baseSin, siniestro: { telefono: '918 365 365' }, nombrePila: 'lucía' })
+  assert.deepEqual(con, { enviar: true, texto: 'Lamentamos lo ocurrido, Lucía. Puede llamar ya al 918 365 365, el teléfono de atención de su póliza. Alberto también le llama en cuanto pueda.', clase: 'ia', frase: 'siniestro_asistencia' })
+  const sin = decideSin({ ...baseSin, siniestro: { telefono: null } })
+  assert.deepEqual(sin, { enviar: true, texto: 'Lamentamos lo ocurrido. Alberto le llama ahora.', clase: 'ia', frase: 'siniestro_alberto' })
+  // Un teléfono que no es un teléfono (inyección desde un dato sucio) cae a «Alberto le llama».
+  assert.equal((decideSin({ ...baseSin, siniestro: { telefono: 'https://malo.es 612' } }) as { frase: string }).frase, 'siniestro_alberto')
+  for (const f of ['siniestro_asistencia', 'siniestro_alberto'] as const) {
+    assert.doesNotMatch(FRASES[f], /siniestro|cubr|cobertura|compañ|aprobad|incluid|gratis/i)
+    assert.equal(filtrarContenido(montarFrase(FRASES[f], null).replace('{telefono}', 'ese numero'), { promesaAviso: false, redactar }).ok, true)
+  }
+})
+
+test('CEPO siniestro: la IA NO puede elegir las frases de siniestro; null = nada; opt-out y baja mandan; la media solo el acuse', () => {
+  for (const id of ['siniestro_asistencia', 'siniestro_alberto']) {
+    assert.deepEqual(decide({ respuestaIA: id }), { enviar: false, motivo: 'contenido_prohibido', detalle: 'siniestro_sin_siniestro' })
+    assert.ok((IDS_SOLO_SERVIDOR as string[]).includes(id))
+    assert.doesNotMatch(sistemaRespuesta({ promesaAviso: false }), new RegExp(`"${id}"`))
+  }
+  assert.deepEqual(decideSin({ ...baseSin, siniestro: { telefono: '918 365 365' }, respuestaIA: null }), { enviar: false, motivo: 'ia_no_segura' })
+  assert.equal((decideSin({ ...baseSin, siniestro: { telefono: null }, baja: true }) as { frase: string }).frase, 'baja')
+  assert.equal((decideSin({ ...baseSin, siniestro: { telefono: null }, optOut: 'opt_out' }) as { frase: string }).frase, 'opt_out')
+  assert.equal((decideSin({ ...baseSin, siniestro: { telefono: null }, tipoEntrante: 'image' }) as { frase: string }).frase, 'acuse')
+})
+
+test('CEPO siniestro: el analizador avisa a Telegram aunque no haya respuesta y el teléfono sale solo del catálogo', () => {
+  const src = readFileSync(new URL('./analizar.ts', import.meta.url), 'utf8')
+  assert.match(src, /siniestroDetectado \? 'Cuenta un PERCANCE/)
+  assert.match(src, /siniestroDetectado && flagRespuesta && fichaUnica && cliente && pre\.ok/)
+  assert.match(src, /telefonoVerificadoPorCodigo\(codigoDgs\)/)
+  assert.match(src, /decidirRespuesta\(\{[^}]*siniestro, optOut/)
 })

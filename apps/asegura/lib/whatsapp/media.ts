@@ -101,3 +101,21 @@ export function crearClienteMedia(opts: { version: string; fetch?: FetchLike; ti
     },
   }
 }
+
+/**
+ * Aviso a Alberto (Telegram) cuando un cliente/lead manda por WhatsApp una póliza y ya se ha LEÍDO y enlazado a su ficha
+ * (documento en Documentos + oportunidad creada/actualizada). Sin datos personales. Nunca lanza ni ofrece lanzar nada:
+ * tarificar con los bots RPA es SIEMPRE con el botón 🤖 de Alberto, y el presupuesto, con su botón. `null` = no avisa
+ * (el caso `revisar` ya avisó el propio lector). PURO.
+ */
+export function textoAvisoPolizaRecibida(r: { estado: string; completada?: boolean; yaExistia?: boolean; relacionado?: boolean }): string | null {
+  if (r.estado === 'creada' || r.estado === 'actualizada') {
+    const que = r.estado === 'creada' && r.yaExistia !== true ? 'oportunidad creada' : r.completada === false ? 'oportunidad ya completa' : 'oportunidad actualizada'
+    return `📄 Un cliente ha mandado su póliza por WhatsApp: leída, guardada en Documentos y ${que}. ${r.relacionado ? 'Era de otra persona: queda relacionada con esta ficha. ' : ''}El presupuesto y los bots los lanzas tú.`
+  }
+  if (r.estado === 'ya_nuestra') return '📄 Un cliente ha mandado por WhatsApp una póliza que ya es nuestra: guardada en Documentos.'
+  if (r.estado === 'no_es_seguro' || r.estado === 'sin_lectura' || r.estado === 'error' || r.estado === 'sin_persona') {
+    return '📎 Un cliente ha mandado un archivo por WhatsApp que no he podido leer como póliza: guardado en Documentos, míralo tú.'
+  }
+  return null
+}

@@ -8,7 +8,7 @@
 // Un fallo de la IA no avanza `analizada_hasta`; al tercero seguido se salta ese tramo (y se dice).
 
 import { cleanJSON } from '@central/core-ai'
-import { WHERE_CARTERA_EN_VIGOR, telefonoParaFicha } from '@central/module-seguros'
+import { WHERE_CARTERA_EN_VIGOR, telefonoParaFicha, telefonoVerificadoPorCodigo, telefonoVerificadoPorNombre } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
 import { Prisma } from '../generated/asegura-client'
 import { prismaAsegura } from '../asegura-db'
@@ -25,7 +25,7 @@ import { casosResueltos } from './aprendizaje'
 import { casoParaIA, elegirCasos, extractoRedactado } from './aprendizaje-reglas'
 import { respuestaIaActiva } from './config'
 import { avisoVencimientoDisponible } from './aviso-vencimiento-reglas'
-import { clasificarOptOut, decidirRespuesta, esBaja, puedeResponder, sistemaRespuesta, TEXTO_MOTIVO, type Pre } from './respuesta-reglas'
+import { clasificarOptOut, decidirRespuesta, elegirTelefonoSiniestro, esBaja, esSiniestro, puedeResponder, ramoDePercance, sistemaRespuesta, TEXTO_MOTIVO, type Pre } from './respuesta-reglas'
 import { enviarRespuesta, leerEstadoRespuesta, marcarOptOut, type ResultadoRespuesta } from './respuesta'
 import { redactarPii } from '@central/module-seguros'
 
@@ -127,6 +127,12 @@ async function clienteVivo(correduriaId: string, clienteId: string): Promise<(Cl
     id = f.fusionada_en
   }
   return null
+}
+
+/** Teléfono de dar parte de la compañía, SOLO del catálogo verificado (código DGS o nombre exacto). */
+function telefonoSiniestrosDe(codigoDgs: string | null, aseguradora: string | null): string | null {
+  const c = (codigoDgs ? telefonoVerificadoPorCodigo(codigoDgs) : null) ?? (aseguradora ? telefonoVerificadoPorNombre(aseguradora) : null)
+  return c?.siniestros ?? null
 }
 
 async function analizarUna(correduriaId: string, c: Reclamada): Promise<number | 'saltada' | 'fallida'> {
@@ -287,10 +293,22 @@ async function analizarUna(correduriaId: string, c: Reclamada): Promise<number |
   const entranteNuevo = ultimaEntranteAt !== null && (!c.analizada_hasta || ultimaEntranteAt.getTime() > c.analizada_hasta.getTime())
   const optOut = flagRespuesta && entranteNuevo ? clasificarOptOut(analisis.intencion, textoUltimaEntrante) : null
   const baja = flagRespuesta && fichaUnica && analisis.es_comercial && optOut !== 'opt_out' && esBaja(analisis.intencion, textoUltimaEntrante)
+  // Percance (siniestro/avería/inundación…): Telegram urgente SIEMPRE; la respuesta solo con el flag y ficha única.
+  const siniestroDetectado = entranteNuevo && !descartaPersonal && analisis.es_comercial && optOut === null && !baja && esSiniestro(analisis.intencion, textoUltimaEntrante)
+  let siniestro: { telefono: string | null } | null = null
+  if (siniestroDetectado && flagRespuesta && fichaUnica && cliente && pre.ok) {
+    // Solo pólizas EN VIGOR de la ficha; si no se leen (null) → sin teléfono («Alberto le llama»).
+    const candidatas = await db.poliza
+      .findMany({ where: { AND: [{ correduriaId, clienteId: cliente.id }, WHERE_CARTERA_EN_VIGOR] }, select: { tipo: true, aseguradora: true, codigoEntidadDgs: true } })
+      .then((ps) => ps.map((x) => ({ tipo: String(x.tipo), aseguradora: x.aseguradora, codigoDgs: x.codigoEntidadDgs })))
+      .catch(() => null)
+    const ramo = analisis.producto ?? ramoDePercance(textoUltimaEntrante)
+    siniestro = { telefono: elegirTelefonoSiniestro(candidatas, ramo, telefonoSiniestrosDe) }
+  }
   let respuestaAviso: { estado: ResultadoRespuesta | 'no_enviada'; texto?: string; motivo?: string } | undefined
   if (pre.ok && entranteId) {
     const d = decidirRespuesta({
-      esComercial: analisis.es_comercial, descartaPersonal, baja, optOut, tipoEntrante, respuestaIA: analisis.respuesta, promesaAviso,
+      esComercial: analisis.es_comercial, descartaPersonal, baja, siniestro, optOut, tipoEntrante, respuestaIA: analisis.respuesta, promesaAviso,
       nombrePila: cliente?.nombre ?? null,
       redactar: (t) => redactarPii(t),
     })
@@ -315,9 +333,10 @@ async function analizarUna(correduriaId: string, c: Reclamada): Promise<number |
   } else if (optOut === 'ambiguo') {
     avisoOptOut.push('Pide que no le escribamos y habla de baja de póliza: no he marcado nada ni contestado, decide tú')
   }
-  const urgente = baja
-    ? 'Pide la BAJA / no renovar. La IA NO ha cambiado nada: la oposición a la prórroga exige escrito del tomador al menos 1 mes antes del vencimiento (art. 22 LCS).'
-    : undefined
+  const urgente = [
+    baja ? 'Pide la BAJA / no renovar. La IA NO ha cambiado nada: la oposición a la prórroga exige escrito del tomador al menos 1 mes antes del vencimiento (art. 22 LCS).' : null,
+    siniestroDetectado ? 'Cuenta un PERCANCE (siniestro/avería): llámale. La IA no afirma cobertura ni abre parte; solo le da, si es fiable, el teléfono de su compañía.' : null,
+  ].filter((x): x is string => x !== null).join(' ') || undefined
 
   // Siempre aviso a Alberto (spec §1) de lo hecho y lo propuesto, con botones ✅/❌ por propuesta. Best effort.
   if (clienteFinal && (plan.pasos.length > 0 || respuestaAviso || urgente || avisoOptOut.length > 0)) {

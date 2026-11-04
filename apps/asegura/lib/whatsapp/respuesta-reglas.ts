@@ -38,6 +38,10 @@ export const FRASES = {
   pedir_poliza: 'Si quiere que le preparemos un presupuesto, envíenos por aquí una foto de su póliza actual y Alberto lo revisa.',
   saludo: 'Gracias a usted{nombre}, un saludo.',
   baja: 'Recibido. Las bajas las gestiona Alberto personalmente y se pondrá en contacto con usted. Hasta entonces su póliza sigue igual.',
+  // SOLO el servidor las pone (cliente con ficha única que cuenta un percance). Nunca afirman cobertura ni dicen «siniestro»
+  // (el filtro lo prohíbe). `{telefono}` = teléfono de la compañía de SU póliza, del catálogo verificado, validado aparte.
+  siniestro_asistencia: 'Lamentamos lo ocurrido{nombre}. Puede llamar ya al {telefono}, el teléfono de atención de su póliza. Alberto también le llama en cuanto pueda.',
+  siniestro_alberto: 'Lamentamos lo ocurrido{nombre}. Alberto le llama ahora.',
 } as const
 /** Solo con `avisoVencimientoDisponible()` (aviso por plantilla encendido): la única frase que promete un aviso. */
 export const FRASE_NOTA_FECHA_AVISO = 'Perfecto{nombre}, tomo nota. Le avisaremos antes del vencimiento.'
@@ -45,6 +49,8 @@ export const FRASE_NOTA_FECHA_AVISO = 'Perfecto{nombre}, tomo nota. Le avisaremo
 export const CONFIRMACION_OPT_OUT = 'Entendido, no le volveremos a escribir por aquí. Si necesita algo, escríbanos cuando quiera.'
 export type IdFrase = keyof typeof FRASES
 export const IDS_FRASE = Object.keys(FRASES) as IdFrase[]
+/** Frases que la IA NO puede elegir: las pone el servidor según el contenido (baja, percance). */
+export const IDS_SOLO_SERVIDOR: readonly IdFrase[] = ['baja', 'siniestro_asistencia', 'siniestro_alberto']
 
 const NOMBRE_PILA = /^[\p{L}][\p{L}'-]{1,29}$/u
 
@@ -200,6 +206,56 @@ export function clasificarOptOut(intencion: string | null | undefined, textoEntr
   return intencion === 'baja' || BAJA.test(resto) ? 'ambiguo' : 'opt_out'
 }
 
+
+// ── Siniestro / avería (04/11/2026): frase con el teléfono de SU compañía, o «Alberto le llama» ──────────────────
+
+const NEGA_SINIESTRO = /\b(ningun[oa]?|nunca|sin|cubr\w*|cobertur\w*|incluy\w*|incluid\w*)\b/
+const PERCANCE = /\b(siniestro|accidente|accidentad[oa]|choque|chocado|chocar|colision\w*|inundacion|inundad[oa]|averia\w*|incendio|fuga de agua|me han robado|robo|grua)\b/
+
+/** ¿Cuenta un percance? La intención de la IA O palabras claras sin negación ni pregunta de cobertura. PURO. */
+export function esSiniestro(intencion: string | null | undefined, textoEntrante: string | null | undefined): boolean {
+  if (intencion === 'siniestro') return true
+  const llano = quitarTildes((textoEntrante ?? '').toLowerCase())
+  return PERCANCE.test(llano) && !NEGA_SINIESTRO.test(llano)
+}
+
+/** Ramo que se deduce del texto (solo si es inequívoco); null = no se sabe. PURO. */
+export function ramoDePercance(textoEntrante: string | null | undefined): 'auto' | 'moto' | 'hogar' | null {
+  const llano = quitarTildes((textoEntrante ?? '').toLowerCase())
+  const moto = /\bmoto\b/.test(llano)
+  const auto = /\b(coche|choque|chocado|chocar|colision\w*|grua|vehiculo|carretera|furgoneta)\b/.test(llano)
+  const hogar = /\b(inundacion|inundad[oa]|fuga|humedad|gotera\w*|casa|piso|vivienda|incendio|cocina|bano|agua)\b/.test(llano)
+  const ramos = [moto && 'moto', auto && !moto && 'auto', hogar && 'hogar'].filter(Boolean) as ('auto' | 'moto' | 'hogar')[]
+  return ramos.length === 1 ? ramos[0] : null
+}
+
+/** Teléfono apto para ir en un mensaje: 9-12 dígitos, solo dígitos, espacios y un «+» inicial. PURO. */
+export function telefonoApto(t: unknown): string | null {
+  if (typeof t !== 'string') return null
+  const v = t.trim()
+  if (!/^\+?[0-9][0-9 ]{6,16}[0-9]$/.test(v)) return null
+  const digitos = v.replace(/\D/g, '').length
+  return digitos >= 9 && digitos <= 12 ? v : null
+}
+
+export type PolizaCandidataSiniestro = { tipo: string; aseguradora: string | null; codigoDgs: string | null }
+
+/**
+ * El teléfono de la compañía de la ÚNICA póliza en vigor candidata, o null (sin dato fiable o varias candidatas → la
+ * frase «Alberto le llama»). `ramo` restringe las candidatas (producto de la IA o deducido del texto). `buscar` = catálogo
+ * verificado (inyectado). Con el ramo conocido y ninguna póliza de ese ramo → null. PURO.
+ */
+export function elegirTelefonoSiniestro(
+  candidatas: readonly PolizaCandidataSiniestro[] | null,
+  ramo: string | null,
+  buscar: (codigoDgs: string | null, aseguradora: string | null) => string | null,
+): string | null {
+  if (candidatas === null) return null
+  const aptas = ramo ? candidatas.filter((c) => c.tipo === ramo) : candidatas
+  if (aptas.length !== 1) return null
+  return telefonoApto(buscar(aptas[0].codigoDgs, aptas[0].aseguradora))
+}
+
 export type DecisionRespuesta =
   | { enviar: true; texto: string; clase: 'ia' | 'acuse' | 'baja' | 'opt_out'; frase: IdFrase | 'opt_out' }
   | { enviar: false; motivo: MotivoNoResponder; detalle?: string }
@@ -212,6 +268,8 @@ export function decidirRespuesta(p: {
   esComercial: boolean
   descartaPersonal: boolean
   baja: boolean
+  /** Cuenta un percance (ficha única): `telefono` ya elegido por el servidor (o null = «Alberto le llama»). */
+  siniestro?: { telefono: string | null } | null
   optOut?: OptOut
   tipoEntrante: string
   respuestaIA: unknown
@@ -226,6 +284,7 @@ export function decidirRespuesta(p: {
   if (p.respuestaIA === null || p.respuestaIA === undefined) return { enviar: false, motivo: 'ia_no_segura' }
   const nombre = nombrePilaSeguro(p.nombrePila)
   if (p.baja) return conFiltro(FRASES.baja, 'baja', 'baja', p)
+  if (p.siniestro && p.tipoEntrante === 'text') return decidirSiniestro(p.siniestro.telefono, nombre, p)
   if (p.tipoEntrante !== 'text') {
     return (TIPOS_ACUSE as readonly string[]).includes(p.tipoEntrante)
       ? conFiltro(montarFrase(FRASES.acuse, nombre), 'acuse', 'acuse', p)
@@ -235,8 +294,23 @@ export function decidirRespuesta(p: {
   if (!(IDS_FRASE as string[]).includes(id)) return { enviar: false, motivo: 'contenido_prohibido', detalle: 'fuera_de_lista' }
   // La baja SOLO la pone el servidor (texto/intención): elegida por la IA sin serlo, no se manda.
   if (id === 'baja') return { enviar: false, motivo: 'contenido_prohibido', detalle: 'baja_sin_baja' }
+  if ((IDS_SOLO_SERVIDOR as string[]).includes(id)) return { enviar: false, motivo: 'contenido_prohibido', detalle: 'siniestro_sin_siniestro' }
   const plantilla = id === 'nota_fecha' && p.promesaAviso ? FRASE_NOTA_FECHA_AVISO : FRASES[id as IdFrase]
   return conFiltro(montarFrase(plantilla, nombre), 'ia', id as IdFrase, p)
+}
+
+/** Percance: con teléfono válido, la frase con él; si no, «Alberto le llama». El filtro mira la plantilla SIN el número. */
+function decidirSiniestro(
+  telefono: string | null,
+  nombre: string | null,
+  p: { promesaAviso: boolean; redactar: (s: string) => string },
+): DecisionRespuesta {
+  const tel = telefonoApto(telefono)
+  if (tel === null) return conFiltro(montarFrase(FRASES.siniestro_alberto, nombre), 'ia', 'siniestro_alberto', p)
+  const sonda = montarFrase(FRASES.siniestro_asistencia, nombre).replace('{telefono}', 'ese numero')
+  const f = filtrarContenido(sonda, { promesaAviso: p.promesaAviso, redactar: p.redactar })
+  if (!f.ok) return { enviar: false, motivo: 'contenido_prohibido', detalle: f.motivo }
+  return { enviar: true, texto: f.texto.replace('ese numero', tel), clase: 'ia', frase: 'siniestro_asistencia' }
 }
 
 function conFiltro(
@@ -261,7 +335,7 @@ export const TEXTO_MOTIVO: Partial<Record<MotivoNoResponder, string>> = {
 
 /** Añadido al prompt de sistema SOLO cuando se le pide respuesta (si no, el prompt es el de siempre). */
 export function sistemaRespuesta(o: { promesaAviso: boolean }): string {
-  const lista = IDS_FRASE.filter((id) => id !== 'baja')
+  const lista = IDS_FRASE.filter((id) => !(IDS_SOLO_SERVIDOR as string[]).includes(id))
     .map((id) => `  "${id}": «${montarFrase(id === 'nota_fecha' && o.promesaAviso ? FRASE_NOTA_FECHA_AVISO : FRASES[id], null)}»`)
     .join('\n')
   return `
@@ -270,5 +344,6 @@ ADEMÁS devuelve el campo "respuesta": el ID de UNA frase aprobada que se enviar
 ${lista}
 - "nota_fecha": si da una fecha (vencimiento, cobro…). "pedir_poliza": si quiere presupuesto o comparar y no ha mandado su póliza. "saludo": si solo da las gracias o se despide. "acuse"/"alberto_revisa": el resto de consultas que Alberto debe mirar.
 - Si pide una baja o no renovar, o que no le escribamos: "respuesta": "acuse" (el sistema pone la frase correcta).
+- Si cuenta un percance (accidente, avería, inundación, robo…): "intencion": "siniestro", "producto": el ramo si se sabe, y "respuesta": "acuse" (el sistema pone la frase y el teléfono correctos; tú nunca los escribes).
 - Si no estás SEGURO, el mensaje no necesita respuesta, o no es de seguros: "respuesta": null.`
 }
