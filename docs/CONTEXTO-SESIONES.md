@@ -78,6 +78,12 @@ Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; ti
 original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados revisado/falta_roto/devuelto + bloque en ficha. `rrhh.material_empleado`
 (0028, aplicada). Pendiente fase 2: revisión periódica mensual.
 
+## (04/11/2026) Correduría · agente de WhatsApp en «modo sombra» — spec (sin código)
+- Inventario: central tiene WhatsApp→CRM solo ENTRANTE (apps/asegura/lib/whatsapp, apagado); responder solo existe en el repo antiguo `asegura` (nunca activado). Meta: Grupo ASegura **ya verificada** (04/11, MCP Whassap).
+- Decisión Alberto: fase 1 SOLO correduría (pisos fuera: escriben poco y Smoobu ya lo cubre). Modo sombra = borrador por Telegram, nada se envía; comparar con lo que Alberto contesta (echoes) 1-2 semanas.
+- Spec: `docs/superpowers/specs/2026-11-04-whatsapp-correduria-modo-sombra.md`. Dudas D1-D5 abiertas para Alberto.
+- Pendiente Alberto: pasar el número a WhatsApp Business app (Coexistence) + revisar app review/publicación en developers.facebook.com.
+
 ## (03/11/2026) Correduría · regularización RC fase 3 (respuesta a Occident + cierre manual) — ✅ PR #5472 mergeado
 - Al completar el cliente: borrador a la compañía → Telegram ✏️/🏁 (✅ solo cuando hay buzón elegido de contactos activos del Directorio; anti-replay `compania_version`). 🏁 Resuelta cierra solicitud + tarea (también clave antigua `suplemento:<póliza>` del mismo periodo).
 - 🚨 Occident no tiene dirección de respuesta: avisos desde occidentinforma.com y el canal oficial es el PORTAL de mediadores. Pendiente decidir buzón fijo (posible `recibe_regularizaciones` en Directorio).
