@@ -78,10 +78,10 @@ Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; ti
 original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados revisado/falta_roto/devuelto + bloque en ficha. `rrhh.material_empleado`
 (0028, aplicada). Pendiente fase 2: revisión periódica mensual.
 
-## (04/11/2026) Correduría · agente de WhatsApp en «modo sombra» — spec (sin código)
+## (04/11/2026) Correduría · WhatsApp: respuestas del cliente → CRM — spec (sin código)
 - Inventario: central tiene WhatsApp→CRM solo ENTRANTE (apps/asegura/lib/whatsapp, apagado); responder solo existe en el repo antiguo `asegura` (nunca activado). Meta: Grupo ASegura **ya verificada** (04/11, MCP Whassap).
-- Decisión Alberto: fase 1 SOLO correduría (pisos fuera: escriben poco y Smoobu ya lo cubre). Modo sombra = borrador por Telegram, nada se envía; comparar con lo que Alberto contesta (echoes) 1-2 semanas.
-- Spec: `docs/superpowers/specs/2026-11-04-whatsapp-correduria-modo-sombra.md`. Dudas D1-D5 abiertas para Alberto.
+- Decisión Alberto: SOLO correduría. Enfoque nuevo (sustituye al «modo sombra»): nada se redacta ni envía; Alberto escribe con los `wa.me`; la IA lee la respuesta del cliente casada con el echo y actúa: oportunidad (auto), fecha de cobro/vencimiento (propuesta ✅/❌ por Telegram), póliza recibida → lectura + bots RPA gratis con botón; aviso con `wa.me` de cierre (presupuesto o `/datos`).
+- Spec: `docs/superpowers/specs/2026-11-04-whatsapp-correduria-respuestas-crm.md`. Dudas D1-D4 abiertas para Alberto.
 - Pendiente Alberto: pasar el número a WhatsApp Business app (Coexistence) + revisar app review/publicación en developers.facebook.com.
 
 ## (03/11/2026) Correduría · regularización RC fase 3 (respuesta a Occident + cierre manual) — ✅ PR #5472 mergeado
