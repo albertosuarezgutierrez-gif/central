@@ -8,7 +8,7 @@ Esto es solo análisis: no se ha tocado código. [Seguro] = lo he leído en el c
 - **Un solo `JWT_SECRET`** para cuatro tipos de token, separados por `typ`. [Seguro]
 - **Un único rol:** `usuarios_rrhh` (email UNIQUE global) + `usuario_empresas` N:N. **`rrhh.empresas` no tiene NIF.** [Seguro]
 - **El alta** (`POST /api/operador/empresas`, adaptador `plataforma/lib/adapters/rrhh.ts`) exige la contraseña del responsable. [Seguro]
-- **La marca** se decide por la env `RRHH_EMPRESAS_MARCA_ASEGURA`. [Seguro]
+- **La marca** la decide cada empresa (logo, nombre y `color_primario` en `rrhh.empresas`; `lib/marca-empresa.ts`). La env `RRHH_EMPRESAS_MARCA_ASEGURA` ya no se lee. [Seguro, 04/11/2026]
 - **El portal** tiene cookie, secreto y rol de BD propios, separados **a propósito** de `apps/asegura`. [Seguro]
 - **El catálogo de herramientas** es `MODULOS_PORTAL = flota|rrhh|alquileres`. Las solicitudes caen en `portal_modulo`, sin pantalla de activar. [Seguro]
 - **Representación societaria:** sale de `cliente_relaciones` `Dueño`/`Administración` (`lib/representacion.ts`). Solo cuenta si la empresa es `juridica` explícita. [Seguro]

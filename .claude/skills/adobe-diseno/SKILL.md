@@ -47,8 +47,8 @@ description: >
 
 ## Logos de empresa en iarrhh
 
-El path de almacenamiento es `branding/<empresa_id>/logo-<ts>.<ext>` en el bucket `rrhh-documentos`.
-Tras subir al storage, actualizar `logo_path` con `actualizarBranding()` de `lib/empresa.ts`.
+El path de almacenamiento es `branding/<empresa_id>/logo-<ts>.png` en el bucket `rrhh-documentos`.
+Para un logo nuevo, NO subirlo a mano: usar `guardarLogoEmpresa()` de `lib/logo-empresa.ts` (recorta márgenes, pasa a PNG ≤600 px y deriva `color_primario` si no hay). Solo si se sube a mano, actualizar `logo_path` con `actualizarBranding()` de `lib/empresa.ts`.
 
 ## Notas
 
