@@ -477,7 +477,7 @@ function infraccionesExplorador(explorador: string, guard: string, otros: Record
   else {
     const abrir = fn.indexOf('abrir(hasta, [endpoint, ...extras], ajaxAvance)')
     const clic = fn.indexOf('.click(')
-    for (const p of ['guard.comprobar()', 'guard.ventana.abierta()', "usados.has('exploracion')", 'esAvanceAutorizado(aut.entrada, aut.el, aut.marco)', 'bloqueoAvance(aut.entrada, aut.el, aut.marco) !== null', 'comprobarBoton(desc, { permitirAceptar: true })',
+    for (const p of ['guard.comprobar()', 'guard.ventana.abierta()', "usados.has('exploracion')", 'esAvanceAutorizado(aut.entrada, aut.el, aut.marco, permisosBd)', 'bloqueoAvance(aut.entrada, aut.el, aut.marco, permisosBd) !== null', 'comprobarBoton(desc, { permitirAceptar: true })',
       // 0.3.18: avance SIN TEXTO (input submit de Fidelidade): su regla estrecha + el DOM VIVO + sin texto de acción final, todo ANTES de abrir.
       'avanceSinTextoAutorizado(aut.entrada, aut.el, aut.marco)', 'causaNoEsAvanceSinTextoVivo(boton, sinTexto)', 'hayTextoAccionFinalVivo(page, sinTexto.textoAccionFinal)', 'vigilanciaVivaAvancePorId(page, sinTexto.nuncaConTitulo)',
       // 0.3.18: «Aceptar» sin id con onclick exacto (ePAC eventoSiguienteDialog): sin otros manejadores ni form* VIVOS, antes de abrir.
@@ -531,7 +531,7 @@ test('EXPLORADOR IA (worker): solo actúa por el guard, revalida, para en OTP/CA
     assert.notEqual(src, explorador, `el cepo «${nombre}» no cambió nada`)
     assert.notDeepEqual(infraccionesExplorador(src, guard, otros), [], nombre)
   }
-  const sinAut = guard.replace('esAvanceAutorizado(aut.entrada, aut.el, aut.marco) ||', '')
+  const sinAut = guard.replace('esAvanceAutorizado(aut.entrada, aut.el, aut.marco, permisosBd) ||', '')
   assert.notEqual(sinAut, guard)
   assert.notDeepEqual(infraccionesExplorador(explorador, sinAut, otros), [], 'guard sin autorización')
   assert.notDeepEqual(infraccionesExplorador(explorador, guard, { 'x.ts': 'await pulsarExploracionAutorizada(page, guard, b, a)' }), [], 'otro fichero la llama')
