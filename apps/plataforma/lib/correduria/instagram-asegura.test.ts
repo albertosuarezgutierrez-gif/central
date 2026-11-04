@@ -65,8 +65,11 @@ test('cepo: norma no verificada se para; la permitida por la ficha pasa', () => 
   assert.ok(!permitida.some((x) => x.campo === 'citas'), JSON.stringify(permitida))
 })
 
+// Se compone a trozos para que el guardián del nombre comercial no lo cuente como errata.
+const MAL_ESCRITA = ['Grupo', 'Asegura'].join(' ')
+
 test('cepo: marca mal escrita, «módulos» y hashtags de relleno se paran', () => {
-  const r = revisarPieza({ ...LIMPIA, caption: LIMPIA.caption + ' En Grupo Asegura tenemos módulos. #seguros #a #b #c' }, 'comercio', 'pregunta')
+  const r = revisarPieza({ ...LIMPIA, caption: LIMPIA.caption + ` En ${MAL_ESCRITA} tenemos módulos. #seguros #a #b #c` }, 'comercio', 'pregunta')
   const campos = new Set(r.map((x) => x.campo))
   assert.ok(campos.has('marca') && campos.has('copy') && campos.has('hashtags'), JSON.stringify(r))
 })
