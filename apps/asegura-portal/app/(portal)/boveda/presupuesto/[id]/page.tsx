@@ -7,6 +7,8 @@ import { TEXTO_AJENO, TEXTO_VINCULO_AMBIGUO, textoAccesoTercero, textoCaducidad 
 import { Actual, Garantias, Mediador, Salidas, SinEquivalenteAviso, Tarjeta, fecha } from './Comparativa'
 import { TodasLasOpciones } from './TodasLasOpciones'
 import { AceptarOpcion } from './AceptarOpcion'
+import { ElegirRenovacion } from './ElegirRenovacion'
+import { RENOVACION_NO_DISPONIBLE, TEXTOS_RENOVACION, puedeElegirRenovacion } from '@/lib/renovacion-vista'
 import { EstudioOfertas } from './EstudioOfertas'
 import { EstudioCliente } from './EstudioCliente'
 import { leerEstudioCliente } from '@/lib/estudio-cliente'
@@ -129,8 +131,14 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
   const ramoCat = ramoDeCatalogo(p.ramo)
   const garantiasActual = ramoCat === null ? null : garantiasDeActual(ramoCat, p.actual?.coberturas ?? null)
   const companias = new Set(portada.map((o) => o.compania)).size
-  // Las MISMAS condiciones para elegir en la portada y en «Todas las opciones».
-  const puedeAceptar = !p.caducado && !p.retirado && p.aceptadoAt === null && p.enviadoAt !== null && tercero === null
+  // RENOVACIÓN con alternativas (04/11/2026): se elige SIN firma («Quiero esta opción» / «Me quedo con mi renovación») y
+  // no se ofrece el «llévamelo yo» (ya somos su corredor). La firma con código, solo si cambia de compañía y cuando el
+  // corredor prepare la emisión. `null` = presupuesto de siempre (o sin la migración: fail-closed, se pinta como siempre).
+  // `'no_disponible'` = la lectura del modo falló (sin GRANT, red): fail-closed, ni elegir ni Aceptar/Firmar.
+  const renovNoDisponible = p.renovacion === RENOVACION_NO_DISPONIBLE
+  const renov = p.renovacion === RENOVACION_NO_DISPONIBLE ? null : p.renovacion
+  // Las MISMAS condiciones para elegir en la portada y en «Todas las opciones». Solo si CONSTA que no es una renovación.
+  const puedeAceptar = p.renovacion === null && !p.caducado && !p.retirado && p.aceptadoAt === null && p.enviadoAt !== null && tercero === null
   // «Ver como el cliente» un BORRADOR (18/10/2026): la misma página, con los botones de acción deshabilitados y rotulados.
   const vistaPrevia = esVistaPreviaBorrador(p) && !p.caducado && !p.retirado
   // El ESTUDIO (21/10/2026): el MISMO que el PDF, para los dos orígenes, pedido a asegura con la identidad de la sesión
@@ -143,7 +151,7 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
     <>
       <p className="antetitulo">Tu presupuesto</p>
       <h1 className="ficha-titulo">
-        {p.actual === null ? 'Lo que te ofrecen las compañías' : `Alternativas a tu seguro de ${p.actual.ramo}`}
+        {renov !== null ? TEXTOS_RENOVACION.titulo : p.actual === null ? 'Lo que te ofrecen las compañías' : `Alternativas a tu seguro de ${p.actual.ramo}`}
       </h1>
 
       {/* 🚨 Nunca «válido hasta el X» a secas: sonaría a compromiso de la
@@ -206,13 +214,14 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
           <h2 style={{ marginTop: 0 }}>Lo que me pediste</h2>
           <p style={{ margin: 0 }}>«{p.necesidades}»</p>
           <p className="suave" style={{ margin: '8px 0 0' }}>
-            Es como lo he anotado a partir de lo que me contaste, y es lo que firmas si aceptas una opción.
-            Si algo no es así, escríbeme antes de aceptar.
+            {renov !== null
+              ? 'Es como lo he anotado a partir de lo que me contaste. Si algo no es así, escríbeme antes de elegir.'
+              : 'Es como lo he anotado a partir de lo que me contaste, y es lo que firmas si aceptas una opción. Si algo no es así, escríbeme antes de aceptar.'}
           </p>
         </section>
       )}
 
-      {(!deOfertas || p.actual !== null) && <Actual actual={p.actual} />}
+      {(!deOfertas || p.actual !== null) && <Actual actual={p.actual} titulo={renov !== null ? TEXTOS_RENOVACION.actual : undefined} />}
 
       {p.aceptadoAt !== null && (
         <section className="seccion">
@@ -247,7 +256,7 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
           corredor={p.vistaDeCorredor}
           codigoWhatsapp={p.accesoWhatsapp}
           pdf={puedeDescargarPdf(p)}
-          vistaPrevia={vistaPrevia}
+          vistaPrevia={vistaPrevia && renov === null}
           supuestosEnDatos={mostrarCotizados}
         />
       ) : (
@@ -318,13 +327,34 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
         />
       )}
 
-      <Salidas
-        caducado={p.caducado}
-        hayPolizaActual={p.actual !== null}
-        presupuestoId={p.id}
-        puedeNombrar={!p.retirado && p.aceptadoAt === null && p.emitidoAt === null && p.enviadoAt !== null && tercero === null}
-        corredor={p.vistaDeCorredor}
-      />
+      {renovNoDisponible ? (
+        <section className="seccion">
+          <p className="pendiente">{TEXTOS_RENOVACION.lecturaNoDisponible}</p>
+        </section>
+      ) : renov !== null ? (
+        <ElegirRenovacion
+          presupuestoId={p.id}
+          opciones={p.opciones.map((o) => ({ id: o.id, compania: o.compania, producto: o.producto, primaEur: o.primaEur, franquiciaEur: o.franquiciaEur }))}
+          primaRenovacion={p.actual?.primaAnual ?? null}
+          companiaActual={p.actual?.compania ?? null}
+          eleccion={renov.eleccion}
+          eleccionAt={renov.eleccionAt}
+          puedeElegir={puedeElegirRenovacion({
+            enviadoAt: p.enviadoAt, caducado: p.caducado, retirado: p.retirado, aceptadoAt: p.aceptadoAt, emitidoAt: p.emitidoAt,
+            accesoWhatsapp: p.accesoWhatsapp, tercero: tercero !== null, vistaDeCorredor: p.vistaDeCorredor,
+          })}
+          vistaPrevia={p.vistaDeCorredor}
+          caducado={p.caducado}
+        />
+      ) : (
+        <Salidas
+          caducado={p.caducado}
+          hayPolizaActual={p.actual !== null}
+          presupuestoId={p.id}
+          puedeNombrar={!p.retirado && p.aceptadoAt === null && p.emitidoAt === null && p.enviadoAt !== null && tercero === null}
+          corredor={p.vistaDeCorredor}
+        />
+      )}
       <Mediador
         companiasEnPortada={companias}
         textoCompanias={deOfertas ? textoCompaniasOfertas(new Set(p.opciones.map((o) => o.compania)).size) : undefined}

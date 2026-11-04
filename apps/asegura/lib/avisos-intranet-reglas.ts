@@ -15,6 +15,7 @@ import {
   type CarnetParaAviso,
   type FirmaParaAviso,
   type PolizaNuevaParaAviso,
+  type PresupuestoParaAviso,
   type PolizaModificadaParaAviso,
   type ParteParaAviso,
   type Aviso,
@@ -79,6 +80,8 @@ export type Pendiente = {
   polizasModificadas?: PolizaModificadaParaAviso[]
   /** Partes del portal abiertos o descartados hace poco (`partesParaAviso`). */
   partes?: ParteParaAviso[]
+  /** Renovaciones con alternativas PUBLICADAS en la app y sin elegir (04/11/2026). El correo no dice ni compañía ni importe. */
+  presupuestos?: PresupuestoParaAviso[]
   /**
    * Antelación de los vencimientos de ESTA ficha (`diasEfectivosDeFicha`: max(7, la mayor de sus
    * identidades del portal), 14/10/2026). Ausente = 7, lo de siempre.
@@ -111,6 +114,7 @@ export function avisosNuevos(
     polizasNuevas: p.polizasNuevas ?? [],
     polizasModificadas: p.polizasModificadas ?? [],
     partes: p.partes ?? [],
+    presupuestos: p.presupuestos ?? [],
     diasAntelacion: p.diasAntelacion ?? null,
     hoy,
   })
