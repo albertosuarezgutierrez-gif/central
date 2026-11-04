@@ -30,11 +30,11 @@ Actualizado: 04/11/2026
 | AXA, Liberty, Zurich, Helvetia | Auto y hogar | en catálogo, sin probar | sin bot | Ninguno abierto |
 | Mutua, Santa Lucía, Caser, Plus Ultra | Auto y hogar | sin cobertura conocida | sin cobertura | Ninguno abierto |
 
-**Nota 1:** Avant2 no da precio de auto desde el 15/10; investigación en curso (punto 4a).
+**Nota 1:** Avant2 no está averiado: desde el 15/10 no se le pide (política «bot primero» del 10/10; Avant2 solo con el botón 💶 de Telegram + confirmación de 0,50 €, #4873). Última petición 15/10: Allianz, Mapfre, Reale y Occident con precio; Generali error 2115.
 
 ## 3. Abierto ahora (04/11/2026)
 
-- **a)** Por qué Avant2 no da precio de auto desde el 15/10 (agente investigando).
+- **a)** Resuelto: Avant2 auto parado por diseño (bot primero), no por fallo. Para ver qué compañías tiene activas la cuenta: `GET /api/operador/codeoscopic/companias` (gratis, requiere secreto de operador).
 - **b)** Consulta GET /insurance-vendors (gratis) para saber qué compañías tiene activas la cuenta.
 - **c)** PR #5534: permisos de navegación en BD (0.3.46). Migración 2026-11-04d NO aplicada.
 - **d)** 0.3.47: en pilotaje, abortar y registrar sin cerrar sesión, para descubrir todos los endpoints de una vez.
