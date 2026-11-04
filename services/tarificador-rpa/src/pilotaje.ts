@@ -17,12 +17,16 @@
 //   sale— pero se REGISTRA (`bloqueosRed` del inventario de la pantalla siguiente: método + origen + ruta, sin query ni cuerpo) en
 //   vez de cerrar; más de 5 navegaciones de documento principal bloqueadas en el mismo paso SÍ cierran (anti-bucle), como el resto
 //   de violaciones de red (ventanas de avance/guardado), que siguen cerrando igual.
+//   0.3.49 (Pelayo real 04/11/2026: «Nueva contratación» abre el wizard `apps.pelayo.com/contratacion-autos` en una PESTAÑA NUEVA y el
+//   pilotaje seguía mirando la original): tras cada comando, una página NUEVA del contexto cuyo origen es https de un dominio de la
+//   compañía de la ENTRADA (`DOMINIOS_PORTAL_COMPANIA` vía `origenDeCompania`) se ADOPTA como página activa (el guard es `context.route`:
+//   ya la cubría desde su primera petición); una de otro origen se CIERRA sin adoptar y va a `bloqueosRed` (`[document pestana]`).
 //   Topes DUROS: 60 comandos y 30 min por sesión.
 //
 // 🚨 TARIFICAR ≠ EMITIR: aquí no hay `.click()` ni navegación a URLs libres; ningún comando llega al portal sin el guard.
 // 🔑 Ningún valor de campo sale del proceso: el resultado solo lleva códigos y motivos.
 
-import { chromium, type Browser, type Locator, type Page } from 'playwright'
+import { chromium, type Browser, type BrowserContext, type Locator, type Page } from 'playwright'
 import {
   EmisionBloqueadaError,
   ENTRADAS_EXPLORACION,
@@ -30,7 +34,10 @@ import {
   entradaConTomadorMediador,
   esEntradaExploracion,
   indiceRefs,
+  lineaBloqueoRed,
   loginAsistidoDe,
+  origenDeCompania,
+  urlSinQuery,
   neutralizacionesOnclickDe,
   pareceDatoPersonalInventario,
   nombresCredencial,
@@ -64,6 +71,7 @@ import {
   cerrarModalInformativo,
   activarRegistroBloqueosPilotaje,
   vaciarBloqueosPilotaje,
+  MAX_BLOQUEOS_RED_PILOTAJE,
   pulsarAccesoNseMapfre,
   pulsarEnlaceEntradaAutorizado,
   pulsarMenuOfertaNseMapfre,
@@ -298,8 +306,75 @@ export async function ejecutarComando(page: Page, captura: InventarioExploracion
   }
 }
 
+/** Espera a que una pestaña recién abierta tenga URL real (un `window.open()` empieza en about:blank) y cargue. Nunca lanza. */
+async function esperarPestanaNueva(p: Page): Promise<void> {
+  await p.waitForLoadState('domcontentloaded', { timeout: TOPE_PASO_MS }).catch(() => undefined)
+  if (!/^https?:/.test(p.url())) await p.waitForURL((u) => u.protocol === 'https:' || u.protocol === 'http:', { timeout: 10_000, waitUntil: 'domcontentloaded' }).catch(() => undefined)
+  await p.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined)
+}
+
+/** ¿La URL es https de un dominio de la compañía (host exacto o subdominio; sin puerto ni credenciales)? Fail-closed. PURA. */
+export function urlDePortalCompania(url: string, compania: string): boolean {
+  let u: URL
+  try {
+    u = new URL(url)
+  } catch {
+    return false
+  }
+  if (u.protocol !== 'https:' || u.port !== '' || u.username !== '' || u.password !== '') return false
+  return origenDeCompania(u.origin, compania)
+}
+
+export type PestanasNuevas = {
+  /** La página adoptada (la ÚLTIMA nueva del portal de la compañía), o `null`. */
+  adoptada: Page | null
+  /** Línea para `resultado.detalle` («pestaña nueva adoptada: origen+ruta», sin query). */
+  detalle: string[]
+  /** Líneas `bloqueosRed` de las pestañas ajenas cerradas, y las que no tienen forma de línea (no http). */
+  bloqueos: string[]
+  omitidas: number
+}
+
+/**
+ * 0.3.49: las páginas del contexto que no estaban `antes` del comando. La última abierta cuyo origen es del portal de la compañía se
+ * ADOPTA (el bucle la inventaría y publica); las de otro origen se CIERRAN y se registran. Las nuevas de la compañía que no se adoptan
+ * se dejan. Sin query ni fragmento en nada de lo que sale.
+ */
+export async function revisarPestanasNuevas(context: BrowserContext, antes: ReadonlySet<Page>, compania: string, redactar: (t: string) => string = (t) => t): Promise<PestanasNuevas> {
+  const r: PestanasNuevas = { adoptada: null, detalle: [], bloqueos: [], omitidas: 0 }
+  const nuevas = context.pages().filter((p) => !antes.has(p) && !p.isClosed())
+  for (const p of nuevas) await esperarPestanaNueva(p)
+  for (const p of nuevas) {
+    if (p.isClosed()) continue
+    const url = p.url()
+    if (urlDePortalCompania(url, compania)) {
+      r.adoptada = p
+      continue
+    }
+    const linea = lineaBloqueoRed('GET', url, 'document', 'pestana')
+    if (linea) r.bloqueos.push(linea)
+    else r.omitidas++
+    await p.close({ runBeforeUnload: false }).catch(() => undefined)
+  }
+  if (r.adoptada) {
+    r.adoptada.setDefaultTimeout(TOPE_PASO_MS)
+    r.adoptada.setDefaultNavigationTimeout(TOPE_PASO_MS)
+    r.detalle.push(textoDiagnostico(`pestaña nueva adoptada: ${urlSinQuery(r.adoptada.url())}`, redactar))
+  }
+  return r
+}
+
 /** El bucle del modo pilotado sobre una página ya dentro del portal. Nunca lanza: devuelve cómo terminó. */
-export async function buclePilotaje(page: Page, k: ContextoPilotaje): Promise<FinPilotaje> {
+export async function buclePilotaje(paginaInicial: Page, k: ContextoPilotaje): Promise<FinPilotaje> {
+  /** 0.3.49: la página ACTIVA (cambia si un comando abre una pestaña nueva del portal de la compañía). */
+  let page = paginaInicial
+  const contexto = paginaInicial.context()
+  const companiaEntrada = esEntradaExploracion(k.entrada) && ENTRADAS_EXPLORACION[k.entrada].compania === k.compania ? k.compania : null
+  /** Pestañas ajenas cerradas en el comando anterior: van al `bloqueosRed` de la pantalla siguiente. */
+  let pestanasBloq: { lineas: string[]; omitidas: number } = { lineas: [], omitidas: 0 }
+  // Ningún diálogo de una pestaña nueva se acepta (como en `abrirSesionEntrada`), desde su primer instante.
+  const alAbrir = (p: Page) => { p.on('dialog', (d) => { d.dismiss().catch(() => {}) }) }
+  contexto.on('page', alAbrir)
   const ahora = k.ahora ?? Date.now
   const dormir = k.dormir ?? dormirReal
   // Los topes del test solo BAJAN los de la sesión.
@@ -331,7 +406,11 @@ export async function buclePilotaje(page: Page, k: ContextoPilotaje): Promise<Fi
       if (!captura) return fin('error_portal', { error: { tipo: 'portal', mensaje: 'no se pudo leer el inventario de la pantalla' } })
       // 0.3.47: lo bloqueado desde la pantalla anterior (y su comando) va en ESTE inventario; vaciar empieza paso (tope de navegaciones).
       // Una línea que la redacción del worker cambiaría no se publica a medias: se cuenta como omitida (asegura redacta otra vez).
-      const bloq = vaciarBloqueosPilotaje(k.guard)
+      const bloq0 = vaciarBloqueosPilotaje(k.guard)
+      // 0.3.49: + las pestañas ajenas cerradas (deduplicadas, mismo tope por paso).
+      const todas = [...new Set([...bloq0.lineas, ...pestanasBloq.lineas])]
+      const bloq = { lineas: todas.slice(0, MAX_BLOQUEOS_RED_PILOTAJE), omitidas: bloq0.omitidas + pestanasBloq.omitidas + Math.max(0, todas.length - MAX_BLOQUEOS_RED_PILOTAJE) }
+      pestanasBloq = { lineas: [], omitidas: 0 }
       const lineas = bloq.lineas.filter((x) => red(x) === x && !pareceDatoPersonalInventario(x))
       const omitidas = bloq.omitidas + bloq.lineas.length - lineas.length
       const inv: InventarioDom = lineas.length > 0 || omitidas > 0
@@ -374,8 +453,21 @@ export async function buclePilotaje(page: Page, k: ContextoPilotaje): Promise<Fi
         resultado = { estado: 'rechazado', motivo: 'tope_comandos' }
         return fin('tope_comandos')
       }
+      const antes = new Set(contexto.pages())
       const ej = await ejecutarComando(page, captura, crudo, k)
       resultado = ej.r
+      if (!ej.fin) {
+        const pn = await revisarPestanasNuevas(contexto, antes, companiaEntrada ?? '', red)
+        // El guard es de CONTEXTO: lo que la pestaña nueva haya pedido ya pasó por él; una violación cierra igual que en la original.
+        k.guard.comprobar()
+        pestanasBloq = { lineas: pn.bloqueos, omitidas: pn.omitidas }
+        if (pn.adoptada) {
+          page = pn.adoptada
+          resultado = { ...ej.r, detalle: [...pn.detalle, ...(ej.r.detalle ?? [])].slice(0, 10) }
+          k.log('pilotaje_pestana_adoptada', { n })
+        }
+        if (pn.bloqueos.length > 0 || pn.omitidas > 0) k.log('pilotaje_pestana_cerrada', { n, cerradas: pn.bloqueos.length + pn.omitidas })
+      }
       k.log('pilotaje_comando', { n, estado: ej.r.estado, motivo: ej.r.motivo })
       if (ej.fin) return fin('fin')
     }
@@ -385,6 +477,7 @@ export async function buclePilotaje(page: Page, k: ContextoPilotaje): Promise<Fi
     const c = clasificar(e)
     return fin(c.tipo === 'captcha' ? 'parada' : 'error_portal', { error: { tipo: c.tipo, mensaje: textoDiagnostico(c.mensaje, k.redactar) } })
   } finally {
+    contexto.off('page', alAbrir)
     await captura?.liberar()
   }
 }

@@ -90,4 +90,4 @@ test('0.3.44 · privacidad: el mensaje del bloqueo de URL lleva origen + ruta, S
   }
 })
 
-test('versión del explorador 0.3.48', () => assert.equal(EXPLORADOR_VERSION, '0.3.48'))
+test('versión del explorador 0.3.49', () => assert.equal(EXPLORADOR_VERSION, '0.3.49'))
