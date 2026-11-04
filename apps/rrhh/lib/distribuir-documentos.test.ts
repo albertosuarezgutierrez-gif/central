@@ -47,8 +47,8 @@ beforeEach(() => {
   vi.clearAllMocks(); inserts = []; previos = []
   iaChat.mockImplementation(async (m: { role: string; content: string }[]) => {
     const t = m[m.length - 1].content
-    if (/Ana Perez Gil/i.test(t)) return 'Ana Pérez Gil (DNI 12345678Z)'
-    if (/Luis Mora Sanz/i.test(t)) return 'Luis Mora Sanz (DNI 87654321X)'
+    if (/Ana Perez Gil/i.test(t)) return 'Ana Pérez Gil'
+    if (/Luis Mora Sanz/i.test(t)) return 'Luis Mora Sanz'
     return 'NINGUNO'
   })
   queryRaw.mockImplementation(async (q: Sql) => {
@@ -70,12 +70,30 @@ describe('candidatos: solo la empresa de la sesión', () => {
     await expect(distribuirDocumentosPdf(OTRA, 'u', await pdf(PAGINAS), entrada)).rejects.toThrow(/No hay empleados/)
     expect(subirObjeto).not.toHaveBeenCalled()
   })
-  it('a la IA solo se le pasan nombre y DNI de los empleados de esa empresa', async () => {
+  it('a la IA solo se le pasan los nombres (NUNCA el DNI) de los empleados de esa empresa', async () => {
     await distribuirDocumentosPdf(EMP, 'u', await pdf(PAGINAS), entrada)
+    for (const call of iaChat.mock.calls) {
+      const prompt = (call[0] as { content: string }[])[1].content
+      const lista = prompt.split('Texto de la página:')[0] // la lista de candidatos (el texto de la página es el documento)
+      expect(lista).toContain('1. Ana Pérez Gil\n2. Luis Mora Sanz')
+      expect(lista).not.toMatch(/DNI|12345678Z|87654321X/i)
+    }
     const prompt = (iaChat.mock.calls[0][0] as { content: string }[])[1].content
-    expect(prompt).toContain('Ana Pérez Gil (DNI 12345678Z)')
-    expect(prompt).toContain('Luis Mora Sanz (DNI 87654321X)')
     expect(prompt).not.toMatch(/email|iban|salario/i)
+  })
+})
+
+describe('homónimos exactos', () => {
+  it('dos empleados con el mismo nombre completo → la IA no puede desambiguar → no identificado', async () => {
+    const ANA2 = { ...ANA, id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', dni: '11111111H' }
+    queryRaw.mockImplementation(async (q: Sql) => {
+      if (/FROM rrhh\.empleados/.test(q.sql)) return [ANA, ANA2]
+      if (/FROM rrhh\.documentos/.test(q.sql)) return []
+      throw new Error('SQL inesperada ' + q.sql)
+    })
+    const r = await distribuirDocumentosPdf(EMP, 'u', await pdf([PAGINAS[0]]), entrada)
+    expect(r.documentos.map(d => d.estado)).toEqual(['no_identificado'])
+    expect(subirObjeto).not.toHaveBeenCalled()
   })
 })
 
@@ -97,7 +115,7 @@ describe('distribuirDocumentosPdf (PDF de 4 páginas)', () => {
   })
 
   it('la IA no puede asignar a quien la página no menciona (alucinación → no identificado)', async () => {
-    iaChat.mockResolvedValue('Luis Mora Sanz (DNI 87654321X)')
+    iaChat.mockResolvedValue('Luis Mora Sanz')
     const r = await distribuirDocumentosPdf(EMP, 'u', await pdf(['Hoja de Ana Perez Gil sin mas datos aqui', 'Otra hoja cualquiera sin nombres de nadie']), entrada)
     expect(r.documentos.map(d => d.estado)).toEqual(['no_identificado', 'no_identificado'])
     expect(subirObjeto).not.toHaveBeenCalled()

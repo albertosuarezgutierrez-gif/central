@@ -5,7 +5,8 @@
 //
 // Reglas de seguridad:
 //  · candidatos SOLO de la empresa de la sesión (rrhh_app tiene BYPASSRLS: el WHERE es el aislamiento);
-//  · a la IA solo se le dan nombre y DNI de esos empleados;
+//  · a la IA solo se le dan «Nombre Apellidos» de esos empleados (minimización: NUNCA el DNI; el DNI solo se usa
+//    en servidor para la verificación local);
 //  · lo que dice la IA se COMPRUEBA en código (el texto de la página debe contener el DNI o el nombre
 //    completo); páginas sin identificar con seguridad → «no identificado», NO se asignan;
 //  · páginas consecutivas del mismo empleado = un documento; las no identificadas nunca se funden;
@@ -67,12 +68,13 @@ export async function candidatosEmpresa(empresaId: string): Promise<Candidato[]>
     ORDER BY nombre, apellidos`)
 }
 
-const etiquetaIA = (e: Candidato) => `${[e.nombre, e.apellidos].filter(Boolean).join(' ')}${e.dni ? ` (DNI ${e.dni})` : ''}`
 const nombreDe = (e: Candidato) => [e.nombre, e.apellidos].filter(Boolean).join(' ')
+/** Lo único que ve la IA de cada empleado: su nombre completo (sin DNI). */
+const etiquetaIA = nombreDe
 
 /** Identifica el empleado de cada página (null = no identificado con seguridad). */
 export async function identificarPaginas(textos: string[], candidatos: Candidato[], documento: string): Promise<(Candidato | null)[]> {
-  // Etiquetas repetidas (homónimos sin DNI) → ambiguas: no se pueden asignar.
+  // Etiquetas repetidas (homónimos exactos; la IA no puede distinguirlos al no ver el DNI) → ambiguas: no se pueden asignar.
   const porEtiqueta = new Map<string, Candidato | null>()
   for (const c of candidatos) {
     const k = etiquetaIA(c)
