@@ -74,8 +74,8 @@ por regla pura). Reglas puras en `apps/asegura/lib/whatsapp/aprendizaje-reglas.t
   `POST /api/operador/whatsapp/propuesta` `{decision:'modificar', correccion}` → `leerCorreccion` (fecha dd/mm[/aaaa] o
   aaaa-mm-dd y/o observación; inválida → 422 sin tocar nada) → se aplica la versión corregida (payload con la fecha nueva,
   observación en la nota y la tarea). Solo actor `humano:`.
-- **Registro** `seguros.whatsapp_aprendizaje` (SQL `apps/asegura/prisma/sql/2026-11-04b_whatsapp_aprendizaje.sql`, NO
-  aplicado; RLS sin policies, grants solo `prisma_seguros`, sin DELETE): una fila por propuesta con tipo, origen del saliente,
+- **Registro** `seguros.whatsapp_aprendizaje` (SQL `apps/asegura/prisma/sql/2026-11-04b_whatsapp_aprendizaje.sql`, aplicado
+  el 04/11/2026; RLS sin policies, grants solo `prisma_seguros`, sin DELETE): una fila por propuesta con tipo, origen del saliente,
   extracto REDACTADO (`redactarPii` + nombre, ≤300) del último mensaje del cliente, propuesta original, versión final,
   observación redactada y resolución (`aplicada`/`descartada`/`modificada`, `autonoma`, `deshecha_at`). El extracto se anula
   con la conversación (retención, purga «personal», supresión). Sin la tabla: no-op, `casos_previos: null`, nunca autónomo.

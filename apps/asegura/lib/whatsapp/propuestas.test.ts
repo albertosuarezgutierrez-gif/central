@@ -127,6 +127,23 @@ test('CEPO: aplicar «pagado» jamás cierra la devolución (sin resolverDevoluc
   assert.ok(!/recibo_devolucion/.test(fuente), 'propuestas.ts no toca recibo_devolucion')
 })
 
+test('crearPropuesta: si el insert no entra, distingue «ya pendiente» (misma clave de uq_wa_propuesta_pendiente) de «fuera de la correduría»', () => {
+  const fuente = sinComentarios(readFileSync(new URL('./propuestas.ts', import.meta.url), 'utf8'))
+  const bloque = fuente.slice(fuente.indexOf('export async function crearPropuesta'), fuente.indexOf('type ResumenPropuesta'))
+  assert.ok(bloque.length > 200 && bloque.includes('insert into whatsapp_propuestas'), 'el bloque acotado es crearPropuesta')
+  assert.ok(bloque.includes("where exists (select 1 from clientes"), 'el insert sigue acotado por la correduría del cliente')
+  assert.ok(/estado = 'pendiente'/.test(bloque) && /coalesce\(recibo_id, oportunidad_id\)/.test(bloque), 'mira la pendiente con la misma clave del índice')
+  assert.ok(bloque.includes("motivo: pendiente ? 'ya_pendiente' : 'fuera_de_correduria'"), 'el motivo sale de esa comprobación')
+  assert.ok(!/if \(!fila\) return \{ ok: false, motivo: 'ya_pendiente' \}/.test(bloque), 'ya no se devuelve ya_pendiente a ciegas')
+})
+
+test('aplicarSiAutonoma: el catch no loguea los errores de migración ausente (sigue devolviendo false)', () => {
+  const fuente = sinComentarios(readFileSync(new URL('./propuestas.ts', import.meta.url), 'utf8'))
+  const bloque = fuente.slice(fuente.indexOf('export async function aplicarSiAutonoma'), fuente.indexOf('export type ResultadoDeshacer'))
+  assert.ok(/if \(!faltaMigracion\(e\)\) console\.error\('\[whatsapp-ia\] modo autónomo:'/.test(bloque), 'el log del modo autónomo se filtra con faltaMigracion')
+  assert.ok(bloque.includes('return false'), 'el catch sigue devolviendo false')
+})
+
 test('CEPO: ni el analizador ni el ejecutor ESCRIBEN recibos (las acciones de cobro solo crean propuesta)', () => {
   for (const f of ['./ejecutor.ts', './analizar.ts']) {
     const fuente = sinComentarios(readFileSync(new URL(f, import.meta.url), 'utf8'))

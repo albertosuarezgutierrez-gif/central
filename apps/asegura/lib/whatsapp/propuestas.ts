@@ -34,7 +34,9 @@ export type NuevaPropuesta = {
   fecha: string | null
 }
 
-export type PropuestaCreada = { ok: true; id: string } | { ok: false; motivo: 'ya_pendiente' | 'sin_migracion' | 'sin_ancla' | 'invalida' }
+export type PropuestaCreada =
+  | { ok: true; id: string }
+  | { ok: false; motivo: 'ya_pendiente' | 'fuera_de_correduria' | 'sin_migracion' | 'sin_ancla' | 'invalida' }
 
 /** Contexto SIN PII para el registro de aprendizaje (extracto ya redactado). */
 export type ContextoAprendizaje = { origenSaliente: string | null; extracto: string | null }
@@ -51,7 +53,17 @@ export async function crearPropuesta(correduriaId: string, p: NuevaPropuesta, co
        where exists (select 1 from clientes where id = ${p.clienteId}::uuid and correduria_id = ${correduriaId}::uuid)
       on conflict do nothing
       returning id::text as id`)
-    if (!fila) return { ok: false, motivo: 'ya_pendiente' }
+    if (!fila) {
+      // El insert no entra por dos razones distintas: ya hay una pendiente del mismo (tipo, ancla) — la clave de
+      // `uq_wa_propuesta_pendiente` — o el cliente/ancla no es de esta correduría (el `where exists`). Se distingue.
+      const [pendiente] = await prismaAsegura().$queryRaw<{ id: string }[]>(Prisma.sql`
+        select id::text as id from whatsapp_propuestas
+         where correduria_id = ${correduriaId}::uuid and tipo = ${p.tipo}
+           and coalesce(recibo_id, oportunidad_id) = coalesce(${p.reciboId}::uuid, ${p.oportunidadId}::uuid)
+           and estado = 'pendiente'
+         limit 1`)
+      return { ok: false, motivo: pendiente ? 'ya_pendiente' : 'fuera_de_correduria' }
+    }
     if (contexto) {
       await registrarContexto(correduriaId, {
         propuestaId: fila.id, conversacionId: p.conversacionId, tipo: p.tipo, origenSaliente: contexto.origenSaliente, extracto: contexto.extracto,
@@ -262,7 +274,8 @@ export async function aplicarSiAutonoma(correduriaId: string, id: string, ahora:
     const r = await resolverPropuesta(correduriaId, id, 'aplicar', ACTOR_AUTONOMO, ahora, { autonoma: true })
     return r.ok
   } catch (e) {
-    console.error('[whatsapp-ia] modo autónomo:', e instanceof Error ? e.name : 'error')
+    // Sin la migración no es un fallo del modo autónomo: queda pendiente, como siempre, y no se ensucia el log.
+    if (!faltaMigracion(e)) console.error('[whatsapp-ia] modo autónomo:', e instanceof Error ? e.name : 'error')
     return false
   }
 }
