@@ -1161,6 +1161,9 @@ importers:
       '@central/module-taller':
         specifier: workspace:*
         version: link:../../packages/module-taller
+      '@prisma/client':
+        specifier: ^5.22.0
+        version: 5.22.0(prisma@5.22.0)
       next:
         specifier: ^15.5.28
         version: 15.5.28(@babel/core@7.29.7)(@types/node@22.19.20)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -1189,6 +1192,9 @@ importers:
       eslint-config-next:
         specifier: ^16.2.6
         version: 16.2.7(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+      prisma:
+        specifier: ^5.22.0
+        version: 5.22.0
       typescript:
         specifier: ^5
         version: 5.9.3

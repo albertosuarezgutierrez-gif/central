@@ -2,7 +2,7 @@
 
 > Gestión de taller **regalada** a talleres (recepción, presupuesto, orden de trabajo, avisos). Piloto:
 > **Talleres de Automoción G2** (Camas, Sevilla). Spec única: `docs/superpowers/specs/2026-11-04-taller-global2.md`.
-> Compone el módulo puro `@central/module-taller` (sin BD). Schema `taller` y rol de BD propio: pendientes (F1).
+> Compone el módulo puro `@central/module-taller` (sin BD). Schema `taller` (SQL en `prisma/sql/`) y rol `prisma_taller`.
 
 ## Reglas
 - **Multi-taller desde el inicio:** toda lectura/escritura lleva `taller_id`; la clave de negocio es la matrícula.
