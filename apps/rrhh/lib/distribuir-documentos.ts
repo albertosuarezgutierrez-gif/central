@@ -20,7 +20,7 @@ import { extraerTextoPorPagina, identificarEmpleado, extraerPaginas } from '@/li
 import { registrarCopia, estadoFirmaDe } from '@/lib/envio-documentos'
 import { carpetaAdmiteFirma } from '@/lib/envio-staging'
 import type { ResultadoAviso } from '@/lib/avisos'
-import { agruparPaginas, idEnvioDeterminista, nombresDocumentos, paginaMencionaEmpleado } from '@/lib/distribuir-documentos-reglas'
+import { agruparPaginas, idEnvioDeterminista, nombresDocumentos, empleadoVerificadoDePagina } from '@/lib/distribuir-documentos-reglas'
 
 /** Mismo tope que la subida normal del expediente (20 MB); en la práctica manda el límite de cuerpo de Vercel (~4,5 MB). */
 export const MAX_PDF_BYTES = 20 * 1024 * 1024
@@ -88,8 +88,9 @@ export async function identificarPaginas(textos: string[], candidatos: Candidato
       try {
         const et = await identificarEmpleado(texto, etiquetas, { documento, estricto: true })
         const c = et ? porEtiqueta.get(et) ?? null : null
-        // Verificación en código: la IA no puede asignar a alguien que la página no menciona.
-        out[i] = c && paginaMencionaEmpleado(texto, c) ? c : null
+        // Verificación en código: la IA no puede asignar a alguien que la página no menciona, ni elegir
+        // entre varios empleados mencionados en la misma página.
+        out[i] = empleadoVerificadoDePagina(texto, c, candidatos)
       } catch (e) {
         console.error('distribuir-documentos: IA página', i + 1, e instanceof Error ? e.message : e)
       }

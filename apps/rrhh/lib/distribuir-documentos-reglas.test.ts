@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { agruparPaginas, idEnvioDeterminista, nombresDocumentos, paginaMencionaEmpleado } from '@/lib/distribuir-documentos-reglas'
+import { agruparPaginas, idEnvioDeterminista, nombresDocumentos, paginaMencionaEmpleado, empleadoVerificadoDePagina } from '@/lib/distribuir-documentos-reglas'
 
 describe('agruparPaginas', () => {
   it('A,A,B,?,B → [A:1-2],[B:3],[?:4],[B:5] (consecutivas del mismo empleado = 1 documento)', () => {
@@ -54,4 +54,24 @@ describe('paginaMencionaEmpleado (verificación en código de lo que dice la IA)
   it('por nombre completo sin tildes', () => expect(paginaMencionaEmpleado('Doña ANA PEREZ GIL', ana)).toBe(true))
   it('solo el nombre de pila NO basta', () => expect(paginaMencionaEmpleado('Ana López', ana)).toBe(false))
   it('sin DNI en ficha ni nombre en texto → false', () => expect(paginaMencionaEmpleado('Otra persona', { nombre: 'Ana', apellidos: null, dni: null })).toBe(false))
+})
+
+describe('empleadoVerificadoDePagina (una página = UN empleado mencionado o nadie)', () => {
+  const ana = { id: 'A', nombre: 'Ana', apellidos: 'Pérez Gil', dni: '12345678Z' }
+  const luis = { id: 'L', nombre: 'Luis', apellidos: 'Mora', dni: 'X1234567L' }
+  const juan = { id: 'J', nombre: 'Juan', apellidos: 'García', dni: null }
+  const juanL = { id: 'JL', nombre: 'Juan', apellidos: 'García López', dni: null }
+  const todos = [ana, luis, juan, juanL]
+  it('solo el elegido mencionado → el elegido', () => expect(empleadoVerificadoDePagina('Contrato de Ana Pérez Gil', ana, todos)).toBe(ana))
+  it('listado con dos empleados → null aunque la IA elija uno', () =>
+    expect(empleadoVerificadoDePagina('Entrega EPIs: Ana Pérez Gil, Luis Mora', ana, todos)).toBeNull())
+  it('nombre contenido en otro («Juan García» ⊂ «Juan García López») → null', () =>
+    expect(empleadoVerificadoDePagina('Trabajador: Juan García López', juan, todos)).toBeNull())
+  it('homónimos sin DNI → null', () => {
+    const ana2 = { ...ana, id: 'A2', dni: null }
+    expect(empleadoVerificadoDePagina('Ana Pérez Gil', ana, [ana, ana2])).toBeNull()
+  })
+  it('IA sin elección → null', () => expect(empleadoVerificadoDePagina('Ana Pérez Gil', null, todos)).toBeNull())
+  it('DNI mal tecleado en la ficha no verifica nada', () =>
+    expect(paginaMencionaEmpleado('pagina 1 de 3', { nombre: 'Eva', apellidos: null, dni: '1' })).toBe(false))
 })

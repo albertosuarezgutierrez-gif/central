@@ -2,7 +2,7 @@
 // consecutivas del mismo empleado, ids de envío deterministas (re-subida idempotente), nombres
 // de los documentos resultantes y verificación en código de lo que la IA dice de cada página.
 import { createHash } from 'node:crypto'
-import { normalizarNif, normalizarTexto } from '@/lib/asistente-subida'
+import { normalizarNif, normalizarTexto, nifValido } from '@/lib/asistente-subida'
 
 export type GrupoPaginas = {
   /** null = página sin identificar con seguridad: NO se asigna a nadie. */
@@ -57,11 +57,25 @@ export function nombresDocumentos(titulo: string, grupos: GrupoPaginas[]): strin
  * no basta. Si no se puede comprobar → false → «no identificado» (nunca se adivina).
  */
 export function paginaMencionaEmpleado(texto: string, e: { nombre: string; apellidos: string | null; dni: string | null }): boolean {
-  const dni = normalizarNif(e.dni)
+  // Solo un DNI/NIE VÁLIDO cuenta: un DNI mal tecleado («1», «A») estaría contenido en cualquier página.
+  const dni = nifValido(e.dni) ? normalizarNif(e.dni) : null
   if (dni && texto.toUpperCase().replace(/[\s.\-]/g, '').includes(dni)) return true
   const t = ` ${normalizarTexto(texto)} `
   const nom = normalizarTexto(e.nombre)
   const ape = normalizarTexto(e.apellidos ?? '')
   const variantes = [normalizarTexto(`${nom} ${ape}`), ape ? normalizarTexto(`${ape} ${nom}`) : ''].filter(v => v.split(' ').length >= 2)
   return variantes.some(v => t.includes(` ${v} `))
+}
+
+/**
+ * Lo que dice la IA solo vale si la página menciona al ELEGIDO y a NINGÚN otro candidato: una página que nombra
+ * a dos empleados (un listado, un homónimo, «Juan García» dentro de «Juan García López») es ambigua → null.
+ * Coste aceptado: si el representante de la empresa está en la plantilla y aparece en cada página, esas páginas
+ * quedan sin asignar (se reparten a mano), nunca a la persona equivocada.
+ */
+export function empleadoVerificadoDePagina<C extends { id: string; nombre: string; apellidos: string | null; dni: string | null }>(
+  texto: string, elegido: C | null, candidatos: C[],
+): C | null {
+  if (!elegido || !paginaMencionaEmpleado(texto, elegido)) return null
+  return candidatos.some(c => c.id !== elegido.id && paginaMencionaEmpleado(texto, c)) ? null : elegido
 }
