@@ -12,8 +12,9 @@
 
 import { z } from 'zod'
 import { RAMOS_OPORTUNIDAD, redactarPii } from '@central/module-seguros'
+import { fechaIsoReal } from './propuestas-reglas.ts'
 
-const fechaIso = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+const fechaIso = z.string().refine(fechaIsoReal, 'fecha no válida')
 const nulo = <T extends z.ZodTypeAny>(t: T) => t.nullable().default(null)
 const ramo = z.enum(RAMOS_OPORTUNIDAD)
 
@@ -22,8 +23,15 @@ export const ESTADOS_LEAD_IA = ['contactado', 'cualificado', 'propuesta'] as con
 export const ESTADOS_OPORTUNIDAD_IA = ['competencia', 'en_negociacion', 'pendiente_cliente'] as const
 export const TIPOS_TAREA_IA = ['llamada', 'tarea', 'email', 'whatsapp'] as const
 
-/** La LISTA BLANCA de acciones. Cualquier otro `tipo` se rechaza y queda anotado como rechazado. */
-export const TIPOS_ACCION = ['updateLead', 'createOpportunity', 'updateOpportunity', 'createTask', 'updateContact', 'addConversationNote'] as const
+/**
+ * La LISTA BLANCA de acciones. Cualquier otro `tipo` se rechaza y queda anotado como rechazado.
+ * Las tres `proponer*` (04/11/2026, D1) NUNCA escriben: dejan una propuesta que Alberto aplica con su botón de Telegram.
+ * No llevan ids: el recibo/oportunidad lo pone el SERVIDOR (saliente vinculado o único candidato), nunca la IA.
+ */
+export const TIPOS_ACCION = [
+  'updateLead', 'createOpportunity', 'updateOpportunity', 'createTask', 'updateContact', 'addConversationNote',
+  'proponerFechaCobro', 'proponerPagado', 'proponerVencimiento',
+] as const
 export type TipoAccion = (typeof TIPOS_ACCION)[number]
 
 const valorDato = z.union([z.string().max(300), z.number(), z.boolean(), z.null()])
@@ -59,6 +67,9 @@ export const zAccion = z.discriminatedUnion('tipo', [
     .strict(),
   z.object({ tipo: z.literal('updateContact'), nombre: z.string().min(2).max(120) }).strict(),
   z.object({ tipo: z.literal('addConversationNote'), texto: z.string().min(3).max(1000) }).strict(),
+  z.object({ tipo: z.literal('proponerFechaCobro'), fecha: fechaIso }).strict(),
+  z.object({ tipo: z.literal('proponerPagado') }).strict(),
+  z.object({ tipo: z.literal('proponerVencimiento'), ramo, fecha: fechaIso }).strict(),
 ])
 export type Accion = z.infer<typeof zAccion>
 
@@ -137,6 +148,13 @@ export type ContextoParaIA = {
   lead_estado: string | null
   ramos_contratados: string[] | null
   oportunidades_abiertas: { ramo: string; estado: string; vencimiento: string | null }[]
+  /**
+   * Lo último que el corredor le MANDÓ por WhatsApp (saliente vinculado, ≤14 días antes de la respuesta): de qué iba,
+   * sin ids ni datos personales. `null` = no hay vínculo (o no se pudo leer): se interpreta sin él, como antes.
+   */
+  ultimo_saliente?: { origen: string; ramo: string | null; fecha: string | null; importe: number | null } | null
+  /** Recibos devueltos/pendientes de pólizas EN VIGOR (D4: un lead o ex-cliente no lleva ninguno). `null` = no se sabe. */
+  recibos_pendientes?: { ramo: string; estado: string; efecto: string | null; importe: number | null }[] | null
 }
 
 export const SISTEMA = `Eres el analista comercial de una correduría de seguros española. Lees una conversación de WhatsApp entre la correduría (Corredor) y una persona (Contacto) y devuelves SOLO un objeto JSON, sin texto alrededor.
@@ -155,7 +173,12 @@ Reglas:
   {"tipo":"createTask","tipo_tarea":"llamada|tarea|email|whatsapp","descripcion":"…","fecha_limite":null,"prioridad":"alta|media|baja"}
   {"tipo":"updateContact","nombre":"…"}  (solo si la persona dice cómo se llama y no está tapado)
   {"tipo":"addConversationNote","texto":"…"}
-- Nunca uses ids. Nunca marques una venta como ganada ni perdida.
+  {"tipo":"proponerFechaCobro","fecha":"aaaa-mm-dd"}  (el contacto dice CUÁNDO pagará un recibo devuelto/pendiente)
+  {"tipo":"proponerPagado"}  (el contacto dice que YA ha pagado un recibo)
+  {"tipo":"proponerVencimiento","ramo":"…","fecha":"aaaa-mm-dd"}  (el contacto da la fecha de vencimiento de su seguro)
+  Las tres «proponer…» no cambian nada: las revisa el corredor. Úsalas solo si el contacto lo dice claramente; para las de recibo, solo si hay recibos_pendientes o ultimo_saliente trata de un recibo.
+- ultimo_saliente es lo que el corredor le escribió antes (p. ej. un recibo devuelto): interpreta la respuesta en ese contexto.
+- Nunca uses ids. Nunca marques una venta como ganada ni perdida. Nunca des un recibo por cobrado.
 
 Formato exacto:
 {"es_comercial":true,"intencion":"nuevo_seguro|renovacion|mejorar_precio|siniestro|consulta_poliza|baja|queja|pago_recibo|otro|null","producto":null,"urgencia":"alta|media|baja|null","interes":"alto|medio|bajo|null","presupuesto":null,"fecha_renovacion":null,"compania_actual":null,"objeciones":null,"riesgo_abandono":"alto|medio|bajo|null","resumen":"…","datos_extraidos":null,"acciones":[]}`

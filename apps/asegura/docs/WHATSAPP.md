@@ -35,6 +35,18 @@ Estado (05/10/2026): código listo, **apagado**, sin credenciales ni SQL. Sin c�
    (se guarda en crudo SIN importar: no hay importador). `smb_app_state_sync` → solo acuse (los contactos NO se
    importan: la agenda manda desde Google Contacts).
 
+## Respuestas del cliente → CRM (spec `docs/superpowers/specs/2026-11-04-whatsapp-correduria-respuestas-crm.md`)
+- **Saliente previsto:** cada `wa.me` de `/correduria` (`BotonWhatsapp` con `registro`; recibo devuelto con `reciboId`,
+  lead, renovación=`recaptacion`, `/datos` con `solicitudId`, presupuesto con `oportunidadId`; sin contexto `generico`)
+  hace un POST fire-and-forget a plataforma `/api/correduria/whatsapp-saliente` → `POST /api/operador/whatsapp/saliente-previsto`.
+  Nunca bloquea el botón: si falla, WhatsApp ya está abierto. Helper `apps/plataforma/lib/correduria/saliente-whatsapp.ts`.
+- El echo de Alberto se casa con el previsto (`vinculo.ts`); la IA interpreta la respuesta contra él y deja
+  **propuestas** (`fecha_cobro`/`pagado`/`vencimiento`) con botones `wap_ok:<id>` / `wap_no:<id>` en Telegram.
+- **Callback `wap_`** (webhook de plataforma, `lib/correduria/whatsapp-propuesta-tg.ts`): solo `from.id = TELEGRAM_CHAT_ID`;
+  `x-actor: humano:<cuentaId>` del titular (`FACTURAS_CUENTA_ID`/`GMAIL_USER`; sin cuenta no se llama) →
+  `POST /api/operador/whatsapp/propuesta`. Edita el mensaje: ✅ aplicada · ❌ descartada · ya resuelta (409) · caducada (410).
+- Pendiente (tarea 7 de la spec): `/datos` acotado a lo que le falta al bot y `wa.me` de presupuesto generado al pulsar.
+
 ## Alta (Tech Provider, sin BSP; Embedded Signup v4 + Coexistence)
 - Pantalla: plataforma `/correduria/ajustes/whatsapp` → `FB.login` (config_id, `response_type:'code'`,
   `featureType:'whatsapp_business_app_onboarding'`) → `POST /api/operador/whatsapp/alta` (`lib/whatsapp/alta.ts`):

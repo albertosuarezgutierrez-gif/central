@@ -163,6 +163,8 @@ function SiguientePaso({ ficha, resumen, tiposVivos, seguros }: { ficha: Ficha; 
         riesgo: devuelta.objeto?.estado === 'conocido' ? { titulo: devuelta.objeto.titulo, detalle: devuelta.objeto.detalle } : null,
         paraTercero: tercero,
       }}
+      reciboId={devuelta.recibos?.ultimo?.id ?? null}
+      polizaId={devuelta.id}
       importe={devuelta.recibos?.ultimo?.importe ?? null}
       fechaEfecto={devuelta.recibos?.ultimo?.fechaEfecto ?? null}
       tipoMotivo={null}

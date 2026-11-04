@@ -2,6 +2,7 @@
 import { MessageCircle } from 'lucide-react'
 import { urlWhatsapp } from '@/lib/telefono-wa'
 import { enlaceWhatsappConMensaje } from '@/lib/invitacion-whatsapp'
+import { registrarSaliente, type RegistroSaliente } from '@/lib/correduria/saliente-whatsapp'
 
 /**
  * Verde de marca de WhatsApp. No es un estado de la app, así que no es un token.
@@ -22,7 +23,7 @@ export const VERDE_WHATSAPP = '#25D366'
  * de pulsar) ni un icono apagado (un icono que se ve promete una acción). El
  * teléfono se queda con su `tel:`, que es lo que sí se sabe que funciona.
  */
-export default function BotonWhatsapp({ telefono, mensaje, compacto = false, onAbrir, rotulo }: {
+export default function BotonWhatsapp({ telefono, mensaje, compacto = false, onAbrir, rotulo, registro }: {
   telefono: string
   /** Con rótulo se pinta como botón verde con texto (acción principal), no como icono suelto. */
   rotulo?: string
@@ -47,10 +48,19 @@ export default function BotonWhatsapp({ telefono, mensaje, compacto = false, onA
    * sí lo hace WhatsApp, esto solo deja constancia de que Alberto lo abrió.
    */
   onAbrir?: () => void
+  /**
+   * Qué se abre, para el «saliente previsto» de asegura (spec 2026-11-04 §4): al pulsar se registra, sin esperar y
+   * sin bloquear, con este origen y su ancla. Sin pasarlo → `generico` (D3); `null` → no se registra nada.
+   */
+  registro?: RegistroSaliente | null
 }) {
   const texto = (mensaje ?? '').trim()
   const url = texto ? enlaceWhatsappConMensaje(telefono, texto) : urlWhatsapp(telefono)
   if (url === null) return null
+  const alPulsar = () => {
+    onAbrir?.()
+    registrarSaliente(registro === undefined ? { origen: 'generico' } : registro, telefono, texto || null)
+  }
   const lado = compacto ? 32 : 44
   if (rotulo) {
     return (
@@ -60,7 +70,7 @@ export default function BotonWhatsapp({ telefono, mensaje, compacto = false, onA
         rel="noopener noreferrer"
         aria-label={`${rotulo}: abrir WhatsApp con ${telefono}`}
         title={texto ? 'Abre WhatsApp con el mensaje ya escrito — lo envías tú' : 'Abre WhatsApp'}
-        onClick={onAbrir}
+        onClick={alPulsar}
         style={{
           display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 44, padding: '0 16px',
           borderRadius: 999, background: VERDE_WHATSAPP, color: '#fff', fontWeight: 600, fontSize: 14,
@@ -80,7 +90,7 @@ export default function BotonWhatsapp({ telefono, mensaje, compacto = false, onA
       title={texto
         ? `Abrir WhatsApp con ${telefono} y el mensaje ya escrito — lo envías tú (se abre en una pestaña nueva)`
         : `Abrir WhatsApp con ${telefono} (se abre en una pestaña nueva)`}
-      onClick={onAbrir}
+      onClick={alPulsar}
       style={{
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         width: lado, height: lado, minWidth: lado,

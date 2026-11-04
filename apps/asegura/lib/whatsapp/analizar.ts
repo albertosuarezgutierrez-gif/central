@@ -19,6 +19,8 @@ import { SISTEMA, construirPrompt, construirTranscripcion, parsearAnalisis, type
 import { ACTOR_IA, ORIGEN_TAREA_IA, ejecutar, planificar, type ClienteContexto, type ContextoEjecucion, type DepsEjecutor, type ResultadoPaso } from './ejecutor'
 import { purgarTextoConversacion } from './retencion'
 import { excluidaPorOptOut } from './optout'
+import { recibosPendientesDe, salienteVinculadoDe, type ReciboParaAnalisis, type SalienteParaAnalisis } from './salientes'
+import { avisarTelegram, crearPropuesta } from './propuestas'
 
 const ESTADOS_ABIERTOS = ['competencia', 'en_negociacion', 'pendiente_cliente']
 const MAX_INTENTOS = 3
@@ -37,7 +39,7 @@ function descifrar(v: string | null | undefined): string | null {
   }
 }
 
-type Reclamada = { opt_out_conv?: boolean; id: string; estado: string; cliente_id: string | null; clientes_candidatos: number | null; perfil: string | null; telefono: string | null; intentos: number }
+type Reclamada = { opt_out_conv?: boolean; id: string; estado: string; cliente_id: string | null; clientes_candidatos: number | null; perfil: string | null; telefono: string | null; intentos: number; telefono_hash?: string | null }
 
 export type ResumenAnalisis = { analizadas: number; fallidas: number; saltadas: number; acciones: number }
 
@@ -60,7 +62,7 @@ export async function analizarPendientes(correduriaId: string, limite = 10): Pro
         for update skip locked)
     returning c.id::text as id, c.estado, c.cliente_id::text as cliente_id, c.clientes_candidatos,
               c.wa_perfil_nombre_cifrado as perfil, c.wa_telefono_cifrado as telefono, c.analisis_intentos as intentos,
-              c.wa_opt_out_at is not null as opt_out_conv`)
+              c.wa_opt_out_at is not null as opt_out_conv, c.wa_telefono_hash as telefono_hash`)
   const r: ResumenAnalisis = { analizadas: 0, fallidas: 0, saltadas: 0, acciones: 0 }
   for (const c of reclamadas) {
     try {
@@ -152,6 +154,9 @@ async function analizarUna(correduriaId: string, c: Reclamada): Promise<number |
   const perfil = descifrar(c.perfil)
   const transcripcion = construirTranscripcion(mensajes, { nombres: [perfil, cliente?.nombre, cliente?.apellidos] })
 
+  // La respuesta que se interpreta = el último mensaje ENTRANTE (los saliente vinculados se buscan antes de ella).
+  const ultimaEntrante = filas.find((f) => f.direccion === 'entrante')?.enviado_at ?? null
+
   const [oportunidades, tareas, ramos] = cliente
     ? await Promise.all([
         db.$queryRaw<{ id: string; ramo: string; estado: string; fecha: string | null }[]>(Prisma.sql`
@@ -170,12 +175,26 @@ async function analizarUna(correduriaId: string, c: Reclamada): Promise<number |
       ])
     : [[], [], null]
 
+  // D4: «en vigor» = alguna póliza `esCarteraEnVigor` de la ficha (los ramos de arriba). null = no se pudo leer.
+  const enVigor = cliente ? (ramos === null ? null : ramos.length > 0) : false
+  // Una ficha exacta o nada: sin ella ni saliente ni recibos (no se le atribuye nada a nadie).
+  const fichaUnica = cliente !== null && c.clientes_candidatos === 1
+  const [saliente, recibos]: [SalienteParaAnalisis | null, ReciboParaAnalisis[] | null] = fichaUnica && cliente && c.telefono_hash && ultimaEntrante
+    ? await Promise.all([
+        salienteVinculadoDe(correduriaId, c.telefono_hash, ultimaEntrante).catch(() => null),
+        enVigor === true ? recibosPendientesDe(correduriaId, cliente.id) : Promise.resolve<ReciboParaAnalisis[] | null>([]),
+      ])
+    : [null, null]
+
   const contextoIA: ContextoParaIA = {
     tiene_ficha: cliente !== null,
     tipo_ficha: cliente?.tipo ?? null,
     lead_estado: cliente?.tipo === 'lead' ? cliente.leadEstado : null,
     ramos_contratados: cliente ? ramos : null,
     oportunidades_abiertas: oportunidades.map((o) => ({ ramo: o.ramo, estado: o.estado, vencimiento: o.fecha })),
+    // Sin ids ni datos personales: de qué iba lo último que se le mandó, y los recibos por ramo/fecha/importe.
+    ultimo_saliente: saliente ? { origen: saliente.origen, ramo: saliente.ramo, fecha: saliente.fecha, importe: saliente.importe } : null,
+    recibos_pendientes: recibos ? recibos.map((r) => ({ ramo: r.ramo, estado: r.situacion, efecto: r.efecto, importe: r.importe })) : null,
   }
 
   let crudo: string
@@ -202,9 +221,20 @@ async function analizarUna(correduriaId: string, c: Reclamada): Promise<number |
     tareasIaPendientes: tareas,
     perfilNombre: perfil,
     hoy: hoyMadrid(),
+    enVigor,
+    recibosPendientes: recibos ? recibos.map((r) => ({ id: r.id, ramo: r.ramo, situacion: r.situacion })) : null,
+    saliente: saliente ? { origen: saliente.origen, reciboId: saliente.reciboId, oportunidadId: saliente.oportunidadId } : null,
   }
   const plan = planificar(analisis, ctx)
-  const { resultados } = await ejecutar(plan, ctx, depsBd(correduriaId, c))
+  const { resultados, clienteId: clienteFinal } = await ejecutar(plan, ctx, depsBd(correduriaId, c))
+
+  // Siempre aviso a Alberto (spec §1) de lo hecho y lo propuesto, con botones ✅/❌ por propuesta. Best effort.
+  if (clienteFinal && plan.pasos.length > 0) {
+    const hechos = resultados.filter((x) => x.resultado === 'hecho' && x.tipo !== 'proponer').map((x) => ETIQUETA_HECHO[x.tipo] ?? x.tipo)
+    const propuestas = resultados.filter((x) => x.tipo === 'proponer' && x.resultado === 'hecho' && x.id).map((x) => ({ id: x.id as string }))
+    const nombrePila = (cliente?.nombre ?? '').trim().split(/\s+/)[0] || null
+    await avisarTelegram(correduriaId, { clienteId: clienteFinal, nombrePila, hechos, propuestas })
+  }
 
   const descartada = plan.pasos.some((x) => x.tipo === 'descartarPersonal')
   // Una conversación personal no guarda ni el resumen: solo que se clasificó así.
@@ -214,6 +244,16 @@ async function analizarUna(correduriaId: string, c: Reclamada): Promise<number |
   await cerrar(Prisma.sql`, analisis = ${JSON.stringify(guardado)}::jsonb, analizada_at = now(), analisis_modelo = ${`${viaIA()}:asegura`},
                              analisis_intentos = 0, analisis_error = null`)
   return resultados.filter((x: ResultadoPaso) => x.resultado === 'hecho').length
+}
+
+const ETIQUETA_HECHO: Record<string, string> = {
+  crearLead: 'Lead nuevo creado',
+  updateLead: 'Lead avanzado',
+  createOpportunity: 'Oportunidad abierta',
+  updateOpportunity: 'Oportunidad completada',
+  createTask: 'Tarea creada',
+  updateContact: 'Nombre rellenado',
+  addConversationNote: 'Nota en la ficha',
 }
 
 // ── Las escrituras reales del ejecutor ─────────────────────────────────────────
@@ -336,6 +376,12 @@ function depsBd(correduriaId: string, c: Reclamada): DepsEjecutor {
 
     async anotarNota(clienteId, texto) {
       await historial(clienteId, `WhatsApp (resumen IA): ${texto}`)
+    },
+
+    async crearPropuesta(clienteId, p) {
+      // SOLO la propuesta: nada de la cartera se toca hasta que Alberto pulse ✅ (resolverPropuesta).
+      const r = await crearPropuesta(correduriaId, { clienteId, conversacionId: c.id, tipo: p.propuesta, reciboId: p.reciboId, oportunidadId: p.oportunidadId, fecha: p.fecha })
+      return r.ok ? { ok: true, id: r.id } : { ok: false, motivo: r.motivo }
     },
 
     async auditar(e) {

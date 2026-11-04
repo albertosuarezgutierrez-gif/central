@@ -41,6 +41,8 @@ import { PREFIJO_CLP, decidirBotonClp, idDeEdicion } from '@/lib/correo/lead-cor
 import { guardarEdicionClp, resolverBotonClp } from '@/lib/correo/lead-correduria-pendiente'
 import { PREFIJO_CSG, decidirBotonCsg } from '@/lib/correo/contacto-sugerido'
 import { PREFIJO_FEX, decidirBotonFex, decidirFexEnAsegura, lineaTrasPulsarFex } from '@/lib/felicitaciones-exclientes-asegura'
+import { PREFIJO_WAP, actorTitular, decidirBotonWap, lineaTrasPulsarWap, resolverPropuestaEnAsegura } from '@/lib/correduria/whatsapp-propuesta-tg'
+import { cuentaTitularTelegram } from '@/lib/correduria/whatsapp-propuesta-tg-cuenta'
 import { PREFIJO_RRC, decidirBotonRrc, decidirRrcCompaniaEnAsegura, decidirRrcEnAsegura, editarRrcCompaniaEnAsegura, editarRrcEnAsegura, idDeEdicionRrc, idDeEdicionRrcCompania, lineaPushRrc, lineaTrasPulsarRrc, textoPedirEdicionRrc, textoPedirEdicionRrcCompania } from '@/lib/regularizacion-rc-asegura'
 import { resolverBotonCsg } from '@/lib/correo/contacto-sugerido-pendiente'
 import { PREFIJO_FACTURA_HUESPED, decidirBotonFactura } from '@/lib/sivra/facturas/telegram'
@@ -1035,6 +1037,30 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
       after(async () => {
         const estado = await decidirFexEnAsegura({ decision: d.decision, clienteId: d.clienteId, anio: d.anio })
         const linea = lineaTrasPulsarFex(d.decision, estado)
+        if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${linea}`).catch(() => {})
+        else await tgSend(linea).catch(() => {})
+      })
+      return NextResponse.json({ ok: true })
+    }
+
+    // ── 💬 Propuesta de la IA de WhatsApp de Grupo ASegura: ✅ aplicar / ❌ descartar (wap_ok / wap_no, 04/11/2026) ──
+    // Escribe en la cartera: solo la PERSONA autorizada (from.id = TELEGRAM_CHAT_ID) y con `x-actor: humano:<cuentaId>`
+    // del titular (sin cuenta resuelta no se llama a asegura). Se contesta YA y asegura (un solo uso → 409, caducada → 410)
+    // va en after(). Aplicar nunca envía nada al cliente ni cierra una devolución. Spec 2026-11-04 §5.
+    if (prefix === PREFIJO_WAP) {
+      const d = decidirBotonWap(cb, action, args, process.env.TELEGRAM_CHAT_ID)
+      if (!d.ok) {
+        await tgAnswerCallback(cb.id, d.toast)
+        return NextResponse.json({ ok: true })
+      }
+      await tgAnswerCallback(cb.id, d.decision === 'aplicar' ? '⏳ Aplicando…' : 'Descartando…')
+      const original = escapeHtml(cb.message?.text ?? '')
+      const mensajeId: number | undefined = cb.message?.message_id
+      if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n⏳ <i>Pulsado…</i>`).catch(() => {})
+      after(async () => {
+        const actor = actorTitular(await cuentaTitularTelegram())
+        const r = await resolverPropuestaEnAsegura({ id: d.id, decision: d.decision, actor })
+        const linea = lineaTrasPulsarWap(d.decision, r)
         if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${linea}`).catch(() => {})
         else await tgSend(linea).catch(() => {})
       })

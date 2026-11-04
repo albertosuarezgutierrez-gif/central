@@ -2022,3 +2022,53 @@ model CorreduriaHilo {
   @@index([correduriaId, clienteId], map: "correduria_hilo_cliente")
   @@map("correduria_hilo")
 }
+
+/// WhatsApp → CRM, parte A (04/11/2026, SQL `prisma/sql/2026-11-04_whatsapp_respuestas_crm.sql`). Cada `wa.me` que el
+/// corredor ABRE en plataforma (`POST /api/operador/whatsapp/saliente-previsto`), para casar el echo de Coexistence
+/// (`lib/whatsapp/vinculo.ts`). Sin texto ni número: sha256 del texto normalizado + índice ciego del teléfono.
+/// Se lee y escribe por SQL crudo (`lib/whatsapp/salientes.ts`). OJO: `poliza_recibos.fecha_prometida_pago` (mismo SQL)
+/// NO se declara en `PolizaRecibo` a propósito: un `findMany` sin `select` la pediría y, sin el SQL, rompería los recibos.
+model WhatsappSalientePrevisto {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId  String    @map("correduria_id") @db.Uuid
+  clienteId     String?   @map("cliente_id") @db.Uuid
+  telefonoHash  String    @map("telefono_hash")
+  origen        String
+  reciboId      String?   @map("recibo_id") @db.Uuid
+  oportunidadId String?   @map("oportunidad_id") @db.Uuid
+  polizaId      String?   @map("poliza_id") @db.Uuid
+  solicitudId   String?   @map("solicitud_id") @db.Uuid
+  textoHash     String?   @map("texto_hash")
+  abiertoAt     DateTime  @default(now()) @map("abierto_at") @db.Timestamptz(6)
+  abiertoPor    String    @map("abierto_por")
+  mensajeId     String?   @map("mensaje_id") @db.Uuid
+  casadoAt      DateTime? @map("casado_at") @db.Timestamptz(6)
+  casadoTipo    String?   @map("casado_tipo")
+
+  @@index([correduriaId, telefonoHash, abiertoAt], map: "idx_wa_salientes_telefono")
+  @@map("whatsapp_salientes_previstos")
+}
+
+/// Propuestas de la IA de WhatsApp que solo aplica el botón ✅ de Alberto en Telegram (callback `wap_`, D1):
+/// `fecha_cobro` · `pagado` · `vencimiento`. Un solo uso, caduca a los 7 días. Mismo SQL que el anterior;
+/// SQL crudo en `lib/whatsapp/propuestas.ts` (reglas puras en `propuestas-reglas.ts`).
+model WhatsappPropuesta {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId      String    @map("correduria_id") @db.Uuid
+  clienteId         String    @map("cliente_id") @db.Uuid
+  conversacionId    String?   @map("conversacion_id") @db.Uuid
+  tipo              String
+  reciboId          String?   @map("recibo_id") @db.Uuid
+  oportunidadId     String?   @map("oportunidad_id") @db.Uuid
+  payload           Json      @default("{}")
+  estado            String    @default("pendiente")
+  creadaAt          DateTime  @default(now()) @map("creada_at") @db.Timestamptz(6)
+  caducaAt          DateTime  @map("caduca_at") @db.Timestamptz(6)
+  resueltaAt        DateTime? @map("resuelta_at") @db.Timestamptz(6)
+  resueltaPor       String?   @map("resuelta_por")
+  resultado         Json?
+  telegramMessageId BigInt?   @map("telegram_message_id")
+
+  @@index([correduriaId, clienteId, creadaAt], map: "idx_wa_propuestas_cliente")
+  @@map("whatsapp_propuestas")
+}
