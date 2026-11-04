@@ -3,6 +3,7 @@ import { paraPagina } from '@/lib/contexto'
 import { tienePermiso } from '@/lib/permisos'
 import { ESTADOS_OT } from '@central/module-taller'
 import { Cabecera } from '../_marca'
+import { claseEstado } from '../_ui'
 
 export const dynamic = 'force-dynamic'
 const PAGINA = 50
@@ -42,8 +43,8 @@ export default async function Pagina({ searchParams }: { searchParams: Promise<{
           <>
             {!datos.mecanico && (
               <nav className="fila" aria-label="Filtrar por estado">
-                <a className="btn btn-sec" href="/ordenes">Todas</a>
-                {ESTADOS_OT.map((e) => <a key={e} className="btn btn-sec" href={`/ordenes?estado=${e}`}>{e.replace('_', ' ')}</a>)}
+                <a className={datos.estado ? 'btn btn-sec' : 'btn'} aria-current={datos.estado ? undefined : 'true'} href="/ordenes">Todas</a>
+                {ESTADOS_OT.map((e) => <a key={e} className={datos.estado === e ? 'btn' : 'btn btn-sec'} aria-current={datos.estado === e ? 'true' : undefined} href={`/ordenes?estado=${e}`}>{e.replace('_', ' ')}</a>)}
               </nav>
             )}
             {datos.ots.length === 0 ? <p className="tenue">No hay órdenes.</p> : (
@@ -52,7 +53,7 @@ export default async function Pagina({ searchParams }: { searchParams: Promise<{
                   <li key={o.id}>
                     <a href={`/ordenes/${o.id}`}>OT {o.numero} · {o.matricula}</a>
                     <span className="tenue">{o.vehiculo}</span>
-                    <span className="estado">{o.estado.replace('_', ' ')}</span>
+                    <span className={claseEstado(o.estado)}>{o.estado.replace('_', ' ')}</span>
                     {datos.mias.includes(o.id) && <span className="ok">Tu parte está abierto</span>}
                   </li>
                 ))}

@@ -14,15 +14,15 @@ export function TablaPresupuesto({ lineas, baseCent, cuotaIvaCent, totalCent }: 
     iva.set(l.ivaCodigo, d)
   }
   return (
-    <div className="tabla-scroll"><table>
+    <div className="tabla-scroll"><table className="tabla-cards">
       <thead><tr><th>Concepto</th><th className="num">Cant.</th><th className="num">Base</th><th className="num">IVA</th><th className="num">Total</th></tr></thead>
       <tbody>
         {lineas.map((l) => (
           <tr key={l.id}>
-            <td>{l.descripcion}</td><td className="num">{cantidad(l)}</td>
-            <td className="num">{formatearEur(Number(l.baseCent))}</td>
-            <td className="num">{pbAPorcentaje(l.ivaPuntosBasicos)} %</td>
-            <td className="num">{formatearEur(Number(l.totalCent))}</td>
+            <td>{l.descripcion}</td><td className="num" data-label="Cant.">{cantidad(l)}</td>
+            <td className="num" data-label="Base">{formatearEur(Number(l.baseCent))}</td>
+            <td className="num" data-label="IVA">{pbAPorcentaje(l.ivaPuntosBasicos)} %</td>
+            <td className="num" data-label="Total">{formatearEur(Number(l.totalCent))}</td>
           </tr>
         ))}
       </tbody>

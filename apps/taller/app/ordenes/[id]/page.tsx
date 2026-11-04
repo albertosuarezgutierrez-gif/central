@@ -6,6 +6,7 @@ import { capacidadParaTransicion, tienePermiso } from '@/lib/permisos'
 import { ESTADOS_ABIERTOS } from '@/lib/trabajo-ot'
 import { horasYMargen, ESTADOS_TRABAJABLES, type TxOrdenes } from '@/lib/ordenes'
 import { Cabecera } from '../../_marca'
+import { claseEstado } from '../../_ui'
 import { abrirMiParteAccion, cambiarEstadoAccion, cerrarMiParteAccion } from '../acciones'
 import { GestionPropuesta, ProponerAmpliacion } from './Ampliaciones'
 import { EntregaCliente } from './EntregaCliente'
@@ -91,7 +92,7 @@ export default async function Pagina({ params, searchParams }: { params: Promise
       <main className="contenido">
         <h1>OT {ot.numero} · {veh?.matricula ?? '—'}</h1>
         {aviso && <p className="aviso-error" role="alert">{aviso}</p>}
-        <p><span className="estado">{estado.replace('_', ' ')}</span> {[veh?.marca, veh?.modelo].filter(Boolean).join(' ')}</p>
+        <p><span className={claseEstado(estado)}>{estado.replace('_', ' ')}</span> {[veh?.marca, veh?.modelo].filter(Boolean).join(' ')}</p>
         <p className="tenue">Cliente: {cli?.nombre ?? '—'}
           {datos.verContacto && cli ? ` · ${cli.movil ?? 'sin teléfono'}${cli.correo ? ` · ${cli.correo}` : ''}` : ''}</p>
         {!datos.firmada && <p className="aviso-error">Recepción sin firmar: no se presupuesta ni se factura hasta que el cliente firme.</p>}
@@ -108,14 +109,14 @@ export default async function Pagina({ params, searchParams }: { params: Promise
 
         <h2>Trabajos</h2>
         {lineas.length === 0 ? <p className="tenue">Aún no hay líneas (se cargan al aceptar el presupuesto).</p> : (
-          <div className="tabla-scroll"><table>
+          <div className="tabla-scroll"><table className="tabla-cards">
             <thead><tr><th>Descripción</th><th className="num">Cant.</th>{datos.verPrecios && <th className="num">Total</th>}</tr></thead>
             <tbody>
               {lineas.map((l) => (
                 <tr key={l.id}>
                   <td>{l.descripcion}</td>
-                  <td className="num">{l.unidad === 'ml' ? `${l.cantidad / 1000} l` : l.unidad === 'min' ? `${l.cantidad} min` : l.cantidad}</td>
-                  {datos.verPrecios && <td className="num">{formatearEur(Number(l.totalCent))}</td>}
+                  <td className="num" data-label="Cant.">{l.unidad === 'ml' ? `${l.cantidad / 1000} l` : l.unidad === 'min' ? `${l.cantidad} min` : l.cantidad}</td>
+                  {datos.verPrecios && <td className="num" data-label="Total">{formatearEur(Number(l.totalCent))}</td>}
                 </tr>
               ))}
             </tbody>
