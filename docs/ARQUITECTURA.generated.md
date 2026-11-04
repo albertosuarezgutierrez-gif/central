@@ -281,6 +281,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (04/11/2026) 04/11/2026) Correduría · WhatsApp: SQL APLICADOS en prod + remates
 - (04/11/2026) 04/11/2026) Correduría · WhatsApp: aprendizaje + autonomía gradual
 - (04/11/2026) 04/11/2026) Correduría · WhatsApp: respuestas del cliente → propuestas CRM — PR #5486
 - (03/11/2026) 03/11/2026) Correduría · regularización RC fase 3 (respuesta a Occident + cierre manual) — ✅ PR #5472 mergeado
@@ -290,5 +291,4 @@
 - (03/11/2026) 03/11/2026) Correduría · cuadre de comisiones por compañía + Drive reorganizado
 - (03/11/2026) 03/11/2026) Facturas · auditoría del lector: tipo de documento obligatorio y documento completo - Causa raíz de los errores básicos: `tipo_documento` salía null en 28/51 y `procesar.ts` no lo miraba; el texto se cortaba a 4.000 car. (la IA solo veía el encabezado). Ahora: prompt con vocabulario cerrado (presupuesto/solicitud/liquidación/resumen/aviso → omitido; null/otro → bandeja con aviso), emisor≠cliente≠dirección del piso, `numero_albaran` aparte, hasta 12.000 car. (inicio+final). Helpers `tipo-documento.ts`, `revision-lectura.ts`, `recorte-texto.ts`; dedupe por nº de factura sin separadores. - Bandeja revisada con Alberto: Netflix → pisos compartidos; PEPEMOBILE → correduría; Anthropic 170 € = bonos reales; TotalEnergies 310,01 € = Monte Carmelo (personal); Vercel B2DRQ0QS-0007 duplicado descartado. - EMASESA 2026 completo
 - (03/11/2026) 03/11/2026) Captación · parado el mailing en frío de ia-rest/ialimp; foco 100% correduría
-- (03/11/2026) 03/11/2026) Facturas · pólizas de clientes y comisiones de portal NO son gasto + bandeja de pendientes
 

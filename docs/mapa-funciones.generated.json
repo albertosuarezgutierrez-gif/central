@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-04T08:53:05Z",
-  "sha": "05c496ef96118e86a4e43a981dd239c3cf62c45d",
+  "generadoEn": "2026-11-04T09:29:18Z",
+  "sha": "5a5474679e8a661cbde9018ef2f51d4409361e72",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -73066,7 +73066,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: NuevaPropuesta, contexto?: ContextoAprendizaje",
           "retorno": "Promise<PropuestaCreada>",
-          "linea": 42
+          "linea": 44
         },
         {
           "nombre": "avisarTelegram",
@@ -73074,7 +73074,7 @@
           "exportada": true,
           "params": "correduriaId: string, a: { clienteId: string; nombrePila: string | null; hechos: string[]; propuestas: { id: string; autonoma?: boolean }[] },",
           "retorno": "Promise<'avisado' | 'sin_telegram' | 'nada' | 'error'>",
-          "linea": 76,
+          "linea": 88,
           "resumen": "Aviso a Alberto (Telegram, con botones ✅/❌ por propuesta) de lo que la IA ha hecho y propuesto en UNA conversación. Nombre de pila + enlace a la ficha; ni DNI ni teléfono ni texto del cliente. Best ef"
         },
         {
@@ -73083,7 +73083,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string, decision: Decision | 'modificar', actor: string, ahora: Date = new Date(), opciones: OpcionesResolver = {},",
           "retorno": "Promise<ResolucionPropuesta>",
-          "linea": 146,
+          "linea": 158,
           "resumen": "nada queda a medias dentro de cada efecto (cada uno es una transacción). Toda resolución queda en el registro de aprendizaje (best effort: sin la tabla, no-op)."
         },
         {
@@ -73092,7 +73092,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string, ahora: Date = new Date()",
           "retorno": "Promise<boolean>",
-          "linea": 252,
+          "linea": 264,
           "resumen": "Modo AUTÓNOMO (spec § «Aprendizaje y autonomía»): si el flag global está encendido y ESE tipo lleva una racha de aprobadas seguidas ≥ umbral, la propuesta se aplica sola (actor `agente:whatsapp-ia-aut"
         },
         {
@@ -73101,7 +73101,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string, actor: string, _ahora: Date = new Date()",
           "retorno": "Promise<ResultadoDeshacer>",
-          "linea": 284,
+          "linea": 297,
           "resumen": "↩️ Deshacer una propuesta aplicada SOLA: vuelve al valor previo GUARDADO al aplicarla. Un uso (la marca `deshecha_at` se reclama con un UPDATE condicionado); si alguien cambió el dato después, no se p"
         },
         {
@@ -73110,7 +73110,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 329
+          "linea": 342
         },
         {
           "nombre": "revertir",
@@ -73118,7 +73118,7 @@
           "exportada": false,
           "params": "correduriaId: string, p: FilaDeshacer, actor: string",
           "retorno": "Promise<'ok' | 'cambiado_despues' | 'fallo_al_deshacer'>",
-          "linea": 337,
+          "linea": 350,
           "resumen": "Revierte en UNA transacción: bloquea (`for update`) lo que escribió aplicar, comprueba que sigue como lo dejó (`planRevertir`: si no, `cambiado_despues` y nada cambia) y lo devuelve al previo. Sin hue"
         },
         {
@@ -73127,7 +73127,7 @@
           "exportada": false,
           "params": "correduriaId: string, propuestaId: string",
           "retorno": "Promise<(string | null)[] | null>",
-          "linea": 411,
+          "linea": 424,
           "resumen": "Nombres con los que redactar la observación de ✏️ (nombre y apellidos de la ficha y el perfil de WhatsApp de la conversación). `null` = no se pudieron leer: la observación no se guarda (estado conserv"
         },
         {
@@ -73136,7 +73136,7 @@
           "exportada": false,
           "params": "correduriaId: string, id: string, resultado: Record<string, unknown>",
           "retorno": "Promise<void>",
-          "linea": 442,
+          "linea": 455,
           "resumen": "Aplicar falló: la propuesta vuelve a `pendiente` para reintentarla. Si ESO falla también (p. ej. choca con `uq_wa_propuesta_pendiente`: ya hay otra pendiente del mismo asunto), se marca `descartada` c"
         },
         {
@@ -73145,7 +73145,7 @@
           "exportada": false,
           "params": "correduriaId: string, id: string, resultado: Record<string, unknown>",
           "retorno": "Promise<void>",
-          "linea": 453
+          "linea": 466
         },
         {
           "nombre": "historial",
@@ -73153,7 +73153,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, texto: string",
           "retorno": null,
-          "linea": 459
+          "linea": 472
         },
         {
           "nombre": "aplicar",
@@ -73161,7 +73161,7 @@
           "exportada": false,
           "params": "correduriaId: string, p: FilaPropuesta, actor: string, ahora: Date, observacion: string | null",
           "retorno": "Promise<Aplicado>",
-          "linea": 471,
+          "linea": 484,
           "resumen": "Los efectos. Guarda en `resultado.previo` el valor que había ANTES (para ↩️ Deshacer de una autónoma) y, si viene, la observación de ✏️ en la nota y en la tarea."
         }
       ],
@@ -73178,7 +73178,7 @@
         "whatsapp_propuestas"
       ],
       "rutaApi": null,
-      "hash": "6bb52db8626b"
+      "hash": "61559761a784"
     },
     {
       "ruta": "apps/asegura/lib/whatsapp/retencion.ts",
@@ -119269,7 +119269,7 @@
           "exportada": true,
           "params": "{ ficha, resumen, seguros, idsConChip }: { ficha: Ficha; resumen: ResumenFicha /** Ids de póliza cuya tarjeta pinta el chip de aviso (`idsConChipAviso`, calculado en page.tsx). */ idsConChip: ReadonlySet<string> /** Solo los SEGUROS (carter",
           "retorno": null,
-          "linea": 33,
+          "linea": 34,
           "resumen": "La cabecera de la ficha: quién es, cómo se le llama y **qué exige una llamada HOY**. Se pinta igual en las siete pestañas, y ese es justo el punto. 🚨 Por qué los contadores viven aquí y no dentro de "
         },
         {
@@ -119278,7 +119278,7 @@
           "exportada": false,
           "params": "{ ficha, resumen, tiposVivos, seguros }: { ficha: Ficha; resumen: ResumenFicha; tiposVivos: string[]; seguros: Ficha['polizas'] }",
           "retorno": null,
-          "linea": 143,
+          "linea": 144,
           "resumen": "── Siguiente paso ────────────────────────────────────────────────────────── UNA frase y UN botón con lo que toca hacer con este cliente (idea §W). La regla vive pura y testeada en `siguientePaso` de "
         },
         {
@@ -119287,7 +119287,7 @@
           "exportada": false,
           "params": "{ tiposVivos }: { tiposVivos: string[] }",
           "retorno": null,
-          "linea": 197,
+          "linea": 198,
           "resumen": "── Ramos contratados ─────────────────────────────────────────────────────── Sustituye a la «rueda de ramos» de Avant2 (24/09/2026, Alberto: «ocupa mucho y no creo que sea necesario»): en móvil se com"
         },
         {
@@ -119296,7 +119296,7 @@
           "exportada": false,
           "params": "{ resumen, idsConChip }: { resumen: ResumenFicha; idsConChip: ReadonlySet<string> }",
           "retorno": null,
-          "linea": 216
+          "linea": 217
         },
         {
           "nombre": "ProximoVencimiento",
@@ -119304,7 +119304,7 @@
           "exportada": false,
           "params": "{ proximo, idsConChip, vivas, sinFecha }: { proximo: ResumenFicha['proximo']; idsConChip: ReadonlySet<string>; vivas: number; sinFecha: number }",
           "retorno": null,
-          "linea": 271,
+          "linea": 272,
           "resumen": "La única fecha de la ficha sobre la que se puede ACTUAR, y por eso sube aquí: hasta ahora vivía dentro de una celda de la tabla de pólizas. 🚨 No es el vencimiento: es el **último día para oponerse a "
         },
         {
@@ -119313,7 +119313,7 @@
           "exportada": false,
           "params": "{ label, valor, sub, color, pequeno }: { label: string; valor: string; sub?: string; color?: string /** Para un valor que es una fecha: más pequeña para que quepa en móvil. */ pequeno?: boolean }",
           "retorno": null,
-          "linea": 315
+          "linea": 316
         },
         {
           "nombre": "EstadoCabecera",
@@ -119321,7 +119321,7 @@
           "exportada": false,
           "params": "{ estado, cotizacionesVivas, cliente }: { estado: EstadoClienteDerivado | null cotizacionesVivas: number | null /** La regla anterior, para una versión de asegura que no manda `estado`. */ cliente: boolean }",
           "retorno": null,
-          "linea": 341
+          "linea": 342
         },
         {
           "nombre": "Acciones",
@@ -119329,15 +119329,15 @@
           "exportada": false,
           "params": "{ clienteId }: { clienteId: string }",
           "retorno": null,
-          "linea": 399
+          "linea": 400
         },
         {
           "nombre": "Contacto",
           "kind": "function",
           "exportada": false,
-          "params": "{ nombre, esCliente, c, intervinientes, piiClave, contactos, polizas }: { /** Para el `aria-label` de los iconos: «Llamar a Jose Suárez». */ nombre: string /** Decide QUÉ mensaje se abre en WhatsApp. Lo calcula la cabecera, con el * mismo c",
+          "params": "{ clienteId, nombre, esCliente, c, intervinientes, piiClave, contactos, polizas }: { /** Ficha a la que pertenece el WhatsApp de la cabecera: se registra como `generico` CON su clienteId. */ clienteId: string /** Para el `aria-label` de los",
           "retorno": null,
-          "linea": 482
+          "linea": 483
         },
         {
           "nombre": "Identidad",
@@ -119345,7 +119345,7 @@
           "exportada": false,
           "params": "{ identidad, clienteId, dePolizas, juridica }: { identidad: IdentidadFicha | null; clienteId: string; dePolizas: DatosDePolizas | null; juridica: boolean }",
           "retorno": null,
-          "linea": 591
+          "linea": 594
         },
         {
           "nombre": "Carnets",
@@ -119353,12 +119353,12 @@
           "exportada": false,
           "params": "{ carnets, dePolizas }: { carnets: CarnetFicha[] | null; dePolizas: DatosDePolizas | null }",
           "retorno": null,
-          "linea": 631
+          "linea": 634
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b2ab3fcac131"
+      "hash": "197ea205c7ac"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/CorreosCliente.tsx",
@@ -149417,7 +149417,7 @@
           "exportada": false,
           "params": "cuentaId: string, texto: string, fromId: unknown",
           "retorno": "Promise<void>",
-          "linea": 1627,
+          "linea": 1630,
           "resumen": "Texto libre de Alberto (escrito o transcrito de una nota de voz) → correduría o contable. El patrimonial ya se desvía antes; aquí solo se decide entre estos dos, y ante cualquier duda gana el contable"
         },
         {
@@ -149426,7 +149426,7 @@
           "exportada": false,
           "params": "updateId: unknown",
           "retorno": "Promise<boolean>",
-          "linea": 1634,
+          "linea": 1637,
           "resumen": "`true` = este update ya se procesó (reintento de Telegram). Sin id o sin BD → `false` (se procesa)."
         },
         {
@@ -149435,7 +149435,7 @@
           "exportada": false,
           "params": "updateId: unknown",
           "retorno": "Promise<void>",
-          "linea": 1646
+          "linea": 1649
         },
         {
           "nombre": "correduriaSegura",
@@ -149443,7 +149443,7 @@
           "exportada": false,
           "params": "texto: string, fromId: unknown",
           "retorno": "Promise<void>",
-          "linea": 1652,
+          "linea": 1655,
           "resumen": "El asistente corre en `after`: un error ya no da 500 (ni reintento), así que se le dice a Alberto."
         }
       ],
@@ -149474,7 +149474,7 @@
         "trading_watchlist"
       ],
       "rutaApi": "/api/sivra/mensajes/telegram-webhook",
-      "hash": "146af0bf9cd6"
+      "hash": "be5ca57f62af"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/webhook/route.ts",
@@ -170136,6 +170136,7 @@
       "ambito": "apps/plataforma",
       "resumen": "Registro del «saliente previsto» de WhatsApp (spec 2026-11-04 §4, parte B): cada vez que Alberto pulsa un `wa.me` de la correduría, plataforma le dice a asegura qué se ABRIÓ (origen + recibo/oportunidad/solicitud) para que, cuando llegue el echo del mensaje enviado desde su móvil, se case con él y l",
       "exporta": [
+        "registroWaCabecera",
         "cuerpoSaliente",
         "deEnlaceWa",
         "registrarSaliente",
@@ -170143,12 +170144,21 @@
       ],
       "funciones": [
         {
+          "nombre": "registroWaCabecera",
+          "kind": "function",
+          "exportada": true,
+          "params": "clienteId: string | null | undefined",
+          "retorno": "RegistroSaliente",
+          "linea": 24,
+          "resumen": "WhatsApp genérico de la cabecera de la ficha: `generico` con el clienteId que la ficha ya conoce."
+        },
+        {
           "nombre": "cuerpoSaliente",
           "kind": "function",
           "exportada": true,
           "params": "r: RegistroSaliente, telefono: string | null | undefined, texto: string | null | undefined",
           "retorno": "CuerpoSaliente | null",
-          "linea": 34,
+          "linea": 39,
           "resumen": "El cuerpo para asegura, o `null` si no se puede registrar (se omite en silencio: el wa.me se abre igual). Mismas reglas que `validarSalientePrevisto` de asegura; si falta el ancla que exige el origen,"
         },
         {
@@ -170157,7 +170167,7 @@
           "exportada": true,
           "params": "href: string | null | undefined",
           "retorno": "",
-          "linea": 54,
+          "linea": 59,
           "resumen": "Teléfono y texto de un `https://wa.me/<num>?text=…` ya construido (el de asegura o el nuestro). Sin número → `null`. PURO."
         },
         {
@@ -170166,7 +170176,7 @@
           "exportada": true,
           "params": "r: RegistroSaliente | null | undefined, telefono: string | null | undefined, texto: string | null | undefined, fetchImpl: typeof fetch | undefined = typeof fetch === 'function' ? fetch : undefined,",
           "retorno": "void",
-          "linea": 74,
+          "linea": 79,
           "resumen": "Fire-and-forget desde el navegador. NUNCA lanza ni devuelve una promesa que haya que esperar: si la red, asegura o la migración fallan, el wa.me ya se ha abierto y no pasa nada más. `fetchImpl` se iny"
         },
         {
@@ -170175,13 +170185,13 @@
           "exportada": true,
           "params": "r: RegistroSaliente | null | undefined, href: string | null | undefined, fetchImpl?: typeof fetch",
           "retorno": "void",
-          "linea": 93,
+          "linea": 98,
           "resumen": "Igual que `registrarSaliente`, sacando teléfono y texto del `wa.me` ya construido (el del presupuesto). Nunca lanza."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6cff54275d7e"
+      "hash": "77b4cd1eae43"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/seguro-anterior-imputado.ts",
@@ -171631,6 +171641,8 @@
         "decidirBotonWap",
         "textoPedirCorreccionWap",
         "idDeCorreccionWap",
+        "mensajeOriginalDeCorreccionWap",
+        "resueltaParaQuitarBotones",
         "actorTitular",
         "resolverPropuestaEnAsegura",
         "lineaTrasPulsarWap"
@@ -171649,10 +171661,10 @@
           "nombre": "textoPedirCorreccionWap",
           "kind": "function",
           "exportada": true,
-          "params": "id: string",
+          "params": "id: string, mensajeOriginalId?: number | null",
           "retorno": "string",
-          "linea": 41,
-          "resumen": "El mensaje que pide la corrección (force_reply). La marca liga la respuesta a la propuesta. PURO."
+          "linea": 44,
+          "resumen": "El mensaje que pide la corrección (force_reply). La marca liga la respuesta a la propuesta y, si se conoce, al mensaje ORIGINAL con botones (`[wap <uuid> m<id>]`) para poder quitárselos al resolver. P"
         },
         {
           "nombre": "idDeCorreccionWap",
@@ -171660,8 +171672,26 @@
           "exportada": true,
           "params": "citado: string | null | undefined",
           "retorno": "string | null",
-          "linea": 46,
+          "linea": 50,
           "resumen": "Id de la propuesta si el mensaje citado es nuestra petición de corrección. PURO."
+        },
+        {
+          "nombre": "mensajeOriginalDeCorreccionWap",
+          "kind": "function",
+          "exportada": true,
+          "params": "citado: string | null | undefined",
+          "retorno": "number | null",
+          "linea": 56,
+          "resumen": "Id del mensaje original (el de los botones) que lleva la marca de la petición de corrección, o `null`. PURO."
+        },
+        {
+          "nombre": "resueltaParaQuitarBotones",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ResultadoWap",
+          "retorno": "boolean",
+          "linea": 66,
+          "resumen": "¿Quedó la propuesta resuelta (o ya imposible de resolver) y por tanto el mensaje original NO debe conservar sus botones? Una corrección inválida o un fallo de red/asegura dejan la propuesta pendiente:"
         },
         {
           "nombre": "actorTitular",
@@ -171669,7 +171699,7 @@
           "exportada": true,
           "params": "cuentaId: string | null | undefined",
           "retorno": "string | null",
-          "linea": 52,
+          "linea": 72,
           "resumen": "`humano:<cuentaId>` del titular, o `null` si la cuenta no es un uuid (entonces no se aplica nada). PURO."
         },
         {
@@ -171678,7 +171708,7 @@
           "exportada": true,
           "params": "d: { id: string; decision: Exclude<DecisionWap, 'modificar'>; actor: string | null } | { id: string; decision: 'modificar'; correccion: string; actor: string | null }, entorno: { secret?: string; base?: string } = { secret: process.env.ASEG",
           "retorno": "Promise<ResultadoWap>",
-          "linea": 63,
+          "linea": 83,
           "resumen": "Reenvía la decisión a asegura. Nunca lanza. Sin actor humano válido NO llama (devuelve `sin_actor`): es el cepo de «el handler no aplica sin x-actor humano». `fetchImpl` se inyecta en los tests."
         },
         {
@@ -171687,13 +171717,13 @@
           "exportada": true,
           "params": "decision: DecisionWap, r: ResultadoWap",
           "retorno": "string",
-          "linea": 87,
+          "linea": 107,
           "resumen": "Línea que sustituye a los botones tras pulsar (o responde a la corrección). PURO."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "82356c5e1325"
+      "hash": "8fd852f83eee"
     },
     {
       "ruta": "apps/plataforma/lib/correo/adjuntos-compania.ts",
@@ -228667,6 +228697,8 @@
         "tgSendButtons",
         "tgAnswerCallback",
         "tgEditMessage",
+        "cuerpoEditMessage",
+        "tgQuitarBotones",
         "tgAskForReply",
         "verifyTelegramWebhook",
         "emisorAutorizado"
@@ -228758,12 +228790,30 @@
           "resumen": "Edita el texto de un mensaje. Sin `botones`, Telegram le QUITA los que tuviera (es lo que se quiere tras pulsar); con `botones`, los sustituye (un aviso que se ACTUALIZA en sitio en vez de mandar otro"
         },
         {
+          "nombre": "cuerpoEditMessage",
+          "kind": "function",
+          "exportada": true,
+          "params": "chatId: string, messageId: number, text: string, botones?: Boton[][]",
+          "retorno": "Record<string, unknown>",
+          "linea": 147,
+          "resumen": "Cuerpo de `editMessageText`: SIN `botones` no lleva `reply_markup` (Telegram quita el teclado); con ellos, los sustituye. PURO."
+        },
+        {
+          "nombre": "tgQuitarBotones",
+          "kind": "function",
+          "exportada": true,
+          "params": "messageId: number, opts: { chatId?: string } = {}",
+          "retorno": "Promise<boolean>",
+          "linea": 155,
+          "resumen": "Quita los botones de un mensaje sin tocar su texto (`editMessageReplyMarkup` con teclado vacío). `true` = aceptado."
+        },
+        {
           "nombre": "tgAskForReply",
           "kind": "function",
           "exportada": true,
           "params": "text: string, opts: { chatId?: string } = {}",
           "retorno": "Promise<number | null>",
-          "linea": 150,
+          "linea": 170,
           "resumen": "Pide texto libre ligado a la respuesta (force_reply). El webhook lee message.reply_to_message."
         },
         {
@@ -228772,7 +228822,7 @@
           "exportada": true,
           "params": "headerValue: string | null, secret = process.env.TELEGRAM_WEBHOOK_SECRET",
           "retorno": "boolean",
-          "linea": 168,
+          "linea": 188,
           "resumen": "Verifica el header secreto que Telegram envía en cada webhook. FAIL-CLOSED: sin TELEGRAM_WEBHOOK_SECRET no se acepta nada. Antes dejaba pasar todo si faltaba la env, y por este webhook se aprueban cos"
         },
         {
@@ -228781,13 +228831,13 @@
           "exportada": true,
           "params": "update: UpdateTelegram, chatPermitido = process.env.TELEGRAM_CHAT_ID",
           "retorno": "boolean",
-          "linea": 186,
+          "linea": 206,
           "resumen": "¿Viene el update del chat autorizado (el de Alberto)? El secreto del header solo prueba que lo manda Telegram, NO quién pulsó: cualquiera que escriba al bot genera updates válidos. El bot solo manda b"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "68bf21099aef"
+      "hash": "fee4e3f8811e"
     },
     {
       "ruta": "packages/core-vehiculos/src/apivehiculo.ts",
@@ -274136,6 +274186,6 @@
   ],
   "resumen": {
     "archivos": 5613,
-    "funciones": 22172
+    "funciones": 22177
   }
 }
