@@ -109,6 +109,14 @@
     {
       "path": "/api/cron/tarificador-humo-informe",
       "schedule": "15 3 * * *"
+    },
+    {
+      "path": "/api/cron/tarificador-alarma",
+      "schedule": "35 7 * * *"
+    },
+    {
+      "path": "/api/cron/tarificador-alarma",
+      "schedule": "35 8 * * *"
     }
   ]
 }
