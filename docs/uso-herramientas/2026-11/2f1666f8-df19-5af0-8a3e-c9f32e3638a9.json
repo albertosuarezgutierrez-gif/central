@@ -1,8 +1,8 @@
 {
  "sesion": "2f1666f8-df19-5af0-8a3e-c9f32e3638a9",
  "inicio": "2026-11-04T10:28:02.762Z",
- "fin": "2026-11-04T12:16:59.488Z",
- "llamadas": 531,
+ "fin": "2026-11-04T12:49:47.520Z",
+ "llamadas": 664,
  "categorias": {
   "agente:Explore": {
    "llamadas": 1,
@@ -16,41 +16,42 @@
    }
   },
   "agente:general-purpose": {
-   "llamadas": 10,
-   "chars_in": 28537,
-   "chars_out": 30762,
+   "llamadas": 11,
+   "chars_in": 31622,
+   "chars_out": 34068,
    "errores": 0,
-   "archivos_citados": 21,
-   "chars_citados": 256012,
+   "archivos_citados": 27,
+   "chars_citados": 290320,
    "tools": {
-    "Agent": 10
+    "Agent": 11
    }
   },
   "otro": {
-   "llamadas": 61,
-   "chars_in": 62464,
-   "chars_out": 297652,
+   "llamadas": 75,
+   "chars_in": 85203,
+   "chars_out": 380795,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 7,
-    "SubagentHandback": 19,
-    "SendMessage": 5,
-    "ReadNotifications": 19,
+    "ToolSearch": 8,
+    "SubagentHandback": 24,
+    "SendMessage": 6,
+    "ReadNotifications": 24,
     "AskUserQuestion": 1,
-    "Monitor": 10
+    "Monitor": 11,
+    "TaskStop": 1
    }
   },
   "bash": {
-   "llamadas": 349,
-   "chars_in": 679085,
-   "chars_out": 1997906,
+   "llamadas": 466,
+   "chars_in": 864616,
+   "chars_out": 2824505,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 349
+    "Bash": 466
    }
   },
   "mcp:Google_Drive": {
@@ -105,16 +106,16 @@
    }
   },
   "mcp:github": {
-   "llamadas": 5,
-   "chars_in": 2675,
-   "chars_out": 4698,
+   "llamadas": 6,
+   "chars_in": 2787,
+   "chars_out": 5028,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__github__list_pull_requests": 2,
     "mcp__github__create_pull_request": 1,
-    "mcp__github__pull_request_read": 1,
+    "mcp__github__pull_request_read": 2,
     "mcp__github__update_pull_request": 1
    }
   },
