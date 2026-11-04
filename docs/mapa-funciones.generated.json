@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-04T12:15:34Z",
-  "sha": "70154c85903885f9c6bede5ce877afaa8ffb61b8",
+  "generadoEn": "2026-11-04T13:05:29Z",
+  "sha": "4b2335104d75fe3e44b814d67a93e1ce8d4e69c2",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -267910,7 +267910,7 @@
           "exportada": true,
           "params": "motivo: MotivoParar, detalle: string | null = null",
           "retorno": "RespuestaExplorador",
-          "linea": 2219,
+          "linea": 2220,
           "resumen": "La respuesta que se manda al worker cuando algo no cuadra: parar, nunca improvisar."
         },
         {
@@ -267919,7 +267919,7 @@
           "exportada": false,
           "params": "el: ElementoInventario",
           "retorno": "boolean",
-          "linea": 2265,
+          "linea": 2266,
           "resumen": "Controles que la frontera de cuenta bancaria mira: nativos y NO nativos (mat-select, combobox/textbox ARIA). El inventario no trae `contenteditable`: ese lo caza el guard del worker (`exigirSinCuentaB"
         },
         {
@@ -267928,7 +267928,7 @@
           "exportada": true,
           "params": "inv: InventarioDom",
           "retorno": "Parada | null",
-          "linea": 2275,
+          "linea": 2276,
           "resumen": "¿Hay que PARAR antes de hacer nada en esta pantalla? `null` = no. Mira títulos, textos y nombres de campos, y la URL de los marcos (un iframe de reCAPTCHA). No es la única barrera: el guard de emisión"
         },
         {
@@ -267937,7 +267937,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "string",
-          "linea": 2318,
+          "linea": 2319,
           "resumen": "Dos FNV-1a de 32 bits con semillas distintas → hex de 16 (sin BigInt ni node:crypto: el index llega al navegador y asegura compila con target ES2017). Es una HUELLA para reconocer pantallas, no un has"
         },
         {
@@ -267946,7 +267946,7 @@
           "exportada": true,
           "params": "inv: InventarioDom",
           "retorno": "string",
-          "linea": 2334,
+          "linea": 2335,
           "resumen": "Huella ESTRUCTURAL de la pantalla: ruta de cada marco + identificadores estables de sus controles (id, name, formControlName, tipo), ordenados. No entran textos variables ni valores: dos visitas a la "
         },
         {
@@ -267955,7 +267955,7 @@
           "exportada": true,
           "params": "inv: InventarioDom",
           "retorno": "string | null",
-          "linea": 2351,
+          "linea": 2352,
           "resumen": "Huella del RELLENO de la pantalla (14/10/2026): qué controles (por `ref`) tienen ya algún valor (`conValor`), nunca el valor. Con la misma huella estructural, que cambie = la exploración AVANZA dentro"
         },
         {
@@ -267964,7 +267964,7 @@
           "exportada": true,
           "params": "huellas: readonly string[], actual: string, avancesFallidos: number, rellenos?: { anteriores: readonly (string | null)[]; actual: string | null },",
           "retorno": "boolean",
-          "linea": 2379,
+          "linea": 2380,
           "resumen": "`huellas` = las de los pasos ANTERIORES, en orden. Bucle = 2 avances sin efecto, o la actual sería la 3.ª seguida con la misma huella Y el mismo relleno (`rellenos`, alineado con `huellas`; `huellaRel"
         },
         {
@@ -267973,7 +267973,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined>",
           "retorno": "TopesExplorador",
-          "linea": 2409
+          "linea": 2410
         },
         {
           "nombre": "comprobarTopes",
@@ -267981,7 +267981,7 @@
           "exportada": true,
           "params": "c: ConsumoExplorador, t: TopesExplorador, costeSiguienteMax: number",
           "retorno": "MotivoTope | null",
-          "linea": 2434,
+          "linea": 2435,
           "resumen": "¿Se puede dar UN paso más con IA? `costeSiguienteMax` = el PEOR caso de la próxima llamada (`costeMaximoLlamada`): se para ANTES de pasarse, no después. `null` = adelante."
         },
         {
@@ -267990,7 +267990,7 @@
           "exportada": false,
           "params": "modelo: string",
           "retorno": null,
-          "linea": 2452
+          "linea": 2453
         },
         {
           "nombre": "redondeo6",
@@ -267998,7 +267998,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 2453
+          "linea": 2454
         },
         {
           "nombre": "costeMaximoLlamada",
@@ -268006,7 +268006,7 @@
           "exportada": true,
           "params": "modelo: string, caracteresEntrada: number, maxTokensSalida: number",
           "retorno": "number",
-          "linea": 2456,
+          "linea": 2457,
           "resumen": "Peor caso de una llamada: ~3 caracteres por token de entrada y TODOS los tokens de salida permitidos."
         },
         {
@@ -268015,7 +268015,7 @@
           "exportada": true,
           "params": "modelo: string, caracteresEntrada: number, caracteresSalida: number",
           "retorno": "number",
-          "linea": 2462,
+          "linea": 2463,
           "resumen": "Estimación tras la llamada (~3 caracteres por token, a la alta)."
         },
         {
@@ -268024,7 +268024,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "PresupuestoMapa | null",
-          "linea": 2505,
+          "linea": 2506,
           "resumen": "Valida un {@link PresupuestoMapa} que llega por el cable. `null` si no tiene la forma (o la referencia parece un dato personal)."
         },
         {
@@ -268033,7 +268033,7 @@
           "exportada": true,
           "params": "el: ElementoInventario",
           "retorno": "SelectorMapa | null",
-          "linea": 2540,
+          "linea": 2541,
           "resumen": "El selector estable de un elemento: id (no autogenerado) > name > formControlName > etiqueta exacta > texto exacto."
         },
         {
@@ -268042,7 +268042,7 @@
           "exportada": false,
           "params": "el: ElementoInventario, s: SelectorMapa",
           "retorno": "boolean",
-          "linea": 2549
+          "linea": 2550
         },
         {
           "nombre": "rutaMarco",
@@ -268050,7 +268050,7 @@
           "exportada": true,
           "params": "url: string",
           "retorno": null,
-          "linea": 2558,
+          "linea": 2559,
           "resumen": "Ruta del marco (sin origen): la misma pantalla puede servirse desde otro host del mismo portal."
         },
         {
@@ -268059,7 +268059,7 @@
           "exportada": true,
           "params": "meta: MetaMapa, pasos: readonly PasoExploracion[]",
           "retorno": "MapaExploracion",
-          "linea": 2580,
+          "linea": 2581,
           "resumen": "Construye el MAPA a partir de los pasos validados (el último paso de cada huella manda). Determinista: mismo input, mismo mapa. Lo que no tiene selector estable o no se mapeó a una clave del catálogo "
         },
         {
@@ -268068,7 +268068,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 2648,
+          "linea": 2649,
           "resumen": "Origen + ruta de una petición de red (sin query, fragmento ni credenciales). `null` si no es una URL http(s)."
         },
         {
@@ -268077,7 +268077,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "MapaExploracion | null",
-          "linea": 2661,
+          "linea": 2662,
           "resumen": "Valida un mapa leído de BD o de un fichero (estricto: versión 1, forma exacta). `null` si no es un mapa v1 válido. No re-deriva nada: solo comprueba forma y límites."
         },
         {
@@ -268086,13 +268086,13 @@
           "exportada": true,
           "params": "pantalla: PantallaMapaExploracion, inv: InventarioDom",
           "retorno": "RespuestaExplorador | null",
-          "linea": 2696,
+          "linea": 2697,
           "resumen": "MEMORIA: si la pantalla ya está en un mapa, el plan sale del mapa SIN IA. Cada campo y el avance tienen que encontrarse UNA sola vez en el inventario actual (si no, `null` y se pregunta a la IA). La r"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6bd299d86965"
+      "hash": "0e17e1dedbaa"
     },
     {
       "ruta": "packages/module-tarificacion/src/fichas-catalogo.ts",
@@ -270244,7 +270244,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 204,
+          "linea": 211,
           "resumen": "0.3.21: minúsculas, sin tildes, solo letras/cifras separadas por un espacio."
         },
         {
@@ -270253,7 +270253,7 @@
           "exportada": true,
           "params": "textoOpcion: string | null | undefined, pistas: readonly string[]",
           "retorno": "boolean",
-          "linea": 209,
+          "linea": 216,
           "resumen": "0.3.21: ¿el texto de una opción casa con alguna pista? Igual, o una contiene a la otra por PALABRAS completas; la más corta tiene que tener ≥3 caracteres («XIAOMI» ~ «Xiaomi», «ELECTRIC SCOOTER 4 PRO»"
         },
         {
@@ -270262,7 +270262,7 @@
           "exportada": true,
           "params": "texto: unknown",
           "retorno": "number | null",
-          "linea": 231,
+          "linea": 238,
           "resumen": "El texto con forma de importe lleva € o decimales: «2019» suelto no es un importe."
         },
         {
@@ -270271,7 +270271,7 @@
           "exportada": false,
           "params": "r: RegExp",
           "retorno": null,
-          "linea": 243,
+          "linea": 250,
           "resumen": "Copia sin el flag `g` (un `test` con /g arrastra `lastIndex` entre llamadas)."
         },
         {
@@ -270280,7 +270280,7 @@
           "exportada": true,
           "params": "textos: Iterable<unknown>, destino: Set<string> = new Set<string>()",
           "retorno": "Set<string>",
-          "linea": 248,
+          "linea": 255,
           "resumen": "Aprende los nombres de mediador («209-C/12/0000 - Nombre Apellidos») de una lista de textos, para quitarlos donde reaparezcan."
         },
         {
@@ -270289,7 +270289,7 @@
           "exportada": true,
           "params": "t: string, nombresMediador: ReadonlySet<string> = new Set<string>()",
           "retorno": "boolean",
-          "linea": 260,
+          "linea": 267,
           "resumen": "¿Es cabecera personal del portal (mediador, «Último acceso: fecha» o un nombre de mediador ya aprendido)?"
         },
         {
@@ -270298,7 +270298,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 279
+          "linea": 286
         },
         {
           "nombre": "pareceDatoPersonalInventario",
@@ -270306,7 +270306,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "boolean",
-          "linea": 282,
+          "linea": 289,
           "resumen": "¿Tiene forma de dato personal? Los dos filtros del módulo: el de la descripción del vehículo y el redactor general."
         },
         {
@@ -270315,7 +270315,7 @@
           "exportada": true,
           "params": "url: unknown",
           "retorno": "string",
-          "linea": 287,
+          "linea": 294,
           "resumen": "URL sin query ni fragmento, con los datos personales tapados. `about:blank` y similares tal cual."
         },
         {
@@ -270324,7 +270324,7 @@
           "exportada": true,
           "params": "crudo: unknown, maxBytes: number = MAX_BYTES_INVENTARIO_DOM, opciones: OpcionesSaneado = {}",
           "retorno": "InventarioDom | null",
-          "linea": 299,
+          "linea": 306,
           "resumen": "Sanea el inventario CRUDO (lo que devuelve el extractor del navegador, o lo que llega por el cable). `null` si no tiene forma de inventario. Nunca lanza."
         },
         {
@@ -270333,7 +270333,7 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "string",
-          "linea": 539,
+          "linea": 547,
           "resumen": "Minúsculas, sin acentos, espacios colapsados."
         },
         {
@@ -270342,7 +270342,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 543,
+          "linea": 551,
           "resumen": "Solo letras y dígitos, ya sin acentos (sin `\\p{L}`: asegura compila con target ES2017) (para valores con dígitos: «1234 ABC» = «1234-abc», «15/01/1980» = «15.01.1980»)."
         },
         {
@@ -270351,7 +270351,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 544
+          "linea": 552
         },
         {
           "nombre": "contieneValorSensible",
@@ -270359,7 +270359,7 @@
           "exportada": true,
           "params": "texto: string, valores: readonly string[]",
           "retorno": "boolean",
-          "linea": 547,
+          "linea": 555,
           "resumen": "¿El texto contiene alguno de los valores? Con dígitos se compara en compacto; sin dígitos, por palabra completa."
         },
         {
@@ -270368,7 +270368,7 @@
           "exportada": true,
           "params": "inv: InventarioDom, valores: readonly string[]",
           "retorno": "InventarioDom",
-          "linea": 569,
+          "linea": 577,
           "resumen": "Copia del inventario SIN ningún texto que contenga uno de `valores` (normalizado; se ignoran los < 3 caracteres). Cuenta lo quitado en `textosDescartados`. Pura; nunca muta la entrada. Las `ref` y el "
         },
         {
@@ -270377,7 +270377,7 @@
           "exportada": true,
           "params": "riesgo: unknown",
           "retorno": "string[]",
-          "linea": 615,
+          "linea": 623,
           "resumen": "Los valores sensibles de un `riesgo` (cualquier forma: auto, hogar, comunidades): recorre el objeto y recoge los textos y números de las claves de `CLAVES_RIESGO_SENSIBLES`. Una fecha ISO añade tambié"
         },
         {
@@ -270386,13 +270386,13 @@
           "exportada": true,
           "params": "inv: InventarioDom",
           "retorno": "InventarioDom",
-          "linea": 646,
+          "linea": 654,
           "resumen": "0.3.17: copia del inventario donde cada `onclick` recortado que trae su `onclickCompleto` pasa a ser el ENTERO (y desaparece la clave aparte). Es lo que miran el validador y el guard; lo que sale haci"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e68673c44ccd"
+      "hash": "63f6f2c0b5b1"
     },
     {
       "ruta": "packages/module-tarificacion/src/modo-integracion.ts",
