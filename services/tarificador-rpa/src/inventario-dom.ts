@@ -96,7 +96,10 @@ function extractor(explora: boolean): string {
   if (EXPLORA) {
     try {
       for (const m of modalesVisibles(document)) {
-        for (const c of Array.from(m.querySelectorAll(SEL_CTL))) {
+        const sub = [];
+        recorrer(m, sub, [], 0);
+        if (m.shadowRoot) recorrer(m.shadowRoot, sub, [], 1);
+        for (const c of sub.filter((x) => x.matches(SEL_CTL))) {
           if (lista.length >= 2000) break;
           if (lista.includes(c) || !esCierreM(c) || !visM(c)) continue;
           lista.push(c);

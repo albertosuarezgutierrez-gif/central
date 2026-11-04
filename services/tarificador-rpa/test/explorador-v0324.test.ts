@@ -75,7 +75,7 @@ function contexto(page: Page, guard: GuardEmision, entrada: string, ramo: string
   }
 }
 
-test('versión del explorador 0.3.38', () => assert.equal(EXPLORADOR_VERSION, '0.3.38'))
+test('versión del explorador 0.3.39', () => assert.equal(EXPLORADOR_VERSION, '0.3.39'))
 
 // ─── 1) Mapfre NSE: el nodo marcado desaparece (repintado JSF) ──────────────────────────────────────────────────────────────────────
 const MF = 'mapfre:automoviles:patinetes'
