@@ -46,7 +46,7 @@ export type CampoContrato = {
 }
 
 /** El contrato que aplica: un ramo con cotizador, o la petición genérica. */
-export type ClaveContrato = 'auto' | 'moto' | 'hogar' | 'vida' | 'salud' | 'decesos' | 'comunidades' | 'sin_cotizador' | 'generico'
+export type ClaveContrato = 'auto' | 'moto' | 'patinete' | 'hogar' | 'vida' | 'salud' | 'decesos' | 'comunidades' | 'sin_cotizador' | 'generico'
 
 export type ContratoDatos = {
   clave: ClaveContrato
@@ -258,9 +258,23 @@ const GENERICO: readonly CampoContrato[] = [
   SEGURO_ACTUAL_GENERICO,
 ]
 
+// ─── Patinete / VMP (Allianz Movilidad Personal, 04/11/2026): vehículo SIN matrícula ──────────────────────────────
+
+const PATINETE: readonly CampoContrato[] = [
+  c('cp', 'código postal de circulación', 'El código postal donde usas el patinete.', 'cliente', 'siempre', { cubre: ['codigoPostal'] }),
+  c('vmp.marca', 'marca del patinete', 'La marca del patinete (por ejemplo, Xiaomi, Cecotec, Segway).', 'cliente', 'siempre'),
+  c('vmp.modelo', 'modelo del patinete', 'El modelo del patinete (por ejemplo, «Mi Electric Scooter 4 Pro»).', 'cliente', 'siempre'),
+  c('vmp.usoProfesional', 'uso profesional', '¿Usas el patinete para trabajar (reparto, desplazamientos del trabajo…) o solo para uso personal?', 'cliente', 'siempre'),
+  c('vmp.homologado', 'homologado por la DGT', '¿Tu patinete está homologado por la DGT (tiene el certificado de circulación)?', 'cliente', 'siempre'),
+  c('vmp.velocidadLimitada25', 'velocidad limitada a 25 km/h', '¿La velocidad máxima de tu patinete está limitada a 25 km/h?', 'cliente', 'siempre'),
+  c('fechaEfecto', 'fecha de efecto', P_EFECTO, 'cliente', 'siempre'),
+  SEGURO_ACTUAL_GENERICO,
+]
+
 const CONTRATOS: Readonly<Record<ClaveContrato, ContratoDatos>> = {
   auto: { clave: 'auto', cotizador: ['avant2', 'rpa'], titulo: 'Del coche', campos: [...persona(true), ...vehiculo(false)] },
   moto: { clave: 'moto', cotizador: ['avant2', 'rpa'], titulo: 'De la moto', campos: [...persona(true), ...vehiculo(true)] },
+  patinete: { clave: 'patinete', cotizador: ['rpa'], titulo: 'Del patinete', campos: [...persona(false), ...PATINETE] },
   hogar: { clave: 'hogar', cotizador: ['avant2', 'rpa'], titulo: 'De la vivienda', campos: [...persona(false), ...HOGAR] },
   vida: { clave: 'vida', cotizador: ['avant2'], titulo: 'Del seguro de vida', campos: [...persona(false), ...VIDA] },
   salud: { clave: 'salud', cotizador: ['avant2'], titulo: 'Del seguro de salud', campos: [...persona(false), ...SALUD] },
@@ -270,7 +284,7 @@ const CONTRATOS: Readonly<Record<ClaveContrato, ContratoDatos>> = {
   generico: { clave: 'generico', cotizador: [], titulo: 'De lo que quieres asegurar', campos: GENERICO },
 }
 
-const CON_CONTRATO = new Set<string>(['auto', 'moto', 'hogar', 'vida', 'salud', 'decesos', 'comunidades'])
+const CON_CONTRATO = new Set<string>(['auto', 'moto', 'patinete', 'hogar', 'vida', 'salud', 'decesos', 'comunidades'])
 
 /**
  * El contrato de un ramo de oportunidad. Ramo sin cotizador (RC, comercio, mascotas…) → `sin_cotizador`; sin ramo
