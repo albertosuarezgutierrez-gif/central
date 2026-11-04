@@ -49,7 +49,7 @@ import { adaptadores } from './adapters/index.ts'
 import { enviarResultado, leerConfig, pedirTrabajo, salidaSinTrabajo, vehiculoDelResultado, type Config, type CuerpoResultado, type VehiculoDelResultado } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
 import { crearTrazaIntento } from './traza-intento.ts'
-import { ErrorCodigoSmsPendiente, ErrorTarificador, ErrorVerificacionHumana, MOTIVO_VERIFICACION_HUMANA, cabeReintento, clasificar, clasificarIntento, esperaReintentoMs, limiteDelTrabajo, pideInventarioDom, type Clasificacion } from './errores.ts'
+import { ErrorCodigoSmsPendiente, ErrorTarificador, ErrorVerificacionHumana, MOTIVO_VERIFICACION_HUMANA, cabeReintento, clasificar, clasificarIntento, codigoCable, esperaReintentoMs, limiteDelTrabajo, pideInventarioDom, type Clasificacion } from './errores.ts'
 import { capturarInventarioDom, marcosDePestanas } from './inventario-dom.ts'
 import { pulsarMediadorGenerali, pulsarEntrarGenerali, entrarTurismosGenerali, cerrarAvisoSabiasQueGenerali, pulsarSubpestanaGenerali, pulsarRecalcularGenerali, pulsarHistorialObtenidoGenerali, pulsarSalidaHistorialObtenidoGenerali, pulsarConsultaHistorialObtenidoGenerali, pulsarPestanaHistorialObtenidoGenerali, marcarPlacasEspecialesGenerali, pulsarConfirmarVehiculoGenerali, pulsarConfirmarDatosPersonasGenerali, pulsarSiguienteValoracionGenerali, abrirDesplegableMarcaGenerali, elegirMarcaListaGenerali, abrirDesplegableModeloGenerali, elegirModeloListaGenerali, elegirPotenciaGenerali, elegirFilaVersionGenerali, elegirCombustibleGenerali, abrirDesplegableVersionGenerali, elegirVersionListaGenerali, cerrarAvisoTomadorMapfre, cerrarClubMapfre, leerOpcionesComercialesMapfre, elegirOpcionComercialMapfre, cerrarControlesTecnicosMapfre, rearmarContinuarMapfreTrasControlesTecnicos, generarProyectoMapfre, companiaActualTurismosAllianz, localidadTurismosAllianz, marcarAntecedenteTurismosAllianz, confirmarVehiculoMapfre, elegirTomadorMapfre, elegirOpcion, pulsarContinuarMapfre, instalarGuardEmision, fijarPermisosNavegacion, marcarOpcionRiesgoHogarAllianz, marcarOpcionResueltaHogarAllianz, marcarOpcionTurismosAllianz, marcarTarjetaVehiculoTurismosAllianz, polizaActualTurismosAllianz,
   guardarPresupuestoTurismosAllianz, buscarBotonDescargaProyecto, pulsarDescargaProyectoAuto, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto, esUrlOktaSmsGenerali, type GuardEmision } from './guard.ts'
@@ -863,6 +863,8 @@ async function main(): Promise<number> {
         resultado: 'error',
         error: {
           tipo: c.tipo,
+          // Causa propuesta (05/11/2026): solo timeout de navegación / portal caído; asegura decide el código final y el reintento.
+          ...(codigoCable(c.transitorio) ? { codigo: codigoCable(c.transitorio)! } : {}),
           // Cabeza + cola del mensaje y, al final, la referencia al documento del volcado (nunca un corte a ciegas).
           mensaje: truncarMensajeConReferencia(redactarTrabajo(mensaje), { max: 2000, referencia: htmlViaja ? nombreDocumentoVolcado(trabajo.id) : null, recortes: volcadoHtml?.recortes, cola: colaBoveda }),
           url: redactarTrabajo(evidencia.url).slice(0, 500),

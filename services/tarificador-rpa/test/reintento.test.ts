@@ -98,3 +98,13 @@ test('enSerie: un trabajo a la vez, aunque el anterior falle', async () => {
   assert.equal(r[0].status, 'rejected')
   assert.deepEqual(r.slice(1).map((x) => x.status === 'fulfilled' && x.value), ['b', 'c'])
 })
+
+// Causa propuesta a asegura (05/11/2026): solo timeout de navegación y portal caído; lo demás lo deriva asegura.
+test('codigoCable: timeout de navegación → timeout; 5xx / pasajero → portal_caido; resto → nada', async () => {
+  const { codigoCable } = await import('../src/errores.ts')
+  assert.equal(codigoCable('timeout_navegacion'), 'timeout')
+  assert.equal(codigoCable('portal_5xx'), 'portal_caido')
+  assert.equal(codigoCable('portal_transitorio'), 'portal_caido')
+  assert.equal(codigoCable('sesion_caducada'), null)
+  assert.equal(codigoCable(null), null)
+})

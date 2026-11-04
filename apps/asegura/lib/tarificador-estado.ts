@@ -12,6 +12,7 @@ import {
   type Avant2Mes,
   type FilaActividad,
   type FilaAvant2,
+  type FilaCausa,
   type FilaEstado,
   type FilaPrecio,
   type FilaTrabajos,
@@ -39,7 +40,7 @@ export async function leerEstadoTarificador(correduriaId: string, ahora = new Da
     esquema.existeTabla('codeoscopic_consumo'),
   ])
 
-  const [precios, trabajos, errores, actividadTrabajos, exploraciones, pilotajes, avant2] = await Promise.all([
+  const [precios, trabajos, errores, actividadTrabajos, exploraciones, pilotajes, avant2, causas] = await Promise.all([
     // Último precio por compañía × ramo y canal: RPA (`respuesta.ofertas[].primaAnualEur`) y Avant2 (`mainQuotes[].premium`
     // por `product.vendor.name`). Una fila por tarificación y compañía con su prima mínima; el «último» lo elige la regla.
     prisma.$queryRaw<FilaPrecio[]>`
@@ -75,7 +76,9 @@ export async function leerEstadoTarificador(correduriaId: string, ahora = new Da
     // Último error por compañía × ramo (tarificar, pilotaje o exploración). Solo las tres claves que se redactan.
     prisma.$queryRaw<FilaUltimoError[]>`
       select distinct on (t.compania, t.ramo) t.compania, t.ramo, coalesce(t.modo, 'tarificar') as modo, t.created_at,
-             jsonb_build_object('tipo', t.error->'tipo', 'atascoClave', t.error->'atascoClave', 'url', t.error->'url') as error
+             jsonb_build_object('tipo', t.error->'tipo', 'codigo', t.error->'codigo', 'atascoClave', t.error->'atascoClave', 'url', t.error->'url',
+                                -- Solo sin código (trabajos anteriores al 05/11/2026): el mensaje recortado para DERIVARLO; no sale de las reglas.
+                                'mensaje', case when t.error->'codigo' is null then to_jsonb(left(t.error->>'mensaje', 400)) end) as error
         from seguros.tarificacion_trabajos t
        where t.correduria_id = ${correduriaId}::uuid and coalesce(t.modo, 'tarificar') <> 'humo'
          and t.estado = any(${ESTADOS_ERROR}::text[]) and jsonb_typeof(t.error) = 'object'
@@ -123,6 +126,17 @@ export async function leerEstadoTarificador(correduriaId: string, ahora = new Da
              and (c.creado_at at time zone 'Europe/Madrid') >= date_trunc('month', now() at time zone 'Europe/Madrid')
            group by 1`
       : Promise.resolve(null),
+    // Causa de los errores de TARIFICAR de 7 días (05/11/2026): tipo + código y, solo sin código, el mensaje recortado para
+    // derivarlo en las reglas (no sale). Fallo de lectura → `null` («no se sabe», nunca «sin errores»).
+    prisma.$queryRaw<FilaCausa[]>`
+      select t.compania, t.ramo,
+             jsonb_build_object('tipo', t.error->'tipo', 'codigo', t.error->'codigo',
+                                'mensaje', case when t.error->'codigo' is null then to_jsonb(left(t.error->>'mensaje', 400)) end) as error
+        from seguros.tarificacion_trabajos t
+       where t.correduria_id = ${correduriaId}::uuid and coalesce(t.modo, 'tarificar') = 'tarificar'
+         and t.estado = any(${ESTADOS_ERROR}::text[]) and jsonb_typeof(t.error) = 'object'
+         and t.created_at > now() - interval '7 days'
+       limit 2000`.catch((): FilaCausa[] | null => null),
   ])
 
   const expl: FilaActividad[] = [...(exploraciones ?? []), ...actividadTrabajos.filter((a) => a.modo === 'exploracion')]
@@ -133,7 +147,7 @@ export async function leerEstadoTarificador(correduriaId: string, ahora = new Da
     }),
     ...actividadTrabajos.filter((a) => a.modo === 'pilotaje'),
   ]
-  const filas = proyectarEstado({ precios, trabajos, errores, exploraciones: expl, pilotajes: pil })
+  const filas = proyectarEstado({ precios, trabajos, errores, exploraciones: expl, pilotajes: pil, causas })
   const mes = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit' }).format(ahora)
   const fuentesAusentes = [
     ...(conExpl ? [] : ['tarificador_exploraciones']),

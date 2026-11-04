@@ -7,6 +7,7 @@
 import { MOTIVOS_FIN, type MotivoFin } from './tarificador-explorador-reglas.ts'
 import { leerVehiculoWorker, type VehiculoEncadenado } from './tarificador-espera-vehiculo.ts'
 import { nombreUtil, partirApellidos } from './nombre-ficha.ts'
+import { esCodigoError, type CodigoError } from './tarificador-error-codigo.ts'
 import {
   claveCompania, envDeMaquina, esCif, faltanParaTarificar, mensajeFaltan, leerAtascoWorker, esDniNie, esTipoError, normalizarDocumento, esVersionBot, referenciaPresupuestoValida, sanearInventarioDom, sanearRecorrido, faltaCompaniaAnterior, validarFormularioAuto, validarFormularioHogar, validarFormularioHogarSinTomador, validarOfertas, validarOpcionesPoblacion, validarOpcionesVersion, validarRiesgoComunidad, validarTraza,
   type AtascoWorker, type CandidatoVersion, type DatosTomadorFicha, type Faltante, type FichaTomadorAuto, type FormularioAuto, type FormularioHogarSinTomador, type InventarioDom, type TomadorHogar, type OfertaNormalizada, type OpcionPoblacion, type PasoTraza, type Recorrido, type RiesgoComunidad, type TipoError,
@@ -619,7 +620,9 @@ export type ResultadoWorker =
        *  ≤60 KB), re-saneadas aquí; se guarda en el `error` jsonb (sin migración). Accesorio: sin forma → se descarta. Nunca se loguea. */
       /** `atasco` (F2, 14/10/2026): checkpoint de un paso que nadie resolvió, re-saneado (`leerAtascoWorker`). Accesorio:
        *  inválido → se descarta y el trabajo falla como antes. NO va al `error` jsonb: vive en `tarificador_atascos`. */
-      error: { tipo: TipoError; mensaje: string; url: string | null; opcionesVersion?: CandidatoVersion[]; opcionesPoblacion?: OpcionPoblacion[]; inventarioDom?: InventarioDom; recorrido?: Recorrido; atasco?: AtascoWorker }
+      /** `codigo` (05/11/2026): causa PROPUESTA por el worker (lista cerrada; fuera de lista se descarta). Asegura la revisa
+       *  (`codigoDeError`): nunca vuelve transitorio lo que asegura ve determinista. */
+      error: { tipo: TipoError; mensaje: string; url: string | null; codigo?: CodigoError; opcionesVersion?: CandidatoVersion[]; opcionesPoblacion?: OpcionPoblacion[]; inventarioDom?: InventarioDom; recorrido?: Recorrido; atasco?: AtascoWorker }
       captura: Buffer | null
       /** La captura (JPEG de un atasco, 21/10/2026) muestra datos personales del tomador: no sale a Telegram. */
       capturaConDatos: boolean
@@ -756,7 +759,7 @@ export function leerResultadoWorker(entrada: unknown): { ok: true; r: ResultadoW
     if (errores.length) return { ok: false, errores }
     return {
       ok: true,
-      r: { tipo: 'error', trabajoId, error: { tipo: err!.tipo as TipoError, mensaje: mensaje!, url, ...(opcionesVersion ? { opcionesVersion } : {}), ...(opcionesPoblacion ? { opcionesPoblacion } : {}), ...(inventarioDom ? { inventarioDom } : {}), ...(recorrido && recorrido.capturas.length > 0 ? { recorrido } : {}), ...(atasco ? { atasco } : {}) }, captura, capturaConDatos: captura !== null && e.capturaConDatos === true, html, ...leerMetaWorker(e) },
+      r: { tipo: 'error', trabajoId, error: { tipo: err!.tipo as TipoError, mensaje: mensaje!, url, ...(esCodigoError(err!.codigo) ? { codigo: err!.codigo } : {}), ...(opcionesVersion ? { opcionesVersion } : {}), ...(opcionesPoblacion ? { opcionesPoblacion } : {}), ...(inventarioDom ? { inventarioDom } : {}), ...(recorrido && recorrido.capturas.length > 0 ? { recorrido } : {}), ...(atasco ? { atasco } : {}) }, captura, capturaConDatos: captura !== null && e.capturaConDatos === true, html, ...leerMetaWorker(e) },
     }
   }
 

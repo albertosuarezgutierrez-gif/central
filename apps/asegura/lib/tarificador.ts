@@ -39,7 +39,9 @@ import { esRamoVehiculo, ofertasConSupuestoReferencia, referenciaDeResultadoOrig
 import { anotarVehiculoUsado, guardarReferenciaOportunidad, leerReferenciaOportunidad } from './tarificador-vehiculo-referencia-bd'
 import { aplicarSexoDeFicha, necesitaSexoDeFicha } from './tarificador-sexo-ficha'
 import { sobreCoberturasRpa } from './presupuesto-rpa-reglas'
-import { hayBotVersion, hayImagenTrabajo, hayPasos } from './esquema-bd'
+import { hayBotVersion, hayImagenTrabajo, hayPasos, hayRiesgoHuella } from './esquema-bd'
+import { VENTANA_CACHE_OK_MS, horasDesde, huellaRiesgo, mensajeReutilizado, okReutilizable } from './tarificador-huella'
+import { requireSecret } from '@central/core-identity'
 import { leerFilaImagen } from './tarificador-imagen'
 import { elegirImagenProduccion, imagenParaTrabajo } from './tarificador-imagen-reglas'
 import { caducarEmisiones } from './tarificador-emision'
@@ -47,6 +49,7 @@ import { MENSAJE_EMISION_INCIERTA, autorizacionSinResolver } from './tarificador
 import { memoriaTrasExito } from './tarificador-eleccion-reglas'
 import { guardarMemoriaVersion } from './tarificador-memoria'
 import { formasRiesgoDuplicado } from './tarificador-duplicados'
+import { MAX_INTENTOS_TARIFICAR, RE_SQL_REINTENTAR_DESDE, codigoDeError, esModoTarificar, estadoTarificarTrasFallo, maxIntentosModo, reintentarDesde } from './tarificador-error-codigo'
 import { purgarEvidenciaCaducada, purgarRecorridosCaducados, purgarRiesgoTrabajos, purgarRiesgosCerrados } from './tarificador-purga'
 import { atascoParaFallo, caducarAtascos, caducarPausas, evaluarCorte, guardarAtasco, pausarTrasHumo, pausaViva, sqlSinPausa } from './tarificador-robustez'
 import { PREFIJO_HUMO_NO_SOPORTADO, estadoTrasFalloHumo, humoPideParar } from './tarificador-humo-reglas'
@@ -142,7 +145,9 @@ export type EntradaEncolar = {
 
 export type ResultadoEncolar =
   /** `duplicado: true` = ya había un trabajo vivo con el mismo riesgo y se devuelve ESE (no se crea otro). */
-  | { estado: 'encolado'; trabajoId: string; duplicado: boolean; /** Estado REAL del trabajo devuelto cuando `duplicado` (nunca «en marcha» a ciegas). */ estadoPrevio?: string; mensaje?: string }
+  | { estado: 'encolado'; trabajoId: string; duplicado: boolean; /** Estado REAL del trabajo devuelto cuando `duplicado` (nunca «en marcha» a ciegas). */ estadoPrevio?: string; mensaje?: string
+      /** Caché 24 h (05/11/2026): el `ok` devuelto es de hace `horas` (mismo encargo); no se lanzó otro bot. */
+      reutilizado?: { horas: number } }
   | { estado: 'rechazado'; status: number; motivo: string }
 
 export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncolar> {
@@ -232,6 +237,11 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
   // forma purgada no distingue viviendas: `riesgoPurgadoJson` es null y `t.riesgo = null` nunca casa).
   const { riesgoJson, riesgoPurgadoJson } = formasRiesgoDuplicado(guardar.riesgo as Record<string, unknown>, e.ramo)
   const cid = clienteId
+  // HUELLA (05/11/2026, tarificador-huella.ts): HMAC del encargo completo; sin columna (SQL 2026-11-05a no aplicada), sin secreto
+  // o en hogar → `null` y todo va como antes. Con ella: índice único de vivos + reutilizar un `ok` con precio de < 24 h.
+  const huella = (await hayRiesgoHuella().catch(() => false))
+    ? huellaRiesgo({ correduriaId: e.correduriaId, clienteId: cid, oportunidadId: e.oportunidadId ?? null, polizaId: polizaId ?? null, compania, ramo: e.ramo, modo: 'tarificar', riesgo: guardar.riesgo }, secretoHuella())
+    : null
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${claveEncolar({ correduriaId: e.correduriaId, clienteId: cid, compania, ramo: e.ramo })}))`
     const previos = await tx.$queryRaw<{ id: string; estado: string; lease_hasta: Date | null; intentos: number; modo: string | null; ahora: Date; terminado_at: Date | null; actualizado_at: Date | null; con_precio: boolean }[]>`
@@ -248,10 +258,53 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
         and t.poliza_id is not distinct from ${polizaId ?? null}::uuid
         and coalesce(to_jsonb(t)->>'modo', 'tarificar') not in ('exploracion', 'humo', 'pilotaje')
       order by t.created_at`
-    const vivo = previos.find((p) => bloqueaDuplicado({ estado: p.estado, leaseHasta: p.lease_hasta, intentos: p.intentos, modo: p.modo, terminadoAt: p.terminado_at, conPrecio: p.con_precio, actualizadoAt: p.actualizado_at }, p.ahora, MAX_INTENTOS))
+    const vivo = previos.find((p) => bloqueaDuplicado({ estado: p.estado, leaseHasta: p.lease_hasta, intentos: p.intentos, modo: p.modo, terminadoAt: p.terminado_at, conPrecio: p.con_precio, actualizadoAt: p.actualizado_at }, p.ahora, maxIntentosModo(p.modo, MAX_INTENTOS)))
     if (vivo && e.imagenPrueba) return { estado: 'rechazado' as const, status: 409, motivo: `duplicado_imagen_prueba: ya hay un trabajo igual (${vivo.id}, ${vivo.estado}); la imagen de prueba solo va en un trabajo nuevo` }
     if (vivo) return { estado: 'encolado' as const, trabajoId: vivo.id, duplicado: true, estadoPrevio: vivo.estado, mensaje: mensajeDuplicado(vivo.estado) }
+    // CACHÉ 24 h: el mismo encargo ya tiene precio de hoy → se devuelve ESE trabajo (no otro login en el portal). Una imagen de
+    // PRUEBA nunca se sirve de caché (mediría otra cosa).
+    if (huella && !e.imagenPrueba) {
+      const previo = await tx.$queryRaw<{ id: string; terminado_at: Date | null; ahora: Date; con_precio: boolean }[]>`
+        select t.id::text as id, t.terminado_at, now() as ahora,
+               (t.tarificacion_id is not null and exists (
+                 select 1 from seguros.tarificacion_precios p where p.tarificacion_id = t.tarificacion_id and p.prima_eur is not null)) as con_precio
+        from seguros.tarificacion_trabajos t
+        where t.correduria_id = ${e.correduriaId}::uuid and t.riesgo_huella = ${huella} and t.estado = 'ok'
+          and coalesce(to_jsonb(t)->>'modo', 'tarificar') = 'tarificar'
+          and t.terminado_at > now() - ${VENTANA_CACHE_OK_MS / 1000}::int * interval '1 second'
+        order by t.terminado_at desc
+        limit 3`
+      const ok = previo.find((p) => okReutilizable({ terminadoAt: p.terminado_at, conPrecio: p.con_precio, ahora: p.ahora }))
+      if (ok) return { estado: 'encolado' as const, trabajoId: ok.id, duplicado: true, estadoPrevio: 'ok', mensaje: mensajeReutilizado(ok.terminado_at!, ok.ahora), reutilizado: { horas: horasDesde(ok.terminado_at!, ok.ahora) } }
+    }
     if (e.soloComprobarDuplicado) return { estado: 'rechazado' as const, status: 409, motivo: 'no_duplicado' }
+    if (huella) {
+      // `on conflict do nothing`: si el índice único de vivos ya tiene este encargo (otro camino lo encoló a la vez), no se
+      // crea otro y se devuelve ese. Sin índice no hay conflicto posible y se inserta como siempre.
+      const filas = e.imagenPrueba
+        ? await tx.$queryRaw<{ id: string }[]>`
+            insert into seguros.tarificacion_trabajos
+              (correduria_id, oportunidad_id, cliente_id, poliza_id, compania, ramo, riesgo, solicitado_por, imagen_prueba, riesgo_huella)
+            values (${e.correduriaId}::uuid, ${e.oportunidadId}::uuid, ${cid}::uuid, ${polizaId}::uuid,
+                    ${compania}, ${e.ramo}, ${riesgoJson}::jsonb, ${e.solicitadoPor}, ${e.imagenPrueba}, ${huella})
+            on conflict do nothing
+            returning id::text as id`
+        : await tx.$queryRaw<{ id: string }[]>`
+            insert into seguros.tarificacion_trabajos
+              (correduria_id, oportunidad_id, cliente_id, poliza_id, compania, ramo, riesgo, solicitado_por, riesgo_huella)
+            values (${e.correduriaId}::uuid, ${e.oportunidadId}::uuid, ${cid}::uuid, ${polizaId}::uuid,
+                    ${compania}, ${e.ramo}, ${riesgoJson}::jsonb, ${e.solicitadoPor}, ${huella})
+            on conflict do nothing
+            returning id::text as id`
+      if (filas[0]) return { estado: 'encolado' as const, trabajoId: filas[0].id, duplicado: false }
+      const otro = await tx.$queryRaw<{ id: string; estado: string }[]>`
+        select t.id::text as id, t.estado from seguros.tarificacion_trabajos t
+        where t.correduria_id = ${e.correduriaId}::uuid and t.riesgo_huella = ${huella}
+          and t.estado in ('pendiente', 'en_curso', 'error_reintentable')
+        limit 1`
+      if (!otro[0] || e.imagenPrueba) return { estado: 'rechazado' as const, status: 409, motivo: 'duplicado_concurrente: ya hay un trabajo vivo con este mismo encargo' }
+      return { estado: 'encolado' as const, trabajoId: otro[0].id, duplicado: true, estadoPrevio: otro[0].estado, mensaje: mensajeDuplicado(otro[0].estado) }
+    }
     if (e.imagenPrueba) {
       const conPrueba = await tx.$queryRaw<{ id: string }[]>`
         insert into seguros.tarificacion_trabajos
@@ -269,6 +322,15 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
       returning id::text as id`
     return { estado: 'encolado' as const, trabajoId: filas[0].id, duplicado: false }
   }, { timeout: 15000, maxWait: 10000 })
+}
+
+/** Secreto de la huella (el del worker, como la caché de matrículas). Sin él → `null`: no hay huella (nunca un literal). */
+function secretoHuella(): string | null {
+  try {
+    return requireSecret('TARIFICADOR_WORKER_SECRET')
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -426,7 +488,8 @@ export async function reclamarSiguiente(correduriaId: string, compania: string, 
          and ci.activo and ci.modo = 'rpa_autorizada'
         where w.correduria_id = ${correduriaId}::uuid and w.compania = ${clave}
           -- autorizado_emision: Alberto pulsó «Emitir»; la máquina 2 reanuda (no es un reintento: intentos a 0).
-          and w.estado in ('pendiente', 'autorizado_emision') and w.intentos < ${MAX_INTENTOS}
+          and w.estado in ('pendiente', 'autorizado_emision')
+          and w.intentos < (case when coalesce(to_jsonb(w)->>'modo', 'tarificar') = 'tarificar' then ${MAX_INTENTOS_TARIFICAR}::int else ${MAX_INTENTOS}::int end)
           -- Solo los modos que se pueden lanzar ahora (13/10/2026): 'exploracion' únicamente con su interruptor
           -- (modosReclamables); una exploración no ocupa máquina ni hueco mientras esté apagado.
           and coalesce(to_jsonb(w)->>'modo', 'tarificar') = any(${[...modos]}::text[])
@@ -949,7 +1012,7 @@ async function marcarFallo(
   db: Db,
   id: string,
   intentos: number,
-  error: { tipo: TipoError; mensaje: string; url: string | null; atasco?: AtascoWorker },
+  error: { tipo: TipoError; mensaje: string; url: string | null; atasco?: AtascoWorker; codigo?: string },
   evidencia: { trabajo: FilaTrabajo; captura: Buffer | null; capturaConDatos?: boolean; html: string | null } | null,
   botVersion: string | null = null,
   conBotVersion = false,
@@ -987,6 +1050,11 @@ async function marcarFallo(
   // ATASCO (F2): un hueco del portal con checkpoint, en un trabajo de tarificar, con el interruptor y bajo el tope de rondas →
   // `atascado` (espera la elección de Alberto) en vez de `error_definitivo`. El checkpoint NO va al `error` jsonb.
   if (deHumo || dePilotaje || deVehiculo) estado = estadoTrasFalloHumo()
+  // CAUSA + REINTENTO (05/11/2026): `codigo` de lista cerrada en TODO fallo; en TARIFICAR solo lo transitorio (timeout,
+  // portal_caido, infra) vuelve a la cola, 2 veces como mucho y con espera (10 y 30 min, `reintentarDesde` en el jsonb).
+  const codigo = codigoDeError(error)
+  const deTarificar = !deEmision && esModoTarificar(modoFila[0]?.modo)
+  if (deTarificar) estado = estadoTarificarTrasFallo({ base: estado, codigo, tipo: error.tipo, intentos, conAtasco: error.atasco !== undefined })
   if (dePilotaje) {
     await db.$executeRaw`update seguros.tarificador_pilotaje_sesiones s set cerrada_at = now(), motivo_fin = 'error_portal'
       from seguros.tarificacion_trabajos t
@@ -1019,7 +1087,8 @@ async function marcarFallo(
   const marcaAtasco = atasco ? { atasco: 'esperando', atascoClave: atasco.clave, ...opcionesAtasco } : {}
   // `capturaConDatos`: la captura muestra datos del tomador → el aviso de Telegram sale SIN foto (solo pantalla de plataforma).
   const marcaCaptura = capturaId ? { capturaConDatos: evidencia?.capturaConDatos === true } : {}
-  const err = JSON.stringify({ ...error, ...marcaAtasco, ...marcaCaptura, html_documento_id: htmlId, en: new Date().toISOString() })
+  const espera = deTarificar && estado === 'error_reintentable' ? reintentarDesde(intentos, new Date()) : null
+  const err = JSON.stringify({ ...error, ...marcaAtasco, ...marcaCaptura, codigo, ...(espera ? { reintentarDesde: espera } : {}), html_documento_id: htmlId, en: new Date().toISOString() })
   let filasTocadas: number
   if (conBotVersion) {
     filasTocadas = await db.$executeRaw`
@@ -1139,14 +1208,17 @@ export async function barrerTarificadorRpa(correduriaId: string, deps: DepsLanza
   r.pausasCaducadas = await paso('pausas', () => caducarPausas(correduriaId))
 
   r.reencolados = (await paso('reencolar', () => prisma.$executeRaw`
-    update seguros.tarificacion_trabajos set estado = 'pendiente', updated_at = now()
-    where correduria_id = ${correduriaId}::uuid and estado = 'error_reintentable' and intentos < ${MAX_INTENTOS}`)) ?? 0
+    update seguros.tarificacion_trabajos t set estado = 'pendiente', updated_at = now()
+    where t.correduria_id = ${correduriaId}::uuid and t.estado = 'error_reintentable'
+      and t.intentos < (case when coalesce(to_jsonb(t)->>'modo', 'tarificar') = 'tarificar' then ${MAX_INTENTOS_TARIFICAR}::int else ${MAX_INTENTOS}::int end)
+      -- Espera del reintento (05/11/2026): sin marca o con una ilegible, como antes (no se congela por un dato dudoso).
+      and coalesce((case when t.error->>'reintentarDesde' ~ ${RE_SQL_REINTENTAR_DESDE} then (t.error->>'reintentarDesde')::timestamptz end) <= now(), true)`)) ?? 0
 
   r.cancelados = (await paso('cancelar_no_autorizados', async () => {
     const cancelados = await prisma.$queryRaw<{ id: string }[]>`
       update seguros.tarificacion_trabajos w
       set estado = 'cancelado', terminado_at = now(), updated_at = now(),
-          error = jsonb_build_object('tipo', 'datos', 'mensaje', 'modo_no_automatizable: la integración ya no está autorizada o activa')
+          error = jsonb_build_object('tipo', 'datos', 'codigo', 'otro', 'mensaje', 'modo_no_automatizable: la integración ya no está autorizada o activa')
       where w.correduria_id = ${correduriaId}::uuid and w.estado = 'pendiente'
         and not exists (
           select 1 from seguros.companias_integracion ci
@@ -1299,7 +1371,7 @@ async function resolverEsperasVehiculo(correduriaId: string): Promise<{ inyectad
       const c = await prisma.$executeRaw`
         update seguros.tarificacion_trabajos
         set estado = 'cancelado', terminado_at = now(), updated_at = now(),
-            error = jsonb_build_object('tipo', 'datos', 'mensaje', ${d.motivo}::text)
+            error = jsonb_build_object('tipo', 'datos', 'codigo', 'datos_faltan', 'mensaje', ${d.motivo}::text)
         where id = ${w.id}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'pendiente'
           -- Solo si SIGUE en espera: si mientras tanto el registro del ok le inyectó el vehículo (quita la marca), no se cancela.
           -- (equivale a riesgo ? 'esperaVehiculo', escrito como la consulta de arriba, sin el operador ? en el SQL de Prisma).

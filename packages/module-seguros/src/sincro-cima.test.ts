@@ -109,6 +109,15 @@ test('esPolizaDeCoche: la moto que CIMA manda como auto NO es del carné B (0007
   assert.equal(esPolizaDeCoche('auto', null), true)
 })
 
+// 04/11/2026 — EIAC V07.1: categoría (§13.3.4) MO = moto; clase (§13.3.16) MO = MONOVOLUMEN.
+test('esPolizaDeCoche: monovolumen (clase MO, categoría TU) SÍ es coche; la categoría manda', () => {
+  assert.equal(esPolizaDeCoche('auto', { riesgos: [{ categoriaVehiculo: 'TU', claseVehiculo: 'MO' }] }), true)
+  assert.equal(esPolizaDeCoche('auto', { categoriaVehiculo: 'TU', claseVehiculo: 'MO' }), true)
+  assert.equal(esPolizaDeCoche('auto', { riesgos: [{ claseVehiculo: 'MO' }] }), true)
+  assert.equal(esPolizaDeCoche('auto', { riesgos: [{ categoriaVehiculo: 'TU', claseVehiculo: 'MT' }] }), true)
+  assert.equal(esPolizaDeCoche('auto', { riesgos: [{ categoriaVehiculo: 'MO' }] }), false)
+})
+
 // ─── Normalizar antes de declarar conflicto (03/10/2026) ─────────────────────
 test('fechaIsoFlexible: cualquier orden y separador razonable → ISO; lo imposible, null', () => {
   for (const v of ['1980-03-04', '1980/03/04', '1980.3.4', '04/03/1980', '4-3-1980', '4.3.1980', '1980-03-04T00:00:00Z']) assert.equal(fechaIsoFlexible(v), '1980-03-04', v)
