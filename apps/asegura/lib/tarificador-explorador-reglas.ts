@@ -6,6 +6,7 @@
 //    catálogo. Nunca credenciales, cookies, HTML ni capturas. Lo que devuelve se valida aquí y otra vez en el worker.
 
 import { humoActivo } from './tarificador-humo-reglas.ts'
+import { vehiculoActivo } from './tarificador-vehiculo-reglas.ts'
 import {
   DETALLES_FIN_EXPLORACION,
   EFECTOS_EN_PORTAL,
@@ -78,7 +79,7 @@ export function leerModosWorker(cabecera: string | null): string[] {
  * (`null`): una imagen anterior a la fase B trata todo lo que no es `emision` como `tarificar`, y una exploración
  * tarificada a ciegas con su riesgo sería un error. `exploracion` SOLO a un worker que la declara en su cabecera.
  */
-export function modoParaWorker(modo: string | null, modosWorker: readonly string[] = ['tarificar', 'emision']): 'tarificar' | 'emision' | 'exploracion' | 'humo' | 'pilotaje' | null {
+export function modoParaWorker(modo: string | null, modosWorker: readonly string[] = ['tarificar', 'emision']): 'tarificar' | 'emision' | 'exploracion' | 'humo' | 'pilotaje' | 'vehiculo' | null {
   if (modo === null || modo === 'tarificar') return 'tarificar'
   if (modo === 'emision') return 'emision'
   if (modo === 'exploracion' && modosWorker.includes('exploracion')) return 'exploracion'
@@ -86,6 +87,8 @@ export function modoParaWorker(modo: string | null, modosWorker: readonly string
   if (modo === 'humo' && modosWorker.includes('humo')) return 'humo'
   // MODO PILOTADO (03/11/2026): solo a un worker que lo declara (una imagen anterior lo trataría como una tarificación sin riesgo).
   if (modo === 'pilotaje' && modosWorker.includes('pilotaje')) return 'pilotaje'
+  // CONSULTA DE VEHÍCULO (04/11/2026): solo a un worker que la declara (una imagen anterior la tarificaría con un riesgo de solo matrícula).
+  if (modo === 'vehiculo' && modosWorker.includes('vehiculo')) return 'vehiculo'
   return null
 }
 
@@ -97,7 +100,8 @@ export function modoParaWorker(modo: string | null, modosWorker: readonly string
 export function modosReclamables(env: Record<string, string | undefined>): string[] {
   // `humo` (15/10/2026) solo con `TARIFICADOR_HUMO_ACTIVO=1` (y la imagen con la prueba): apagado, un humo no gasta máquina ni hueco.
   // `pilotaje` (03/11/2026) con el MISMO interruptor que el explorador: apagado, una sesión pilotada no gasta máquina ni hueco.
-  return [...(exploradorActivo(env) ? ['tarificar', 'emision', 'exploracion', 'pilotaje'] : ['tarificar', 'emision']), ...(humoActivo(env) ? ['humo'] : [])]
+  // `vehiculo` (04/11/2026) con su interruptor propio `TARIFICADOR_VEHICULO_ACTIVO=1`.
+  return [...(exploradorActivo(env) ? ['tarificar', 'emision', 'exploracion', 'pilotaje'] : ['tarificar', 'emision']), ...(humoActivo(env) ? ['humo'] : []), ...(vehiculoActivo(env) ? ['vehiculo'] : [])]
 }
 
 /** Margen para que el worker cierre y mande el resultado tras el tope de tiempo del explorador. */

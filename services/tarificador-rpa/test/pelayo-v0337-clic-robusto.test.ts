@@ -92,9 +92,9 @@ const D = {
   anc: { tag: 'div', cls: 'envoltura', op: 1, pe: 'none' }, hit: { rel: 'otro', tag: 'div', cls: 'velo-modal' }, cookie: false, ifr: false, shd: false, anim: 2,
 } as const
 
-test('versión del explorador 0.3.46', async () => {
+test('versión del explorador 0.3.48', async () => {
   const { EXPLORADOR_VERSION } = await import('../src/explorador.ts')
-  assert.equal(EXPLORADOR_VERSION, '0.3.46')
+  assert.equal(EXPLORADOR_VERSION, '0.3.48')
 })
 
 test('diagnóstico: forma CERRADA, redondeada, acotada, sin forma de dato personal; la nota casa su regex', () => {

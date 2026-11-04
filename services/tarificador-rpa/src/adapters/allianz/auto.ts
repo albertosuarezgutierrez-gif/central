@@ -2097,6 +2097,64 @@ export async function rellenarDatosVehiculoTurismosConSupuesto(page: Page, marco
   }
 }
 
+// ── CONSULTA DE VEHÍCULO POR MATRÍCULA (modo `vehiculo` del worker, explorador 0.3.48, 04/11/2026) ──
+// Los MISMOS pasos que el principio de `rellenarDatosVehiculoTurismosConSupuesto` (Sí › Matrícula › «Encuentra mi vehículo»), pero
+// SOLO LECTURA después: nunca elige tarjeta ni versión, nunca pulsa «SIGUIENTE» (lo veta además `src/vehiculo.ts`). El legado
+// `consultarMatricula`/`leerVehiculoPortal` (ids `#licensePlate`/`#marca` del mapa de Moto) no sirve en la app Angular de Turismos
+// (v0.6.0): aquí solo se usa `leerVehiculoPortal` como lectura de respaldo en el mismo marco (ids ausentes → todo `null`).
+
+/** Lo que el portal enseña tras «Encuentra mi vehículo». `aviso` = respondió con un aviso (no encontrado): no se inventa nada. */
+export type ConsultaMatriculaTurismos =
+  | { tipo: 'tarjetas'; etiquetas: string[]; fechaMatriculacion: string | null }
+  | { tipo: 'versiones'; opciones: CandidatoVersion[]; legado: LecturaVehiculoPortal; fechaMatriculacion: string | null }
+  | { tipo: 'aviso' }
+
+/** «Fecha de (1ª|primera) matriculación» del paso, si el portal la pinta (un solo campo, solo lectura). Sin campo → `null`. */
+async function fechaMatriculacionTurismos(marco: Pick<Frame, 'locator'>): Promise<string | null> {
+  const c = sinCabecera(marco, zonaTurismos(marco).getByLabel(/^\s*fecha de (1[ªa] |primera )?matriculaci[oó]n\s*\*?\s*$/i))
+  if ((await c.count().catch(() => 0)) !== 1) return null
+  const v = await c.inputValue({ timeout: 1_000 }).catch(() => '')
+  return fechaIsoDesdeTexto(v) ?? null
+}
+
+export async function consultarMatriculaTurismos(
+  page: Pick<Page, 'waitForTimeout'>,
+  marco: Frame,
+  matricula: string,
+  ctx: Pick<CtxTurismos, 'pulsar' | 'pausaAccion' | 'marcarOpcionTurismos' | 'formador'>,
+): Promise<ConsultaMatriculaTurismos> {
+  if (typeof ctx?.marcarOpcionTurismos !== 'function') throw new ErrorMapaIncompleto('la puerta guardada de opciones de Turismos en el contexto del worker', false, true)
+  const r = await ctx.marcarOpcionTurismos(marco, CLAVE_CONOCE_MATRICULA)
+  if (r.estado === 'no_unica' || r.estado === 'no_quedo') {
+    throw new ErrorMapaIncompleto(`cómo se marca «${OPCION_SI}» en «${ETIQUETA_CONOCE_MATRICULA}» (${r.estado === 'no_unica' ? `${r.coincidencias} coincidencias` : 'tras pulsar no quedó marcada'})`, true)
+  }
+  const { locator: campo, confirmar } = await campoUnicoTurismos(page, marco, ETIQUETA_MATRICULA, `el campo «${ETIQUETA_MATRICULA}»`, ESPERA_CONTROL_TURISMOS_MS, ctx.formador)
+  await ctx.pausaAccion()
+  await comprobarCampo(campo)
+  if (!(await teclearTurismos(campo, matricula))) throw new ErrorMapaIncompleto(`el campo «${ETIQUETA_MATRICULA}» (el portal no dejó escribir en él a tiempo)`, true)
+  await confirmar()
+  const boton = await unicoControl(page, botonTurismos(marco, BOTON_ENCUENTRA_VEHICULO), `el botón «${BOTON_ENCUENTRA_VEHICULO}»`, true)
+  await ctx.pausaAccion()
+  await ctx.pulsar(boton)
+  const fin = Date.now() + ESPERA_RESULTADO_VEHICULO_MS
+  for (;;) {
+    if ((await modalTurismos(marco).count().catch(() => 0)) > 0) {
+      throw new ErrorMapaIncompleto(`el modal con la lista de vehículos que abre «${BOTON_ENCUENTRA_VEHICULO}» (estructura sin mapear)`, true)
+    }
+    const tarjetas = await tarjetasVehiculoEstables(page, marco)
+    if (tarjetas.length > 0) return { tipo: 'tarjetas', etiquetas: tarjetas.map((t) => t.etiqueta), fechaMatriculacion: await fechaMatriculacionTurismos(marco) }
+    const versiones = await leerVersionesTurismos(marco)
+    const siguiente = botonSiguienteTurismos(marco)
+    // «SIGUIENTE» habilitado = el portal aceptó la matrícula; se LEE, no se pulsa.
+    if ((versiones && versiones.opciones.length > 0) || ((await siguiente.count().catch(() => 0)) === 1 && (await habilitadoDeVerdad(siguiente)))) {
+      return { tipo: 'versiones', opciones: versiones?.opciones ?? [], legado: await leerVehiculoPortal(marco), fechaMatriculacion: await fechaMatriculacionTurismos(marco) }
+    }
+    if ((await zonaTurismos(marco).getByRole('alert').count().catch(() => 0)) > 0) return { tipo: 'aviso' }
+    if (Date.now() >= fin) throw new ErrorMapaIncompleto(`el resultado de «${BOTON_ENCUENTRA_VEHICULO}» (ni tarjetas, ni versiones, ni aviso)`, true)
+    await page.waitForTimeout(500)
+  }
+}
+
 // ── Turismos · pasos «Datos del vehículo» (resto), «Datos personales» y «Antecedentes» (v0.6.5) ──
 // HTML real del trabajo 590a330e (17/10/2026, solo estructura): el asistente es un `cdk-stepper` con UN `tabpanel` por paso y los
 // ocho están en el DOM desde el principio (ocultos salvo el activo). Por eso la 0.6.4 «no veía» las fechas, el segundo conductor

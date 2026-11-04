@@ -52,3 +52,12 @@ Actualizado: 04/11/2026
 - Workflow tarificador-relanzar.yml con accion=pilotar y entrada=compania:presupuestos:ramo.
 - Comandos en seguros.tarificador_pilotaje_pasos: pulsar, rellenar, seleccionar, inspeccionar, esperar, volver, fin. Los datos personales van con el comando «dato» y una clave del catálogo, nunca en claro.
 - Topes: 60 comandos / 30 min / 10 min sin comando.
+
+## Ideas añadidas al plan (04/11/2026, Alberto: «añade todas»)
+1. **Plantilla de alta de compañía** — tras el primer precio de Pelayo: recorrido común + ficha por compañía (dominios, pasos, pantalla de precio, inicio de emisión) + permisos en BD. Objetivo: compañía nueva en 1–2 pilotajes.
+2. **Comparativa por nivel de cobertura** — agrupar ofertas (bot y Avant2) en terceros / terceros ampliado / todo riesgo con las coberturas guardadas y dar la más barata de cada nivel (hoy «la más barata» compara coberturas distintas).
+3. **Corregir datos que hacen fallar** — póliza anterior (Occident exige 5 caracteres; Allianz rechaza `previousInsurancePolicy`) y equivalencia de vehículo en Mapfre.
+4. **Matrícula por bot como primer paso de todo lead de coche** — modo `vehiculo` (0.3.48) rellena la ficha gratis antes de tarificar (activar tras probar con una matrícula real).
+5. **Alarma de compañía sin precio** — Telegram si una compañía lleva 3 días sin precio o encadena errores (datos del panel de estado).
+6. **Re-tarificación de cartera en vigor a 45 días del vencimiento** — bot primero; Avant2 solo con el botón 💶.
+Pendiente de Alberto: capturas del panel de Avant2 (prompt de Claude en Chrome), URLs de los pasos de Pelayo, compañías principales por volumen, consulta del código 2115 de Generali a Codeoscopic.

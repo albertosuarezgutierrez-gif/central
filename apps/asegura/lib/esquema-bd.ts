@@ -24,6 +24,8 @@ export const hayIpidHuella = () => esquema.existeColumna('presupuesto', 'ipid_hu
 export const hayExplorador = () => esquema.existeTabla('tarificador_exploracion_pasos')
 // Modo pilotado (SQL 2026-11-03c_tarificador_pilotaje): sin él, las rutas /api/tarificador/pilotaje/* responden 503.
 export const hayPilotaje = () => esquema.existeTabla('tarificador_pilotaje_pasos')
+// Consulta de vehículo por matrícula con el bot (SQL 2026-11-04e_tarificador_vehiculo_matricula): sin él, las rutas responden 503.
+export const hayVehiculoMatricula = () => esquema.existeTabla('tarificador_vehiculo_matricula')
 // F2 del plan de robustez (SQL 2026-10-14e_tarificador_robustez_f2): sin él, lo aprendido sigue sin confianza, no hay corte
 // por compañía/ramo y un atasco cae a `error_definitivo` como antes.
 export const hayConfianzaAprendido = () => esquema.existeColumna('tarificador_conocimiento', 'descartado_at')

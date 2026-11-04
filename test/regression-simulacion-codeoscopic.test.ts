@@ -43,6 +43,11 @@ function codigo(f: string): string {
     .replace(/(^|[^:])\/\/.*$/gm, '$1')
 }
 
+/** ¿El código ESCRIBE en `codeoscopic_consumo` (insert/update/delete/merge/truncate)? */
+function escribeLibroConsumo(src: string): boolean {
+  return /\b(insert\s+into|update|delete\s+from|merge\s+into|truncate(\s+table)?)\s+(seguros\.)?codeoscopic_consumo\b/i.test(src)
+}
+
 function ficheros(patron: RegExp): string[] {
   const out = execFileSync('git', ['ls-files', 'apps/asegura'], { cwd: ROOT, encoding: 'utf8' })
   return out.split('\n').filter(Boolean).filter((f) => patron.test(f))
@@ -239,9 +244,13 @@ test('nadie escribe en el libro de consumo fuera del embudo y su persistencia', 
     'apps/asegura/lib/codeoscopic/consumo.ts',
     'apps/asegura/lib/codeoscopic/cotizar.ts',
   ])
+  // Lectores de SOLO LECTURA declarados uno a uno: pueden leer el libro (p.ej. el gasto
+  // Avant2 del mes en el panel de estado), pero si alguno llega a escribirlo, salta igual.
+  const lectores = new Set(['apps/asegura/lib/tarificador-estado.ts'])
   const infractores = ficheros(/^apps\/asegura\/(app|lib)\/.*\.(ts|tsx)$/)
     .filter((f) => !permitidos.has(f) && !f.endsWith('.test.ts'))
     .filter((f) => /codeoscopic_consumo/.test(codigo(f)))
+    .filter((f) => !lectores.has(f) || escribeLibroConsumo(codigo(f)))
   assert.deepEqual(
     infractores,
     [],
@@ -250,6 +259,13 @@ test('nadie escribe en el libro de consumo fuera del embudo y su persistencia', 
 })
 
 // ─── El cepo se prueba a sí mismo ────────────────────────────────────────────
+
+test('el detector de escritura del libro distingue leer de escribir', () => {
+  assert.ok(!escribeLibroConsumo('select sum(c.coste_cents) from seguros.codeoscopic_consumo c'), 'leer no es escribir')
+  assert.ok(escribeLibroConsumo('insert into seguros.codeoscopic_consumo (x) values (1)'), 'insert')
+  assert.ok(escribeLibroConsumo('UPDATE seguros.codeoscopic_consumo set estado = 1'), 'update')
+  assert.ok(escribeLibroConsumo('delete from codeoscopic_consumo where 1=1'), 'delete')
+})
 
 test('el quitacomentarios no confunde documentación con código', () => {
   // Se apoya en un fichero real: si algún día se recorta de más, salta aquí.

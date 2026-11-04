@@ -20,6 +20,10 @@ Fuente: OpenAPI del portal INT (`docs/avant2/`). Detalle y matices en `docs/CODE
 ## Lo que podemos automatizar nosotros
 - Leer ramos y compañías GRATIS: `GET /insurance-lines`, `/insurance-vendors`, `/insurance-lines/{id}/products`
   (en central: `/api/operador/codeoscopic/lineas` y `/companias`; plataforma `/correduria/hogar` ya pinta hogar).
+- Instantánea GRATIS del catálogo por compañía (04/11/2026): Actions «Tarificador RPA · relanzar» → `accion=catalogo_avant2`
+  → `POST /api/operador/codeoscopic/catalogo/instantanea` (lista cerrada de GET en `lib/codeoscopic/catalogo-companias.ts`, ≤60
+  llamadas) → `seguros.codeoscopic_catalogo` (SQL `2026-11-04f`, NO aplicado: 503 sin él). Lectura: `GET …/codeoscopic/catalogo`.
+  `brokerFee` NO viene en `/products` según la spec: queda NULL («no se sabe») salvo que el vendor lo mande.
 - Auditar la config de cada compañía comparando `configs[].favorite` y `name` con lo que Alberto espera.
 - Pisar opciones por petición con la `config.id` correcta, y mostrar `formattedOptions` de la oferta.
 - NO automatizable: fijar defaults, descuentos, preemisión o comisiones de compañía; ni webhooks.

@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-04T18:33:23Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-04T15:29:52Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -20,7 +20,7 @@
 ### asegura
 - **Módulos que usa:** core-ai, core-catastro, core-direccion, core-email, core-firma, core-identity, core-telegram, core-vehiculos, module-patrimonio, module-seguros, module-seguros-pii, module-seguros-portal, module-tarificacion
 - **Capacidades:** QR / portal cliente
-- **Tablas (154):** de, if, seguros._volcado_control, seguros.acuerdo_comisiones, seguros.acuerdo_objetivos, seguros.acuerdos_compania, seguros.anulacion, seguros.aprobacion, seguros.auditoria, seguros.aviso_web, seguros.backfill_dni_plan, seguros.bien_documentos, seguros.bienes_asegurables, seguros.borradores_presupuesto, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.cambio_cuenta_solicitud, seguros.campana_envio, seguros.carta_mediador, seguros.cartera_foto, seguros.channel_inbound_messages, seguros.cima_decisiones, seguros.cima_ficheros, seguros.claves_mediador, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_mote, seguros.cliente_relaciones…
+- **Tablas (152):** de, if, seguros._volcado_control, seguros.acuerdo_comisiones, seguros.acuerdo_objetivos, seguros.acuerdos_compania, seguros.anulacion, seguros.aprobacion, seguros.auditoria, seguros.aviso_web, seguros.backfill_dni_plan, seguros.bien_documentos, seguros.bienes_asegurables, seguros.borradores_presupuesto, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.cambio_cuenta_solicitud, seguros.campana_envio, seguros.carta_mediador, seguros.cartera_foto, seguros.channel_inbound_messages, seguros.cima_decisiones, seguros.cima_ficheros, seguros.claves_mediador, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_mote, seguros.cliente_relaciones…
 - **Rutas API:** 308
 ### asegura-portal
 - **Módulos que usa:** core-ai, core-catastro, core-direccion, core-email, core-identity, core-push, core-telegram, module-documental, module-patrimonio, module-seguros, module-seguros-pii, module-seguros-portal, module-tarificacion

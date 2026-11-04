@@ -503,6 +503,8 @@ export type EntradaAvisoRpa = {
   alertas?: string[]
   /** Ofertas del borrador SIN garantías leídas (`ofertasSinGarantiasRpa`): el borrador es INCOMPLETO y se dice arriba. */
   incompletas?: { compania: string; producto: string; motivo?: string }[]
+  /** Líneas «⚠️ Revisar: …» del comprobador de coherencia (`lineasRevisar` de tarificacion-coherencia.ts). No bloquean: avisan. */
+  revisar?: string[]
 }
 
 /** El Telegram para Alberto (parse_mode HTML: todo lo variable, escapado). Solo nombre de pila o referencia: sin NIF ni teléfono. */
@@ -517,6 +519,7 @@ export function textoAvisoPresupuestoRpa(e: EntradaAvisoRpa): string {
       ? [`⛔ <b>INCOMPLETO</b>: sin garantías leídas en ${escapeHtml(e.incompletas.map((o) => `${o.compania} · ${o.producto}${o.motivo ? ` (${o.motivo})` : ''}`).join('; '))}. No se genera el PDF ni conviene enviarlo hasta completarlas (vuelve a tarificar esa compañía o revisa el PDF de su proyecto).`]
       : []),
     ...[...new Set(e.alertas ?? [])].map((a) => `⚠️ <b>Alerta</b>: ${escapeHtml(a)}`),
+    ...(e.revisar ?? []).map((l) => escapeHtml(l)),
     `Ofertas: ${e.primas.length}${companias ? ` (${escapeHtml(companias)})` : ''}`,
     `Primas anuales: ${rango ? escapeHtml(rango) : 'no constan'}`,
     ...(e.sinLeer?.length ? [`Sin leer: ${escapeHtml([...new Set(e.sinLeer)].join(', '))} (no entran en el borrador).`] : []),

@@ -23,6 +23,7 @@ export default function TarificadorPage() {
         <div>
           <Link href="/correduria" style={{ fontSize: 13, color: 'var(--muted)' }}>← Correduría</Link>
           <Link href="/correduria/tarificador/estado" style={{ fontSize: 13, color: 'var(--primary)', marginLeft: 16 }}>Estado de los bots →</Link>
+          <Link href="/correduria/tarificador/resumen" style={{ fontSize: 13, color: 'var(--primary)', marginLeft: 16 }}>Estado del tarificador →</Link>
           <PageHeader
             titulo="Tarificador (bot de Allianz)"
             icono={<Bot size={20} strokeWidth={1.75} />}
