@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-04T10:56:39Z",
-  "sha": "4883cec5311b72658518f26ea005234126d02157",
+  "generadoEn": "2026-11-04T11:28:25Z",
+  "sha": "228a1f99fa6d3a0a64489a3f4eb436edf08fe588",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -213124,7 +213124,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/auth/cambiar-empresa",
-      "hash": "31efb0a161c0"
+      "hash": "6d54c871fb4a"
     },
     {
       "ruta": "apps/rrhh/app/api/auth/logout/route.ts",
@@ -214217,7 +214217,7 @@
           "exportada": true,
           "params": "e: string | undefined, extra: Record<string, string> = {}",
           "retorno": null,
-          "linea": 23
+          "linea": 24
         },
         {
           "nombre": "post",
@@ -214225,7 +214225,7 @@
           "exportada": true,
           "params": "url: string, body: unknown",
           "retorno": null,
-          "linea": 25
+          "linea": 26
         },
         {
           "nombre": "AccesoOtp",
@@ -214233,12 +214233,12 @@
           "exportada": true,
           "params": "{ solicitarUrl, verificarUrl, passwordUrl, irAPorDefecto, textos, erroresExtra, conRecordar = false, ayuda, renderElegir }: { solicitarUrl: string verificarUrl: string /** Si se pasa, aparece «Entrar con contraseña» (solo responsables). */ ",
           "retorno": null,
-          "linea": 32
+          "linea": 33
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "af8265bedf0e"
+      "hash": "0e12bc5fe41a"
     },
     {
       "ruta": "apps/rrhh/components/ActivarPush.tsx",
@@ -214976,10 +214976,10 @@
           "nombre": "emitirSesionResponsable",
           "kind": "function",
           "exportada": true,
-          "params": "res: NextResponse, usuario_id: string, empresa_id: string, recordar: boolean",
+          "params": "res: NextResponse, usuario_id: string, empresa_id: string, recordar: boolean, reemplazaJti?: string,",
           "retorno": "Promise<void>",
-          "linea": 14,
-          "resumen": "Emite la sesión de `usuario_id` en `empresa_id` (sesión única por jti) y recuerda la empresa."
+          "linea": 15,
+          "resumen": "Emite la sesión de `usuario_id` en `empresa_id` (un jti por dispositivo) y recuerda la empresa."
         },
         {
           "nombre": "abrirSesionResponsable",
@@ -214987,15 +214987,16 @@
           "exportada": true,
           "params": "req: Request, r: { usuario_id: string; empresas: { id: string; nombre: string }[] }, recordar: boolean,",
           "retorno": "Promise<NextResponse>",
-          "linea": 21
+          "linea": 33
         }
       ],
       "tablas": [
         "next",
-        "rrhh"
+        "rrhh",
+        "unnest"
       ],
       "rutaApi": null,
-      "hash": "33cb98640ca4"
+      "hash": "345e48643723"
     },
     {
       "ruta": "apps/rrhh/lib/acceso-email-repo.ts",
@@ -219040,7 +219041,7 @@
           "exportada": true,
           "params": "recordar: boolean | null | undefined",
           "retorno": "number",
-          "linea": 11
+          "linea": 13
         },
         {
           "nombre": "opcionesCookieSesion",
@@ -219048,7 +219049,7 @@
           "exportada": true,
           "params": "recordar: boolean | null | undefined",
           "retorno": null,
-          "linea": 16,
+          "linea": 18,
           "resumen": "Opciones de la cookie de sesión: la caducidad de la cookie y la del JWT salen del MISMO valor."
         },
         {
@@ -219057,7 +219058,7 @@
           "exportada": true,
           "params": "cabecera: string | null | undefined, nombre: string",
           "retorno": "string | null",
-          "linea": 24,
+          "linea": 26,
           "resumen": "Lee una cookie de la cabecera `Cookie` (sin depender de `next/headers`, para poder usarla en rutas y tests)."
         },
         {
@@ -219066,7 +219067,7 @@
           "exportada": true,
           "params": "empresas: { id: string }[], recordada: string | null | undefined",
           "retorno": "string | null",
-          "linea": 39,
+          "linea": 41,
           "resumen": "Empresa a la que entrar sin preguntar: la única que tiene, o la recordada SI sigue entre las autorizadas. `null` = hay que elegir. Una cookie manipulada o de una empresa ya revocada no cuenta nunca."
         },
         {
@@ -219075,30 +219076,50 @@
           "exportada": true,
           "params": "email: unknown",
           "retorno": "string",
-          "linea": 47,
+          "linea": 49,
           "resumen": "`pilar@ejemplo.es` → `p***@e***.es`. Para logs de diagnóstico: nunca el correo entero."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fad53a9e5ff7"
+      "hash": "f1599ba3112f"
     },
     {
       "ruta": "apps/rrhh/lib/sesion-responsable-vigencia.ts",
       "ambito": "apps/rrhh",
-      "resumen": "Vigencia de la sesión del RESPONSABLE en el servidor (revisión del 26/10/2026). Las sesiones duran 30 o 90 días («Recordar este dispositivo»), así que el JWT solo no basta: en CADA petición se mira en BD que 1. `usuarios_rrhh.session_jti` sigue siendo el del token (sesión única; «Salir» lo ROTA a un",
+      "resumen": "Vigencia de la sesión del RESPONSABLE en el servidor (revisión del 26/10/2026). Las sesiones duran 30 o 90 días («Recordar este dispositivo»), así que el JWT solo no basta: en CADA petición se mira en BD que 1. `usuarios_rrhh.session_jti` sigue siendo el del token (lista de dispositivos, máx. 5; «Sa",
       "exporta": [
+        "jtisVigentes",
+        "jtiEnLista",
         "motivoRechazoSesion",
         "revocarSesionResponsable"
       ],
       "funciones": [
+        {
+          "nombre": "jtisVigentes",
+          "kind": "function",
+          "exportada": true,
+          "params": "columna: string | null | undefined",
+          "retorno": "string[]",
+          "linea": 13,
+          "resumen": "`session_jti` guarda los jti vigentes separados por coma (uno por dispositivo; sin migración: sigue siendo text)."
+        },
+        {
+          "nombre": "jtiEnLista",
+          "kind": "function",
+          "exportada": true,
+          "params": "columna: string | null | undefined, jti: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 17,
+          "resumen": "Cuenta con el jti del token: `session_jti` NULL/vacío nunca vale."
+        },
         {
           "nombre": "motivoRechazoSesion",
           "kind": "function",
           "exportada": true,
           "params": "s: Pick<Sesion, 'jti'>, fila: EstadoSesionResponsable | null",
           "retorno": "MotivoRechazo | null",
-          "linea": 22,
+          "linea": 33,
           "resumen": "`null` = vigente; si no, por qué no."
         },
         {
@@ -219107,13 +219128,13 @@
           "exportada": true,
           "params": "repo: RepoSesionResponsable, s: Pick<Sesion, 'usuario_id' | 'jti'>",
           "retorno": "Promise<void>",
-          "linea": 31,
-          "resumen": "«Salir»: invalida el token EN EL SERVIDOR rotando el jti a uno aleatorio nuevo (nunca a NULL)."
+          "linea": 42,
+          "resumen": "«Salir»: invalida ESTE token EN EL SERVIDOR sustituyendo su jti por uno aleatorio (nunca NULL; otros dispositivos siguen)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0db369d5f1e0"
+      "hash": "0f943bd52b3c"
     },
     {
       "ruta": "apps/rrhh/lib/solicitudes-tipos.ts",
@@ -219427,7 +219448,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Sesion>",
-          "linea": 38,
+          "linea": 40,
           "resumen": "Lee la sesión del responsable desde la cookie y la revalida EN BD en cada petición: jti vigente (sesión única, «Salir» lo rota; NULL no vale) y empresa del token todavía en `usuario_empresas`. 🚨 Fail"
         }
       ],
@@ -219436,7 +219457,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "a73942241e32"
+      "hash": "a759e6e31676"
     },
     {
       "ruta": "apps/rrhh/lib/ubicacion-fichaje.ts",
@@ -274381,6 +274402,6 @@
   ],
   "resumen": {
     "archivos": 5617,
-    "funciones": 22192
+    "funciones": 22194
   }
 }
