@@ -6,7 +6,7 @@ import Card from '@/components/ui/Card'
 import { NOTAS_MAX } from '@/lib/notas-empleado'
 
 type Carpeta = { id: string; etiqueta: string }
-type Doc = { id: string; carpeta: string; nombre: string; subido_por: string; estado_firma: string; requiere_firma_empresa: boolean; firmado_empresa_at: string | null; firmado_empresa_nombre: string | null; creada_at: string; url: string | null }
+type Doc = { id: string; carpeta: string; nombre: string; subido_por: string; estado_firma: string; requiere_firma_empresa: boolean; firmado_empresa_at: string | null; firmado_empresa_nombre: string | null; creada_at: string; url: string | null; visible_empleado?: boolean }
 type Empleado = {
   id: string; nombre: string; apellidos: string | null; email: string | null; puesto: string | null
   dni: string | null; nss: string | null; telefono: string | null; estado: string
@@ -36,6 +36,9 @@ export default function ExpedienteClient({ empleado, carpetas, inicial }: { empl
   const [docs, setDocs] = useState<Doc[]>(inicial)
   const [subiendo, setSubiendo] = useState<string | null>(null)
   const [modoFirma, setModoFirma] = useState<Record<string, string>>({})
+  // Por carpeta: el próximo documento que se suba será INTERNO (el empleado no lo ve).
+  const [interno, setInterno] = useState<Record<string, boolean>>({})
+  const [cambiandoVis, setCambiandoVis] = useState<string | null>(null)
   const [firmandoEmpresa, setFirmandoEmpresa] = useState<string | null>(null)
   const [error, setError] = useState('')
 
@@ -111,12 +114,13 @@ export default function ExpedienteClient({ empleado, carpetas, inicial }: { empl
     if (r.ok) setDocs((await r.json()).documentos)
   }
 
-async function subir(carpeta: string, file: File, modo: string = 'none') {
+async function subir(carpeta: string, file: File, modo: string = 'none', oculto = false) {
     setSubiendo(carpeta); setError('')
     try {
       const form = new FormData()
       form.append('file', file)
       form.append('carpeta', carpeta)
+      if (oculto && modo === 'none') form.append('visible_empleado', '0') // interno: el empleado no lo ve
       if (modo === 'empresa_y_empleado') form.append('requiere_firma_empresa', 'true')
       if (modo === 'solo_empleado') form.append('solo_empleado', 'true')
       const r = await fetch(`/api/admin/empleados/${empleado.id}/documentos`, { method: 'POST', body: form })
@@ -127,6 +131,15 @@ async function subir(carpeta: string, file: File, modo: string = 'none') {
     } finally {
       setSubiendo(null)
     }
+  }
+
+  async function cambiarVisibilidad(docId: string, visible: boolean) {
+    setCambiandoVis(docId); setError('')
+    const r = await fetch(`/api/admin/empleados/${empleado.id}/documentos/${docId}/visibilidad`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visible }),
+    })
+    if (r.ok) await recargar(); else setError((await r.json().catch(() => ({}))).error ?? 'No se pudo cambiar la visibilidad')
+    setCambiandoVis(null)
   }
 
   async function borrar(docId: string) {
@@ -414,6 +427,7 @@ async function subir(carpeta: string, file: File, modo: string = 'none') {
                       : <span className="break-all">{d.nombre}</span>}
                     <span className="ml-1 text-xs text-ink-3">· {d.subido_por}</span>
                     {FIRMA[d.estado_firma] && <span className={`ml-1 text-xs font-semibold ${FIRMA[d.estado_firma].cls}`}>· {FIRMA[d.estado_firma].txt}</span>}
+                    {d.visible_empleado === false && <span className="ml-1 text-xs font-semibold text-warn">· 🔒 Interno: el empleado NO lo ve</span>}
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
                     {d.estado_firma === 'firmado' && (
@@ -433,7 +447,13 @@ async function subir(carpeta: string, file: File, modo: string = 'none') {
                         {firmandoEmpresa === d.id ? 'Firmando…' : 'Firmar como empresa'}
                       </button>
                     )}
-                    {d.estado_firma === 'no_requiere' && c.id !== 'datos_personales' && c.id !== 'formacion' && (
+                    {d.estado_firma === 'no_requiere' && c.id !== 'nominas' && (
+                      <button onClick={() => cambiarVisibilidad(d.id, d.visible_empleado === false)} disabled={cambiandoVis === d.id}
+                        className="bg-paper-2 px-2 py-1 text-xs text-accent-ink hover:bg-line">
+                        {d.visible_empleado === false ? 'Mostrar al empleado' : 'Ocultar al empleado'}
+                      </button>
+                    )}
+                    {d.estado_firma === 'no_requiere' && d.visible_empleado !== false && c.id !== 'datos_personales' && c.id !== 'formacion' && (
                       <button onClick={() => solicitarFirma(d.id)} className="bg-paper-2 px-2 py-1 text-xs text-accent-ink hover:bg-line">Solicitar firma</button>
                     )}
                     <button onClick={() => borrar(d.id)} className="bg-transparent px-2 py-1 text-xs text-alert hover:bg-paper-2">Borrar</button>
@@ -444,16 +464,24 @@ async function subir(carpeta: string, file: File, modo: string = 'none') {
             </ul>
             <div className="flex flex-col gap-2">
               {c.id !== 'datos_personales' && c.id !== 'formacion' && (
-                <select value={modoFirma[c.id] ?? 'none'} onChange={e => setModoFirma(s => ({ ...s, [c.id]: e.target.value }))} className="text-xs">
+                <select value={modoFirma[c.id] ?? 'none'} onChange={e => { setModoFirma(s => ({ ...s, [c.id]: e.target.value })); if (e.target.value !== 'none') setInterno(s => ({ ...s, [c.id]: false })) }} className="text-xs">
                   <option value="none">Sin firma</option>
                   <option value="solo_empleado">Solo firma el empleado</option>
                   <option value="empresa_y_empleado">Firma empresa y empleado</option>
                 </select>
               )}
+              {c.id !== 'nominas' && (
+                <label className="flex min-h-[44px] items-center gap-2 text-xs text-ink-2">
+                  <input type="checkbox" checked={!!interno[c.id] && (modoFirma[c.id] ?? 'none') === 'none'}
+                    disabled={(modoFirma[c.id] ?? 'none') !== 'none'}
+                    onChange={e => setInterno(s => ({ ...s, [c.id]: e.target.checked }))} />
+                  Interno: que el empleado NO lo vea{(modoFirma[c.id] ?? 'none') !== 'none' && <span className="text-ink-3"> (un documento con firma siempre lo ve)</span>}
+                </label>
+              )}
               <label className="text-sm text-ink-2">
                 {subiendo === c.id ? 'Subiendo…' : 'Subir documento: '}
                 <input type="file" disabled={subiendo === c.id}
-                  onChange={e => { const f = e.target.files?.[0]; if (f) subir(c.id, f, modoFirma[c.id] ?? 'none'); e.currentTarget.value = ''; setModoFirma(s => ({ ...s, [c.id]: 'none' })) }} />
+                  onChange={e => { const f = e.target.files?.[0]; if (f) subir(c.id, f, modoFirma[c.id] ?? 'none', !!interno[c.id]); e.currentTarget.value = ''; setModoFirma(s => ({ ...s, [c.id]: 'none' })); setInterno(s => ({ ...s, [c.id]: false })) }} />
               </label>
             </div>
           </Card>

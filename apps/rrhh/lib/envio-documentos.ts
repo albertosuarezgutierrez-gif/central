@@ -17,6 +17,7 @@ import {
 } from '@/lib/asistente-subida'
 import { esPathStagingDe, nombreConExtension, carpetaAdmiteFirma, stagingCaducados } from '@/lib/envio-staging'
 import { avisarDocumento, avisarSolicitudFirma, type ResultadoAviso } from '@/lib/avisos'
+import { normalizarVisible, validarVisibilidad } from '@/lib/visibilidad-documento'
 
 export type MotivoAnalisis = 'ok' | 'sin_texto' | 'no_pdf' | 'ia_no_configurada' | 'ia_error'
 
@@ -96,6 +97,8 @@ export type EntradaAsignar = {
   empleado_ids: string[] | 'toda_plantilla'
   firma: ModoFirma
   avisar: boolean
+  /** false = el empleado NO ve el documento (interno). Default true. Incompatible con pedir firma. */
+  visible_empleado?: boolean
   /** uuid que genera el CLIENTE por documento: reintentar con el mismo no duplica copias. */
   envio_id?: string | null
 }
@@ -118,13 +121,17 @@ export async function registrarCopia(p: {
   v: { carpeta: string; nombre: string; tipo: string | null; tamano: number | null }
   destino: string; estado: 'pendiente_empresa' | 'pendiente' | 'no_requiere'; requiereEmpresa: boolean
   categoria: CategoriaDoc | null; resumen: string | null; avisar: boolean; origen?: string | null
+  /** false = oculto al empleado (migración 0029): no se le avisa por ningún canal. Default true. */
+  visibleEmpleado?: boolean
 }): Promise<{ doc_id: string; aviso?: ResultadoAviso | null; ya_enviado?: boolean }> {
-  const { empresaId, empleadoId, usuarioId, envioId, v, destino, estado, requiereEmpresa, categoria, resumen, avisar, origen } = p
+  const { empresaId, empleadoId, usuarioId, envioId, v, destino, estado, requiereEmpresa, categoria, resumen, avisar: avisarPedido, origen } = p
+  const visible = p.visibleEmpleado !== false
+  const avisar = avisarPedido && visible // oculto ⇒ nunca se avisa
   const rows = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
     INSERT INTO rrhh.documentos (empresa_id, empleado_id, carpeta, nombre, tipo, tamano, storage_path, subido_por,
-                                 estado_firma, requiere_firma_empresa, categoria_doc, resumen, envio_id, avisar)
+                                 estado_firma, requiere_firma_empresa, categoria_doc, resumen, envio_id, visible_empleado, avisar)
     VALUES (${empresaId}::uuid, ${empleadoId}::uuid, ${v.carpeta}, ${v.nombre}, ${v.tipo}, ${v.tamano}::bigint, ${destino}, ${ACTOR_GESTOR},
-            ${estado}, ${requiereEmpresa}, ${categoria}, ${resumen}, ${envioId}::uuid, ${avisar})
+            ${estado}, ${requiereEmpresa}, ${categoria}, ${resumen}, ${envioId}::uuid, ${visible}, ${avisar})
     ON CONFLICT (envio_id, empleado_id) WHERE envio_id IS NOT NULL DO NOTHING
     RETURNING id`)
   if (!rows[0]) {
@@ -168,6 +175,9 @@ export async function asignarStaging(empresaId: string, usuarioId: string, e: En
   if (!['none', 'solo_empleado', 'empresa_y_empleado'].includes(e.firma)) throw new Error('Modo de firma desconocido')
   // Misma regla que el expediente: en estas carpetas no se pide firma.
   if (e.firma !== 'none' && !carpetaAdmiteFirma(e.carpeta)) throw new Error('En esta carpeta no se pide firma: elige «Sin firma» u otra carpeta')
+  const visible = normalizarVisible(e.visible_empleado)
+  const errVis = validarVisibilidad({ carpeta: e.carpeta, visible, firma: e.firma })
+  if (errVis) throw new Error(errVis)
   if (e.envio_id != null && !UUID_RE.test(e.envio_id)) throw new Error('Identificador de envío no válido')
   const envioId = e.envio_id ?? crypto.randomUUID()
   const nombre = nombreConExtension(e.titulo || e.nombre_original, e.nombre_original)
@@ -221,7 +231,7 @@ export async function asignarStaging(empresaId: string, usuarioId: string, e: En
       const destino = construirPathStorage({ tipo: 'empleado', id: empleadoId }, v.carpeta, v.nombre, crypto.randomUUID())
       await copiarObjeto(e.path, destino)
       const r = await registrarCopia({
-        empresaId, empleadoId, usuarioId, envioId, v, destino, estado, requiereEmpresa, categoria, resumen, avisar: e.avisar, origen,
+        empresaId, empleadoId, usuarioId, envioId, v, destino, estado, requiereEmpresa, categoria, resumen, avisar: e.avisar, origen, visibleEmpleado: visible,
       })
       resultados.push({ empleado_id: empleadoId, ...r })
     } catch (err) {

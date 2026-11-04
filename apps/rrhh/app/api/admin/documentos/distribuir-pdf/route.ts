@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSesion, AuthError } from '@/lib/tenant'
 import { distribuirDocumentosPdf, MAX_PDF_BYTES } from '@/lib/distribuir-documentos'
+import { normalizarVisible } from '@/lib/visibilidad-documento'
 
 export const maxDuration = 300 // lectura del PDF + IA por página + copia/aviso por documento
 
@@ -26,6 +27,7 @@ export async function POST(req: NextRequest) {
       titulo: String(form.get('titulo') ?? ''),
       requiereFirma: form.get('requiere_firma') === '1',
       avisar: form.get('avisar') !== '0',
+      visibleEmpleado: normalizarVisible(form.get('visible_empleado')), // '0' = oculto al empleado
       origen: new URL(req.url).origin,
     })
     return NextResponse.json(r)
@@ -33,7 +35,7 @@ export async function POST(req: NextRequest) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: 401 })
     const msg = e instanceof Error ? e.message : 'Error inesperado'
     console.error('[distribuir-documentos] error:', msg)
-    const cliente = /no válid|no se pide firma|permiso|obligatorio|supera|vac[ií]o|Máximo|No hay empleados|No se pudo leer/.test(msg)
+    const cliente = /no válid|no se pide firma|permiso|obligatorio|supera|vac[ií]o|Máximo|No hay empleados|No se pudo leer|debe ser visible|nóminas/.test(msg)
     return NextResponse.json({ error: msg }, { status: cliente ? 400 : 500 })
   }
 }

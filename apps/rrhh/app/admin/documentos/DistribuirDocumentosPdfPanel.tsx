@@ -20,11 +20,14 @@ export default function DistribuirDocumentosPdfPanel({ carpetas }: { carpetas: O
   const [titulo, setTitulo] = useState('')
   const [firma, setFirma] = useState(false)
   const [avisar, setAvisar] = useState(true)
+  const [interno, setInterno] = useState(false) // true = el empleado NO ve los documentos
   const [procesando, setProcesando] = useState(false)
   const [res, setRes] = useState<Respuesta | null>(null)
   const [msg, setMsg] = useState('')
 
   const admiteFirma = !carpeta || carpetaAdmiteFirma(carpeta)
+  const puedeInterno = carpeta !== 'nominas' && !(firma && admiteFirma) // con firma o nóminas, siempre visible
+  const oculto = interno && puedeInterno
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault()
@@ -33,7 +36,7 @@ export default function DistribuirDocumentosPdfPanel({ carpetas }: { carpetas: O
     try {
       const fd = new FormData()
       fd.set('file', file); fd.set('carpeta', carpeta); fd.set('titulo', titulo)
-      fd.set('requiere_firma', firma && admiteFirma ? '1' : '0'); fd.set('avisar', avisar ? '1' : '0')
+      fd.set('requiere_firma', firma && admiteFirma ? '1' : '0'); fd.set('avisar', avisar && !oculto ? '1' : '0'); fd.set('visible_empleado', oculto ? '0' : '1')
       const r = await fetch('/api/admin/documentos/distribuir-pdf', { method: 'POST', body: fd })
       const j = await r.json().catch(() => ({}))
       if (r.ok) {
@@ -74,8 +77,12 @@ export default function DistribuirDocumentosPdfPanel({ carpetas }: { carpetas: O
           Requiere firma del empleado{!admiteFirma && <span className="text-ink-3 text-xs"> (no en esta carpeta)</span>}
         </label>
         <label className="flex min-h-[44px] items-center gap-2 text-sm">
-          <input type="checkbox" checked={avisar} onChange={e => setAvisar(e.target.checked)} />
-          Avisar a cada empleado (email y notificación)
+          <input type="checkbox" checked={oculto} disabled={!puedeInterno} onChange={e => setInterno(e.target.checked)} />
+          Interno: que el empleado NO vea estos documentos{!puedeInterno && <span className="text-ink-3 text-xs"> (con firma o en Nóminas siempre los ve)</span>}
+        </label>
+        <label className="flex min-h-[44px] items-center gap-2 text-sm">
+          <input type="checkbox" checked={avisar && !oculto} disabled={oculto} onChange={e => setAvisar(e.target.checked)} />
+          Avisar a cada empleado (email y notificación){oculto && <span className="text-ink-3 text-xs"> (no aplica: no los ve)</span>}
         </label>
         <input type="file" accept="application/pdf" onChange={e => setFile(e.target.files?.[0] ?? null)} required />
         <button type="submit" disabled={procesando || !file || !carpeta} className="min-h-[44px]">

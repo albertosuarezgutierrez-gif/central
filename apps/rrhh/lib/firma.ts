@@ -25,7 +25,8 @@ function deps(empresaId: string, empleadoId: string): DepsFirma {
                TRIM(CONCAT(e.nombre, ' ', COALESCE(e.apellidos, ''))) AS nombre,
                e.email, e.dni
         FROM rrhh.documentos d JOIN rrhh.empleados e ON e.id = d.empleado_id
-        WHERE d.id = ${docId}::uuid AND d.empleado_id = ${empleadoId}::uuid AND d.empresa_id = ${empresaId}::uuid LIMIT 1`)
+        WHERE d.id = ${docId}::uuid AND d.empleado_id = ${empleadoId}::uuid AND d.empresa_id = ${empresaId}::uuid
+          AND (d.visible_empleado OR d.carpeta = 'nominas') LIMIT 1`) // oculto al empleado = no firmable (404 «no encontrado»)
       const doc = rows[0]
       if (!doc) return null
       const titular: Firmante = { id: empleadoId, nombre: doc.nombre, email: doc.email, dni: doc.dni }

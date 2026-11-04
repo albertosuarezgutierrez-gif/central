@@ -21,6 +21,7 @@ import { extraerTextoPorPagina, identificarEmpleado, extraerPaginas } from '@/li
 import { registrarCopia, estadoFirmaDe } from '@/lib/envio-documentos'
 import { carpetaAdmiteFirma } from '@/lib/envio-staging'
 import type { ResultadoAviso } from '@/lib/avisos'
+import { validarVisibilidad } from '@/lib/visibilidad-documento'
 import { agruparPaginas, idEnvioDeterminista, nombresDocumentos, empleadoVerificadoDePagina } from '@/lib/distribuir-documentos-reglas'
 
 /** Mismo tope que la subida normal del expediente (20 MB); en la práctica manda el límite de cuerpo de Vercel (~4,5 MB). */
@@ -36,6 +37,8 @@ export type EntradaDistribuir = {
   requiereFirma: boolean
   avisar: boolean
   origen?: string | null
+  /** false = oculto al empleado (interno). Default true. Incompatible con «requiere firma». */
+  visibleEmpleado?: boolean
 }
 
 export type ResultadoDocumento = {
@@ -111,6 +114,10 @@ export async function distribuirDocumentosPdf(
   validarSubida(CARPETAS_IDX, ACTOR_GESTOR, { carpeta: e.carpeta, nombre: e.nombreOriginal || 'documentos.pdf', tipo: 'application/pdf', tamano: bytes.byteLength })
   if (e.requiereFirma && !carpetaAdmiteFirma(e.carpeta)) throw new Error('En esta carpeta no se pide firma: desmarca «Requiere firma» u otra carpeta')
 
+  const visible = e.visibleEmpleado !== false
+  const errVis = validarVisibilidad({ carpeta: e.carpeta, visible, firma: e.requiereFirma ? 'solo_empleado' : 'none' })
+  if (errVis) throw new Error(errVis)
+
   const pdfHash = createHash('sha256').update(new Uint8Array(bytes)).digest('hex') // antes de pdfjs (detacha copias)
   const titulo = (e.titulo ?? '').trim() || cfg.etiqueta || e.carpeta
   const candidatos = await candidatosEmpresa(empresaId)
@@ -158,7 +165,7 @@ export async function distribuirDocumentosPdf(
       await subirObjeto(destino, buf, 'application/pdf')
       const r = await registrarCopia({
         empresaId, empleadoId: emp.id, usuarioId, envioId, v, destino, estado, requiereEmpresa,
-        categoria: null, resumen: null, avisar: e.avisar, origen: e.origen,
+        categoria: null, resumen: null, avisar: e.avisar, origen: e.origen, visibleEmpleado: visible,
       })
       documentos[i] = { ...base, estado: r.ya_enviado ? 'ya_enviado' : 'ok', doc_id: r.doc_id, aviso: r.aviso }
     } catch (err) {

@@ -160,3 +160,26 @@ describe('distribuirDocumentosPdf (PDF de 4 páginas)', () => {
     await expect(distribuirDocumentosPdf(EMP, 'u', await pdf(PAGINAS), { ...entrada, carpeta: 'no_existe' })).rejects.toThrow()
   })
 })
+
+describe('distribuir: documentos OCULTOS al empleado', () => {
+  it('visibleEmpleado=false → todas las filas con false y NINGÚN aviso', async () => {
+    const r = await distribuirDocumentosPdf(EMP, 'u', await pdf(PAGINAS), { ...entrada, visibleEmpleado: false, avisar: true })
+    expect(r.ok).toBe(2)
+    expect(inserts).toHaveLength(2)
+    for (const i of inserts) { expect(i.sql).toMatch(/visible_empleado/); expect(i.values).toContain(false) }
+    expect(avisarDocumento).not.toHaveBeenCalled()
+    expect(avisarSolicitudFirma).not.toHaveBeenCalled()
+  })
+  it('sin indicar nada → visible (por defecto) y se avisa como siempre', async () => {
+    await distribuirDocumentosPdf(EMP, 'u', await pdf(PAGINAS), entrada)
+    for (const i of inserts) expect(i.values).toContain(true)
+    expect(avisarDocumento).toHaveBeenCalled()
+  })
+  it('oculto + requiere firma → rechazado antes de leer nada', async () => {
+    await expect(distribuirDocumentosPdf(EMP, 'u', await pdf(PAGINAS), { ...entrada, visibleEmpleado: false, requiereFirma: true })).rejects.toThrow(/firma.*visible/i)
+    expect(queryRaw).not.toHaveBeenCalled()
+  })
+  it('nóminas no se pueden ocultar', async () => {
+    await expect(distribuirDocumentosPdf(EMP, 'u', await pdf(PAGINAS), { ...entrada, carpeta: 'nominas', visibleEmpleado: false })).rejects.toThrow(/nóminas/i)
+  })
+})

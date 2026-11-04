@@ -18,6 +18,8 @@ type Analisis = {
 }
 type Form = {
   titulo: string; categoria: string; carpeta: string; resumen: string; firma: Firma; avisar: boolean
+  /** true = documento INTERNO: el empleado no lo ve (ni se le avisa). Incompatible con firma. */
+  interno: boolean
   destinatarios: string[]; toda_plantilla: boolean
 }
 type Resultado = { total: number; ok: number; resultados: { empleado_id: string; doc_id?: string; error?: string; ya_enviado?: boolean; aviso?: { email_estado: string } | null }[] }
@@ -38,7 +40,7 @@ const MOTIVO: Record<Analisis['motivo'], string> = {
 }
 
 const formVacio = (nombre: string): Form => ({
-  titulo: nombre.replace(/\.[a-z0-9]{1,8}$/i, ''), categoria: '', carpeta: '', resumen: '', firma: 'none', avisar: true,
+  titulo: nombre.replace(/\.[a-z0-9]{1,8}$/i, ''), categoria: '', carpeta: '', resumen: '', firma: 'none', avisar: true, interno: false,
   destinatarios: [], toda_plantilla: false,
 })
 
@@ -110,6 +112,8 @@ export default function DocumentosClient({ carpetas, categorias }: {
     if (!it.form.titulo.trim()) return 'Pon un título'
     if (!it.form.carpeta) return 'Elige carpeta'
     if (it.form.firma !== 'none' && !carpetaAdmiteFirma(it.form.carpeta)) return 'En esta carpeta no se pide firma'
+    if (it.form.interno && it.form.firma !== 'none') return 'Un documento con firma debe ser visible para el empleado'
+    if (it.form.interno && it.form.carpeta === 'nominas') return 'Las nóminas las ve siempre el empleado'
     if (!it.form.toda_plantilla && it.form.destinatarios.length === 0) return 'Elige al menos un empleado'
     return null
   }
@@ -130,7 +134,7 @@ export default function DocumentosClient({ carpetas, categorias }: {
       body: JSON.stringify({
         path: it.path, nombre_original: it.nombre, envio_id: it.envio_id,
         titulo: it.form.titulo, categoria: it.form.categoria || null, carpeta: it.form.carpeta, resumen: it.form.resumen || null,
-        firma: it.form.firma, avisar: it.form.avisar,
+        firma: it.form.firma, avisar: it.form.avisar && !it.form.interno, visible_empleado: !it.form.interno,
         toda_plantilla: toda, empleado_ids: toda ? [] : (soloIds ?? it.form.destinatarios),
       }),
     }).catch(() => null)
@@ -263,7 +267,7 @@ function TarjetaDocumento({ it, carpetas, categorias, empleados, cargandoEmplead
             Firma {admiteFirma && a && a.propuesta.requiere_firma == null && <span className="text-warn">(la IA no sabe si requiere firma)</span>}
             {admiteFirma
               ? (
-                <select value={f.firma} onChange={e => onForm({ firma: e.target.value as Firma })} disabled={bloqueado} className="text-sm">
+                <select value={f.firma} onChange={e => onForm({ firma: e.target.value as Firma, ...(e.target.value !== 'none' ? { interno: false } : {}) })} disabled={bloqueado} className="text-sm">
                   <option value="none">Sin firma</option>
                   <option value="solo_empleado">Solo firma el empleado</option>
                   <option value="empresa_y_empleado">Firma empresa y empleado</option>
@@ -271,8 +275,13 @@ function TarjetaDocumento({ it, carpetas, categorias, empleados, cargandoEmplead
               )
               : <span className="text-sm text-ink-3">Sin firma (en esta carpeta no se pide firma)</span>}
           </label>
+          <label className="flex min-h-[44px] items-center gap-2 text-xs text-ink-2 sm:col-span-2">
+            <input type="checkbox" checked={f.interno && f.firma === 'none' && f.carpeta !== 'nominas'}
+              onChange={e => onForm({ interno: e.target.checked })} disabled={bloqueado || f.firma !== 'none' || f.carpeta === 'nominas'} />
+            Interno: que el empleado NO vea este documento (amonestaciones, evaluaciones, notas…){(f.firma !== 'none' || f.carpeta === 'nominas') && <span className="text-ink-3"> — con firma o en Nóminas siempre lo ve</span>}
+          </label>
           <label className="flex min-h-[44px] items-center gap-2 text-xs text-ink-2">
-            <input type="checkbox" checked={f.avisar} onChange={e => onForm({ avisar: e.target.checked })} disabled={bloqueado} />
+            <input type="checkbox" checked={f.avisar && !f.interno} onChange={e => onForm({ avisar: e.target.checked })} disabled={bloqueado || f.interno} />
             Avisar al empleado (intranet, email y push){f.firma === 'empresa_y_empleado' ? ' — al firmar la empresa' : ''}
           </label>
           <label className="flex flex-col gap-1 text-xs text-ink-2 sm:col-span-2">
