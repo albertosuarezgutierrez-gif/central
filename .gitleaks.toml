@@ -56,4 +56,8 @@ regexes = [
   # services/tarificador-rpa/test/explorador-entrada.test.ts (commit f59f7e11a del PR #4585). El test actual la
   # compone en runtime; se allowlista el literal por el historial del PR.
   '''clave-sintetica-de-prueba-9f3a''',
+  # Fixture de test (NO es un secreto real): CRON_SECRET inventado que vivió en
+  # apps/taller/test/cron-purga.test.ts (commit 86fa91fbb del PR #5502). El test actual lo
+  # compone en runtime; se allowlista el literal por el historial del PR.
+  '''cron-secreto-de-prueba-0123456789''',
 ]

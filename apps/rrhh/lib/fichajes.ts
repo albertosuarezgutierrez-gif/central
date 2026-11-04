@@ -41,15 +41,16 @@ export async function fichajeActivo(empresaId: string, empleadoId: string): Prom
   return { ...f, horas_totales: f.horas_totales != null ? Number(f.horas_totales) : null }
 }
 
-export type ExtraFichaje = { precision_m?: number | null; sin_ubicacion?: boolean }
+/** `origen`/`ip` (migración 0029) solo los manda el puerto de operador; sin ellos no se tocan esas columnas. */
+export type ExtraFichaje = { precision_m?: number | null; sin_ubicacion?: boolean; origen?: string; ip?: string | null }
 
 export async function ficharEntrada(empresaId: string, empleadoId: string, lat: number | null, lng: number | null, extra: ExtraFichaje = {}): Promise<Fichaje> {
   const obra_id = await detectarObra(empresaId, lat, lng)
   const precision = extra.precision_m ?? null
   const sin = extra.sin_ubicacion === true
   const rows = await prisma.$queryRaw<Fichaje[]>(Prisma.sql`
-    INSERT INTO rrhh.fichajes (empresa_id, empleado_id, obra_id, lat_entrada, lng_entrada, precision_entrada_m, sin_ubicacion_entrada)
-    VALUES (${empresaId}::uuid, ${empleadoId}::uuid, ${obra_id}::uuid, ${lat}::numeric, ${lng}::numeric, ${precision}::int, ${sin})
+    INSERT INTO rrhh.fichajes (empresa_id, empleado_id, obra_id, lat_entrada, lng_entrada, precision_entrada_m, sin_ubicacion_entrada${extra.origen ? Prisma.sql`, origen_entrada, ip_entrada` : Prisma.empty})
+    VALUES (${empresaId}::uuid, ${empleadoId}::uuid, ${obra_id}::uuid, ${lat}::numeric, ${lng}::numeric, ${precision}::int, ${sin}${extra.origen ? Prisma.sql`, ${extra.origen}, ${extra.ip ?? null}` : Prisma.empty})
     RETURNING *`)
   return JSON.parse(JSON.stringify(rows[0]))
 }
@@ -61,6 +62,7 @@ export async function ficharSalida(empresaId: string, empleadoId: string, lat: n
     UPDATE rrhh.fichajes
     SET salida_at = now(), lat_salida = ${lat}::numeric, lng_salida = ${lng}::numeric, estado = 'cerrado',
         precision_salida_m = ${precision}::int, sin_ubicacion_salida = ${sin},
+        ${extra.origen ? Prisma.sql`origen_salida = ${extra.origen}, ip_salida = ${extra.ip ?? null},` : Prisma.empty}
         horas_totales = ROUND(EXTRACT(EPOCH FROM (now() - entrada_at)) / 3600.0, 2)
     WHERE empresa_id = ${empresaId}::uuid AND empleado_id = ${empleadoId}::uuid AND estado = 'activo'
     RETURNING *`)

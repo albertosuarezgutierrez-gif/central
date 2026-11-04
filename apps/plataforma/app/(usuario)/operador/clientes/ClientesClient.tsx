@@ -2,9 +2,10 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Building2 } from 'lucide-react'
 import { Pagina, PageHeader } from '@/components/ui'
+import DireccionAlta, { DIRECCION_VACIA, type DireccionForm } from './DireccionAlta'
 
 type Metrica = { label: string; valor: string }
-type Cliente = { vertical: 'ialimp' | 'sivra' | 'iarest' | 'rrhh'; id: string; nombre: string; email?: string | null; activo: boolean; puedeBloquear: boolean; metricas: Metrica[] }
+type Cliente = { vertical: 'ialimp' | 'sivra' | 'iarest' | 'rrhh' | 'taller'; id: string; nombre: string; email?: string | null; activo: boolean; puedeBloquear: boolean; metricas: Metrica[] }
 type Ficha = Cliente & { detalle: Metrica[]; modulos?: string[] }
 
 const VERT: Record<string, { label: string; icon: string }> = {
@@ -12,6 +13,7 @@ const VERT: Record<string, { label: string; icon: string }> = {
   sivra:  { label: 'Inmobiliario · sivra', icon: '🏠' },
   iarest: { label: 'Hostelería · ia-rest', icon: '🍽️' },
   rrhh:   { label: 'RR.HH. · iarrhh', icon: '👥' },
+  taller: { label: 'Taller · taller', icon: '🔧' },
 }
 
 export default function ClientesClient({ operador }: { operador: string }) {
@@ -22,7 +24,10 @@ export default function ClientesClient({ operador }: { operador: string }) {
   const [modulos, setModulos] = useState<{ key: string; label: string; activo: boolean }[]>([])
   const [busy, setBusy] = useState<string | null>(null)
   const [showNuevo, setShowNuevo] = useState(false)
-  const [nuevo, setNuevo] = useState({ vertical: 'ialimp', nombre: '', email: '', password: '', ciudad: '', responsableNombre: '', color: '', logo: '' })
+  const [nuevo, setNuevo] = useState({ vertical: 'ialimp', nombre: '', email: '', password: '', ciudad: '', responsableNombre: '', color: '', logo: '', nif: '', vincularExistente: false })
+  const [direccion, setDireccion] = useState<DireccionForm>(DIRECCION_VACIA)
+  // PIN temporal del dueño del taller: se enseña UNA vez; al cerrar el aviso desaparece y no se guarda en ningún sitio.
+  const [pinTaller, setPinTaller] = useState<{ taller: string; pin: string; codigo: string } | null>(null)
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [nuevoErr, setNuevoErr] = useState('')
   const [nuevoOk, setNuevoOk] = useState('')
@@ -82,11 +87,14 @@ export default function ClientesClient({ operador }: { operador: string }) {
       const { url } = await up.json()
       logoUrl = url
     }
-    const r = await fetch('/api/admin/clientes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...nuevo, logo: logoUrl }) })
+    const r = await fetch('/api/admin/clientes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...nuevo, logo: logoUrl, ...(nuevo.vertical === 'taller' ? { direccion } : {}) }) })
     const d = await r.json()
     if (d.ok) {
-      if (nuevo.vertical === 'rrhh') setNuevoOk(`Empresa creada. Entrega al cliente — Email: ${nuevo.email} · Contraseña: ${nuevo.password}`)
-      setNuevo({ vertical: nuevo.vertical, nombre: '', email: '', password: '', ciudad: '', responsableNombre: '', color: '', logo: '' })
+      if (nuevo.vertical === 'taller' && d.pinTemporal) setPinTaller({ taller: nuevo.nombre, pin: d.pinTemporal, codigo: String(d.codigoTaller ?? '') })
+      if (nuevo.vertical === 'rrhh' && d.vinculado) setNuevoOk(`Empresa creada y vinculada al responsable existente (${nuevo.email}). Entra con su código de siempre y elige la empresa.`)
+      else if (nuevo.vertical === 'rrhh') setNuevoOk(`Empresa creada. Entrega al cliente — Email: ${nuevo.email} · Contraseña: ${nuevo.password}`)
+      setNuevo({ vertical: nuevo.vertical, nombre: '', email: '', password: '', ciudad: '', responsableNombre: '', color: '', logo: '', nif: '', vincularExistente: false })
+      setDireccion(DIRECCION_VACIA)
       setLogoFile(null)
       cargar()
       if (nuevo.vertical !== 'rrhh') setShowNuevo(false)
@@ -94,7 +102,7 @@ export default function ClientesClient({ operador }: { operador: string }) {
     else setNuevoErr(d.error || 'Error')
   }
 
-  const verticales = ['ialimp', 'sivra', 'iarest', 'rrhh'] as const
+  const verticales = ['ialimp', 'sivra', 'iarest', 'rrhh', 'taller'] as const
   const activos = clientes.filter(c => c.activo && c.id !== 'iarest-info').length
 
   return (
@@ -229,6 +237,18 @@ export default function ClientesClient({ operador }: { operador: string }) {
         </div>
       )}
 
+      {pinTaller && (
+        <div role="alertdialog" aria-modal="true" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', zIndex: 60 }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '24px', width: '100%', maxWidth: '380px' }}>
+            <div style={{ fontSize: '18px', fontWeight: 800, marginBottom: '8px' }}>Taller creado: {pinTaller.taller}</div>
+            <div style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '12px' }}>PIN temporal del dueño. Se muestra UNA sola vez: apúntalo y entrégaselo; tendrá que cambiarlo al entrar.</div>
+            <div style={{ fontSize: '40px', fontWeight: 800, letterSpacing: '8px', textAlign: 'center', marginBottom: '16px' }}>{pinTaller.pin}</div>
+            <div style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '4px' }}>Código del taller (cada dispositivo lo escribe una vez; el dueño lo ve y lo cambia en Ajustes).</div>
+            <div style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '4px', textAlign: 'center', marginBottom: '16px' }}>{pinTaller.codigo ? `${pinTaller.codigo.slice(0, 4)}-${pinTaller.codigo.slice(4)}` : '—'}</div>
+            <button type="button" onClick={() => { setPinTaller(null); setShowNuevo(false) }} style={{ width: '100%', minHeight: 44, padding: '11px', background: 'var(--primary)', border: 'none', borderRadius: '10px', color: '#fff', fontWeight: 800, cursor: 'pointer' }}>Ya lo he apuntado</button>
+          </div>
+        </div>
+      )}
       {/* Modal nuevo cliente */}
       {showNuevo && (
         <div onClick={() => setShowNuevo(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', zIndex: 50 }}>
@@ -241,18 +261,28 @@ export default function ClientesClient({ operador }: { operador: string }) {
                 <option value="ialimp">Limpieza · ialimp</option>
                 <option value="iarest">Hostelería · ia-rest</option>
                 <option value="rrhh">RR.HH. · iarrhh</option>
+                <option value="taller">Taller · taller</option>
               </select>
             </Field>
-            <Field label={nuevo.vertical === 'rrhh' ? 'Nombre de la empresa' : 'Nombre'}><input value={nuevo.nombre} onChange={e => setNuevo(n => ({ ...n, nombre: e.target.value }))} required style={inp} /></Field>
+            <Field label={nuevo.vertical === 'rrhh' ? 'Nombre de la empresa' : nuevo.vertical === 'taller' ? 'Razón social' : 'Nombre'}><input value={nuevo.nombre} onChange={e => setNuevo(n => ({ ...n, nombre: e.target.value }))} required style={inp} /></Field>
             {nuevo.vertical === 'ialimp' && <>
               <Field label="Email del dueño"><input type="email" value={nuevo.email} onChange={e => setNuevo(n => ({ ...n, email: e.target.value }))} required style={inp} /></Field>
               <Field label="Contraseña inicial"><input type="text" value={nuevo.password} onChange={e => setNuevo(n => ({ ...n, password: e.target.value }))} required minLength={8} style={inp} /></Field>
             </>}
             {nuevo.vertical === 'iarest' && <Field label="Ciudad"><input value={nuevo.ciudad} onChange={e => setNuevo(n => ({ ...n, ciudad: e.target.value }))} style={inp} /></Field>}
+            {nuevo.vertical === 'taller' && <>
+              <Field label="NIF de la sociedad"><input value={nuevo.nif} onChange={e => setNuevo(n => ({ ...n, nif: e.target.value }))} required minLength={8} maxLength={12} style={inp} placeholder="B12345678" /></Field>
+              <DireccionAlta valor={direccion} onChange={setDireccion} />
+              <Field label="Nombre del dueño"><input value={nuevo.responsableNombre} onChange={e => setNuevo(n => ({ ...n, responsableNombre: e.target.value }))} required style={inp} /></Field>
+            </>}
             {nuevo.vertical === 'rrhh' && <>
               <Field label="Responsable (nombre)"><input value={nuevo.responsableNombre} onChange={e => setNuevo(n => ({ ...n, responsableNombre: e.target.value }))} required style={inp} /></Field>
               <Field label="Email del responsable"><input type="email" value={nuevo.email} onChange={e => setNuevo(n => ({ ...n, email: e.target.value }))} required style={inp} /></Field>
-              <Field label="Contraseña inicial"><input type="text" value={nuevo.password} onChange={e => setNuevo(n => ({ ...n, password: e.target.value }))} required minLength={8} style={inp} /></Field>
+              <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', minHeight: 44, fontSize: 13, marginBottom: 8 }}>
+                <input type="checkbox" checked={nuevo.vincularExistente} onChange={e => setNuevo(n => ({ ...n, vincularExistente: e.target.checked }))} style={{ marginTop: 3 }} />
+                <span>Vincular responsable existente: el correo ya es responsable de otra empresa y se le añade esta (sin crear usuario nuevo).</span>
+              </label>
+              {!nuevo.vincularExistente && <Field label="Contraseña inicial"><input type="text" value={nuevo.password} onChange={e => setNuevo(n => ({ ...n, password: e.target.value }))} required minLength={8} style={inp} /></Field>}
               <Field label="Color de marca (opcional)">
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <input type="color" value={nuevo.color || '#2B6A6E'} onChange={e => setNuevo(n => ({ ...n, color: e.target.value }))} style={{ height: '38px', width: '48px', cursor: 'pointer', borderRadius: '6px', border: '1px solid var(--border)', padding: '2px', background: 'var(--bg)', flexShrink: 0 }} />

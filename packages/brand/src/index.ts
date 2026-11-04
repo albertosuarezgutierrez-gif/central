@@ -6,7 +6,9 @@ export type {
   ElevacionMarca,
   TipografiaMarca,
   LogosMarca,
+  CoMarcaMarca,
 } from './tipos'
 export { emitirVariables, emitirVariablesOscuras, emitirRootCss } from './css'
 export { MARCA_JOAQUIN_JAEN } from './marcas/joaquin-jaen'
 export { MARCA_ASEGURA } from './marcas/asegura'
+export { MARCA_TALLERES_G2 } from './marcas/talleres-g2'

@@ -36,7 +36,8 @@
 │   ├── housesevillana ← landing pública House Sevillana (housesevillana.es)  [✅ en apps/]
 │   ├── asegura        ← Correduría (Grupo ASegura): trastienda, BD `seguros`, /api/operador/*  [✅ en apps/]
 │   ├── asegura-portal ← portal del CLIENTE de Grupo ASegura (rol sin BYPASSRLS)   [✅ en apps/]
-│   └── asegura-web    ← web pública grupoasegura.es (sin BD a propósito)          [✅ en apps/]
+│   ├── asegura-web    ← web pública grupoasegura.es (sin BD a propósito)          [✅ en apps/]
+│   └── taller         ← Taller de vehículos (piloto Global 2), PIN, multi-taller  [🆕 en apps/, sin Vercel/BD aún]
 └── docs/              ← runbook del corte, contexto de sesiones, arquitectura
 ```
 
@@ -57,6 +58,7 @@
 | **asegura-portal** | Portal del CLIENTE de Grupo ASegura | `asegura-portal` | ✅ En `apps/asegura-portal`, Root Directory `apps/asegura-portal`. Rol `prisma_asegura_portal` **SIN BYPASSRLS** (el aislamiento lo da el código), cookie y secreto propios, desplegada aparte de `asegura` a propósito. `CLAUDE.md` propio. |
 | **asegura-web** | Web pública de Grupo ASegura (`grupoasegura.es` + `www`) | `asegura-web` | ✅ En `apps/asegura-web`, Root Directory `apps/asegura-web`. **Sin BD a propósito**: el lead va a plataforma reenviando `x-forwarded-for`. Analítica fail-closed (sin Cookiebot no se mide). Sin `CLAUDE.md` propio: las reglas viven en el `CLAUDE.md` raíz y en los guardianes `apps/asegura-web/lib/*.test.ts`. |
 | **housesevillana** | Landing pública de House Sevillana (canal directo: motor de reservas, WhatsApp de grupos, teléfono) | `house-sevillana-landing` | ✅ En `apps/housesevillana`, Root Directory `apps/housesevillana`. **Unificada en el monorepo el 12/08/2026** desde el repo suelto `house-sevillana-landing`; vivía FUERA y por eso era invisible al leer `apps/sivra` (llevó a afirmar por error que «no había web», PR #1387→#1388). Importada **sin su historia git a propósito** (contenía una `service_role`). Next.js mínimo por rutas `edge`; `/en` e `/it` se DERIVAN del HTML español por diccionario de cadenas exactas → tocar un texto español rompe su traducción. La reescribe sola el agente SEO de `apps/sivra` (`/api/seo-refresh`, lunes) por la GitHub Contents API. |
+| **taller** | Taller de vehículos regalado a talleres (piloto Talleres de Automoción G2) | `taller` (pendiente) | 🆕 `apps/taller` creada 04/11/2026 (esqueleto F1: marca, login PIN con stub en memoria, navegación). Compone `@central/module-taller`. Pendiente: proyecto Vercel (Root Directory `apps/taller`), schema `taller` + rol de BD, `PinStore` real, env `TALLER_SESSION_SECRET`. Spec: `docs/superpowers/specs/2026-11-04-taller-global2.md`. |
 
 ## Cómo se bajó `ia.rest` a `apps/ia-rest` (HECHO — 08/06/2026, PR #90)
 

@@ -19,3 +19,12 @@ export { requireSecret } from './secret'
 export { secretoCoincide, autorizacionBearerValida } from './secreto-comparar'
 export { VALIDEZ_MINUTOS, MAX_INTENTOS, generarCodigo, esHashCodigo, igualEnTiempoConstante, estadoCodigo } from './codigo-otp'
 export type { EstadoCodigo, CodigoGuardado } from './codigo-otp'
+export {
+  LONGITUD_PIN_POR_DEFECTO, ITERACIONES_PIN, POLITICA_BLOQUEO_POR_DEFECTO, ESTADO_BLOQUEO_INICIAL,
+  esPinTrivial, validarFormatoPin, hashPin, verificarPin, estaBloqueado, minutosRestantes, registrarFallo,
+  registrarAcierto, intentosRestantes, loginConPin, firmarSesionPin, verificarSesionPin,
+} from './pin.ts'
+export type {
+  OpcionesFormatoPin, ErrorFormatoPin, EstadoBloqueo, PoliticaBloqueo, CredencialPin, PinStore,
+  ResultadoLoginPin, OpcionesLoginPin,
+} from './pin.ts'

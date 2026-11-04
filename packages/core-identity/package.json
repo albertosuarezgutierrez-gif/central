@@ -9,13 +9,14 @@
   "exports": {
     ".": "./src/index.ts",
     "./codigo-otp": "./src/codigo-otp.ts",
-    "./secret": "./src/secret.ts"
+    "./secret": "./src/secret.ts",
+    "./pin": "./src/pin.ts"
   },
   "dependencies": {
     "jose": "^5.9.3"
   },
   "scripts": {
-    "test": "node --test src/secreto-comparar.test.ts"
+    "test": "node --test src/secreto-comparar.test.ts src/pin.test.ts"
   },
   "sideEffects": false,
   "license": "UNLICENSED"

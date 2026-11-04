@@ -123,8 +123,8 @@ y los `module-*` de cada vertical.
   **Prohibido:** commit vacío, cerrar/reabrir, rama nueva por iniciativa propia, tocar el ruleset o su bypass.
 - Requeridos = nombres de JOB: `Análisis estático · Patrones conocidos`, `Lint · TypeCheck · Build`,
   `Tests (packages + guardián)` + `Typecheck · <app>` (el ruleset exige 9; los demás corren). Los `Vercel – *` no.
-- ⚠️ **La matriz de `tests.yml` ya NO son 9 apps: son 13** — `ia-rest, ialimp, sivra, plataforma, rrhh, transporte,
-  alquiler, almacen, mariscos, asegura, asegura-portal, asegura-web, housesevillana`. Cuéntalas en el workflow antes de
+- ⚠️ **La matriz de `tests.yml` ya NO son 9 apps: son 14** — `ia-rest, ialimp, sivra, plataforma, rrhh, transporte,
+  alquiler, almacen, mariscos, asegura, asegura-portal, asegura-web, housesevillana, taller`. Cuéntalas en el workflow antes de
   citar la cifra (lo vigila `test/regression-matriz-typecheck.test.ts`); **una app nueva se añade a la matriz** en su alta.
 - **Todo se puede correr en local:** `npx --yes pnpm@10.33.0 install --no-frozen-lockfile`; `pnpm test` (raíz);
   por app `pnpm exec prisma generate` + `pnpm exec tsc --noEmit -p tsconfig.json`; QA y lint/build desde `apps/ia-rest`.
@@ -140,8 +140,8 @@ y los `module-*` de cada vertical.
 - 🚨 **Todo `apps/<app>/vercel.json` lleva `"ignoreCommand": "node ../../scripts/vercel-ignore-build.mjs apps/<app>"`**
   (sin ella cada push reconstruye TODAS las apps: incidente de ~600 US$). Todas salvo ialimp llevan `--sin-previews`.
 - **`[preview]`** fuerza una preview solo si va en el asunto del **último** commit del push **y** ese commit toca la app.
-  **Nunca en un commit de merge** (construye las 13). `Building` en el comentario de Vercel es intermedio.
-- **`Ignored` no es gratis del todo:** cada push a una rama de PR crea un deployment por app (13) contra un cupo de 450/h de
+  **Nunca en un commit de merge** (construye las 14). `Building` en el comentario de Vercel es intermedio.
+- **`Ignored` no es gratis del todo:** cada push a una rama de PR crea un deployment por app (14) contra un cupo de 450/h de
   cuenta. Verifica en local y empuja UNA vez.
 - **NUNCA** `apps/` en el `.vercelignore` de la raíz.
 - Las apps consumen `packages/*` por `file:`/`workspace:`; no acoples un paquete a una vertical.

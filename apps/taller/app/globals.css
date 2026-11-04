@@ -1,0 +1,119 @@
+/* Los tokens (--bg, --brand, --text…) los emite emitirRootCss(MARCA) en el <head>. */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 16px;
+  min-width: 320px;
+}
+h1 { font-family: var(--serif); font-size: 28px; margin: 0 0 16px; }
+.tenue { color: var(--muted); margin: 8px 0; }
+.cabecera {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 16px; background: #0a0a0a; border-bottom: 1px solid var(--border);
+}
+.marca { display: flex; align-items: center; gap: 12px; text-decoration: none; min-width: 0; }
+.marca-logo { height: 44px; width: auto; max-width: 60vw; }
+.sello {
+  font-family: 'Quicksand', 'Nunito Sans', system-ui, sans-serif; font-weight: 700; font-size: 14px;
+  color: #3364ee;
+}
+.contenido { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+.rejilla { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+.tarjeta {
+  display: flex; flex-direction: column; gap: 4px; min-height: 88px; justify-content: center;
+  padding: 16px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radio);
+  color: var(--text); text-decoration: none;
+}
+.tarjeta span { color: var(--muted); font-size: 14px; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 18px;
+  border-radius: var(--radio); border: 1px solid var(--brand); background: var(--brand);
+  color: var(--on-brand, #0a0a0a); font: inherit; font-weight: 600; cursor: pointer; text-decoration: none;
+}
+.btn-sec { background: transparent; color: var(--text); border-color: var(--border); }
+.login-wrap { min-height: 100vh; display: grid; place-items: center; padding: 16px; background: #0a0a0a; }
+.login-card {
+  width: min(100%, 360px); text-align: center; padding: 24px 16px; border-radius: var(--radio);
+  background: var(--panel); border: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.login-logo { width: min(70%, 220px); height: auto; background: #0a0a0a; border-radius: var(--radio); }
+.pin-puntos { display: flex; gap: 14px; margin: 8px 0; }
+.punto { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--muted); }
+.punto.lleno { background: var(--brand); border-color: var(--brand); }
+.error { min-height: 22px; color: var(--danger); font-size: 14px; }
+.pad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; width: 100%; margin-top: 8px; }
+.tecla {
+  min-height: 56px; font: inherit; font-size: 22px; font-weight: 600; border-radius: var(--radio);
+  border: 1px solid var(--border); background: var(--panel2); color: var(--text); cursor: pointer;
+}
+.tecla:active:not(:disabled) { background: var(--brand-soft); }
+.tecla:disabled { opacity: .5; }
+.tecla-sec { font-size: 18px; color: var(--muted); }
+
+/* Ajustes: secciones plegables (nada se monta abierto de golpe), fichas en vez de tablas (≥320 px). */
+.ajustes { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-bottom: 16px; }
+.seccion { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radio); }
+.seccion > summary { min-height: 48px; display: flex; align-items: center; padding: 0 16px; cursor: pointer; font-weight: 600; }
+.seccion-cuerpo { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 0 16px 16px; }
+.lista { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); }
+.ficha { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radio); background: var(--panel2); }
+.ficha.inactiva { opacity: .6; }
+.campo { display: grid; gap: 4px; font-size: 14px; color: var(--muted); }
+.campo input, .campo select, .campo textarea, .fila input {
+  min-height: 44px; width: 100%; padding: 0 10px; font: inherit; color: var(--text);
+  background: var(--bg); border: 1px solid var(--border); border-radius: var(--radio);
+}
+.fila { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.fila input { flex: 1 1 180px; width: auto; }
+.check { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.check input { width: 22px; height: 22px; }
+.ok { color: var(--ok, #3fb950); font-size: 14px; margin: 0; }
+.pin-grande { font-size: 22px; letter-spacing: 4px; }
+.campo textarea { padding: 8px 10px; min-height: 88px; resize: vertical; }
+
+/* F1: listas, formularios de pantalla completa, firma, resguardo imprimible. */
+.lista-simple { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 8px; }
+.lista-simple li { min-height: 44px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 6px 12px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radio); }
+.lista-simple a { color: var(--text); font-weight: 600; min-height: 44px; display: inline-flex; align-items: center; }
+.formulario { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.formulario fieldset { border: 1px solid var(--border); border-radius: var(--radio); padding: 12px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin: 0; min-width: 0; }
+.formulario legend { font-weight: 600; padding: 0 6px; }
+.dos-col { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+.firma-lienzo { width: 100%; height: 180px; background: #fff; border: 1px solid var(--border); border-radius: var(--radio); touch-action: none; display: block; }
+.casilla { display: flex; gap: 10px; align-items: flex-start; min-height: 44px; padding: 8px 0; }
+.casilla input { width: 24px; height: 24px; flex: none; margin-top: 2px; }
+.fotos-mini { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 120px), 1fr)); }
+.fotos-mini figure { margin: 0; font-size: 12px; color: var(--muted); }
+.fotos-mini img { width: 100%; height: 90px; object-fit: cover; border-radius: var(--radio); }
+.aviso-error { color: var(--danger); margin: 0; }
+.estado { display: inline-block; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--border); font-size: 13px; }
+.tabla-scroll { overflow-x: auto; }
+.tabla-scroll table { border-collapse: collapse; width: 100%; min-width: 480px; }
+.tabla-scroll th, .tabla-scroll td { text-align: left; padding: 8px; border-bottom: 1px solid var(--border); font-size: 14px; }
+.num { text-align: right !important; white-space: nowrap; }
+.datos { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px 12px; }
+.datos dt { font-weight: 600; margin-top: 8px; }
+.datos dd { margin: 0; word-break: break-word; }
+@media (min-width: 560px) { .datos { grid-template-columns: 180px minmax(0, 1fr); } .datos dt { margin-top: 0; } }
+.pie-resguardo { white-space: pre-wrap; font-size: 13px; color: var(--muted); }
+.enlace-copia { word-break: break-all; padding: 10px; background: var(--panel2); border-radius: var(--radio); user-select: all; }
+@media print {
+  .no-imprimir, .cabecera { display: none !important; }
+  body { background: #fff; color: #000; }
+  .contenido { max-width: none; padding: 0; }
+}
+
+/* Dirección (CP → provincia → municipio → calle Catastro → número). */
+.direccion { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); }
+.sugerencias {
+  position: absolute; top: 100%; left: 0; right: 0; z-index: 20; margin: 2px 0 0; padding: 0; list-style: none;
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radio); max-height: min(60vh, 360px); overflow-y: auto;
+}
+.sugerencias li { min-height: 44px; display: flex; align-items: center; gap: 6px; padding: 8px 12px; cursor: pointer; overflow-wrap: anywhere; color: var(--text); }
+.sugerencias li.activa { background: var(--brand-soft); }
+.desactivado { opacity: .6; pointer-events: none; }
+.firma-img { max-width: min(100%, 360px); height: auto; background: #fff; border: 1px solid var(--border); border-radius: var(--radio); }
+@media print { .fotos-mini img { height: 120px; } }

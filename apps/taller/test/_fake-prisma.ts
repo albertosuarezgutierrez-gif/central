@@ -1,0 +1,169 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// BD FALSA en memoria con la forma mínima de Prisma que usa la app (delegados + $transaction + $queryRaw).
+// Emula lo que importa del schema `taller`:
+//   · RLS: cada transacción solo ve/escribe filas de `set_config('taller.taller_id', …)`; sin ajuste, nada.
+//   · WITH CHECK: insertar una fila de otro taller lanza.
+//   · Rollback: si la función de la transacción lanza, las tablas vuelven al estado anterior.
+// No es Postgres: lo comprobado aquí es la lógica de la app; el SQL real se probó en un Postgres desechable.
+
+const CON_ACTIVO = new Set(['taller', 'tipoIva', 'tipoVehiculo', 'aceite', 'paquete', 'medioCobro', 'usuarioTaller', 'proveedor'])
+
+export type BdFake = ReturnType<typeof crearBdFake>
+
+export function crearBdFake() {
+  let tablas: Record<string, any[]> = {}
+  let n = 0
+  // Ids con forma de uuid (como los de Postgres): el login valida que `usuarioId` lo sea antes de tocar la BD.
+  const nuevoId = () => `00000000-0000-4000-8000-${String(++n).padStart(12, '0')}`
+  const llamadasRaw: string[] = []
+  let transacciones = 0
+  const tabla = (m: string) => (tablas[m] ??= [])
+
+  // Operadores de Prisma que usa la app: { in }, { gt, gte, lt, lte, not } y claves compuestas (tallerId_codigo…).
+  const operador = (valor: any, v: Record<string, any>): boolean =>
+    Object.entries(v).every(([op, x]) => {
+      if (op === 'in') return (x as unknown[]).includes(valor)
+      if (op === 'gt') return valor != null && valor > x
+      if (op === 'gte') return valor != null && valor >= x
+      if (op === 'lt') return valor != null && valor < x
+      if (op === 'lte') return valor != null && valor <= x
+      if (op === 'not') return valor !== x
+      return valor?.[op] === x
+    })
+
+  const coincide = (f: any, where: any) =>
+    Object.entries(where ?? {}).every(([k, v]) =>
+      v !== null && typeof v === 'object' && !(v instanceof Date)
+        ? Object.keys(v as object).some((o) => ['in', 'gt', 'gte', 'lt', 'lte', 'not'].includes(o))
+          ? operador(f[k], v as Record<string, any>)
+          : Object.entries(v as object).every(([k2, v2]) => f[k2] === v2) // clave compuesta (tallerId_codigo…)
+        : v === null ? f[k] == null : f[k] === v, // columna NULL = campo ausente (el fake no rellena los NULL)
+    )
+
+  // Candados de aviso por clave (emulan pg_advisory_xact_lock). Se sueltan al terminar la transacción que los tomó.
+  const candados = new Map<string, Promise<void>>()
+  const propios = new WeakMap<Array<() => void>, Set<string>>()
+  async function tomarCandado(clave: string, liberar: Array<() => void>) {
+    // Re-entrante dentro de la misma transacción, como en Postgres.
+    const mios = propios.get(liberar) ?? propios.set(liberar, new Set()).get(liberar)!
+    if (mios.has(clave)) return
+    while (candados.has(clave)) await candados.get(clave)
+    mios.add(clave)
+    let suelta!: () => void
+    candados.set(clave, new Promise<void>((r) => (suelta = r)))
+    liberar.push(() => {
+      candados.delete(clave)
+      suelta()
+    })
+  }
+
+  function crearTx() {
+    const ajuste = { v: null as string | null }
+    const liberar: Array<() => void> = []
+    const visible = (m: string, f: any) => (m === 'taller' ? f.id === ajuste.v : f.tallerId === ajuste.v)
+    const filas = (m: string, where: any) => tabla(m).filter((f) => visible(m, f) && coincide(f, where))
+    const copia = (f: any) => (f ? { ...f } : null)
+    // orderBy simple ({campo: 'asc'|'desc'}) y take, como Prisma.
+    const ordenar = (xs: any[], a?: any) => {
+      let r = xs
+      const ob = Array.isArray(a?.orderBy) ? a.orderBy[0] : a?.orderBy
+      if (ob) {
+        const [campo, dir] = Object.entries(ob)[0] as [string, string]
+        r = [...r].sort((x, y) => (x[campo] < y[campo] ? -1 : x[campo] > y[campo] ? 1 : 0) * (dir === 'desc' ? -1 : 1))
+      }
+      return typeof a?.take === 'number' ? r.slice(0, a.take) : r
+    }
+
+    const delegado = (m: string) => {
+      const d = {
+        findMany: async (a?: any) => ordenar(filas(m, a?.where), a).map(copia),
+        findFirst: async (a?: any) => copia(ordenar(filas(m, a?.where), a)[0]),
+        findUnique: async (a: any) => copia(filas(m, a?.where)[0]),
+        create: async ({ data }: any) => {
+          const fila = { ...(CON_ACTIVO.has(m) ? { activo: true } : {}), id: nuevoId(), ...data }
+          // Columna GENERADA de 0001 (matricula_normalizada ≡ normalizarMatricula, cepo en esquema-sql.test.ts).
+          if (m === 'vehiculo') fila.matriculaNormalizada = String(fila.matricula).replace(/[^A-Za-z0-9]/g, '').toUpperCase()
+          if (!visible(m, fila)) throw new Error(`new row violates row-level security policy for "${m}"`)
+          tabla(m).push(fila)
+          return copia(fila)
+        },
+        update: async ({ where, data }: any) => {
+          const f = filas(m, where)[0]
+          if (!f) throw new Error(`${m}: registro no encontrado`)
+          Object.assign(f, data)
+          return copia(f)
+        },
+        updateMany: async ({ where, data }: any) => {
+          const fs = filas(m, where)
+          for (const f of fs) Object.assign(f, data)
+          return { count: fs.length }
+        },
+        upsert: async ({ where, create, update }: any) =>
+          filas(m, where)[0] ? d.update({ where, data: update }) : d.create({ data: create }),
+        deleteMany: async ({ where }: any) => {
+          const fuera = new Set(filas(m, where))
+          tablas[m] = tabla(m).filter((f) => !fuera.has(f))
+          return { count: fuera.size }
+        },
+      }
+      return d
+    }
+
+    return new Proxy({} as any, {
+      get(_t, prop: string) {
+        if (prop === '$queryRaw')
+          return async (s: TemplateStringsArray, ...vals: unknown[]) => {
+            const sql = s.join('?')
+            llamadasRaw.push(sql)
+            if (sql.includes("set_config('taller.taller_id'")) {
+              ajuste.v = vals[0] as string
+              return [{ v: vals[0] }]
+            }
+            return []
+          }
+        if (prop === '$executeRaw')
+          return async (s: TemplateStringsArray, ...vals: unknown[]) => {
+            llamadasRaw.push(`${s.join('?')} :: ${vals.map(String).join(',')}`)
+            // pg_advisory_xact_lock: quien llega después ESPERA a que la transacción dueña termine (commit o rollback).
+            if (s.join('?').includes('pg_advisory_xact_lock')) await tomarCandado(String(vals[0]), liberar)
+            return 1
+          }
+        if (prop === '__liberar') return () => liberar.splice(0).forEach((f) => f())
+        if (prop === '__ajuste') return ajuste.v
+        return delegado(prop)
+      },
+    })
+  }
+
+  return {
+    /** Cliente con `$transaction` (como PrismaClient). */
+    cliente: {
+      async $transaction<R>(fn: (tx: any) => Promise<R>): Promise<R> {
+        transacciones++
+        const antes = structuredClone(tablas)
+        const tx = crearTx()
+        try {
+          return await fn(tx)
+        } catch (e) {
+          tablas = antes
+          throw e
+        } finally {
+          tx.__liberar()
+        }
+      },
+    },
+    /** Acceso directo SIN ajuste (como usar el cliente global fuera de conTaller). */
+    sinAjuste: () => crearTx(),
+    /** Siembra como operador (salta RLS), igual que 0002 aplicado como postgres. */
+    sembrar(m: string, fila: any) {
+      const f = { ...(CON_ACTIVO.has(m) ? { activo: true } : {}), id: nuevoId(), ...fila }
+      tabla(m).push(f)
+      return f
+    },
+    filas: (m: string) => tabla(m).map((f) => ({ ...f })),
+    llamadasRaw,
+    get transacciones() {
+      return transacciones
+    },
+  }
+}

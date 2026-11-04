@@ -1,0 +1,17 @@
+{
+  "name": "@central/module-taller",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Taller de vehículos (casa de marcas): lógica PURA del dominio. Configuración por taller con defaults de alta (precio hora, tipos de vehículo, paquetes, aceites a granel, IVA, series, medios de cobro, avisos, horario), cálculo de presupuesto en céntimos con IVA por línea, máquina de estados de la orden de trabajo, partes de horas (baremo vs real y margen), guardia de consentimiento para leads a Grupo ASegura y regla de avisos servicio/comercial. Sin BD, sin secretos, sin LLM.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts"
+  },
+  "sideEffects": false,
+  "license": "UNLICENSED"
+}

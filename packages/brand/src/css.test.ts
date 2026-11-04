@@ -133,3 +133,38 @@ test('una marca que declara solo superficies oscuras no arrastra las claras', ()
   assert.equal(oscuras, '--bg:oklch(0.1 0 0)')
   assert.ok(!oscuras.includes('--text:'), 'no debe inventar claves que la marca no declaró')
 })
+
+// ── Talleres de Automoción G2 (04/11/2026) ───────────────────────────────────
+import { MARCA_TALLERES_G2 } from './marcas/talleres-g2.ts'
+
+function lum(hex: string): number {
+  const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map(v => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+}
+const contraste = (a: string, b: string) => {
+  const [x, y] = [lum(a), lum(b)]
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05)
+}
+
+test('G2: colores del logo y texto sobre primario con AA', () => {
+  const p = MARCA_TALLERES_G2.paleta
+  assert.equal(p.primario, '#8ffa09') // medido del logo, no a ojo
+  assert.ok(contraste(p.sobrePrimario!, p.primario) >= 4.5, 'texto sobre el lima')
+  assert.ok(contraste(p.primarioInk, p.panel) >= 4.5, 'tinta del primario sobre blanco')
+  const o = MARCA_TALLERES_G2.paletaOscura!
+  assert.ok(contraste(o.primario!, o.panel!) >= 4.5, 'lima sobre panel oscuro')
+  assert.ok(contraste(o.texto!, o.fondo!) >= 4.5)
+  const css = emitirRootCss(MARCA_TALLERES_G2)
+  assert.ok(css.includes('--on-brand:#0a0a0a'))
+})
+
+test('G2: sello «con Grupo ASegura» cobalto, solo en coMarca (no en la paleta del taller)', () => {
+  const s = MARCA_TALLERES_G2.coMarca!
+  assert.equal(s.texto, 'con Grupo ASegura')
+  assert.equal(s.color.toLowerCase(), '#3364ee')
+  assert.ok(/Quicksand/.test(s.fuente))
+  assert.ok(!/Quicksand/.test(MARCA_TALLERES_G2.tipografia.titulos + MARCA_TALLERES_G2.tipografia.cuerpo))
+  assert.ok(!emitirRootCss(MARCA_TALLERES_G2).toLowerCase().includes('#3364ee'))
+  assert.equal(MARCA_JOAQUIN_JAEN.coMarca, undefined)
+})
