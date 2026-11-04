@@ -11,7 +11,7 @@
 // `POST /insurances` cuesta 0,50€ y NO es idempotente: cada regla que sabemos se
 // comprueba ANTES de gastar, no después.
 
-import { exigeSiniestrosUltimos5, polizaAnteriorParaTarificar } from '@central/module-seguros'
+import { exigeSiniestrosUltimos5, ultimosDigitosPoliza } from '@central/module-seguros'
 import {
   construirEmpresa,
   construirPersona,
@@ -25,7 +25,7 @@ import {
   type DatosPersona,
   type DatosPropietario,
 } from './persona.ts'
-import { mismoDni } from './peticion-auto.ts'
+import { mismoDni, MOTIVO_POLIZA_ANTERIOR_CORTA, polizaAnteriorParaCodeoscopic } from './peticion-auto.ts'
 import { motivoFechaEfectoInvalida } from './fecha-efecto.ts'
 import { reparosMatricula, tieneMatricula } from './matricula-nueva.ts'
 
@@ -196,6 +196,11 @@ export function revisarDatosMoto(d: Partial<DatosMoto>, opciones: { vehiculoNuev
   if (d.aseguradoAntes) {
     if (!texto(d.companiaAnteriorCodigo)) falta('companiaAnteriorCodigo')
     if (!texto(d.polizaAnterior)) falta('polizaAnterior')
+    // Avant2 manda a las compañías los 5 ÚLTIMOS caracteres (consultan SINCO con compañía + esos 5).
+    // Con menos no hay forma honesta de cumplirlo (Occident: «debe tener 5 caracteres») y el campo es
+    // obligatorio en `MotorPreviousInsurance_V1`: se avisa aquí, gratis, en vez de rellenar.
+    else if (ultimosDigitosPoliza(d.polizaAnterior, d.companiaAnteriorCodigo) === null)
+      falta('polizaAnterior', MOTIVO_POLIZA_ANTERIOR_CORTA)
     for (const c of ['aniosAsegurado', 'aniosEnCompania', 'aniosSinSiniestros'] as const) {
       if (!numero(d[c])) falta(c)
     }
@@ -279,7 +284,10 @@ export function construirPeticionMoto(d: DatosMoto, lineaId: string, opciones: {
 
   if (d.aseguradoAntes) {
     const previa: Record<string, unknown> = {
-      policyNumber: polizaAnteriorParaTarificar(d.polizaAnterior, d.companiaAnteriorCodigo),
+      // 🚨 Los 5 ÚLTIMOS, sin separadores y en mayúsculas (05-15/10/2026: con el nº completo y su
+      // espacio, Occident «debe tener 5 caracteres» y Allianz «previousInsurancePolicy incorrecto»).
+      // Mapfre: antes se quita su sufijo de versión. `revisar*` garantiza que no es null.
+      policyNumber: polizaAnteriorParaCodeoscopic(d.polizaAnterior, d.companiaAnteriorCodigo),
       previousCompany: { code: d.companiaAnteriorCodigo },
       registrationPlate: texto(d.matriculaAnterior) ? d.matriculaAnterior!.toUpperCase().replace(/\s/g, '') : riesgo.registrationPlate,
       totalYearsInsured: d.aniosAsegurado,
