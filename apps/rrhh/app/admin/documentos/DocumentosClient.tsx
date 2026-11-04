@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { carpetaAdmiteFirma } from '@/lib/envio-staging'
 import Page from '@/components/ui/Page'
+import DistribuirDocumentosPdfPanel from './DistribuirDocumentosPdfPanel'
 
 type Opcion = { id: string; etiqueta: string }
 type Categoria = Opcion & { carpeta: string }
@@ -169,6 +170,8 @@ export default function DocumentosClient({ carpetas, categorias }: {
       subtitulo={<>Sube uno o varios documentos. La IA propone el tipo, la carpeta, el título, si requiere firma, un resumen para el
         empleado y a quién va (por DNI o nombre completo). Revisa y corrige: <b>nada se asigna ni se avisa hasta que confirmes</b>.</>}
     >
+
+      <DistribuirDocumentosPdfPanel carpetas={carpetas} />
 
       <label className="mb-4 block rounded-card border border-dashed border-line bg-card p-4 text-center text-sm">
         <span className="font-medium text-accent">Elegir archivos</span> <span className="text-ink-3">(PDF recomendado, máx. ~4 MB cada uno)</span>
