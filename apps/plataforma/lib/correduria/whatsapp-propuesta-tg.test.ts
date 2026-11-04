@@ -1,7 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { parseCallback } from '@central/core-telegram'
-import { PREFIJO_WAP, actorTitular, decidirBotonWap, lineaTrasPulsarWap, resolverPropuestaEnAsegura } from './whatsapp-propuesta-tg.ts'
+import { readFileSync } from 'node:fs'
+import { ACCIONES_WAP, PREFIJO_WAP, actorTitular, decidirBotonWap, idDeCorreccionWap, lineaTrasPulsarWap, resolverPropuestaEnAsegura, textoPedirCorreccionWap } from './whatsapp-propuesta-tg.ts'
 
 const ID = '3f2b8c1e-9a4d-4e6f-8b7a-1c2d3e4f5a6b'
 const CUENTA = '0b6c1f7e-3a52-4d7e-9f0a-1c2d3e4f5a6b'
@@ -86,4 +87,66 @@ test('sin secreto o con la red caída: no lanza', async () => {
   assert.equal((await resolverPropuestaEnAsegura({ id: ID, decision: 'aplicar', actor: `humano:${CUENTA}` }, {}, fetchFalso(200, {}).f)).estado, 'puerto_sin_configurar')
   const roto = (async () => { throw new Error('ECONNRESET') }) as unknown as typeof fetch
   assert.deepEqual(await resolverPropuestaEnAsegura({ id: ID, decision: 'aplicar', actor: `humano:${CUENTA}` }, ENTORNO, roto), { status: 502, estado: 'red' })
+})
+
+// ── Aprendizaje y autonomía (✏️ wap_ed, ↩️ wap_un) ───────────────────────────────
+
+test('wap_ed y wap_un: se parsean y se mapean a modificar / deshacer', () => {
+  const ed = parseCallback(`wap_ed:${ID}`)
+  assert.equal(ed.prefix, PREFIJO_WAP)
+  assert.deepEqual(decidirBotonWap(cb(CHAT), ed.action, ed.args, CHAT), { ok: true, id: ID, decision: 'modificar' })
+  const un = parseCallback(`wap_un:${ID}`)
+  assert.deepEqual(decidirBotonWap(cb(CHAT), un.action, un.args, CHAT), { ok: true, id: ID, decision: 'deshacer' })
+  assert.deepEqual([...ACCIONES_WAP], ['ok', 'no', 'ed', 'un'])
+})
+
+test('CEPO ↩️ deshacer y ✏️ modificar: solo el titular (otro from.id o sin chat → no)', () => {
+  for (const accion of ['un', 'ed']) {
+    assert.deepEqual(decidirBotonWap(cb('999'), accion, [ID], CHAT), { ok: false, toast: 'Solo el titular puede hacerlo' }, accion)
+    assert.equal(decidirBotonWap(cb(CHAT), accion, [ID], undefined).ok, false, accion)
+    assert.equal(decidirBotonWap(cb(CHAT), accion, [ID], '').ok, false, accion)
+  }
+})
+
+test('✏️: la marca liga la respuesta a su propuesta y nada más', () => {
+  assert.equal(idDeCorreccionWap(textoPedirCorreccionWap(ID)), ID)
+  assert.equal(idDeCorreccionWap('[wap 123]'), null)
+  assert.equal(idDeCorreccionWap(`[rrc ${ID}]`), null)
+  assert.equal(idDeCorreccionWap(null), null)
+})
+
+test('modificar manda la corrección; deshacer solo el id; sin actor humano no se llama', async () => {
+  const mod = fetchFalso(200, { estado: 'modificada' })
+  const r = await resolverPropuestaEnAsegura({ id: ID, decision: 'modificar', correccion: '20/11/2026', actor: `humano:${CUENTA}` }, ENTORNO, mod.f)
+  assert.deepEqual(r, { status: 200, estado: 'modificada' })
+  assert.deepEqual(JSON.parse(String(mod.llamadas[0].init.body)), { id: ID, decision: 'modificar', correccion: '20/11/2026' })
+  const des = fetchFalso(200, { estado: 'deshecha' })
+  await resolverPropuestaEnAsegura({ id: ID, decision: 'deshacer', actor: `humano:${CUENTA}` }, ENTORNO, des.f)
+  assert.deepEqual(JSON.parse(String(des.llamadas[0].init.body)), { id: ID, decision: 'deshacer' })
+  for (const decision of ['deshacer', 'modificar'] as const) {
+    const x = fetchFalso(200, {})
+    const res = decision === 'modificar'
+      ? await resolverPropuestaEnAsegura({ id: ID, decision, correccion: 'x', actor: 'agente:whatsapp-ia-autonomo' }, ENTORNO, x.f)
+      : await resolverPropuestaEnAsegura({ id: ID, decision, actor: 'agente:whatsapp-ia-autonomo' }, ENTORNO, x.f)
+    assert.equal(res.estado, 'sin_actor')
+    assert.equal(x.llamadas.length, 0)
+  }
+})
+
+test('líneas de deshacer y modificar no afirman lo que no consta', () => {
+  assert.match(lineaTrasPulsarWap('deshacer', { status: 200, estado: 'deshecha' }), /Deshecha/)
+  assert.match(lineaTrasPulsarWap('deshacer', { status: 409, estado: 'ya_deshecha' }), /Ya estaba deshecha/)
+  assert.match(lineaTrasPulsarWap('deshacer', { status: 409, estado: 'cambiado_despues' }), /no se pisa/)
+  assert.doesNotMatch(lineaTrasPulsarWap('deshacer', { status: 500, estado: 'fallo_al_deshacer' }), /Deshecha/)
+  assert.match(lineaTrasPulsarWap('modificar', { status: 200, estado: 'modificada' }), /corrección/)
+  assert.match(lineaTrasPulsarWap('modificar', { status: 422, estado: 'correccion_invalida' }), /no he cambiado nada/)
+})
+
+test('CEPO webhook: la respuesta ✏️ comprueba el chat autorizado ANTES de llamar a asegura', () => {
+  const webhook = readFileSync(new URL('../../app/api/sivra/mensajes/telegram-webhook/route.ts', import.meta.url), 'utf8')
+  const resp = webhook.slice(webhook.indexOf('const wapEdit = idDeCorreccionWap('))
+  const guarda = resp.indexOf("String(msg.from?.id ?? '') === String(process.env.TELEGRAM_CHAT_ID ?? '')")
+  assert.ok(guarda > 0 && guarda < resp.indexOf('resolverPropuestaEnAsegura('))
+  const rama = webhook.slice(webhook.indexOf('if (prefix === PREFIJO_WAP)'))
+  assert.ok(rama.indexOf('decidirBotonWap(cb, action, args, process.env.TELEGRAM_CHAT_ID)') < rama.indexOf('tgAskForReply(textoPedirCorreccionWap('))
 })

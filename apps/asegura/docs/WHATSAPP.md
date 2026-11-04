@@ -46,6 +46,10 @@ Estado (05/10/2026): código listo, **apagado**, sin credenciales ni SQL. Sin c�
   `x-actor: humano:<cuentaId>` del titular (`FACTURAS_CUENTA_ID`/`GMAIL_USER`; sin cuenta no se llama) →
   `POST /api/operador/whatsapp/propuesta`. Edita el mensaje: ✅ aplicada · ❌ descartada · ya resuelta (409) · caducada (410).
 - Pendiente (tarea 7 de la spec): `/datos` acotado a lo que le falta al bot y `wa.me` de presupuesto generado al pulsar.
+- **Aprendizaje y autonomía** (spec § 5 bis): ✏️ `wap_ed` aplica la corrección de Alberto (fecha y/o observación); cada
+  resolución queda en `whatsapp_aprendizaje` (SQL `2026-11-04b`, extracto redactado) y los casos parecidos entran al prompt.
+  Con `ASEGURA_WHATSAPP_AUTONOMIA_ACTIVA=1` y 20 ✅ seguidas de un tipo, ese tipo se aplica solo con ↩️ `wap_un` (un uso,
+  solo titular). ❌/✏️/↩️ lo devuelven a «con permiso». Bots y envíos a terceros: nunca autónomos.
 
 ## Alta (Tech Provider, sin BSP; Embedded Signup v4 + Coexistence)
 - Pantalla: plataforma `/correduria/ajustes/whatsapp` → `FB.login` (config_id, `response_type:'code'`,
@@ -71,6 +75,8 @@ Estado (05/10/2026): código listo, **apagado**, sin credenciales ni SQL. Sin c�
 | `WHATSAPP_PHONE_NUMBER_ID` | solo se procesa lo que llega a ese número. Falta → 503 |
 | `ASEGURA_WHATSAPP_ACTIVO` | `1` = guarda y procesa; si no, 200 sin guardar nada |
 | `ASEGURA_WHATSAPP_IA_ACTIVO` | `1` = el cron llama a la IA (`iaTexto`, `privado`) |
+| `ASEGURA_WHATSAPP_AUTONOMIA_ACTIVA` | `1` = un tipo de propuesta con racha ≥ umbral se aplica solo (↩️ Deshacer). Apagado por defecto |
+| `ASEGURA_WHATSAPP_AUTONOMIA_UMBRAL` | aprobadas seguidas para la autonomía; vacío = 20; fuera de [5, 1000] = nunca autónomo |
 | `WHATSAPP_RETENCION_DIAS` | texto de mensajes, por defecto 730; valor no válido → no purga y 500 |
 | `WHATSAPP_APP_ID` | id de la app de Meta (canje del code; requireSecret). Falta → alta 503 |
 | `WHATSAPP_GRAPH_API_VERSION` | `vNN.N` para el alta (por defecto v24.0; mal formada → 503) |

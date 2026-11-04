@@ -41,7 +41,7 @@ import { PREFIJO_CLP, decidirBotonClp, idDeEdicion } from '@/lib/correo/lead-cor
 import { guardarEdicionClp, resolverBotonClp } from '@/lib/correo/lead-correduria-pendiente'
 import { PREFIJO_CSG, decidirBotonCsg } from '@/lib/correo/contacto-sugerido'
 import { PREFIJO_FEX, decidirBotonFex, decidirFexEnAsegura, lineaTrasPulsarFex } from '@/lib/felicitaciones-exclientes-asegura'
-import { PREFIJO_WAP, actorTitular, decidirBotonWap, lineaTrasPulsarWap, resolverPropuestaEnAsegura } from '@/lib/correduria/whatsapp-propuesta-tg'
+import { PREFIJO_WAP, actorTitular, decidirBotonWap, idDeCorreccionWap, lineaTrasPulsarWap, resolverPropuestaEnAsegura, textoPedirCorreccionWap } from '@/lib/correduria/whatsapp-propuesta-tg'
 import { cuentaTitularTelegram } from '@/lib/correduria/whatsapp-propuesta-tg-cuenta'
 import { PREFIJO_RRC, decidirBotonRrc, decidirRrcCompaniaEnAsegura, decidirRrcEnAsegura, editarRrcCompaniaEnAsegura, editarRrcEnAsegura, idDeEdicionRrc, idDeEdicionRrcCompania, lineaPushRrc, lineaTrasPulsarRrc, textoPedirEdicionRrc, textoPedirEdicionRrcCompania } from '@/lib/regularizacion-rc-asegura'
 import { resolverBotonCsg } from '@/lib/correo/contacto-sugerido-pendiente'
@@ -1047,20 +1047,28 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
     // Escribe en la cartera: solo la PERSONA autorizada (from.id = TELEGRAM_CHAT_ID) y con `x-actor: humano:<cuentaId>`
     // del titular (sin cuenta resuelta no se llama a asegura). Se contesta YA y asegura (un solo uso → 409, caducada → 410)
     // va en after(). Aplicar nunca envía nada al cliente ni cierra una devolución. Spec 2026-11-04 §5.
+    // ✏️ `wap_ed` pide la corrección con force_reply (marca «[wap <uuid>]»; la propuesta sigue pendiente hasta que llegue).
+    // ↩️ `wap_un` deshace una aplicada SOLA (modo autónomo): un uso, lo comprueba asegura. § «Aprendizaje y autonomía».
     if (prefix === PREFIJO_WAP) {
       const d = decidirBotonWap(cb, action, args, process.env.TELEGRAM_CHAT_ID)
       if (!d.ok) {
         await tgAnswerCallback(cb.id, d.toast)
         return NextResponse.json({ ok: true })
       }
-      await tgAnswerCallback(cb.id, d.decision === 'aplicar' ? '⏳ Aplicando…' : 'Descartando…')
+      if (d.decision === 'modificar') {
+        await tgAnswerCallback(cb.id, '✏️ Escribe la corrección')
+        await tgAskForReply(textoPedirCorreccionWap(d.id)).catch(() => null)
+        return NextResponse.json({ ok: true })
+      }
+      const decision = d.decision
+      await tgAnswerCallback(cb.id, decision === 'aplicar' ? '⏳ Aplicando…' : decision === 'deshacer' ? '↩️ Deshaciendo…' : 'Descartando…')
       const original = escapeHtml(cb.message?.text ?? '')
       const mensajeId: number | undefined = cb.message?.message_id
       if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n⏳ <i>Pulsado…</i>`).catch(() => {})
       after(async () => {
         const actor = actorTitular(await cuentaTitularTelegram())
-        const r = await resolverPropuestaEnAsegura({ id: d.id, decision: d.decision, actor })
-        const linea = lineaTrasPulsarWap(d.decision, r)
+        const r = await resolverPropuestaEnAsegura({ id: d.id, decision, actor })
+        const linea = lineaTrasPulsarWap(decision, r)
         if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${linea}`).catch(() => {})
         else await tgSend(linea).catch(() => {})
       })
@@ -1482,6 +1490,18 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
       if (estado === 'invalida') await tgSend('<i>Eso no vale: «Para: correo» en la primera línea y/o un texto de 20 a 4.000 caracteres. No he cambiado nada.</i>').catch(() => {})
       else if (estado === 'buzon_desconocido') await tgSend('<i>Ese correo no es un contacto ACTIVO de la compañía en el Directorio: no lo uso. Añádelo allí o elige uno de la lista. No he cambiado nada.</i>').catch(() => {})
       else if (estado !== 'editada') await tgSend(`<i>Esa respuesta ya no espera edición (enviada o resuelta) o no he podido guardarla (${escapeHtml(estado.slice(0, 60))}): no he cambiado nada.</i>`).catch(() => {})
+      return NextResponse.json({ ok: true })
+    }
+    // Corrección de una propuesta de la IA de WhatsApp (✏️ de `wap_ed`, marca «[wap <uuid>]»). Solo del chat autorizado
+    // y con el actor humano del titular (sin él, resolverPropuestaEnAsegura no llama). asegura aplica la versión corregida.
+    const wapEdit = idDeCorreccionWap(String(msg.reply_to_message.text))
+    if (wapEdit !== null && String(msg.from?.id ?? '') === String(process.env.TELEGRAM_CHAT_ID ?? '')) {
+      const correccion = String(msg.text ?? '')
+      after(async () => {
+        const actor = actorTitular(await cuentaTitularTelegram())
+        const r = await resolverPropuestaEnAsegura({ id: wapEdit, decision: 'modificar', correccion, actor })
+        await tgSend(lineaTrasPulsarWap('modificar', r)).catch(() => {})
+      })
       return NextResponse.json({ ok: true })
     }
     // Nota a un 👎 del asistente de la correduría («asistente seguros · turno N»).

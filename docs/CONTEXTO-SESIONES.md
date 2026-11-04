@@ -78,6 +78,10 @@ Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; ti
 original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados revisado/falta_roto/devuelto + bloque en ficha. `rrhh.material_empleado`
 (0028, aplicada). Pendiente fase 2: revisión periódica mensual.
 
+## (04/11/2026) Correduría · WhatsApp: aprendizaje + autonomía gradual
+- Como el agente de pisos: cada ✅/❌/✏️/↩️ de Alberto queda en `whatsapp_aprendizaje`; casos parecidos (sin embeddings) al prompt; autonomía POR TIPO (fecha_cobro/pagado/vencimiento) tras N aprobadas seguidas (`ASEGURA_WHATSAPP_AUTONOMIA_UMBRAL`, 20) con ↩️ Deshacer; flag `ASEGURA_WHATSAPP_AUTONOMIA_ACTIVA` apagado. Bots RPA y envíos NUNCA autónomos (cepo).
+- SQL `apps/asegura/prisma/sql/2026-11-04b_whatsapp_aprendizaje.sql` SIN aplicar (fail-closed). Spec §5 bis.
+
 ## (04/11/2026) Correduría · WhatsApp: respuestas del cliente → propuestas CRM — PR #5486
 - Enfoque Alberto: él envía por wa.me (coste 0); el cliente contesta → el agente crea oportunidad / PROPONE fecha de cobro, «ya pagado», vencimiento (Telegram `wap_` ✅/❌) / lee la póliza (media) → presupuesto con bots RPA siempre con botón. Nada se envía por API (cepos).
 - Hecho: parte A (apps/asegura: casado echo↔saliente, media, propuestas, endpoints operador) + parte B (plataforma: registro de salientes en botones wa.me, handler `wap_`). Spec `docs/superpowers/specs/2026-11-04-whatsapp-correduria-respuestas-crm.md`.
