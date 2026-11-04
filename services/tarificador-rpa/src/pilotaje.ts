@@ -81,6 +81,8 @@ import {
   registrarPrecioVisto,
   tolerarRutasApp,
   permisosNavegacionEn,
+  TIPOS_INPUT_MARCABLES,
+  esTipoInputMarcable,
   type GuardEmision,
 } from './guard.ts'
 import { TOPES_PILOTAJE, esCampoTexto, leerComando, loteExploradorDe, motivoCampoProhibido, motivoValorLiteralProhibido, textoDiagnostico, type ComandoPilotaje } from './pilotaje-reglas.ts'
@@ -205,7 +207,7 @@ export async function ejecutarComando(page: Page, captura: InventarioExploracion
   if (c.accion === 'marcar' && hit.el.tag === 'label') {
     // 0.3.50: `marcar` sobre la ETIQUETA = sobre SU casilla/radio inventariada (mismo marco, misma identidad viva): el validador mira el input.
     const ctl = await controlDeEtiquetaInventariado(captura, hit, nodo)
-    if (!ctl) return rechazo('validador', ['la etiqueta no es de una única casilla/radio del inventario'])
+    if (!ctl) return rechazo('validador', ['la etiqueta no es de una única casilla/botón de opción del inventario'])
     ;({ hit, nodo } = ctl)
     refEfectiva = ctl.ref
   }
@@ -298,7 +300,7 @@ export async function ejecutarComando(page: Page, captura: InventarioExploracion
     // pulsar (desmarcaría), un radio ya marcado re-emite su `change` y, si el input está oculto a la vista, se pulsa su `<label for>`; todo
     // por la puerta del guard (`k.pulsar`).
     const tipoCtl = (el.type ?? '').toLowerCase()
-    if (c.accion === 'marcar' || (el.tag === 'input' && (tipoCtl === 'checkbox' || tipoCtl === 'radio'))) {
+    if (c.accion === 'marcar' || (el.tag === 'input' && esTipoInputMarcable(tipoCtl))) {
       await k.pausaAccion()
       const m = await marcarControl(loc, nodo.marco, el, k.pulsar, k.guard)
       if (m.yaMarcada) return hecho('ya marcada')
@@ -341,14 +343,14 @@ async function controlDeEtiquetaInventariado(
   nodo: NonNullable<ReturnType<InventarioExploracion['nodos']['get']>>,
 ): Promise<{ hit: typeof hit; nodo: typeof nodo; ref: string } | null> {
   const ctl = await nodo.handle
-    .evaluate((n) => {
+    .evaluate((n, tipos) => {
       const l = n as HTMLLabelElement
       if (l.tagName !== 'LABEL') return null
       const c = l.control as HTMLInputElement | null
       if (!c || c.tagName !== 'INPUT' || !c.id || l.htmlFor !== c.id || !c.labels || c.labels.length !== 1) return null
       const tipo = String(c.type).toLowerCase()
-      return tipo === 'checkbox' || tipo === 'radio' ? { id: c.id, tipo } : null
-    })
+      return tipos.includes(tipo) ? { id: c.id, tipo } : null
+    }, [...TIPOS_INPUT_MARCABLES])
     .catch(() => null)
   if (!ctl) return null
   const candidatos = hit.marco.elementos.filter((e) => e.tag === 'input' && e.id === ctl.id && (e.type ?? '').toLowerCase() === ctl.tipo && typeof e.ref === 'string')

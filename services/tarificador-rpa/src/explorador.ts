@@ -91,7 +91,7 @@ import {
 import { cerrarExploracion, enviarResultado, pedirPaso, type Config, type CuerpoResultado, type CuerpoResultadoPresupuesto, type RespuestaPaso, type Trabajo } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
 import { ErrorTarificador, ErrorVerificacionHumana, clasificar } from './errores.ts'
-import { cerrarModalInformativo, type ResultadoCierreModal, cerrarFaseEntrada, ErrorFronteraEmision, exigirCampoNoBancario, GuardadoConDialogoError, cerrarDialogoTerminoEpac, controlOcultoDeEtiqueta, instalarGuardEmision, precioVistoEn, registrarPrecioVisto, pulsar, pulsarAccesoNseMapfre, pulsarMenuOfertaNseMapfre, pulsarEnlaceEntradaAutorizado, tolerarRutasApp, neutralizarOnclicksEntrada, pulsarExploracionAutorizada, pulsarNavegacionLibre, pulsarGuardadoDialogoAutorizado, pulsarGuardadoPresupuesto, redispararCambioMarcado, fijarPermisosNavegacion, permisosNavegacionEn, type GuardEmision } from './guard.ts'
+import { cerrarModalInformativo, type ResultadoCierreModal, cerrarFaseEntrada, ErrorFronteraEmision, exigirCampoNoBancario, GuardadoConDialogoError, cerrarDialogoTerminoEpac, controlOcultoDeEtiqueta, instalarGuardEmision, precioVistoEn, registrarPrecioVisto, pulsar, pulsarAccesoNseMapfre, pulsarMenuOfertaNseMapfre, pulsarEnlaceEntradaAutorizado, tolerarRutasApp, neutralizarOnclicksEntrada, pulsarExploracionAutorizada, pulsarNavegacionLibre, pulsarGuardadoDialogoAutorizado, pulsarGuardadoPresupuesto, redispararCambioMarcado, TIPOS_INPUT_MARCABLES, fijarPermisosNavegacion, permisosNavegacionEn, type GuardEmision } from './guard.ts'
 import { esperarPdf } from './descarga-pdf.ts'
 import { elegirDesplegableCustom } from './desplegable-custom.ts'
 import { capturarInventarioExploracion, envoltorioSelectOculto, type InventarioExploracion } from './inventario-dom.ts'
@@ -1047,11 +1047,11 @@ export async function asegurarMarcado(loc: Locator, marco: Frame, pulsarEtiqueta
 async function etiquetaDeControlOculto(loc: Locator, marco: Frame): Promise<{ etiqueta: Locator; marca: string } | null> {
   const marca = randomUUID().slice(0, 12)
   const ok = await loc
-    .evaluate((n, [at, mc]) => {
+    .evaluate((n, [at, mc, tipos]) => {
       const c = n as HTMLInputElement
       if (c.tagName !== 'INPUT') return false
       const tipo = String(c.type).toLowerCase()
-      if (tipo !== 'checkbox' && tipo !== 'radio') return false
+      if (!tipos.includes(tipo)) return false
       const ls = c.labels
       if (!c.id || !ls || ls.length !== 1 || ls[0].htmlFor !== c.id) return false
       let oculto = false
@@ -1073,7 +1073,7 @@ async function etiquetaDeControlOculto(loc: Locator, marco: Frame): Promise<{ et
       if (!oculto) return false
       ls[0].setAttribute(at, mc)
       return true
-    }, [ATRIBUTO_MARCA, marca] as const, { timeout: TOPE_COMPROBACION_REF_MS })
+    }, [ATRIBUTO_MARCA, marca, [...TIPOS_INPUT_MARCABLES]] as const, { timeout: TOPE_COMPROBACION_REF_MS })
     .catch(() => false)
   if (!ok) return null
   const etiqueta = marco.locator(`label[${ATRIBUTO_MARCA}="${marca}"]`)

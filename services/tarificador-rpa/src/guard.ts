@@ -1092,6 +1092,15 @@ async function pulsarNuevaContratacionPelayo(boton: Locator, guard: GuardEmision
   guard.comprobar()
 }
 
+/**
+ * 0.3.50: tipos de `<input>` que `marcar` admite (casilla y botón de opción). Vive AQUÍ porque solo guard.ts puede nombrar esos controles
+ * (guardián `regression-tarificador-rpa`, ePAC Comunidades 2020); el explorador y el pilotaje lo importan (y lo pasan por argumento a sus
+ * `evaluate`, que corren en el navegador).
+ */
+export const TIPOS_INPUT_MARCABLES: readonly string[] = Object.freeze(['checkbox', 'radio'])
+/** ¿`tipo` (cualquier caja) es uno de {@link TIPOS_INPUT_MARCABLES}? */
+export const esTipoInputMarcable = (tipo: string | null | undefined): boolean => TIPOS_INPUT_MARCABLES.includes(String(tipo ?? '').toLowerCase())
+
 /** Nombre de cada rótulo que mira `pulsar()` (para el mensaje: nunca el texto). */
 const NOMBRES_ROTULOS_PULSAR: readonly string[] = Object.freeze(['texto', 'aria-label', 'title', 'value', 'aria-labelledby', 'alt de hijos', 'alt'])
 
