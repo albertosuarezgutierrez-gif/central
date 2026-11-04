@@ -167,14 +167,14 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 436 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 437 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 424 | 78.839 | 68.115.944 | 0 | 0 |
-| `otro` | 418 | 18.536 | 37.763.818 | 21.502.739 | 0 |
+| `bash` | 425 | 78.842 | 68.116.461 | 0 | 0 |
+| `otro` | 419 | 18.538 | 37.763.858 | 21.502.739 | 0 |
 | `lectura-directa` | 359 | 12.045 | 33.895.942 | 0 | 0 |
-| `sql` | 274 | 8.988 | 5.143.065 | 3.040.710 | 36 |
+| `sql` | 275 | 8.989 | 5.143.224 | 3.040.710 | 36 |
 | `mcp:github` | 357 | 8.942 | 6.516.435 | 58.215.068 | 122 |
 | `escritura` | 258 | 6.863 | 110.263.173 | 0 | 0 |
 | `mcp:Vercel` | 92 | 1.547 | 1.339.497 | 237.328 | 50 |

@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-11-03T22:22:43Z",
+  "generadoEn": "2026-11-04T08:06:35Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1025,7 +1025,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 23
+        "evidencias": 25
       },
       "asegura-portal": {
         "estado": "usado",
@@ -1053,7 +1053,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 43
+        "evidencias": 44
       },
       "rrhh": {
         "estado": "usado",
@@ -2321,7 +2321,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 342
+        "evidencias": 344
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2375,7 +2375,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 68
+        "evidencias": 70
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4426,6 +4426,8 @@
       "/api/operador/whatsapp/alta",
       "/api/operador/whatsapp/conexion",
       "/api/operador/whatsapp/conversaciones",
+      "/api/operador/whatsapp/propuesta",
+      "/api/operador/whatsapp/saliente-previsto",
       "/api/portal/anulacion",
       "/api/portal/anulacion/solicitar",
       "/api/portal/carnets",
@@ -5575,6 +5577,7 @@
       "/api/correduria/tarificador/ultimo-riesgo",
       "/api/correduria/vencimientos",
       "/api/correduria/whatsapp-conexion",
+      "/api/correduria/whatsapp-saliente",
       "/api/cron/agentes-latido",
       "/api/cron/banca-alertas",
       "/api/cron/blog-asegura",
@@ -6212,7 +6215,9 @@
       "seguros.tarificador_sesiones",
       "seguros.usuarios",
       "seguros.whatsapp_kb_chunks",
-      "seguros.whatsapp_outbound_messages"
+      "seguros.whatsapp_outbound_messages",
+      "seguros.whatsapp_propuestas",
+      "seguros.whatsapp_salientes_previstos"
     ],
     "asegura-portal": [
       "seguros.cliente_relaciones_permiso_volcado",
@@ -7279,7 +7284,7 @@
     "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1882,
+    "apis": 1885,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

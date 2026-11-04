@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-04T07:31:44Z",
-  "sha": "0f9f90a73d7bc0aa6d554d40ae14f59ae8a59a4b",
+  "generadoEn": "2026-11-04T08:06:35Z",
+  "sha": "2884d86c472ef8829f49c15fc7f4bb8d762805e4",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -28651,13 +28651,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 25,
+          "linea": 26,
           "resumen": "GET /api/cron/whatsapp-analizar — cada 15 min (`vercel.json`). Doc: apps/asegura/docs/WHATSAPP.md. 1. Rescate de la Fase 1 (con ASEGURA_WHATSAPP_ACTIVO=1): procesa los crudos que el `after()` del webh"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/whatsapp-analizar",
-      "hash": "dd4d62ba9ab1"
+      "hash": "a210b129ecec"
     },
     {
       "ruta": "apps/asegura/app/api/cron/whatsapp-retencion/route.ts",
@@ -33525,6 +33525,24 @@
       "tablas": [],
       "rutaApi": "/api/operador/whatsapp/conversaciones",
       "hash": "cdb853b4aa42"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/whatsapp/propuesta/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [],
+      "rutaApi": "/api/operador/whatsapp/propuesta",
+      "hash": "b730bb79f436"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/whatsapp/saliente-previsto/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [],
+      "rutaApi": "/api/operador/whatsapp/saliente-previsto",
+      "hash": "e3637f4f510f"
     },
     {
       "ruta": "apps/asegura/app/api/portal/anulacion/route.ts",
@@ -54601,7 +54619,7 @@
           "nombre": "oportunidadDesdeFichero",
           "kind": "function",
           "exportada": true,
-          "params": "e: EntradaOportunidadDocumento & { fichero: { contenido: Buffer; mime: string; nombre: string } },",
+          "params": "e: EntradaOportunidadDocumento & { fichero: { contenido: Buffer; mime: string; nombre: string } /** * Guarda opcional (04/11/2026, WhatsApp): con lo LEÍDO y antes de tocar nada. Si devuelve un desenlace, se devuelve * ese y NO se crea/actua",
           "retorno": "Promise<ResultadoOportunidadDocumento>",
           "linea": 155,
           "resumen": "Lee el fichero (probando el DNI de la ficha si el PDF tiene contraseña) y sigue con lo leído."
@@ -54612,7 +54630,7 @@
           "exportada": true,
           "params": "e: EntradaOportunidadDocumento & { lectura: ResultadoLecturaPoliza | LecturaPoliza },",
           "retorno": "Promise<ResultadoOportunidadDocumento>",
-          "linea": 174,
+          "linea": 185,
           "resumen": "Con el documento ya leído (p. ej. `subir-poliza`, que lo leyó antes de guardar)."
         },
         {
@@ -54621,7 +54639,7 @@
           "exportada": true,
           "params": "e: EntradaOportunidadDocumento & { lectura: ResultadoLecturaPoliza | LecturaPoliza },",
           "retorno": "Promise<",
-          "linea": 189,
+          "linea": 200,
           "resumen": "Lo mismo, y además (05/10/2026) lo que el documento dice de la IDENTIDAD de la ficha del tomador, que NO va en el resultado (este viaja al navegador y al portal): - `marca`: para guardar con el docume"
         },
         {
@@ -54630,7 +54648,7 @@
           "exportada": false,
           "params": "e: EntradaOportunidadDocumento & { lectura: ResultadoLecturaPoliza | LecturaPoliza }, identidad: { marca: MarcaIdentidadDocumento | null; propuesta: { clienteId: string; propuesta: PropuestaIdentidad } | null },",
           "retorno": "Promise<ResultadoOportunidadDocumento>",
-          "linea": 199
+          "linea": 210
         },
         {
           "nombre": "notaReactivada",
@@ -54638,7 +54656,7 @@
           "exportada": false,
           "params": "numeroPoliza: string | null, origen: string",
           "retorno": null,
-          "linea": 571
+          "linea": 582
         },
         {
           "nombre": "oportunidadesDeLaPoliza",
@@ -54646,7 +54664,7 @@
           "exportada": false,
           "params": "correduriaId: string, numeroPoliza: string",
           "retorno": "Promise<(OportunidadDeLaPoliza &",
-          "linea": 579,
+          "linea": 590,
           "resumen": "Todas las oportunidades (abiertas y cerradas) de la correduría con ese nº de póliza normalizado, con la ficha VIVA de cada una (una fusionada apunta a su destino) y si está activa. `null` = no se pudo"
         },
         {
@@ -54655,7 +54673,7 @@
           "exportada": false,
           "params": "texto: string",
           "retorno": "Promise<boolean>",
-          "linea": 603,
+          "linea": 614,
           "resumen": "Telegram a Alberto (el bot de siempre). `false` = no salió (sin bot configurado o error): se dice."
         },
         {
@@ -54664,7 +54682,7 @@
           "exportada": false,
           "params": "e: { correduriaId: string; oportunidadId: string; tomadorId: string; ramo: string; bruto: Record<string, unknown> /** Asignar el rol en la oportunidad (solo los del ramo, solo si está libre). */ asignar: boolean /** Relacionar con el tomado",
           "retorno": "Promise<",
-          "linea": 617,
+          "linea": 628,
           "resumen": "Las personas de la póliza que NO son el tomador (asegurados, propietario, conductores, beneficiarios), casadas con su ficha por índice ciego del DNI/CIF en toda la cartera (`decidirFichaPorIdentidad`)"
         },
         {
@@ -54673,7 +54691,7 @@
           "exportada": false,
           "params": "e: { correduriaId: string; oportunidadId: string; clienteId: string; actor: string; origen: string; verificado: boolean; hoy: Date /** Recién creada: lo leído completa su `info_riesgo`, sin nota en la ficha (ya dice «abierta»). */ nueva: bo",
           "retorno": "Promise<",
-          "linea": 684,
+          "linea": 695,
           "resumen": "Lo leído de la póliza a SU oportunidad, en una transacción con la fila bloqueada: columnas (`fecha_fin_vigencia`, `prima_bruta`) e `info_riesgo.lecturaDocumento` (capitales, garantías, personas). Quié"
         },
         {
@@ -54682,7 +54700,7 @@
           "exportada": false,
           "params": "correduriaId: string, nombreCompleto: string",
           "retorno": "Promise<string | null>",
-          "linea": 768,
+          "linea": 779,
           "resumen": "El lead SIN DNI que se llama exactamente igual (el más antiguo), o null. Solo leads: una ficha de cliente o con DNI no se toma por nombre."
         },
         {
@@ -54691,7 +54709,7 @@
           "exportada": true,
           "params": "correduriaId: string, documentoId: string, bruto: Record<string, unknown> | null, /** 05/10/2026: la marca de identidad (índice ciego del DNI, nunca el DNI). Ver `marcaAcreditaFicha`. */ marca: MarcaIdentidadDocumento | null = null,",
           "retorno": "Promise<void>",
-          "linea": 792,
+          "linea": 803,
           "resumen": "Guarda con el documento lo leído por la IA (`documentos.extraccion`, 03/10/2026) SIN datos personales: DNI, teléfono, email, fechas de nacimiento/carné y domicilio no se guardan en claro en un campo S"
         },
         {
@@ -54700,7 +54718,7 @@
           "exportada": false,
           "params": "codigo: string | null",
           "retorno": "Promise<string | null>",
-          "linea": 812,
+          "linea": 823,
           "resumen": "El nombre de la compañía por su código DGS (C0058 → Mapfre), o null."
         },
         {
@@ -54709,7 +54727,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<",
-          "linea": 820,
+          "linea": 831,
           "resumen": "El catálogo DGS para casar un nombre leído. `[]` si no se pudo leer: entonces no se resuelve nada."
         },
         {
@@ -54718,7 +54736,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, nombre: string | null, compartenContacto: string[], actor: string",
           "retorno": "Promise<void>",
-          "linea": 831,
+          "linea": 842,
           "resumen": "En un lead RECIÉN abierto: «posible duplicado de <id>» por cada ficha que se llama exactamente igual, y las que comparten su teléfono/email. NO se funde nada (duplicar se ve; mezclar a dos personas, n"
         },
         {
@@ -54727,7 +54745,7 @@
           "exportada": false,
           "params": "correduriaId: string, nombreCompleto: string",
           "retorno": "Promise<string[]>",
-          "linea": 847,
+          "linea": 858,
           "resumen": "Fichas vivas (no lápidas) que se llaman EXACTAMENTE igual, sin orden. Hasta 5."
         }
       ],
@@ -54739,7 +54757,7 @@
         "oportunidades"
       ],
       "rutaApi": null,
-      "hash": "72b21ad12984"
+      "hash": "2cb043389e53"
     },
     {
       "ruta": "apps/asegura/lib/oportunidad-figuras.ts",
@@ -71676,7 +71694,7 @@
           "exportada": false,
           "params": "t: T",
           "retorno": null,
-          "linea": 17
+          "linea": 18
         },
         {
           "nombre": "parsearAnalisis",
@@ -71684,7 +71702,7 @@
           "exportada": true,
           "params": "crudo: string, limpiar: (s: string) => string = (s) => s",
           "retorno": "ResultadoParseo",
-          "linea": 88,
+          "linea": 99,
           "resumen": "Texto de la IA → análisis validado. `limpiar` es `cleanJSON` de core-ai (inyectado para test)."
         },
         {
@@ -71693,7 +71711,7 @@
           "exportada": true,
           "params": "mensajes: readonly MensajeTranscripcion[], opciones: { nombres?: readonly (string | null | undefined)[]; maxMensajes?: number; maxCaracteres?: number } = {},",
           "retorno": "string",
-          "linea": 111,
+          "linea": 122,
           "resumen": "Los últimos `maxMensajes`, REDACTADOS, en orden, y recortando por arriba (los más viejos fuera) hasta caber en `maxCaracteres`. Nunca lleva el número ni el nombre del contacto."
         },
         {
@@ -71702,12 +71720,12 @@
           "exportada": true,
           "params": "contexto: ContextoParaIA, transcripcion: string",
           "retorno": "string",
-          "linea": 163
+          "linea": 186
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c7087684c12c"
+      "hash": "9624e669a738"
     },
     {
       "ruta": "apps/asegura/lib/whatsapp/analizar.ts",
@@ -71724,7 +71742,7 @@
           "exportada": true,
           "params": "ahora: Date = new Date()",
           "retorno": "string",
-          "linea": 26
+          "linea": 28
         },
         {
           "nombre": "descifrar",
@@ -71732,7 +71750,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 30
+          "linea": 32
         },
         {
           "nombre": "analizarPendientes",
@@ -71740,7 +71758,7 @@
           "exportada": true,
           "params": "correduriaId: string, limite = 10",
           "retorno": "Promise<ResumenAnalisis>",
-          "linea": 44
+          "linea": 46
         },
         {
           "nombre": "hastaDe",
@@ -71748,7 +71766,7 @@
           "exportada": false,
           "params": "conversacionId: string",
           "retorno": "Promise<Date | null>",
-          "linea": 83
+          "linea": 85
         },
         {
           "nombre": "fallo",
@@ -71756,7 +71774,7 @@
           "exportada": false,
           "params": "correduriaId: string, c: Reclamada, hasta: Date | null, motivo: string",
           "retorno": "Promise<void>",
-          "linea": 89
+          "linea": 91
         },
         {
           "nombre": "clienteVivo",
@@ -71764,7 +71782,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<(ClienteContexto &",
-          "linea": 105
+          "linea": 107
         },
         {
           "nombre": "analizarUna",
@@ -71772,7 +71790,7 @@
           "exportada": false,
           "params": "correduriaId: string, c: Reclamada",
           "retorno": "Promise<number | 'saltada' | 'fallida'>",
-          "linea": 123
+          "linea": 125
         },
         {
           "nombre": "depsBd",
@@ -71780,7 +71798,7 @@
           "exportada": false,
           "params": "correduriaId: string, c: Reclamada",
           "retorno": "DepsEjecutor",
-          "linea": 221
+          "linea": 261
         }
       ],
       "tablas": [
@@ -71795,7 +71813,7 @@
         "skip"
       ],
       "rutaApi": null,
-      "hash": "d34df3e89328"
+      "hash": "4a094c3ea206"
     },
     {
       "ruta": "apps/asegura/lib/whatsapp/conexion.ts",
@@ -72055,6 +72073,7 @@
         "sumarDias",
         "nombreDePerfil",
         "planificar",
+        "planificarPropuesta",
         "ejecutar"
       ],
       "funciones": [
@@ -72064,7 +72083,7 @@
           "exportada": true,
           "params": "fecha: string, n: number",
           "retorno": "string",
-          "linea": 68,
+          "linea": 84,
           "resumen": "aaaa-mm-dd + n días (UTC, sin horas: son fechas de calendario)."
         },
         {
@@ -72073,7 +72092,7 @@
           "exportada": true,
           "params": "perfil: string | null | undefined",
           "retorno": "string | null",
-          "linea": 77,
+          "linea": 93,
           "resumen": "El nombre del perfil de WhatsApp sirve para la ficha solo si parece un nombre (no «🔥», no un número)."
         },
         {
@@ -72082,7 +72101,16 @@
           "exportada": true,
           "params": "analisis: Analisis, ctx: ContextoEjecucion",
           "retorno": "Plan",
-          "linea": 82
+          "linea": 98
+        },
+        {
+          "nombre": "planificarPropuesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: AccionPropuesta, ctx: ContextoEjecucion",
+          "retorno": "Extract<Paso,",
+          "linea": 214,
+          "resumen": "Las guardas de una propuesta (ficha única, D4, ancla del servidor). PURA."
         },
         {
           "nombre": "ejecutar",
@@ -72090,12 +72118,12 @@
           "exportada": true,
           "params": "plan: Plan, ctx: ContextoEjecucion, deps: DepsEjecutor",
           "retorno": "Promise<",
-          "linea": 203
+          "linea": 266
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b2b34506b7eb"
+      "hash": "f533fdbe1a86"
     },
     {
       "ruta": "apps/asegura/lib/whatsapp/eventos.ts",
@@ -72266,6 +72294,139 @@
       "hash": "9424d2b88079"
     },
     {
+      "ruta": "apps/asegura/lib/whatsapp/media-procesar.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Media que manda un cliente por WhatsApp → `documentos` → (si es una póliza) oportunidad (spec 2026-11-04 §6, §7). Lo llama SOLO el cron `whatsapp-analizar` (no el `after()` del webhook). Solo trabaja con mensajes encolados (`mensajes.media_estado = 'pendiente'`), que `procesar.ts` solo encola con UN",
+      "exporta": [
+        "procesarMediaPendiente",
+        "guardaDniDeOtraFicha"
+      ],
+      "funciones": [
+        {
+          "nombre": "procesarMediaPendiente",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, opciones: { limite?: number; fetch?: FetchLike } = {}",
+          "retorno": "Promise<ResumenMedia>",
+          "linea": 36
+        },
+        {
+          "nombre": "tokenCorreduria",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string",
+          "retorno": "Promise<string | null>",
+          "linea": 133
+        },
+        {
+          "nombre": "leidasHoy",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string",
+          "retorno": "Promise<number>",
+          "linea": 146,
+          "resumen": "Documentos de WhatsApp LEÍDOS hoy (Madrid): solo los que ya tienen `extraccion`."
+        },
+        {
+          "nombre": "guardaDniDeOtraFicha",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, clienteConversacion: string, l: ResultadoLecturaPoliza",
+          "retorno": "Promise<ResultadoOportunidadDocumento | null>",
+          "linea": 160,
+          "resumen": "§7: si el DNI del tomador LEÍDO está en una ficha viva que NO es la de la conversación → `revisar` y Telegram; nada se crea ni se mueve. Sin DNI leído → sigue (lo decide `oportunidadDesdeLectura` con "
+        },
+        {
+          "nombre": "trasLectura",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, clienteId: string, documentoId: string, r: ResultadoOportunidadDocumento",
+          "retorno": "Promise<void>",
+          "linea": 180
+        }
+      ],
+      "tablas": [
+        "clientes",
+        "conversaciones",
+        "corredurias",
+        "documentos",
+        "historial_interno",
+        "mensajes"
+      ],
+      "rutaApi": null,
+      "hash": "3be5b57bbe13"
+    },
+    {
+      "ruta": "apps/asegura/lib/whatsapp/media.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Descarga del MEDIA (imagen/PDF) que manda un cliente por WhatsApp (spec 2026-11-04 §6). PURO salvo `fetch` (inyectado). Es el ÚNICO fichero de `lib/whatsapp/` con Graph aparte de `graph.ts`, y SOLO hace `GET`: 1. GET https://graph.facebook.com/{version}/{media-id} (Bearer) → { url, mime_type, file_s",
+      "exporta": [
+        "mimeAdmitido",
+        "urlMediaDeMeta",
+        "debeEncolarMedia",
+        "maxPolizasDia",
+        "decidirDniLeido",
+        "crearClienteMedia"
+      ],
+      "funciones": [
+        {
+          "nombre": "mimeAdmitido",
+          "kind": "function",
+          "exportada": true,
+          "params": "mime: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 18
+        },
+        {
+          "nombre": "urlMediaDeMeta",
+          "kind": "function",
+          "exportada": true,
+          "params": "url: string",
+          "retorno": "boolean",
+          "linea": 23,
+          "resumen": "¿URL de descarga de Meta por https? Cualquier otra → no se le manda el token."
+        },
+        {
+          "nombre": "debeEncolarMedia",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { direccion: 'entrante' | 'saliente' media: { id: string; mime: string | null } | null fichaUnica: boolean optOut: boolean personal: boolean }",
+          "retorno": "boolean",
+          "linea": 37,
+          "resumen": "¿Se encola la descarga del media de este mensaje? Solo un ENTRANTE image/document de una conversación con UNA ficha exacta (la del teléfono hoy, la misma que la de la conversación), sin opt-out y no d"
+        },
+        {
+          "nombre": "maxPolizasDia",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: Record<string, string | undefined> = process.env",
+          "retorno": "number",
+          "linea": 51,
+          "resumen": "Lecturas de póliza por WhatsApp al día (IA de visión): `ASEGURA_WHATSAPP_POLIZAS_MAX_DIA`, por defecto 10. Mal formada → 0 (no se lee)."
+        },
+        {
+          "nombre": "decidirDniLeido",
+          "kind": "function",
+          "exportada": true,
+          "params": "clienteConversacion: string, fichasConEseDni: string[] | null",
+          "retorno": "'seguir' | 'revisar'",
+          "linea": 58,
+          "resumen": "PURA: con las fichas que tienen ese DNI (null = no se pudo comprobar), ¿se sigue o se para?"
+        },
+        {
+          "nombre": "crearClienteMedia",
+          "kind": "function",
+          "exportada": true,
+          "params": "opts: { version: string; fetch?: FetchLike; timeoutMs?: number }",
+          "retorno": null,
+          "linea": 68
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "24388da800cf"
+    },
+    {
       "ruta": "apps/asegura/lib/whatsapp/optout.ts",
       "ambito": "apps/asegura",
       "resumen": "PURO. RGPD: una conversación o ficha con opt-out de WhatsApp NO va a la IA (ni se reclama ni se analiza).",
@@ -72294,6 +72455,7 @@
       "exporta": [
         "textoDeMensaje",
         "extraerMensajes",
+        "mediaDeMensaje",
         "crudoMinimizado"
       ],
       "funciones": [
@@ -72303,7 +72465,7 @@
           "exportada": true,
           "params": "m: Record<string, unknown> & { type: string; text?: { body: string } }",
           "retorno": "string",
-          "linea": 90,
+          "linea": 91,
           "resumen": "Texto de un mensaje según su tipo. Nunca descarga media: marcador + pie de foto si lo hay."
         },
         {
@@ -72312,8 +72474,17 @@
           "exportada": true,
           "params": "body: WebhookWhatsapp, phoneNumberId: string",
           "retorno": "Extraccion",
-          "linea": 106,
+          "linea": 107,
           "resumen": "Del cuerpo ya validado, los mensajes dirigidos a `phoneNumberId`. Lo de otro número de la WABA se cuenta y se deja (no es de esta correduría). Un mensaje mal formado se cuenta, no tumba el resto."
+        },
+        {
+          "nombre": "mediaDeMensaje",
+          "kind": "function",
+          "exportada": true,
+          "params": "m: Record<string, unknown>",
+          "retorno": "MediaMensaje | null",
+          "linea": 157,
+          "resumen": "El media de un mensaje `image`/`document` (id de Meta, mime y sha256). El NOMBRE del fichero no: puede llevar datos."
         },
         {
           "nombre": "crudoMinimizado",
@@ -72321,8 +72492,16 @@
           "exportada": true,
           "params": "crudo: unknown",
           "retorno": "Record<string, unknown>",
-          "linea": 154,
+          "linea": 173,
           "resumen": "El crudo SIN datos personales, para lo que se conserva después de procesar: ids, tipos y fechas. Fuera el texto, el pie, el nombre del perfil y los números (de los dos lados)."
+        },
+        {
+          "nombre": "mediaMinimo",
+          "kind": "function",
+          "exportada": false,
+          "params": "m: Record<string, unknown>",
+          "retorno": "",
+          "linea": 184
         },
         {
           "nombre": "originalDe",
@@ -72330,13 +72509,13 @@
           "exportada": false,
           "params": "m: Record<string, unknown>",
           "retorno": "",
-          "linea": 166,
+          "linea": 190,
           "resumen": "De una edición o un borrado se conserva a QUÉ mensaje apuntaba (un wamid, sin texto)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "23b2317153c8"
+      "hash": "a415e5833f6b"
     },
     {
       "ruta": "apps/asegura/lib/whatsapp/procesar.ts",
@@ -72356,7 +72535,7 @@
           "exportada": true,
           "params": "hash: string",
           "retorno": "string",
-          "linea": 29,
+          "linea": 31,
           "resumen": "El seudónimo que va en `lead_wa_phone` (varchar(30), CHECK heredado): nunca el número."
         },
         {
@@ -72365,7 +72544,7 @@
           "exportada": true,
           "params": "correduriaId: string, mensajes: readonly MensajeExtraido[]",
           "retorno": "Promise<",
-          "linea": 33
+          "linea": 35
         },
         {
           "nombre": "guardarNoReconocido",
@@ -72373,7 +72552,7 @@
           "exportada": true,
           "params": "correduriaId: string | null, cuerpoCrudo: string, parseado: unknown",
           "retorno": "Promise<void>",
-          "linea": 56,
+          "linea": 58,
           "resumen": "Un cuerpo FIRMADO por Meta que no casa con el esquema: se guarda igual (guardar primero, preguntar después) con un id derivado del hash, para no perder un mensaje por un cambio de Meta. Se minimiza co"
         },
         {
@@ -72382,7 +72561,7 @@
           "exportada": true,
           "params": "correduriaId: string, hashes: readonly string[]",
           "retorno": "Promise<string[]>",
-          "linea": 71,
+          "linea": 73,
           "resumen": "Fichas VIVAS de la correduría con alguno de esos hashes (principal o secundario), siguiendo la lápida de fusión hasta la superviviente. Dos fichas distintas nunca se funden aquí: se devuelven las dos."
         },
         {
@@ -72391,7 +72570,7 @@
           "exportada": true,
           "params": "correduriaId: string, ids?: readonly string[], limite = 50",
           "retorno": "Promise<ResumenProceso>",
-          "linea": 106,
+          "linea": 108,
           "resumen": "Procesa las filas `pendiente`/`error` del canal (todas, o solo `ids`). Idempotente: el mensaje se deduplica por (conversación, wamid) y la fila cruda solo se marca `procesado` al final."
         },
         {
@@ -72400,7 +72579,7 @@
           "exportada": false,
           "params": "id: string, estado: string, error: string | null, minimizar?: unknown",
           "retorno": "Promise<void>",
-          "linea": 136
+          "linea": 140
         },
         {
           "nombre": "procesarUna",
@@ -72408,7 +72587,7 @@
           "exportada": false,
           "params": "correduriaId: string, f: FilaCruda",
           "retorno": "Promise<string>",
-          "linea": 146
+          "linea": 150
         },
         {
           "nombre": "erroresDe",
@@ -72416,7 +72595,7 @@
           "exportada": false,
           "params": "m: Record<string, unknown>",
           "retorno": "",
-          "linea": 237,
+          "linea": 261,
           "resumen": "Códigos de error de Meta del mensaje (131060 = no admitido): constan en `metadata`, nunca tumban nada."
         },
         {
@@ -72425,7 +72604,7 @@
           "exportada": false,
           "params": "correduriaId: string, filaId: string, crudo: Record<string, unknown>, m: Record<string, unknown>, ed: Edicion",
           "retorno": "Promise<string>",
-          "linea": 252,
+          "linea": 276,
           "resumen": "· original desconocido (anterior a la conexión, o de una conversación con opt-out) → `original_desconocido`, terminal; pero si el original está aún SIN procesar, se reintenta (si no, un borrado se per"
         }
       ],
@@ -72439,7 +72618,199 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "85bcfd676d89"
+      "hash": "a547fac6a769"
+    },
+    {
+      "ruta": "apps/asegura/lib/whatsapp/propuestas-reglas.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Propuestas de la IA de WhatsApp (spec 2026-11-04 §5, decisión D1 de Alberto): reglas PURAS, sin BD. La IA NUNCA ejecuta b1-b3: solo deja una PROPUESTA (`whatsapp_propuestas`) y Alberto la aplica o la descarta con el botón de Telegram (callback `wap_ok:<id>` / `wap_no:<id>`). El handler del callback ",
+      "exporta": [
+        "validarResolucion",
+        "botonesPropuesta",
+        "leerCallbackPropuesta",
+        "puedeResolver",
+        "fechaIsoReal",
+        "payloadPropuesta",
+        "lineaPropuesta",
+        "tareaAlAplicar",
+        "cerrarSiFallaDevolver"
+      ],
+      "funciones": [
+        {
+          "nombre": "validarResolucion",
+          "kind": "function",
+          "exportada": true,
+          "params": "b: unknown",
+          "retorno": "",
+          "linea": 29
+        },
+        {
+          "nombre": "botonesPropuesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string, etiqueta?: string",
+          "retorno": "",
+          "linea": 38,
+          "resumen": "`wap_ok:<uuid>` (43 bytes, bajo el tope de 64 de Telegram)."
+        },
+        {
+          "nombre": "leerCallbackPropuesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "data: string",
+          "retorno": "",
+          "linea": 47,
+          "resumen": "De un `callback_data` de Telegram, la decisión y el id; cualquier otra cosa → null (no es nuestro o está mal)."
+        },
+        {
+          "nombre": "puedeResolver",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: EstadoActual, decision: Decision, ahora: Date",
+          "retorno": "Veredicto",
+          "linea": 60,
+          "resumen": "¿Se puede resolver AHORA? Un solo uso; una caducada no se aplica (sí se puede descartar: limpia el botón)."
+        },
+        {
+          "nombre": "fechaIsoReal",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "boolean",
+          "linea": 69,
+          "resumen": "aaaa-mm-dd que existe de verdad en el calendario (2026-02-30 no)."
+        },
+        {
+          "nombre": "payloadPropuesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipo: TipoPropuesta, fecha: string | null",
+          "retorno": "",
+          "linea": 77,
+          "resumen": "El payload que se guarda: solo la fecha (aaaa-mm-dd) cuando el tipo la lleva. Nada del texto del cliente."
+        },
+        {
+          "nombre": "lineaPropuesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipo: TipoPropuesta, p: { ramo: string | null; fecha: string | null; importe: string | null }",
+          "retorno": "string",
+          "linea": 83,
+          "resumen": "Una línea del aviso de Telegram, sin PII (ramo, fecha e importe ya formateados por quien llama)."
+        },
+        {
+          "nombre": "tareaAlAplicar",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipo: TipoPropuesta, fecha: string | null, hoy: string",
+          "retorno": "",
+          "linea": 93,
+          "resumen": "Tareas que deja aplicar (texto fijo + fecha límite); `vencimiento` la decide `editarOportunidad`."
+        },
+        {
+          "nombre": "cerrarSiFallaDevolver",
+          "kind": "function",
+          "exportada": true,
+          "params": "devolver: () => Promise<void>, descartar: () => Promise<void>",
+          "retorno": "Promise<void>",
+          "linea": 100,
+          "resumen": "Aplicar falló: intenta devolver la propuesta a `pendiente`; si eso falla también, la deja `descartada` (nunca `aplicada` sin efecto)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d7ef5b9107bd"
+    },
+    {
+      "ruta": "apps/asegura/lib/whatsapp/propuestas.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Propuestas de la IA de WhatsApp: crear (desde el analizador), avisar por Telegram y RESOLVER (aplicar/descartar). Las reglas son PURAS en `propuestas-reglas.ts`. Resolver lo invoca `POST /api/operador/whatsapp/propuesta`, que llama el handler del callback `wap_` de plataforma (parte B). Un solo uso:",
+      "exporta": [
+        "crearPropuesta",
+        "avisarTelegram",
+        "resolverPropuesta"
+      ],
+      "funciones": [
+        {
+          "nombre": "faltaMigracion",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "e: unknown",
+          "retorno": null,
+          "linea": 20
+        },
+        {
+          "nombre": "crearPropuesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, p: NuevaPropuesta",
+          "retorno": "Promise<PropuestaCreada>",
+          "linea": 33
+        },
+        {
+          "nombre": "avisarTelegram",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, a: { clienteId: string; nombrePila: string | null; hechos: string[]; propuestas: { id: string }[] },",
+          "retorno": "Promise<'avisado' | 'sin_telegram' | 'nada' | 'error'>",
+          "linea": 60,
+          "resumen": "Aviso a Alberto (Telegram, con botones ✅/❌ por propuesta) de lo que la IA ha hecho y propuesto en UNA conversación. Nombre de pila + enlace a la ficha; ni DNI ni teléfono ni texto del cliente. Best ef"
+        },
+        {
+          "nombre": "resolverPropuesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, id: string, decision: Decision, actor: string, ahora: Date = new Date()",
+          "retorno": "Promise<ResolucionPropuesta>",
+          "linea": 113,
+          "resumen": "Aplica o descarta una propuesta. Atómico frente a dobles pulsaciones (UPDATE condicionado). Si aplicar falla, la propuesta VUELVE a `pendiente` (con el error en `resultado`) para poder reintentarla; n"
+        },
+        {
+          "nombre": "cerrarSinEfecto",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, id: string, resultado: Record<string, unknown>",
+          "retorno": "Promise<void>",
+          "linea": 170,
+          "resumen": "Aplicar falló: la propuesta vuelve a `pendiente` para reintentarla. Si ESO falla también (p. ej. choca con `uq_wa_propuesta_pendiente`: ya hay otra pendiente del mismo asunto), se marca `descartada` c"
+        },
+        {
+          "nombre": "devolverAPendiente",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, id: string, resultado: Record<string, unknown>",
+          "retorno": "Promise<void>",
+          "linea": 181
+        },
+        {
+          "nombre": "historial",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, clienteId: string, texto: string",
+          "retorno": null,
+          "linea": 187
+        },
+        {
+          "nombre": "aplicar",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, p: FilaPropuesta, actor: string, ahora: Date",
+          "retorno": "Promise<Aplicado>",
+          "linea": 195
+        }
+      ],
+      "tablas": [
+        "clientes",
+        "condicionado",
+        "gestiones",
+        "historial_interno",
+        "oportunidades",
+        "poliza_recibos",
+        "polizas",
+        "whatsapp_propuestas"
+      ],
+      "rutaApi": null,
+      "hash": "c8a3a2afa8e6"
     },
     {
       "ruta": "apps/asegura/lib/whatsapp/retencion.ts",
@@ -72481,10 +72852,100 @@
         "bot_turn_traces",
         "channel_inbound_messages",
         "conversaciones",
-        "mensajes"
+        "documentos",
+        "information_schema",
+        "mensajes",
+        "solicitud_regularizacion",
+        "tarificador_fichas",
+        "whatsapp_salientes_previstos"
       ],
       "rutaApi": null,
-      "hash": "4fab689bd55a"
+      "hash": "07ddc247b36b"
+    },
+    {
+      "ruta": "apps/asegura/lib/whatsapp/salientes.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Salientes previstos (spec 2026-11-04 §4): registrar el `wa.me` que abre plataforma, casar el echo y leer el vinculado para el analizador. Las reglas (normalización, casado, ventana) son PURAS en `vinculo.ts`; aquí solo la BD. 🛡️ Toda sentencia filtra `correduria_id` (BYPASSRLS). Sin el SQL `2026-11",
+      "exporta": [
+        "e164DeTelefono",
+        "hashTelefonoConversacion",
+        "registrarSalientePrevisto",
+        "casarEchoGuardado",
+        "salienteVinculadoDe",
+        "recibosPendientesDe"
+      ],
+      "funciones": [
+        {
+          "nombre": "faltaMigracion",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "e: unknown",
+          "retorno": null,
+          "linea": 25
+        },
+        {
+          "nombre": "e164DeTelefono",
+          "kind": "function",
+          "exportada": true,
+          "params": "telefono: string",
+          "retorno": "string | null",
+          "linea": 27
+        },
+        {
+          "nombre": "hashTelefonoConversacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "telefono: string",
+          "retorno": "string | null",
+          "linea": 34,
+          "resumen": "El mismo índice ciego que `procesar.ts` guarda en `conversaciones.wa_telefono_hash`."
+        },
+        {
+          "nombre": "registrarSalientePrevisto",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, e: EntradaSalientePrevisto, actor: string",
+          "retorno": "Promise<ResultadoRegistro>",
+          "linea": 43
+        },
+        {
+          "nombre": "casarEchoGuardado",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, echo: { mensajeId: string; telefonoHash: string; fecha: Date; texto: string }",
+          "retorno": "Promise<ResultadoCasado>",
+          "linea": 81,
+          "resumen": "Casa un echo YA guardado (`mensajes.id`) con su saliente previsto. Lo llama `procesar.ts` tras guardar un `saliente`. Nunca lanza por la migración ausente; otro error sí (quien llama lo captura: el me"
+        },
+        {
+          "nombre": "salienteVinculadoDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, telefonoHash: string, respuestaAt: Date",
+          "retorno": "Promise<SalienteParaAnalisis | null>",
+          "linea": 119,
+          "resumen": "El saliente vinculado más reciente ANTERIOR a la última respuesta del cliente (≤14 días), de esa conversación. `null` = no hay (o no se pudo leer: el analizador trabaja como antes, sin contexto de sal"
+        },
+        {
+          "nombre": "recibosPendientesDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, clienteId: string",
+          "retorno": "Promise<ReciboParaAnalisis[] | null>",
+          "linea": 169,
+          "resumen": "Recibos devueltos/pendientes de las pólizas EN VIGOR de la ficha (D4: un lead o ex-cliente no tiene ninguno, y por tanto ninguna propuesta de cobro). `null` = no se pudo leer («no se sabe», nunca «no "
+        }
+      ],
+      "tablas": [
+        "clientes",
+        "mensajes",
+        "oportunidades",
+        "poliza_recibos",
+        "polizas",
+        "whatsapp_salientes_previstos"
+      ],
+      "rutaApi": null,
+      "hash": "6ba67396ecb0"
     },
     {
       "ruta": "apps/asegura/lib/whatsapp/secretos.ts",
@@ -72506,6 +72967,67 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "cd59a4498e2d"
+    },
+    {
+      "ruta": "apps/asegura/lib/whatsapp/vinculo.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Vínculo SALIENTE PREVISTO ↔ ECHO ↔ respuesta del cliente (spec 2026-11-04 §4). PURO, sin BD. 1. Alberto pulsa un `wa.me` en plataforma → `POST /api/operador/whatsapp/saliente-previsto` guarda el origen (recibo devuelto, lead, presupuesto…) con el sha256 del texto NORMALIZADO y el índice ciego del te",
+      "exporta": [
+        "normalizarTextoSaliente",
+        "hashTextoSaliente",
+        "casarEcho",
+        "salienteDeLaRespuesta",
+        "validarSalientePrevisto"
+      ],
+      "funciones": [
+        {
+          "nombre": "normalizarTextoSaliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "string",
+          "linea": 26,
+          "resumen": "El texto tal como lo compararemos: NFKC (el móvil puede recomponer acentos y espacios raros), sin saltos de línea distintos, espacios colapsados, sin espacios en los extremos y en minúsculas. Los emoj"
+        },
+        {
+          "nombre": "hashTextoSaliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 37,
+          "resumen": "sha256 hex del texto normalizado. Texto vacío tras normalizar → null (no hay nada que comparar)."
+        },
+        {
+          "nombre": "casarEcho",
+          "kind": "function",
+          "exportada": true,
+          "params": "echo: Echo, previstos: readonly PrevistoCandidato[]",
+          "retorno": "Casado | null",
+          "linea": 47
+        },
+        {
+          "nombre": "salienteDeLaRespuesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "respuestaAt: Date, vinculados: readonly T[]",
+          "retorno": "T | null",
+          "linea": 75,
+          "resumen": "El vinculado más reciente ENVIADO antes de `respuestaAt` y como mucho 14 días antes."
+        },
+        {
+          "nombre": "validarSalientePrevisto",
+          "kind": "function",
+          "exportada": true,
+          "params": "b: unknown",
+          "retorno": "",
+          "linea": 103,
+          "resumen": "solicitud_datos → solicitudId): sin ella el vínculo no serviría para nada y se rechaza."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f373a7500615"
     },
     {
       "ruta": "apps/asegura/middleware.ts",
@@ -117202,15 +117724,15 @@
           "nombre": "AccionesContacto",
           "kind": "function",
           "exportada": true,
-          "params": "{ telefono, email, ilegible, quien, mensaje, onWhatsapp, tam = 'sm' }: { telefono?: string | null email?: string | null /** El contacto cifrado que asegura no pudo descifrar: no se ofrece nada. */ ilegible?: boolean /** Para el `aria-label`",
+          "params": "{ telefono, email, ilegible, quien, mensaje, onWhatsapp, registro, tam = 'sm' }: { telefono?: string | null email?: string | null /** El contacto cifrado que asegura no pudo descifrar: no se ofrece nada. */ ilegible?: boolean /** Para el `a",
           "retorno": null,
-          "linea": 24,
+          "linea": 25,
           "resumen": "Llamar · WhatsApp · escribir, al lado del nombre de un cliente. Petición de Alberto (04/09/2026): «al lado de cada nombre cliente aparezca icono tlf para poder llamarlo, mail y whassap». La norma es q"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b0b0f57cece7"
+      "hash": "de638d26499d"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Actividad.tsx",
@@ -117509,15 +118031,15 @@
           "nombre": "BotonWhatsapp",
           "kind": "function",
           "exportada": true,
-          "params": "{ telefono, mensaje, compacto = false, onAbrir, rotulo }: { telefono: string /** Con rótulo se pinta como botón verde con texto (acción principal), no como icono suelto. */ rotulo?: string /** * Abre WhatsApp con el texto ya escrito, para n",
+          "params": "{ telefono, mensaje, compacto = false, onAbrir, rotulo, registro }: { telefono: string /** Con rótulo se pinta como botón verde con texto (acción principal), no como icono suelto. */ rotulo?: string /** * Abre WhatsApp con el texto ya escri",
           "retorno": null,
-          "linea": 25,
+          "linea": 26,
           "resumen": "Abre WhatsApp con el cliente, al lado de su teléfono (Alberto, 03/09/2026: «se podría poner al lado de los móviles un icono de WhatsApp y me ir al WhatsApp del cliente pulsándolo»). ⚠️ Si `urlWhatsapp"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "49d8e6cddfdf"
+      "hash": "9635363b3df3"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/BuscadorCartera.tsx",
@@ -118387,7 +118909,7 @@
           "exportada": false,
           "params": "{ tiposVivos }: { tiposVivos: string[] }",
           "retorno": null,
-          "linea": 195,
+          "linea": 197,
           "resumen": "── Ramos contratados ─────────────────────────────────────────────────────── Sustituye a la «rueda de ramos» de Avant2 (24/09/2026, Alberto: «ocupa mucho y no creo que sea necesario»): en móvil se com"
         },
         {
@@ -118396,7 +118918,7 @@
           "exportada": false,
           "params": "{ resumen, idsConChip }: { resumen: ResumenFicha; idsConChip: ReadonlySet<string> }",
           "retorno": null,
-          "linea": 214
+          "linea": 216
         },
         {
           "nombre": "ProximoVencimiento",
@@ -118404,7 +118926,7 @@
           "exportada": false,
           "params": "{ proximo, idsConChip, vivas, sinFecha }: { proximo: ResumenFicha['proximo']; idsConChip: ReadonlySet<string>; vivas: number; sinFecha: number }",
           "retorno": null,
-          "linea": 269,
+          "linea": 271,
           "resumen": "La única fecha de la ficha sobre la que se puede ACTUAR, y por eso sube aquí: hasta ahora vivía dentro de una celda de la tabla de pólizas. 🚨 No es el vencimiento: es el **último día para oponerse a "
         },
         {
@@ -118413,7 +118935,7 @@
           "exportada": false,
           "params": "{ label, valor, sub, color, pequeno }: { label: string; valor: string; sub?: string; color?: string /** Para un valor que es una fecha: más pequeña para que quepa en móvil. */ pequeno?: boolean }",
           "retorno": null,
-          "linea": 313
+          "linea": 315
         },
         {
           "nombre": "EstadoCabecera",
@@ -118421,7 +118943,7 @@
           "exportada": false,
           "params": "{ estado, cotizacionesVivas, cliente }: { estado: EstadoClienteDerivado | null cotizacionesVivas: number | null /** La regla anterior, para una versión de asegura que no manda `estado`. */ cliente: boolean }",
           "retorno": null,
-          "linea": 339
+          "linea": 341
         },
         {
           "nombre": "Acciones",
@@ -118429,7 +118951,7 @@
           "exportada": false,
           "params": "{ clienteId }: { clienteId: string }",
           "retorno": null,
-          "linea": 397
+          "linea": 399
         },
         {
           "nombre": "Contacto",
@@ -118437,7 +118959,7 @@
           "exportada": false,
           "params": "{ nombre, esCliente, c, intervinientes, piiClave, contactos, polizas }: { /** Para el `aria-label` de los iconos: «Llamar a Jose Suárez». */ nombre: string /** Decide QUÉ mensaje se abre en WhatsApp. Lo calcula la cabecera, con el * mismo c",
           "retorno": null,
-          "linea": 480
+          "linea": 482
         },
         {
           "nombre": "Identidad",
@@ -118445,7 +118967,7 @@
           "exportada": false,
           "params": "{ identidad, clienteId, dePolizas, juridica }: { identidad: IdentidadFicha | null; clienteId: string; dePolizas: DatosDePolizas | null; juridica: boolean }",
           "retorno": null,
-          "linea": 589
+          "linea": 591
         },
         {
           "nombre": "Carnets",
@@ -118453,12 +118975,12 @@
           "exportada": false,
           "params": "{ carnets, dePolizas }: { carnets: CarnetFicha[] | null; dePolizas: DatosDePolizas | null }",
           "retorno": null,
-          "linea": 629
+          "linea": 631
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a415b897a814"
+      "hash": "b2ab3fcac131"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/CorreosCliente.tsx",
@@ -119598,7 +120120,7 @@
           "exportada": true,
           "params": "{ oportunidadId, clienteId, telefono = null, ramo }: { oportunidadId: string; clienteId: string; telefono?: string | null; ramo: RamoSolicitud }",
           "retorno": null,
-          "linea": 28
+          "linea": 29
         }
       ],
       "tablas": [
@@ -119606,7 +120128,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "949263c289cb"
+      "hash": "646a22127a9b"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/PedirPresupuestoBot.tsx",
@@ -120866,7 +121388,7 @@
           "exportada": false,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<",
-          "linea": 16,
+          "linea": 17,
           "resumen": "el enlace anterior deja de valer). Solo si la emisión FALLA el mensaje lista los datos, y el aviso lo dice claro. Sin móvil, el botón sale desactivado y dice por qué."
         },
         {
@@ -120875,12 +121397,12 @@
           "exportada": true,
           "params": "{ oportunidadId, ramo, telefono, nombre }: { oportunidadId: string; ramo: string | null; telefono: string | null; nombre: string | null }",
           "retorno": null,
-          "linea": 25
+          "linea": 26
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d01051106f76"
+      "hash": "f6f7a6ddcaac"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/nuevo/page.tsx",
@@ -124574,22 +125096,22 @@
           "exportada": false,
           "params": "id: string, cuerpo: Record<string, unknown>",
           "retorno": "Promise<Patch>",
-          "linea": 25
+          "linea": 26
         },
         {
           "nombre": "EnviarAlCliente",
           "kind": "function",
           "exportada": true,
-          "params": "{ presupuestoId, clienteId, correo }: { presupuestoId: string; clienteId: string; correo: 'con_email' | 'sin_email' | 'no_se_sabe' }",
+          "params": "{ presupuestoId, clienteId, correo, oportunidadId = null }: { presupuestoId: string; clienteId: string; correo: 'con_email' | 'sin_email' | 'no_se_sabe'; oportunidadId?: string | null }",
           "retorno": null,
-          "linea": 34
+          "linea": 35
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "9127fef212f3"
+      "hash": "ec20ae5d0884"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/FaltaPorCompletar.tsx",
@@ -125114,7 +125636,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "0216ff7373e5"
+      "hash": "d03e0d4107c1"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/page.tsx",
@@ -127046,7 +127568,7 @@
           "nombre": "TablaRecibos",
           "kind": "function",
           "exportada": false,
-          "params": "{ lista, wa, puedeBaja }: { lista: Poliza['listaRecibos']; wa: ContextoWhatsappDevuelto | null; puedeBaja: boolean }",
+          "params": "{ lista, wa, puedeBaja, polizaId }: { lista: Poliza['listaRecibos']; wa: ContextoWhatsappDevuelto | null; puedeBaja: boolean; polizaId: string }",
           "retorno": null,
           "linea": 671
         },
@@ -127175,7 +127697,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d8814971f2d4"
+      "hash": "0c683a818a47"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/PersonasPoliza.tsx",
@@ -128138,14 +128660,14 @@
           "nombre": "WhatsappReciboDevuelto",
           "kind": "function",
           "exportada": true,
-          "params": "{ ctx, importe, fechaEfecto, tipoMotivo, grande = false }: { ctx: ContextoWhatsappDevuelto importe: number | null fechaEfecto: string | null tipoMotivo: string | null /** Botón con rótulo (el «Siguiente paso» de la ficha) en vez del icono d",
+          "params": "{ ctx, reciboId, polizaId, importe, fechaEfecto, tipoMotivo, grande = false }: { ctx: ContextoWhatsappDevuelto /** El recibo devuelto y su póliza: ancla del «saliente previsto» (spec 2026-11-04 §4). Sin ellos se registra `generico`. */ reci",
           "retorno": null,
           "linea": 20
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c921446e56f1"
+      "hash": "d98854edc29a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Quejas.tsx",
@@ -128499,7 +129021,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0444fbddefb9"
+      "hash": "8d5a8c2db896"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Retencion.tsx",
@@ -130525,7 +131047,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "750767e660f6"
+      "hash": "032ffeaefcd5"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/dashboard/GestionSociedad.tsx",
@@ -142443,6 +142965,27 @@
       "hash": "2f1b66445245"
     },
     {
+      "ruta": "apps/plataforma/app/api/correduria/whatsapp-saliente/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 15,
+          "resumen": "POST /api/correduria/whatsapp-saliente — registra el `wa.me` que Alberto acaba de abrir (spec 2026-11-04 §4). Reenvía a `POST /api/operador/whatsapp/saliente-previsto` de asegura y devuelve el MISMO s"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/whatsapp-saliente",
+      "hash": "39fa829ef3a8"
+    },
+    {
       "ruta": "apps/plataforma/app/api/cron/agentes-latido/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [],
@@ -148429,7 +148972,7 @@
           "exportada": false,
           "params": "bookingId: string, codigo: string, nombre: string",
           "retorno": "Promise<void>",
-          "linea": 72,
+          "linea": 74,
           "resumen": "Ofrece el botón tras aprobar un mensaje que habla de un extra. No manda nada por su cuenta."
         },
         {
@@ -148438,7 +148981,7 @@
           "exportada": false,
           "params": "bookingId: string, codigo: string",
           "retorno": "Promise<",
-          "linea": 89,
+          "linea": 91,
           "resumen": "Manda la orden de verdad. Devuelve el texto con el que se reescribe el mensaje del botón."
         },
         {
@@ -148447,7 +148990,7 @@
           "exportada": false,
           "params": "bookingId: string, pend: Pendiente",
           "retorno": "Promise<ContextoRedaccion>",
-          "linea": 115
+          "linea": 117
         },
         {
           "nombre": "getPendiente",
@@ -148455,7 +148998,7 @@
           "exportada": false,
           "params": "bookingId: string",
           "retorno": "Promise<Pendiente | null>",
-          "linea": 145
+          "linea": 147
         },
         {
           "nombre": "reclamarPendiente",
@@ -148463,7 +149006,7 @@
           "exportada": false,
           "params": "bookingId: string",
           "retorno": "Promise<(Pendiente & Record<string, unknown>) | null>",
-          "linea": 155,
+          "linea": 157,
           "resumen": "Reclamo ATÓMICO del pendiente (doble pulsación / reintento de Telegram): el primero que borra la fila gana y es el único que envía; el segundo recibe `null`. Si luego el envío no sale, quien reclamó D"
         },
         {
@@ -148472,7 +149015,7 @@
           "exportada": false,
           "params": "p: Pendiente & Record<string, unknown>",
           "retorno": "Promise<void>",
-          "linea": 160
+          "linea": 162
         },
         {
           "nombre": "POST",
@@ -148480,7 +149023,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 168
+          "linea": 170
         },
         {
           "nombre": "procesarUpdate",
@@ -148488,7 +149031,7 @@
           "exportada": false,
           "params": "req: NextRequest, body: any",
           "retorno": "Promise<Response>",
-          "linea": 194
+          "linea": 196
         },
         {
           "nombre": "enrutarTextoLibre",
@@ -148496,7 +149039,7 @@
           "exportada": false,
           "params": "cuentaId: string, texto: string, fromId: unknown",
           "retorno": "Promise<void>",
-          "linea": 1581,
+          "linea": 1607,
           "resumen": "Texto libre de Alberto (escrito o transcrito de una nota de voz) → correduría o contable. El patrimonial ya se desvía antes; aquí solo se decide entre estos dos, y ante cualquier duda gana el contable"
         },
         {
@@ -148505,7 +149048,7 @@
           "exportada": false,
           "params": "updateId: unknown",
           "retorno": "Promise<boolean>",
-          "linea": 1588,
+          "linea": 1614,
           "resumen": "`true` = este update ya se procesó (reintento de Telegram). Sin id o sin BD → `false` (se procesa)."
         },
         {
@@ -148514,7 +149057,7 @@
           "exportada": false,
           "params": "updateId: unknown",
           "retorno": "Promise<void>",
-          "linea": 1600
+          "linea": 1626
         },
         {
           "nombre": "correduriaSegura",
@@ -148522,7 +149065,7 @@
           "exportada": false,
           "params": "texto: string, fromId: unknown",
           "retorno": "Promise<void>",
-          "linea": 1606,
+          "linea": 1632,
           "resumen": "El asistente corre en `after`: un error ya no da 500 (ni reintento), así que se le dice a Alberto."
         }
       ],
@@ -148553,7 +149096,7 @@
         "trading_watchlist"
       ],
       "rutaApi": "/api/sivra/mensajes/telegram-webhook",
-      "hash": "91b3650263b3"
+      "hash": "baf6e01a49b2"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/webhook/route.ts",
@@ -169211,6 +169754,58 @@
       "hash": "a039ad4251fa"
     },
     {
+      "ruta": "apps/plataforma/lib/correduria/saliente-whatsapp.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Registro del «saliente previsto» de WhatsApp (spec 2026-11-04 §4, parte B): cada vez que Alberto pulsa un `wa.me` de la correduría, plataforma le dice a asegura qué se ABRIÓ (origen + recibo/oportunidad/solicitud) para que, cuando llegue el echo del mensaje enviado desde su móvil, se case con él y l",
+      "exporta": [
+        "cuerpoSaliente",
+        "deEnlaceWa",
+        "registrarSaliente",
+        "registrarSalienteDeEnlace"
+      ],
+      "funciones": [
+        {
+          "nombre": "cuerpoSaliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: RegistroSaliente, telefono: string | null | undefined, texto: string | null | undefined",
+          "retorno": "CuerpoSaliente | null",
+          "linea": 34,
+          "resumen": "El cuerpo para asegura, o `null` si no se puede registrar (se omite en silencio: el wa.me se abre igual). Mismas reglas que `validarSalientePrevisto` de asegura; si falta el ancla que exige el origen,"
+        },
+        {
+          "nombre": "deEnlaceWa",
+          "kind": "function",
+          "exportada": true,
+          "params": "href: string | null | undefined",
+          "retorno": "",
+          "linea": 54,
+          "resumen": "Teléfono y texto de un `https://wa.me/<num>?text=…` ya construido (el de asegura o el nuestro). Sin número → `null`. PURO."
+        },
+        {
+          "nombre": "registrarSaliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: RegistroSaliente | null | undefined, telefono: string | null | undefined, texto: string | null | undefined, fetchImpl: typeof fetch | undefined = typeof fetch === 'function' ? fetch : undefined,",
+          "retorno": "void",
+          "linea": 74,
+          "resumen": "Fire-and-forget desde el navegador. NUNCA lanza ni devuelve una promesa que haya que esperar: si la red, asegura o la migración fallan, el wa.me ya se ha abierto y no pasa nada más. `fetchImpl` se iny"
+        },
+        {
+          "nombre": "registrarSalienteDeEnlace",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: RegistroSaliente | null | undefined, href: string | null | undefined, fetchImpl?: typeof fetch",
+          "retorno": "void",
+          "linea": 93,
+          "resumen": "Igual que `registrarSaliente`, sacando teléfono y texto del `wa.me` ya construido (el del presupuesto). Nunca lanza."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6cff54275d7e"
+    },
+    {
       "ruta": "apps/plataforma/lib/correduria/seguro-anterior-imputado.ts",
       "ambito": "apps/plataforma",
       "resumen": "El seguro anterior IMPUTADO a un vehículo nuevo (03/10/2026, Alberto): asegura propone qué póliza de motor del cliente se declara como seguro anterior («el vehículo es nuevo, el historial es del conductor») y si el bonus va SUPUESTO (años sin siniestros al máximo porque no constaban → precio condici",
@@ -170626,6 +171221,81 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "031b48b9fd86"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correduria/whatsapp-propuesta-tg-cuenta.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "La cuenta de plataforma del TITULAR del bot (la persona de TELEGRAM_CHAT_ID), para firmar `x-actor: humano:<cuentaId>` al aplicar una propuesta de WhatsApp (`wap_`). Misma regla que el resto de procesos sin sesión (`resolverCuentaBuzon`: env FACTURAS_CUENTA_ID → cuenta cuyo email == GMAIL_USER → la ",
+      "exporta": [
+        "cuentaTitularTelegram"
+      ],
+      "funciones": [
+        {
+          "nombre": "cuentaTitularTelegram",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<string | null>",
+          "linea": 8
+        }
+      ],
+      "tablas": [
+        "cuentas"
+      ],
+      "rutaApi": null,
+      "hash": "ba9af0f436f2"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correduria/whatsapp-propuesta-tg.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Propuestas de la IA de WhatsApp de Grupo ASegura (spec 2026-11-04 §5, parte B): la parte de PLATAFORMA del botón ✅ Aplicar / ❌ Descartar (`wap_ok:<uuid>` / `wap_no:<uuid>`). asegura (`lib/whatsapp/propuestas.ts`) manda a Alberto el aviso con esos botones y guarda `telegram_message_id`. El webhook de",
+      "exporta": [
+        "decidirBotonWap",
+        "actorTitular",
+        "resolverPropuestaEnAsegura",
+        "lineaTrasPulsarWap"
+      ],
+      "funciones": [
+        {
+          "nombre": "decidirBotonWap",
+          "kind": "function",
+          "exportada": true,
+          "params": "cb: { from?: { id?: unknown } | null } | null | undefined, accion: string, args: readonly string[], chatAutorizado: string | undefined,",
+          "retorno": "BotonWap",
+          "linea": 21,
+          "resumen": "¿Vale esta pulsación? Solo el titular (from.id EXACTO; sin chat configurado, nadie) y un `ok|no` con un uuid. PURO."
+        },
+        {
+          "nombre": "actorTitular",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 35,
+          "resumen": "`humano:<cuentaId>` del titular, o `null` si la cuenta no es un uuid (entonces no se aplica nada). PURO."
+        },
+        {
+          "nombre": "resolverPropuestaEnAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: { id: string; decision: DecisionWap; actor: string | null }, entorno: { secret?: string; base?: string } = { secret: process.env.ASEGURA_OPERADOR_SECRET, base: process.env.ASEGURA_URL }, fetchImpl: typeof fetch = fetch,",
+          "retorno": "Promise<ResultadoWap>",
+          "linea": 46,
+          "resumen": "Reenvía la decisión a asegura. Nunca lanza. Sin actor humano válido NO llama (devuelve `sin_actor`): es el cepo de «el handler no aplica sin x-actor humano». `fetchImpl` se inyecta en los tests."
+        },
+        {
+          "nombre": "lineaTrasPulsarWap",
+          "kind": "function",
+          "exportada": true,
+          "params": "decision: DecisionWap, r: ResultadoWap",
+          "retorno": "string",
+          "linea": 70,
+          "resumen": "Línea que sustituye a los botones tras pulsar. PURO."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a69b69a9d387"
     },
     {
       "ruta": "apps/plataforma/lib/correo/adjuntos-compania.ts",
@@ -187685,6 +188355,7 @@
         "crearTareaVinculadaAsegura",
         "registrarLlamadaAsegura",
         "registrarWhatsappAsegura",
+        "salientePrevistoAsegura",
         "contactosMovilAsegura",
         "interpretarContactosMovil",
         "revisionesGoogleAsegura",
@@ -188090,12 +188761,21 @@
           "resumen": "Anota que se abrió el WhatsApp de seguimiento de un lead (no envía nada)."
         },
         {
+          "nombre": "salientePrevistoAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: Record<string, unknown>",
+          "retorno": "Promise<Reenvio>",
+          "linea": 807,
+          "resumen": "«Saliente previsto» de WhatsApp (spec 2026-11-04 §4): qué `wa.me` abrió Alberto, para casarlo luego con el echo. El actor (`humano:<cuentaId>`) lo pone `cabecerasPuerto` desde la sesión. Timeout corto"
+        },
+        {
           "nombre": "contactosMovilAsegura",
           "kind": "function",
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 804,
+          "linea": 812,
           "resumen": "Clientes en vigor y leads de Vencimientos con su contacto, para el .vcf del móvil."
         },
         {
@@ -188104,7 +188784,7 @@
           "exportada": true,
           "params": "status: number, j: unknown",
           "retorno": "",
-          "linea": 812,
+          "linea": 820,
           "resumen": "Lectura defensiva de la respuesta: `null` = no se pudo leer (el .vcf NO se genera vacío, que se importaría como «no tienes a nadie»)."
         },
         {
@@ -188113,7 +188793,7 @@
           "exportada": true,
           "params": "despuesDe: string | null",
           "retorno": "Promise<Reenvio>",
-          "linea": 825,
+          "linea": 833,
           "resumen": "Cola de revisión de la sincronización con Google Contacts (50 por página, cursor `despuesDe`)."
         },
         {
@@ -188122,7 +188802,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 828
+          "linea": 836
         },
         {
           "nombre": "moteClienteAsegura",
@@ -188130,7 +188810,7 @@
           "exportada": true,
           "params": "clienteId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 832,
+          "linea": 840,
           "resumen": "MOTE de la ficha (solo para la agenda de Google de Alberto; AISLADO: nunca en correos/portal/PDF)."
         },
         {
@@ -188139,7 +188819,7 @@
           "exportada": true,
           "params": "body: { clienteId: string; mote: string | null; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 835
+          "linea": 843
         },
         {
           "nombre": "ordenarAgendaGoogleAsegura",
@@ -188147,7 +188827,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 839,
+          "linea": 847,
           "resumen": "«Ordenar agenda»: informe SOLO LECTURA de la agenda de Google (lee la agenda entera: hasta ~2 min)."
         },
         {
@@ -188156,7 +188836,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 843,
+          "linea": 851,
           "resumen": "Estado de la conexión con Google Contacts (cuenta, simulada, activada)."
         },
         {
@@ -188165,7 +188845,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 847,
+          "linea": 855,
           "resumen": "Simulación SOLO LECTURA (lee la agenda entera de Google: hasta ~2 min)."
         },
         {
@@ -188174,7 +188854,7 @@
           "exportada": true,
           "params": "actor: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 851,
+          "linea": 859,
           "resumen": "«Simulación revisada: sincroniza». El `actor` lo pone quien llama desde la SESIÓN."
         },
         {
@@ -188183,7 +188863,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 855,
+          "linea": 863,
           "resumen": "Ticket de un solo uso (2 min) para arrancar el OAuth de Google desde el panel: asegura devuelve la URL de `conectar`."
         },
         {
@@ -188192,7 +188872,7 @@
           "exportada": true,
           "params": "borrarContactos: boolean",
           "retorno": "Promise<Reenvio>",
-          "linea": 859,
+          "linea": 867,
           "resumen": "Revoca en Google y borra token y vínculos; con `borrarContactos` borra antes los que CREÓ el CRM."
         },
         {
@@ -188201,7 +188881,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 864,
+          "linea": 872,
           "resumen": "Estado de la conexión de WhatsApp (Embedded Signup / Coexistence) y qué variables faltan en asegura."
         },
         {
@@ -188210,7 +188890,7 @@
           "exportada": true,
           "params": "body: { code: string; waba_id: string; phone_number_id: string; business_id: string | null }",
           "retorno": "Promise<Reenvio>",
-          "linea": 868,
+          "linea": 876,
           "resumen": "Cierre del Embedded Signup: asegura canjea el `code`, suscribe la WABA y pide las syncs (varias llamadas a Meta)."
         },
         {
@@ -188219,7 +188899,7 @@
           "exportada": true,
           "params": "eventoAt: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 872,
+          "linea": 880,
           "resumen": "El Telegram del evento de conexión `eventoAt` ya salió: asegura lo marca."
         },
         {
@@ -188228,7 +188908,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 876
+          "linea": 884
         },
         {
           "nombre": "expedientesAsegura",
@@ -188236,7 +188916,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 880,
+          "linea": 888,
           "resumen": "«Mis expedientes» (13/10/2026): se interpreta con `interpretarExpedientes` de `lib/correduria/expedientes.ts`."
         },
         {
@@ -188245,7 +188925,7 @@
           "exportada": true,
           "params": "dias = 30",
           "retorno": "Promise<Reenvio>",
-          "linea": 885,
+          "linea": 893,
           "resumen": "Bandeja «Correos de compañía» de Mi mesa: avisos de compañías leídos del correo (14/10/2026)."
         },
         {
@@ -188254,7 +188934,7 @@
           "exportada": true,
           "params": "body: { id: string; revisado: boolean }",
           "retorno": "Promise<Reenvio>",
-          "linea": 889,
+          "linea": 897,
           "resumen": "«Marcar como mirado» / «Deshacer» de la bandeja (14/10/2026)."
         },
         {
@@ -188263,7 +188943,7 @@
           "exportada": true,
           "params": "body: { mensajeId: string; nombre: string; mime: string; base64: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 894,
+          "linea": 902,
           "resumen": "`POST /api/operador/correo/documento`: UN PDF de un correo de compañía (asegura decide a qué ficha va, o sin asignar)."
         },
         {
@@ -188272,7 +188952,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 898,
+          "linea": 906,
           "resumen": "Adjuntos de correo SIN asignar (bandeja «Correos de compañía»)."
         },
         {
@@ -188281,7 +188961,7 @@
           "exportada": true,
           "params": "body: { id: string; clienteId: string; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 902,
+          "linea": 910,
           "resumen": "Asignar a mano un adjunto sin asignar. El actor lo pone la ruta (sesión) y va el ÚLTIMO."
         },
         {
@@ -188290,7 +188970,7 @@
           "exportada": true,
           "params": "body: { id: string; clienteId: string; oportunidadId: string | null; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 906,
+          "linea": 914,
           "resumen": "«Asignar a cliente / oportunidad» de un aviso sin resolver. El actor lo pone la ruta (sesión) y va el ÚLTIMO."
         },
         {
@@ -188299,7 +188979,7 @@
           "exportada": true,
           "params": "eventoId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 910,
+          "linea": 918,
           "resumen": "Historial de una solicitud en la compañía, desde una fila de la bandeja."
         },
         {
@@ -188308,7 +188988,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 914,
+          "linea": 922,
           "resumen": "Cruce diario correo ↔ CIMA: decide, apunta y devuelve los avisos pendientes de salir."
         },
         {
@@ -188317,7 +188997,7 @@
           "exportada": true,
           "params": "avisados: string[]",
           "retorno": "Promise<Reenvio>",
-          "linea": 918,
+          "linea": 926,
           "resumen": "Marca como avisados (SOLO los que salieron por Telegram)."
         },
         {
@@ -188326,7 +189006,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 921
+          "linea": 929
         },
         {
           "nombre": "interpretarTomador",
@@ -188334,7 +189014,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "TomadorLeido | undefined",
-          "linea": 967
+          "linea": 975
         },
         {
           "nombre": "interpretarLecturaOportunidad",
@@ -188342,7 +189022,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "LecturaDocumentoOportunidad",
-          "linea": 989,
+          "linea": 997,
           "resumen": "Lo que devuelve el puerto `leer-documento`. Un campo con forma rara se queda en `null` («no se leyó»), nunca en un valor plausible: una prima 0 o una fecha que no es fecha no rellenan nada. Si no se l"
         },
         {
@@ -188351,7 +189031,7 @@
           "exportada": true,
           "params": "n: number",
           "retorno": "string",
-          "linea": 1023,
+          "linea": 1031,
           "resumen": "La prima como la teclearía Alberto, para el campo de texto: «1200,5» → «1200,50»."
         },
         {
@@ -188360,7 +189040,7 @@
           "exportada": true,
           "params": "guardado: unknown",
           "retorno": "EnlacePresupuesto | null",
-          "linea": 1036
+          "linea": 1044
         },
         {
           "nombre": "interpretarSolicitudesDatos",
@@ -188368,7 +189048,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "SolicitudesDatos",
-          "linea": 1082
+          "linea": 1090
         },
         {
           "nombre": "valorLegible",
@@ -188376,7 +189056,7 @@
           "exportada": true,
           "params": "campo: SolicitudDatos['campos'][number], v: string | number | boolean | null | undefined",
           "retorno": "string",
-          "linea": 1128,
+          "linea": 1136,
           "resumen": "Una respuesta como la lee Alberto: opción → su etiqueta, sí/no, fecha española; `null` → «—»."
         },
         {
@@ -188385,7 +189065,7 @@
           "exportada": true,
           "params": "body: { clienteId: string; ramo: string; existente: boolean }",
           "retorno": "Promise<Reenvio>",
-          "linea": 1145
+          "linea": 1153
         },
         {
           "nombre": "solicitudesDatosAsegura",
@@ -188393,7 +189073,7 @@
           "exportada": true,
           "params": "oportunidadId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 1148
+          "linea": 1156
         },
         {
           "nombre": "accionSolicitudDatosAsegura",
@@ -188401,7 +189081,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1151
+          "linea": 1159
         },
         {
           "nombre": "borradoresPresupuestoAsegura",
@@ -188409,7 +189089,7 @@
           "exportada": true,
           "params": "clienteId: string, ramo: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 1156,
+          "linea": 1164,
           "resumen": "─── Borrador de presupuesto en servidor (05/10/2026, `lib/correduria/borrador-servidor.ts`) ──"
         },
         {
@@ -188418,7 +189098,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1159
+          "linea": 1167
         },
         {
           "nombre": "borrarBorradorPresupuestoAsegura",
@@ -188426,7 +189106,7 @@
           "exportada": true,
           "params": "clienteId: string, ramo: string, oportunidadId: string | null",
           "retorno": "Promise<Reenvio>",
-          "linea": 1162
+          "linea": 1170
         },
         {
           "nombre": "riesgoAsegura",
@@ -188434,7 +189114,7 @@
           "exportada": true,
           "params": "oportunidadId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 1168,
+          "linea": 1176,
           "resumen": "─── El riesgo como pantalla (29/09/2026) ───────────────────────────────────"
         },
         {
@@ -188443,7 +189123,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1175,
+          "linea": 1183,
           "resumen": "Edita/confirma los datos del riesgo de CUALQUIER ramo (30/09/2026): el cuerpo lleva exactamente una clave de datos (`datosVehiculo` | `datosVivienda` | `datosCapital` | `datosComercio` | `datosRiesgoL"
         },
         {
@@ -188452,7 +189132,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1178
+          "linea": 1186
         },
         {
           "nombre": "quitarFiguraAsegura",
@@ -188460,7 +189140,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1181
+          "linea": 1189
         },
         {
           "nombre": "compararVariantesAsegura",
@@ -188468,7 +189148,7 @@
           "exportada": true,
           "params": "oportunidadId: string, a: string, b: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 1186,
+          "linea": 1194,
           "resumen": "Dos variantes del mismo riesgo: qué cambia y el precio de cada compañía en las dos. Gratis."
         },
         {
@@ -188477,7 +189157,7 @@
           "exportada": true,
           "params": "body: { polizaId: string; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 1191,
+          "linea": 1199,
           "resumen": "Abre (o devuelve la abierta) la oportunidad de retarificar una póliza. Gratis: no pide precio."
         },
         {
@@ -188486,7 +189166,7 @@
           "exportada": true,
           "params": "body: { oportunidadId: string; nuevoClienteId: string; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 1196,
+          "linea": 1204,
           "resumen": "«Pasar la oportunidad a…»: la oportunidad abierta pasa a llevarla otro cliente. Gratis."
         },
         {
@@ -188495,7 +189175,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1205,
+          "linea": 1213,
           "resumen": "`POST /api/operador/correo/lead`: SOLO tras el «✅ Enviar» de Alberto en Telegram (`clp_env`). 30 s: Resend puede reintentar un 429. Un 5xx o un corte = «no se sabe si salió» (`interpretarEnvioPeticion"
         },
         {
@@ -188504,7 +189184,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1214,
+          "linea": 1222,
           "resumen": "`POST /api/operador/correo/respuesta-lead`: `accion:'casar'` (¿de qué hilo/oportunidades es?) o `accion:'guardar'` (los datos leídos, para escribirlos sin pisar nada). Responde SOLO claves, nunca valo"
         },
         {
@@ -188513,7 +189193,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1219,
+          "linea": 1227,
           "resumen": "`POST /api/operador/correo/adjunto`: un adjunto del cliente, que asegura guarda CIFRADO (sin clave, no lo guarda)."
         },
         {
@@ -188522,7 +189202,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1227,
+          "linea": 1235,
           "resumen": "`POST /api/operador/correo/seguimiento-lead` (F5): `pendientes` (hilos vivos, sin email), `recordar` (UN recordatorio en el hilo; asegura re-decide el hito y pone el destinatario desde la ficha) o `ce"
         },
         {
@@ -188531,7 +189211,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1237,
+          "linea": 1245,
           "resumen": "`POST /api/operador/correo/tarificar-lead`: `accion:'revisar'` (gratis: qué bots llegarían a precio y qué les falta), `accion:'tarificar'` (encola los bots; SOLO tras `clp_tar`) o `accion:'ampliar_top"
         },
         {
@@ -188540,7 +189220,7 @@
           "exportada": true,
           "params": "r: Reenvio",
           "retorno": "ContactosLead",
-          "linea": 1251,
+          "linea": 1259,
           "resumen": "La respuesta del puerto de Contactos, en uno de sus seis estados. Lo que no se entiende es `error` con motivo (nunca «añadido» ni «ya estaba» por defecto: no se afirma lo que no se ha visto). Sin PII:"
         },
         {
@@ -188549,13 +189229,13 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1268,
+          "linea": 1276,
           "resumen": "`POST /api/operador/correo/propuesta-lead`: `accion:'pendientes'`/`'revisar'` (gratis: comparativa, necesidades IDD y recomendada de los hilos con precio) o `accion:'enviar'` (SOLO tras «📤 Enviar» de"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dd2d2184ec46"
+      "hash": "424980d21674"
     },
     {
       "ruta": "apps/plataforma/lib/seguimiento-presupuestos-asegura.ts",
@@ -273057,7 +273737,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5599,
-    "funciones": 22080
+    "archivos": 5611,
+    "funciones": 22134
   }
 }
