@@ -284,7 +284,7 @@
 - (03/11/2026) 03/11/2026) Correduría · regularización RC fase 3 (respuesta a Occident + cierre manual) — ✅ PR #5472 mergeado
 - (03/11/2026) 03/11/2026) Correduría · buscador de cartera tolerante (caso Antonio Villegas)
 - (03/11/2026) 03/11/2026) Correduría · regularización RC de Occident automatizada (fases 1-2)
-- (03/11/2026) 03/11/2026) Sivra · mensajes de huésped de Agoda por correo
+- (03/11/2026) 03/11/2026) Sivra · mensajes de huésped de Agoda por correo (PR #5455, mergeado y desplegado)
 - (03/11/2026) 03/11/2026) Correduría · cuadre de comisiones por compañía + Drive reorganizado
 - (03/11/2026) 03/11/2026) Facturas · auditoría del lector: tipo de documento obligatorio y documento completo - Causa raíz de los errores básicos: `tipo_documento` salía null en 28/51 y `procesar.ts` no lo miraba; el texto se cortaba a 4.000 car. (la IA solo veía el encabezado). Ahora: prompt con vocabulario cerrado (presupuesto/solicitud/liquidación/resumen/aviso → omitido; null/otro → bandeja con aviso), emisor≠cliente≠dirección del piso, `numero_albaran` aparte, hasta 12.000 car. (inicio+final). Helpers `tipo-documento.ts`, `revision-lectura.ts`, `recorte-texto.ts`; dedupe por nº de factura sin separadores. - Bandeja revisada con Alberto: Netflix → pisos compartidos; PEPEMOBILE → correduría; Anthropic 170 € = bonos reales; TotalEnergies 310,01 € = Monte Carmelo (personal); Vercel B2DRQ0QS-0007 duplicado descartado. - EMASESA 2026 completo
 - (03/11/2026) 03/11/2026) Captación · parado el mailing en frío de ia-rest/ialimp; foco 100% correduría
