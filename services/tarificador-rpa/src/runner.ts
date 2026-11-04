@@ -51,6 +51,7 @@ import { capturarInventarioDom, marcosDePestanas } from './inventario-dom.ts'
 import { pulsarMediadorGenerali, pulsarEntrarGenerali, entrarTurismosGenerali, cerrarAvisoSabiasQueGenerali, pulsarSubpestanaGenerali, pulsarRecalcularGenerali, pulsarHistorialObtenidoGenerali, pulsarSalidaHistorialObtenidoGenerali, pulsarConsultaHistorialObtenidoGenerali, pulsarPestanaHistorialObtenidoGenerali, marcarPlacasEspecialesGenerali, pulsarConfirmarVehiculoGenerali, pulsarConfirmarDatosPersonasGenerali, pulsarSiguienteValoracionGenerali, abrirDesplegableMarcaGenerali, elegirMarcaListaGenerali, abrirDesplegableModeloGenerali, elegirModeloListaGenerali, elegirPotenciaGenerali, elegirFilaVersionGenerali, elegirCombustibleGenerali, abrirDesplegableVersionGenerali, elegirVersionListaGenerali, cerrarAvisoTomadorMapfre, cerrarClubMapfre, leerOpcionesComercialesMapfre, elegirOpcionComercialMapfre, cerrarControlesTecnicosMapfre, rearmarContinuarMapfreTrasControlesTecnicos, generarProyectoMapfre, companiaActualTurismosAllianz, localidadTurismosAllianz, marcarAntecedenteTurismosAllianz, confirmarVehiculoMapfre, elegirTomadorMapfre, elegirOpcion, pulsarContinuarMapfre, instalarGuardEmision, marcarOpcionRiesgoHogarAllianz, marcarOpcionResueltaHogarAllianz, marcarOpcionTurismosAllianz, marcarTarjetaVehiculoTurismosAllianz, polizaActualTurismosAllianz,
   guardarPresupuestoTurismosAllianz, buscarBotonDescargaProyecto, pulsarDescargaProyectoAuto, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto, esUrlOktaSmsGenerali, type GuardEmision } from './guard.ts'
 import { puertoCodigoHttp, relevarCodigoSmsGenerali, type Relevo } from './relevo-sms.ts'
+import { conRedaccionMediador } from './privacidad-mediador.ts'
 import { crearLog } from './log.ts'
 import { localizarContinuarConRespaldo, pulsarContinuarSeguro } from './continuar.ts'
 import { elegirOpcionMatSelect, leerOpcionesMatSelect } from './mat-select.ts'
@@ -609,7 +610,7 @@ async function main(): Promise<number> {
   // Documento del tomador (Mapfre: lo pone asegura desde la ficha, 14/10/2026): SECRETO DEL TRABAJO. Fuera de mensajes,
   // URL y HTML de evidencia, y sin captura de pantalla (una imagen no se redacta). Nunca se loguea.
   const secretosRiesgo = secretosDelRiesgo(trabajo.riesgo)
-  const redactarTrabajo = secretosRiesgo.length ? crearRedactor([...secretosDelEntorno(env), ...secretosRiesgo]) : redactar
+  const redactarTrabajo = secretosRiesgo.length ? conRedaccionMediador(crearRedactor([...secretosDelEntorno(env), ...secretosRiesgo])) : redactar
 
   const fallo = (tipo: 'datos' | 'credenciales', mensaje: string) =>
     enviarResultado(cfg, { trabajoId: trabajo.id, resultado: 'error', error: { tipo, mensaje, url: null } })

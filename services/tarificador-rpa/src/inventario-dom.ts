@@ -9,6 +9,7 @@
 
 import { sanearInventarioDom, MAX_BYTES_INVENTARIO_DOM, MAX_MARCOS_INVENTARIO, MAX_OPCIONES_CRUDAS_SELECT, type InventarioDom } from '@central/module-tarificacion'
 import type { ElementHandle, Frame, JSHandle, Page } from 'playwright'
+import { redactarMediadorProfundo } from './privacidad-mediador.ts'
 import { LIB_MODAL_PAGINA } from './modal-informativo.ts'
 import { controlOcultoDeEtiqueta, SEL_ERROR_EPAC, SELECTOR_AVANCE_SERVLET, SELECTOR_DIALOGO, tituloDialogoVivo } from './guard.ts'
 
@@ -80,15 +81,30 @@ function extractor(explora: boolean): string {
   };
   const out = [];
   const nodos = [];
-  // DIAGNÓSTICO (no exploración): también dentro de shadow DOM ABIERTO (componentes web). En exploración no: sus refs se
-  // re-resuelven por handle y el bucle IA queda como estaba.
+  // Diagnóstico Y exploración (0.3.40): también dentro de shadow DOM ABIERTO, recursivo (web components de Stencil/Angular: <pelayo-modal> con
+  // <pelayo-input>/<pelayo-select>/<pelayo-button> anidados). Las refs se siguen re-resolviendo por handle (el handle es el nodo real, esté donde esté).
   const todos = (raiz, acc, prof) => {
     for (const el of Array.from(raiz.querySelectorAll(SEL))) acc.push(el);
-    if (EXPLORA || prof > 4 || acc.length > 2000) return acc;
+    if (prof > 5 || acc.length > 2000) return acc;
     for (const h of Array.from(raiz.querySelectorAll('*'))) if (h.shadowRoot) todos(h.shadowRoot, acc, prof + 1);
     return acc;
   };
-  const lista = todos(document, [], 0);
+  // Todos los nodos que casan con \`sel\` en el documento y en sus shadowRoot abiertos (títulos del modal, etc.).
+  const todosSel = (raiz, sel, acc, prof) => {
+    for (const el of Array.from(raiz.querySelectorAll(sel))) acc.push(el);
+    if (prof > 5 || acc.length > 2000) return acc;
+    for (const h of Array.from(raiz.querySelectorAll('*'))) if (h.shadowRoot) todosSel(h.shadowRoot, sel, acc, prof + 1);
+    return acc;
+  };
+  const raizDe = (el) => { const r = el.getRootNode && el.getRootNode(); return r && r.nodeType === 11 ? r : document; };
+  const dentroDe = (el, cont) => {
+    for (let n = el, i = 0; n && i < 80; i++) {
+      if (n === cont) return true;
+      n = n.parentElement || ((n.getRootNode && n.getRootNode().host) || null);
+    }
+    return false;
+  };
+  let lista = todos(document, [], 0);
   // 0.3.38 (Pelayo real 608504fd: un .pelayo-modal persistente tapaba las tarjetas y el inventario no lo veía): en EXPLORACIÓN, los controles de CIERRE de
   // un modal/diálogo VISIBLE se inventarían aunque no tengan texto (aria-label «Cerrar», clase close/btn-close, data-dismiss, «×»), sean del tag que sean.
   // Solo se LEE; pulsarlos sigue pasando por las puertas del guard (cerrar_modal del pilotaje).
@@ -108,6 +124,40 @@ function extractor(explora: boolean): string {
       }
     } catch (err) { /* sin modales legibles: el inventario sigue como antes */ }
   }
+  // 0.3.40 (Pelayo real 0a3ffed6): un MODAL de web component (custom element que cubre >= 50 % de la ventana) con CAMPOS dentro es la pantalla actual: se inventaría
+  // SOLO su contenido (las tarjetas de detrás están tapadas, no son accionables). Solo custom elements: los diálogos de light DOM siguen como antes.
+  let modalActivo = null;
+  if (EXPLORA) {
+    try {
+      for (const m of modalesVisibles(document)) {
+        if (String(m.localName || '').indexOf('-') < 1) continue;
+        const rm = m.getBoundingClientRect();
+        if (rm.width * rm.height < 0.5 * window.innerWidth * window.innerHeight) continue;
+        const sub = [];
+        recorrer(m, sub, [], 0);
+        if (m.shadowRoot) recorrer(m.shadowRoot, sub, [], 1);
+        if (sub.some((x) => x.matches('input:not([type=hidden]),select,textarea'))) { modalActivo = m; break; }
+      }
+    } catch (err) { modalActivo = null; }
+    if (modalActivo) lista = lista.filter((x) => dentroDe(x, modalActivo));
+  }
+  // Etiqueta de un campo DENTRO de un shadowRoot cuando no tiene <label> (0.3.40): label[for] de su misma raíz, el atributo label/placeholder/aria-label del host,
+  // o el texto corto del contenedor más cercano que tenga UN solo campo.
+  const etiquetaShadow = (el) => {
+    const raiz = raizDe(el);
+    if (raiz === document) return null;
+    if (el.id) { const l = raiz.querySelector('label[for="' + CSS.escape(el.id) + '"]'); if (l) return corta(l.innerText || l.textContent || '', 200); }
+    const lc = el.closest('label');
+    if (lc) return corta(lc.innerText || lc.textContent || '', 200);
+    for (let c = el.parentElement, k = 0; c && k < 3; c = c.parentElement, k++) {
+      if (c.querySelectorAll('input:not([type=hidden]),select,textarea').length !== 1) break;
+      const t = corta(c.innerText || c.textContent || '', 80);
+      if (t) return t;
+    }
+    const h = raiz.host;
+    if (h) { const a = h.getAttribute('label') || h.getAttribute('aria-label') || h.getAttribute('placeholder'); if (a) return corta(a, 200); }
+    return null;
+  };
   for (let i = 0; i < lista.length && out.length < 600; i++) {
     const el = lista[i];
     const tag = el.tagName.toLowerCase();
@@ -149,8 +199,10 @@ function extractor(explora: boolean): string {
     if (el.labels && el.labels.length) {
       e.etiqueta = corta(Array.from(el.labels).map((l) => l.innerText || l.textContent || '').join(' '), 200);
     } else if (el.getAttribute('aria-labelledby')) {
-      e.etiqueta = corta(el.getAttribute('aria-labelledby').split(/\\s+/).map((id) => { const x = document.getElementById(id); return x ? (x.innerText || x.textContent || '') : ''; }).join(' '), 200);
+      const rz = raizDe(el);
+      e.etiqueta = corta(el.getAttribute('aria-labelledby').split(/\\s+/).map((id) => { const x = (rz.getElementById ? rz.getElementById(id) : null) || document.getElementById(id); return x ? (x.innerText || x.textContent || '') : ''; }).join(' '), 200);
     }
+    if (!e.etiqueta && (tag === 'input' || tag === 'select' || tag === 'textarea')) { const es = etiquetaShadow(el); if (es) e.etiqueta = es; }
     const divServlet = esDivServlet(el);
     const ng = ngClick(el);
     // Un [ng-click] que no es control de texto (fila, tarjeta…) puede envolver nombres: su texto, CORTO (80); el saneado lo filtra.
@@ -231,11 +283,15 @@ function extractor(explora: boolean): string {
   }
   if (!EXPLORA) return out;
   const titulos = [];
-  for (const h of Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,h6,legend,th,caption'))) {
+  // 0.3.40: también los de los shadowRoot abiertos, y los del MODAL activo (rótulos de clase title/titulo/header: «Nueva contratación»).
+  const SEL_TIT = 'h1,h2,h3,h4,h5,h6,legend,th,caption';
+  const candTit = todosSel(document, SEL_TIT, [], 0);
+  if (modalActivo) for (const x of todosSel(modalActivo.shadowRoot || modalActivo, '[class*="title"],[class*="titulo"],[class*="header"] > *:first-child,[role=heading]', [], 0)) if (candTit.indexOf(x) < 0) candTit.push(x);
+  for (const h of candTit) {
     if (titulos.length >= 40) break;
     if (!visible(h)) continue;
     const t = corta(h.innerText || h.textContent || '', 200);
-    if (t) titulos.push({ texto: t, tag: h.tagName.toLowerCase() });
+    if (t && !titulos.some((x) => x.texto === t)) titulos.push({ texto: t, tag: h.tagName.toLowerCase().replace(/[^a-z0-9-]/g, '') });
   }
   const importes = [];
   const RE = /^(?:€\\s*)?-?[\\d.,]{1,15}\\s*(?:€|eur(?:os)?)?$/i;
@@ -298,7 +354,7 @@ export async function capturarInventarioDom(page: Pick<Page, 'frames'>, maxBytes
       const elementos = await conTope(f.evaluate(EXTRACTOR_INVENTARIO) as Promise<unknown>, Math.min(msPorMarco, resta))
       marcos.push({ url: f.url(), nombre: f.name() || null, elementos: Array.isArray(elementos) ? elementos : [], ...(Array.isArray(elementos) ? {} : { ilegible: true }) })
     }
-    return sanearInventarioDom({ marcos }, maxBytes)
+    return sanearInventarioDom(redactarMediadorProfundo({ marcos }), maxBytes)
   } catch {
     return null
   }
@@ -369,7 +425,7 @@ export async function capturarInventarioExploracion(page: Pick<Page, 'frames'>, 
       porMarco.push({ marco: f, nodos })
     }
     // 0.3.21: pistas NO personales del catálogo (`pistasOpcionesInventario`): las opciones que casan se conservan más allá del tope.
-    const inventario = sanearInventarioDom({ marcos }, maxBytes, { refs: true, pistasOpciones })
+    const inventario = sanearInventarioDom(redactarMediadorProfundo({ marcos }), maxBytes, { refs: true, pistasOpciones })
     if (!inventario) {
       await liberar()
       return null

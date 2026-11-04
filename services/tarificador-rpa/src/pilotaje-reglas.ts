@@ -6,6 +6,7 @@
 // regla de aquí autoriza un clic: los clics van SIEMPRE por las puertas de guard.ts (`pulsar`, `pulsarExploracionAutorizada`,
 // `pulsarGuardadoDialogoAutorizado`). TARIFICAR ≠ EMITIR.
 
+import { redactarMediador } from './privacidad-mediador.ts'
 import { pareceDatoPersonalInventario, senalCuentaBancaria, descripcionesElemento, type ElementoInventario } from '@central/module-tarificacion'
 
 /** Topes DUROS de una sesión (asegura usa los mismos: apps/asegura/lib/tarificador-pilotaje-reglas.ts). */
@@ -159,6 +160,6 @@ export function loteExploradorDe(c: ComandoPilotaje, el: ElementoInventario): un
 
 /** Texto de diagnóstico corto y sin forma de dato personal (asegura lo vuelve a redactar). PURA. */
 export function textoDiagnostico(t: string, redactar: (t: string) => string = (x) => x): string {
-  const s = redactar(t).replace(/\s+/g, ' ').trim().slice(0, 160)
+  const s = redactarMediador(redactar(t)).replace(/\s+/g, ' ').trim().slice(0, 160)
   return pareceDatoPersonalInventario(s) ? '(texto redactado)' : s
 }

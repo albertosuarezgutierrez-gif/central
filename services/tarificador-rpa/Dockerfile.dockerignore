@@ -1,6 +1,7 @@
 # Contexto = raíz del monorepo. Solo entra lo que el worker necesita.
 *
 !packages/module-tarificacion/**
+!packages/module-seguros/src/mediador.ts
 !services/tarificador-rpa/package.json
 !services/tarificador-rpa/package-lock.json
 !services/tarificador-rpa/tsconfig.json
