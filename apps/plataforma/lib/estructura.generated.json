@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-11-04T15:29:52Z",
+  "generadoEn": "2026-11-04T20:29:06Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -794,7 +794,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 8
+        "evidencias": 9
       },
       "asegura-portal": {
         "estado": "usado",
@@ -1142,7 +1142,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 29
+        "evidencias": 30
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2534,7 +2534,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 350
+        "evidencias": 351
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2882,7 +2882,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 79
+        "evidencias": 84
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4589,6 +4589,7 @@
       "/api/cron/senales-patrimonio",
       "/api/cron/siniestros-vinculo",
       "/api/cron/solicitudes-abandonadas",
+      "/api/cron/tarificador-alarma",
       "/api/cron/tarificador-cola",
       "/api/cron/tarificador-humo",
       "/api/cron/tarificador-humo-informe",
@@ -4633,6 +4634,8 @@
       "/api/operador/cliente/relaciones/aviso",
       "/api/operador/clientes",
       "/api/operador/codeoscopic/auto-nuevo",
+      "/api/operador/codeoscopic/catalogo",
+      "/api/operador/codeoscopic/catalogo/instantanea",
       "/api/operador/codeoscopic/catalogos",
       "/api/operador/codeoscopic/coberturas",
       "/api/operador/codeoscopic/companias",
@@ -4801,6 +4804,7 @@
       "/api/operador/tarificador/emision/avisos",
       "/api/operador/tarificador/encolar",
       "/api/operador/tarificador/estadisticas",
+      "/api/operador/tarificador/estado",
       "/api/operador/tarificador/exploracion",
       "/api/operador/tarificador/exploraciones",
       "/api/operador/tarificador/exploraciones/[id]",
@@ -4826,6 +4830,8 @@
       "/api/operador/tarificador/trabajo/[id]/pdf/[indice]",
       "/api/operador/tarificador/trabajo/[id]/traza",
       "/api/operador/tarificador/ultimo-riesgo",
+      "/api/operador/tarificador/vehiculo",
+      "/api/operador/tarificador/vehiculo/[id]",
       "/api/operador/vehiculo/matricula",
       "/api/operador/vencimientos",
       "/api/operador/whatsapp/alta",
@@ -4874,6 +4880,7 @@
       "/api/tarificador/resultado",
       "/api/tarificador/sesion/[compania]",
       "/api/tarificador/trabajo/[id]",
+      "/api/tarificador/vehiculo/resultado",
       "/api/webhooks/codeoscopic",
       "/api/webhooks/resend",
       "/api/webhooks/whatsapp"
@@ -5961,6 +5968,7 @@
       "/api/correduria/tarificador/emision",
       "/api/correduria/tarificador/encolar",
       "/api/correduria/tarificador/estadisticas",
+      "/api/correduria/tarificador/estado",
       "/api/correduria/tarificador/exploraciones",
       "/api/correduria/tarificador/exploraciones/[id]",
       "/api/correduria/tarificador/fichas",
@@ -6522,6 +6530,7 @@
       "seguros.cliente_relaciones",
       "seguros.cliente_telefonos",
       "seguros.clientes",
+      "seguros.codeoscopic_catalogo",
       "seguros.codeoscopic_consumo",
       "seguros.codeoscopic_documents",
       "seguros.codeoscopic_emisiones_revision",
@@ -6632,9 +6641,12 @@
       "seguros.tarificador_imagen",
       "seguros.tarificador_intervenciones",
       "seguros.tarificador_pausas",
+      "seguros.tarificador_permisos_navegacion",
+      "seguros.tarificador_permisos_navegacion_auditoria",
       "seguros.tarificador_pilotaje_pasos",
       "seguros.tarificador_pilotaje_sesiones",
       "seguros.tarificador_sesiones",
+      "seguros.tarificador_vehiculo_matricula",
       "seguros.usuarios",
       "seguros.whatsapp_aprendizaje",
       "seguros.whatsapp_avisos_vencimiento",
@@ -7779,7 +7791,7 @@
     "packages": 47,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1902,
+    "apis": 1910,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
