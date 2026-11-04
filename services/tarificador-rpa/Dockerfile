@@ -10,6 +10,8 @@ ENV NODE_ENV=production \
 
 WORKDIR /app
 COPY packages/module-tarificacion /app/packages/module-tarificacion
+# Datos canónicos del mediador (fichero puro, sin dependencias) para redactar su nombre/NIF/móvil en todo texto saliente (src/privacidad-mediador.ts).
+COPY packages/module-seguros/src/mediador.ts /app/packages/module-seguros/src/mediador.ts
 COPY services/tarificador-rpa/package.json services/tarificador-rpa/package-lock.json /app/services/tarificador-rpa/
 WORKDIR /app/services/tarificador-rpa
 RUN npm ci --omit=dev --no-audit --no-fund
