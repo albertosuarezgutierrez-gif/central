@@ -33,7 +33,10 @@ export async function GET(req: Request) {
   const token = secretoWhatsapp('WHATSAPP_VERIFY_TOKEN')
   if (!token) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
   const r = verificarSuscripcion(new URL(req.url).searchParams, token)
-  if (!r.ok) return NextResponse.json({ estado: 'no_autorizado' }, { status: 403 })
+  if (!r.ok) {
+    console.warn('[webhooks/whatsapp] verificación de suscripción no autorizada (verify_token distinto)')
+    return NextResponse.json({ estado: 'no_autorizado' }, { status: 403 })
+  }
   return new NextResponse(r.challenge, { status: 200, headers: { 'content-type': 'text/plain' } })
 }
 
@@ -42,7 +45,11 @@ export async function POST(req: Request) {
   if (!appSecret) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
 
   const cuerpoCrudo = await req.text()
-  if (!verificarFirmaMeta(cuerpoCrudo, req.headers.get('x-hub-signature-256'), appSecret)) {
+  const firmaCabecera = req.headers.get('x-hub-signature-256')
+  if (!verificarFirmaMeta(cuerpoCrudo, firmaCabecera, appSecret)) {
+    console.warn(
+      `[webhooks/whatsapp] firma inválida (¿WHATSAPP_APP_SECRET de otra app?) cabecera_X-Hub-Signature-256=${firmaCabecera !== null}`,
+    )
     return NextResponse.json({ estado: 'firma_invalida' }, { status: 401 })
   }
   let parseado: unknown
@@ -68,7 +75,10 @@ export async function POST(req: Request) {
   }
   const destino = resolverDestino(envNumero, bd)
   // Ni número ni WABA configurados: firmado por Meta pero no sabemos de quién es → 200 sin procesar (no 503: reintentaría).
-  if (!hayDestino(destino)) return NextResponse.json({ estado: 'sin_destino' })
+  if (!hayDestino(destino)) {
+    console.warn('[webhooks/whatsapp] estado=sin_destino (sin WHATSAPP_PHONE_NUMBER_ID ni número guardado ni WABA)')
+    return NextResponse.json({ estado: 'sin_destino' })
+  }
   const numeroId = destino.phoneNumberId
 
   // Eventos de cuenta: con el canal encendido o apagado (no llevan datos personales).
@@ -93,7 +103,10 @@ export async function POST(req: Request) {
   if (eventos && eventos.noAdmitidos > 0) console.warn(`[webhooks/whatsapp] mensajes no admitidos por Meta (131060): ${eventos.noAdmitidos}`)
 
   // Apagado: se contesta 200 y no se guarda NINGÚN mensaje (ni el crudo). Meta da el evento por entregado.
-  if (!activo) return NextResponse.json({ estado: 'inactivo' })
+  if (!activo) {
+    console.warn('[webhooks/whatsapp] estado=inactivo (ASEGURA_WHATSAPP_ACTIVO≠1: mensajes no guardados)')
+    return NextResponse.json({ estado: 'inactivo' })
+  }
   if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
 
   let correduriaId: string
@@ -107,7 +120,10 @@ export async function POST(req: Request) {
   }
 
   // Solo WABA (sin phone id): los eventos de cuenta ya se registraron; los mensajes no se guardan.
-  if (numeroId === null) return NextResponse.json({ estado: 'sin_numero' })
+  if (numeroId === null) {
+    console.warn('[webhooks/whatsapp] estado=sin_numero (solo WABA: mensajes no procesados)')
+    return NextResponse.json({ estado: 'sin_numero' })
+  }
 
   if (!v || !v.success) {
     // Firmado por Meta pero con una forma que no conocemos: se guarda tal cual (no se pierde) y 200.
