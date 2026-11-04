@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-11-04T10:56:39Z",
+  "generadoEn": "2026-11-04T12:13:59Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -679,7 +679,7 @@
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 4
       },
       "sivra": {
         "estado": "no",
@@ -2299,7 +2299,7 @@
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "sivra": {
         "estado": "no",
@@ -2329,7 +2329,7 @@
       },
       "asegura-web": {
         "estado": "usado",
-        "evidencias": 32
+        "evidencias": 34
       },
       "housesevillana": {
         "estado": "no",
@@ -2591,7 +2591,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 78
+        "evidencias": 79
       },
       "asegura-portal": {
         "estado": "usado",
@@ -5878,6 +5878,7 @@
       "/api/admin/empleados/[id]/documentos/[docId]/descargar-firmado",
       "/api/admin/empleados/[id]/documentos/[docId]/firmar-empresa",
       "/api/admin/empleados/[id]/documentos/[docId]/solicitar-firma",
+      "/api/admin/empleados/[id]/documentos/[docId]/visibilidad",
       "/api/admin/empleados/[id]/documentos/confirm",
       "/api/admin/empleados/[id]/documentos/generar",
       "/api/admin/empleados/[id]/documentos/presign",
@@ -7286,7 +7287,7 @@
     "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1886,
+    "apis": 1887,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

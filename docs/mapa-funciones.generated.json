@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-04T11:28:25Z",
-  "sha": "228a1f99fa6d3a0a64489a3f4eb436edf08fe588",
+  "generadoEn": "2026-11-04T12:13:59Z",
+  "sha": "7f56de5ee2ffd0da38104ff1792ec07918bfb7cb",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -11409,7 +11409,7 @@
           "exportada": false,
           "params": "{ titulo, qr }: { titulo: string; qr?: string | null }",
           "retorno": null,
-          "linea": 43,
+          "linea": 44,
           "resumen": "El masthead del papel. La marca a la IZQUIERDA (primera fijación del barrido), qué es el papel en el centro y el QR a la derecha, donde llega el pulgar de quien sujeta el móvil con la hoja pegada a la"
         },
         {
@@ -11418,7 +11418,7 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ token: string }> }",
           "retorno": null,
-          "linea": 111,
+          "linea": 112,
           "resumen": "La HOJA que se abre al escanear el QR del papel de la nevera. Es PÚBLICA a propósito —vive fuera del grupo `(portal)`— y no pide sesión: se abre en el arcén, con prisa, desde un papel que alguien impr"
         },
         {
@@ -11427,13 +11427,13 @@
           "exportada": false,
           "params": "{ canal }: { canal: CanalCompania }",
           "retorno": null,
-          "linea": 251,
+          "linea": 256,
           "resumen": "Los teléfonos de la compañía. `sinDatos` = **no lo hemos verificado**, jamás «esta compañía no tiene»: la hoja dice «pídenoslo». Misma regla y mismos datos que el bloque de `ParteSiniestro.tsx`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5f5eb3c44808"
+      "hash": "d7c3ad96ffbf"
     },
     {
       "ruta": "apps/asegura-portal/app/icon.tsx",
@@ -26142,7 +26142,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b3e818c3af78"
+      "hash": "9088f3d48052"
     },
     {
       "ruta": "apps/asegura-web/app/legal/aviso-legal/page.tsx",
@@ -26166,6 +26166,27 @@
       "hash": "09b9fe801806"
     },
     {
+      "ruta": "apps/asegura-web/app/legal/condiciones/page.tsx",
+      "ambito": "apps/asegura-web",
+      "resumen": "Condiciones de uso de los canales digitales de Grupo ASegura (web pública, portal del cliente y WhatsApp). Adaptadas de las del portal (`apps/asegura-portal/app/legal/condiciones`), de las que solo se toma lo que vale para todos los canales. Lo que es propio del portal (acceso por código, autorizar ",
+      "exporta": [
+        "Condiciones"
+      ],
+      "funciones": [
+        {
+          "nombre": "Condiciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 193
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e00d99fe3d4c"
+    },
+    {
       "ruta": "apps/asegura-web/app/legal/cookies/page.tsx",
       "ambito": "apps/asegura-web",
       "resumen": "Política de cookies. El listado de abajo son las CATEGORÍAS que declara nuestro propio banner (`@central/core-consent`), no un rastreo automático del dominio — Cookiebot generaba esa tabla sola a partir de `cd.js`; nuestro CMP no lo hace, así que aquí se describe a mano lo que cada categoría cubre. ",
@@ -26185,6 +26206,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "885145c21cb1"
+    },
+    {
+      "ruta": "apps/asegura-web/app/legal/eliminacion-datos/page.tsx",
+      "ambito": "apps/asegura-web",
+      "resumen": "Cómo pedir la supresión de los datos tratados por el canal de WhatsApp de Grupo ASegura. Es la URL de «instrucciones de eliminación de datos» que pide Meta en la revisión de la app. El correo y el domicilio son los que ya figuran en la política de privacidad (`MEDIADOR`); no se inventa ningún contac",
+      "exporta": [
+        "EliminacionDatos"
+      ],
+      "funciones": [
+        {
+          "nombre": "EliminacionDatos",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 193
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "29fea8ac4946"
     },
     {
       "ruta": "apps/asegura-web/app/legal/informacion-mediador/page.tsx",
@@ -26226,7 +26268,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "291b5e35433b"
+      "hash": "aa30466362e2"
     },
     {
       "ruta": "apps/asegura-web/app/opengraph-image.tsx",
@@ -26432,7 +26474,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "55d915f576d3"
+      "hash": "6cdd03d18747"
     },
     {
       "ruta": "apps/asegura-web/app/telefonos-siniestros/contacto/[slug]/route.ts",
@@ -66556,7 +66598,7 @@
     {
       "ruta": "apps/asegura/lib/tarificador-explorador-mediador.ts",
       "ambito": "apps/asegura",
-      "resumen": "Tomador = el MEDIADOR en las exploraciones de patinete (Alberto, 28/10/2026: «datos del mediador con su consentimiento»). Función PURA. Los datos salen de `MEDIADOR` (`@central/module-seguros`), la única copia: ningún literal aquí ni en los tests. Forma = la de `riesgo.tomador` que lee el resolver d",
+      "resumen": "Tomador = el MEDIADOR en las exploraciones de patinete y Pelayo (Alberto, 28/10/2026: «datos del mediador con su consentimiento»). Función PURA. Los datos salen de `MEDIADOR` (`@central/module-seguros`), la única copia: ningún literal aquí ni en los tests. Forma = la de `riesgo.tomador` que lee el r",
       "exporta": [
         "riesgoTomadorMediador",
         "riesgoConTomadorMediador"
@@ -66566,10 +66608,10 @@
           "nombre": "riesgoTomadorMediador",
           "kind": "function",
           "exportada": true,
-          "params": "m: { nombre: string; nif: string; fechaNacimiento?: string } = MEDIADOR.identidad",
+          "params": "m: IdentidadTomadorMediador = MEDIADOR.identidad",
           "retorno": "RiesgoTomadorMediador",
           "linea": 15,
-          "resumen": "`riesgo` de una exploración SINTÉTICA de patinete: solo el tomador. Un dato que `MEDIADOR` no trae (o que no se puede separar sin adivinar) se OMITE: el explorador para con `dato_sensible_requerido` y"
+          "resumen": "`riesgo` de una exploración SINTÉTICA con `tomadorMediador`: solo el tomador. El mapeo es UNO (`riesgoTomadorDeMediador` del módulo, puro; también lo usa el pilotaje del worker): aquí solo se le pasa "
         },
         {
           "nombre": "riesgoConTomadorMediador",
@@ -66577,13 +66619,13 @@
           "exportada": true,
           "params": "riesgo: unknown",
           "retorno": "Record<string, unknown>",
-          "linea": 35,
+          "linea": 20,
           "resumen": "El `riesgo` de la respuesta al worker con el tomador del mediador añadido (solo en la respuesta, nunca en BD)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "51863c633fab"
+      "hash": "1b25b0e7f924"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-explorador-paso.ts",
@@ -210916,7 +210958,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "d08d32034179"
+      "hash": "1984f1c1fe42"
     },
     {
       "ruta": "apps/rrhh/app/admin/documentos/DocumentosClient.tsx",
@@ -210931,7 +210973,7 @@
           "exportada": false,
           "params": "nombre: string",
           "retorno": "Form",
-          "linea": 40
+          "linea": 42
         },
         {
           "nombre": "nombreEmp",
@@ -210939,7 +210981,7 @@
           "exportada": false,
           "params": "e: Empleado",
           "retorno": null,
-          "linea": 45
+          "linea": 47
         },
         {
           "nombre": "norm",
@@ -210947,7 +210989,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 46
+          "linea": 48
         },
         {
           "nombre": "DocumentosClient",
@@ -210955,7 +210997,7 @@
           "exportada": true,
           "params": "{ carpetas, categorias }: { carpetas: Opcion[]; categorias: Categoria[] }",
           "retorno": null,
-          "linea": 48
+          "linea": 50
         },
         {
           "nombre": "TarjetaDocumento",
@@ -210963,14 +211005,14 @@
           "exportada": false,
           "params": "{ it, carpetas, categorias, empleados, cargandoEmpleados, ocupado, onForm, onQuitar, onEnviar, onReintentar }: { it: Item; carpetas: Opcion[]; categorias: Categoria[]; empleados: Empleado[]; cargandoEmpleados: boolean /** Hay un «Enviar tod",
           "retorno": null,
-          "linea": 202
+          "linea": 206
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "d81ecccc392b"
+      "hash": "2a43618445b4"
     },
     {
       "ruta": "apps/rrhh/app/admin/documentos/page.tsx",
@@ -211064,16 +211106,16 @@
           "nombre": "subir",
           "kind": "function",
           "exportada": false,
-          "params": "carpeta: string, file: File, modo: string = 'none'",
+          "params": "carpeta: string, file: File, modo: string = 'none', oculto = false",
           "retorno": null,
-          "linea": 114
+          "linea": 117
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "95ce3e5c4ecd"
+      "hash": "bbda0539cd02"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/[id]/page.tsx",
@@ -211946,7 +211988,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/admin/documentos/asignar",
-      "hash": "71dea1ff0698"
+      "hash": "b44f83a71963"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/documentos/distribuir-pdf/route.ts",
@@ -211961,13 +212003,13 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 11,
+          "linea": 12,
           "resumen": "«Distribuir documentos desde PDF»: un PDF con los documentos de varios empleados → cada uno al expediente del suyo. Empresa SIEMPRE la de la sesión. Campos: file, carpeta, titulo?, requiere_firma?, av"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/admin/documentos/distribuir-pdf",
-      "hash": "533c3a602889"
+      "hash": "9be2afe1c693"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/documentos/staging/route.ts",
@@ -212167,6 +212209,27 @@
       "hash": "9b709b707ffe"
     },
     {
+      "ruta": "apps/rrhh/app/api/admin/empleados/[id]/documentos/[docId]/visibilidad/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "PATCH"
+      ],
+      "funciones": [
+        {
+          "nombre": "PATCH",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, { params }: { params: Promise<{ id: string; docId: string }> }",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "PATCH { visible: boolean } — el responsable muestra u oculta un documento al empleado (migración 0029). Ocultar exige que no tenga firma y que no sea una nómina. Scope: empresa de la sesión + empleado"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/admin/empleados/[id]/documentos/[docId]/visibilidad",
+      "hash": "cf6cd24507e4"
+    },
+    {
       "ruta": "apps/rrhh/app/api/admin/empleados/[id]/documentos/confirm/route.ts",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -212179,7 +212242,7 @@
           "exportada": true,
           "params": "req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 10,
+          "linea": 11,
           "resumen": "Fase 2: el cliente ya subió a Storage; registra la fila en BD."
         }
       ],
@@ -212188,7 +212251,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/admin/empleados/[id]/documentos/confirm",
-      "hash": "737d067dd13f"
+      "hash": "dd944ddfacd6"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/empleados/[id]/documentos/generar/route.ts",
@@ -212246,7 +212309,7 @@
           "exportada": true,
           "params": "_req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 9
+          "linea": 10
         },
         {
           "nombre": "POST",
@@ -212254,7 +212317,7 @@
           "exportada": true,
           "params": "req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 23
+          "linea": 24
         }
       ],
       "tablas": [
@@ -212262,7 +212325,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/admin/empleados/[id]/documentos",
-      "hash": "2cce643b76b6"
+      "hash": "235e92520f96"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/empleados/[id]/enlace/route.ts",
@@ -215888,7 +215951,7 @@
           "exportada": true,
           "params": "p: Params",
           "retorno": "Promise<ResultadoAviso | null>",
-          "linea": 34,
+          "linea": 35,
           "resumen": "Crea el aviso y lo envía por email y push. Devuelve null SOLO en el recordatorio automático cuando ya hubo uno hoy para ese documento (idempotencia por índice único: la fila se reserva ANTES de enviar"
         },
         {
@@ -215897,7 +215960,7 @@
           "exportada": true,
           "params": "empresaId: string, docId: string",
           "retorno": "Promise<void>",
-          "linea": 89,
+          "linea": 92,
           "resumen": "Marca desde cuándo se reclama la firma (si no estaba ya). Es la base del recordatorio automático."
         },
         {
@@ -215906,7 +215969,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, docId: string, creadoPor: string, origen?: string | null,",
           "retorno": "Promise<ResultadoAviso | null>",
-          "linea": 99,
+          "linea": 102,
           "resumen": "Avisa de una solicitud de firma YA en estado 'pendiente' (tras solicitarla, subirla con «solo firma el empleado» o tras firmar la empresa). Nunca lanza: si el aviso falla, devuelve null y lo loguea."
         },
         {
@@ -215915,7 +215978,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, docId: string, creadoPor: string, origen?: string | null,",
           "retorno": "Promise<ResultadoAviso | null>",
-          "linea": 112,
+          "linea": 115,
           "resumen": "Solicita la firma (flujo existente de `lib/firma.ts`) y avisa al empleado. Lanza solo si la solicitud falla."
         },
         {
@@ -215924,7 +215987,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string",
           "retorno": "Promise<",
-          "linea": 127,
+          "linea": 130,
           "resumen": "Avisos del empleado (los 30 últimos) y cuántos documentos tienen avisos sin ver. Solo los SUYOS."
         },
         {
@@ -215933,7 +215996,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, docId: string",
           "retorno": "Promise<boolean>",
-          "linea": 146,
+          "linea": 152,
           "resumen": "El empleado abre un documento SUYO: marca sus avisos como vistos y la primera apertura del documento."
         }
       ],
@@ -215941,7 +216004,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "4b3fb1dd8582"
+      "hash": "c60d54022bd7"
     },
     {
       "ruta": "apps/rrhh/lib/branding.ts",
@@ -216415,7 +216478,7 @@
           "exportada": true,
           "params": "empresaId: string",
           "retorno": "Promise<Candidato[]>",
-          "linea": 64,
+          "linea": 67,
           "resumen": "Empleados activos de LA empresa de la sesión (única fuente de candidatos)."
         },
         {
@@ -216424,7 +216487,7 @@
           "exportada": false,
           "params": "e: Candidato",
           "retorno": null,
-          "linea": 71
+          "linea": 74
         },
         {
           "nombre": "identificarPaginas",
@@ -216432,7 +216495,7 @@
           "exportada": true,
           "params": "textos: string[], candidatos: Candidato[], documento: string",
           "retorno": "Promise<(Candidato | null)[]>",
-          "linea": 76,
+          "linea": 79,
           "resumen": "Identifica el empleado de cada página (null = no identificado con seguridad)."
         },
         {
@@ -216441,7 +216504,7 @@
           "exportada": true,
           "params": "empresaId: string, usuarioId: string, bytes: ArrayBuffer, e: EntradaDistribuir,",
           "retorno": "Promise<ResultadoDistribuirDocs>",
-          "linea": 104
+          "linea": 107
         }
       ],
       "tablas": [
@@ -216449,7 +216512,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "857a432e5e91"
+      "hash": "811b9683bcc1"
     },
     {
       "ruta": "apps/rrhh/lib/distribuir-nominas.ts",
@@ -216523,7 +216586,8 @@
         "subirDocumento",
         "prepararSubidaDirecta",
         "confirmarSubidaDirecta",
-        "borrarDocumento"
+        "borrarDocumento",
+        "cambiarVisibilidadDocumento"
       ],
       "funciones": [
         {
@@ -216532,7 +216596,7 @@
           "exportada": false,
           "params": "empresaId: string, empleadoId: string",
           "retorno": null,
-          "linea": 8,
+          "linea": 10,
           "resumen": "Verifica que el empleado pertenece a la empresa (scope multi-tenant). Lanza si no."
         },
         {
@@ -216541,16 +216605,16 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, actor: Actor",
           "retorno": null,
-          "linea": 15,
+          "linea": 17,
           "resumen": "Lista el expediente de un empleado, agrupado por carpeta visible para `actor`, con URLs firmadas."
         },
         {
           "nombre": "subirDocumento",
           "kind": "function",
           "exportada": true,
-          "params": "empresaId: string, empleadoId: string, actor: Actor, entrada: { carpeta: string; nombre: string; tipo?: string | null; tamano?: number | null; bytes: ArrayBuffer }",
+          "params": "empresaId: string, empleadoId: string, actor: Actor, entrada: { carpeta: string; nombre: string; tipo?: string | null; tamano?: number | null; bytes: ArrayBuffer; visible_empleado?: boolean }",
           "retorno": null,
-          "linea": 42,
+          "linea": 56,
           "resumen": "Sube un documento al expediente. `actor` decide permisos por carpeta (vía el módulo)."
         },
         {
@@ -216559,16 +216623,16 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, actor: Actor, entrada: { carpeta: string; nombre: string; tipo?: string | null; tamano?: number | null }",
           "retorno": null,
-          "linea": 63,
+          "linea": 81,
           "resumen": "Fase 1 del flujo de subida directa: valida permisos y devuelve una URL firmada para que el cliente suba el archivo DIRECTAMENTE a Supabase Storage (sin pasar por la función serverless). Devuelve tambi"
         },
         {
           "nombre": "confirmarSubidaDirecta",
           "kind": "function",
           "exportada": true,
-          "params": "empresaId: string, empleadoId: string, actor: Actor, entrada: { path: string; carpeta: string; nombre: string; tipo?: string | null; tamano?: number | null }",
+          "params": "empresaId: string, empleadoId: string, actor: Actor, entrada: { path: string; carpeta: string; nombre: string; tipo?: string | null; tamano?: number | null; visible_empleado?: boolean }",
           "retorno": null,
-          "linea": 79,
+          "linea": 97,
           "resumen": "aquí solo registramos la fila en BD."
         },
         {
@@ -216577,15 +216641,24 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, docId: string",
           "retorno": null,
-          "linea": 93,
+          "linea": 115,
           "resumen": "Borra un documento (solo el gestor; scope por empresa). Quita el objeto del Storage."
+        },
+        {
+          "nombre": "cambiarVisibilidadDocumento",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, empleadoId: string, docId: string, visible: boolean",
+          "retorno": null,
+          "linea": 129,
+          "resumen": "El gestor muestra/oculta un documento al empleado. Ocultar exige que NO tenga firma (pendiente o hecha) ni sea una nómina; mostrarlo siempre se puede. Scope empresa + empleado; otro empleado/empresa ="
         }
       ],
       "tablas": [
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "f0e2cede2dba"
+      "hash": "63db7c328a9a"
     },
     {
       "ruta": "apps/rrhh/lib/empleado-auth.ts",
@@ -216882,7 +216955,7 @@
           "exportada": false,
           "params": "motivo: MotivoAnalisis",
           "retorno": "Analisis",
-          "linea": 33
+          "linea": 34
         },
         {
           "nombre": "analizarStaging",
@@ -216890,7 +216963,7 @@
           "exportada": true,
           "params": "empresaId: string, path: string, nombre: string",
           "retorno": "Promise<Analisis>",
-          "linea": 39,
+          "linea": 40,
           "resumen": "Analiza un documento del staging de la empresa. Nunca lanza por la IA: degrada a campos null."
         },
         {
@@ -216899,7 +216972,7 @@
           "exportada": true,
           "params": "firma: ModoFirma",
           "retorno": "",
-          "linea": 103
+          "linea": 106
         },
         {
           "nombre": "registrarCopia",
@@ -216907,7 +216980,7 @@
           "exportada": true,
           "params": "p: { empresaId: string; empleadoId: string; usuarioId: string; envioId: string v: { carpeta: string; nombre: string; tipo: string | null; tamano: number | null } destino: string; estado: 'pendiente_empresa' | 'pendiente' | 'no_requiere'; re",
           "retorno": "Promise<",
-          "linea": 116,
+          "linea": 119,
           "resumen": "Inserta la fila de UNA copia ya subida a Storage (`destino`) y avisa si se pide. Compartido por el envío de un documento a varios empleados (`asignarStaging`) y por «Distribuir documentos desde PDF». "
         },
         {
@@ -216916,7 +216989,7 @@
           "exportada": true,
           "params": "empresaId: string, usuarioId: string, e: EntradaAsignar, origen?: string | null",
           "retorno": "Promise<ResultadoAsignar>",
-          "linea": 166,
+          "linea": 173,
           "resumen": "Envío confirmado: una copia por empleado (mismo contenido, firma y evidencia independientes). IDEMPOTENTE por `envio_id` (uuid del cliente por documento) + empleado (índice único parcial `documentos_e"
         },
         {
@@ -216925,7 +216998,7 @@
           "exportada": true,
           "params": "ahora = new Date()",
           "retorno": "Promise<",
-          "linea": 248,
+          "linea": 258,
           "resumen": "Cron: borra las subidas al staging abandonadas (> 48 h sin confirmar). Empresa a empresa y SOLO bajo `staging/<empresa_id>/` (cada ruta pasa por `esPathStagingDe`). Un fallo en una empresa no para las"
         }
       ],
@@ -216933,7 +217006,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "80acdf922b7f"
+      "hash": "61d80316eecf"
     },
     {
       "ruta": "apps/rrhh/lib/envio-staging.ts",
@@ -217188,7 +217261,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, docId: string",
           "retorno": null,
-          "linea": 94,
+          "linea": 95,
           "resumen": "Genera y envía el código OTP de firma (10 min). Ver `@central/module-rrhh`."
         },
         {
@@ -217197,7 +217270,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, docId: string",
           "retorno": null,
-          "linea": 105,
+          "linea": 106,
           "resumen": "El gestor solicita la firma de un documento (estado_firma → 'pendiente'). Scope por empresa."
         },
         {
@@ -217206,7 +217279,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, docId: string, ctx: { ip?: string | null; user_agent?: string | null; nombre_confirmado: string; codigo?: string | null }",
           "retorno": null,
-          "linea": 110,
+          "linea": 111,
           "resumen": "El empleado firma el documento (firma avanzada propia, eIDAS art.26). Devuelve la evidencia."
         }
       ],
@@ -217215,7 +217288,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "ffa383f11301"
+      "hash": "7de81e2543d4"
     },
     {
       "ruta": "apps/rrhh/lib/firmas-panel.ts",
@@ -219568,6 +219641,47 @@
       ],
       "rutaApi": null,
       "hash": "7b8f1b198c75"
+    },
+    {
+      "ruta": "apps/rrhh/lib/visibilidad-documento.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "«Visible para el empleado» (migración 0029, `rrhh.documentos.visible_empleado`). Reglas PURAS, sin BD. · Por defecto TRUE: todo lo anterior sigue viéndose igual. · Un documento oculto no se lista, no se firma, no se avisa ni se cuenta para el empleado. · Un documento con firma (pendiente/firmado) de",
+      "exporta": [
+        "normalizarVisible",
+        "empleadoPuedeVerDocumento",
+        "validarVisibilidad"
+      ],
+      "funciones": [
+        {
+          "nombre": "normalizarVisible",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "boolean",
+          "linea": 11,
+          "resumen": "Solo un `false` explícito (o '0'/'false' de un formulario) oculta; cualquier otra cosa = visible."
+        },
+        {
+          "nombre": "empleadoPuedeVerDocumento",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: { carpeta: string; visible_empleado?: boolean | null }",
+          "retorno": "boolean",
+          "linea": 17
+        },
+        {
+          "nombre": "validarVisibilidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { carpeta: string; visible: boolean; firma: string | null | undefined }",
+          "retorno": "string | null",
+          "linea": 27,
+          "resumen": "Devuelve el mensaje de error, o null si la combinación es válida. `firma`: estado_firma de BD ('no_requiere'|'pendiente'|'pendiente_empresa'|'firmado') o modo de envío ('none'|'solo_empleado'|'empresa"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "489af15855d3"
     },
     {
       "ruta": "apps/rrhh/middleware.ts",
@@ -267022,6 +267136,7 @@
         "cvAKw",
         "claseMinimaPermiso",
         "entradaConTomadorMediador",
+        "riesgoTomadorDeMediador",
         "catalogoDe",
         "pistasOpcionesInventario",
         "claveOmitibleSinValor",
@@ -267097,7 +267212,7 @@
           "exportada": true,
           "params": "rotulo: string | null | undefined, textoAccionFinal: RegExp = RE_TEXTO_ACCION_FINAL_SIN_TEXTO",
           "retorno": "boolean",
-          "linea": 274,
+          "linea": 282,
           "resumen": "0.3.20: ¿es `rotulo` (vivo) un rótulo de avance NEUTRO para la regla {@link AvanceSinTexto}? Vacío = sí (sin rótulo, 0.3.18). Si no, tiene que ser EXACTAMENTE uno de {@link ROTULOS_AVANCE_NEUTROS_SIN_"
         },
         {
@@ -267106,7 +267221,7 @@
           "exportada": true,
           "params": "a: AvancePorId, ruta: string | null",
           "retorno": "boolean",
-          "linea": 344,
+          "linea": 352,
           "resumen": "¿La ruta del marco es la de la regla (o una de sus `rutasMarco`, solo si es `sinIdentidad`)? Pura; la repite el guard con la ruta VIVA."
         },
         {
@@ -267115,7 +267230,7 @@
           "exportada": true,
           "params": "entrada: string",
           "retorno": "boolean",
-          "linea": 434,
+          "linea": 449,
           "resumen": "¿La entrada es de SOLO LECTURA (ver `EntradaExploracion.soloLectura`)? Desconocida = no. Pura."
         },
         {
@@ -267124,7 +267239,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "v is keyof typeof ENTRADAS_EXPLORACION",
-          "linea": 438
+          "linea": 453
         },
         {
           "nombre": "D",
@@ -267132,7 +267247,7 @@
           "exportada": false,
           "params": "d: DatoCatalogo",
           "retorno": "DatoCatalogo",
-          "linea": 471
+          "linea": 486
         },
         {
           "nombre": "cvAKw",
@@ -267140,7 +267255,7 @@
           "exportada": true,
           "params": "cv: number | null",
           "retorno": "number | null",
-          "linea": 515,
+          "linea": 530,
           "resumen": "CV → kW (1 CV = 0,73549875 kW). La columna «CV/KW» del diálogo «Selección de vehículo» de Mapfre trae CV."
         },
         {
@@ -267149,7 +267264,7 @@
           "exportada": true,
           "params": "{ esMoto, cilindradaCc, potenciaKw, antiguedadBAnios }: { esMoto: boolean | null cilindradaCc: number | null potenciaKw: number | null antiguedadBAnios: number | null }",
           "retorno": "'B' | 'A1' | 'A2' | 'A' | null",
-          "linea": 525,
+          "linea": 540,
           "resumen": "moto ≤125 cc y ≤11 kW → B si lleva ≥3 años con B, si no A1; moto ≤35 kW → A2; más → A. `null` siempre que falte un dato necesario para decidir (nunca adivinar)."
         },
         {
@@ -267158,8 +267273,17 @@
           "exportada": true,
           "params": "entrada: string",
           "retorno": "boolean",
-          "linea": 583,
-          "resumen": "¿Esta entrada usa al MEDIADOR como tomador? (solo las de patinete; ver {@link EntradaExploracion.tomadorMediador})."
+          "linea": 598,
+          "resumen": "¿Esta entrada usa al MEDIADOR como tomador? (patinete y Pelayo; ver {@link EntradaExploracion.tomadorMediador})."
+        },
+        {
+          "nombre": "riesgoTomadorDeMediador",
+          "kind": "function",
+          "exportada": true,
+          "params": "m: IdentidadTomadorMediador",
+          "retorno": "RiesgoTomadorMediador",
+          "linea": 613,
+          "resumen": "`riesgo` de una exploración/pilotaje SINTÉTICO con `tomadorMediador`: solo el tomador, a partir de la identidad del mediador (`MEDIADOR.identidad` de module-seguros; este módulo no la importa: la pasa"
         },
         {
           "nombre": "catalogoDe",
@@ -267167,7 +267291,7 @@
           "exportada": true,
           "params": "ramo: string",
           "retorno": "readonly DatoCatalogo[]",
-          "linea": 598
+          "linea": 651
         },
         {
           "nombre": "pistasOpcionesInventario",
@@ -267175,7 +267299,7 @@
           "exportada": true,
           "params": "ramo: string",
           "retorno": "string[]",
-          "linea": 607,
+          "linea": 660,
           "resumen": "0.3.21 (Allianz VMP real 29/10/2026, 3c888bba…: «XIAOMI» era la opción 50 de 56 y el inventario solo llevaba 40): pistas para que el saneado conserve las opciones de un `<select>` que casan con el dat"
         },
         {
@@ -267184,7 +267308,7 @@
           "exportada": true,
           "params": "ramo: string, clave: string",
           "retorno": "boolean",
-          "linea": 614,
+          "linea": 667,
           "resumen": "¿Esta clave del ramo se puede dejar SIN rellenar si no tiene valor (exploración sin datos reales)? Ver {@link DatoCatalogo.omitibleSinValor}."
         },
         {
@@ -267193,7 +267317,7 @@
           "exportada": true,
           "params": "a: unknown, ramo: string, datosReales: unknown",
           "retorno": "boolean",
-          "linea": 623,
+          "linea": 676,
           "resumen": "0.3.20 (Allianz VMP real 29/10/2026, 5f47a553…): ¿esta acción NO hace nada en el portal? Un `rellenar` de una clave {@link DatoCatalogo.omitibleSinValor} en una exploración SIN datos reales: el worker"
         },
         {
@@ -267202,7 +267326,7 @@
           "exportada": true,
           "params": "lista: readonly unknown[], refs: ReadonlyMap<string, { el: ElementoInventario; marco: MarcoInventario }>",
           "retorno": "boolean",
-          "linea": 638,
+          "linea": 691,
           "resumen": "0.3.21 (Fidelidade real 29/10/2026, b8e871fe…, «Simulación»): la IA manda [rellenar nombre, marcar régimen, avanzar] y el botón de avance está DESHABILITADO hasta que se rellena (el portal lo habilita"
         },
         {
@@ -267211,7 +267335,7 @@
           "exportada": true,
           "params": "opcion: unknown, el: ElementoInventario",
           "retorno": "OpcionElegirNormalizada",
-          "linea": 673,
+          "linea": 726,
           "resumen": "· sinónimos `value` (de valor) y `text`/`label`/`etiqueta` (de texto), uno por clave; un índice NO (¿base 0 o 1?: ambiguo). El inventario de esa pantalla traía `opcionesTotal` 4 con 3 opciones: la cua"
         },
         {
@@ -267220,7 +267344,7 @@
           "exportada": true,
           "params": "clave: string, el: ElementoInventario",
           "retorno": "boolean",
-          "linea": 743,
+          "linea": 796,
           "resumen": "0.3.16: una clave de CONTACTO (teléfono, correo) no se escribe en un campo que se llama matrícula, código postal, población o municipio (Allianz patinete, 29/10/2026: la IA mapeó matrícula y CP a `con"
         },
         {
@@ -267229,7 +267353,7 @@
           "exportada": true,
           "params": "ramo: string, real?: { riesgo: unknown },",
           "retorno": "",
-          "linea": 752,
+          "linea": 805,
           "resumen": "Lo que la IA ve del catálogo: clave, descripción y tipo. La `pista` (el valor de prueba) SOLO de lo no personal; de un dato personal la IA no ve nada más que su clave."
         },
         {
@@ -267238,7 +267362,7 @@
           "exportada": true,
           "params": "clave: string, riesgo: unknown",
           "retorno": "",
-          "linea": 789,
+          "linea": 842,
           "resumen": "El valor REAL que la IA puede ver de una clave: id + significado, SOLO si la clave es de {@link CLAVES_VALOR_VISIBLE_IA}, no personal, con valor en el riesgo y ese id en el mapa cerrado. `null` = la I"
         },
         {
@@ -267247,7 +267371,7 @@
           "exportada": false,
           "params": "raiz: unknown, ruta: string",
           "retorno": "string | null",
-          "linea": 816
+          "linea": 869
         },
         {
           "nombre": "ddmmaaaa",
@@ -267255,7 +267379,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 827
+          "linea": 880
         },
         {
           "nombre": "resolverDato",
@@ -267263,7 +267387,7 @@
           "exportada": true,
           "params": "clave: string, ctx: ContextoDatos",
           "retorno": "DatoResuelto",
-          "linea": 835,
+          "linea": 888,
           "resumen": "El VALOR de una clave del catálogo. Solo lo llama el WORKER (justo antes de escribir en el portal): el valor no va a la IA, ni a asegura, ni al log. Fail-closed: sin valor seguro → motivo de parada."
         },
         {
@@ -267272,7 +267396,7 @@
           "exportada": true,
           "params": "clave: string, valor: string",
           "retorno": "string | null | undefined",
-          "linea": 863,
+          "linea": 916,
           "resumen": "El valor de una clave de {@link ENTEROS_PORTAL} como lo acepta un `<input type=number>` (14/10/2026, Allianz Hogar: año y m² quedaban vacíos e inválidos): solo dígitos, sin unidades («m2», «m²», «metr"
         },
         {
@@ -267281,7 +267405,7 @@
           "exportada": false,
           "params": "clave: string, ctx: ContextoDatos",
           "retorno": "DatoResuelto",
-          "linea": 879
+          "linea": 932
         },
         {
           "nombre": "valoresSensiblesExploracion",
@@ -267289,7 +267413,7 @@
           "exportada": true,
           "params": "ctx: { conDatosReales: boolean; riesgo: unknown; env: Record<string, string | undefined>; tomadorMediador?: boolean }",
           "retorno": "string[] | null",
-          "linea": 916,
+          "linea": 971,
           "resumen": "Valores que hay que QUITAR del inventario antes de mandarlo a la IA o guardarlo (`redactarValoresInventario`): el contacto de entorno siempre y, con datos reales, los del riesgo del trabajo. `null` = "
         },
         {
@@ -267298,7 +267422,7 @@
           "exportada": false,
           "params": "el: ElementoInventario",
           "retorno": null,
-          "linea": 1022
+          "linea": 1077
         },
         {
           "nombre": "relocalizarElemento",
@@ -267306,7 +267430,7 @@
           "exportada": true,
           "params": "el: ElementoInventario, marcoUrl: string, inv: InventarioDom, huellaValidada: string",
           "retorno": "string | null",
-          "linea": 1035,
+          "linea": 1090,
           "resumen": "- UN solo candidato. Si no, `null` (no se adivina). Devuelve la ref nueva. Pura."
         },
         {
@@ -267315,7 +267439,7 @@
           "exportada": false,
           "params": "o: Record<string, unknown>",
           "retorno": "DiagnosticoIncidencia",
-          "linea": 1119,
+          "linea": 1174,
           "resumen": "El diagnóstico de una incidencia, SOLO con valores de las listas cerradas (lo demás se ignora, sin tumbar la incidencia)."
         },
         {
@@ -267324,7 +267448,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "IncidenciaEjecucion[]",
-          "linea": 1131,
+          "linea": 1186,
           "resumen": "Lo que manda el worker, TOLERANTE: lo mal formado se descarta (nunca tumba el paso ni el cierre). Máx. 15. Pura."
         },
         {
@@ -267333,7 +267457,7 @@
           "exportada": false,
           "params": "i: IncidenciaEjecucion",
           "retorno": "string",
-          "linea": 1154,
+          "linea": 1209,
           "resumen": "`lote_cortado` → `lote_cortado_por_<corte>`; y el motivo de no localizar entre corchetes (`[no_visible:sin_alto]`). Pura."
         },
         {
@@ -267342,7 +267466,7 @@
           "exportada": true,
           "params": "incidencias: readonly IncidenciaEjecucion[], inventario: InventarioDom | null | undefined",
           "retorno": "string[]",
-          "linea": 1165,
+          "linea": 1220,
           "resumen": "Las incidencias como `errores` del paso: `ejecucion: rellenar m1e39 «Año de construcción» (inmueble.anio_construccion): valor_no_aplicado`. La etiqueta sale del INVENTARIO GUARDADO de ese paso (redact"
         },
         {
@@ -267351,7 +267475,7 @@
           "exportada": true,
           "params": "dato: string, el: ElementoInventario | undefined",
           "retorno": "boolean",
-          "linea": 1196,
+          "linea": 1251,
           "resumen": "¿Este `rellenar` puede REPINTAR la sección? Su clave dispara autocompletado (`CLAVES_AUTOCOMPLETADO`) o el control es un autocompletado (`role=combobox/searchbox`, `aria-autocomplete`/datalist → `auto"
         },
         {
@@ -267360,7 +267484,7 @@
           "exportada": true,
           "params": "acciones: readonly A[], inventario: InventarioDom",
           "retorno": "A[]",
-          "linea": 1211,
+          "linea": 1266,
           "resumen": "2. `avanzar` (el validador ya lo exige el último), `terminar` y `parar` (van solos). No añade, quita ni cambia acciones: solo las reordena. Pura."
         },
         {
@@ -267369,7 +267493,7 @@
           "exportada": true,
           "params": "pendientes: readonly Accion[], corte?: MotivoCorteLote, /** Por qué no se localizó la PRIMERA pendiente (la que destapó el corte por `repintado`). */ primera?: Pick<DiagnosticoIncidencia, 'motivo' | 'visibilidad'>,",
           "retorno": "IncidenciaEjecucion[]",
-          "linea": 1225,
+          "linea": 1280,
           "resumen": "Las acciones de un lote CORTADO que no se llegaron a ejecutar → incidencias `lote_cortado` (ref + clave; nunca el valor ni la opción). `parar`/`terminar` no se reportan (van solos: nunca quedan detrás"
         },
         {
@@ -267378,7 +267502,7 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 1241,
+          "linea": 1296,
           "resumen": "La línea del prompt con los motivos de `parar`, generada de {@link MOTIVOS_PARAR}."
         },
         {
@@ -267387,7 +267511,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 1245
+          "linea": 1300
         },
         {
           "nombre": "normalizarMotivoParar",
@@ -267395,7 +267519,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "MotivoParar | null",
-          "linea": 1252,
+          "linea": 1307,
           "resumen": "El motivo de `parar` que manda la IA, a su código. Admite mayúsculas, espacios/guiones por «_» y un código seguido de una explicación («dato_sensible_requerido: piden NIF», «ambiguo (…)»). Una frase l"
         },
         {
@@ -267404,7 +267528,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string",
-          "linea": 1259,
+          "linea": 1314,
           "resumen": "Para el error del validador: el motivo rechazado SOLO si es un código corto sin cifras (nunca un texto con datos)."
         },
         {
@@ -267413,7 +267537,7 @@
           "exportada": true,
           "params": "t: string | null",
           "retorno": "string | null",
-          "linea": 1300,
+          "linea": 1355,
           "resumen": "Recorta el `motivo` libre a {@link MAX_MOTIVO} caracteres con «…» (no invalida la respuesta)."
         },
         {
@@ -267422,7 +267546,7 @@
           "exportada": true,
           "params": "respuestas: readonly (RespuestaExplorador | null | undefined)[]",
           "retorno": "boolean",
-          "linea": 1327,
+          "linea": 1382,
           "resumen": "¿Algún paso anterior (validado) pulsó un `guardar_presupuesto`? Para {@link ContextoValidacion.presupuestoEnCurso}."
         },
         {
@@ -267431,7 +267555,7 @@
           "exportada": true,
           "params": "el: ElementoInventario",
           "retorno": "string",
-          "linea": 1341,
+          "linea": 1396,
           "resumen": "0.3.17: descripción corta del control rechazado para el diagnóstico (tag, type, name, clase y texto visible, cada uno ≤40 car.). Nunca el valor de un campo: de un input de texto/select/textarea no sal"
         },
         {
@@ -267440,7 +267564,7 @@
           "exportada": true,
           "params": "r: RechazoAccion",
           "retorno": "string",
-          "linea": 1350,
+          "linea": 1405,
           "resumen": "«rechazo acciones[1] avanzar r12: onclick_truncado» — la línea que se guarda en los errores del paso. Pura."
         },
         {
@@ -267449,7 +267573,7 @@
           "exportada": false,
           "params": "errores: readonly string[], lista: readonly unknown[], refs: ReadonlyMap<string, unknown>",
           "retorno": "RechazoAccion[]",
-          "linea": 1355,
+          "linea": 1410,
           "resumen": "Las acciones rechazadas de una lista de errores del validador (`acciones[i]…`), con la acción y la ref de la respuesta. Pura."
         },
         {
@@ -267458,7 +267582,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 1370
+          "linea": 1425
         },
         {
           "nombre": "plano",
@@ -267466,7 +267590,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 1371
+          "linea": 1426
         },
         {
           "nombre": "primerObjetoJsonExplorador",
@@ -267474,7 +267598,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "Record<string, unknown> | null",
-          "linea": 1374,
+          "linea": 1429,
           "resumen": "Primer objeto JSON balanceado del texto (la IA a veces añade prosa o ```json). `null` si no hay."
         },
         {
@@ -267483,7 +267607,7 @@
           "exportada": true,
           "params": "inv: InventarioDom",
           "retorno": "Map<string,",
-          "linea": 1402,
+          "linea": 1457,
           "resumen": "Índice ref → {elemento, marco} del inventario."
         },
         {
@@ -267492,7 +267616,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 1416,
+          "linea": 1471,
           "resumen": "Cadenas entre comillas de un trozo de código."
         },
         {
@@ -267501,7 +267625,7 @@
           "exportada": true,
           "params": "onclick: string | undefined, el: Pick<ElementoInventario, 'id' | 'name'>",
           "retorno": "boolean",
-          "linea": 1430,
+          "linea": 1485,
           "resumen": "0.3.16: ¿el onclick COMPLETO de una radio/casilla envía el formulario o dispara la acción de OTRO componente? Pura. Fail-closed. - `submit(…)` / `requestSubmit(…)` o un clic programático sobre otro el"
         },
         {
@@ -267510,7 +267634,7 @@
           "exportada": true,
           "params": "el: ElementoInventario",
           "retorno": "string[]",
-          "linea": 1467,
+          "linea": 1522,
           "resumen": "Todo lo que describe a un elemento (para el guard de emisión)."
         },
         {
@@ -267519,7 +267643,7 @@
           "exportada": false,
           "params": "el: ElementoInventario",
           "retorno": "boolean",
-          "linea": 1471
+          "linea": 1526
         },
         {
           "nombre": "esAvanzable",
@@ -267527,7 +267651,7 @@
           "exportada": false,
           "params": "el: ElementoInventario",
           "retorno": "boolean",
-          "linea": 1476
+          "linea": 1531
         },
         {
           "nombre": "esEnlaceAvanzable",
@@ -267535,7 +267659,7 @@
           "exportada": true,
           "params": "entrada: string, el: ElementoInventario, marco: MarcoInventario",
           "retorno": "boolean",
-          "linea": 1489,
+          "linea": 1544,
           "resumen": "Entradas de MENÚ avanzables (28/10/2026, Mapfre NSE: menú lateral de `<a>`), SOLO en entradas que lo declaran (`enlacesAvanzables`) y SOLO dentro de su aplicación: el marco (la ventana) en la ruta de "
         },
         {
@@ -267544,7 +267668,7 @@
           "exportada": true,
           "params": "entrada: string, el: ElementoInventario, marco: MarcoInventario",
           "retorno": "boolean",
-          "linea": 1511,
+          "linea": 1566,
           "resumen": "El «Aceptar» de Datos básicos del servlet de Allianz no es un button: es `<div id=\"aceptar\" onclick=\"btnAceptar();\">` (DOM real de Comunidades, 06/10/2026). El extractor del worker lo recoge SOLO con "
         },
         {
@@ -267553,7 +267677,7 @@
           "exportada": true,
           "params": "entrada: string, el: ElementoInventario, marco: MarcoInventario",
           "retorno": "boolean",
-          "linea": 1520,
+          "linea": 1575,
           "resumen": "¿Este avance es un «Aceptar» autorizado para ESTA entrada en ESTA pantalla? Además del texto exacto exige el título de la pantalla (marco del botón) y que no haya ningún título de tarificación/emisión"
         },
         {
@@ -267562,7 +267686,7 @@
           "exportada": false,
           "params": "marco: MarcoInventario",
           "retorno": "boolean",
-          "linea": 1537,
+          "linea": 1592,
           "resumen": "La lista de títulos del marco llegó en el TOPE (recortada): no se sabe qué decía el resto."
         },
         {
@@ -267571,7 +267695,7 @@
           "exportada": true,
           "params": "onclick: string | null | undefined",
           "retorno": "string",
-          "linea": 1540,
+          "linea": 1595,
           "resumen": "`onclick` normalizado para la comparación EXACTA de `AvancePorId` (sin espacios ni `;` final). Pura."
         },
         {
@@ -267580,7 +267704,7 @@
           "exportada": true,
           "params": "url: string | null | undefined",
           "retorno": "string | null",
-          "linea": 1548,
+          "linea": 1603,
           "resumen": "`pathname` de la URL de un marco (sin `;jsessionid=…` final), o `null` si no se puede leer. Pura. Por expresión y no con `new URL`: el saneado del inventario puede tapar el HOST (`http://[DATO]:puerto"
         },
         {
@@ -267589,7 +267713,7 @@
           "exportada": true,
           "params": "entrada: string, el: ElementoInventario, marco: MarcoInventario",
           "retorno": "AvancePorId | null",
-          "linea": 1559,
+          "linea": 1614,
           "resumen": "¿Es este control el avance por IDENTIDAD EXACTA (`AvancePorId`) de ESTA entrada en ESTE marco? Exige: id EXACTO, onclick EXACTO (sin recortar), texto EXACTO (y aria-label, si lo hay, igual), ruta del "
         },
         {
@@ -267598,7 +267722,7 @@
           "exportada": false,
           "params": "v: string | undefined | null",
           "retorno": "boolean",
-          "linea": 1588
+          "linea": 1643
         },
         {
           "nombre": "casaSinIdentidad",
@@ -267606,7 +267730,7 @@
           "exportada": false,
           "params": "a: AvancePorId, el: ElementoInventario",
           "retorno": "boolean",
-          "linea": 1594,
+          "linea": 1649,
           "resumen": "¿Casa la IDENTIDAD de un control sin id con una regla `sinIdentidad`? Sin `onclickExacto`: sin id y sin onclick (0.3.17). Con `onclickExacto` (0.3.18): sin id, onclick EXACTO tras `trim` (sin `onclick"
         },
         {
@@ -267615,7 +267739,7 @@
           "exportada": true,
           "params": "marco: MarcoInventario, re: RegExp",
           "retorno": "boolean",
-          "linea": 1605,
+          "linea": 1660,
           "resumen": "0.3.17: ¿hay EXACTAMENTE un control en el marco cuyo texto (o aria-label) normalizado case con la regla? Un segundo «Aceptar» (de la pantalla anterior, de un modal…) hace ambigua la identificación: no"
         },
         {
@@ -267624,7 +267748,7 @@
           "exportada": false,
           "params": "x: ElementoInventario, a: AvanceSinTexto",
           "retorno": "boolean",
-          "linea": 1615,
+          "linea": 1670,
           "resumen": "¿Este elemento tiene las CARACTERÍSTICAS del control de una regla {@link AvanceSinTexto}? (sin mirar onclick, origen, ruta ni unicidad). Pura."
         },
         {
@@ -267633,7 +267757,7 @@
           "exportada": true,
           "params": "a: AvanceSinTexto, onclick: string | null | undefined, name: string | null | undefined, opts: { nameExacto: boolean }",
           "retorno": "boolean",
-          "linea": 1631,
+          "linea": 1686,
           "resumen": "0.3.19: ¿el onclick casa la forma CERRADA de la regla (`onclickForma`)? Exige: regla con forma, onclick no recortado ni con cifras normalizadas, casa el patrón anclado (espacios colapsados), A === B c"
         },
         {
@@ -267642,7 +267766,7 @@
           "exportada": true,
           "params": "entrada: string",
           "retorno": "readonly NeutralizacionOnclick[]",
-          "linea": 1646,
+          "linea": 1701,
           "resumen": "Reglas de neutralización de onclick de la entrada (lista vacía si no tiene)."
         },
         {
@@ -267651,7 +267775,7 @@
           "exportada": true,
           "params": "reglas: readonly NeutralizacionOnclick[], c: ControlNeutralizable",
           "retorno": "string | null",
-          "linea": 1670,
+          "linea": 1725,
           "resumen": "0.3.19: el onclick con la subcadena de una regla {@link NeutralizacionOnclick} quitada (sustituida por un espacio, para no pegar trozos), o `null` si no aplica ninguna regla. Exige TODO: origen y tag "
         },
         {
@@ -267660,7 +267784,7 @@
           "exportada": true,
           "params": "entrada: string, el: ElementoInventario, marco: MarcoInventario",
           "retorno": "string | null",
-          "linea": 1698,
+          "linea": 1753,
           "resumen": "0.3.18: qué impide autorizar `el` como avance SIN TEXTO de la entrada (nombre de la condición, sin valores del portal), o `null` si se autoriza. `'sin_regla'` si la entrada no declara ninguna. Exige T"
         },
         {
@@ -267669,7 +267793,7 @@
           "exportada": true,
           "params": "entrada: string, el: ElementoInventario, marco: MarcoInventario",
           "retorno": "AvanceSinTexto | null",
-          "linea": 1733,
+          "linea": 1788,
           "resumen": "La regla {@link AvanceSinTexto} que autoriza `el` (o `null`). Pura y compartida con el worker."
         },
         {
@@ -267678,7 +267802,7 @@
           "exportada": true,
           "params": "entrada: string, el: ElementoInventario, marco: MarcoInventario",
           "retorno": "string | null",
-          "linea": 1743,
+          "linea": 1798,
           "resumen": "Por qué NO se autoriza un «Aceptar» por identidad exacta (diagnóstico para el error del validador; SIN valores del portal: solo el nombre de la condición que falla). `null` si la entrada no tiene regl"
         },
         {
@@ -267687,7 +267811,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 1782,
+          "linea": 1837,
           "resumen": "Texto que el saneado recortó (acaba en «…»): no se sabe qué decía el final."
         },
         {
@@ -267696,7 +267820,7 @@
           "exportada": true,
           "params": "entrada: string",
           "retorno": "readonly GuardadoEnDialogo[]",
-          "linea": 1785,
+          "linea": 1840,
           "resumen": "Reglas de «Guardar» en modal de la entrada (lista vacía si no tiene)."
         },
         {
@@ -267705,7 +267829,7 @@
           "exportada": true,
           "params": "entrada: string, texto: string | null | undefined, dialogo: string | null | undefined",
           "retorno": "boolean",
-          "linea": 1794,
+          "linea": 1849,
           "resumen": "¿Casan texto del botón y título del diálogo con una regla `GuardadoEnDialogo` de la entrada? Pura y compartida con el worker, que la aplica a lo que lee VIVO del DOM. Textos planos; vacíos o recortado"
         },
         {
@@ -267714,7 +267838,7 @@
           "exportada": true,
           "params": "entrada: string, el: ElementoInventario",
           "retorno": "boolean",
-          "linea": 1807,
+          "linea": 1862,
           "resumen": "¿Es este elemento del INVENTARIO un «Guardar» de modal autorizado para ESTA entrada? Exige: botón/pestaña pulsable, texto y título de diálogo exactos de una regla, aria-label (si lo hay) igual de exac"
         },
         {
@@ -267723,7 +267847,7 @@
           "exportada": true,
           "params": "entrada: string",
           "retorno": "readonly RutaTolerable[]",
-          "linea": 1819,
+          "linea": 1874,
           "resumen": "Rutas de aplicación tolerables de la entrada (lista vacía si no tiene)."
         },
         {
@@ -267732,7 +267856,7 @@
           "exportada": false,
           "params": "entrada: string, el0: ElementoInventario, marco: MarcoInventario",
           "retorno": "string[]",
-          "linea": 1828,
+          "linea": 1883,
           "resumen": "`descripcionesElemento` con la RUTA del href neutralizada si la entrada declara esa ruta de aplicación (solo `hrefRuta`, y solo si la ventana del marco es del origen de la regla: la ruta es relativa a"
         },
         {
@@ -267741,7 +267865,7 @@
           "exportada": true,
           "params": "entrada: string, el: ElementoInventario, marco: MarcoInventario",
           "retorno": "string | null",
-          "linea": 1839,
+          "linea": 1894,
           "resumen": "`null` = el botón se puede pulsar en exploración; si no, por qué no."
         },
         {
@@ -267750,7 +267874,7 @@
           "exportada": true,
           "params": "el: ElementoInventario, marco: MarcoInventario",
           "retorno": "ResultadoNavegacionLibre",
-          "linea": 1864,
+          "linea": 1924,
           "resumen": "La regla de NAVEGACIÓN LIBRE sobre un elemento del INVENTARIO (lo que el inventario no trae lo repite el worker vivo). Pura."
         },
         {
@@ -267759,7 +267883,7 @@
           "exportada": true,
           "params": "entrada: string, el: ElementoInventario, marco: MarcoInventario",
           "retorno": "boolean",
-          "linea": 1873,
+          "linea": 1933,
           "resumen": "0.3.36: `true` = el validador aceptó este avance SOLO por la navegación libre (las reglas clásicas lo rechazan: no es botón/pestaña, o es el sustantivo del desplegable de menú). El worker lo pulsa ENT"
         },
         {
@@ -267768,7 +267892,7 @@
           "exportada": true,
           "params": "el: ElementoInventario, p: PantallaGuardado",
           "retorno": "string | null",
-          "linea": 1898,
+          "linea": 1958,
           "resumen": "4. pantalla de RESULTADO con importes a la vista (o, tras un guardado previo en esta exploración, la pantalla que sigue). El worker lo repite sobre el control VIVO (`pulsarGuardadoPresupuesto`) antes "
         },
         {
@@ -267777,7 +267901,7 @@
           "exportada": true,
           "params": "entrada: unknown, ctx: ContextoValidacion",
           "retorno": "ValidacionRespuesta",
-          "linea": 1918,
+          "linea": 1978,
           "resumen": "Valida la respuesta de la IA contra la lista blanca, el catálogo y el inventario de ESA pantalla. Fail-closed: cualquier clave desconocida, texto libre donde no toca, acción fuera de lista o ref inexi"
         },
         {
@@ -267786,7 +267910,7 @@
           "exportada": true,
           "params": "motivo: MotivoParar, detalle: string | null = null",
           "retorno": "RespuestaExplorador",
-          "linea": 2157,
+          "linea": 2219,
           "resumen": "La respuesta que se manda al worker cuando algo no cuadra: parar, nunca improvisar."
         },
         {
@@ -267795,7 +267919,7 @@
           "exportada": false,
           "params": "el: ElementoInventario",
           "retorno": "boolean",
-          "linea": 2203,
+          "linea": 2265,
           "resumen": "Controles que la frontera de cuenta bancaria mira: nativos y NO nativos (mat-select, combobox/textbox ARIA). El inventario no trae `contenteditable`: ese lo caza el guard del worker (`exigirSinCuentaB"
         },
         {
@@ -267804,7 +267928,7 @@
           "exportada": true,
           "params": "inv: InventarioDom",
           "retorno": "Parada | null",
-          "linea": 2213,
+          "linea": 2275,
           "resumen": "¿Hay que PARAR antes de hacer nada en esta pantalla? `null` = no. Mira títulos, textos y nombres de campos, y la URL de los marcos (un iframe de reCAPTCHA). No es la única barrera: el guard de emisión"
         },
         {
@@ -267813,7 +267937,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "string",
-          "linea": 2256,
+          "linea": 2318,
           "resumen": "Dos FNV-1a de 32 bits con semillas distintas → hex de 16 (sin BigInt ni node:crypto: el index llega al navegador y asegura compila con target ES2017). Es una HUELLA para reconocer pantallas, no un has"
         },
         {
@@ -267822,7 +267946,7 @@
           "exportada": true,
           "params": "inv: InventarioDom",
           "retorno": "string",
-          "linea": 2272,
+          "linea": 2334,
           "resumen": "Huella ESTRUCTURAL de la pantalla: ruta de cada marco + identificadores estables de sus controles (id, name, formControlName, tipo), ordenados. No entran textos variables ni valores: dos visitas a la "
         },
         {
@@ -267831,7 +267955,7 @@
           "exportada": true,
           "params": "inv: InventarioDom",
           "retorno": "string | null",
-          "linea": 2289,
+          "linea": 2351,
           "resumen": "Huella del RELLENO de la pantalla (14/10/2026): qué controles (por `ref`) tienen ya algún valor (`conValor`), nunca el valor. Con la misma huella estructural, que cambie = la exploración AVANZA dentro"
         },
         {
@@ -267840,7 +267964,7 @@
           "exportada": true,
           "params": "huellas: readonly string[], actual: string, avancesFallidos: number, rellenos?: { anteriores: readonly (string | null)[]; actual: string | null },",
           "retorno": "boolean",
-          "linea": 2317,
+          "linea": 2379,
           "resumen": "`huellas` = las de los pasos ANTERIORES, en orden. Bucle = 2 avances sin efecto, o la actual sería la 3.ª seguida con la misma huella Y el mismo relleno (`rellenos`, alineado con `huellas`; `huellaRel"
         },
         {
@@ -267849,7 +267973,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined>",
           "retorno": "TopesExplorador",
-          "linea": 2347
+          "linea": 2409
         },
         {
           "nombre": "comprobarTopes",
@@ -267857,7 +267981,7 @@
           "exportada": true,
           "params": "c: ConsumoExplorador, t: TopesExplorador, costeSiguienteMax: number",
           "retorno": "MotivoTope | null",
-          "linea": 2372,
+          "linea": 2434,
           "resumen": "¿Se puede dar UN paso más con IA? `costeSiguienteMax` = el PEOR caso de la próxima llamada (`costeMaximoLlamada`): se para ANTES de pasarse, no después. `null` = adelante."
         },
         {
@@ -267866,7 +267990,7 @@
           "exportada": false,
           "params": "modelo: string",
           "retorno": null,
-          "linea": 2390
+          "linea": 2452
         },
         {
           "nombre": "redondeo6",
@@ -267874,7 +267998,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 2391
+          "linea": 2453
         },
         {
           "nombre": "costeMaximoLlamada",
@@ -267882,7 +268006,7 @@
           "exportada": true,
           "params": "modelo: string, caracteresEntrada: number, maxTokensSalida: number",
           "retorno": "number",
-          "linea": 2394,
+          "linea": 2456,
           "resumen": "Peor caso de una llamada: ~3 caracteres por token de entrada y TODOS los tokens de salida permitidos."
         },
         {
@@ -267891,7 +268015,7 @@
           "exportada": true,
           "params": "modelo: string, caracteresEntrada: number, caracteresSalida: number",
           "retorno": "number",
-          "linea": 2400,
+          "linea": 2462,
           "resumen": "Estimación tras la llamada (~3 caracteres por token, a la alta)."
         },
         {
@@ -267900,7 +268024,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "PresupuestoMapa | null",
-          "linea": 2443,
+          "linea": 2505,
           "resumen": "Valida un {@link PresupuestoMapa} que llega por el cable. `null` si no tiene la forma (o la referencia parece un dato personal)."
         },
         {
@@ -267909,7 +268033,7 @@
           "exportada": true,
           "params": "el: ElementoInventario",
           "retorno": "SelectorMapa | null",
-          "linea": 2478,
+          "linea": 2540,
           "resumen": "El selector estable de un elemento: id (no autogenerado) > name > formControlName > etiqueta exacta > texto exacto."
         },
         {
@@ -267918,7 +268042,7 @@
           "exportada": false,
           "params": "el: ElementoInventario, s: SelectorMapa",
           "retorno": "boolean",
-          "linea": 2487
+          "linea": 2549
         },
         {
           "nombre": "rutaMarco",
@@ -267926,7 +268050,7 @@
           "exportada": true,
           "params": "url: string",
           "retorno": null,
-          "linea": 2496,
+          "linea": 2558,
           "resumen": "Ruta del marco (sin origen): la misma pantalla puede servirse desde otro host del mismo portal."
         },
         {
@@ -267935,7 +268059,7 @@
           "exportada": true,
           "params": "meta: MetaMapa, pasos: readonly PasoExploracion[]",
           "retorno": "MapaExploracion",
-          "linea": 2518,
+          "linea": 2580,
           "resumen": "Construye el MAPA a partir de los pasos validados (el último paso de cada huella manda). Determinista: mismo input, mismo mapa. Lo que no tiene selector estable o no se mapeó a una clave del catálogo "
         },
         {
@@ -267944,7 +268068,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 2586,
+          "linea": 2648,
           "resumen": "Origen + ruta de una petición de red (sin query, fragmento ni credenciales). `null` si no es una URL http(s)."
         },
         {
@@ -267953,7 +268077,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "MapaExploracion | null",
-          "linea": 2599,
+          "linea": 2661,
           "resumen": "Valida un mapa leído de BD o de un fichero (estricto: versión 1, forma exacta). `null` si no es un mapa v1 válido. No re-deriva nada: solo comprueba forma y límites."
         },
         {
@@ -267962,13 +268086,13 @@
           "exportada": true,
           "params": "pantalla: PantallaMapaExploracion, inv: InventarioDom",
           "retorno": "RespuestaExplorador | null",
-          "linea": 2634,
+          "linea": 2696,
           "resumen": "MEMORIA: si la pantalla ya está en un mapa, el plan sale del mapa SIN IA. Cada campo y el avance tienen que encontrarse UNA sola vez en el inventario actual (si no, `null` y se pregunta a la IA). La r"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d29f92a30ff2"
+      "hash": "6bd299d86965"
     },
     {
       "ruta": "packages/module-tarificacion/src/fichas-catalogo.ts",
@@ -269719,7 +269843,7 @@
           "exportada": true,
           "params": "cuerpo: string | null | undefined, url?: string | null",
           "retorno": "boolean",
-          "linea": 456,
+          "linea": 465,
           "resumen": "Cuerpo (form-urlencoded) de una petición a una ruta TOLERADA: ¿nombra una acción de emisión real? Mira el NOMBRE de cada parámetro (`formEmision:btnEmitir=…`) y el VALOR de `javax.faces.source` / `jav"
         },
         {
@@ -269728,7 +269852,7 @@
           "exportada": true,
           "params": "nombre: string, valor: string",
           "retorno": "boolean",
-          "linea": 484,
+          "linea": 493,
           "resumen": "0.3.20 (Mapfre NSE real 29/10/2026, POST a `…/informacionGeneral/datosGenerales.jsf`): el parámetro `formDG:fechaFirmaInputDate` (la FECHA de firma, un dato del formulario) casaba con «firm» y abortab"
         },
         {
@@ -269737,7 +269861,7 @@
           "exportada": true,
           "params": "nombre: string, valor: string",
           "retorno": "boolean",
-          "linea": 510,
+          "linea": 519,
           "resumen": "0.3.22 (Mapfre NSE real 29/10/2026, dbf8ef0e…, POST a `…/informacionGeneral/datosGenerales.jsf`): `formDG:panelConfirmCTOpenedState` es el ESTADO abierto/cerrado de un modal RichFaces (`<id>OpenedStat"
         },
         {
@@ -269746,7 +269870,7 @@
           "exportada": true,
           "params": "nombre: string, valor: string, url: string | null | undefined",
           "retorno": "boolean",
-          "linea": 553,
+          "linea": 562,
           "resumen": "· el VALOR no es un nombre/rótulo de acción: ficha simple (≤20, sin «:», espacios ni signos) que no casa con ninguna lista de acción final (`RE_ACCION_REAL_TRAS_PREFIJO`, `NOMBRE_ACCION_FINAL`, `VALOR"
         },
         {
@@ -269755,7 +269879,7 @@
           "exportada": true,
           "params": "valor: string | null | undefined",
           "retorno": "ClaseValorDiagnostico",
-          "linea": 574
+          "linea": 583
         },
         {
           "nombre": "detalleCuerpoToleradoConAccionReal",
@@ -269763,7 +269887,7 @@
           "exportada": true,
           "params": "cuerpo: string | null | undefined, url?: string | null",
           "retorno": "",
-          "linea": 594,
+          "linea": 603,
           "resumen": "Como `cuerpoToleradoConAccionReal`, pero diciendo QUÉ casó (0.3.8, real 28/10/2026 18:33: el guard paró `busquedaProductos.jsf` y no se sabía por qué): el NOMBRE del parámetro (o `javax.faces.*`) y la"
         },
         {
@@ -269772,8 +269896,17 @@
           "exportada": true,
           "params": "d: { parametro: string; patron: string; parametros?: readonly HalladoCuerpo[] }, max: number = MAX_DETALLE_CUERPO_MENSAJE",
           "retorno": "string",
-          "linea": 638,
+          "linea": 647,
           "resumen": "0.3.22: el trozo del mensaje del guard con lo que casó en el cuerpo. Solo NOMBRES (y, 0.3.23, la clase del valor). 0.3.23 (real 30/10/2026: la lista salía cortada): uno: `parámetro «X» [valor: vacío] "
+        },
+        {
+          "nombre": "restoExactoPermitido",
+          "kind": "function",
+          "exportada": false,
+          "params": "r: RutaTolerable, restoRuta: string",
+          "retorno": "boolean",
+          "linea": 665,
+          "resumen": "¿El resto de ruta tras el prefijo está en `rutasExactas` (si la regla la declara)? Sin la clave = sí. PURA."
         },
         {
           "nombre": "neutralizarRutaTolerable",
@@ -269781,7 +269914,7 @@
           "exportada": true,
           "params": "texto: string | null | undefined, reglas: readonly RutaTolerable[], origenPagina?: string | null",
           "retorno": "string | null | undefined",
-          "linea": 659,
+          "linea": 675,
           "resumen": "`origenPagina`: origen de la ventana/marco donde está la ruta. Una ruta RELATIVA (`/…`) solo se tolera si es EXACTAMENTE el de la regla; sin él, nunca (fail-closed). Una URL absoluta lleva su propio o"
         },
         {
@@ -269790,7 +269923,7 @@
           "exportada": true,
           "params": "texto: string | null | undefined",
           "retorno": "boolean",
-          "linea": 700
+          "linea": 719
         },
         {
           "nombre": "tipoDocumentoDe",
@@ -269798,7 +269931,7 @@
           "exportada": true,
           "params": "documento: string | null | undefined",
           "retorno": "TipoDocumento | null",
-          "linea": 709
+          "linea": 728
         },
         {
           "nombre": "opcionTipoDocumento",
@@ -269806,13 +269939,13 @@
           "exportada": true,
           "params": "tipo: TipoDocumento, opciones: readonly { valor: string | null; texto: string | null }[]",
           "retorno": "string | null",
-          "linea": 722,
+          "linea": 741,
           "resumen": "La opción de un desplegable de «Tipo de documento» que corresponde a `tipo`, por su TEXTO (sin tildes, mayúsculas ni signos): NIF → «NIF», «DNI», «DNI/NIF», «NIF/DNI», «N.I.F.», «DNI/NIF/NIE/CIF» (0.3"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "08a86d0e758b"
+      "hash": "61aa3149aaab"
     },
     {
       "ruta": "packages/module-tarificacion/src/hogar-asesor.ts",
@@ -270738,6 +270871,82 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "b6fa899be4be"
+    },
+    {
+      "ruta": "packages/module-tarificacion/src/pelayo-contratacion.ts",
+      "ambito": "packages/module-tarificacion",
+      "resumen": "PELAYO · «Nueva contratación» y el wizard de autos (0.3.41, 04/11/2026; recorrido a mano de Alberto). PURO, sin DOM ni red. 1. mediadores.pelayo.com/portalmediador-nuevo-presupuesto › tarjeta AUTOS › modal `<pelayo-modal>` «Nueva contratación» con «Datos del Tomador» y los botones «Cancelar» / «Nuev",
+      "exporta": [
+        "esTextoNuevaContratacionPelayo",
+        "esUbicacionNuevaContratacionPelayo",
+        "esNuevaContratacionPelayoInventario",
+        "bloqueoZonaWizardPelayo"
+      ],
+      "funciones": [
+        {
+          "nombre": "plano",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string | null | undefined",
+          "retorno": null,
+          "linea": 28
+        },
+        {
+          "nombre": "truncado",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string | null | undefined",
+          "retorno": null,
+          "linea": 29
+        },
+        {
+          "nombre": "url",
+          "kind": "function",
+          "exportada": false,
+          "params": "u: string | null | undefined",
+          "retorno": "URL | null",
+          "linea": 31
+        },
+        {
+          "nombre": "esTextoNuevaContratacionPelayo",
+          "kind": "function",
+          "exportada": true,
+          "params": "t: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 42,
+          "resumen": "¿Texto ENTERO «Nueva contratación» (sin tildes, mayúsculas ni espacios de más)? Nada delante ni detrás."
+        },
+        {
+          "nombre": "esUbicacionNuevaContratacionPelayo",
+          "kind": "function",
+          "exportada": true,
+          "params": "u: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 47,
+          "resumen": "¿La URL es la del selector de nuevo presupuesto del portal de mediadores (origen EXACTO + ruta)?"
+        },
+        {
+          "nombre": "esNuevaContratacionPelayoInventario",
+          "kind": "function",
+          "exportada": true,
+          "params": "el: ElementoInventario, marco: MarcoInventario",
+          "retorno": "boolean",
+          "linea": 59,
+          "resumen": "¿Es este elemento del INVENTARIO el «Nueva contratación» del modal de «Datos del Tomador»? Exige: `<button>` (o input button/submit) no deshabilitado; texto (y aria-label, si lo hay) EXACTOS; sin href"
+        },
+        {
+          "nombre": "bloqueoZonaWizardPelayo",
+          "kind": "function",
+          "exportada": true,
+          "params": "urlPantalla: string | null | undefined, rotulos: readonly (string | null | undefined)[] = []",
+          "retorno": "string | null",
+          "linea": 80,
+          "resumen": "TOPE DURO del wizard de Pelayo: `null` = se puede pulsar; si no, el motivo. Fuera de https://apps.pelayo.com, `null` siempre (no aplica). Dentro: solo en `PREFIJO_WIZARD_AUTOS_PELAYO` + un resto EXACT"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2bf4ed04a256"
     },
     {
       "ruta": "packages/module-tarificacion/src/pista.ts",
@@ -274401,7 +274610,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5617,
-    "funciones": 22194
+    "archivos": 5622,
+    "funciones": 22210
   }
 }
