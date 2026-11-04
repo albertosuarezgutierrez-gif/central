@@ -893,6 +893,19 @@ export const AVISOS: AvisoTelegram[] = [
     que: 'No hay artículo esta quincena, y por qué: falta el token de GitHub, el borrador citaba normas sin verificar, o no se pudo abrir el PR.',
     cuando: 'Los días 1 y 15, solo cuando falla',
   },
+  {
+    // Instagram de Grupo ASegura (04/11/2026): `app/api/cron/asegura-instagram`. Nada se publica sin el ✅.
+    id: 'correduria.instagram-listo', categoria: 'correduria',
+    titulo: 'Post de Instagram listo para aprobar',
+    que: 'Imagen + texto para Instagram de Grupo ASegura, ya revisados contra el cepo de copy (RDL 3/2020). Con ✅ se publica (o, sin perfil conectado, te da imagen y texto para subirlo a mano), 🗑️ lo descarta y 🔄 escribe otro.',
+    cuando: 'Lunes, miércoles y viernes a las 08:13 (hora de invierno; 09:13 en verano)',
+  },
+  {
+    id: 'correduria.instagram-fallido', categoria: 'correduria',
+    titulo: 'El post de Instagram no ha salido',
+    que: 'No hay post hoy, y por qué: el texto no pasó el cepo de copy dos veces seguidas (precio prometido, norma no verificada…), falla la IA o falta la tabla en BD.',
+    cuando: 'Lunes, miércoles y viernes, solo cuando falla',
+  },
 ]
 
 export const AVISOS_POR_ID: ReadonlyMap<string, AvisoTelegram> =

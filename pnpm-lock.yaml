@@ -768,6 +768,9 @@ importers:
       '@anthropic-ai/sdk':
         specifier: ^0.52.0
         version: 0.52.0
+      '@central/brand':
+        specifier: workspace:*
+        version: link:../../packages/brand
       '@central/core-ai':
         specifier: workspace:*
         version: link:../../packages/core-ai
@@ -786,6 +789,9 @@ importers:
       '@central/core-identity':
         specifier: workspace:*
         version: link:../../packages/core-identity
+      '@central/core-instagram':
+        specifier: workspace:*
+        version: link:../../packages/core-instagram
       '@central/core-payments':
         specifier: workspace:*
         version: link:../../packages/core-payments
@@ -1309,6 +1315,8 @@ importers:
       jose:
         specifier: ^5.9.3
         version: 5.10.0
+
+  packages/core-instagram: {}
 
   packages/core-payments:
     dependencies:

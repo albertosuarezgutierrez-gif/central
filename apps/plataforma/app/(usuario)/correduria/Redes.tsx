@@ -4,6 +4,7 @@ import { Megaphone, Copy, Check, ExternalLink } from 'lucide-react'
 import Bloque from './Bloque'
 import { Badge, btnStyle } from '@/components/ui'
 import { BORRADORES, revisarBorrador, explicarRevision, MAX_LINKEDIN } from '@/lib/correduria/redes-borradores'
+import RedesInstagram from './RedesInstagram'
 
 /**
  * Los borradores para LinkedIn, listos para copiar.
@@ -133,6 +134,8 @@ export default function Redes() {
           })}
         </div>
       </Bloque>
+
+      <RedesInstagram />
 
       {/* Lo que falta y solo puede hacer Alberto. Va escrito aquí y no en un
           documento porque es donde se va a leer: un pendiente que vive en un
