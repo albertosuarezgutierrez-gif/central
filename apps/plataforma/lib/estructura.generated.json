@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-11-04T12:15:34Z",
+  "generadoEn": "2026-11-04T14:26:01Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -13,6 +13,7 @@
     "plataforma",
     "rrhh",
     "sivra",
+    "taller",
     "transporte"
   ],
   "matriz": "plataforma",
@@ -223,6 +224,11 @@
       "npm": "@central/module-subastas"
     },
     {
+      "id": "module-taller",
+      "tipo": "module",
+      "npm": "@central/module-taller"
+    },
+    {
       "id": "module-tarificacion",
       "tipo": "module",
       "npm": "@central/module-tarificacion"
@@ -415,6 +421,10 @@
         "estado": "usado",
         "evidencias": 2
       },
+      "taller": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "transporte": {
         "estado": "no",
         "evidencias": 0
@@ -469,6 +479,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "taller": {
+        "estado": "usado",
+        "evidencias": 3
+      },
       "transporte": {
         "estado": "usado",
         "evidencias": 2
@@ -520,6 +534,10 @@
         "evidencias": 0
       },
       "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "taller": {
         "estado": "no",
         "evidencias": 0
       },
@@ -577,6 +595,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "taller": {
+        "estado": "usado",
+        "evidencias": 4
+      },
       "transporte": {
         "estado": "usado",
         "evidencias": 4
@@ -631,6 +653,10 @@
         "estado": "usado",
         "evidencias": 5
       },
+      "taller": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "transporte": {
         "estado": "no",
         "evidencias": 0
@@ -682,6 +708,10 @@
         "evidencias": 4
       },
       "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "taller": {
         "estado": "no",
         "evidencias": 0
       },
@@ -739,6 +769,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "taller": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "transporte": {
         "estado": "no",
         "evidencias": 0
@@ -793,6 +827,10 @@
         "estado": "usado",
         "evidencias": 1
       },
+      "taller": {
+        "estado": "usado",
+        "evidencias": 20
+      },
       "transporte": {
         "estado": "usado",
         "evidencias": 3
@@ -844,6 +882,10 @@
         "evidencias": 0
       },
       "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "taller": {
         "estado": "no",
         "evidencias": 0
       },
@@ -901,6 +943,10 @@
         "estado": "usado",
         "evidencias": 2
       },
+      "taller": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "transporte": {
         "estado": "no",
         "evidencias": 0
@@ -952,6 +998,10 @@
         "evidencias": 0
       },
       "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "taller": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1009,6 +1059,10 @@
         "estado": "usado",
         "evidencias": 2
       },
+      "taller": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "transporte": {
         "estado": "no",
         "evidencias": 0
@@ -1060,6 +1114,10 @@
         "evidencias": 3
       },
       "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "taller": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1117,6 +1175,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "taller": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "transporte": {
         "estado": "no",
         "evidencias": 0
@@ -1168,6 +1230,10 @@
         "evidencias": 0
       },
       "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "taller": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1225,6 +1291,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "taller": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "transporte": {
         "estado": "no",
         "evidencias": 0
@@ -1276,6 +1346,10 @@
         "evidencias": 2
       },
       "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "taller": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1333,6 +1407,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "taller": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "transporte": {
         "estado": "no",
         "evidencias": 0
@@ -1384,6 +1462,10 @@
         "evidencias": 0
       },
       "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "taller": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1441,6 +1523,10 @@
         "estado": "usado",
         "evidencias": 2
       },
+      "taller": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "transporte": {
         "estado": "no",
         "evidencias": 0
@@ -1492,6 +1578,10 @@
         "evidencias": 0
       },
       "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "taller": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1549,6 +1639,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "taller": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "transporte": {
         "estado": "no",
         "evidencias": 0
@@ -1600,6 +1694,10 @@
         "evidencias": 0
       },
       "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "taller": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1657,6 +1755,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "taller": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "transporte": {
         "estado": "usado",
         "evidencias": 3
@@ -1708,6 +1810,10 @@
         "evidencias": 2
       },
       "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "taller": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1765,6 +1871,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "taller": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "transporte": {
         "estado": "no",
         "evidencias": 0
@@ -1816,6 +1926,10 @@
         "evidencias": 0
       },
       "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "taller": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1873,6 +1987,10 @@
         "estado": "usado",
         "evidencias": 2
       },
+      "taller": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "transporte": {
         "estado": "no",
         "evidencias": 0
@@ -1924,6 +2042,10 @@
         "evidencias": 6
       },
       "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "taller": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1981,6 +2103,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "taller": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "transporte": {
         "estado": "no",
         "evidencias": 0
@@ -2032,6 +2158,10 @@
         "evidencias": 0
       },
       "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "taller": {
         "estado": "no",
         "evidencias": 0
       },
@@ -2089,6 +2219,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "taller": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "transporte": {
         "estado": "no",
         "evidencias": 0
@@ -2140,6 +2274,10 @@
         "evidencias": 0
       },
       "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "taller": {
         "estado": "no",
         "evidencias": 0
       },
@@ -2197,6 +2335,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "taller": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "transporte": {
         "estado": "no",
         "evidencias": 0
@@ -2251,6 +2393,10 @@
         "estado": "usado",
         "evidencias": 2
       },
+      "taller": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "transporte": {
         "estado": "no",
         "evidencias": 0
@@ -2302,6 +2448,10 @@
         "evidencias": 5
       },
       "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "taller": {
         "estado": "no",
         "evidencias": 0
       },
@@ -2359,6 +2509,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "taller": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "transporte": {
         "estado": "no",
         "evidencias": 0
@@ -2410,6 +2564,10 @@
         "evidencias": 0
       },
       "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "taller": {
         "estado": "no",
         "evidencias": 0
       },
@@ -2467,6 +2625,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "taller": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "transporte": {
         "estado": "no",
         "evidencias": 0
@@ -2518,6 +2680,10 @@
         "evidencias": 0
       },
       "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "taller": {
         "estado": "no",
         "evidencias": 0
       },
@@ -2575,6 +2741,68 @@
         "estado": "no",
         "evidencias": 0
       },
+      "taller": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-taller": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "taller": {
+        "estado": "usado",
+        "evidencias": 39
+      },
       "transporte": {
         "estado": "no",
         "evidencias": 0
@@ -2626,6 +2854,10 @@
         "evidencias": 0
       },
       "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "taller": {
         "estado": "no",
         "evidencias": 0
       },
@@ -2683,6 +2915,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "taller": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "transporte": {
         "estado": "no",
         "evidencias": 0
@@ -2737,6 +2973,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "taller": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "transporte": {
         "estado": "usado",
         "evidencias": 2
@@ -2788,6 +3028,10 @@
         "evidencias": 0
       },
       "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "taller": {
         "estado": "no",
         "evidencias": 0
       },
@@ -2847,6 +3091,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "taller": {
+        "presente": false,
+        "evidencias": 0
+      },
       "transporte": {
         "presente": false,
         "evidencias": 0
@@ -2898,6 +3146,10 @@
         "evidencias": 0
       },
       "sivra": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "taller": {
         "presente": false,
         "evidencias": 0
       },
@@ -2955,6 +3207,10 @@
         "presente": true,
         "evidencias": 1
       },
+      "taller": {
+        "presente": false,
+        "evidencias": 0
+      },
       "transporte": {
         "presente": false,
         "evidencias": 0
@@ -3006,6 +3262,10 @@
         "evidencias": 0
       },
       "sivra": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "taller": {
         "presente": false,
         "evidencias": 0
       },
@@ -3063,6 +3323,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "taller": {
+        "presente": false,
+        "evidencias": 0
+      },
       "transporte": {
         "presente": false,
         "evidencias": 0
@@ -3114,6 +3378,10 @@
         "evidencias": 0
       },
       "sivra": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "taller": {
         "presente": false,
         "evidencias": 0
       },
@@ -3171,6 +3439,10 @@
         "presente": true,
         "evidencias": 30
       },
+      "taller": {
+        "presente": false,
+        "evidencias": 0
+      },
       "transporte": {
         "presente": false,
         "evidencias": 0
@@ -3224,6 +3496,10 @@
       "sivra": {
         "presente": true,
         "evidencias": 1
+      },
+      "taller": {
+        "presente": false,
+        "evidencias": 0
       },
       "transporte": {
         "presente": false,
@@ -3279,6 +3555,10 @@
         "presente": true,
         "evidencias": 23
       },
+      "taller": {
+        "presente": false,
+        "evidencias": 0
+      },
       "transporte": {
         "presente": false,
         "evidencias": 0
@@ -3333,6 +3613,10 @@
         "presente": true,
         "evidencias": 11
       },
+      "taller": {
+        "presente": false,
+        "evidencias": 0
+      },
       "transporte": {
         "presente": false,
         "evidencias": 0
@@ -3384,6 +3668,10 @@
         "evidencias": 0
       },
       "sivra": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "taller": {
         "presente": false,
         "evidencias": 0
       },
@@ -3441,6 +3729,10 @@
         "presente": true,
         "evidencias": 6
       },
+      "taller": {
+        "presente": false,
+        "evidencias": 0
+      },
       "transporte": {
         "presente": false,
         "evidencias": 0
@@ -3492,6 +3784,10 @@
         "evidencias": 0
       },
       "sivra": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "taller": {
         "presente": false,
         "evidencias": 0
       },
@@ -3549,6 +3845,10 @@
         "presente": true,
         "evidencias": 1
       },
+      "taller": {
+        "presente": false,
+        "evidencias": 0
+      },
       "transporte": {
         "presente": false,
         "evidencias": 0
@@ -3603,6 +3903,10 @@
         "presente": true,
         "evidencias": 1
       },
+      "taller": {
+        "presente": false,
+        "evidencias": 0
+      },
       "transporte": {
         "presente": false,
         "evidencias": 0
@@ -3654,6 +3958,10 @@
         "evidencias": 0
       },
       "sivra": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "taller": {
         "presente": false,
         "evidencias": 0
       },
@@ -3711,6 +4019,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "taller": {
+        "presente": false,
+        "evidencias": 0
+      },
       "transporte": {
         "presente": false,
         "evidencias": 0
@@ -3762,6 +4074,10 @@
         "evidencias": 0
       },
       "sivra": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "taller": {
         "presente": false,
         "evidencias": 0
       },
@@ -3819,6 +4135,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "taller": {
+        "presente": false,
+        "evidencias": 0
+      },
       "transporte": {
         "presente": false,
         "evidencias": 0
@@ -3870,6 +4190,10 @@
         "evidencias": 17
       },
       "sivra": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "taller": {
         "presente": false,
         "evidencias": 0
       },
@@ -3927,6 +4251,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "taller": {
+        "presente": false,
+        "evidencias": 0
+      },
       "transporte": {
         "presente": false,
         "evidencias": 0
@@ -3981,6 +4309,10 @@
         "presente": true,
         "evidencias": 3
       },
+      "taller": {
+        "presente": false,
+        "evidencias": 0
+      },
       "transporte": {
         "presente": false,
         "evidencias": 0
@@ -4032,6 +4364,10 @@
         "evidencias": 0
       },
       "sivra": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "taller": {
         "presente": false,
         "evidencias": 0
       },
@@ -4123,6 +4459,9 @@
     "module-subastas": [
       "core-catastro",
       "module-concursos"
+    ],
+    "module-taller": [
+      "module-presupuestos"
     ],
     "module-tarificacion": [
       "core-catastro",
@@ -5939,6 +6278,8 @@
       "/api/e/salir",
       "/api/e/solicitudes",
       "/api/operador/empresas",
+      "/api/operador/empresas/fichaje-taller",
+      "/api/operador/fichajes",
       "/api/operador/logos",
       "/api/operador/personas"
     ],
@@ -6034,6 +6375,16 @@
       "/api/smoobu/import",
       "/api/updates",
       "/api/updates/sync"
+    ],
+    "taller": [
+      "/api/auth/login",
+      "/api/auth/logout",
+      "/api/auth/taller",
+      "/api/cron/purgar-fotos",
+      "/api/direccion/cp",
+      "/api/direccion/vias",
+      "/api/fichar",
+      "/api/operador/talleres"
     ],
     "transporte": [
       "/api/auth/login",
@@ -6595,6 +6946,54 @@
     "sivra": [
       "gastos_fijos"
     ],
+    "taller": [
+      "sin",
+      "taller.aceites",
+      "taller.ampliaciones_fotos",
+      "taller.articulos",
+      "taller.auditoria",
+      "taller.avisos",
+      "taller.baremos",
+      "taller.bloqueos_codigo",
+      "taller.bloqueos_pin",
+      "taller.cierres_agenda",
+      "taller.citas",
+      "taller.clientes",
+      "taller.cobros",
+      "taller.configuracion",
+      "taller.consentimientos",
+      "taller.dictados",
+      "taller.facturas",
+      "taller.horario_citas",
+      "taller.invitaciones_cita",
+      "taller.iva_por_defecto",
+      "taller.leads_enviados",
+      "taller.medios_cobro",
+      "taller.movimientos_stock",
+      "taller.ordenes_trabajo",
+      "taller.ot_fotos",
+      "taller.ot_lineas",
+      "taller.ot_notas",
+      "taller.ot_propuesta_lineas",
+      "taller.ot_propuestas",
+      "taller.paquete_piezas",
+      "taller.paquete_precios",
+      "taller.paquetes",
+      "taller.partes_horas",
+      "taller.pedido_lineas",
+      "taller.pedidos",
+      "taller.presupuesto_lineas",
+      "taller.presupuestos",
+      "taller.proveedores",
+      "taller.recepcion_fotos",
+      "taller.recepciones",
+      "taller.series_factura",
+      "taller.talleres",
+      "taller.tipos_iva",
+      "taller.tipos_vehiculo",
+      "taller.usuarios_taller",
+      "taller.vehiculos"
+    ],
     "transporte": [
       "flota_conductores",
       "flota_documentos",
@@ -6856,6 +7255,7 @@
           "mariscos",
           "rrhh",
           "sivra",
+          "taller",
           "transporte"
         ]
       },
@@ -6876,6 +7276,7 @@
           "mariscos",
           "rrhh",
           "sivra",
+          "taller",
           "transporte"
         ]
       },
@@ -6896,6 +7297,7 @@
           "ialimp",
           "mariscos",
           "rrhh",
+          "taller",
           "transporte"
         ]
       },
@@ -6916,6 +7318,7 @@
           "mariscos",
           "rrhh",
           "sivra",
+          "taller",
           "transporte"
         ]
       },
@@ -6936,6 +7339,7 @@
           "mariscos",
           "rrhh",
           "sivra",
+          "taller",
           "transporte"
         ]
       },
@@ -6956,6 +7360,7 @@
           "mariscos",
           "rrhh",
           "sivra",
+          "taller",
           "transporte"
         ]
       },
@@ -6976,6 +7381,7 @@
           "ia-rest",
           "mariscos",
           "rrhh",
+          "taller",
           "transporte"
         ]
       },
@@ -6996,6 +7402,7 @@
           "housesevillana",
           "mariscos",
           "rrhh",
+          "taller",
           "transporte"
         ]
       },
@@ -7016,6 +7423,7 @@
           "ialimp",
           "mariscos",
           "rrhh",
+          "taller",
           "transporte"
         ]
       },
@@ -7036,6 +7444,7 @@
           "ialimp",
           "mariscos",
           "rrhh",
+          "taller",
           "transporte"
         ]
       },
@@ -7056,6 +7465,7 @@
           "mariscos",
           "rrhh",
           "sivra",
+          "taller",
           "transporte"
         ]
       },
@@ -7076,6 +7486,7 @@
           "ialimp",
           "mariscos",
           "rrhh",
+          "taller",
           "transporte"
         ]
       },
@@ -7096,6 +7507,7 @@
           "mariscos",
           "rrhh",
           "sivra",
+          "taller",
           "transporte"
         ]
       },
@@ -7116,6 +7528,7 @@
           "housesevillana",
           "mariscos",
           "rrhh",
+          "taller",
           "transporte"
         ]
       },
@@ -7136,6 +7549,7 @@
           "housesevillana",
           "mariscos",
           "rrhh",
+          "taller",
           "transporte"
         ]
       },
@@ -7156,6 +7570,7 @@
           "mariscos",
           "rrhh",
           "sivra",
+          "taller",
           "transporte"
         ]
       },
@@ -7176,6 +7591,7 @@
           "mariscos",
           "rrhh",
           "sivra",
+          "taller",
           "transporte"
         ]
       },
@@ -7196,6 +7612,7 @@
           "mariscos",
           "rrhh",
           "sivra",
+          "taller",
           "transporte"
         ]
       },
@@ -7216,6 +7633,7 @@
           "mariscos",
           "rrhh",
           "sivra",
+          "taller",
           "transporte"
         ]
       },
@@ -7236,6 +7654,7 @@
           "ia-rest",
           "mariscos",
           "sivra",
+          "taller",
           "transporte"
         ]
       },
@@ -7256,6 +7675,7 @@
           "housesevillana",
           "mariscos",
           "sivra",
+          "taller",
           "transporte"
         ]
       },
@@ -7276,6 +7696,7 @@
           "asegura-web",
           "housesevillana",
           "mariscos",
+          "taller",
           "transporte"
         ]
       }
@@ -7283,11 +7704,11 @@
     "reimplementaciones": []
   },
   "resumen": {
-    "verticales": 13,
-    "packages": 45,
+    "verticales": 14,
+    "packages": 46,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1887,
+    "apis": 1897,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
