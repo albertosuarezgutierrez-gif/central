@@ -21,7 +21,8 @@ export const MAX_BYTES_CAPTURA_PILOTAJE = 4 * 1024 * 1024
 
 /** `inspeccionar` (0.3.37): diagnóstico de accionabilidad de un control SIN pulsarlo (caja, visibilidad, estilos, qué lo tapa). */
 /** `cerrar_modal` (0.3.38): cierra un modal INFORMATIVO (sin campos ni términos de acción final); sin ref. El worker decide si se puede. */
-export const ACCIONES_PILOTAJE = ['pulsar', 'rellenar', 'seleccionar', 'inspeccionar', 'cerrar_modal', 'esperar', 'volver', 'fin'] as const
+/** `marcar` (0.3.50): radio/casilla (o su label si el input está oculto); el worker aplica el validador del explorador. */
+export const ACCIONES_PILOTAJE = ['pulsar', 'marcar', 'rellenar', 'seleccionar', 'inspeccionar', 'cerrar_modal', 'esperar', 'volver', 'fin'] as const
 export type AccionPilotaje = (typeof ACCIONES_PILOTAJE)[number]
 export const EFECTOS_PULSAR = ['siguiente_pantalla', 'calcular', 'abrir_seccion', 'ver_resultado'] as const
 export type ComandoPilotaje = {
@@ -44,14 +45,14 @@ export function leerComandoPilotaje(v: unknown): { ok: true; c: ComandoPilotaje 
   if (!c) return { ok: false, errores: ['comando no es un objeto'] }
   const errores: string[] = []
   const accion = ACCIONES_PILOTAJE.find((a) => a === c.accion)
-  if (!accion) return { ok: false, errores: ['accion fuera de lista (pulsar|rellenar|seleccionar|inspeccionar|cerrar_modal|esperar|volver|fin)'] }
+  if (!accion) return { ok: false, errores: ['accion fuera de lista (pulsar|marcar|rellenar|seleccionar|inspeccionar|cerrar_modal|esperar|volver|fin)'] }
   const permitidas: Record<AccionPilotaje, string[]> = {
-    pulsar: ['accion', 'ref', 'efecto'], rellenar: ['accion', 'ref', 'valor', 'dato'], seleccionar: ['accion', 'ref', 'valor'], inspeccionar: ['accion', 'ref'], cerrar_modal: ['accion'],
+    pulsar: ['accion', 'ref', 'efecto'], marcar: ['accion', 'ref'], rellenar: ['accion', 'ref', 'valor', 'dato'], seleccionar: ['accion', 'ref', 'valor'], inspeccionar: ['accion', 'ref'], cerrar_modal: ['accion'],
     esperar: ['accion', 'ms'], volver: ['accion'], fin: ['accion'],
   }
   for (const k of Object.keys(c)) if (!permitidas[accion].includes(k)) errores.push(`clave «${k.slice(0, 30)}» no se admite en ${accion}`)
   const out: ComandoPilotaje = { accion }
-  if (accion === 'pulsar' || accion === 'rellenar' || accion === 'seleccionar' || accion === 'inspeccionar') {
+  if (accion === 'pulsar' || accion === 'marcar' || accion === 'rellenar' || accion === 'seleccionar' || accion === 'inspeccionar') {
     if (typeof c.ref !== 'string' || !RE_REF.test(c.ref)) errores.push('ref tiene que ser un ref del inventario (p. ej. m0e10)')
     else out.ref = c.ref
   }
