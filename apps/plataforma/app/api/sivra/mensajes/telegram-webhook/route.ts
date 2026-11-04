@@ -1061,7 +1061,7 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
       const mensajeId: number | undefined = cb.message?.message_id
       if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n⏳ <i>Pulsado…</i>`).catch(() => {})
       after(async () => {
-        const r = await publicarRenovacionAsegura({ presupuestoId: d.presupuestoId, actor: 'telegram:titular', telegramMessageId: mensajeId ?? null }, 'sistema:telegram-renovacion')
+        const r = await publicarRenovacionAsegura({ presupuestoId: d.presupuestoId, actor: 'telegram:titular', via: 'telegram', telegramMessageId: mensajeId ?? null }, 'sistema:telegram-renovacion')
           .catch(() => ({ status: 502, json: null }))
         const linea = lineaTrasPublicarCrv(estadoCrv(r))
         if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${linea}`).catch(() => {})

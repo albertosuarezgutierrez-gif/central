@@ -54,3 +54,18 @@ test('cepo: el cuerpo al puente lleva la identidad de la SESIÓN y nunca un clie
   assert.match(ruta, /identidad\.corredor/)
   assert.doesNotMatch(ruta, /clienteId/)
 })
+
+test('🪤 leer la renovación: «no es renovación» ≠ «no se ha podido leer» (fail-closed)', async () => {
+  const { renovacionTrasFallo, RENOVACION_NO_DISPONIBLE } = await import('./renovacion-vista.ts')
+  // Sin la migración (falta la columna) no PUEDE haber renovaciones: es el presupuesto de siempre.
+  assert.equal(renovacionTrasFallo(new Error('column "modo" does not exist (42703)')), null)
+  // Con la migración pero sin GRANT, caída de red… NO se pinta como presupuesto normal con Aceptar/Firmar.
+  assert.equal(renovacionTrasFallo(new Error('permission denied for table presupuesto (42501)')), RENOVACION_NO_DISPONIBLE)
+  assert.equal(renovacionTrasFallo(new Error('timeout')), RENOVACION_NO_DISPONIBLE)
+  const src = readFileSync(new URL('./presupuesto.ts', import.meta.url), 'utf8')
+  const leer = src.slice(src.indexOf('async function leerRenovacion'), src.indexOf('async function leerActual'))
+  assert.match(leer, /return renovacionTrasFallo\(e\)/)
+  const pagina = readFileSync(new URL('../app/(portal)/boveda/presupuesto/[id]/page.tsx', import.meta.url), 'utf8')
+  assert.match(pagina, /const puedeAceptar = p\.renovacion === null && /, 'Aceptar/Firmar solo si consta que NO es renovación')
+  assert.match(pagina, /TEXTOS_RENOVACION\.lecturaNoDisponible/)
+})

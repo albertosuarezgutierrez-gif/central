@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { tgSend } from '@central/core-telegram'
 
 import { presupuestoAbiertoAlCliente } from '@/lib/presupuesto'
 import { pedirEleccion } from '@/lib/renovacion-vista'
@@ -14,7 +13,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
  *   { presupuestoId, eleccion:'opcion', opcionId } | { presupuestoId, eleccion:'renovacion' }
  *
  * NO contrata, NO firma, NO emite: asegura (puente) resuelve la ficha por `portal_vinculo` con la identidad de la SESIÓN,
- * anota la elección y devuelve el aviso, que aquí se manda a Alberto por Telegram. La vista de corredor no elige (403).
+ * anota la elección y manda él mismo el Telegram a Alberto (si no sale, queda en el historial de la ficha: `avisarEleccion`).
+ * La vista de corredor no elige (403).
  * 503 = no disponible (falta la migración o el puente): nunca se finge una elección guardada.
  */
 export async function POST(req: Request) {
@@ -37,18 +37,7 @@ export async function POST(req: Request) {
   if (!(await presupuestoAbiertoAlCliente(presupuestoId))) return NextResponse.json({ estado: 'no_encontrado' }, { status: 404 })
 
   const r = await pedirEleccion(identidad.id, presupuestoId, eleccion)
-  if (r.estado === 'ok') {
-    if (r.aviso) {
-      // Best effort: la elección ya está anotada en su ficha (historial) y en el presupuesto.
-      try {
-        const id = await tgSend(r.aviso)
-        if (!id) console.warn('[presupuesto/elegir] Telegram sin canal o no salió: la elección no ha llegado por Telegram')
-      } catch (e) {
-        console.warn('[presupuesto/elegir] no se pudo avisar por Telegram:', e instanceof Error ? e.message : e)
-      }
-    }
-    return NextResponse.json({ estado: 'ok' })
-  }
+  if (r.estado === 'ok') return NextResponse.json({ estado: 'ok' })
   const status = r.estado === 'limite' ? 429 : r.estado === 'caducado' ? 410 : r.estado === 'no_disponible' ? 503 : 502
   return NextResponse.json({ estado: r.estado }, { status })
 }

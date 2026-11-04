@@ -14,7 +14,7 @@ import { calcularVencimiento, compararOfertas, esCarteraEnVigor, ofertaDeAvant2,
 import { generarTokenVista, hashTokenVista } from '@central/module-seguros-portal'
 import { inmuebleUnicoCatastro } from '@central/module-tarificacion'
 import { inmueblesPorDireccion } from '@central/core-catastro/http'
-import { tgSendButtons } from '@central/core-telegram'
+import { tgSend, tgSendButtons } from '@central/core-telegram'
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
@@ -34,10 +34,11 @@ import { URL_PLATAFORMA_DEFECTO, enlaceFichaCliente } from './datos-cotizados'
 import { propio } from './comparativa-ia-servicio'
 import { nombreDePila } from './presupuesto-rpa-reglas'
 import {
-  ACTOR_RENOVACION, CLAVE_CATASTRO_RENOVACION, EVENTO_ELECCION, EVENTO_PUBLICADO, EVENTO_REVISION_TG, MAX_AVANT2_RENOVACION, MODO_RENOVACION,
-  botonesRevision, compararConRenovacion, completarViviendaConCatastro, decidirDestinatarios, decidirEleccion, decidirPreparacion,
-  filaOfertaActual, filaOfertaAvant2, lineaHistorialEleccion, textoEleccion, textoRevision,
-  type DecisionDestinatarios, type Eleccion, type EstadoCatastroRenovacion, type OpcionComparada, type QuienVeEnApp, type RenovacionActual,
+  ACTOR_RENOVACION, CLAVE_CATASTRO_RENOVACION, EVENTO_AVISO_FALLIDO, EVENTO_ELECCION, EVENTO_PUBLICADO, EVENTO_REVISION_TG, MAX_AVANT2_RENOVACION, MODO_RENOVACION,
+  botonesRevision, compararConRenovacion, completarViviendaConCatastro, contarVinculadasQueOperan, decidirDestinatarios, decidirEleccion, decidirMensajeVigente,
+  decidirPreparacion, filaOfertaActual, filaOfertaAvant2, fusionarViviendaCatastro, lineaHistorialAvisoFallido, lineaHistorialEleccion, lineaHistorialPreparada,
+  textoEleccion, textoRevision,
+  type DecisionDestinatarios, type Eleccion, type EstadoCatastroRenovacion, type OpcionComparada, type QuienVeEnApp, type RenovacionActual, type ViaPublicar,
 } from './renovacion-alternativas-reglas'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -91,13 +92,14 @@ async function leerPoliza(correduriaId: string, polizaId: string) {
 }
 
 /**
- * Quién verá el presupuesto en la app: las identidades vinculadas a la ficha del TOMADOR (sin vistas de corredor), y quién
+ * Quién verá el presupuesto en la app: las identidades vinculadas a la ficha del TOMADOR con nivel de OPERAR (sin vistas de
+ * corredor; quien solo ve no puede elegir, así que no cuenta para un ✅ publicable), y quién
  * ve ESTA póliza por otra vía (autorización vigente del tomador o figurar en ella) y NO lo verá. `null` = no se pudo mirar.
  */
 export async function quienVeEnApp(correduriaId: string, clienteId: string, polizaId: string): Promise<QuienVeEnApp | null> {
   try {
-    const [v] = await db().$queryRaw<{ n: number }[]>`
-      select count(distinct identidad_id)::int as n from portal_vinculo
+    const vinculos = await db().$queryRaw<{ identidadId: string; nivel: string }[]>`
+      select identidad_id::text as "identidadId", nivel::text as nivel from portal_vinculo
       where correduria_id = ${correduriaId}::uuid and cliente_id = ${clienteId}::uuid and origen <> 'corredor'`
     const aut = await db().$queryRaw<{ nombre: string | null }[]>`
       select c.nombre from portal_autorizacion a
@@ -111,7 +113,7 @@ export async function quienVeEnApp(correduriaId: string, clienteId: string, poli
       where i.correduria_id = ${correduriaId}::uuid and i.poliza_id = ${polizaId}::uuid and i.cliente_id <> ${clienteId}::uuid
         and exists (select 1 from portal_vinculo pv where pv.correduria_id = i.correduria_id and pv.cliente_id = i.cliente_id and pv.origen <> 'corredor')`
     return {
-      vinculadasTomador: v?.n ?? 0,
+      vinculadasTomador: contarVinculadasQueOperan(vinculos),
       otrosVenPoliza: [
         ...aut.map((a) => ({ nombre: nombreDePila(a.nombre), via: 'autorizacion' as const })),
         ...inter.map((a) => ({ nombre: nombreDePila(a.nombre), via: 'interviniente' as const })),
@@ -126,7 +128,7 @@ export async function quienVeEnApp(correduriaId: string, clienteId: string, poli
 // ─── Catastro (hogar) ────────────────────────────────────────────────────────
 
 /** Completa `info_riesgo.datosVivienda` de la oportunidad con el Catastro. Nunca lanza; nunca pisa lo escrito ni lo confirmado. */
-async function catastroDeOportunidad(correduriaId: string, oportunidadId: string, ahora: Date): Promise<EstadoCatastroRenovacion> {
+async function catastroDeOportunidad(correduriaId: string, oportunidadId: string, ahora: Date, intento = 1): Promise<EstadoCatastroRenovacion> {
   try {
     const [o] = await db().$queryRaw<{ v: Record<string, unknown> | null }[]>`
       select info_riesgo->'datosVivienda' as v from oportunidades where id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid`
@@ -153,15 +155,20 @@ async function catastroDeOportunidad(correduriaId: string, oportunidadId: string
     }, ahora.toISOString())
     if (r.estado !== 'completada') return r
     const marca = { consultadoAt: ahora.toISOString(), anadidos: r.anadidos, distintos: r.distintos }
-    // Merge SOLO de las claves del Catastro; `confirmadoAt` queda como estaba (sin confirmar). El bloque confirmado no llega aquí.
-    await db().$executeRaw`
+    // Gana el dato EXISTENTE (`fusionarViviendaCatastro`) y el UPDATE va condicionado a lo LEÍDO (compare-and-swap): si
+    // alguien escribió la vivienda entre la lectura y aquí (el Catastro tarda segundos), no se pisa: se relee y se rehace
+    // una vez; si vuelve a cambiar, no se escribe. `confirmadoAt` sigue vacío (el bloque confirmado no llega aquí).
+    const fusion = fusionarViviendaCatastro(v, r.cambios)
+    const n = await db().$executeRaw`
       update oportunidades
       set info_riesgo = jsonb_set(
-            jsonb_set(coalesce(info_riesgo, '{}'::jsonb), '{datosVivienda}', coalesce(info_riesgo->'datosVivienda', '{}'::jsonb) || ${JSON.stringify(r.cambios)}::jsonb),
+            jsonb_set(coalesce(info_riesgo, '{}'::jsonb), '{datosVivienda}', ${JSON.stringify(fusion)}::jsonb),
             ${`{${CLAVE_CATASTRO_RENOVACION}}`}::text[], ${JSON.stringify(marca)}::jsonb),
           updated_at = now()
       where id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid
+        and coalesce(info_riesgo->'datosVivienda', '{}'::jsonb) = ${JSON.stringify(v)}::jsonb
         and coalesce(info_riesgo->'datosVivienda'->>'confirmadoAt', '') = ''`
+    if (n === 0) return intento < 2 ? catastroDeOportunidad(correduriaId, oportunidadId, ahora, intento + 1) : { estado: 'error' }
     anotarCambio({ entidad: 'oportunidad', id: oportunidadId, campo: 'datosVivienda.catastro', antes: null, despues: r.anadidos.join(',') || 'consultado' })
     return { estado: 'completada', anadidos: r.anadidos, distintos: r.distintos }
   } catch (e) {
@@ -338,6 +345,10 @@ export async function prepararRenovacion(correduriaId: string, e: { polizaId: st
       select: { id: true },
     })
     await tx.$executeRaw`update presupuesto set modo = ${MODO_RENOVACION} where id = ${creado.id}::uuid and correduria_id = ${correduriaId}::uuid`
+    await tx.$executeRaw`
+      insert into historial_interno (correduria_id, cliente_id, tipo, texto)
+      values (${correduriaId}::uuid, ${op.clienteId}::uuid, cast('gestion' as tipo_historial_interno),
+              ${lineaHistorialPreparada(op.ramo ?? pol.ramo ?? 'otros', opcionesBase.length)})`
     return { nuevo: true as const, id: creado.id }
   }, { timeout: 20_000, maxWait: 10_000 })
 
@@ -382,11 +393,11 @@ export type ResultadoPublicar =
   | { estado: 'sin_migracion' | 'canal_no_disponible' | 'no_vigente' | 'caducado' | 'retirado' | 'no_encontrado' | 'invalido' | 'sin_necesidades' | 'error'; status: number; motivo: string }
 
 /**
- * Publica el borrador de renovación en la app del tomador. `telegramMessageId` (si viene del botón) tiene que ser el del
- * ÚLTIMO mensaje de revisión de ese borrador. Al publicar, Alberto da por REVISADAS las ofertas de las opciones visibles
+ * Publica el borrador de renovación en la app del tomador. Desde Telegram (`via` ≠ 'pantalla') es OBLIGATORIO el
+ * `telegramMessageId` del botón y tiene que ser el del ÚLTIMO mensaje de revisión de ese borrador. Al publicar, Alberto da por REVISADAS las ofertas de las opciones visibles
  * (el trigger de la BD lo vuelve a exigir). Un solo uso: dos pulsaciones = una publicación (CAS sobre `enviado_at`).
  */
-export async function publicarRenovacion(correduriaId: string, e: { presupuestoId: string; actor: string; telegramMessageId?: number | null }, ahora: Date = new Date()): Promise<ResultadoPublicar> {
+export async function publicarRenovacion(correduriaId: string, e: { presupuestoId: string; actor: string; via: ViaPublicar; telegramMessageId?: number | null }, ahora: Date = new Date()): Promise<ResultadoPublicar> {
   if (!UUID.test(e.presupuestoId)) return { estado: 'invalido', status: 422, motivo: 'presupuestoId no válido' }
   if (!(await migracionRenovacion())) return { estado: 'sin_migracion', status: 503, motivo: 'Falta aplicar la migración 2026-11-05b.' }
   const [p] = await db().$queryRaw<{ id: string; cliente_id: string; poliza_id: string | null; oportunidad_id: string | null; ramo: string; modo: string | null; enviado_at: Date | null; retirado_at: Date | null; vence_el: Date; necesidades: string | null }[]>`
@@ -398,9 +409,12 @@ export async function publicarRenovacion(correduriaId: string, e: { presupuestoI
   if (p.vence_el.getTime() < ahora.getTime()) return { estado: 'caducado', status: 409, motivo: 'Los precios han caducado.' }
   // Exigencias y necesidades (art. 175.1 RDL 3/2020): la misma puerta que el envío por correo/WhatsApp (`envio-presupuesto`).
   if (!p.necesidades?.trim()) return { estado: 'sin_necesidades', status: 409, motivo: 'Antes de publicarlo, escribe sus exigencias y necesidades en el presupuesto (ficha de la póliza → Presupuestos).' }
-  if (typeof e.telegramMessageId === 'number') {
+  // Desde Telegram, SIEMPRE el message_id del botón y el del último mensaje de revisión (sin él no se publica).
+  if (e.via !== 'pantalla') {
     const ultimo = await db().presupuestoEvento.findFirst({ where: { presupuestoId: p.id, tipo: EVENTO_REVISION_TG }, orderBy: { ocurridoAt: 'desc' }, select: { detalle: true } })
-    if ((ultimo?.detalle as { messageId?: unknown } | undefined)?.messageId !== e.telegramMessageId) return { estado: 'no_vigente', status: 409, motivo: 'Ese mensaje no es el último de este borrador.' }
+    const idUltimo = (ultimo?.detalle as { messageId?: unknown } | undefined)?.messageId
+    const vig = decidirMensajeVigente({ via: 'telegram', pedido: e.telegramMessageId ?? null, ultimo: typeof idUltimo === 'number' ? idUltimo : null })
+    if (!vig.ok) return { estado: 'no_vigente', status: 409, motivo: vig.motivo }
   }
   const dest = decidirDestinatarios(await quienVeEnApp(correduriaId, p.cliente_id, p.poliza_id))
   // 503 `canal_no_disponible`: no hay a quién publicarlo. NO es «el envío falló» (502).
@@ -478,4 +492,33 @@ export async function elegirRenovacion(correduriaId: string, identidadId: string
       aviso: textoEleccion({ tomador: nombreDePila(pr.tomador), ramo: p.ramo, eleccion, opcion: op, primaRenovacion: typeof ren === 'number' ? ren : null, enlace: enlaceFichaCliente(p.cliente_id, plataforma()), cambio: true }),
     }
   }, { timeout: 15_000, maxWait: 8_000 })
+}
+
+/**
+ * El Telegram INTERNO a Alberto con la elección (lo llama el puente en `after()`, ya respondido el portal). Si no sale
+ * (sin canal o fallo), NO se pierde: evento `renovacion_eleccion_aviso_fallido` con el motivo + línea en el historial de la
+ * ficha (lo que ve Alberto en plataforma) + log. No hay cron de reintento de Telegram: el historial es el rastro. Nunca lanza.
+ */
+export async function avisarEleccion(correduriaId: string, presupuestoId: string, aviso: string): Promise<boolean> {
+  let motivo = 'sin_canal'
+  try {
+    const id = await tgSend(aviso)
+    if (id !== null) return true
+  } catch (x) {
+    motivo = 'error_telegram'
+    registrarErrorCartera('renovacion/aviso-eleccion', x)
+  }
+  console.warn(`[renovacion] ${presupuestoId}: el Telegram de la elección no salió (${motivo})`)
+  try {
+    await db().$transaction(async (tx) => {
+      await tx.presupuestoEvento.create({ data: { presupuestoId, tipo: EVENTO_AVISO_FALLIDO, origen: 'sistema', detalle: { motivo } } })
+      await tx.$executeRaw`
+        insert into historial_interno (correduria_id, cliente_id, tipo, texto)
+        select p.correduria_id, p.cliente_id, cast('gestion' as tipo_historial_interno), ${lineaHistorialAvisoFallido(motivo)}
+        from presupuesto p where p.id = ${presupuestoId}::uuid and p.correduria_id = ${correduriaId}::uuid`
+    })
+  } catch (x) {
+    registrarErrorCartera('renovacion/aviso-eleccion-rastro', x)
+  }
+  return false
 }

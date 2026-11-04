@@ -1,7 +1,7 @@
 -- 2026-11-05b — RENOVACIÓN CON ALTERNATIVAS en la app del cliente (Alberto, 04/11/2026).
 -- Código: apps/asegura/lib/renovacion-alternativas.ts (BD) + renovacion-alternativas-reglas.ts (PURO, con test),
--- rutas /api/operador/renovacion/{preparar,enviar} y la acción `elegir_renovacion` del puente /api/portal/presupuesto;
--- en el portal, lib/presupuesto-renovacion.ts (lectura fail-closed) y el bloque ElegirRenovacion.
+-- rutas /api/operador/renovacion/{preparar,publicar} y la acción `elegir_renovacion` del puente /api/portal/presupuesto;
+-- en el portal, lib/presupuesto.ts (`leerRenovacion`, lectura fail-closed) + lib/renovacion-vista.ts y el bloque ElegirRenovacion.
 --
 -- Qué añade a `seguros.presupuesto` (ni una tabla nueva):
 --   · `modo`               NULL = el presupuesto de siempre; 'renovacion' = «tu renovación actual vs. alternativas» de una
@@ -72,7 +72,7 @@ COMMIT;
 --                      'presupuesto_canal_aviso_check', 'presupuesto_app_solo_renovacion');               -- 5 filas
 --   select column_name from information_schema.column_privileges
 --    where table_schema = 'seguros' and table_name = 'presupuesto' and grantee = 'prisma_asegura_portal'
---      and column_name like 'eleccion%' or column_name = 'modo';                                          -- SELECT
+--      and (column_name like 'eleccion%' or column_name = 'modo');                                        -- SELECT
 --
 -- ─── ROLLBACK (se pierde qué eligió cada cliente; los presupuestos publicados por 'app' vuelven a no tener canal) ───
 --   BEGIN;

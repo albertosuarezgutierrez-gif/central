@@ -68,9 +68,12 @@ export function prepararRenovacionAsegura(e: { polizaId: string; actor: string }
   return llamar('/api/operador/renovacion/preparar', { polizaId: e.polizaId, actor: e.actor })
 }
 
-/** Publica en la app (el ✅). Con `telegramMessageId`, asegura exige que sea el último mensaje de revisión. */
-export function publicarRenovacionAsegura(e: { presupuestoId: string; actor: string; telegramMessageId?: number | null }, actorPuerto?: string): Promise<Reenvio> {
-  return llamar('/api/operador/renovacion/publicar', { presupuestoId: e.presupuestoId, actor: e.actor, ...(typeof e.telegramMessageId === 'number' ? { telegramMessageId: e.telegramMessageId } : {}) }, actorPuerto, 25_000)
+/**
+ * Publica en la app (el ✅). `via: 'telegram'`: asegura EXIGE `telegramMessageId` y que sea el último mensaje de revisión
+ * (sin él, 409). `via: 'pantalla'`: el botón de la ficha, con sesión de la correduría.
+ */
+export function publicarRenovacionAsegura(e: { presupuestoId: string; actor: string; via: 'telegram' | 'pantalla'; telegramMessageId?: number | null }, actorPuerto?: string): Promise<Reenvio> {
+  return llamar('/api/operador/renovacion/publicar', { presupuestoId: e.presupuestoId, actor: e.actor, via: e.via, ...(typeof e.telegramMessageId === 'number' ? { telegramMessageId: e.telegramMessageId } : {}) }, actorPuerto, 25_000)
 }
 
 /** El `estado` de la respuesta (para la línea de Telegram). Nunca lanza. */

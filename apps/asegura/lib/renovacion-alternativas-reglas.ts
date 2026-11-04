@@ -19,6 +19,7 @@
 
 import type { Boton } from '@central/core-telegram'
 import { eur } from './dinero.ts'
+import { puedeOperar } from './ficha-de-poliza.ts'
 
 export const MODO_RENOVACION = 'renovacion'
 export const ACTOR_RENOVACION = 'sistema:renovacion-alternativas'
@@ -28,6 +29,8 @@ export const CLAVE_CATASTRO_RENOVACION = 'renovacionCatastro'
 export const EVENTO_REVISION_TG = 'renovacion_revision_telegram'
 export const EVENTO_PUBLICADO = 'renovacion_publicada'
 export const EVENTO_ELECCION = 'renovacion_eleccion_cliente'
+/** El Telegram a Alberto con la elección del cliente NO salió (queda también en el historial de la ficha, con su motivo). */
+export const EVENTO_AVISO_FALLIDO = 'renovacion_eleccion_aviso_fallido'
 /** Cambios de opinión del cliente en 24 h: más que esto es un bucle, no una decisión. */
 export const MAX_ELECCIONES_DIA = 5
 /** Cuántas cotizaciones de Avant2 (las más baratas por compañía y nivel) entran como alternativas. */
@@ -220,6 +223,21 @@ export function completarViviendaConCatastro(vivienda: Record<string, unknown> |
   return { estado: 'completada', cambios, anadidos, distintos }
 }
 
+/**
+ * La fusión que se ESCRIBE (revisión 04/11/2026): en los datos del seguro GANA el dato existente (`cambios || existente`):
+ * lo que alguien escribió entre la lectura y la escritura no se pisa; un hueco vacío sí se rellena. Las marcas de la
+ * consulta (`catastro*`, `usoCatastral`) son las de ESTA consulta. El UPDATE además va condicionado a lo leído (CAS).
+ */
+export function fusionarViviendaCatastro(existente: Record<string, unknown> | null, cambios: Record<string, unknown>): Record<string, unknown> {
+  const e = existente ?? {}
+  const datos = new Set<string>(CAMPOS_RELLENA_CATASTRO)
+  const out: Record<string, unknown> = { ...e }
+  for (const [k, v] of Object.entries(cambios)) {
+    if (!datos.has(k) || vacio(e[k])) out[k] = v
+  }
+  return out
+}
+
 export const ETIQUETA_CAMPO_CATASTRO: Readonly<Record<CampoRellenaCatastro, string>> = {
   referenciaCatastral: 'referencia catastral', cp: 'código postal', metrosCuadrados: 'superficie', anioConstruccion: 'año de construcción',
 }
@@ -258,6 +276,11 @@ export type QuienVeEnApp = {
   vinculadasTomador: number
   /** Nombres de pila de quien ve ESTA póliza en su app por otra vía (autorización vigente o figurar en ella) y NO verá el presupuesto. `null` = desconocido. */
   otrosVenPoliza: { nombre: string | null; via: 'autorizacion' | 'interviniente' }[]
+}
+
+/** Identidades (sin repetir) cuyo vínculo con la ficha del tomador deja OPERAR: quien solo ve (`tarjeta`, `completo`) no puede elegir. */
+export function contarVinculadasQueOperan(vinculos: readonly { identidadId: string; nivel: string }[]): number {
+  return new Set(vinculos.filter((v) => typeof v.identidadId === 'string' && v.identidadId.trim() !== '' && puedeOperar(v.nivel)).map((v) => v.identidadId.trim())).size
 }
 
 export type DecisionDestinatarios =
@@ -419,4 +442,36 @@ export function lineaHistorialEleccion(e: Eleccion, opcion: { compania: string; 
   return e.tipo === 'renovacion'
     ? `El cliente elige en la app quedarse con su renovación de ${ramo} (no emite nada; pendiente de Alberto).`
     : `El cliente elige en la app la alternativa ${opcion ? `${opcion.compania} — ${opcion.producto}` : '(opción)'} para su ${ramo} (no emite nada; pendiente de Alberto).`
+}
+
+// ─── 9. Revisión adversarial (04/11/2026) ─────────────────────────────────────
+
+export const MOTIVO_RENOVACION_SIN_FIRMA = 'Esta es tu renovación con alternativas: aquí no se acepta ni se firma. Elige en la propia página («Quiero esta opción» o «Me quedo con mi renovación») y tu corredor te dirá si hace falta firmar algo.'
+
+/** Una RENOVACIÓN (modo) no entra por preparar/código/firmar del presupuesto de siempre. `null` = puede seguir. */
+export function bloqueoFirmaRenovacion(modo: string | null | undefined): string | null {
+  return modo === MODO_RENOVACION ? MOTIVO_RENOVACION_SIN_FIRMA : null
+}
+
+export type ViaPublicar = 'telegram' | 'pantalla'
+
+/**
+ * ¿Vale esta publicación? Desde TELEGRAM hace falta el message_id del botón y que sea el del ÚLTIMO mensaje de revisión
+ * registrado (sin id o sin revisión registrada: no). Desde la PANTALLA (sesión de plataforma) no hay mensaje que mirar.
+ */
+export function decidirMensajeVigente(e: { via: ViaPublicar; pedido: number | null; ultimo: number | null }): { ok: true } | { ok: false; motivo: string } {
+  if (e.via === 'pantalla') return { ok: true }
+  if (typeof e.pedido !== 'number' || !Number.isInteger(e.pedido)) return { ok: false, motivo: 'Desde Telegram hace falta el mensaje del botón: no se publica sin él.' }
+  if (e.ultimo !== e.pedido) return { ok: false, motivo: 'Ese mensaje no es el último de este borrador.' }
+  return { ok: true }
+}
+
+/** Historial interno al PREPARAR (como al publicar y al elegir). Sin importes ni datos personales. */
+export function lineaHistorialPreparada(ramo: string, nOpciones: number): string {
+  return `Renovación con alternativas de ${ramo} preparada (${nOpciones === 1 ? 'una alternativa' : `${nOpciones} alternativas`}): borrador pendiente de revisar, no ha salido nada al cliente.`
+}
+
+/** Historial interno cuando el Telegram de la elección no sale: la elección ya está guardada; lo que falta es que Alberto lo sepa. */
+export function lineaHistorialAvisoFallido(motivo: string): string {
+  return `⚠️ El cliente eligió en la app, pero el aviso por Telegram a Alberto NO salió (${motivo.slice(0, 80)}). Revisa su elección en el presupuesto.`
 }

@@ -56,6 +56,7 @@ import { garantiasDeJson } from './todas-las-opciones'
 import { origenVista, type OrigenVista } from './presupuesto-ofertas-vista'
 import { abiertoAlCliente } from './presupuesto-publicado'
 import { coberturasDeJson, leerFirmeza, leerSinEquivalente, esPapel, type Firmeza, type PapelPortada, type SinEquivalente } from './presupuesto-vista'
+import { RENOVACION_NO_DISPONIBLE, renovacionTrasFallo } from './renovacion-vista'
 
 // ─── Lo que la pantalla necesita ─────────────────────────────────────────────
 
@@ -140,8 +141,8 @@ export type PresupuestoCliente = {
   actual: ActualCliente | null
   /** `true` cuando quien mira es Alberto con la vista de corredor. */
   vistaDeCorredor: boolean
-  /** Ver `RenovacionCliente`. */
-  renovacion: RenovacionCliente | null
+  /** Ver `RenovacionCliente`. `'no_disponible'` = no se ha podido leer: ni se elige ni se acepta/firma (fail-closed). */
+  renovacion: RenovacionCliente | null | typeof RENOVACION_NO_DISPONIBLE
   /** Lo que el cliente pidió, según lo anotó el corredor. `null` = no consta por escrito. */
   necesidades: string | null
   /** Entró con el CÓDIGO DEL WHATSAPP (no con su correo): puede firmar con ese mismo código. */
@@ -554,9 +555,10 @@ async function leerOpciones(presupuestoId: string, correduriaId: string): Promis
 /**
  * El modo renovación y la elección (columnas de 2026-11-05b, leídas en crudo: el schema no las declara para que su
  * ausencia no tumbe el resto de lecturas del presupuesto). Solo se llama DESPUÉS de autorizar (`presupuestoDeSesion`).
- * Sin la migración o con cualquier fallo → `null`: se pinta el presupuesto de siempre y no se ofrece elegir sin firma.
+ * Sin la migración (falta la columna) → `null`: el presupuesto de siempre. Cualquier OTRO fallo (sin GRANT, red) →
+ * `'no_disponible'`: la página no ofrece ni elegir ni Aceptar/Firmar (`renovacionTrasFallo`).
  */
-async function leerRenovacion(presupuestoId: string, correduriaId: string): Promise<RenovacionCliente | null> {
+async function leerRenovacion(presupuestoId: string, correduriaId: string): Promise<RenovacionCliente | null | typeof RENOVACION_NO_DISPONIBLE> {
   try {
     const [f] = await prisma.$queryRaw<{ modo: string | null; eleccion_cliente: string | null; eleccion_opcion_id: string | null; eleccion_at: Date | null }[]>`
       select modo, eleccion_cliente, eleccion_opcion_id::text as eleccion_opcion_id, eleccion_at
@@ -568,7 +570,7 @@ async function leerRenovacion(presupuestoId: string, correduriaId: string): Prom
     return { eleccion, eleccionAt: eleccion ? f.eleccion_at : null }
   } catch (e) {
     registrar('leerRenovacion', e)
-    return null
+    return renovacionTrasFallo(e)
   }
 }
 

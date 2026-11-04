@@ -17,6 +17,6 @@ export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null
   const presupuestoId = typeof body?.presupuestoId === 'string' ? body.presupuestoId.trim() : ''
   if (!UUID.test(presupuestoId)) return NextResponse.json({ estado: 'invalido', motivo: 'Falta el id del presupuesto.' }, { status: 422 })
-  const r = await publicarRenovacionAsegura({ presupuestoId, actor: guarda.session.email })
+  const r = await publicarRenovacionAsegura({ presupuestoId, actor: guarda.session.email, via: 'pantalla' })
   return NextResponse.json(r.json ?? { estado: 'error', motivo: `HTTP ${r.status}` }, { status: r.status })
 }

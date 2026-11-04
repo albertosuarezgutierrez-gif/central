@@ -102,3 +102,14 @@ test('🪤 los datos confirmados van DENTRO del documento firmado (y por tanto d
   assert.match(comp, /confirmacionDatos: confirmacion,/)
   assert.match(firmar, /datosConfirmados: true, datosHuella: c\.datos\.huella/)
 })
+
+test('🪤 una RENOVACIÓN (modo) no se prepara, ni pide código, ni se firma por aquí: 409 con motivo (revisión 04/11/2026)', () => {
+  // `modo` por `to_jsonb`: sin la migración 2026-11-05b la lectura no se cae (y entonces no hay renovaciones).
+  assert.match(src, /to_jsonb\(p\) ->> 'modo' as modo/)
+  const b = src.slice(src.indexOf('async function base('), src.indexOf('export const TIPO_DATOS_INCORRECTOS'))
+  const corte = b.indexOf('bloqueoFirmaRenovacion(f.modo)')
+  assert.ok(corte > 0 && corte < b.indexOf('return { f, clienteId'), 'antes de devolver la fila a preparar/código/firmar')
+  assert.match(b, /estado: 'es_renovacion'/)
+  const ruta = readFileSync(new URL('../app/api/portal/presupuesto/route.ts', import.meta.url), 'utf8')
+  assert.match(ruta, /es_renovacion: 409/)
+})

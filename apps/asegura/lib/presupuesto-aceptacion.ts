@@ -43,6 +43,7 @@ import { datosAceptacionOfertas, gruposAceptacionOfertas, gruposRevisionOfertas,
 import { fichaDeTokenWhatsapp, gastarCodigoWhatsapp } from './presupuesto-codigo-whatsapp'
 import { fichaDeToken } from './presupuesto-acceso-tercero'
 import { gruposDatosUsadosDePresupuesto } from './datos-usados-ofertas-bd'
+import { bloqueoFirmaRenovacion } from './renovacion-alternativas-reglas'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 export const MINUTOS_CODIGO = 10
@@ -82,6 +83,8 @@ type Fila = {
   peticion: unknown
   /** El cliente dijo que un dato no es correcto: no se acepta desde el portal hasta retarificar. */
   datosEnRevision: boolean
+  /** `renovacion` = renovación con alternativas (2026-11-05b): se ELIGE en el portal, no se acepta ni firma aquí. */
+  modo: string | null
 }
 
 async function leer(correduriaId: string, clienteId: string, presupuestoId: string, opcionId: string): Promise<Fila | null> {
@@ -92,6 +95,7 @@ async function leer(correduriaId: string, clienteId: string, presupuestoId: stri
            p.elegido_at as "elegidoAt", p.aceptado_at as "aceptadoAt", p.emitido_at as "emitidoAt",
            p.retirado_at as "retiradoAt", p.enlace_generado_at as "enlaceGeneradoAt",
            p.firma_otp_hash as "otpHash", p.firma_otp_expira as "otpExpira", p.necesidades,
+           to_jsonb(p) ->> 'modo' as modo,
            o.id::text as "opcionId", o.compania, o.producto, o.prima_eur::text as prima, o.franquicia_eur::text as franquicia, o.firmeza,
            (select cd.codigo_dgs from companias_dgs cd where lower(cd.nombre_comun) = lower(o.compania) limit 1) as "opcionDgs",
            coalesce(cda.nombre_comun, pol.aseguradora) as "actualCompania", pol.numero_poliza as "actualNumero",
@@ -201,7 +205,7 @@ function componer(f: Fila, hoy: string, datos: Extract<DatosCotizados, { estado:
 }
 
 type SinFicha = { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'sin_permiso' } | { estado: 'error'; causa: string }
-type Base = { f: Fila; clienteId: string } | { estado: 'no_encontrado' } | { estado: 'no_admite'; motivo: string } | SinFicha
+type Base = { f: Fila; clienteId: string } | { estado: 'no_encontrado' } | { estado: 'no_admite' | 'es_renovacion'; motivo: string } | SinFicha
 
 /**
  * Quién llama desde el portal: su identidad (entró con su correo) o el token del enlace de un
@@ -229,6 +233,9 @@ async function base(correduriaId: string, acceso: AccesoPortal, presupuestoId: s
   if (ficha.estado !== 'ok') return ficha
   const f = await leer(correduriaId, ficha.clienteId, presupuestoId, opcionId)
   if (!f) return { estado: 'no_encontrado' }
+  // Revisión 04/11/2026: un POST directo no acepta/firma una RENOVACIÓN por el camino antiguo (se elige sin firma).
+  const renovacion = bloqueoFirmaRenovacion(f.modo)
+  if (renovacion) return { estado: 'es_renovacion', motivo: renovacion }
   const estado = estadoPresupuesto(f, new Date())
   if (!admiteDecision(estado)) {
     return { estado: 'no_admite', motivo: estado === 'caducado' ? 'Este presupuesto ha caducado: pide uno actualizado a tu corredor.' : 'Este presupuesto ya no admite cambios.' }

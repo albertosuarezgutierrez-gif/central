@@ -165,3 +165,95 @@ test('cepo: las reglas son PURAS (ni BD, ni red, ni envs)', () => {
   const src = readFileSync(new URL('./renovacion-alternativas-reglas.ts', import.meta.url), 'utf8').replace(/\/\/.*$/gm, '')
   assert.doesNotMatch(src, /prisma|fetch\(|process\.env|tgSend/)
 })
+
+// ─── Revisión adversarial (04/11/2026) ────────────────────────────────────────
+
+test('🪤 una RENOVACIÓN no se acepta ni se firma por el camino antiguo (preparar/código/firmar)', async () => {
+  const { bloqueoFirmaRenovacion } = await import('./renovacion-alternativas-reglas.ts')
+  assert.match(bloqueoFirmaRenovacion('renovacion') ?? '', /elige/i)
+  assert.equal(bloqueoFirmaRenovacion(null), null)
+  assert.equal(bloqueoFirmaRenovacion(undefined), null)
+})
+
+test('🪤 Catastro: en la fusión GANA el dato existente; la marca de la consulta es la nueva', async () => {
+  const { fusionarViviendaCatastro } = await import('./renovacion-alternativas-reglas.ts')
+  const m = fusionarViviendaCatastro(
+    { cp: '41003', metrosCuadrados: 90, anioConstruccion: '', catastroConsultadoAt: '2026-01-01T00:00:00Z' },
+    { cp: '41004', metrosCuadrados: 85, anioConstruccion: 1960, catastroConsultadoAt: '2026-11-04T10:00:00Z' },
+  )
+  assert.equal(m.cp, '41003', 'lo escrito entre la lectura y la escritura no se pisa')
+  assert.equal(m.metrosCuadrados, 90)
+  assert.equal(m.anioConstruccion, 1960, 'un hueco vacío sí se rellena')
+  assert.equal(m.catastroConsultadoAt, '2026-11-04T10:00:00Z')
+  assert.deepEqual(fusionarViviendaCatastro(null, { cp: '41003' }), { cp: '41003' })
+})
+
+test('🪤 Catastro: el UPDATE va condicionado a lo leído (compare-and-swap) y relee si cambió', () => {
+  const src = readFileSync(new URL('./renovacion-alternativas.ts', import.meta.url), 'utf8')
+  const cat = src.slice(src.indexOf('async function catastroDeOportunidad'), src.indexOf('const conTope'))
+  assert.match(cat, /fusionarViviendaCatastro\(/)
+  assert.match(cat, /coalesce\(info_riesgo->'datosVivienda', '\{\}'::jsonb\) = \$\{JSON\.stringify\(v\)\}::jsonb/)
+  assert.doesNotMatch(cat, /coalesce\(info_riesgo->'datosVivienda', '\{\}'::jsonb\) \|\| \$\{JSON\.stringify\(r\.cambios\)\}/, 'nunca «existente || cambios»')
+})
+
+test('🪤 publicar desde Telegram EXIGE message_id y que sea el último; la pantalla no lleva mensaje', async () => {
+  const { decidirMensajeVigente } = await import('./renovacion-alternativas-reglas.ts')
+  assert.equal(decidirMensajeVigente({ via: 'telegram', pedido: null, ultimo: 7 }).ok, false, 'sin message_id, no')
+  assert.equal(decidirMensajeVigente({ via: 'telegram', pedido: 6, ultimo: 7 }).ok, false)
+  assert.equal(decidirMensajeVigente({ via: 'telegram', pedido: 7, ultimo: null }).ok, false, 'sin revisión registrada, no')
+  assert.equal(decidirMensajeVigente({ via: 'telegram', pedido: 7, ultimo: 7 }).ok, true)
+  assert.equal(decidirMensajeVigente({ via: 'pantalla', pedido: null, ultimo: null }).ok, true)
+  const src = readFileSync(new URL('./renovacion-alternativas.ts', import.meta.url), 'utf8')
+  const pub = src.slice(src.indexOf('export async function publicarRenovacion'), src.indexOf('// ─── La elección del cliente'))
+  assert.doesNotMatch(pub, /typeof e\.telegramMessageId === 'number'\) \{/, 'el cepo no puede depender de que venga el id')
+  assert.match(pub, /decidirMensajeVigente\(/)
+  const ruta = readFileSync(new URL('../app/api/operador/renovacion/publicar/route.ts', import.meta.url), 'utf8')
+  assert.match(ruta, /b\?\.via === 'pantalla' \? 'pantalla' : 'telegram'/, 'por defecto, Telegram (fail-closed)')
+})
+
+test('🪤 quién lo verá: solo cuentan los vínculos que pueden OPERAR (elegir)', async () => {
+  const { contarVinculadasQueOperan } = await import('./renovacion-alternativas-reglas.ts')
+  assert.equal(contarVinculadasQueOperan([{ identidadId: 'a', nivel: 'tarjeta' }, { identidadId: 'b', nivel: 'completo' }]), 0)
+  assert.equal(contarVinculadasQueOperan([{ identidadId: 'a', nivel: 'gestionar' }, { identidadId: 'a', nivel: 'administrar' }, { identidadId: 'b', nivel: 'tarjeta' }]), 1)
+  const src = readFileSync(new URL('./renovacion-alternativas.ts', import.meta.url), 'utf8')
+  const q = src.slice(src.indexOf('export async function quienVeEnApp'), src.indexOf('// ─── Catastro'))
+  assert.match(q, /contarVinculadasQueOperan\(/)
+})
+
+test('🪤 preparar escribe el historial interno de la ficha (como publicar y elegir)', () => {
+  const src = readFileSync(new URL('./renovacion-alternativas.ts', import.meta.url), 'utf8')
+  const prep = src.slice(src.indexOf('export async function prepararRenovacion'), src.indexOf('// ─── Publicar en la app'))
+  const tx = prep.indexOf('db().$transaction(')
+  const hist = prep.indexOf('insert into historial_interno', tx)
+  assert.ok(tx > 0 && hist > tx && hist < prep.indexOf('return { nuevo: true as const'), 'dentro de la transacción del borrador nuevo')
+})
+
+test('🪤 si el Telegram de la elección no sale, queda en la ficha (historial + evento) con su motivo', async () => {
+  const { lineaHistorialAvisoFallido, EVENTO_AVISO_FALLIDO } = await import('./renovacion-alternativas-reglas.ts')
+  assert.match(lineaHistorialAvisoFallido('sin_canal'), /Telegram/)
+  assert.match(lineaHistorialAvisoFallido('sin_canal'), /sin_canal/)
+  assert.equal(typeof EVENTO_AVISO_FALLIDO, 'string')
+  const src = readFileSync(new URL('./renovacion-alternativas.ts', import.meta.url), 'utf8')
+  const av = src.slice(src.indexOf('export async function avisarEleccion'))
+  assert.ok(av.length > 0 && av.indexOf('tgSend(') > 0)
+  assert.match(av, /EVENTO_AVISO_FALLIDO/)
+  assert.match(av, /insert into historial_interno/)
+  const ruta = readFileSync(new URL('../app/api/portal/presupuesto/route.ts', import.meta.url), 'utf8')
+  assert.match(ruta, /after\(\(\) => avisarEleccion\(/)
+})
+
+test('🪤 la cabecera de la migración 2026-11-05b solo cita rutas y ficheros que existen', async () => {
+  const { existsSync } = await import('node:fs')
+  const sql = readFileSync(new URL('../prisma/sql/2026-11-05b_presupuesto_renovacion.sql', import.meta.url), 'utf8')
+  const cabecera = sql.slice(0, sql.indexOf('BEGIN;'))
+  const raiz = new URL('../../', import.meta.url)
+  const ficheros = [...cabecera.matchAll(/(?:apps\/[\w-]+\/)?lib\/[\w./-]+\.ts|app\/[\w/()[\]-]+\.tsx?/g)].map((m) => m[0])
+  assert.ok(ficheros.length >= 2)
+  for (const f of ficheros) {
+    const ok = f.startsWith('apps/') ? existsSync(new URL(`../${f}`, raiz)) : ['asegura', 'asegura-portal'].some((a) => existsSync(new URL(`${a}/${f}`, raiz)))
+    assert.ok(ok, `${f} no existe`)
+  }
+  for (const m of cabecera.matchAll(/\/api\/operador\/renovacion\/\{([^}]+)\}/g)) {
+    for (const r of m[1]!.split(',')) assert.ok(existsSync(new URL(`asegura/app/api/operador/renovacion/${r.trim()}/route.ts`, raiz)), `ruta ${r} no existe`)
+  }
+})

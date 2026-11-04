@@ -18,7 +18,21 @@ export const TEXTOS_RENOVACION = {
   error: 'No he podido guardar tu elección (no se ha hecho nada). Vuelve a intentarlo en un momento.',
   limite: 'Has cambiado de opinión muchas veces hoy: escríbeme y lo vemos juntos.',
   noDisponible: 'Ahora mismo no puedo recoger tu elección. Escríbeme o llámame y lo apunto yo.',
+  lecturaNoDisponible: 'Ahora mismo no puedo enseñarte cómo responder a esta propuesta. Vuelve a entrar en un rato, o escríbeme o llámame y lo vemos juntos.',
 } as const
+
+/** La lectura del modo renovación FALLÓ (no es «no es renovación»): no se ofrece ni elegir ni aceptar/firmar. */
+export const RENOVACION_NO_DISPONIBLE = 'no_disponible' as const
+
+/**
+ * Qué se concluye de un fallo al leer el modo renovación. Solo «falta la columna» (sin la migración 2026-11-05b no PUEDE
+ * haber renovaciones) es `null` = el presupuesto de siempre. Cualquier otro (sin GRANT 42501, red…) es NO DISPONIBLE:
+ * fail-closed, nunca se pinta una renovación como presupuesto normal con Aceptar/Firmar.
+ */
+export function renovacionTrasFallo(e: unknown): null | typeof RENOVACION_NO_DISPONIBLE {
+  const m = e instanceof Error ? e.message : String(e)
+  return /42703|column .* does not exist|no existe la columna/i.test(m) ? null : RENOVACION_NO_DISPONIBLE
+}
 
 const DIA = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', timeZone: 'Europe/Madrid' })
 const eurEs = (n: number) => `${n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' })}€`

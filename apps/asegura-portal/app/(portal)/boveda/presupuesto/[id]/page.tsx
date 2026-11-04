@@ -8,7 +8,7 @@ import { Actual, Garantias, Mediador, Salidas, SinEquivalenteAviso, Tarjeta, fec
 import { TodasLasOpciones } from './TodasLasOpciones'
 import { AceptarOpcion } from './AceptarOpcion'
 import { ElegirRenovacion } from './ElegirRenovacion'
-import { TEXTOS_RENOVACION, puedeElegirRenovacion } from '@/lib/renovacion-vista'
+import { RENOVACION_NO_DISPONIBLE, TEXTOS_RENOVACION, puedeElegirRenovacion } from '@/lib/renovacion-vista'
 import { EstudioOfertas } from './EstudioOfertas'
 import { EstudioCliente } from './EstudioCliente'
 import { leerEstudioCliente } from '@/lib/estudio-cliente'
@@ -134,9 +134,11 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
   // RENOVACIÓN con alternativas (04/11/2026): se elige SIN firma («Quiero esta opción» / «Me quedo con mi renovación») y
   // no se ofrece el «llévamelo yo» (ya somos su corredor). La firma con código, solo si cambia de compañía y cuando el
   // corredor prepare la emisión. `null` = presupuesto de siempre (o sin la migración: fail-closed, se pinta como siempre).
-  const renov = p.renovacion
-  // Las MISMAS condiciones para elegir en la portada y en «Todas las opciones».
-  const puedeAceptar = renov === null && !p.caducado && !p.retirado && p.aceptadoAt === null && p.enviadoAt !== null && tercero === null
+  // `'no_disponible'` = la lectura del modo falló (sin GRANT, red): fail-closed, ni elegir ni Aceptar/Firmar.
+  const renovNoDisponible = p.renovacion === RENOVACION_NO_DISPONIBLE
+  const renov = p.renovacion === RENOVACION_NO_DISPONIBLE ? null : p.renovacion
+  // Las MISMAS condiciones para elegir en la portada y en «Todas las opciones». Solo si CONSTA que no es una renovación.
+  const puedeAceptar = p.renovacion === null && !p.caducado && !p.retirado && p.aceptadoAt === null && p.enviadoAt !== null && tercero === null
   // «Ver como el cliente» un BORRADOR (18/10/2026): la misma página, con los botones de acción deshabilitados y rotulados.
   const vistaPrevia = esVistaPreviaBorrador(p) && !p.caducado && !p.retirado
   // El ESTUDIO (21/10/2026): el MISMO que el PDF, para los dos orígenes, pedido a asegura con la identidad de la sesión
@@ -325,7 +327,11 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
         />
       )}
 
-      {renov !== null ? (
+      {renovNoDisponible ? (
+        <section className="seccion">
+          <p className="pendiente">{TEXTOS_RENOVACION.lecturaNoDisponible}</p>
+        </section>
+      ) : renov !== null ? (
         <ElegirRenovacion
           presupuestoId={p.id}
           opciones={p.opciones.map((o) => ({ id: o.id, compania: o.compania, producto: o.producto, primaEur: o.primaEur, franquiciaEur: o.franquiciaEur }))}

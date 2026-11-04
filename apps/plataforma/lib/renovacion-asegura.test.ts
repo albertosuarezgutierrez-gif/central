@@ -36,3 +36,13 @@ test('el webhook enruta `crv` con la puerta del titular y sin reintentar', () =>
   assert.match(bloque, /telegramMessageId: mensajeId/)
   assert.equal((bloque.match(/publicarRenovacionAsegura\(/g) ?? []).length, 1, 'una sola llamada: no se reintenta')
 })
+
+test('🪤 publicar dice SU vía: Telegram (asegura exige el message_id) o la pantalla con sesión', () => {
+  const lib = readFileSync(new URL('./renovacion-asegura.ts', import.meta.url), 'utf8')
+  assert.match(lib, /via: e\.via/)
+  const ruta = readFileSync(new URL('../app/api/sivra/mensajes/telegram-webhook/route.ts', import.meta.url), 'utf8')
+  const i = ruta.indexOf('if (prefix === PREFIJO_CRV)')
+  assert.match(ruta.slice(i, i + 2500), /via: 'telegram'/)
+  const pantalla = readFileSync(new URL('../app/api/correduria/renovacion/publicar/route.ts', import.meta.url), 'utf8')
+  assert.match(pantalla, /via: 'pantalla'/)
+})
