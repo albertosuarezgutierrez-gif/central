@@ -27,6 +27,22 @@ export const PASOS_PULSABLES_WIZARD_AUTOS_PELAYO: readonly string[] = Object.fre
 export const RUTAS_RED_WIZARD_AUTOS_PELAYO: readonly string[] = Object.freeze(['', ...PASOS_PULSABLES_WIZARD_AUTOS_PELAYO])
 export const RUTA_TOLERABLE_WIZARD_AUTOS_PELAYO: RutaTolerable = Object.freeze({ origen: ORIGEN_APP_PELAYO, prefijo: PREFIJO_WIZARD_AUTOS_PELAYO, rutasExactas: RUTAS_RED_WIZARD_AUTOS_PELAYO })
 
+// 0.3.45 (Pelayo real 04/11/2026): tras «Nueva contratación», apps.pelayo.com/contratacion-autos?… REDIRIGE al SSO de Pelayo (Oracle OAM,
+// el mismo host del login): `https://acceso12.pelayo.com/oauth2/rest/authorize?<query OAuth2>`. La URL casaba con el patrón de
+// emisión por su QUERY (`redirect_uri` → …/contratacion-autos, «contrat»; la ruta sola no casa); es el inicio de sesión OAuth2, no un pago. Se tolera SOLO: ese origen EXACTO, ese path EXACTO (con o sin
+// «/» final, cualquier query), y solo como NAVEGACIÓN GET (`soloNavegacionGet`: ni POST, ni XHR, ni href de un botón). Otros paths de
+// acceso12 (`/oauth2/rest/token`, `/oauth2/rest/authorize/x`…) siguen bloqueados; un parámetro con forma de acción de emisión en la query
+// lo sigue cortando `parametrosParecenEmision`. En esa pantalla NO se pulsa nada (`bloqueoZonaWizardPelayo`): redirige sola con la cookie.
+// La vuelta a apps.pelayo.com (¿callback? ¿POST?) NO se sabe: no se abre nada; si se corta, el mensaje lleva origen + ruta (sin query).
+export const ORIGEN_SSO_PELAYO = 'https://acceso12.pelayo.com'
+export const RUTA_SSO_AUTHORIZE_PELAYO = '/oauth2/rest/authorize'
+export const RUTA_TOLERABLE_SSO_AUTHORIZE_PELAYO: RutaTolerable = Object.freeze({
+  origen: ORIGEN_SSO_PELAYO,
+  prefijo: `${RUTA_SSO_AUTHORIZE_PELAYO}/`,
+  rutasExactas: Object.freeze(['']),
+  soloNavegacionGet: true as const,
+})
+
 const plano = (s: string | null | undefined) => (s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
 const truncado = (s: string | null | undefined) => typeof s === 'string' && s.endsWith('…')
 
@@ -75,7 +91,8 @@ export function esNuevaContratacionPelayoInventario(el: ElementoInventario, marc
 const RE_PASO_PROHIBIDO_WIZARD = /^(?:(?:paso\s*)?\d+\s*[.:)-]?\s*)?(?:precio final|intervinientes|medios? de pago|contratar)$/
 
 /**
- * TOPE DURO del wizard de Pelayo: `null` = se puede pulsar; si no, el motivo. Fuera de https://apps.pelayo.com, `null` siempre (no
+ * TOPE DURO del wizard de Pelayo: `null` = se puede pulsar; si no, el motivo. 0.3.45: en el SSO `acceso12.pelayo.com/oauth2/rest/authorize`,
+ * `pelayo_sso_authorize_no_pulsable` siempre. Fuera de https://apps.pelayo.com (y de ese SSO), `null` siempre (no
  * aplica). Dentro: solo en `PREFIJO_WIZARD_AUTOS_PELAYO` + un resto EXACTO de `PASOS_PULSABLES_WIZARD_AUTOS_PELAYO`, y nunca un control
  * cuyo rótulo sea un paso prohibido. URL ilegible en ese origen = bloqueo. PURA.
  */
@@ -85,6 +102,8 @@ export function bloqueoZonaWizardPelayo(urlPantalla: string | null | undefined, 
     // Una URL no https o ilegible: si nombra el host del wizard, se bloquea (fail-closed); si no, no aplica.
     return typeof urlPantalla === 'string' && /apps\.pelayo\.com/i.test(urlPantalla) ? 'pelayo_wizard_url_ilegible' : null
   }
+  // 0.3.45: en el SSO de autorización de Pelayo (acceso12, `/oauth2/rest/authorize`, con o sin «/» final) NO se pulsa nada: redirige sola.
+  if (x.hostname.toLowerCase() === 'acceso12.pelayo.com' && x.pathname.toLowerCase().replace(/\/+$/, '') === RUTA_SSO_AUTHORIZE_PELAYO) return 'pelayo_sso_authorize_no_pulsable'
   if (x.hostname.toLowerCase() !== 'apps.pelayo.com') return null
   if (x.origin !== ORIGEN_APP_PELAYO) return 'pelayo_wizard_url_ilegible'
   for (const r of rotulos) if (typeof r === 'string' && RE_PASO_PROHIBIDO_WIZARD.test(plano(r))) return 'pelayo_wizard_paso_prohibido'

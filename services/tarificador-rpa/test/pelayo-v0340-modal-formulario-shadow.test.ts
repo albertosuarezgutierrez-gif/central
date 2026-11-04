@@ -76,7 +76,7 @@ async function pagina(cuerpo: string) {
   return { context, page, guard }
 }
 
-test('versión del explorador 0.3.44', () => assert.equal(EXPLORADOR_VERSION, '0.3.44'))
+test('versión del explorador 0.3.45', () => assert.equal(EXPLORADOR_VERSION, '0.3.45'))
 
 test('inventario: atraviesa el shadow (y el shadow anidado) y lista campos y botones con ref y etiqueta; las tarjetas de detrás NO', async () => {
   const { context, page } = await pagina(CON_MODAL)

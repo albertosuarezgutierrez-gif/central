@@ -22,7 +22,7 @@ describe('Pelayo · entradas del explorador', () => {
       expect(e.guardadosEnDialogo ?? []).toEqual([])
       expect(e.neutralizacionesOnclick ?? []).toEqual([])
       // 0.3.41: Auto tolera SOLO el wizard de apps.pelayo.com con restos exactos (pelayo-contratacion.test.ts); Hogar, nada.
-      expect((e.rutasAppTolerables ?? []).map((r) => r.origen)).toEqual(k.endsWith(':auto') ? ['https://apps.pelayo.com'] : [])
+      expect((e.rutasAppTolerables ?? []).map((r) => r.origen)).toEqual(k.endsWith(':auto') ? ['https://apps.pelayo.com', 'https://acceso12.pelayo.com'] : []) // 0.3.45: + SSO authorize (solo navegación GET)
       expect(e.nuevaContratacionPelayo).toBe(k.endsWith(':auto') ? true : undefined)
       // 0.3.41: la primera pantalla es «Datos del Tomador» (NIF obligatorio): tomador = el MEDIADOR (solo sintético).
       expect(e.tomadorMediador).toBe(true)

@@ -520,7 +520,9 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
       // «Generar Proyecto» de Mapfre (22/10/2026): su ventana abre SOLO su patrón (`permitirGenerarProyectoMapfre`), no Archivar/store.
       const enProyectoMapfre = enGuardado && gv.proyectoMapfre
       const op = { permitirAceptar: fases.aceptarEnVuelo() || enLista, permitirGuardarPresupuesto: enGuardado && !enProyectoMapfre, permitirGenerarProyectoMapfre: enProyectoMapfre }
-      const neutra = neutralizarRutaTolerable(url, tolerables) ?? url
+      // 0.3.45: las reglas `soloNavegacionGet` (SSO authorize de Pelayo) solo valen para una NAVEGACIÓN GET (documento/redirección); un
+      // POST o cualquier otra petición a esa ruta se mira entera (query incluida: su `redirect_uri` casa con «contrat»).
+      const neutra = neutralizarRutaTolerable(url, tolerables, null, { navegacionGet: req.isNavigationRequest() && !noGet }) ?? url
       // Tarificación de hogar de Mapfre (ruta EXACTA, `neutralizarTarificacionProyectoMapfre`): solo su RUTA deja de contar; query y cuerpo igual.
       const neutraUrl = neutralizarTarificacionProyectoMapfre(url) ?? neutra
       const porUrl = pareceEmision(neutraUrl, op) || parametrosParecenEmision(url, op)
@@ -652,7 +654,17 @@ export function tolerarRutasApp(guard: GuardEmision, reglas: readonly RutaTolera
   }
   // 0.3.41: `rutasExactas` (si la hay) viaja en la copia: sin ella la regla se ABRIRÍA a cualquier resto (fail-open). Cada resto, ruta simple.
   for (const r of reglas) if (r.rutasExactas !== undefined && !r.rutasExactas.every((x) => /^[\w-]*(?:\/[\w-]+)*$/.test(x))) throw new EmisionBloqueadaError('fase', 'ruta tolerable no válida')
-  const copia = Object.freeze(reglas.map((r) => Object.freeze({ origen: r.origen, prefijo: r.prefijo, ...(r.rutasExactas !== undefined ? { rutasExactas: Object.freeze([...r.rutasExactas]) } : {}) })))
+  // 0.3.45: `soloNavegacionGet` también viaja (sin ella la regla valdría para POST y href: fail-open).
+  const copia = Object.freeze(
+    reglas.map((r) =>
+      Object.freeze({
+        origen: r.origen,
+        prefijo: r.prefijo,
+        ...(r.rutasExactas !== undefined ? { rutasExactas: Object.freeze([...r.rutasExactas]) } : {}),
+        ...(r.soloNavegacionGet === true ? { soloNavegacionGet: true as const } : {}),
+      }),
+    ),
+  )
   RUTAS_TOLERABLES.set(guard, copia)
   fijar(copia)
 }

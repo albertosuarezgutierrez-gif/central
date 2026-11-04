@@ -65,7 +65,7 @@ async function abrir(o: { abreConHover?: boolean } = {}) {
 }
 const ruta = (p: Page) => new URL(p.url()).pathname
 
-test('versión del explorador 0.3.44', () => assert.equal(EXPLORADOR_VERSION, '0.3.44'))
+test('versión del explorador 0.3.45', () => assert.equal(EXPLORADOR_VERSION, '0.3.45'))
 
 test('puras: URL EXACTA de la página de presupuestos (https, mediadores.pelayo.com, con o sin barra final) y elección del control', () => {
   for (const u of [`${ORIGEN}/portalmediador-presupuestos/`, `${ORIGEN}/portalmediador-presupuestos`, `${ORIGEN}/portalmediador-presupuestos/?x=1`]) assert.equal(esUrlPresupuestosPelayo(u), true, u)
