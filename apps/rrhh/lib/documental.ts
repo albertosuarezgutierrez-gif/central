@@ -135,7 +135,10 @@ export async function cambiarVisibilidadDocumento(empresaId: string, empleadoId:
   if (!d) throw new Error('Documento no encontrado')
   const err = validarVisibilidad({ carpeta: d.carpeta, visible, firma: d.estado_firma })
   if (err) throw new Error(err)
-  await prisma.$executeRaw(Prisma.sql`
+  // Las reglas se repiten en el WHERE: si entre la lectura y la escritura se pidió firma, no se oculta (TOCTOU).
+  const n = await prisma.$executeRaw(Prisma.sql`
     UPDATE rrhh.documentos SET visible_empleado = ${visible}
-    WHERE id = ${docId}::uuid AND empleado_id = ${empleadoId}::uuid AND empresa_id = ${empresaId}::uuid`)
+    WHERE id = ${docId}::uuid AND empleado_id = ${empleadoId}::uuid AND empresa_id = ${empresaId}::uuid
+      AND (${visible} OR (carpeta <> 'nominas' AND COALESCE(estado_firma, 'no_requiere') = 'no_requiere'))`)
+  if (!n) throw new Error('Un documento con firma debe ser visible para el empleado (si no, no podría firmarlo)')
 }
