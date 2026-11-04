@@ -15,7 +15,7 @@ import { DIRECCION_VACIA, type Direccion } from '@/lib/direccion'
 import { coloresPorDefecto, fondosMarca } from '@/lib/marca'
 import { DireccionCp } from '../_direccion/DireccionCp'
 import {
-  altaPersona, bajaPersona, guardarAjuste, guardarDatosTaller, guardarMarcaColores, guardarProveedorAccion, quitarLogo, resetPinPersona,
+  altaPersona, bajaPersona, guardarAjuste, guardarDatosTaller, guardarMarcaColores, guardarProveedorAccion, guardarEmpresaRrhhAccion, guardarVinculoRrhhPersona, quitarLogo, resetPinPersona,
   subirLogo, type Respuesta,
 } from './acciones'
 
@@ -26,10 +26,11 @@ export type DatosAjustes = {
     razonSocial: string
     nombreComercial: string
     nif: string | null
+    rrhhEmpresaId: string | null
     direccion: { cp: string | null; provincia: string | null; municipio: string | null; via: string | null; numero: string | null }
   }
   marca: { primario: string | null; secundario: string | null; tieneLogo: boolean }
-  personas: { id: string; nombre: string; rol: string; activo: boolean }[]
+  personas: { id: string; nombre: string; rol: string; activo: boolean; rrhhIdentificador: string | null }[]
   proveedores: { id: string; nombre: string; correo: string | null; activo: boolean }[]
 }
 
@@ -563,7 +564,35 @@ function Avisos({ c }: { c: ConfigTaller }) {
 }
 
 // ── Personal ─────────────────────────────────────────────────────────────────
-function Personal({ personas, yoId }: { personas: DatosAjustes['personas']; yoId: string }) {
+function VinculoRrhh({ id, inicial }: { id: string; inicial: string | null }) {
+  const [v, setV] = useState(inicial ?? '')
+  const g = useGuardar()
+  return (
+    <div>
+      <Campo etiqueta="Identificador en RR.HH. (NIF o id de empleado)">
+        <input value={v} placeholder="Sin vincular: no podrá fichar" onChange={(e) => setV(e.target.value)} />
+      </Campo>
+      <button type="button" className="btn btn-sec" disabled={g.pendiente} onClick={() => g.guardar(() => guardarVinculoRrhhPersona({ id, identificador: v }))}>Guardar vínculo</button>
+      {g.aviso}
+    </div>
+  )
+}
+
+function EmpresaRrhh({ inicial }: { inicial: string | null }) {
+  const [v, setV] = useState(inicial ?? '')
+  const g = useGuardar()
+  return (
+    <div className="ficha">
+      <Campo etiqueta="Id de la empresa en RR.HH. (para fichar)">
+        <input value={v} placeholder="Sin vincular" onChange={(e) => setV(e.target.value)} />
+      </Campo>
+      <button type="button" className="btn btn-sec" disabled={g.pendiente} onClick={() => g.guardar(() => guardarEmpresaRrhhAccion(v))}>Guardar empresa</button>
+      {g.aviso}
+    </div>
+  )
+}
+
+function Personal({ personas, yoId, rrhhEmpresaId }: { personas: DatosAjustes['personas']; yoId: string; rrhhEmpresaId: string | null }) {
   const [alta, setAlta] = useState({ nombre: '', rol: 'mecanico' })
   const [pinNuevo, setPinNuevo] = useState<{ nombre: string; pin: string } | null>(null)
   const g = useGuardar()
@@ -572,6 +601,7 @@ function Personal({ personas, yoId }: { personas: DatosAjustes['personas']; yoId
       {pinNuevo && (
         <p className="ok" role="alert">PIN de {pinNuevo.nombre}: <strong className="pin-grande">{pinNuevo.pin}</strong> · apúntalo: no se vuelve a mostrar.</p>
       )}
+      <EmpresaRrhh inicial={rrhhEmpresaId} />
       <ListaPerezosa items={personas} vacia="Sin personal" render={(p) => (
         <div key={p.id} className={`ficha${p.activo ? '' : ' inactiva'}`}>
           <strong>{p.nombre}{p.id === yoId ? ' (tú)' : ''}</strong>
@@ -584,6 +614,7 @@ function Personal({ personas, yoId }: { personas: DatosAjustes['personas']; yoId
                 onClick={() => confirm(`¿Dar de baja a ${p.nombre}?`) && g.guardar(() => bajaPersona(p.id))}>Dar de baja</button>
             </div>
           )}
+          {p.activo && <VinculoRrhh id={p.id} inicial={p.rrhhIdentificador} />}
         </div>
       )} />
       <div className="ficha">
@@ -649,7 +680,7 @@ export function AjustesCliente({ datos }: { datos: DatosAjustes }) {
       <Textos c={c} />
       <Marca m={datos.marca} />
       <Acceso c={c} />
-      <Personal personas={datos.personas} yoId={datos.yoId} />
+      <Personal personas={datos.personas} yoId={datos.yoId} rrhhEmpresaId={datos.taller.rrhhEmpresaId} />
       {/* key: remonta solo si cambia el conjunto (alta nueva), sin perder la edición en curso de los demás */}
       <Proveedores key={datos.proveedores.map((p) => p.id).join()} proveedores={datos.proveedores} />
     </div>

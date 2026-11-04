@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { COOKIE_NAME, RENOVAR_CADA_MS, cookieOpts, leerCookie, renovarCookie } from './lib/sesion-cookie'
 
 // Gate de sesión: todo exige PIN salvo el login y su API.
+// `/api/fichar`: fichaje con PIN desde la pantalla de login (el trabajador no abre sesión; valida el PIN él mismo).
 // `/api/operador/`: puerto de operador (Bearer propio, sin PIN).
 // `/p/<token>`: enlace público de aceptación de presupuesto (sin login; la autorización es el token).
-const PUBLIC = ['/login', '/api/auth', '/brand', '/p/', '/api/operador/']
+const PUBLIC = ['/login', '/api/auth', '/api/fichar', '/brand', '/p/', '/api/operador/']
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl

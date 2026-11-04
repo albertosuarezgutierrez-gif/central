@@ -96,3 +96,19 @@ test('la ruta usa TALLER_OPERADOR_SECRET con autorizacionBearerValida y es públ
   assert.match(lee('app', 'api', 'operador', 'talleres', 'route.ts'), /autorizacionBearerValida\(req, 'TALLER_OPERADOR_SECRET'\)/)
   assert.match(lee('middleware.ts'), /'\/api\/operador\/'/)
 })
+
+test('alta con dirección completa la guarda; a medias → 400 y no se crea nada; sin ella queda vacía', async () => {
+  const m = montar()
+  const h = manejador(m)
+  const dir = { cp: '41900', provincia: 'Sevilla', municipio: 'Camas', via: 'Calle Real', numero: '5' }
+  assert.equal((await h(req({ ...cuerpo, direccion: dir }))).status, 201)
+  const t = m.bd.filas('taller')[0]
+  assert.equal(t.cp, '41900'); assert.equal(t.municipio, 'Camas'); assert.equal(t.numero, '5')
+  const m2 = montar()
+  const r = await manejador(m2)(req({ ...cuerpo, direccion: { cp: '41900', via: 'Calle Real' } }))
+  assert.equal(r.status, 400)
+  assert.equal(m2.bd.filas('taller').length, 0)
+  const m3 = montar()
+  assert.equal((await manejador(m3)(req(cuerpo))).status, 201)
+  assert.equal(m3.bd.filas('taller')[0].cp, undefined)
+})

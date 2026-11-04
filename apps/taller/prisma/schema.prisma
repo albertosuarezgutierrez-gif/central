@@ -27,6 +27,8 @@ model Taller {
   numero              String?
   referenciaCatastral String?  @map("referencia_catastral")
   marcaCodigo         String?  @map("marca_codigo")
+  /// Empresa de este taller en rrhh (migración 0005). El taller solo ENVÍA fichajes; no lee rrhh.
+  rrhhEmpresaId       String?  @map("rrhh_empresa_id") @db.Uuid
   activo              Boolean  @default(true)
   creadoEn            DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
   actualizadoEn       DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
@@ -227,6 +229,8 @@ model UsuarioTaller {
   intentosFallidos Int       @default(0) @map("intentos_fallidos")
   bloqueadoHasta   DateTime? @map("bloqueado_hasta") @db.Timestamptz(6)
   rrhhPersonaId    String?   @map("rrhh_persona_id") @db.Uuid
+  /// NIF o id de empleado en rrhh (migración 0005); NULL = sin vincular, no puede fichar.
+  rrhhIdentificador String?  @map("rrhh_identificador")
   debeCambiarPin   Boolean   @default(false) @map("debe_cambiar_pin")
   creadoEn         DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
   actualizadoEn    DateTime  @default(now()) @map("actualizado_en") @db.Timestamptz(6)

@@ -22,7 +22,7 @@ export default async function Pagina() {
       tx.taller.findFirst({ where: { id: s.tallerId } }),
       tx.usuarioTaller.findMany({
         where: { tallerId: s.tallerId }, orderBy: [{ activo: 'desc' }, { nombre: 'asc' }],
-        select: { id: true, nombre: true, rol: true, activo: true },
+        select: { id: true, nombre: true, rol: true, activo: true, rrhhIdentificador: true },
       }),
       tx.proveedor.findMany({
         where: { tallerId: s.tallerId }, orderBy: [{ activo: 'desc' }, { nombre: 'asc' }],
@@ -35,6 +35,7 @@ export default async function Pagina() {
       yoId: s.usuarioId,
       config,
       taller: {
+        rrhhEmpresaId: taller.rrhhEmpresaId,
         razonSocial: taller.razonSocial, nombreComercial: taller.nombreComercial, nif: taller.nif,
         direccion: { cp: taller.cp, provincia: taller.provincia, municipio: taller.municipio, via: taller.via, numero: taller.numero },
       },

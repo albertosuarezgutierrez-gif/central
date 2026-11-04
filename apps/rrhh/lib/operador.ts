@@ -6,3 +6,10 @@ import { autorizacionBearerValida } from '@central/core-identity'
 export function operadorAutorizado(req: Request): boolean {
   return autorizacionBearerValida(req, 'RRHH_OPERADOR_SECRET')
 }
+
+/** Autoriza el puerto de FICHAJE del taller (apps/taller → rrhh). Secreto NUEVO y propio, distinto de
+ *  `RRHH_OPERADOR_SECRET`: quien puede fichar desde el taller no puede dar de alta empresas ni leer personas.
+ *  Cerrado por defecto: sin la env, no autoriza. */
+export function fichajeTallerAutorizado(req: Request): boolean {
+  return autorizacionBearerValida(req, 'RRHH_FICHAJE_TALLER_SECRET')
+}

@@ -11,6 +11,7 @@ import { auditar, guardarConfig, leerConfig, type TxConfig } from '@/lib/config-
 import { almacenActivo, mimeReal } from '@/lib/almacen'
 import { direccionOpcional } from '@/lib/direccion'
 import { ErrorMarca, guardarColores, guardarLogoRuta, type TxMarca } from '@/lib/marca-repo'
+import { guardarEmpresaRrhh, guardarIdentificadorRrhh, type TxVinculo } from '@/lib/vinculo-rrhh'
 import { altaUsuario, bajaUsuario, ErrorPersonal, guardarProveedor, resetPinUsuario, ROLES, type TxPersonal } from '@/lib/personal'
 
 export type Respuesta<T = object> = ({ ok: true } & T) | { ok: false; errores: string[] }
@@ -266,6 +267,37 @@ export async function guardarProveedorAccion(entrada: unknown): Promise<Respuest
         accion: p.data.id ? 'editar' : 'alta', antes: null, despues: { nombre: p.data.nombre, correo: p.data.correo, activo: p.data.activo },
       })
       return {}
+    }),
+  )
+}
+
+// ── Vínculo con RR.HH. (fichaje): el taller solo ENVÍA el fichaje; aquí se guarda a quién corresponde ──
+export async function guardarVinculoRrhhPersona(entrada: unknown): Promise<Respuesta<{ identificador: string | null }>> {
+  const p = z.object({ id: Id, identificador: z.string().max(100) }).safeParse(entrada)
+  if (!p.success) return { ok: false, errores: ['Datos inválidos'] }
+  return responder(() =>
+    comoDueno(async (tx, s) => {
+      const identificador = await guardarIdentificadorRrhh(tx as unknown as TxVinculo, s.tallerId, p.data.id, p.data.identificador)
+      await auditar(tx as unknown as TxConfig, {
+        tallerId: s.tallerId, usuarioId: s.usuarioId, entidad: 'usuarios_taller', entidadId: p.data.id, accion: 'vinculo_rrhh',
+        antes: null, despues: { vinculado: identificador !== null },
+      })
+      return { identificador }
+    }),
+  )
+}
+
+export async function guardarEmpresaRrhhAccion(valor: unknown): Promise<Respuesta<{ empresaId: string | null }>> {
+  const p = z.string().max(100).safeParse(valor)
+  if (!p.success) return { ok: false, errores: ['Datos inválidos'] }
+  return responder(() =>
+    comoDueno(async (tx, s) => {
+      const empresaId = await guardarEmpresaRrhh(tx as unknown as TxVinculo, s.tallerId, p.data)
+      await auditar(tx as unknown as TxConfig, {
+        tallerId: s.tallerId, usuarioId: s.usuarioId, entidad: 'talleres', entidadId: s.tallerId, accion: 'empresa_rrhh',
+        antes: null, despues: { vinculada: empresaId !== null },
+      })
+      return { empresaId }
     }),
   )
 }

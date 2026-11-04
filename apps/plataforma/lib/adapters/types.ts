@@ -2,7 +2,7 @@
 // liste y gestione sus clientes/tenants. Así el panel no conoce la BD ni la API
 // concreta de cada vertical — solo el puerto.
 
-export type Vertical = 'ialimp' | 'sivra' | 'iarest' | 'rrhh'
+export type Vertical = 'ialimp' | 'sivra' | 'iarest' | 'rrhh' | 'taller'
 
 export interface Metrica { label: string; valor: string }
 
@@ -23,7 +23,18 @@ export interface Cliente360 extends ClienteSaaS {
   modulos?: string[]          // módulos activos (F2)
 }
 
-export interface NuevoCliente { nombre: string; email?: string; password?: string; ciudad?: string; responsableNombre?: string; color?: string; logo?: string }
+export interface DireccionAlta { cp?: string; provincia?: string; municipio?: string; via?: string; numero?: string }
+
+export interface NuevoCliente {
+  nombre: string; email?: string; password?: string; ciudad?: string; responsableNombre?: string; color?: string; logo?: string
+  /** taller: NIF de la sociedad y dirección (CP → provincia → municipio → calle → número). */
+  nif?: string; direccion?: DireccionAlta
+  /** rrhh: si el correo YA es responsable, añadirle la empresa nueva en vez de dar error (explícito, nunca por defecto). */
+  vincularExistente?: boolean
+}
+
+/** Lo que devuelve un alta: `pinTemporal` (taller) se enseña UNA vez; `vinculado` (rrhh) = se reutilizó un responsable existente. */
+export interface AltaResultado { id: string; pinTemporal?: string; vinculado?: boolean }
 
 /** Una persona del directorio de un negocio (para dirigir comunicación por persona). */
 export interface PersonaDirectorio {
@@ -40,7 +51,7 @@ export interface VerticalAdapter {
   listar(): Promise<ClienteSaaS[]>
   ficha(id: string): Promise<Cliente360 | null>
   setActivo(id: string, activo: boolean): Promise<boolean>   // bloquear/liberar
-  crear?(input: NuevoCliente): Promise<{ id: string }>       // alta de cliente
+  crear?(input: NuevoCliente): Promise<AltaResultado>       // alta de cliente
   // Directorio de personas/roles de un negocio (refExt = tenant en su vertical).
   // Para dirigir comunicación a personas concretas (F0.3). Opcional por vertical.
   listarDirectorio?(refExt: string): Promise<PersonaDirectorio[]>

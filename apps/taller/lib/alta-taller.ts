@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { configDeAlta } from '@central/module-taller'
 import { auditar, escalaresDeConfig, guardarConfig, type TxConfig } from './config-repo.ts'
 import { altaUsuario, ErrorPersonal, type TxPersonal } from './personal.ts'
+import { direccionOpcional, type Direccion } from './direccion.ts'
 import type { ConTaller } from './rls.ts'
 
 const NIF = /^[A-Z0-9]{8,12}$/
@@ -16,6 +17,8 @@ export const EntradaAlta = z.object({
   nombreComercial: z.string().trim().min(1).max(200).optional(),
   nif: z.string().trim().max(20).optional(),
   duenoNombre: z.string().trim().min(1).max(200),
+  // Opcional: CP → provincia → municipio → calle → número. Vacía = sin dirección; a medias = 400 (nunca se inventa).
+  direccion: z.object({ cp: z.string(), provincia: z.string(), municipio: z.string(), via: z.string(), numero: z.string() }).partial().optional(),
 })
 
 export type ResultadoAlta =
@@ -33,6 +36,8 @@ export async function altaTaller(
   if (!p.success) return { ok: false, status: 400, error: 'Faltan datos (razonSocial y duenoNombre) o no son válidos' }
   const nif = p.data.nif ? p.data.nif.toUpperCase().replace(/[\s-]/g, '') : null
   if (nif !== null && !NIF.test(nif)) return { ok: false, status: 400, error: 'NIF no válido' }
+  const dir = direccionOpcional({ cp: '', provincia: '', municipio: '', via: '', numero: '', ...(p.data.direccion ?? {}) } as Direccion)
+  if (!dir.ok) return { ok: false, status: 400, error: dir.errores.join('. ') }
   const t = await deps.crearTaller({ razonSocial: p.data.razonSocial, nombreComercial: p.data.nombreComercial ?? p.data.razonSocial, nif })
 
   return deps.conTaller(t.id, async (tx) => {
@@ -42,6 +47,8 @@ export async function altaTaller(
     const alta = configDeAlta()
     await (tx as any).configuracion.create({ data: { tallerId: t.id, ...escalaresDeConfig(alta) } })
     await guardarConfig(tx, t.id, alta)
+    // Dirección del alta (columnas con UPDATE concedido, 0002). Solo si vino completa; si no, queda sin dirección.
+    if (dir.direccion) await (tx as any).taller.update({ where: { id: t.id }, data: dir.direccion })
     const dueno = await altaUsuario(tx, t.id, { nombre: p.data.duenoNombre, rol: 'dueno' }, aleatorio)
     await auditar(tx, { tallerId: t.id, usuarioId: dueno.id, entidad: 'talleres', entidadId: t.id, accion: 'alta_operador', antes: null, despues: { nif, dueno: p.data.duenoNombre } })
     return { ok: true as const, tallerId: t.id, usuarioId: dueno.id, pinTemporal: dueno.pin }
