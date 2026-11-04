@@ -38,6 +38,7 @@ import {
 } from '@central/module-tarificacion'
 import { cerrarPilotaje, enviarResultado, pedirComandoPilotaje, publicarEstadoPilotaje, type Config, type ResultadoComandoPilotaje, type Trabajo } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
+import { ClicNoAccionableError, cuerpoDiagnosticoClic, esTimeoutAccionabilidad, leerDiagnosticoClic } from './diagnostico-clic.ts'
 import { clasificar } from './errores.ts'
 import { exigirSinVerificacion } from './verificacion.ts'
 import { capturarInventarioExploracion, type InventarioExploracion } from './inventario-dom.ts'
@@ -142,6 +143,17 @@ export async function ejecutarComando(page: Page, captura: InventarioExploracion
   const nodo = captura.nodos.get(c.ref)
   if (!hit || !nodo) return rechazo('ref_no_existe')
   const el = hit.el
+  if (c.accion === 'inspeccionar') {
+    // 0.3.37: SOLO LECTURA. Diagnóstico de accionabilidad del control (forma cerrada, sin PII), sin pulsarlo ni desplazarlo.
+    const l0 = await localizar(nodo, el)
+    if (!('loc' in l0)) return rechazo('no_localizado', [l0.motivo])
+    try {
+      const d = await leerDiagnosticoClic(l0.loc)
+      return d ? { r: { estado: 'hecho', motivo: 'inspeccionado', detalle: [`diag: ${cuerpoDiagnosticoClic(d)}`] } } : rechazo('no_localizado', ['el nodo ya no está'])
+    } finally {
+      await l0.loc.evaluate((n, at) => n.removeAttribute(at), ATRIBUTO_MARCA, { timeout: 2_000 }).catch(() => undefined)
+    }
+  }
   if (c.accion !== 'pulsar') {
     const prohibido = motivoCampoProhibido(el)
     if (prohibido) return rechazo(prohibido)
@@ -217,6 +229,13 @@ export async function ejecutarComando(page: Page, captura: InventarioExploracion
     // Una violación de RED del guard (algo salió hacia emisión) cierra la sesión; el resto es un rechazo registrado.
     if (k.guard.violacion()) throw k.guard.violacion()
     if (e instanceof EmisionBloqueadaError) return rechazo('guard', [textoDiagnostico(`${e.donde}: ${e.message}`, red)])
+    // 0.3.37: el clic caducó por accionabilidad. La tarjeta de ramo de Pelayo ya agotó su clic robusto (guard.ts) y trae el diagnóstico; cualquier
+    // otro control se diagnostica aquí (el nodo sigue marcado). Todo en forma cerrada, sin PII.
+    if (e instanceof ClicNoAccionableError) return rechazo('clic_no_accionable', [e.diagnostico ? `diag: ${cuerpoDiagnosticoClic(e.diagnostico)}` : 'sin diagnóstico', `hijo probado: ${e.hijoProbado ? 1 : 0}`])
+    if (esTimeoutAccionabilidad(e)) {
+      const d = await leerDiagnosticoClic(loc)
+      return rechazo('clic_no_accionable', [...(d ? [`diag: ${cuerpoDiagnosticoClic(d)}`] : ['sin diagnóstico']), textoDiagnostico(e instanceof Error ? e.message : String(e), red)])
+    }
     return rechazo('error', [textoDiagnostico(e instanceof Error ? e.message : String(e), red)])
   } finally {
     await loc.evaluate((n, at) => n.removeAttribute(at), ATRIBUTO_MARCA, { timeout: 2_000 }).catch(() => undefined)

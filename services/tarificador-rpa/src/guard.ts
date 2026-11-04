@@ -10,6 +10,7 @@
 import type { BrowserContext, Dialog, Frame, Locator, Page, Request } from 'playwright'
 import { randomUUID } from 'node:crypto'
 import { ErrorTarificador } from './errores.ts'
+import { ClicNoAccionableError, esTimeoutAccionabilidad, leerDiagnosticoClic } from './diagnostico-clic.ts'
 import { esTextoControlesTecnicos, SEL_DIALOGO_CONTROLES_TECNICOS } from './controles-tecnicos-mapfre.ts'
 import { indiceOpcionGenerica, indicesCompaniaActualCompuesta } from './compania-actual.ts'
 import {
@@ -97,6 +98,7 @@ import {
   compactoNavegacion,
   comprobarRotulosAccionFinal,
   comprobarRotulosPulsar,
+  esRotuloRamoNavegacion,
   rotuloExentoDeOyentes,
   navegacionLibre,
   navegacionLibreInventario,
@@ -877,7 +879,9 @@ export async function pulsar(boton: Locator, guard: GuardEmision): Promise<void>
   // El `value` solo es rótulo en un botón (en un campo de texto es el DATO tecleado: no se mira aquí, sí en `comprobarBoton`).
   const valorEsRotulo = await boton.evaluate((el) => el.tagName === 'BUTTON' || (el.tagName === 'INPUT' && ['submit', 'button', 'image', 'reset'].includes(((el as HTMLInputElement).type || '').toLowerCase()))).catch(() => true)
   comprobarRotulosPulsar([desc[0], desc[1], desc[2], valorEsRotulo ? desc[3] : null, ...rotulosAccesibles(desc)], NOMBRES_ROTULOS_PULSAR)
-  await boton.click()
+  const tarjeta = await tarjetaRamoPelayoViva(boton)
+  if (tarjeta) await pulsarTarjetaRamoPelayo(boton, guard, tarjeta.texto)
+  else await boton.click()
   guard.comprobar()
 }
 
@@ -1329,6 +1333,96 @@ export const ENLACES_ENTRADA_AUTORIZADOS: Readonly<Record<string, readonly strin
   pelayo: Object.freeze(['Contratación', 'Presupuestos', 'Nuevo Presupuesto', 'Auto', 'Autos', 'Automóvil', 'Automóviles', 'Hogar']),
 })
 
+/**
+ * 0.3.37: tiempos del clic robusto de la tarjeta de ramo de Pelayo (mutable SOLO para los tests de este fichero; en producción, los de aquí).
+ * `pasoMs`: tope de CADA intento de clic (directo, hijo, prueba); `hoverMs`: scroll y hover previos; `animacionesMs`: espera a las animaciones.
+ */
+export const AJUSTES_CLIC_TARJETA = { pasoMs: 10_000, hoverMs: 3_000, animacionesMs: 3_000 }
+
+/**
+ * 0.3.37: ¿el control VIVO es una TARJETA DE RAMO de Pelayo? El mismo criterio estrecho de rótulo de ramo que la navegación libre
+ * (`rotuloExentoDeOyentes`): `<a class="card">` cuyo texto es EXACTAMENTE un ramo de la lista cerrada, en el origen de Pelayo (página y
+ * documento del control). Solo lectura. Devuelve su texto o `null` (cualquier otra cosa, o lectura fallida = no es una tarjeta).
+ */
+export async function tarjetaRamoPelayoViva(boton: Locator): Promise<{ texto: string } | null> {
+  try {
+    if (!boton.page().url().startsWith(`${ORIGEN_ENTRADA.pelayo}/`)) return null
+    const vivo = await controlNavegacionVivo(boton)
+    if (!vivo || new URL(vivo.url).origin !== ORIGEN_ENTRADA.pelayo) return null
+    const clases = (vivo.c.clase ?? '').toLowerCase().split(/\s+/).filter(Boolean)
+    const texto = (vivo.c.texto ?? '').replace(/\s+/g, ' ').trim()
+    if ((vivo.c.tag ?? '').toLowerCase() !== 'a' || !clases.includes('card') || texto === '' || !esRotuloRamoNavegacion(texto)) return null
+    return { texto }
+  } catch {
+    return null
+  }
+}
+
+/** Animaciones EN CURSO cuyo objetivo es el control, un ancestro o un descendiente (script de lectura; función real creada con `new Function`, sin `__name` de esbuild). */
+const SCRIPT_ANIMACIONES_DEL_CONTROL = new Function('el', `
+  try { return el.ownerDocument.getAnimations().filter((a) => a.playState === 'running' && a.effect && a.effect.target && (a.effect.target.contains(el) || el.contains(a.effect.target))).length; } catch (e) { return 0; }
+`) as (el: Element) => number
+
+/**
+ * 0.3.37 (Pelayo real, pilotaje fc136562): el CLIC ROBUSTO de la tarjeta de ramo (`tarjetaRamoPelayoViva`), SOLO tras la puerta que la
+ * autorizó (`pulsarEnlaceEntradaAutorizado` / `pulsarNavegacionLibre` / `pulsar`). Sin `force`, sin `dispatchEvent`:
+ *   scrollIntoViewIfNeeded › hover › espera a las animaciones del control (≤ `animacionesMs`) › `click()`;
+ *   si caduca por ACCIONABILIDAD (no visible / inestable / otro elemento intercepta): `click()` sobre el hijo de texto exacto (revisado
+ *   por el guard igual que la tarjeta); si sigue, `click({ trial: true })` solo para diagnosticar y PARAR con `ClicNoAccionableError`
+ *   (diagnóstico cerrado y sin PII). Un banner de cookies que tape la tarjeta NO se cierra aquí: la regla general de navegación libre no
+ *   admite «Aceptar»/«Rechazar» (queda como hueco: el diagnóstico dice `cookie=1`).
+ */
+export async function pulsarTarjetaRamoPelayo(boton: Locator, guard: GuardEmision, texto: string): Promise<void> {
+  // La revisión del HIJO (el control nuevo que se pulsaría): las mismas barreras que la puerta, vivas, antes de su clic.
+  const revisarHijo = async (hijo: Locator): Promise<void> => {
+    guard.comprobar()
+    await exigirSinCuentaBancaria(hijo.page())
+    const d = await descripcion(hijo)
+    comprobarBoton(conRutasTolerables(guard, d))
+    comprobarRotulosAccionFinal(d)
+  }
+  const { pasoMs, hoverMs, animacionesMs } = AJUSTES_CLIC_TARJETA
+  await boton.scrollIntoViewIfNeeded({ timeout: hoverMs }).catch(() => undefined)
+  await boton.hover({ timeout: hoverMs }).catch(() => undefined)
+  const finAnimaciones = Date.now() + animacionesMs
+  while (Date.now() < finAnimaciones) {
+    const enCurso = Number(await boton.evaluate(SCRIPT_ANIMACIONES_DEL_CONTROL, undefined, { timeout: 2_000 }).catch(() => 0))
+    if (!(enCurso > 0)) break
+    await boton.page().waitForTimeout(100)
+  }
+  guard.comprobar()
+  try {
+    await boton.click({ timeout: pasoMs })
+    return
+  } catch (e) {
+    if (!esTimeoutAccionabilidad(e)) throw e
+  }
+  guard.comprobar()
+  let hijoProbado = false
+  const textoRe = texto.replace(/[.*+?^$(){}|[\]\\]/g, '\\$&')
+  // Un DESCENDIENTE estricto (`locator('*')`): `getByText` desde la propia tarjeta también casaría con ella misma si el texto es suyo.
+  const hijo = boton.locator('*').getByText(new RegExp(`^\\s*${textoRe}\\s*$`, 'i'))
+  if ((await hijo.count()) === 1) {
+    await revisarHijo(hijo)
+    hijoProbado = true
+    try {
+      await hijo.click({ timeout: pasoMs })
+      return
+    } catch (e) {
+      if (!esTimeoutAccionabilidad(e)) throw e
+    }
+    guard.comprobar()
+  }
+  try {
+    await boton.click({ trial: true, timeout: pasoMs })
+  } catch (e) {
+    if (!esTimeoutAccionabilidad(e)) throw e
+    throw new ClicNoAccionableError(await leerDiagnosticoClic(boton), hijoProbado)
+  }
+  // La prueba pasó: el control ya es accionable (terminó una animación o un overlay). Un clic normal, sin forzar nada.
+  await boton.click({ timeout: pasoMs })
+}
+
 /** 0.3.33: etiquetas (normalizadas) de ramo de Pelayo que admiten UN reintento de clic. */
 const RAMOS_REINTENTABLES_PELAYO: ReadonlySet<string> = new Set(['auto', 'autos', 'automóvil', 'automóviles', 'hogar'])
 
@@ -1410,7 +1504,10 @@ export async function pulsarEnlaceEntradaAutorizado(boton: Locator, guard: Guard
   comprobarBoton(desc.filter((d) => textoEntrada(d) !== autorizado))
   usados.add(clave)
   AVANCES_USADOS.set(guard, usados)
-  await boton.click()
+  // 0.3.37: la tarjeta de RAMO de Pelayo (a.card con rótulo de ramo) se pulsa con el clic robusto (animaciones, hijo, diagnóstico); el resto, como siempre.
+  const tarjeta = compania === 'pelayo' && RAMOS_REINTENTABLES_PELAYO.has(autorizado) ? await tarjetaRamoPelayoViva(boton) : null
+  if (tarjeta) await pulsarTarjetaRamoPelayo(boton, guard, tarjeta.texto)
+  else await boton.click()
   guard.comprobar()
 }
 
@@ -4091,7 +4188,9 @@ export async function pulsarNavegacionLibre(boton: Locator, guard: GuardEmision,
   cuenta.set(clave, usadas + 1)
   PULSACIONES_NAVEGACION.set(guard, cuenta)
   PULSACIONES_NAVEGACION_TOTAL.set(guard, total + 1)
-  await boton.click()
+  const tarjeta = await tarjetaRamoPelayoViva(boton)
+  if (tarjeta) await pulsarTarjetaRamoPelayo(boton, guard, tarjeta.texto)
+  else await boton.click()
   guard.comprobar()
 }
 
