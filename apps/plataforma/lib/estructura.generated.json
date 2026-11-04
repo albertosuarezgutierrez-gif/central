@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-11-04T08:06:35Z",
+  "generadoEn": "2026-11-04T08:46:36Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2321,7 +2321,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 344
+        "evidencias": 346
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2375,7 +2375,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 70
+        "evidencias": 71
       },
       "asegura-portal": {
         "estado": "usado",
@@ -6214,6 +6214,7 @@
       "seguros.tarificador_pilotaje_sesiones",
       "seguros.tarificador_sesiones",
       "seguros.usuarios",
+      "seguros.whatsapp_aprendizaje",
       "seguros.whatsapp_kb_chunks",
       "seguros.whatsapp_outbound_messages",
       "seguros.whatsapp_propuestas",
