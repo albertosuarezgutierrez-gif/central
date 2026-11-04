@@ -166,7 +166,7 @@ test('CEPO deshacer es de un solo uso en BD: reclama con UPDATE condicionado a �
 
 test('CEPO deshacer y modificar: el endpoint exige actor HUMANO (titular), nunca agente ni sistema', () => {
   const src = sinComentarios(readFileSync(new URL('../../app/api/operador/whatsapp/propuesta/route.ts', import.meta.url), 'utf8'))
-  const guarda = src.indexOf("(v.decision === 'modificar' || v.decision === 'deshacer') && actor.tipo !== 'humano'")
+  const guarda = src.indexOf("(v.decision === 'modificar' || v.decision === 'deshacer' || v.decision === 'silenciar') && actor.tipo !== 'humano'")
   assert.ok(guarda > 0, 'falta la guarda de actor humano')
   assert.ok(guarda < src.indexOf('deshacerPropuesta('), 'la guarda va ANTES de deshacer')
 })
@@ -259,8 +259,8 @@ test('casos parecidos: primero los que comparten palabras, con hueco para los m�
   assert.equal(casoParaIA(caso('x', 9, { autonoma: true, deshecha: true })).decision, 'aplicada_sola_y_deshecha_por_el_corredor')
 })
 
-test('CEPO los casos entran al prompt solo con ficha única y póliza en vigor; null ≠ []', () => {
+test('CEPO los casos entran al prompt solo con ficha única y (póliza en vigor u oportunidad abierta: D4 ajustada); null ≠ []', () => {
   const src = fuente('./analizar.ts')
-  assert.match(src, /const casos = fichaUnica && enVigor === true \? await casosResueltos\(correduriaId\) : undefined/)
+  assert.match(src, /const casos = fichaUnica && \(enVigor === true \|\| oportunidades\.length > 0\) \? await casosResueltos\(correduriaId\) : undefined/)
   assert.match(src, /casos_previos: casos === null \? null :/)
 })

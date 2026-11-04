@@ -23,7 +23,8 @@ import { recibosPendientesDe, salienteVinculadoDe, type ReciboParaAnalisis, type
 import { aplicarSiAutonoma, avisarTelegram, crearPropuesta, type ContextoAprendizaje } from './propuestas'
 import { casosResueltos } from './aprendizaje'
 import { casoParaIA, elegirCasos, extractoRedactado } from './aprendizaje-reglas'
-import { promesaAvisoActiva, respuestaIaActiva } from './config'
+import { respuestaIaActiva } from './config'
+import { avisoVencimientoDisponible } from './aviso-vencimiento-reglas'
 import { decidirRespuesta, esBaja, puedeResponder, sistemaRespuesta, TEXTO_MOTIVO, type Pre } from './respuesta-reglas'
 import { enviarRespuesta, leerEstadoRespuesta, type ResultadoRespuesta } from './respuesta'
 import { redactarPii } from '@central/module-seguros'
@@ -208,7 +209,8 @@ async function analizarUna(correduriaId: string, c: Reclamada): Promise<number |
 
   // Respuesta automática (ASEGURA_WHATSAPP_RESPUESTA_ACTIVA=1). Con el flag apagado no se lee nada más ni cambia el prompt.
   const flagRespuesta = respuestaIaActiva()
-  const promesaAviso = promesaAvisoActiva()
+  // La respuesta solo promete avisos si el aviso de vencimiento por plantilla está de verdad disponible.
+  const promesaAviso = avisoVencimientoDisponible()
   let pre: Pre = { ok: false, motivo: 'flag_apagado' }
   let entranteId: string | null = null
   let tipoEntrante = 'text'

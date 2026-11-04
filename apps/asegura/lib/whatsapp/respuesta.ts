@@ -1,5 +1,5 @@
 // Respuesta automática de la IA por WhatsApp: la parte con BD y red. Las reglas son PURAS en `respuesta-reglas.ts`;
-// el transporte (único `/messages` del canal) en `envio.ts`. Solo se llama con ASEGURA_WHATSAPP_RESPUESTA_ACTIVA=1.
+// el transporte en `lib/whatsapp-salida/texto.ts`. Solo se llama con ASEGURA_WHATSAPP_RESPUESTA_ACTIVA=1.
 //
 // IDEMPOTENCIA (nunca dos respuestas al mismo entrante, ni con reintentos del cron ni con carreras):
 //   1. el analizador RECLAMA la conversación (`for update skip locked`), así que dos pasadas no la cogen a la vez;
@@ -17,7 +17,7 @@ import { Prisma } from '../generated/asegura-client'
 import { prismaAsegura } from '../asegura-db'
 import { esColumnaAusente, esTablaAusente } from '../pg-error'
 import { versionGraph } from './graph'
-import { crearEnviador } from './envio'
+import { crearEnviador } from '../whatsapp-salida/texto'
 import { secretoWhatsapp } from './secretos'
 import { leerDestinoWebhook } from './conexion'
 import { tokenCorreduria } from './media-procesar'

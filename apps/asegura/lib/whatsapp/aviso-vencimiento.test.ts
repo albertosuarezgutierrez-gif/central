@@ -171,15 +171,15 @@ function ficheros(dir: string, salida: string[] = []): string[] {
   return salida
 }
 
-test('CEPO: solo lib/whatsapp-salida/plantilla.ts envía a Meta (`/messages`); lib/whatsapp sigue sin hablar con Graph', () => {
+test('CEPO: solo lib/whatsapp-salida/{plantilla,texto}.ts envían a Meta (`/messages`); lib/whatsapp sigue sin hablar con Graph', () => {
   const conEnvio = [...ficheros(join(RAIZ, 'lib')), ...ficheros(join(RAIZ, 'app'))]
     .filter((f) => /\/messages\b/.test(sinComentarios(readFileSync(f, 'utf8'))))
     .map((f) => f.slice(RAIZ.length))
-  // `lib/whatsapp/envio.ts` es el enviador de TEXTO de la respuesta automática (otro encargo): no es de este aviso.
+  // `lib/whatsapp-salida/texto.ts` es el enviador de TEXTO de la respuesta automática (otro encargo): no es de este aviso.
   assert.ok(conEnvio.includes('lib/whatsapp-salida/plantilla.ts'))
-  assert.deepEqual(conEnvio.filter((f) => f !== 'lib/whatsapp-salida/plantilla.ts' && f !== 'lib/whatsapp/envio.ts'), [], 'ningún otro fichero envía')
+  assert.deepEqual(conEnvio.filter((f) => f !== 'lib/whatsapp-salida/plantilla.ts' && f !== 'lib/whatsapp-salida/texto.ts'), [], 'ningún otro fichero envía')
   const aviso = sinComentarios(readFileSync(new URL('./aviso-vencimiento.ts', import.meta.url), 'utf8'))
-  assert.doesNotMatch(aviso, /envio\.ts|crearEnviador|enviarTexto|graph\.facebook|\/messages/, 'el aviso solo manda PLANTILLAS, por plantilla.ts')
+  assert.doesNotMatch(aviso, /texto\.ts|crearEnviador|enviarTexto|graph\.facebook|\/messages/, 'el aviso solo manda PLANTILLAS, por plantilla.ts')
 })
 
 test('CEPO: ni plantilla.ts ni el aviso loguean token o teléfono, y el aviso solo escribe en su tabla y en mensajes', () => {

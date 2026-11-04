@@ -97,11 +97,10 @@ const PROHIBIDO: { motivo: string; re: RegExp }[] = [
     re: /\b(ya (esta|estan|queda|quedan|lo|la|se)|he |hemos |queda |quedan |esta |estan )?(dad[oa]s? de baja|anulad[oa]s?|cancelad[oa]s?|tramitad[oa]s?|cambiad[oa]s?|modificad[oa]s?|actualizad[oa]s?|renovad[oa]s?|aplicad[oa]s?|confirmad[oa]s?|hech[oa]s?|resuelt[oa]s?|realizad[oa]s?|gestionad[oa]s?|cobrad[oa]s?|pagad[oa]s?)\b|\b(le|te) confirmo\b|\bconfirmamos\b/,
   },
   { motivo: 'enlace', re: /https?:|www\.|\.(es|com|net|org)\b/ },
-  { motivo: 'marcador', re: /\[[A-Z_]{2,}\]/ },
   { motivo: 'dato_personal', re: /\b(dni|nif|nie|iban|cuenta bancaria|numero de cuenta|tarjeta|contrasena|clave|codigo|direccion|domicilio|matricula|n(umero)? de poliza)\b/ },
 ]
 
-/** Promesa de AVISO futuro (apagada hasta que existan los avisos por plantilla). */
+/** Promesa de AVISO futuro: solo con `avisoVencimientoDisponible()` (aviso de vencimiento por plantilla encendido). */
 const PROMESA_AVISO = /\b(le|te) (aviso|avisare|avisaremos|avisamos|escribire|escribiremos|recordare|recordaremos|mando|mandare|enviare)\b|\b(le|te) (llegara|llegaran) (un|el|los) (aviso|recordatorio|mensaje)|\b(aviso|recordatorio) (antes|\d+ dias)/
 
 /** Lo que la IA puede decir en su lugar mientras la promesa esté apagada (va en el prompt). */
@@ -122,6 +121,7 @@ export function filtrarContenido(bruto: unknown, opciones: { promesaAviso: boole
   // Como mucho 3 frases: una respuesta larga es una respuesta que dice demasiado.
   if ((texto.match(/[.!?](\s|$)/g) ?? []).length > 3) return { ok: false, motivo: 'larga' }
   if (/\d{3,}/.test(texto)) return { ok: false, motivo: 'numero' }
+  if (/\[[A-Z_]{2,}\]/.test(texto)) return { ok: false, motivo: 'marcador' }
   if (opciones.redactar(texto) !== texto) return { ok: false, motivo: 'dato_personal' }
   const llano = quitarTildes(texto.toLowerCase())
   // «60 días antes del vencimiento» no tiene importe; pero «60» sí pasa por el filtro de números (2 cifras admitidas).

@@ -1,14 +1,15 @@
-// EL ÚNICO fichero de `lib/whatsapp/` que ENVÍA un mensaje a Meta (`POST /{phone_number_id}/messages`).
+// Envío de TEXTO libre a WhatsApp (`POST /{phone_number_id}/messages`). Vive en `lib/whatsapp-salida/` con `plantilla.ts`:
+// son los DOS únicos ficheros de apps/asegura que envían (cepo en `texto.test.ts`); `lib/whatsapp/` sigue sin `/messages`.
 // Decisión de Alberto (04/11/2026): la IA contesta sola, con TEXTO, dentro de la ventana de 24 h, a un lead/cliente
-// con ficha única. Quién decide si se envía: `respuesta-reglas.ts` (puro) + `respuesta.ts` (BD, reserva idempotente).
+// con ficha única. Quién decide si se envía: `respuesta-reglas.ts` (puro) + `respuesta.ts` (BD, reserva idempotente), el ÚNICO llamador (cepo).
 // Aquí solo el transporte. PURO salvo `fetch`, que se inyecta (los tests pasan uno falso).
 //
 // 🚫 Solo `type: 'text'` con `preview_url: false` (ni plantillas, ni media, ni interactivos) y UN intento: tras un
-//    error o corte NO se reintenta (más vale ninguna respuesta que dos). Cepos en `respuesta.test.ts`.
+//    error o corte NO se reintenta (más vale ninguna respuesta que dos). Cepos en `texto.test.ts`.
 // 🔐 Ni el token ni el número salen nunca en un error ni en un log: el error lleva el código de Meta y nada más.
 
 import { z } from 'zod'
-import { idMetaValido, type FetchLike } from './graph.ts'
+import { idMetaValido, type FetchLike } from '../whatsapp/graph.ts'
 
 const BASE = 'https://graph.facebook.com'
 export const MAX_TEXTO_ENVIO = 1000

@@ -17,10 +17,11 @@ export const PREFIJO_WAP = 'wap'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const ACTOR_HUMANO = /^humano:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-export type DecisionWap = 'aplicar' | 'descartar' | 'modificar' | 'deshacer'
+export type DecisionWap = 'aplicar' | 'descartar' | 'modificar' | 'deshacer' | 'silenciar'
 /** Las acciones `wap_<acción>` que acepta el webhook: las MISMAS que emite asegura (`ACCIONES_WAP`; lo fija el test). */
-export const ACCIONES_WAP = ['ok', 'no', 'ed', 'un'] as const
-const DECISION: Record<(typeof ACCIONES_WAP)[number], DecisionWap> = { ok: 'aplicar', no: 'descartar', ed: 'modificar', un: 'deshacer' }
+// `si` (🔇): el uuid es el de la CONVERSACIÓN; silencia la respuesta automática de la IA en ella (asegura, 04/11/2026).
+export const ACCIONES_WAP = ['ok', 'no', 'ed', 'un', 'si'] as const
+const DECISION: Record<(typeof ACCIONES_WAP)[number], DecisionWap> = { ok: 'aplicar', no: 'descartar', ed: 'modificar', un: 'deshacer', si: 'silenciar' }
 export type BotonWap = { ok: true; id: string; decision: DecisionWap } | { ok: false; toast: string }
 
 /** ¿Vale esta pulsación? Solo el titular (from.id EXACTO; sin chat configurado, nadie) y una acción de `ACCIONES_WAP` con un uuid. PURO. */
@@ -108,6 +109,7 @@ export function lineaTrasPulsarWap(decision: DecisionWap, r: ResultadoWap): stri
   if (r.status === 200 && r.estado === 'aplicada') return '✅ <i>Aplicada en el CRM.</i>'
   if (r.status === 200 && r.estado === 'descartada') return '❌ <i>Descartada: no se toca nada.</i>'
   if (r.status === 200 && r.estado === 'modificada') return '✏️ <i>Aplicada con tu corrección y anotada para que la IA aprenda.</i>'
+  if (r.status === 200 && (r.estado === 'silenciada' || r.estado === 'ya_silenciada')) return '🔇 <i>IA silenciada en esta conversación: ya no contestará sola. Lo demás (avisos y propuestas) sigue.</i>'
   if (r.status === 200 && r.estado === 'deshecha') return '↩️ <i>Deshecha: vuelve al valor anterior. Este tipo vuelve a pedirte permiso.</i>'
   if (r.estado === 'correccion_invalida') return '⚠️ <i>No entiendo la corrección (una fecha dd/mm/aaaa y/o una observación): no he cambiado nada. Pulsa ✏️ otra vez.</i>'
   if (r.estado === 'cambiado_despues') return '⚠️ <i>No se deshace: el dato se cambió después (lo que puso una persona no se pisa). Míralo en la ficha.</i>'
@@ -119,6 +121,7 @@ export function lineaTrasPulsarWap(decision: DecisionWap, r: ResultadoWap): stri
   if (r.estado === 'sin_actor') return '⚠️ <i>No se sabe qué cuenta es la tuya (FACTURAS_CUENTA_ID / GMAIL_USER): no se aplica nada.</i>'
   if (r.status === 503) return '⚠️ <i>asegura no está lista (sin configurar o sin migración): sigue pendiente.</i>'
   const estado = r.estado.replace(/[<>&]/g, '').slice(0, 60)
+  if (decision === 'silenciar') return `⚠️ <i>No se ha podido silenciar (${estado}). La IA puede seguir contestando: repite o apaga ASEGURA_WHATSAPP_RESPUESTA_ACTIVA.</i>`
   if (decision === 'deshacer') return `⚠️ <i>No se ha podido deshacer (${estado}): sigue aplicada. Mira la ficha antes de repetir.</i>`
   return `⚠️ <i>No se ha podido ${decision === 'descartar' ? 'descartar' : 'aplicar'} (${estado}). Sigue pendiente: mira la ficha antes de repetir.</i>`
 }

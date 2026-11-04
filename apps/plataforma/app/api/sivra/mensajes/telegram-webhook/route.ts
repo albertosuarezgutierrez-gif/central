@@ -1049,6 +1049,7 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
     // va en after(). Aplicar nunca envía nada al cliente ni cierra una devolución. Spec 2026-11-04 §5.
     // ✏️ `wap_ed` pide la corrección con force_reply (marca «[wap <uuid>]»; la propuesta sigue pendiente hasta que llegue).
     // ↩️ `wap_un` deshace una aplicada SOLA (modo autónomo): un uso, lo comprueba asegura. § «Aprendizaje y autonomía».
+    // 🔇 `wap_si:<conversación>` silencia la respuesta automática de la IA en esa conversación (mismo puerto, solo titular).
     if (prefix === PREFIJO_WAP) {
       const d = decidirBotonWap(cb, action, args, process.env.TELEGRAM_CHAT_ID)
       if (!d.ok) {
@@ -1062,7 +1063,7 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
         return NextResponse.json({ ok: true })
       }
       const decision = d.decision
-      await tgAnswerCallback(cb.id, decision === 'aplicar' ? '⏳ Aplicando…' : decision === 'deshacer' ? '↩️ Deshaciendo…' : 'Descartando…')
+      await tgAnswerCallback(cb.id, decision === 'aplicar' ? '⏳ Aplicando…' : decision === 'deshacer' ? '↩️ Deshaciendo…' : decision === 'silenciar' ? '🔇 Silenciando…' : 'Descartando…')
       const original = escapeHtml(cb.message?.text ?? '')
       const mensajeId: number | undefined = cb.message?.message_id
       if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n⏳ <i>Pulsado…</i>`).catch(() => {})

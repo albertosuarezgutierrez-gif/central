@@ -65,6 +65,7 @@ const HISTORIAL: Record<string, string> = {
   no_compartido: 'No compartido (lo elegido: «No compartir chats»)',
   descartado: 'Llegó y se DESCARTÓ sin guardar texto',
   guardado_crudo: 'Guardado en crudo, sin importar (WHATSAPP_IMPORTAR_HISTORIAL=1)',
+  importado: 'Importado: solo los chats de clientes con ficha única (WHATSAPP_IMPORTAR_HISTORIAL=1)',
   error_meta: 'Meta devolvió un error',
 }
 

@@ -2,8 +2,43 @@
 
 > Decidido por Alberto (sustituye al «modo sombra» de borradores). Base: `apps/asegura/docs/WHATSAPP.md`. Sin código todavía.
 
+## 0. Decisiones nuevas de Alberto (04/11/2026, tarde) — mandan sobre §1 y §11
+1. **Respuesta automática** (flag `ASEGURA_WHATSAPP_RESPUESTA_ACTIVA=1`, apagado; exige también `ASEGURA_WHATSAPP_ACTIVO` e
+   `ASEGURA_WHATSAPP_IA_ACTIVO`). Con el flag apagado, todo igual que antes (mismo prompt, nada se envía). La IA contesta con
+   texto libre por Cloud API a un lead/cliente con **ficha única** que responde a una conversación que abrió Alberto, solo en la
+   ventana de 24 h (margen 30 min). Reglas puras en `lib/whatsapp/respuesta-reglas.ts`; BD y reserva en `respuesta.ts`;
+   transporte en `lib/whatsapp-salida/texto.ts` (con `plantilla.ts`, los DOS únicos ficheros que envían; `lib/whatsapp/` sigue
+   sin `/messages` ni `graph.facebook.com`).
+   - **No contesta:** sin ficha / >1 ficha / beneficiario, conversación no `abierta` (personal, pendiente), opt-out, 🔇 silenciada,
+     fuera de 24 h, entrante del historial importado, sin saliente previo de la correduría, si Alberto escribió después del último
+     entrante, tipos no-texto (salvo imagen/documento/audio/vídeo → acuse genérico FIJO), tope 3/conversación/día y 40/día, IA no
+     segura (`respuesta: null`) o texto que no pasa el filtro.
+   - **Filtro** (conservador): precios/importes/%, asesoramiento (recomendar, coberturas, compañías), trámites confirmados
+     («dado de baja», «tramitado», «le confirmo»…), datos personales (redactarPii + DNI/IBAN/dirección/matrícula/póliza),
+     números de ≥3 cifras, enlaces, marcadores `[NOMBRE]`, >400 caracteres o >3 frases. **Promesa de avisos futuros** solo si
+     `avisoVencimientoDisponible()` (aviso de vencimiento por plantilla encendido); si no: «tomo nota, Alberto se lo revisa antes
+     del vencimiento».
+   - **Bajas / oposición a prórroga** (intención `baja` o texto): texto FIJO «Alberto lo gestiona… no se ha cambiado nada» +
+     Telegram 🚨 (escrito del tomador ≥1 mes antes del vencimiento, art. 22 LCS). Nunca «hecho».
+   - **Idempotencia:** conversación reclamada (`skip locked`) + reserva en `mensajes` ANTES de enviar bajo índice único
+     `uq_mensajes_responde_a` (re-comprueba silencio, opt-out, saliente posterior, entrante más nuevo y topes en la misma
+     sentencia) + UN intento (fallo/corte = `fallido`/`enviando`, no se reintenta).
+   - Lo enviado queda en `mensajes` (saliente, `rol='bot'`, `generado_por='ia'`, cifrado) y Telegram dice «🤖 Respondí: «…»» con
+     **🔇 Silenciar IA aquí** (`wap_si:<conversación>` → `POST /api/operador/whatsapp/propuesta {decision:'silenciar'}`, solo humano).
+   - **Debounce: se mantienen los 10 min** (no 2): el cron corre cada 15 min (bajar el umbral apenas adelanta nada), los
+     clientes escriben a ráfagas (contestar a medio mensaje y re-analizar duplica coste IA) y esos minutos son el margen para que
+     Alberto conteste desde el móvil (si lo hace, la IA calla).
+2. **Cambios de datos** siguen como propuesta ✅ (autonomía gradual intacta). **D4 ajustada:** `proponerVencimiento` ya no exige
+   póliza en vigor, solo ficha única + oportunidad ABIERTA del ramo (el vencimiento de un lead). Las de recibo siguen exigiéndola.
+   «Baja»/«ya no tengo el seguro» no es tipo de propuesta: Telegram urgente + tarea si la IA la crea.
+3. **Historial (compartir 6 meses):** con `WHATSAPP_IMPORTAR_HISTORIAL=1` ya NO se guarda el crudo (antes guardaba en claro
+   TODOS los chats, también personales). `lib/whatsapp/historial.ts` importa SOLO hilos con UNA ficha viva sin opt-out (≤186
+   días, ≤200 mensajes/hilo, cifrados, `metadata.origen='historial'`, dedupe por wamid) y no toca `ultimo_mensaje_at` ni
+   `analizada_hasta` (no dispara análisis ni respuesta). El analizador solo usa el historial como contexto con ficha única.
+4. SQL `apps/asegura/prisma/sql/2026-11-04c_whatsapp_respuesta_ia.sql` (**pendiente de aplicar**; sin él, fail-closed).
+
 ## 1. Alcance
-- **El sistema NUNCA redacta respuestas libres ni envía nada por WhatsApp.** Alberto escribe desde su móvil con los botones
+- ~~**El sistema NUNCA redacta respuestas libres ni envía nada por WhatsApp.**~~ (sustituido por §0.1) Alberto escribe desde su móvil con los botones
   `wa.me` que ya existen (coste Meta 0). Cuando el CLIENTE contesta, el agente interpreta la respuesta en el contexto de lo que
   Alberto le mandó (llega como `smb_message_echoes`, Coexistence) y **actúa en el CRM**. Siempre aviso a Alberto por Telegram.
 - Cierre del ciclo: el aviso trae un **botón `wa.me` ya escrito** (enlace al presupuesto o enlace `/datos` con lo que falta) que
