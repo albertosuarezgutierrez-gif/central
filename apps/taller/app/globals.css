@@ -1,0 +1,54 @@
+/* Los tokens (--bg, --brand, --text…) los emite emitirRootCss(MARCA) en el <head>. */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 16px;
+  min-width: 320px;
+}
+h1 { font-family: var(--serif); font-size: 28px; margin: 0 0 16px; }
+.tenue { color: var(--muted); margin: 8px 0; }
+.cabecera {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 16px; background: #0a0a0a; border-bottom: 1px solid var(--border);
+}
+.marca { display: flex; align-items: center; gap: 12px; text-decoration: none; min-width: 0; }
+.marca-logo { height: 44px; width: auto; max-width: 60vw; }
+.sello {
+  font-family: 'Quicksand', 'Nunito Sans', system-ui, sans-serif; font-weight: 700; font-size: 14px;
+  color: #3364ee;
+}
+.contenido { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+.rejilla { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+.tarjeta {
+  display: flex; flex-direction: column; gap: 4px; min-height: 88px; justify-content: center;
+  padding: 16px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radio);
+  color: var(--text); text-decoration: none;
+}
+.tarjeta span { color: var(--muted); font-size: 14px; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 18px;
+  border-radius: var(--radio); border: 1px solid var(--brand); background: var(--brand);
+  color: var(--on-brand, #0a0a0a); font: inherit; font-weight: 600; cursor: pointer; text-decoration: none;
+}
+.btn-sec { background: transparent; color: var(--text); border-color: var(--border); }
+.login-wrap { min-height: 100vh; display: grid; place-items: center; padding: 16px; background: #0a0a0a; }
+.login-card {
+  width: min(100%, 360px); text-align: center; padding: 24px 16px; border-radius: var(--radio);
+  background: var(--panel); border: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.login-logo { width: min(70%, 220px); height: auto; background: #0a0a0a; border-radius: var(--radio); }
+.pin-puntos { display: flex; gap: 14px; margin: 8px 0; }
+.punto { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--muted); }
+.punto.lleno { background: var(--brand); border-color: var(--brand); }
+.error { min-height: 22px; color: var(--danger); font-size: 14px; }
+.pad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; width: 100%; margin-top: 8px; }
+.tecla {
+  min-height: 56px; font: inherit; font-size: 22px; font-weight: 600; border-radius: var(--radio);
+  border: 1px solid var(--border); background: var(--panel2); color: var(--text); cursor: pointer;
+}
+.tecla:active:not(:disabled) { background: var(--brand-soft); }
+.tecla:disabled { opacity: .5; }
+.tecla-sec { font-size: 18px; color: var(--muted); }

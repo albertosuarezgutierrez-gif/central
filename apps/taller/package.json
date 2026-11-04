@@ -1,0 +1,28 @@
+{
+  "name": "taller",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "node --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@central/brand": "workspace:*",
+    "@central/core-identity": "workspace:*",
+    "@central/module-taller": "workspace:*",
+    "next": "^15.5.28",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "^16.2.6",
+    "typescript": "^5"
+  }
+}
