@@ -167,6 +167,13 @@ export type ElementoInventario = {
    */
   selectOculto?: true
   /**
+   * 0.3.43 (Pelayo real 04/11/2026, `<pelayo-smart-select formControlName=documentType>`): CUSTOM ELEMENT de desplegable SIN `<select>` nativo
+   * dentro (tag de desplegable, {@link RE_TAG_DESPLEGABLE_CUSTOM}, o role listbox/combobox; nunca `nx-dropdown`, que tiene su camino). Su
+   * disparador y sus opciones (`li` / role=option) viven en su shadow DOM. Se elige con `elegir`/`seleccionar` por el TEXTO EXACTO de la opción
+   * (como el nx-dropdown); `opciones` lleva los textos de sus opciones aunque estén ocultas (valor siempre null).
+   */
+  desplegableCustom?: true
+  /**
    * Título accesible del DIÁLOGO/MODAL que contiene al control (14/10/2026; el más cercano: `SELECTOR_DIALOGO` de guard.ts),
    * saneado. Solo si el crudo lo trae. Sirve para el «Guardar» de un modal autorizado por entrada (`guardadosEnDialogo`).
    */
@@ -299,6 +306,18 @@ export function urlSinQuery(url: unknown): string {
 
 const TAG = /^[a-z][a-z0-9-]{0,40}$/
 
+/** 0.3.42/0.3.43: tag de un custom element de DESPLEGABLE (Stencil/Angular: `pelayo-select`, `pelayo-smart-select`, `x-dropdown`, `ui-combobox`…). */
+export const RE_TAG_DESPLEGABLE_CUSTOM = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*-(?:select|dropdown|combo|combobox|picker|listbox)$/
+
+/**
+ * 0.3.43: ¿puede `tag`/`role` ser un desplegable CUSTOM (`desplegableCustom`)? Custom element (con guion), no `nx-dropdown`, y tag de desplegable
+ * o role listbox/combobox. Pura.
+ */
+export function esTagDesplegableCustom(tag: string, role: string | null | undefined): boolean {
+  if (tag.indexOf('-') < 1 || tag === 'nx-dropdown') return false
+  return RE_TAG_DESPLEGABLE_CUSTOM.test(tag) || role === 'listbox' || role === 'combobox'
+}
+
 /**
  * Sanea el inventario CRUDO (lo que devuelve el extractor del navegador, o lo que llega por el cable). `null` si no tiene
  * forma de inventario. Nunca lanza.
@@ -413,20 +432,23 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
       if (eo.autocompletar === true && (tag === 'input' || tag === 'textarea')) el.autocompletar = true
       if (eo.selectpicker === true && tag === 'select') el.selectpicker = true
       if (eo.selectOculto === true && tag === 'select') el.selectOculto = true
+      const desplegableCustom = eo.desplegableCustom === true && esTagDesplegableCustom(tag, el.role)
+      if (desplegableCustom) el.desplegableCustom = true
       // Elemento que MUESTRA el usuario/mediador (cabecera: id/name/aria «usuario», «mediador», «perfil»…): su texto fuera.
       if (el.texto !== undefined && tag !== 'input' && tag !== 'select' && tag !== 'textarea'
         && [eo.id, eo.name, eo.ariaLabel].some((x) => typeof x === 'string' && PATRON_ELEMENTO_USUARIO.test(x))) {
         delete el.texto
         descartados++
       }
-      if ((tag === 'select' || tag === 'nx-dropdown') && Array.isArray(eo.opciones)) {
+      if ((tag === 'select' || tag === 'nx-dropdown' || desplegableCustom) && Array.isArray(eo.opciones)) {
         const todas: OpcionInventario[] = []
         // 0.3.24: placeholders vacíos descartados (`value=""` EXACTO y sin texto); la 2.ª pasada (asegura) hereda la cuenta de la 1.ª.
         let vacias = tag === 'select' && typeof eo.opcionesVacias === 'number' && Number.isInteger(eo.opcionesVacias) && eo.opcionesVacias > 0 ? Math.min(eo.opcionesVacias, 100_000) : 0
         for (const o of eo.opciones.slice(0, MAX_OPCIONES_CRUDAS_SELECT)) {
           const oo = obj(o)
           if (!oo) continue
-          const valor = texto(oo.valor, MAX_ATRIBUTO) ?? null
+          // 0.3.43: en un desplegable custom la opción ES su texto (sin valor).
+          const valor = desplegableCustom ? null : (texto(oo.valor, MAX_ATRIBUTO) ?? null)
           const t = texto(oo.texto, MAX_TEXTO_INVENTARIO) ?? null
           // `value` EXACTAMENTE '' (no redactado; o ya marcado en la 1.ª pasada): solo en <select>, solo con valor null.
           const vacio = tag === 'select' && valor === null && (oo.valor === '' || (oo.valor === null && oo.vacio === true))
