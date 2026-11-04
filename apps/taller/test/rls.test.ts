@@ -4,7 +4,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { crearConTaller, SinTallerError } from '../lib/rls.ts'
-import { tallerDelDespliegue } from '../lib/login.ts'
+import { tallerDeDesarrollo } from '../lib/dispositivo.ts'
 import { crearBdFake } from './_fake-prisma.ts'
 
 const T = 'f9e29b9a-0fb8-4196-ac7a-01c1722b1d8b'
@@ -52,8 +52,9 @@ test('la BD (fake RLS) no devuelve nada fuera de conTaller y rechaza escribir en
   )
 })
 
-test('tallerDelDespliegue: sin TALLER_PILOTO_ID uuid no hay taller (nunca uno por defecto)', () => {
-  assert.equal(tallerDelDespliegue({}), null)
-  assert.equal(tallerDelDespliegue({ TALLER_PILOTO_ID: 'piloto' }), null)
-  assert.equal(tallerDelDespliegue({ TALLER_PILOTO_ID: ` ${T} ` }), T)
+test('tallerDeDesarrollo: sin TALLER_PILOTO_ID uuid no hay taller (nunca uno por defecto) y en producción NUNCA', () => {
+  assert.equal(tallerDeDesarrollo({}), null)
+  assert.equal(tallerDeDesarrollo({ TALLER_PILOTO_ID: 'piloto' }), null)
+  assert.equal(tallerDeDesarrollo({ TALLER_PILOTO_ID: ` ${T} ` }), T)
+  assert.equal(tallerDeDesarrollo({ TALLER_PILOTO_ID: T, NODE_ENV: 'production' }), null, 'en producción el taller sale del código del dispositivo')
 })

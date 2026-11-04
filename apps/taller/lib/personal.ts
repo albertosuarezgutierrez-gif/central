@@ -1,9 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- delegados Prisma tipados de forma estructural (fake en tests) */
 // Personal (usuarios con PIN) y proveedores del taller. Dentro de `conTaller`. Reglas:
 //   · El PIN nunca se guarda ni se elige a mano: alta y reset generan uno temporal que se enseña UNA vez (spec 3bis).
-//   · PIN único dentro del taller (el login «solo PIN» identifica a la persona por él): se comprueba contra los hashes.
+//   · El PIN YA NO es único en el taller: el login es taller → usuario → PIN y el PIN solo se verifica contra el hash de la persona
+//     elegida. Por eso no hay «ya está en uso» (era un oráculo: decía qué PIN tenía un compañero) ni búsqueda de PIN libre.
+//   · Cambiar/resetear el PIN o dar de baja sube `sesion_version`: la cookie anterior deja de valer.
 //   · Nunca queda el taller sin un dueño activo (si no, nadie podría volver a entrar en Ajustes).
 import { esPinTrivial, hashPin, validarFormatoPin, verificarPin } from '@central/core-identity/pin'
+import {
+  anotarFalloUsuario, leerBloqueoUsuario, limpiarBloqueoUsuario, politicaUsuario, usuarioBloqueado,
+  type TxBloqueoUsuario, type TxConfigUsuario,
+} from './bloqueo-usuario.ts'
 
 export const ROLES = ['recepcion', 'mecanico', 'dueno', 'admin'] as const
 export type Rol = (typeof ROLES)[number]
@@ -14,7 +20,7 @@ type Delegado = {
   update(a: any): Promise<any>
   create(a: any): Promise<any>
 }
-export type TxPersonal = { usuarioTaller: Delegado; proveedor: Delegado }
+export type TxPersonal = { usuarioTaller: Delegado; proveedor: Delegado; bloqueoPin: { deleteMany(a: any): Promise<any> } }
 
 export class ErrorPersonal extends Error {}
 
@@ -26,30 +32,19 @@ export function pinAleatorio(aleatorio: () => number = () => crypto.getRandomVal
   }
 }
 
-async function pinLibre(tx: TxPersonal, tallerId: string, aleatorio?: () => number): Promise<{ pin: string; hash: string }> {
-  const hashes = (await tx.usuarioTaller.findMany({ where: { tallerId, activo: true }, select: { pinHash: true } }))
-    .map((u) => u.pinHash as string)
-  for (let i = 0; i < 20; i++) {
-    const pin = pinAleatorio(aleatorio)
-    let usado = false
-    for (const h of hashes) if (await verificarPin(pin, h)) usado = true
-    if (!usado) return { pin, hash: await hashPin(pin) }
-  }
-  throw new ErrorPersonal('no se encontró un PIN libre; inténtalo de nuevo')
-}
-
 export async function altaUsuario(
   tx: TxPersonal, tallerId: string, d: { nombre: string; rol: string }, aleatorio?: () => number,
 ): Promise<{ id: string; pin: string }> {
   const nombre = d.nombre.trim()
   if (!nombre) throw new ErrorPersonal('falta el nombre')
   if (!(ROLES as readonly string[]).includes(d.rol)) throw new ErrorPersonal('rol inválido')
-  const { pin, hash } = await pinLibre(tx, tallerId, aleatorio)
+  const pin = pinAleatorio(aleatorio)
+  const hash = await hashPin(pin)
   const u = await tx.usuarioTaller.create({ data: { tallerId, nombre, rol: d.rol, pinHash: hash, debeCambiarPin: true } })
   return { id: u.id, pin }
 }
 
-async function usuario(tx: TxPersonal, tallerId: string, id: string) {
+async function usuario(tx: { usuarioTaller: Delegado }, tallerId: string, id: string) {
   const u = await tx.usuarioTaller.findFirst({ where: { tallerId, id } })
   if (!u) throw new ErrorPersonal('usuario no encontrado')
   return u
@@ -61,7 +56,7 @@ export async function bajaUsuario(tx: TxPersonal, tallerId: string, id: string):
     const duenos = await tx.usuarioTaller.findMany({ where: { tallerId, rol: 'dueno', activo: true } })
     if (duenos.length <= 1) throw new ErrorPersonal('no se puede dar de baja al único dueño')
   }
-  await tx.usuarioTaller.update({ where: { id }, data: { activo: false } })
+  await tx.usuarioTaller.update({ where: { id }, data: { activo: false, sesionVersion: (u.sesionVersion ?? 0) + 1 } })
 }
 
 export async function resetPinUsuario(
@@ -69,8 +64,12 @@ export async function resetPinUsuario(
 ): Promise<{ pin: string }> {
   const u = await usuario(tx, tallerId, id)
   if (!u.activo) throw new ErrorPersonal('el usuario está de baja')
-  const { pin, hash } = await pinLibre(tx, tallerId, aleatorio)
-  await tx.usuarioTaller.update({ where: { id }, data: { pinHash: hash, debeCambiarPin: true } })
+  const pin = pinAleatorio(aleatorio)
+  await tx.usuarioTaller.update({
+    where: { id }, data: { pinHash: await hashPin(pin), debeCambiarPin: true, sesionVersion: (u.sesionVersion ?? 0) + 1 },
+  })
+  // Un PIN nuevo también levanta el bloqueo de esa persona (si no, el dueño le daría un PIN que no puede usar).
+  await limpiarBloqueoUsuario(tx, tallerId, id)
   return { pin }
 }
 
@@ -102,18 +101,42 @@ export async function guardarProveedor(
   return p.id
 }
 
-/** El PIN nuevo que elige la persona en su primer acceso: 4 dígitos, no trivial, distinto del actual y libre en el taller. */
+export type TxCambioPin = { usuarioTaller: Delegado } & TxBloqueoUsuario & TxConfigUsuario
+
+export type ResultadoCambioPin = { ok: true; sesionVersion: number } | { ok: false; error: string }
+
+/**
+ * El PIN nuevo que elige la persona: 4 dígitos, no trivial, distinto del actual. Si NO es el primer acceso (`debeCambiarPin` falso) exige
+ * el PIN ACTUAL, y cada fallo cuenta en el bloqueo de ESA persona (misma política que el login: 5 fallos → 5 h). Sube `sesion_version`.
+ * Los errores de validación lanzan `ErrorPersonal` ANTES de escribir; el PIN actual erróneo se DEVUELVE (`ok:false`) para que la
+ * transacción confirme el contador de fallos (un `throw` lo desharía y daría intentos gratis).
+ */
 export async function cambiarMiPin(
-  tx: TxPersonal, o: { tallerId: string; usuarioId: string; pinNuevo: string },
-): Promise<void> {
+  tx: TxCambioPin, o: { tallerId: string; usuarioId: string; pinNuevo: string; pinActual?: unknown; ahora?: Date },
+): Promise<ResultadoCambioPin> {
   const f = validarFormatoPin(o.pinNuevo, { rechazarTriviales: true })
   if (!f.ok) throw new ErrorPersonal(f.error === 'trivial' ? 'Ese PIN es demasiado fácil (1234, 0000…): elige otro' : 'El PIN son 4 dígitos')
   const yo = await usuario(tx, o.tallerId, o.usuarioId)
   if (!yo.activo) throw new ErrorPersonal('el usuario está de baja')
-  const otros = await tx.usuarioTaller.findMany({ where: { tallerId: o.tallerId, activo: true } })
-  for (const u of otros) {
-    if (!(await verificarPin(o.pinNuevo, u.pinHash))) continue
-    throw new ErrorPersonal(u.id === yo.id ? 'Elige un PIN distinto del temporal' : 'Ese PIN ya está en uso: elige otro')
+  const ahora = o.ahora ?? new Date()
+
+  if (!yo.debeCambiarPin) {
+    const fa = validarFormatoPin(o.pinActual)
+    if (!fa.ok) throw new ErrorPersonal('Escribe tu PIN actual (4 dígitos)')
+    const previo = await leerBloqueoUsuario(tx, o.tallerId, o.usuarioId)
+    const b = usuarioBloqueado(previo, ahora)
+    if (b.bloqueado) return { ok: false, error: `Demasiados intentos. Prueba en ${b.minutos} min` }
+    if (!(await verificarPin(o.pinActual as string, yo.pinHash))) {
+      const n = await anotarFalloUsuario(tx, o.tallerId, o.usuarioId, previo, ahora, await politicaUsuario(tx, o.tallerId))
+      const bn = usuarioBloqueado(n, ahora)
+      return { ok: false, error: bn.bloqueado ? `Demasiados intentos. Prueba en ${bn.minutos} min` : 'El PIN actual no es correcto' }
+    }
+    if (previo.intentos > 0 || previo.bloqueadoHasta) await limpiarBloqueoUsuario(tx, o.tallerId, o.usuarioId)
   }
-  await tx.usuarioTaller.update({ where: { id: yo.id }, data: { pinHash: await hashPin(o.pinNuevo), debeCambiarPin: false } })
+  if (await verificarPin(o.pinNuevo, yo.pinHash)) {
+    throw new ErrorPersonal(yo.debeCambiarPin ? 'Elige un PIN distinto del temporal' : 'Elige un PIN distinto del actual')
+  }
+  const sesionVersion = (yo.sesionVersion ?? 0) + 1
+  await tx.usuarioTaller.update({ where: { id: yo.id }, data: { pinHash: await hashPin(o.pinNuevo), debeCambiarPin: false, sesionVersion } })
+  return { ok: true, sesionVersion }
 }

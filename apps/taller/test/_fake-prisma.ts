@@ -13,6 +13,8 @@ export type BdFake = ReturnType<typeof crearBdFake>
 export function crearBdFake() {
   let tablas: Record<string, any[]> = {}
   let n = 0
+  // Ids con forma de uuid (como los de Postgres): el login valida que `usuarioId` lo sea antes de tocar la BD.
+  const nuevoId = () => `00000000-0000-4000-8000-${String(++n).padStart(12, '0')}`
   const llamadasRaw: string[] = []
   let transacciones = 0
   const tabla = (m: string) => (tablas[m] ??= [])
@@ -22,6 +24,8 @@ export function crearBdFake() {
       v !== null && typeof v === 'object' && !(v instanceof Date)
         ? 'in' in (v as object)
           ? ((v as { in: unknown[] }).in).includes(f[k]) // { in: [...] }
+          : 'gt' in (v as object)
+            ? f[k] != null && f[k] > (v as { gt: any }).gt // { gt: fecha }
           : Object.entries(v as object).every(([k2, v2]) => f[k2] === v2) // clave compuesta (tallerId_codigo…)
         : f[k] === v,
     )
@@ -48,7 +52,7 @@ export function crearBdFake() {
         findFirst: async (a?: any) => copia(ordenar(filas(m, a?.where), a)[0]),
         findUnique: async (a: any) => copia(filas(m, a?.where)[0]),
         create: async ({ data }: any) => {
-          const fila = { ...(CON_ACTIVO.has(m) ? { activo: true } : {}), id: `id-${++n}`, ...data }
+          const fila = { ...(CON_ACTIVO.has(m) ? { activo: true } : {}), id: nuevoId(), ...data }
           // Columna GENERADA de 0001 (matricula_normalizada ≡ normalizarMatricula, cepo en esquema-sql.test.ts).
           if (m === 'vehiculo') fila.matriculaNormalizada = String(fila.matricula).replace(/[^A-Za-z0-9]/g, '').toUpperCase()
           if (!visible(m, fila)) throw new Error(`new row violates row-level security policy for "${m}"`)
@@ -60,6 +64,11 @@ export function crearBdFake() {
           if (!f) throw new Error(`${m}: registro no encontrado`)
           Object.assign(f, data)
           return copia(f)
+        },
+        updateMany: async ({ where, data }: any) => {
+          const fs = filas(m, where)
+          for (const f of fs) Object.assign(f, data)
+          return { count: fs.length }
         },
         upsert: async ({ where, create, update }: any) =>
           filas(m, where)[0] ? d.update({ where, data: update }) : d.create({ data: create }),
@@ -113,7 +122,7 @@ export function crearBdFake() {
     sinAjuste: () => crearTx(),
     /** Siembra como operador (salta RLS), igual que 0002 aplicado como postgres. */
     sembrar(m: string, fila: any) {
-      const f = { ...(CON_ACTIVO.has(m) ? { activo: true } : {}), id: `id-${++n}`, ...fila }
+      const f = { ...(CON_ACTIVO.has(m) ? { activo: true } : {}), id: nuevoId(), ...fila }
       tabla(m).push(f)
       return f
     },

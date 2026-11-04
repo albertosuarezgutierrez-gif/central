@@ -3,22 +3,28 @@ import { useState, useTransition } from 'react'
 import { cambiarPinAccion } from './acciones'
 
 export function CambiarPinCliente({ obligatorio }: { obligatorio: boolean }) {
+  const [actual, setActual] = useState('')
   const [pin, setPin] = useState('')
   const [pin2, setPin2] = useState('')
   const [error, setError] = useState('')
   const [pend, iniciar] = useTransition()
-  const valido = /^\d{4}$/.test(pin) && pin === pin2
+  const valido = /^\d{4}$/.test(pin) && pin === pin2 && (obligatorio || /^\d{4}$/.test(actual))
   return (
     <form className="formulario" onSubmit={(e) => {
       e.preventDefault()
       setError('')
       iniciar(async () => {
-        const r = await cambiarPinAccion(pin)
+        const r = await cambiarPinAccion(pin, obligatorio ? undefined : actual)
         if (!r.ok) return setError(r.errores.join(' · '))
         window.location.href = '/'
       })
     }}>
       {obligatorio && <p className="aviso-error" role="status">Tu PIN es temporal. Elige uno propio para seguir.</p>}
+      {!obligatorio && (
+        <label className="campo">PIN actual
+          <input type="password" inputMode="numeric" autoComplete="current-password" maxLength={4} value={actual} onChange={(e) => setActual(e.target.value.replace(/\D/g, ''))} />
+        </label>
+      )}
       <label className="campo">PIN nuevo (4 dígitos)
         <input type="password" inputMode="numeric" autoComplete="new-password" maxLength={4} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))} />
       </label>

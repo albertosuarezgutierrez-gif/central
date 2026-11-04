@@ -49,7 +49,7 @@ export async function cambiarEstadoAccion(fd: FormData): Promise<void> {
       const ot = await tx.ordenTrabajo.findFirst({ where: { tallerId: c.tallerId, id: id.data }, select: { estado: true } })
       if (!ot) return { ok: false as const, motivo: 'orden no encontrada' }
       const cap = capacidadParaTransicion(ot.estado, hacia.data)
-      if (cap !== 'ordenes_avanzar') await exigir(tx as never, { tallerId: c.tallerId, usuarioId: c.usuarioId, rol: c.rol }, cap)
+      if (cap !== 'ordenes_avanzar') await exigir(tx as never, c, cap)
       return cambiarEstadoOt(tx as unknown as TxOrdenes, { tallerId: c.tallerId, otId: id.data, hacia: hacia.data, ahora: new Date() })
     }),
   )

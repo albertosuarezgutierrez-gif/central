@@ -18,13 +18,17 @@ const POL = { maxFallosTaller: 4, ventanaMinutos: 15, bloqueoMinutos: 20 }
 async function montar(conConfig = true) {
   const bd = crearBdFake()
   bd.sembrar('taller', { id: T })
-  bd.sembrar('usuarioTaller', { tallerId: T, nombre: 'Dueño', rol: 'dueno', pinHash: await hashPin('4826', ITER) })
+  const dueno = bd.sembrar('usuarioTaller', { tallerId: T, nombre: 'Dueño', rol: 'dueno', pinHash: await hashPin('4826', ITER) })
   if (conConfig) {
-    bd.sembrar('configuracion', { tallerId: T, loginMaxFallosTaller: POL.maxFallosTaller, loginVentanaMinutos: POL.ventanaMinutos, loginBloqueoTallerMinutos: POL.bloqueoMinutos })
+    // Tope por PERSONA altísimo: estas pruebas miden el tope del TALLER (el de la persona tiene sus propias pruebas en login-usuario.test.ts).
+    bd.sembrar('configuracion', {
+      tallerId: T, loginMaxFallosTaller: POL.maxFallosTaller, loginVentanaMinutos: POL.ventanaMinutos, loginBloqueoTallerMinutos: POL.bloqueoMinutos,
+      loginMaxFallosUsuario: 100_000, loginBloqueoUsuarioMinutos: 300,
+    })
   }
   const conTaller = crearConTaller(bd.cliente)
-  const login = (pin: string, ip: string, ahora = t0) => loginTaller(conTaller, { tallerId: T, ip, pin, ahora })
-  return { bd, login }
+  const login = (pin: string, ip: string, ahora = t0, usuarioId: string = dueno.id) => loginTaller(conTaller, { tallerId: T, usuarioId, ip, pin, ahora })
+  return { bd, login, conTaller, dueno }
 }
 
 test('N fallos desde IPs DISTINTAS bloquean el taller: ni el PIN correcto entra desde otra IP', async () => {
@@ -69,11 +73,17 @@ test('un acierto NO reinicia la cuenta del taller (si no, daría fuerza bruta gr
 })
 
 test('sin fila de configuración rige la política de ALTA (nunca «sin tope»)', async () => {
-  const { login } = await montar(false)
+  const { bd, login } = await montar(false)
   const alta = configDeAlta().seguridadLogin
-  for (let i = 1; i <= alta.maxFallosTaller; i++) await login('0001', `3.3.${Math.floor(i / 200)}.${i % 200}`, min(0))
+  // Con la política de alta cada PERSONA se bloquea a los 5 fallos: se reparten los 30 fallos del taller entre 6 personas.
+  const personas = [] as string[]
+  for (let k = 0; k < alta.maxFallosTaller / alta.maxFallosUsuario; k++) {
+    personas.push(bd.sembrar('usuarioTaller', { tallerId: T, nombre: `P${k}`, rol: 'mecanico', pinHash: await hashPin('4826', ITER) }).id)
+  }
+  let n = 0
+  for (const id of personas) for (let j = 0; j < alta.maxFallosUsuario; j++) await login('0001', `3.3.${Math.floor(++n / 200)}.${n % 200}`, min(0), id)
   const r = await login('4826', '2.2.2.2', min(1))
-  assert.ok(!r.ok && r.motivo === 'bloqueado')
+  assert.ok(!r.ok && r.motivo === 'bloqueado' && r.ambito === 'taller')
 })
 
 test('función pura: el bloqueo vencido no bloquea; el fallo con bloqueo vencido reinicia', () => {

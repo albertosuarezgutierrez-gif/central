@@ -27,7 +27,7 @@ export default function ClientesClient({ operador }: { operador: string }) {
   const [nuevo, setNuevo] = useState({ vertical: 'ialimp', nombre: '', email: '', password: '', ciudad: '', responsableNombre: '', color: '', logo: '', nif: '', vincularExistente: false })
   const [direccion, setDireccion] = useState<DireccionForm>(DIRECCION_VACIA)
   // PIN temporal del dueño del taller: se enseña UNA vez; al cerrar el aviso desaparece y no se guarda en ningún sitio.
-  const [pinTaller, setPinTaller] = useState<{ taller: string; pin: string } | null>(null)
+  const [pinTaller, setPinTaller] = useState<{ taller: string; pin: string; codigo: string } | null>(null)
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [nuevoErr, setNuevoErr] = useState('')
   const [nuevoOk, setNuevoOk] = useState('')
@@ -90,7 +90,7 @@ export default function ClientesClient({ operador }: { operador: string }) {
     const r = await fetch('/api/admin/clientes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...nuevo, logo: logoUrl, ...(nuevo.vertical === 'taller' ? { direccion } : {}) }) })
     const d = await r.json()
     if (d.ok) {
-      if (nuevo.vertical === 'taller' && d.pinTemporal) setPinTaller({ taller: nuevo.nombre, pin: d.pinTemporal })
+      if (nuevo.vertical === 'taller' && d.pinTemporal) setPinTaller({ taller: nuevo.nombre, pin: d.pinTemporal, codigo: String(d.codigoTaller ?? '') })
       if (nuevo.vertical === 'rrhh' && d.vinculado) setNuevoOk(`Empresa creada y vinculada al responsable existente (${nuevo.email}). Entra con su código de siempre y elige la empresa.`)
       else if (nuevo.vertical === 'rrhh') setNuevoOk(`Empresa creada. Entrega al cliente — Email: ${nuevo.email} · Contraseña: ${nuevo.password}`)
       setNuevo({ vertical: nuevo.vertical, nombre: '', email: '', password: '', ciudad: '', responsableNombre: '', color: '', logo: '', nif: '', vincularExistente: false })
@@ -243,6 +243,8 @@ export default function ClientesClient({ operador }: { operador: string }) {
             <div style={{ fontSize: '18px', fontWeight: 800, marginBottom: '8px' }}>Taller creado: {pinTaller.taller}</div>
             <div style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '12px' }}>PIN temporal del dueño. Se muestra UNA sola vez: apúntalo y entrégaselo; tendrá que cambiarlo al entrar.</div>
             <div style={{ fontSize: '40px', fontWeight: 800, letterSpacing: '8px', textAlign: 'center', marginBottom: '16px' }}>{pinTaller.pin}</div>
+            <div style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '4px' }}>Código del taller (cada dispositivo lo escribe una vez; el dueño lo ve y lo cambia en Ajustes).</div>
+            <div style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '4px', textAlign: 'center', marginBottom: '16px' }}>{pinTaller.codigo ? `${pinTaller.codigo.slice(0, 4)}-${pinTaller.codigo.slice(4)}` : '—'}</div>
             <button type="button" onClick={() => { setPinTaller(null); setShowNuevo(false) }} style={{ width: '100%', minHeight: 44, padding: '11px', background: 'var(--primary)', border: 'none', borderRadius: '10px', color: '#fff', fontWeight: 800, cursor: 'pointer' }}>Ya lo he apuntado</button>
           </div>
         </div>
@@ -269,7 +271,7 @@ export default function ClientesClient({ operador }: { operador: string }) {
             </>}
             {nuevo.vertical === 'iarest' && <Field label="Ciudad"><input value={nuevo.ciudad} onChange={e => setNuevo(n => ({ ...n, ciudad: e.target.value }))} style={inp} /></Field>}
             {nuevo.vertical === 'taller' && <>
-              <Field label="NIF de la sociedad"><input value={nuevo.nif} onChange={e => setNuevo(n => ({ ...n, nif: e.target.value }))} style={inp} placeholder="B12345678" /></Field>
+              <Field label="NIF de la sociedad"><input value={nuevo.nif} onChange={e => setNuevo(n => ({ ...n, nif: e.target.value }))} required minLength={8} maxLength={12} style={inp} placeholder="B12345678" /></Field>
               <DireccionAlta valor={direccion} onChange={setDireccion} />
               <Field label="Nombre del dueño"><input value={nuevo.responsableNombre} onChange={e => setNuevo(n => ({ ...n, responsableNombre: e.target.value }))} required style={inp} /></Field>
             </>}

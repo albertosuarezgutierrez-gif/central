@@ -27,6 +27,8 @@ model Taller {
   numero              String?
   referenciaCatastral String?  @map("referencia_catastral")
   marcaCodigo         String?  @map("marca_codigo")
+  /// Código corto de acceso (migración 0006): el dispositivo lo recuerda y resuelve el taller en el login. Único.
+  codigoAcceso        String?  @unique @map("codigo_acceso")
   /// Empresa de este taller en rrhh (migración 0005). El taller solo ENVÍA fichajes; no lee rrhh.
   rrhhEmpresaId       String?  @map("rrhh_empresa_id") @db.Uuid
   activo              Boolean  @default(true)
@@ -57,6 +59,8 @@ model Configuracion {
   loginMaxFallosTaller           Int      @default(30) @map("login_max_fallos_taller")
   loginVentanaMinutos            Int      @default(15) @map("login_ventana_minutos")
   loginBloqueoTallerMinutos      Int      @default(15) @map("login_bloqueo_taller_minutos")
+  loginMaxFallosUsuario          Int      @default(5) @map("login_max_fallos_usuario")
+  loginBloqueoUsuarioMinutos     Int      @default(300) @map("login_bloqueo_usuario_minutos")
   loginSesionMinutos             Int      @default(300) @map("login_sesion_minutos")
   loginInactividadMinutos        Int      @default(30) @map("login_inactividad_minutos")
   marcaLogoRuta                  String?  @map("marca_logo_ruta")
@@ -232,6 +236,8 @@ model UsuarioTaller {
   /// NIF o id de empleado en rrhh (migración 0005); NULL = sin vincular, no puede fichar.
   rrhhIdentificador String?  @map("rrhh_identificador")
   debeCambiarPin   Boolean   @default(false) @map("debe_cambiar_pin")
+  /// Va en la sesión firmada; cambiar/resetear PIN o dar de baja la incrementa (migración 0006).
+  sesionVersion    Int       @default(0) @map("sesion_version")
   creadoEn         DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
   actualizadoEn    DateTime  @default(now()) @map("actualizado_en") @db.Timestamptz(6)
 

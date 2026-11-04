@@ -20,12 +20,13 @@ async function montar() {
   bd.sembrar('taller', { id: T })
   bd.sembrar('taller', { id: U })
   const dueno = bd.sembrar('usuarioTaller', { tallerId: T, nombre: 'Dueño', rol: 'dueno', pinHash: await hashPin('4826', ITER) })
-  bd.sembrar('usuarioTaller', { tallerId: T, nombre: 'Baja', rol: 'mecanico', pinHash: await hashPin('5173', ITER), activo: false })
+  const baja = bd.sembrar('usuarioTaller', { tallerId: T, nombre: 'Baja', rol: 'mecanico', pinHash: await hashPin('5173', ITER), activo: false })
+  const mec = bd.sembrar('usuarioTaller', { tallerId: T, nombre: 'Mecánico', rol: 'mecanico', pinHash: await hashPin('5555', ITER) })
   bd.sembrar('usuarioTaller', { tallerId: U, nombre: 'Otro taller', rol: 'dueno', pinHash: await hashPin('7391', ITER) })
   const conTaller = crearConTaller(bd.cliente)
-  const login = (pin: string, ip = '1.2.3.4', ahora = new Date('2026-11-04T10:00:00Z')) =>
-    loginTaller(conTaller, { tallerId: T, ip, pin, ahora })
-  return { bd, dueno, login, conTaller }
+  const login = (pin: string, ip = '1.2.3.4', ahora = new Date('2026-11-04T10:00:00Z'), usuarioId: string = dueno.id) =>
+    loginTaller(conTaller, { tallerId: T, usuarioId, ip, pin, ahora })
+  return { bd, dueno, baja, mec, login, conTaller }
 }
 
 test('el PIN se guarda como hash PBKDF2 con sal (nunca en claro) y verifica', async () => {
@@ -37,23 +38,30 @@ test('el PIN se guarda como hash PBKDF2 con sal (nunca en claro) y verifica', as
   assert.equal(await verificarPin('4827', h), false)
 })
 
-test('PIN correcto entra con el usuario del taller; inactivo y de otro taller, no', async () => {
-  const { login, dueno } = await montar()
+test('PIN correcto entra con el usuario ELEGIDO; de baja, de otro taller o el PIN de otra persona, no', async () => {
+  const { login, dueno, baja, mec } = await montar()
   const r = await login('4826')
   assert.ok(r.ok)
   assert.equal(r.credencial.usuarioId, dueno.id)
   assert.equal(r.credencial.rol, 'dueno')
-  assert.equal((await login('5173', '2.2.2.2')).ok, false, 'usuario de baja')
+  const b = await login('5173', '2.2.2.2', undefined, baja.id)
+  assert.ok(!b.ok && b.motivo === 'usuario', 'usuario de baja')
   assert.equal((await login('7391', '3.3.3.3')).ok, false, 'PIN de otro taller')
+  assert.equal((await login('7391', '3.3.3.3', undefined, '00000000-0000-4000-8000-0000000000aa')).ok, false, 'usuario inexistente')
+  // El PIN YA NO identifica a nadie: el del mecánico no abre la cuenta del dueño (y viceversa).
+  const cruzado = await login('5555', '4.4.4.4')
+  assert.ok(!cruzado.ok && cruzado.motivo === 'incorrecto')
+  const mio = await login('5555', '5.5.5.5', undefined, mec.id)
+  assert.ok(mio.ok && mio.credencial.usuarioId === mec.id)
 })
 
-test('5 fallos bloquean; el bloqueo PERSISTE en BD (otra transacción) y para el PIN correcto; otra IP no', async () => {
-  const { bd, login } = await montar()
+test('5 fallos bloquean; el bloqueo PERSISTE en BD (otra transacción) y para el PIN correcto; otra IP + otra persona entra', async () => {
+  const { bd, login, mec } = await montar()
   for (let i = 0; i < 4; i++) assert.equal((await login('0001')).ok, false)
   const r5 = await login('0001')
   assert.ok(!r5.ok && r5.motivo === 'bloqueado')
-  // Además de la fila de la IP hay la del tope del TALLER (clave `<taller>:#taller`, ver tope-taller.test.ts).
-  const filas = bd.filas('bloqueoPin').filter((f) => !f.clave.endsWith(':#taller'))
+  // Además de la fila de la IP hay la del tope del TALLER (`<taller>:#taller`, ver tope-taller.test.ts) y la de la PERSONA (`<taller>:u:<id>`).
+  const filas = bd.filas('bloqueoPin').filter((f) => !f.clave.endsWith(':#taller') && !f.clave.includes(':u:'))
   assert.equal(filas.length, 1)
   assert.equal(filas[0].clave, `${T}:1.2.3.4`)
   assert.equal(filas[0].tallerId, T)
@@ -61,9 +69,11 @@ test('5 fallos bloquean; el bloqueo PERSISTE en BD (otra transacción) y para el
 
   const correcto = await login('4826')
   assert.ok(!correcto.ok && correcto.motivo === 'bloqueado', 'bloqueado aunque acierte')
-  assert.ok((await login('4826', '9.9.9.9')).ok, 'la clave es taller:ip')
-  // Vencido el bloqueo, entra y la fila se borra.
-  assert.ok((await login('4826', '1.2.3.4', new Date('2026-11-04T10:20:00Z'))).ok)
+  const otraIp = await login('4826', '9.9.9.9')
+  assert.ok(!otraIp.ok && otraIp.motivo === 'bloqueado' && otraIp.ambito === 'usuario', 'la PERSONA sigue bloqueada desde otra IP (5 h)')
+  assert.ok((await login('5555', '9.9.9.9', undefined, mec.id)).ok, 'otra persona, otra IP: entra')
+  // Vencido el bloqueo de la persona (5 h), entra y las filas se borran.
+  assert.ok((await login('4826', '1.2.3.4', new Date('2026-11-04T15:01:00Z'))).ok)
   assert.equal(bd.filas('bloqueoPin').filter((f) => !f.clave.endsWith(':#taller')).length, 0)
 })
 

@@ -22,9 +22,9 @@ beforeEach(() => {
 afterEach(() => { globalThis.fetch = real; delete process.env.TALLER_URL; delete process.env.TALLER_OPERADOR_SECRET; delete process.env.RRHH_URL; delete process.env.RRHH_OPERADOR_SECRET })
 
 test('taller: alta OK → POST al puerto con Bearer propio, cuerpo mínimo y PIN temporal devuelto', async () => {
-  falso(() => json({ tallerId: 't1', usuarioId: 'u1', pinTemporal: '4826', debeCambiarPin: true }, 201))
+  falso(() => json({ tallerId: 't1', usuarioId: 'u1', pinTemporal: '4826', codigoTaller: 'ABCD2345', debeCambiarPin: true }, 201))
   const r = await tallerAdapter.crear!({ nombre: ' Talleres G2 SL ', nif: 'B12345678', responsableNombre: 'Pilar', direccion: { cp: '41900', provincia: 'Sevilla', municipio: 'Camas', via: 'Calle Real', numero: '5', } })
-  assert.deepEqual(r, { id: 't1', pinTemporal: '4826' })
+  assert.deepEqual(r, { id: 't1', pinTemporal: '4826', codigoTaller: 'ABCD2345' })
   assert.equal(llamadas[0].url, 'https://taller.test/api/operador/talleres')
   assert.equal(llamadas[0].init.headers.Authorization, 'Bearer sec-taller')
   assert.deepEqual(JSON.parse(llamadas[0].init.body), {
@@ -41,18 +41,31 @@ test('taller rechaza (409 NIF, 401…): el error llega al operador tal cual y no
   falso(() => json({ error: 'Ya existe un taller con ese NIF', tallerId: 't0' }, 409))
   await assert.rejects(tallerAdapter.crear!({ nombre: 'A', responsableNombre: 'B', nif: 'B12345678' }), /Ya existe un taller con ese NIF/)
   falso(() => json({ error: 'No autorizado' }, 401))
-  await assert.rejects(tallerAdapter.crear!({ nombre: 'A', responsableNombre: 'B' }), /No autorizado/)
+  await assert.rejects(tallerAdapter.crear!({ nombre: 'A', responsableNombre: 'B', nif: 'B12345678' }), /No autorizado/)
+})
+
+test('taller: el NIF es OBLIGATORIO (hallazgo 4 de la revisión): sin él (o en blanco) no se llama al puerto', async () => {
+  falso(() => json({ tallerId: 't1', pinTemporal: '4826', codigoTaller: 'ABCD2345' }, 201))
+  for (const nif of [undefined, '', '   ']) await assert.rejects(tallerAdapter.crear!({ nombre: 'A', responsableNombre: 'B', nif }), /NIF obligatorio/)
+  assert.equal(llamadas.length, 0)
+  const form = readFileSync(new URL('../../app/(usuario)/operador/clientes/ClientesClient.tsx', import.meta.url), 'utf8')
+  assert.match(form, /label="NIF de la sociedad"><input[^\n]*\brequired\b/, 'el formulario también lo exige')
+})
+
+test('taller: la respuesta sin código del taller se rechaza (sin código el dueño no podría entrar)', async () => {
+  falso(() => json({ tallerId: 't1', pinTemporal: '4826' }, 201))
+  await assert.rejects(tallerAdapter.crear!({ nombre: 'A', responsableNombre: 'B', nif: 'B12345678' }), /código del taller/)
 })
 
 test('taller: sin envs no llama; red caída avisa de que no se sabe si se creó; faltan datos → error', async () => {
   falso(() => json({}, 201))
   delete process.env.TALLER_OPERADOR_SECRET
-  await assert.rejects(tallerAdapter.crear!({ nombre: 'A', responsableNombre: 'B' }), /TALLER_URL \+ TALLER_OPERADOR_SECRET/)
+  await assert.rejects(tallerAdapter.crear!({ nombre: 'A', responsableNombre: 'B', nif: 'B12345678' }), /TALLER_URL \+ TALLER_OPERADOR_SECRET/)
   assert.equal(llamadas.length, 0)
   process.env.TALLER_OPERADOR_SECRET = 'x'
   globalThis.fetch = (async () => { throw new Error('boom') }) as any
-  await assert.rejects(tallerAdapter.crear!({ nombre: 'A', responsableNombre: 'B' }), /No se sabe si se creó|no se sabe si se creó/i)
-  await assert.rejects(tallerAdapter.crear!({ nombre: 'A', responsableNombre: '' }), /dueño/)
+  await assert.rejects(tallerAdapter.crear!({ nombre: 'A', responsableNombre: 'B', nif: 'B12345678' }), /No se sabe si se creó|no se sabe si se creó/i)
+  await assert.rejects(tallerAdapter.crear!({ nombre: 'A', responsableNombre: '', nif: 'B12345678' }), /dueño/)
 })
 
 test('rrhh: vincularExistente manda vincular_existente:true y devuelve vinculado; sin él, el cuerpo no lo lleva', async () => {
@@ -79,8 +92,8 @@ test('cuerpo de la ruta → NuevoCliente: solo el booleano true vincula', () => 
 })
 
 test('respuesta: el PIN temporal va una vez y con no-store; «vinculado» se indica; sin PIN no hay cabecera', () => {
-  const t = respuestaAlta({ id: 't1', pinTemporal: '4826' })
-  assert.deepEqual(t.cuerpo, { ok: true, id: 't1', pinTemporal: '4826' }); assert.equal(t.cabeceras['Cache-Control'], 'no-store')
+  const t = respuestaAlta({ id: 't1', pinTemporal: '4826', codigoTaller: 'ABCD2345' })
+  assert.deepEqual(t.cuerpo, { ok: true, id: 't1', pinTemporal: '4826', codigoTaller: 'ABCD2345' }); assert.equal(t.cabeceras['Cache-Control'], 'no-store')
   const r = respuestaAlta({ id: 'e1', vinculado: true })
   assert.deepEqual(r.cuerpo, { ok: true, id: 'e1', vinculado: true }); assert.deepEqual(r.cabeceras, {})
 })

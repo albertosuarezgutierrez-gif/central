@@ -10,7 +10,7 @@
 //
 // OT (decisión de Alberto, 04/11/2026): recepción PUEDE pasar en_curso → terminado y terminado → entregado
 // (`ordenes_avanzar`); el resto de cambios de estado a mano, solo el dueño (`ordenes_gestionar`).
-import type { Acceso } from './acceso.ts'
+import { SELECT_ACCESO, sesionVigente, usuarioDeSesion, type Acceso } from './acceso.ts'
 
 export const CAPACIDADES = [
   'recepcion', // alta de recepciones, resguardo
@@ -61,6 +61,14 @@ export const TRANSICIONES_RECEPCION: readonly (readonly [string, string])[] = [[
 export const capacidadParaTransicion = (desde: string, hacia: string): Capacidad =>
   TRANSICIONES_RECEPCION.some(([d, h]) => d === desde && h === hacia) ? 'ordenes_avanzar' : 'ordenes_gestionar'
 
+/** La cookie lleva una versión de sesión que ya no es la del usuario (cambió o reseteó el PIN): hay que volver a entrar. */
+export class SesionObsoletaError extends Error {
+  constructor() {
+    super('Sesión obsoleta')
+    this.name = 'SesionObsoletaError'
+  }
+}
+
 /** El PIN es temporal (alta o reset): hasta que elija uno propio, no entra en nada más. */
 export class DebeCambiarPinError extends Error {
   constructor() {
@@ -69,18 +77,21 @@ export class DebeCambiarPinError extends Error {
   }
 }
 
-type TxRol = { usuarioTaller: { findFirst(a: unknown): Promise<{ rol: string; activo: boolean; debeCambiarPin?: boolean } | null> } }
+type TxRol = { usuarioTaller: { findFirst(a: unknown): Promise<{ rol: string; activo: boolean; debeCambiarPin?: boolean; sesionVersion?: number } | null> } }
 
-/** Rol VIGENTE en BD (usuario activo del taller de la sesión) o null. */
+/** Rol VIGENTE en BD (usuario activo del taller de la sesión, con la misma versión de sesión) o null. */
 export async function rolVigente(tx: TxRol, s: Acceso): Promise<string | null> {
-  const u = await tx.usuarioTaller.findFirst({ where: { tallerId: s.tallerId, id: s.usuarioId }, select: { rol: true, activo: true } })
-  return u && u.activo ? u.rol : null
+  const u = await usuarioDeSesion(tx, s)
+  return u ? u.rol : null
 }
 
 /** Devuelve el rol si tiene la capacidad; si no, lanza. */
 export async function exigir(tx: TxRol, s: Acceso, cap: Capacidad): Promise<string> {
-  const u = await tx.usuarioTaller.findFirst({ where: { tallerId: s.tallerId, id: s.usuarioId }, select: { rol: true, activo: true, debeCambiarPin: true } })
-  const rol = u && u.activo ? u.rol : null
+  const f = await tx.usuarioTaller.findFirst({ where: { tallerId: s.tallerId, id: s.usuarioId }, select: SELECT_ACCESO })
+  // Usuario activo pero con OTRA versión de sesión (PIN cambiado/reseteado): la cookie vieja ya no vale → a entrar de nuevo.
+  if (f && f.activo && !sesionVigente(s, f)) throw new SesionObsoletaError()
+  const u = f && f.activo ? f : null
+  const rol = u ? u.rol : null
   if (!tienePermiso(rol, cap)) throw new SinPermisoError(cap)
   if (u?.debeCambiarPin === true) throw new DebeCambiarPinError()
   return rol as string

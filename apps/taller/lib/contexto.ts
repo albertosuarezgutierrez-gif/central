@@ -3,21 +3,26 @@
 import { conTaller, type Tx } from './db'
 import { getSession } from './session'
 import { redirect } from 'next/navigation'
-import { DebeCambiarPinError, exigir, SinPermisoError, type Capacidad } from './permisos'
+import { DebeCambiarPinError, exigir, SesionObsoletaError, SinPermisoError, type Capacidad } from './permisos'
 import { leerConfig, type TxConfig } from './config-repo'
 
 export class SinSesionError extends Error {}
-export type Contexto = { tallerId: string; usuarioId: string; rol: string }
+export type Contexto = { tallerId: string; usuarioId: string; rol: string; sv: number }
 
 export async function conPermiso<T>(
   cap: Capacidad, fn: (tx: Tx, c: Contexto) => Promise<T>, opciones?: { timeout?: number },
 ): Promise<T> {
   const s = await getSession()
   if (!s) throw new SinSesionError('sin sesión')
-  return conTaller(s.tallerId, async (tx) => {
-    const rol = await exigir(tx as never, s, cap)
-    return fn(tx, { tallerId: s.tallerId, usuarioId: s.usuarioId, rol })
-  }, { timeout: 20_000, ...opciones })
+  try {
+    return await conTaller(s.tallerId, async (tx) => {
+      const rol = await exigir(tx as never, s, cap)
+      return fn(tx, { tallerId: s.tallerId, usuarioId: s.usuarioId, rol, sv: s.sv })
+    }, { timeout: 20_000, ...opciones })
+  } catch (e) {
+    if (e instanceof SesionObsoletaError) throw new SinSesionError('sesión obsoleta')
+    throw e
+  }
 }
 
 export const configDe = (tx: Tx, tallerId: string) => leerConfig(tx as unknown as TxConfig, tallerId)

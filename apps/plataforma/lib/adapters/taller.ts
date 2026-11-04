@@ -2,6 +2,7 @@
 // se habla con `POST /api/operador/talleres` (Bearer TALLER_OPERADOR_SECRET). Sin fusionar BD.
 // Requiere envs en plataforma: TALLER_URL + TALLER_OPERADOR_SECRET (PROPIO de taller; no reutilizar otros).
 // El PIN temporal del dueño llega UNA vez en la respuesta: aquí se devuelve al operador y no se guarda en ningún sitio.
+// El CÓDIGO del taller (login taller → usuario → PIN) viaja con él: sin el código el dueño no puede entrar. El NIF es obligatorio.
 
 import type { VerticalAdapter, ClienteSaaS, NuevoCliente, AltaResultado } from './types'
 
@@ -27,6 +28,7 @@ export const tallerAdapter: VerticalAdapter = {
 
   async crear(input): Promise<AltaResultado> {
     if (!input.nombre?.trim()) throw new Error('Razón social obligatoria')
+    if (!input.nif?.trim()) throw new Error('NIF obligatorio')
     if (!input.responsableNombre?.trim()) throw new Error('Nombre del dueño obligatorio')
     const url = base(); const s = secret()
     if (!url || !s) throw new Error('taller sin conectar (define TALLER_URL + TALLER_OPERADOR_SECRET)')
@@ -44,9 +46,9 @@ export const tallerAdapter: VerticalAdapter = {
     }
     const j = await res.json().catch(() => ({} as Record<string, unknown>))
     if (!res.ok) throw new Error(String((j as { error?: unknown }).error || `No se pudo crear en taller (HTTP ${res.status})`))
-    const { tallerId, pinTemporal } = j as { tallerId?: string; pinTemporal?: string }
-    if (!tallerId || !pinTemporal) throw new Error('taller respondió sin id o sin PIN temporal')
-    return { id: tallerId, pinTemporal }
+    const { tallerId, pinTemporal, codigoTaller } = j as { tallerId?: string; pinTemporal?: string; codigoTaller?: string }
+    if (!tallerId || !pinTemporal || !codigoTaller) throw new Error('taller respondió sin id, sin PIN temporal o sin código del taller')
+    return { id: tallerId, pinTemporal, codigoTaller }
   },
 
   // El puerto de taller no lista, no tiene ficha ni se bloquea desde aquí.

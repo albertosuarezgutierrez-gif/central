@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { conTaller } from '@/lib/db'
 import { getSession } from '@/lib/session'
-import { debeCambiarPin } from '@/lib/acceso'
+import { usuarioDeSesion } from '@/lib/acceso'
 import { urlPortalEmpleado } from '@/lib/enlaces'
 import { Cabecera } from './_marca'
 
@@ -18,7 +18,9 @@ const SECCIONES = [
 export default async function Inicio() {
   const s = await getSession()
   if (!s) redirect('/login')
-  if (await conTaller(s.tallerId, (tx) => debeCambiarPin(tx as never, s))) redirect('/cambiar-pin')
+  const u = await conTaller(s.tallerId, (tx) => usuarioDeSesion(tx as never, s))
+  if (!u) redirect('/login') // baja, o PIN cambiado/reseteado desde otro sitio: la cookie vieja ya no vale
+  if (u.debeCambiarPin === true) redirect('/cambiar-pin')
   const nominas = urlPortalEmpleado()
   return (
     <>

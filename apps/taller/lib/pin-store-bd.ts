@@ -14,14 +14,14 @@ import {
   type PinStore,
 } from '@central/core-identity/pin'
 
-type FilaUsuario = { id: string; pinHash: string; rol: string; nombre: string }
+type FilaUsuario = { id: string; pinHash: string; rol: string; nombre: string; sesionVersion: number }
 type FilaBloqueo = { intentos: number; bloqueadoHasta: Date | null }
 
 /** Lo que el adaptador usa de la transacción Prisma (subconjunto de Prisma.TransactionClient). */
 export type TxPin = {
   $executeRaw(consulta: TemplateStringsArray, ...valores: unknown[]): Promise<unknown>
   usuarioTaller: {
-    findMany(a: { where: { tallerId: string; activo: true; id?: string }; select: { id: true; pinHash: true; rol: true; nombre: true } }): Promise<FilaUsuario[]>
+    findMany(a: { where: { tallerId: string; activo: true; id?: string }; select: { id: true; pinHash: true; rol: true; nombre: true; sesionVersion: true } }): Promise<FilaUsuario[]>
   }
   bloqueoPin: {
     findUnique(a: { where: { tallerId_clave: { tallerId: string; clave: string } } }): Promise<FilaBloqueo | null>
@@ -47,9 +47,9 @@ export function crearPinStoreBd(tx: TxPin, tallerId: string): PinStore {
       if (tenantId !== tallerId) throw new Error('credenciales de otro taller')
       const filas = await tx.usuarioTaller.findMany({
         where: { tallerId, activo: true, ...(usuarioId ? { id: usuarioId } : {}) },
-        select: { id: true, pinHash: true, rol: true, nombre: true },
+        select: { id: true, pinHash: true, rol: true, nombre: true, sesionVersion: true },
       })
-      return filas.map((f) => ({ usuarioId: f.id, pinHash: f.pinHash, rol: f.rol, nombre: f.nombre }))
+      return filas.map((f) => ({ usuarioId: f.id, pinHash: f.pinHash, rol: f.rol, nombre: f.nombre, sesionVersion: f.sesionVersion ?? 0 }))
     },
     async leerBloqueo(clave): Promise<EstadoBloqueo> {
       comprobarClave(clave)

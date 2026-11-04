@@ -5,7 +5,7 @@ import { almacenActivo, SEGUNDOS_URL_FIRMADA } from './almacen'
 import { leerMarcaGuardada } from './marca-repo'
 import { resolverMarca, type MarcaTaller } from './marca'
 import { getSession } from './session'
-import { tallerDelDespliegue } from './login'
+import { tallerDelDispositivo } from './dispositivo-servidor'
 
 export async function marcaDelTaller(tallerId: string | null): Promise<MarcaTaller> {
   if (!tallerId) return resolverMarca('sin-taller')
@@ -18,8 +18,8 @@ export async function marcaDelTaller(tallerId: string | null): Promise<MarcaTall
   }
 }
 
-/** Taller de la sesión; sin sesión (login), el del despliegue. */
+/** Taller de la sesión; sin sesión (login), el que recuerda el dispositivo (código del taller). */
 export async function marcaActual(): Promise<MarcaTaller> {
   const s = await getSession().catch(() => null)
-  return marcaDelTaller(s?.tallerId ?? tallerDelDespliegue())
+  return marcaDelTaller(s?.tallerId ?? (await tallerDelDispositivo().catch(() => null)))
 }

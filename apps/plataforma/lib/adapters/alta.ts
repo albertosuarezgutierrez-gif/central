@@ -19,7 +19,7 @@ export function nuevoClienteDesdeBody(body: Record<string, unknown>): NuevoClien
 
 export function respuestaAlta(r: AltaResultado): { cuerpo: Record<string, unknown>; cabeceras: Record<string, string> } {
   return {
-    cuerpo: { ok: true, id: r.id, ...(r.vinculado ? { vinculado: true } : {}), ...(r.pinTemporal ? { pinTemporal: r.pinTemporal } : {}) },
+    cuerpo: { ok: true, id: r.id, ...(r.vinculado ? { vinculado: true } : {}), ...(r.pinTemporal ? { pinTemporal: r.pinTemporal } : {}), ...(r.codigoTaller ? { codigoTaller: r.codigoTaller } : {}) },
     cabeceras: r.pinTemporal ? { 'Cache-Control': 'no-store' } : {},
   }
 }

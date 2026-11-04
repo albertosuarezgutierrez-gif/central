@@ -18,7 +18,7 @@ type Delegado = {
 export type TxPresupuestos = TxConsent & {
   ordenTrabajo: Delegado
   recepcion: Delegado
-  presupuesto: Delegado
+  presupuesto: Delegado & { updateMany(a: any): Promise<{ count: number }> }
   presupuestoLinea: Delegado
   otLinea: Delegado
   parteHoras: Delegado
@@ -176,6 +176,20 @@ export async function casillasPendientes(tx: TxConsent, tallerId: string, client
   return { asegura: !e.asegura.permitido, taller: !e.taller.permitido }
 }
 
+/**
+ * Reclama el presupuesto con UNA sentencia condicionada (`UPDATE … WHERE estado = 'enviado'`): el que la gana (count = 1) sigue; el que
+ * llega después (doble clic, dos pestañas, reintento) ve count = 0 y NO copia líneas ni registra consentimientos. La lectura de
+ * `vistaPorToken` por sí sola no basta: dos peticiones concurrentes la ven «abierta» a la vez (carrera).
+ */
+async function reclamarPresupuesto(
+  tx: Pick<TxPresupuestos, 'presupuesto'>, tallerId: string, id: string, data: Record<string, unknown>,
+): Promise<boolean> {
+  const r = await tx.presupuesto.updateMany({ where: { id, tallerId, estado: 'enviado' }, data })
+  return r.count === 1
+}
+
+const YA_RESPONDIDO: ResultadoAceptar = { ok: false, status: 409, motivo: 'el presupuesto ya ha sido respondido' }
+
 export type EntradaAceptar = {
   tallerId: string; token: string; ip: string | null; userAgent: string | null; ahora: Date
   casillas: CasillasMarcadas
@@ -201,10 +215,7 @@ export async function aceptarPorToken(
     const rec = await tx.recepcion.findFirst({ where: { tallerId: e.tallerId, id: ot.recepcionId } })
     const t = transicionarOt(ot.estado as EstadoOt, 'aceptado', { presupuestoAceptado: true, recepcionFirmada: !!rec && rec.firmadoEn != null })
     if (!t.ok) return { ok: false, status: 409, motivo: t.motivo }
-    await tx.presupuesto.update({
-      where: { id: p.id },
-      data: { estado: 'aceptado', aceptadoEn: e.ahora, aceptadoIp: e.ip, aceptadoTexto: texto },
-    })
+    if (!(await reclamarPresupuesto(tx, e.tallerId, p.id, { estado: 'aceptado', aceptadoEn: e.ahora, aceptadoIp: e.ip, aceptadoTexto: texto }))) return YA_RESPONDIDO
     await tx.ordenTrabajo.update({ where: { id: ot.id }, data: { estado: t.estado } })
     otId = ot.id
     for (const l of v.lineas) {
@@ -218,10 +229,7 @@ export async function aceptarPorToken(
       })
     }
   } else {
-    await tx.presupuesto.update({
-      where: { id: p.id },
-      data: { estado: 'aceptado', aceptadoEn: e.ahora, aceptadoIp: e.ip, aceptadoTexto: texto },
-    })
+    if (!(await reclamarPresupuesto(tx, e.tallerId, p.id, { estado: 'aceptado', aceptadoEn: e.ahora, aceptadoIp: e.ip, aceptadoTexto: texto }))) return YA_RESPONDIDO
   }
 
   await registrarCasillas(tx, e, p, deps)
@@ -256,7 +264,7 @@ async function aceptarAmpliacion(
   const p = v.presupuesto
   const ot = p.presupuestoPadreId ? await tx.ordenTrabajo.findFirst({ where: { tallerId: e.tallerId, presupuestoId: p.presupuestoPadreId } }) : null
   if (!ot) return { ok: false, status: 409, motivo: 'la orden de esta ampliación ya no existe' }
-  await tx.presupuesto.update({ where: { id: p.id }, data: { estado: 'aceptado', aceptadoEn: e.ahora, aceptadoIp: e.ip, aceptadoTexto: texto } })
+  if (!(await reclamarPresupuesto(tx, e.tallerId, p.id, { estado: 'aceptado', aceptadoEn: e.ahora, aceptadoIp: e.ip, aceptadoTexto: texto }))) return YA_RESPONDIDO
   for (const l of v.lineas) {
     await tx.otLinea.create({
       data: {
@@ -284,7 +292,7 @@ export async function rechazarPorToken(
   const v = await vistaPorToken(tx, e.tallerId, e.token, e.ahora)
   if (!v.ok) return { ok: false, status: 404, motivo: 'no encontrado' }
   if (v.estado !== 'abierto') return { ok: false, status: 409, motivo: `el presupuesto está ${v.estado}` }
-  await tx.presupuesto.update({ where: { id: v.presupuesto.id }, data: { estado: 'rechazado' } })
+  if (!(await reclamarPresupuesto(tx, e.tallerId, v.presupuesto.id, { estado: 'rechazado' }))) return YA_RESPONDIDO
   // Una ampliación rechazada no bloquea la OT: la línea no entra y, sin más pendientes, vuelve a en_curso.
   if (v.presupuesto.origen === 'ampliacion' && v.presupuesto.presupuestoPadreId) {
     const ot = await tx.ordenTrabajo.findFirst({ where: { tallerId: e.tallerId, presupuestoId: v.presupuesto.presupuestoPadreId } })

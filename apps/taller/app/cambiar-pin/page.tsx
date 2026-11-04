@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { conTaller } from '@/lib/db'
 import { getSession } from '@/lib/session'
-import { debeCambiarPin } from '@/lib/acceso'
+import { usuarioDeSesion } from '@/lib/acceso'
 import { Cabecera } from '../_marca'
 import { CambiarPinCliente } from './CambiarPinCliente'
 
@@ -10,7 +10,10 @@ export const dynamic = 'force-dynamic'
 export default async function Pagina() {
   const s = await getSession()
   if (!s) redirect('/login')
-  const obligatorio = await conTaller(s.tallerId, (tx) => debeCambiarPin(tx as never, s))
+  // Sesión vigente (activo + misma versión): con PIN temporal basta; si no, el formulario pide el PIN ACTUAL.
+  const u = await conTaller(s.tallerId, (tx) => usuarioDeSesion(tx as never, s))
+  if (!u) redirect('/login')
+  const obligatorio = u.debeCambiarPin === true
   return (
     <>
       <Cabecera conSalir />

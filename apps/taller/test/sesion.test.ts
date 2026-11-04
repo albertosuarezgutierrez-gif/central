@@ -12,7 +12,7 @@ import { crearBdFake } from './_fake-prisma.ts'
 import { T } from './_escenario.ts'
 
 process.env.TALLER_SESSION_SECRET = 'secreto-de-prueba-no-real'
-const U = { tallerId: T, usuarioId: 'u1', rol: 'mecanico' }
+const U = { tallerId: T, usuarioId: 'u1', rol: 'mecanico', sv: 0 }
 const T0 = new Date('2026-11-04T08:00:00Z')
 const despues = (min: number, base = T0) => new Date(base.getTime() + min * 60_000)
 

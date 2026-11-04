@@ -2,6 +2,8 @@
 import { isIP } from 'node:net'
 
 export type EntradaFichajeTaller = {
+  /** Taller que ficha: la empresa solo acepta si lo tiene habilitado (`empresas.fichaje_taller_id`). */
+  taller_id: string
   empresa_id: string
   accion: 'entrada' | 'salida'
   /** Identificador estable del empleado: `empleado_id` (uuid) o `dni` (NIF normalizado). Uno de los dos. */
@@ -20,6 +22,8 @@ export function normalizaNif(v: string): string {
 
 export function validarFichajeTaller(body: unknown): { ok: true; datos: EntradaFichajeTaller } | { ok: false; error: string } {
   const b = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>
+  const taller_id = typeof b.taller_id === 'string' ? b.taller_id.trim().toLowerCase() : ''
+  if (!UUID.test(taller_id)) return { ok: false, error: 'taller_id no válido' }
   const empresa_id = typeof b.empresa_id === 'string' ? b.empresa_id.trim() : ''
   if (!UUID.test(empresa_id)) return { ok: false, error: 'empresa_id no válido' }
   if (b.accion !== 'entrada' && b.accion !== 'salida') return { ok: false, error: "accion debe ser 'entrada' o 'salida'" }
@@ -29,5 +33,5 @@ export function validarFichajeTaller(body: unknown): { ok: true; datos: EntradaF
   if (eid && !UUID.test(eid)) return { ok: false, error: 'empleado_id no válido' }
   if (!eid && !dni) return { ok: false, error: 'Falta el identificador del empleado (empleado_id o dni)' }
   const ipRaw = typeof b.ip === 'string' ? b.ip.trim() : ''
-  return { ok: true, datos: { empresa_id, accion: b.accion, empleado_id: eid || null, dni: dni || null, ip: ipRaw && isIP(ipRaw) ? ipRaw : null } }
+  return { ok: true, datos: { taller_id, empresa_id, accion: b.accion, empleado_id: eid || null, dni: dni || null, ip: ipRaw && isIP(ipRaw) ? ipRaw : null } }
 }

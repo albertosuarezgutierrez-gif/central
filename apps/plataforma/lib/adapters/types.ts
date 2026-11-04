@@ -33,8 +33,8 @@ export interface NuevoCliente {
   vincularExistente?: boolean
 }
 
-/** Lo que devuelve un alta: `pinTemporal` (taller) se enseña UNA vez; `vinculado` (rrhh) = se reutilizó un responsable existente. */
-export interface AltaResultado { id: string; pinTemporal?: string; vinculado?: boolean }
+/** Lo que devuelve un alta: `pinTemporal` (taller) se enseña UNA vez y `codigoTaller` acompaña al PIN; `vinculado` (rrhh) = se reutilizó un responsable existente. */
+export interface AltaResultado { id: string; pinTemporal?: string; /** taller: código de acceso del taller (paso 1 del login), para entregarlo con el PIN. */ codigoTaller?: string; vinculado?: boolean }
 
 /** Una persona del directorio de un negocio (para dirigir comunicación por persona). */
 export interface PersonaDirectorio {

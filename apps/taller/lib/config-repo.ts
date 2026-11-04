@@ -135,6 +135,8 @@ export async function leerConfig(tx: TxConfig, tallerId: string): Promise<Config
       maxFallosTaller: cfg.loginMaxFallosTaller,
       ventanaMinutos: cfg.loginVentanaMinutos,
       bloqueoMinutos: cfg.loginBloqueoTallerMinutos,
+      maxFallosUsuario: cfg.loginMaxFallosUsuario,
+      bloqueoUsuarioMinutos: cfg.loginBloqueoUsuarioMinutos,
       sesionMinutos: cfg.loginSesionMinutos,
       inactividadMinutos: cfg.loginInactividadMinutos,
     },
@@ -169,6 +171,8 @@ export function escalaresDeConfig(c: ConfigTaller) {
     loginMaxFallosTaller: c.seguridadLogin.maxFallosTaller,
     loginVentanaMinutos: c.seguridadLogin.ventanaMinutos,
     loginBloqueoTallerMinutos: c.seguridadLogin.bloqueoMinutos,
+    loginMaxFallosUsuario: c.seguridadLogin.maxFallosUsuario,
+    loginBloqueoUsuarioMinutos: c.seguridadLogin.bloqueoUsuarioMinutos,
     loginSesionMinutos: c.seguridadLogin.sesionMinutos,
     loginInactividadMinutos: c.seguridadLogin.inactividadMinutos,
   }

@@ -11,7 +11,8 @@ import { auditar, guardarConfig, leerConfig, type TxConfig } from '@/lib/config-
 import { almacenActivo, mimeReal } from '@/lib/almacen'
 import { direccionOpcional } from '@/lib/direccion'
 import { ErrorMarca, guardarColores, guardarLogoRuta, type TxMarca } from '@/lib/marca-repo'
-import { guardarEmpresaRrhh, guardarIdentificadorRrhh, type TxVinculo } from '@/lib/vinculo-rrhh'
+import { guardarIdentificadorRrhh, type TxVinculo } from '@/lib/vinculo-rrhh'
+import { desbloquearTaller, fijarCodigoTaller } from '@/lib/bloqueos-ajustes'
 import { altaUsuario, bajaUsuario, ErrorPersonal, guardarProveedor, resetPinUsuario, ROLES, type TxPersonal } from '@/lib/personal'
 
 export type Respuesta<T = object> = ({ ok: true } & T) | { ok: false; errores: string[] }
@@ -35,6 +36,8 @@ async function responder<T extends object>(fn: () => Promise<T>): Promise<Respue
   } catch (e) {
     if (e instanceof NoAutorizado) return { ok: false, errores: ['Solo el dueño puede cambiar los ajustes'] }
     if (e instanceof ErrorPersonal || e instanceof ErrorMarca) return { ok: false, errores: [e.message] }
+    // Índice único del código (0006): otro taller ya lo usa.
+    if (e && typeof e === 'object' && (e as { code?: unknown }).code === 'P2002') return { ok: false, errores: ['Ese código ya lo usa otro taller: elige otro'] }
     if (e && typeof e === 'object' && 'errores' in e && Array.isArray((e as { errores: unknown }).errores)) {
       return { ok: false, errores: (e as { errores: string[] }).errores }
     }
@@ -85,7 +88,9 @@ const Cambio = z.discriminatedUnion('seccion', [
   }),
   z.object({
     seccion: z.literal('seguridad_login'),
-    seguridad: z.object({ maxFallosTaller: ent, ventanaMinutos: ent, bloqueoMinutos: ent, sesionMinutos: ent, inactividadMinutos: ent }),
+    seguridad: z.object({
+      maxFallosTaller: ent, ventanaMinutos: ent, bloqueoMinutos: ent, maxFallosUsuario: ent, bloqueoUsuarioMinutos: ent, sesionMinutos: ent, inactividadMinutos: ent,
+    }),
   }),
   z.object({
     seccion: z.literal('horario'),
@@ -287,17 +292,30 @@ export async function guardarVinculoRrhhPersona(entrada: unknown): Promise<Respu
   )
 }
 
-export async function guardarEmpresaRrhhAccion(valor: unknown): Promise<Respuesta<{ empresaId: string | null }>> {
-  const p = z.string().max(100).safeParse(valor)
+// ── Código del taller (paso 1 del login) y desbloqueo del tope por taller ──
+export async function guardarCodigoTallerAccion(valor: unknown): Promise<Respuesta<{ codigo: string }>> {
+  const p = z.string().max(40).nullable().safeParse(valor)
   if (!p.success) return { ok: false, errores: ['Datos inválidos'] }
   return responder(() =>
     comoDueno(async (tx, s) => {
-      const empresaId = await guardarEmpresaRrhh(tx as unknown as TxVinculo, s.tallerId, p.data)
+      const codigo = await fijarCodigoTaller(tx as never, s.tallerId, p.data)
+      // El código nuevo no se audita en claro con valor viejo: basta dejar constancia del cambio.
       await auditar(tx as unknown as TxConfig, {
-        tallerId: s.tallerId, usuarioId: s.usuarioId, entidad: 'talleres', entidadId: s.tallerId, accion: 'empresa_rrhh',
-        antes: null, despues: { vinculada: empresaId !== null },
+        tallerId: s.tallerId, usuarioId: s.usuarioId, entidad: 'talleres', entidadId: s.tallerId, accion: 'codigo_acceso', antes: null, despues: { cambiado: true },
       })
-      return { empresaId }
+      return { codigo }
+    }),
+  )
+}
+
+export async function desbloquearTallerAccion(): Promise<Respuesta> {
+  return responder(() =>
+    comoDueno(async (tx, s) => {
+      await desbloquearTaller(tx as never, s.tallerId)
+      await auditar(tx as unknown as TxConfig, {
+        tallerId: s.tallerId, usuarioId: s.usuarioId, entidad: 'talleres', entidadId: s.tallerId, accion: 'desbloqueo_taller', antes: null, despues: { desbloqueado: true },
+      })
+      return {}
     }),
   )
 }

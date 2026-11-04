@@ -61,3 +61,16 @@ test('seguridadLogin: sesión 5 h e inactividad 30 min de alta; 0 se rechaza', a
   c.seguridadLogin.sesionMinutos = 0
   assert.ok(validarConfig(c).some((e) => e.includes('seguridadLogin.sesionMinutos')))
 })
+
+test('seguridadLogin: bloqueo por usuario (5 fallos, 5 h de alta); ausente o 0 se rechaza', async () => {
+  const { configDeAlta } = await import('../src/index.ts')
+  const c = configDeAlta()
+  assert.equal(c.seguridadLogin.maxFallosUsuario, 5)
+  assert.equal(c.seguridadLogin.bloqueoUsuarioMinutos, 300)
+  assert.deepEqual(validarConfig(c), [])
+  c.seguridadLogin.maxFallosUsuario = 0
+  assert.ok(validarConfig(c).some((e) => e.includes('seguridadLogin.maxFallosUsuario')))
+  const v = configDeAlta() as unknown as { seguridadLogin: Record<string, unknown> }
+  delete v.seguridadLogin.bloqueoUsuarioMinutos
+  assert.ok(validarConfig(v as never).some((e) => e.includes('seguridadLogin.bloqueoUsuarioMinutos')), 'una clave que falta no pasa en silencio')
+})

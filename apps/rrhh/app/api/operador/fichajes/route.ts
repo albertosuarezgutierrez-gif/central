@@ -8,7 +8,9 @@ import { getIp } from '@/lib/rate-limit'
 
 const ORIGEN = 'taller'
 
-// POST { empresa_id, accion: 'entrada'|'salida', empleado_id | dni, ip? } — Bearer RRHH_FICHAJE_TALLER_SECRET.
+// POST { taller_id, empresa_id, accion: 'entrada'|'salida', empleado_id | dni, ip? } — Bearer RRHH_FICHAJE_TALLER_SECRET.
+// La empresa debe haber HABILITADO a ese taller (`empresas.fichaje_taller_id`, migración 0030; lo fija el operador): sin eso 403 y no se
+// mira ni al empleado. Así un taller no puede fichar contra otra empresa aunque conozca su id.
 // La hora la pone el SERVIDOR (now()); el taller no la manda. Reutiliza `ficharEntrada`/`ficharSalida` del portal.
 // Sin ubicación (el taller no tiene GPS del trabajador): el fichaje queda marcado `sin_ubicacion` y con origen 'taller'.
 // Duplicados: entrada con una entrada ya abierta → 409; salida sin entrada abierta → 409. Nunca se alterna solo.
@@ -17,6 +19,12 @@ export async function POST(req: Request) {
   const v = validarFichajeTaller(await req.json().catch(() => null))
   if (!v.ok) return NextResponse.json({ error: v.error }, { status: 400 })
   const d = v.datos
+
+  const hab = await prisma.$queryRaw<{ ok: boolean }[]>(Prisma.sql`
+    SELECT (fichaje_taller_id = ${d.taller_id}::uuid) AS ok FROM rrhh.empresas WHERE id = ${d.empresa_id}::uuid`)
+  if (hab[0]?.ok !== true) {
+    return NextResponse.json({ error: 'La empresa no tiene habilitado el fichaje desde este taller', codigo: 'fichaje_taller_no_habilitado' }, { status: 403 })
+  }
 
   const filas = await prisma.$queryRaw<{ id: string; nombre: string; estado: string }[]>(Prisma.sql`
     SELECT id::text AS id, nombre, estado FROM rrhh.empleados

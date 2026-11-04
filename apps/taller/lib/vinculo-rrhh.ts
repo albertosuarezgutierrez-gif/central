@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- delegados Prisma tipados de forma estructural (fake en tests) */
-// Vínculo con rrhh que edita el DUEÑO en Ajustes > Personal. El taller NO lee rrhh: solo guarda a qué empleado
-// (NIF o id) y a qué empresa de rrhh corresponde para ENVIAR el fichaje. Dentro de `conTaller`.
+// Vínculo con rrhh. El DUEÑO solo edita aquí a qué EMPLEADO (NIF o id) corresponde cada persona. La EMPRESA de rrhh del taller
+// (`talleres.rrhh_empresa_id`) la fija SOLO el operador (POST/PATCH /api/operador/talleres → `taller.fijar_rrhh_empresa`, 0006): si
+// la editara el dueño podría fichar contra OTRA empresa de rrhh. El taller NO lee rrhh. Dentro de `conTaller`.
 import { ErrorPersonal } from './personal.ts'
 
 type Delegado = { findFirst(a: any): Promise<any>; update(a: any): Promise<any> }
-export type TxVinculo = { usuarioTaller: Delegado; taller: Delegado }
+export type TxVinculo = { usuarioTaller: Delegado }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const IDENT = /^[A-Za-z0-9\-]{3,64}$/
@@ -17,6 +18,7 @@ export function validarIdentificadorRrhh(v: string): string | null {
   return UUID.test(t) ? t.toLowerCase() : t.toUpperCase()
 }
 
+/** Solo para el puerto de operador. */
 export function validarEmpresaRrhh(v: string): string | null {
   const t = v.trim()
   if (!t) return null
@@ -30,10 +32,4 @@ export async function guardarIdentificadorRrhh(tx: TxVinculo, tallerId: string, 
   if (!u) throw new ErrorPersonal('usuario no encontrado')
   await tx.usuarioTaller.update({ where: { id: usuarioId }, data: { rrhhIdentificador: identificador } })
   return identificador
-}
-
-export async function guardarEmpresaRrhh(tx: TxVinculo, tallerId: string, valor: string): Promise<string | null> {
-  const empresaId = validarEmpresaRrhh(valor)
-  await tx.taller.update({ where: { id: tallerId }, data: { rrhhEmpresaId: empresaId } })
-  return empresaId
 }

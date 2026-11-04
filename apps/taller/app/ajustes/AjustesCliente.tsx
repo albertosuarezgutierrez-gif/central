@@ -15,7 +15,7 @@ import { DIRECCION_VACIA, type Direccion } from '@/lib/direccion'
 import { coloresPorDefecto, fondosMarca } from '@/lib/marca'
 import { DireccionCp } from '../_direccion/DireccionCp'
 import {
-  altaPersona, bajaPersona, guardarAjuste, guardarDatosTaller, guardarMarcaColores, guardarProveedorAccion, guardarEmpresaRrhhAccion, guardarVinculoRrhhPersona, quitarLogo, resetPinPersona,
+  altaPersona, bajaPersona, guardarAjuste, guardarDatosTaller, guardarMarcaColores, guardarProveedorAccion, desbloquearTallerAccion, guardarCodigoTallerAccion, guardarVinculoRrhhPersona, quitarLogo, resetPinPersona,
   subirLogo, type Respuesta,
 } from './acciones'
 
@@ -26,11 +26,14 @@ export type DatosAjustes = {
     razonSocial: string
     nombreComercial: string
     nif: string | null
-    rrhhEmpresaId: string | null
+    /** La empresa de rrhh la fija SOLO el operador (Grupo ASegura); aquí solo se sabe si hay vínculo. */
+    rrhhVinculada: boolean
+    codigoAcceso: string | null
     direccion: { cp: string | null; provincia: string | null; municipio: string | null; via: string | null; numero: string | null }
   }
   marca: { primario: string | null; secundario: string | null; tieneLogo: boolean }
   personas: { id: string; nombre: string; rol: string; activo: boolean; rrhhIdentificador: string | null }[]
+  bloqueos: { topeMinutos: number | null; usuariosBloqueados: string[] }
   proveedores: { id: string; nombre: string; correo: string | null; activo: boolean }[]
 }
 
@@ -162,7 +165,9 @@ function Marca({ m }: { m: DatosAjustes['marca'] }) {
 const CAMPOS_ACCESO: [keyof SeguridadLogin, string][] = [
   ['maxFallosTaller', 'Fallos de PIN que bloquean el taller (N)'],
   ['ventanaMinutos', 'Ventana donde se cuentan los fallos (minutos)'],
-  ['bloqueoMinutos', 'Duración del bloqueo (minutos)'],
+  ['bloqueoMinutos', 'Duración del bloqueo del taller (minutos)'],
+  ['maxFallosUsuario', 'Fallos de PIN que bloquean a UNA persona (N)'],
+  ['bloqueoUsuarioMinutos', 'Duración del bloqueo de esa persona (minutos)'],
   ['sesionMinutos', 'Duración máxima de la sesión (minutos)'],
   ['inactividadMinutos', 'Cierre por inactividad (minutos)'],
 ]
@@ -186,6 +191,45 @@ function Acceso({ c }: { c: ConfigTaller }) {
       <p className="tenue">Sesión de {minutosAHoras(Number(v.sesionMinutos) || 0)} h como máximo; se cierra sola tras {v.inactividadMinutos || 0} min sin usarla.
         Los cambios valen para las sesiones que se abran desde ahora.</p>
       <button type="button" className="btn" disabled={g.pendiente} onClick={guardar}>Guardar acceso</button>
+      {g.aviso}
+    </Seccion>
+  )
+}
+
+// ── Código del taller (paso 1 del login) y aviso de tope ──
+function AvisoTope({ minutos }: { minutos: number | null }) {
+  const g = useGuardar()
+  if (minutos === null) return null
+  return (
+    <section className="ficha">
+      <p className="aviso-error" role="alert">
+        El acceso al taller está BLOQUEADO por demasiados PIN fallidos (quedan unos {minutos} min). Si no ha sido tu equipo, alguien está probando PIN.
+      </p>
+      <button type="button" className="btn" disabled={g.pendiente}
+        onClick={() => confirm('¿Desbloquear el acceso al taller ahora?') && g.guardar(() => desbloquearTallerAccion())}>Desbloquear</button>
+      {g.aviso}
+    </section>
+  )
+}
+
+function CodigoTaller({ inicial }: { inicial: string | null }) {
+  const [codigo, setCodigo] = useState(inicial ?? '')
+  const [nuevo, setNuevo] = useState('')
+  const g = useGuardar()
+  const aplicar = (valor: string | null) => g.guardar(() => guardarCodigoTallerAccion(valor), (r) => { setCodigo(r.codigo); setNuevo('') })
+  return (
+    <Seccion titulo="Código del taller">
+      <p>Código actual: <strong className="pin-grande">{codigo ? `${codigo.slice(0, 4)}-${codigo.slice(4)}` : 'sin código'}</strong></p>
+      <p className="tenue">Cada móvil o tablet lo escribe UNA vez (después recuerda el taller) y cada persona entra con su nombre y su PIN.
+        Si lo cambias, los dispositivos que ya lo tenían tendrán que volver a escribirlo (úsalo si pierdes un móvil).</p>
+      <Campo etiqueta="Escribir otro código (6 a 12 letras o números)">
+        <input value={nuevo} maxLength={14} autoCapitalize="characters" onChange={(e) => setNuevo(e.target.value)} />
+      </Campo>
+      <div className="fila">
+        <button type="button" className="btn btn-sec" disabled={g.pendiente || nuevo.trim() === ''} onClick={() => aplicar(nuevo)}>Guardar este código</button>
+        <button type="button" className="btn btn-sec" disabled={g.pendiente}
+          onClick={() => confirm('¿Generar un código nuevo? Los dispositivos actuales tendrán que escribirlo.') && aplicar(null)}>Generar uno nuevo</button>
+      </div>
       {g.aviso}
     </Seccion>
   )
@@ -578,21 +622,15 @@ function VinculoRrhh({ id, inicial }: { id: string; inicial: string | null }) {
   )
 }
 
-function EmpresaRrhh({ inicial }: { inicial: string | null }) {
-  const [v, setV] = useState(inicial ?? '')
-  const g = useGuardar()
+function EmpresaRrhh({ vinculada }: { vinculada: boolean }) {
   return (
-    <div className="ficha">
-      <Campo etiqueta="Id de la empresa en RR.HH. (para fichar)">
-        <input value={v} placeholder="Sin vincular" onChange={(e) => setV(e.target.value)} />
-      </Campo>
-      <button type="button" className="btn btn-sec" disabled={g.pendiente} onClick={() => g.guardar(() => guardarEmpresaRrhhAccion(v))}>Guardar empresa</button>
-      {g.aviso}
-    </div>
+    <p className="tenue">
+      Fichaje con RR.HH.: {vinculada ? 'la empresa de RR.HH. de este taller está vinculada.' : 'sin vincular. La vinculación la hace Grupo ASegura.'}
+    </p>
   )
 }
 
-function Personal({ personas, yoId, rrhhEmpresaId }: { personas: DatosAjustes['personas']; yoId: string; rrhhEmpresaId: string | null }) {
+function Personal({ personas, yoId, rrhhVinculada, bloqueados }: { personas: DatosAjustes['personas']; yoId: string; rrhhVinculada: boolean; bloqueados: string[] }) {
   const [alta, setAlta] = useState({ nombre: '', rol: 'mecanico' })
   const [pinNuevo, setPinNuevo] = useState<{ nombre: string; pin: string } | null>(null)
   const g = useGuardar()
@@ -601,11 +639,11 @@ function Personal({ personas, yoId, rrhhEmpresaId }: { personas: DatosAjustes['p
       {pinNuevo && (
         <p className="ok" role="alert">PIN de {pinNuevo.nombre}: <strong className="pin-grande">{pinNuevo.pin}</strong> · apúntalo: no se vuelve a mostrar.</p>
       )}
-      <EmpresaRrhh inicial={rrhhEmpresaId} />
+      <EmpresaRrhh vinculada={rrhhVinculada} />
       <ListaPerezosa items={personas} vacia="Sin personal" render={(p) => (
         <div key={p.id} className={`ficha${p.activo ? '' : ' inactiva'}`}>
           <strong>{p.nombre}{p.id === yoId ? ' (tú)' : ''}</strong>
-          <span className="tenue">{NOMBRE_ROL[p.rol] ?? p.rol}{p.activo ? '' : ' · de baja'}</span>
+          <span className="tenue">{NOMBRE_ROL[p.rol] ?? p.rol}{p.activo ? '' : ' · de baja'}{bloqueados.includes(p.id) ? ' · BLOQUEADO por fallos de PIN (un «Nuevo PIN» lo levanta)' : ''}</span>
           {p.activo && (
             <div className="fila">
               <button type="button" className="btn btn-sec" disabled={g.pendiente}
@@ -666,6 +704,7 @@ export function AjustesCliente({ datos }: { datos: DatosAjustes }) {
   const c = datos.config
   return (
     <div className="ajustes">
+      <AvisoTope minutos={datos.bloqueos.topeMinutos} />
       <DatosTaller t={datos.taller} />
       <ManoObra c={c} />
       <TiposVehiculo c={c} />
@@ -679,8 +718,9 @@ export function AjustesCliente({ datos }: { datos: DatosAjustes }) {
       <Avisos c={c} />
       <Textos c={c} />
       <Marca m={datos.marca} />
+      <CodigoTaller inicial={datos.taller.codigoAcceso} />
       <Acceso c={c} />
-      <Personal personas={datos.personas} yoId={datos.yoId} rrhhEmpresaId={datos.taller.rrhhEmpresaId} />
+      <Personal personas={datos.personas} yoId={datos.yoId} rrhhVinculada={datos.taller.rrhhVinculada} bloqueados={datos.bloqueos.usuariosBloqueados} />
       {/* key: remonta solo si cambia el conjunto (alta nueva), sin perder la edición en curso de los demás */}
       <Proveedores key={datos.proveedores.map((p) => p.id).join()} proveedores={datos.proveedores} />
     </div>

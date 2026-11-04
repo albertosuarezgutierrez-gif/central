@@ -115,6 +115,10 @@ export interface SeguridadLogin {
   maxFallosTaller: number
   ventanaMinutos: number
   bloqueoMinutos: number
+  /** Fallos de PIN de UN usuario que lo bloquean (además del tope por IP y por taller). */
+  maxFallosUsuario: number
+  /** Minutos que queda bloqueado ese usuario (alta: 5 h). */
+  bloqueoUsuarioMinutos: number
   /** Duración máxima de la sesión PIN (minutos desde que se entra). */
   sesionMinutos: number
   /** Cierre por inactividad (minutos sin usar la app). */
@@ -216,6 +220,11 @@ export function validarConfig(c: ConfigTaller): string[] {
     if (!esEnteroPos(v)) e.push(`seguridadLogin.${k} debe ser un entero > 0`)
   }
   if (!c.seguridadLogin) e.push('falta seguridadLogin')
+  else {
+    for (const k of ['maxFallosTaller', 'ventanaMinutos', 'bloqueoMinutos', 'maxFallosUsuario', 'bloqueoUsuarioMinutos', 'sesionMinutos', 'inactividadMinutos'] as const) {
+      if (!esEnteroPos(c.seguridadLogin[k])) e.push(`seguridadLogin.${k} debe ser un entero > 0`)
+    }
+  }
   if (!c.textos.versionTextoComercialTaller.trim() || !c.textos.textoConsentimientoComercialTaller.trim()) {
     e.push('falta el texto/versión del consentimiento comercial del taller')
   }
