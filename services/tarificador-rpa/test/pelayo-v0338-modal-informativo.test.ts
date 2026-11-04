@@ -108,8 +108,8 @@ async function pagina(cuerpo: string) {
 
 // ─── Puras ───────────────────────────────────────────────────────────────────
 
-test('versión del explorador 0.3.43', () => {
-  assert.equal(EXPLORADOR_VERSION, '0.3.43')
+test('versión del explorador 0.3.44', () => {
+  assert.equal(EXPLORADOR_VERSION, '0.3.44')
 })
 
 test('evaluarModal: forma cerrada, texto redactado ≤160, veredicto (campos / términos prohibidos), fragmento de la nota', () => {

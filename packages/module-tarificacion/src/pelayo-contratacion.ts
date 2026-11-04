@@ -11,6 +11,8 @@
 //      rótulo sea un paso 4-7 (o «Intervinientes», que es el 2 y el 5).
 //   La red: la ruta `/contratacion-autos/` deja de contar como emisión SOLO con un resto EXACTO de `RUTAS_RED_WIZARD_AUTOS_PELAYO`
 //   (`RutaTolerable.rutasExactas`): otra ruta del wizard sigue bloqueada por «contratacion».
+//   0.3.44 (real): «Nueva contratación» entra por `/contratacion-autos?<query base64>` (sin «/» final): la lista exacta mira solo la RUTA
+//   (sin query ni fragmento, con o sin «/» final), así que la raíz y `vehicle` pasan con cualquier query; el TOPE DURO no cambia.
 
 import { pareceEmision, type RutaTolerable } from './guard-emision.ts'
 import type { ElementoInventario, MarcoInventario } from './inventario-dom.ts'

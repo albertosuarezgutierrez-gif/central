@@ -3,10 +3,14 @@ import { describe, expect, it } from 'vitest'
 import {
   bloqueoAvance,
   bloqueoZonaWizardPelayo,
+  comprobarUrl,
+  EmisionBloqueadaError,
   esNuevaContratacionPelayoInventario,
   neutralizarRutaTolerable,
   pareceEmision,
+  parametrosParecenEmision,
   rutasAppTolerablesDe,
+  urlParaMensaje,
   type ElementoInventario,
   type MarcoInventario,
 } from './index.ts'
@@ -71,7 +75,61 @@ describe('TOPE DURO del wizard de autos de Pelayo', () => {
     expect(reglas).toHaveLength(1)
     expect(rutasAppTolerablesDe('pelayo:presupuestos:hogar')).toEqual([])
     for (const u of [`${WIZ}vehicle`, `${WIZ}vehicle?token=abc`, WIZ]) expect(pareceEmision(neutralizarRutaTolerable(u, reglas)), u).toBe(false)
-    for (const u of [`${WIZ}payment`, `${WIZ}final-price`, `${WIZ}vehicle/contract`, `${WIZ}vehicle?accion=contratar`, 'https://otro.pelayo.com/contratacion-autos/vehicle'])
+    for (const u of [`${WIZ}payment`, `${WIZ}final-price`, `${WIZ}vehicle/contract`, 'https://otro.pelayo.com/contratacion-autos/vehicle'])
       expect(pareceEmision(neutralizarRutaTolerable(u, reglas)), u).toBe(true)
+    // 0.3.44: la query ya no viaja a la URL neutralizada; un parámetro de ACCIÓN en la query lo sigue cortando la red (`parametrosParecenEmision`).
+    const u = `${WIZ}vehicle?accion=contratar`
+    expect(pareceEmision(neutralizarRutaTolerable(u, reglas)) || parametrosParecenEmision(u), u).toBe(true)
+  })
+})
+
+// 0.3.44 (Pelayo real 04/11/2026): «Nueva contratación» navegó a /contratacion-autos?<query base64> (SIN «/» final, CON query).
+// Query FICTICIA con letras que casarían con el patrón si se mirara (emit, GRAB, firm): solo cuenta la RUTA.
+const Q = '?eyJhIjoiYiJ9R1JBQmVtaXQ0ZmlybWE9PQ'
+describe('0.3.44 · wizard de Pelayo: ruta exacta por PATH (sin query ni hash, con y sin «/» final)', () => {
+  const reglas = rutasAppTolerablesDe('pelayo:presupuestos:auto')
+  const bloquea = (u: string) => pareceEmision(neutralizarRutaTolerable(u, reglas) ?? '') || parametrosParecenEmision(u)
+  const B = 'https://apps.pelayo.com/contratacion-autos'
+  it('pasan /contratacion-autos, /contratacion-autos/ y /contratacion-autos/vehicle con cualquier query o hash', () => {
+    for (const ruta of [B, `${B}/`, `${B}/vehicle`, `${B}/vehicle/`, `${B}/VEHICLE`])
+      for (const cola of ['', Q, `${Q}#paso`, '#x', '?token=abc&x=1'])
+        expect(bloquea(`${ruta}${cola}`), `${ruta}${cola}`).toBe(false)
+  })
+  it('cualquier otro path sigue bloqueado, con o sin query', () => {
+    for (const ruta of [`${B}/precio-final`, `${B}/final-price`, `${B}/vehicle/x`, `${B}X`, `${B}x/vehicle`, `${B}/payment`, `${B}/intervinientes`, `${B}//vehicle/contract`])
+      for (const cola of ['', Q]) expect(bloquea(`${ruta}${cola}`), `${ruta}${cola}`).toBe(true)
+  })
+  it('la ruta sola del inventario (mismo origen) igual: sin «/» final y con query pasa; otro resto no', () => {
+    const O = 'https://apps.pelayo.com'
+    for (const r of ['/contratacion-autos', `/contratacion-autos${Q}`, '/contratacion-autos/vehicle#x'])
+      expect(pareceEmision(neutralizarRutaTolerable(r, reglas, O) ?? ''), r).toBe(false)
+    for (const r of ['/contratacion-autos/precio-final', `/contratacion-autosX${Q}`, '/contratacion-autos/vehicle/x'])
+      expect(pareceEmision(neutralizarRutaTolerable(r, reglas, O) ?? ''), r).toBe(true)
+  })
+  it('TOPE DURO intacto: en la raíz del wizard no se pulsa nada; en Precio final y siguientes tampoco, con query o sin ella', () => {
+    for (const u of [B, `${B}${Q}`, `${B}/`, `${B}/precio-final${Q}`, `${B}/final-price`]) expect(bloqueoZonaWizardPelayo(u, ['Siguiente']), u).toBe('pelayo_wizard_fuera_de_zona')
+    expect(bloqueoZonaWizardPelayo(`${B}/vehicle${Q}`, ['Siguiente'])).toBeNull()
+    for (const r of ['Precio final', 'Intervinientes', 'Medios de pago', 'Contratar']) expect(bloqueoZonaWizardPelayo(`${B}/vehicle${Q}`, [r]), r).toBe('pelayo_wizard_paso_prohibido')
+  })
+})
+
+describe('0.3.44 · privacidad: el mensaje de bloqueo de URL va SIN query ni hash', () => {
+  it('urlParaMensaje = origen + ruta', () => {
+    expect(urlParaMensaje(`https://apps.pelayo.com/contratacion-autos${Q}#frag`)).toBe('https://apps.pelayo.com/contratacion-autos')
+    expect(urlParaMensaje('https://u:p@x.test/emitir?id=1')).toBe('https://x.test/emitir')
+    expect(urlParaMensaje('/emitir?id=1#a')).toBe('/emitir')
+  })
+  it('comprobarUrl lanza con la URL sin query ni hash', () => {
+    let e: unknown = null
+    try {
+      comprobarUrl(`https://x.test/contratacion-autos${Q}#frag`)
+    } catch (x) {
+      e = x
+    }
+    expect(e).toBeInstanceOf(EmisionBloqueadaError)
+    const m = (e as Error).message
+    expect(m).toBe('guard_emision: url bloqueada (casa con el patrón de emisión): «https://x.test/contratacion-autos»')
+    expect(m).not.toContain('?')
+    expect(m).not.toContain('eyJ')
   })
 })

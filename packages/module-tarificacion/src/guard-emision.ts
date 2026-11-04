@@ -254,7 +254,25 @@ function paresDelCuerpo(cuerpo: string): [string, string][] {
 
 /** Lanza si la URL casa con el patrón. */
 export function comprobarUrl(url: string, opciones: OpcionesGuard = {}): void {
-  if (pareceEmision(url, opciones)) throw new EmisionBloqueadaError('url', url)
+  if (pareceEmision(url, opciones)) throw new EmisionBloqueadaError('url', urlParaMensaje(url))
+}
+
+/**
+ * 0.3.44 (privacidad; Pelayo real: el error guardado en `tarificacion_trabajos.error` llevaba la query base64 del wizard, con
+ * identificadores del agente/petición): la URL que va a un MENSAJE de bloqueo, SIN query ni fragmento (origen + ruta). Ilegible como URL
+ * absoluta = se corta en el primer «?» o «#». PURA.
+ */
+export function urlParaMensaje(url: string | null | undefined): string {
+  if (typeof url !== 'string') return ''
+  if (/^https?:\/\//i.test(url.trim())) {
+    try {
+      const u = new URL(url.trim())
+      return `${u.origin}${u.pathname}`
+    } catch {
+      // cae al recorte
+    }
+  }
+  return url.split(/[?#]/)[0] ?? ''
 }
 
 /**
@@ -661,11 +679,20 @@ export function textoDetalleCuerpo(d: { parametro: string; patron: string; param
   return `${cab}${cuerpo}${n < lista.length ? ` (+${lista.length - n} más)` : ''}`
 }
 
-/** ¿El resto de ruta tras el prefijo está en `rutasExactas` (si la regla la declara)? Sin la clave = sí. PURA. */
-function restoExactoPermitido(r: RutaTolerable, restoRuta: string): boolean {
-  if (r.rutasExactas === undefined) return true
-  const t = restoRuta.toLowerCase().replace(/\/+$/, '')
-  return r.rutasExactas.some((x) => x.toLowerCase() === t)
+/**
+ * 0.3.44 (Pelayo real 04/11/2026: «Nueva contratación» navegó a `https://apps.pelayo.com/contratacion-autos?<query base64>`, SIN «/» final
+ * y CON query, y la ruta no casaba con el prefijo `/contratacion-autos/` → bloqueada por «contratacion»). Regla con `rutasExactas`: se
+ * compara SOLO la RUTA (sin query ni fragmento), con o sin «/» final: la ruta es la BASE del prefijo (sin su «/» final) o base + «/» +
+ * resto, y el resto (sin «/» finales, en minúsculas) tiene que ser EXACTAMENTE uno de la lista. Devuelve el resto o `null`. PURA.
+ */
+function restoExactoDeRuta(r: RutaTolerable & { rutasExactas: readonly string[] }, rutaSinQuery: string): string | null {
+  const base = r.prefijo.toLowerCase().replace(/\/+$/, '')
+  const ruta = rutaSinQuery.toLowerCase()
+  let resto: string
+  if (ruta === base) resto = ''
+  else if (ruta.startsWith(`${base}/`)) resto = ruta.slice(base.length + 1).replace(/\/+$/, '')
+  else return null
+  return r.rutasExactas.some((x) => x.toLowerCase() === resto) ? resto : null
 }
 
 /**
@@ -689,18 +716,30 @@ export function neutralizarRutaTolerable(texto: string | null | undefined, regla
       origen = u.origin
       if (origen !== r.origen) continue
       const ruta = plano(decodificarUrlTolerante(u.pathname))
-      if (!ruta.toLowerCase().startsWith(r.prefijo.toLowerCase())) continue
-      if (!restoExactoPermitido(r, ruta.slice(r.prefijo.length))) continue
-      resto = ruta.slice(r.prefijo.length) + plano(decodificarUrlTolerante(u.search + u.hash))
+      if (r.rutasExactas !== undefined) {
+        // 0.3.44: lista EXACTA de restos = solo cuenta la RUTA; la query y el fragmento no viajan a la URL neutralizada (los NOMBRES de
+        // parámetro de acción de la query los sigue mirando `parametrosParecenEmision` en la red). Otro resto = no se neutraliza.
+        const exacto = restoExactoDeRuta({ ...r, rutasExactas: r.rutasExactas }, ruta)
+        if (exacto === null) continue
+        resto = exacto
+      } else {
+        if (!ruta.toLowerCase().startsWith(r.prefijo.toLowerCase())) continue
+        resto = ruta.slice(r.prefijo.length) + plano(decodificarUrlTolerante(u.search + u.hash))
+      }
     } else if (t.startsWith('/') && !t.startsWith('//')) {
       // Ruta sola (el `hrefRuta` del inventario, que solo lleva la ruta si el enlace es del MISMO origen que la ventana): solo si la
       // ventana es EXACTAMENTE del origen de la regla.
       if (origenPagina !== r.origen) continue
       const ruta = plano(decodificarUrlTolerante(t))
-      if (!ruta.toLowerCase().startsWith(r.prefijo.toLowerCase())) continue
-      // La ruta sola del inventario puede traer query/fragmento: la lista exacta se mira sobre la RUTA.
-      if (!restoExactoPermitido(r, ruta.slice(r.prefijo.length).split(/[?#]/)[0] ?? '')) continue
-      resto = ruta.slice(r.prefijo.length)
+      if (r.rutasExactas !== undefined) {
+        // La ruta sola del inventario puede traer query/fragmento: la lista exacta se mira sobre la RUTA (0.3.44: con o sin «/» final).
+        const exacto = restoExactoDeRuta({ ...r, rutasExactas: r.rutasExactas }, ruta.split(/[?#]/)[0] ?? '')
+        if (exacto === null) continue
+        resto = exacto
+      } else {
+        if (!ruta.toLowerCase().startsWith(r.prefijo.toLowerCase())) continue
+        resto = ruta.slice(r.prefijo.length)
+      }
     } else {
       continue
     }
