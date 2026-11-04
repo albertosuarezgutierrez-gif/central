@@ -608,13 +608,13 @@ function Recibos({ p }: { p: Poliza }) {
   return (
     <Tarjeta titulo={`Recibos${r && r.total ? ` (${r.total})` : ''}`}>
       <p style={{ margin: '0 0 8px', fontSize: 13 }}>{titular}</p>
-      {recientes.length > 0 && <TablaRecibos lista={recientes} wa={wa} puedeBaja={puedeBaja} />}
+      {recientes.length > 0 && <TablaRecibos lista={recientes} wa={wa} puedeBaja={puedeBaja} polizaId={p.id} />}
       {/* Los antiguos, plegados y sin montar: una póliza de hace años trae
           decenas de recibos y lo que se consulta es la anualidad en curso. */}
       {antiguos.length > 0 && (
         <div style={{ marginTop: 10 }}>
           <Plegable titulo={`Ver ${antiguos.length} recibo(s) anteriores`}>
-            <TablaRecibos lista={antiguos} wa={wa} puedeBaja={puedeBaja} />
+            <TablaRecibos lista={antiguos} wa={wa} puedeBaja={puedeBaja} polizaId={p.id} />
           </Plegable>
         </div>
       )}
@@ -668,7 +668,7 @@ function HistorialDevoluciones({ lista }: { lista: Poliza['historialDevoluciones
   )
 }
 
-function TablaRecibos({ lista, wa, puedeBaja }: { lista: Poliza['listaRecibos']; wa: ContextoWhatsappDevuelto | null; puedeBaja: boolean }) {
+function TablaRecibos({ lista, wa, puedeBaja, polizaId }: { lista: Poliza['listaRecibos']; wa: ContextoWhatsappDevuelto | null; puedeBaja: boolean; polizaId: string }) {
   // Columnas nuevas solo si ALGÚN recibo las trae: asegura vieja o recibos anteriores a la ingesta nueva no las tienen.
   const hayNeta = lista.some((x) => x.primaNeta !== null || x.comisionLiquida !== null)
   const hayComision = lista.some((x) => x.baseComision !== null || x.comisionBruta !== null || x.claseComision || x.retencionIrpf !== null)
@@ -695,7 +695,7 @@ function TablaRecibos({ lista, wa, puedeBaja }: { lista: Poliza['listaRecibos'];
                 {textoFechaSituacion(x.situacion, x.fechaSituacion) && <div style={sub}>{textoFechaSituacion(x.situacion, x.fechaSituacion)}</div>}
                 {/* Solo en DEVUELTO: un «pendiente» no prueba que el banco lo devolviera. */}
                 {x.situacion === 'devuelto' && wa && (
-                  <> <WhatsappReciboDevuelto ctx={wa} importe={x.importe} fechaEfecto={x.fechaEfecto} tipoMotivo={x.devolucionCorreo?.tipoMotivo ?? null} /></>
+                  <> <WhatsappReciboDevuelto ctx={wa} reciboId={x.id} polizaId={polizaId} importe={x.importe} fechaEfecto={x.fechaEfecto} tipoMotivo={x.devolucionCorreo?.tipoMotivo ?? null} /></>
                 )}
                 {x.situacion === 'devuelto' && x.comisionBruta !== null && x.comisionBruta > 0 && (
                   <div style={sub} title="Comisión bruta del recibo según CIMA: si no se cobra, la compañía te la descuenta">💸 {eur(x.comisionBruta)} de comisión en riesgo</div>

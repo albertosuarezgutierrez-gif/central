@@ -200,7 +200,7 @@ export default function OfertasOportunidad({ oportunidadId, clienteId, polizaId,
                     <a href={polizaId ? `/correduria/poliza/${encodeURIComponent(polizaId)}` : `/correduria/cliente/${encodeURIComponent(clienteId)}`} style={{ ...btnStyle('secundario'), textDecoration: 'none' }}>Ver en presupuestos</a>
                   </div>
                   {/* «Enviar al cliente» (21/10/2026): copiar enlace · WhatsApp · correo. Nada sale sin clic. */}
-                  <EnviarAlCliente presupuestoId={generado.id} clienteId={clienteId} correo={correoTomador} />
+                  <EnviarAlCliente presupuestoId={generado.id} clienteId={clienteId} correo={correoTomador} oportunidadId={oportunidadId} />
                 </div>
               )}
             </div>

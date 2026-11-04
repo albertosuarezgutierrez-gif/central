@@ -463,6 +463,7 @@ export default function Renovaciones({ datos, filtro }: {
                             aseguradora: p.aseguradora,
                             fechaVencimiento: p.fechaVencimiento,
                           })}
+                          registro={{ origen: 'recaptacion', clienteId: p.clienteId, polizaId: p.id }}
                           onWhatsapp={() => {
                             if (!p.clienteId) return
                             fetch('/api/correduria/renovaciones/contacto', {

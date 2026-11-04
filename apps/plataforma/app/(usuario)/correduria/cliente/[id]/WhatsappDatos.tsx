@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { MessageCircle } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
+import { registrarSaliente } from '@/lib/correduria/saliente-whatsapp'
 import { avisoTrasWhatsapp, enlaceDeRespuestaSolicitud, motivoSinWhatsapp, prepararWhatsappDatos } from '@/lib/correduria/whatsapp-datos'
 
 /**
@@ -41,6 +42,8 @@ export default function WhatsappDatos({ oportunidadId, ramo, telefono, nombre }:
       if (!wa.ok) { ventana?.close(); setAviso(wa.motivo); return }
       if (ventana) ventana.location.href = wa.href
       else setEnlace(wa.href)
+      // «Saliente previsto» (spec 2026-11-04 §4): sin esperar; con el id de la solicitud si asegura lo devolvió.
+      registrarSaliente({ origen: 'solicitud_datos', oportunidadId, solicitudId: typeof r.json?.id === 'string' ? r.json.id : null }, telefono, wa.mensaje)
       const nota = await post({ accion: 'whatsapp', oportunidadId, conEnlace: wa.conEnlace })
       setSinEnlace(!wa.conEnlace)
       setAviso(avisoTrasWhatsapp({ conEnlace: wa.conEnlace, motivoSinEnlace, notaStatus: nota.status }))

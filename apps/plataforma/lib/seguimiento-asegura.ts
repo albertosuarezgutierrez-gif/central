@@ -800,6 +800,14 @@ export function registrarWhatsappAsegura(body: { oportunidadId: string; actor: s
   return llamar('/api/operador/oportunidad/whatsapp', { method: 'POST', body: JSON.stringify(body) })
 }
 
+/**
+ * «Saliente previsto» de WhatsApp (spec 2026-11-04 §4): qué `wa.me` abrió Alberto, para casarlo luego con el echo.
+ * El actor (`humano:<cuentaId>`) lo pone `cabecerasPuerto` desde la sesión. Timeout corto: nadie lo espera.
+ */
+export function salientePrevistoAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/whatsapp/saliente-previsto', { method: 'POST', body: JSON.stringify(body) }, 8_000)
+}
+
 /** Clientes en vigor y leads de Vencimientos con su contacto, para el .vcf del móvil. */
 export function contactosMovilAsegura(): Promise<Reenvio> {
   return llamar('/api/operador/contactos-movil', { method: 'GET' })

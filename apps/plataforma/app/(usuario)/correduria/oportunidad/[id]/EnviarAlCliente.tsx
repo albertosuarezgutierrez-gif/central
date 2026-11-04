@@ -15,6 +15,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { btnStyle } from '@/components/ui'
+import { registrarSalienteDeEnlace } from '@/lib/correduria/saliente-whatsapp'
 import { avisoRotacion, leerPresupuestoEnLista, textoAviso, type PresupuestoEnLista } from '@/lib/presupuesto-asegura'
 import {
   CONFIRMAR_CORREO, cabeceraDestinatarios, confirmarCorreoContacto, confirmarWhatsappContacto, etiquetaContacto, etiquetaDescartado, etiquetaTomadorWhatsapp,
@@ -31,7 +32,7 @@ async function patch(id: string, cuerpo: Record<string, unknown>): Promise<Patch
   }
 }
 
-export default function EnviarAlCliente({ presupuestoId, clienteId, correo }: { presupuestoId: string; clienteId: string; correo: 'con_email' | 'sin_email' | 'no_se_sabe' }) {
+export default function EnviarAlCliente({ presupuestoId, clienteId, correo, oportunidadId = null }: { presupuestoId: string; clienteId: string; correo: 'con_email' | 'sin_email' | 'no_se_sabe'; oportunidadId?: string | null }) {
   const [ocupado, setOcupado] = useState(false)
   const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null)
   const [copiado, setCopiado] = useState(false)
@@ -145,6 +146,8 @@ export default function EnviarAlCliente({ presupuestoId, clienteId, correo }: { 
     try {
       const e = await pedirEnlace(contacto)
       if (!e) { ventana?.close(); return }
+      // «Saliente previsto» (spec 2026-11-04 §4), antes de salir de la página y sin esperar: teléfono y texto, del wa.me.
+      registrarSalienteDeEnlace({ origen: 'presupuesto', oportunidadId, clienteId: contacto ? contacto.clienteId : clienteId }, e.whatsapp)
       if (ventana) ventana.location.href = e.whatsapp
       else window.location.href = e.whatsapp
       setAviso({ ok: true, texto: contacto
