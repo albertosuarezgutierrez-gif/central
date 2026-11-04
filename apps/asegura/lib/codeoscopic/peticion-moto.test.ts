@@ -94,6 +94,17 @@ const CON_HISTORIAL: DatosMoto = {
   aniosSinSiniestros: 6,
 }
 
+test('póliza anterior (Occident/Allianz, 05-15/10/2026): viajan los 5 últimos, sin separadores y en mayúsculas', () => {
+  const c = construirPeticionMoto({ ...CON_HISTORIAL, polizaAnterior: '1234567890 12' }, LINEA) as any
+  assert.equal(c.risk.previousInsurance.policyNumber, '89012')
+  const a = construirPeticionMoto({ ...CON_HISTORIAL, polizaAnterior: ' ab-12/3 4x ' }, LINEA) as any
+  assert.equal(a.risk.previousInsurance.policyNumber, '1234X')
+})
+test('póliza anterior con menos de 5 caracteres: reparo antes de pagar', () => {
+  assert.ok(revisarDatosMoto({ ...CON_HISTORIAL, polizaAnterior: '12-3' }).some((x) => x.campo === 'polizaAnterior'))
+  assert.throws(() => construirPeticionMoto({ ...CON_HISTORIAL, polizaAnterior: '12-3' }, LINEA), /polizaAnterior/)
+})
+
 test('con historial, el bloque va completo y con el código DGS de la compañía', () => {
   const c = construirPeticionMoto(CON_HISTORIAL, LINEA) as any
   assert.equal(c.risk.previousInsurance.previousCompany.code, 'M0083')

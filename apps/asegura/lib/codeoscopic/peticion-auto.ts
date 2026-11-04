@@ -9,7 +9,7 @@
 // Las reglas no son adivinadas: salen del builder de Manuel, verificado por él
 // contra el entorno real, y están transcritas en docs/CODEOSCOPIC-TRASPASO-MANUEL.md §3.
 
-import { exigeSiniestrosUltimos5, polizaAnteriorParaTarificar } from '@central/module-seguros'
+import { exigeSiniestrosUltimos5, ultimosDigitosPoliza } from '@central/module-seguros'
 import {
   construirEmpresa,
   construirPersona,
@@ -305,6 +305,11 @@ export function revisarDatosAuto(d: Partial<DatosAuto>, opciones: OpcionesRevisi
   if (d.aseguradoAntes) {
     if (!texto(d.companiaAnteriorCodigo)) falta('companiaAnteriorCodigo')
     if (!texto(d.polizaAnterior)) falta('polizaAnterior')
+    // Avant2 manda a las compañías los 5 ÚLTIMOS caracteres (consultan SINCO con compañía + esos 5).
+    // Con menos no hay forma honesta de cumplirlo (Occident: «debe tener 5 caracteres») y el campo es
+    // obligatorio en `MotorPreviousInsurance_V1`: se avisa aquí, gratis, en vez de rellenar.
+    else if (ultimosDigitosPoliza(d.polizaAnterior, d.companiaAnteriorCodigo) === null)
+      falta('polizaAnterior', MOTIVO_POLIZA_ANTERIOR_CORTA)
     for (const c of ['aniosAsegurado', 'aniosEnCompania', 'aniosSinSiniestros'] as const) {
       if (!numero(d[c])) falta(c)
     }
@@ -441,7 +446,10 @@ export function construirPeticionAuto(d: DatosAuto, opciones: Pick<OpcionesRevis
 
   if (d.aseguradoAntes) {
     const previa: Record<string, unknown> = {
-      policyNumber: polizaAnteriorParaTarificar(d.polizaAnterior, d.companiaAnteriorCodigo),
+      // 🚨 Los 5 ÚLTIMOS, sin separadores y en mayúsculas (05-15/10/2026: con el nº completo y su
+      // espacio, Occident «debe tener 5 caracteres» y Allianz «previousInsurancePolicy incorrecto»).
+      // Mapfre: antes se quita su sufijo de versión. `revisar*` garantiza que no es null.
+      policyNumber: polizaAnteriorParaCodeoscopic(d.polizaAnterior, d.companiaAnteriorCodigo),
       previousCompany: { code: d.companiaAnteriorCodigo },
       registrationPlate: texto(d.matriculaAnterior) ? d.matriculaAnterior!.toUpperCase().replace(/\s/g, '') : riesgo.registrationPlate,
       totalYearsInsured: d.aniosAsegurado,
@@ -476,4 +484,21 @@ export function exigeDetalleDeSiniestros(d: Partial<DatosAuto>): boolean {
 export function mismoDni(a: string | null | undefined, b: string | null | undefined): boolean {
   const n = (x: string | null | undefined) => String(x ?? '').trim().toUpperCase().replace(/[\s-]/g, '')
   return n(a) !== '' && n(a) === n(b)
+}
+
+/** Reparo cuando el nº de póliza anterior no llega a 5 caracteres útiles (letras/cifras). */
+export const MOTIVO_POLIZA_ANTERIOR_CORTA =
+  'el nº de póliza anterior necesita al menos 5 letras o cifras: la compañía consulta SINCO con los 5 últimos ' +
+  '(Occident rechaza otro largo). Revisa el número en la póliza; si no se sabe, apaga «tiene seguro en vigor»'
+
+/**
+ * El `policyNumber` de `previousInsurance` tal como viaja: los 5 ÚLTIMOS caracteres alfanuméricos en
+ * mayúsculas (`ultimosDigitosPoliza`, la misma regla que plataforma y que el bot RPA de Allianz/Mapfre),
+ * quitando antes el sufijo de versión de Mapfre. Lanza si no llega a 5: no se rellena ni se inventa
+ * (`revisarDatosAuto`/`revisarDatosMoto` lo reprochan antes con `MOTIVO_POLIZA_ANTERIOR_CORTA`).
+ */
+export function polizaAnteriorParaCodeoscopic(numero: string | null | undefined, companiaCodigoDgs?: string | null): string {
+  const cinco = ultimosDigitosPoliza(numero, companiaCodigoDgs)
+  if (cinco === null) throw new Error(`codeoscopic_datos_incompletos: polizaAnterior (${MOTIVO_POLIZA_ANTERIOR_CORTA})`)
+  return cinco
 }
