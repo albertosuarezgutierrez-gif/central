@@ -20,8 +20,11 @@ import { computeTelefonoLookupHash, encryptField } from '@central/module-seguros
 import { createHash } from 'node:crypto'
 import { Prisma } from '../generated/asegura-client'
 import { prismaAsegura } from '../asegura-db'
-import { crudoMinimizado, textoDeMensaje, type MensajeExtraido } from './payload'
+import { crudoMinimizado, mediaDeMensaje, textoDeMensaje, type MensajeExtraido } from './payload'
 import { interpretarEdicion, type Edicion } from './eventos'
+import { casarEchoGuardado } from './salientes'
+import { procesarMediaPendiente } from './media-procesar'
+import { debeEncolarMedia } from './media'
 
 const CANAL = 'whatsapp'
 
@@ -130,6 +133,10 @@ export async function procesarPendientes(correduriaId: string, ids?: readonly st
       await marcar(f.id, 'error', 'excepcion').catch(() => {})
     }
   }
+  // Media (imagen/PDF) de los entrantes con UNA ficha: descarga, archivo y lectura de póliza (spec §6). Nunca tumba nada.
+  if (r.procesados > 0) {
+    await procesarMediaPendiente(correduriaId).catch((e) => console.error('[whatsapp] media:', e instanceof Error ? e.name : 'error'))
+  }
   return r
 }
 
@@ -172,6 +179,7 @@ async function procesarUna(correduriaId: string, f: FilaCruda): Promise<string> 
   const clienteId = fichas.length === 1 ? fichas[0] : null
   const fecha = /^\d{1,12}$/.test(String(m.timestamp)) ? new Date(Number(m.timestamp) * 1000) : new Date()
   const texto = textoDeMensaje(m)
+  const media = mediaDeMensaje(m)
   const contacto = crudo.contact as { profile?: { name?: unknown } } | undefined
   const perfil = direccion === 'entrante' && typeof contacto?.profile?.name === 'string' && contacto.profile.name.trim() !== '' ? contacto.profile.name.trim().slice(0, 120) : null
 
@@ -206,7 +214,7 @@ async function procesarUna(correduriaId: string, f: FilaCruda): Promise<string> 
     const [msg] = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
       insert into mensajes (conversacion_id, rol, contenido, wa_message_id, metadata, direccion, tipo, enviado_at, estado, texto_purgado_at)
       values (${conv.id}::uuid, ${direccion === 'entrante' ? 'cliente' : 'corredor'}, ${personal ? '' : encryptField(texto)}, ${m.id},
-              ${JSON.stringify({ canal: CANAL, campo: crudo.field ?? null, ...erroresDe(m) })}::jsonb, ${direccion}, ${m.type.slice(0, 30)}, ${fecha},
+              ${JSON.stringify({ canal: CANAL, campo: crudo.field ?? null, ...erroresDe(m), ...(media ? { media } : {}) })}::jsonb, ${direccion}, ${m.type.slice(0, 30)}, ${fecha},
               ${direccion === 'entrante' ? 'recibido' : 'enviado'}, ${personal ? new Date() : null})
       on conflict (conversacion_id, wa_message_id) where direccion is not null and wa_message_id is not null do nothing
       returning id::text as id`)
@@ -219,8 +227,27 @@ async function procesarUna(correduriaId: string, f: FilaCruda): Promise<string> 
       update conversaciones
          set ultimo_mensaje_at = greatest(coalesce(ultimo_mensaje_at, ${fecha}), ${fecha}), updated_at = now()
        where id = ${conv.id}::uuid and correduria_id = ${correduriaId}::uuid`)
-    return { estado: 'procesado' as const, conversacionId: conv.id, mensajeId, clienteId: conv.cliente_id }
+    return { estado: 'procesado' as const, conversacionId: conv.id, mensajeId, clienteId: conv.cliente_id, personal, nuevo: msg !== undefined }
   })
+
+  // 04/11/2026 (spec §4 y §6), FUERA de la transacción y en best effort: sin el SQL 2026-11-04 no hacen nada y el
+  // mensaje ya está guardado. El echo se casa con el `wa.me` que abrió plataforma; el media se encola solo con UNA
+  // ficha exacta y sin opt-out (`debeEncolarMedia`).
+  if (resultado.estado === 'procesado' && resultado.mensajeId && resultado.nuevo) {
+    const mensajeId = resultado.mensajeId
+    if (direccion === 'saliente') {
+      await casarEchoGuardado(correduriaId, { mensajeId, telefonoHash: hash, fecha, texto }).catch((e) =>
+        console.error('[whatsapp] casado del echo:', e instanceof Error ? e.name : 'error'),
+      )
+    } else if (debeEncolarMedia({ direccion, media, fichaUnica: fichas.length === 1 && fichas[0] === resultado.clienteId, optOut: false, personal: resultado.personal })) {
+      await prismaAsegura()
+        .$executeRaw(Prisma.sql`
+          update mensajes set media_estado = 'pendiente'
+           where id = ${mensajeId}::uuid and media_estado is null
+             and exists (select 1 from conversaciones c where c.id = mensajes.conversacion_id and c.correduria_id = ${correduriaId}::uuid)`)
+        .catch((e) => console.error('[whatsapp] media sin encolar:', e instanceof Error ? e.name : 'error'))
+    }
+  }
 
   await prismaAsegura().$executeRaw(Prisma.sql`
     update channel_inbound_messages

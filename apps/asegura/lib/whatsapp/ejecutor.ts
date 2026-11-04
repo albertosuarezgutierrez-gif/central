@@ -14,9 +14,18 @@
 //   · duplicar: no abre oportunidad si ya hay una abierta del ramo, ni tarea si ya hay una pendiente
 //     de la IA del mismo tipo para esa ficha.
 // Conversación personal (es_comercial=false) sin ficha → se descarta y se PURGA su texto.
+//
+// Propuestas (04/11/2026, spec 2026-11-04 §5, D1/D4): `proponerFechaCobro` · `proponerPagado` · `proponerVencimiento`
+// NUNCA escriben en la cartera: el paso `proponer` solo crea una fila en `whatsapp_propuestas` que Alberto aplica con su
+// botón. Tres guardas, en este orden:
+//   · UNA ficha exacta (`clientesCandidatos === 1` y ficha ya existente) o nada;
+//   · D4: solo con póliza EN VIGOR (`enVigor === true`; null = «no se sabe» → no);
+//   · el ancla la pone el SERVIDOR: el recibo/oportunidad del saliente vinculado (si está entre los de la ficha en vigor)
+//     o el ÚNICO candidato; varios sin vínculo → `ambiguo`, nunca se elige.
 
 import { RAMOS_OPORTUNIDAD, nombrePendiente } from '@central/module-seguros'
-import { TIPOS_ACCION, zAccion, type Analisis } from './analisis.ts'
+import { TIPOS_ACCION, zAccion, type Accion, type Analisis } from './analisis.ts'
+import type { TipoPropuesta } from './propuestas-reglas.ts'
 
 export const ACTOR_IA = 'agente:whatsapp-ia'
 export const ORIGEN_TAREA_IA = 'whatsapp_ia'
@@ -43,6 +52,12 @@ export type ContextoEjecucion = {
   perfilNombre: string | null
   /** Hoy en Madrid, aaaa-mm-dd. */
   hoy: string
+  /** D4: ¿la ficha tiene alguna póliza EN VIGOR (`esCarteraEnVigor`)? null/ausente = no se sabe → sin propuestas. */
+  enVigor?: boolean | null
+  /** Recibos devueltos/pendientes de sus pólizas EN VIGOR (ids del servidor). null/ausente = no se sabe. */
+  recibosPendientes?: { id: string; ramo: string; situacion: string }[] | null
+  /** El último saliente vinculado (ids del servidor, nunca de la IA). */
+  saliente?: { origen: string; reciboId: string | null; oportunidadId: string | null } | null
 }
 
 export type Paso =
@@ -60,6 +75,7 @@ export type Paso =
   | { tipo: 'createTask'; tipoTarea: string; descripcion: string; fechaLimite: string; prioridad: 'alta' | 'media' | 'baja' }
   | { tipo: 'updateContact'; nombre: string }
   | { tipo: 'addConversationNote'; texto: string }
+  | { tipo: 'proponer'; propuesta: TipoPropuesta; reciboId: string | null; oportunidadId: string | null; fecha: string | null }
 
 export type Rechazo = { tipo: string; motivo: string }
 export type Plan = { pasos: Paso[]; rechazos: Rechazo[] }
@@ -104,6 +120,7 @@ export function planificar(analisis: Analisis, ctx: ContextoEjecucion): Plan {
   }
 
   const ramosAbiertos = new Set(ctx.oportunidadesAbiertas.map((o) => o.ramo))
+  const propuestasYa = new Set<string>()
   const tareasYa = new Set(ctx.tareasIaPendientes.map((t) => t.tipo))
   const manana = sumarDias(ctx.hoy, 1)
 
@@ -175,9 +192,53 @@ export function planificar(analisis: Analisis, ctx: ContextoEjecucion): Plan {
       case 'addConversationNote':
         pasos.push({ tipo: 'addConversationNote', texto: a.texto.replace(/\s+/g, ' ').trim() })
         break
+      case 'proponerFechaCobro':
+      case 'proponerPagado':
+      case 'proponerVencimiento': {
+        const r = planificarPropuesta(a, ctx)
+        if ('motivo' in r) { rechazos.push({ tipo, motivo: r.motivo }); break }
+        const clave = `${r.propuesta}:${r.reciboId ?? r.oportunidadId}`
+        if (propuestasYa.has(clave)) { rechazos.push({ tipo, motivo: 'repetida' }); break }
+        propuestasYa.add(clave)
+        pasos.push(r)
+        break
+      }
     }
   }
   return { pasos, rechazos }
+}
+
+type AccionPropuesta = Extract<Accion, { tipo: 'proponerFechaCobro' | 'proponerPagado' | 'proponerVencimiento' }>
+
+/** Las guardas de una propuesta (ficha única, D4, ancla del servidor). PURA. */
+export function planificarPropuesta(a: AccionPropuesta, ctx: ContextoEjecucion): Extract<Paso, { tipo: 'proponer' }> | { motivo: string } {
+  // Una ficha exacta o nada: ni lead recién creado, ni teléfono compartido, ni «no se miró».
+  if (ctx.cliente === null || ctx.clientesCandidatos !== 1) return { motivo: 'ficha_no_unica' }
+  // D4: un lead o ex-cliente (sin póliza en vigor) no recibe propuestas; «no se sabe» tampoco.
+  if (ctx.enVigor !== true) return { motivo: 'sin_poliza_en_vigor' }
+  if (a.tipo === 'proponerVencimiento') {
+    if (a.fecha < ctx.hoy) return { motivo: 'fecha_pasada' }
+    const delVinculo = ctx.saliente?.oportunidadId ? ctx.oportunidadesAbiertas.find((o) => o.id === ctx.saliente?.oportunidadId && o.ramo === a.ramo) : undefined
+    const delRamo = ctx.oportunidadesAbiertas.filter((o) => o.ramo === a.ramo)
+    const o = delVinculo ?? (delRamo.length === 1 ? delRamo[0] : undefined)
+    if (!o) return { motivo: delRamo.length > 1 ? 'ambigua' : 'sin_oportunidad_abierta' }
+    if (o.fechaFinVigencia === a.fecha) return { motivo: 'nada_que_cambiar' }
+    return { tipo: 'proponer', propuesta: 'vencimiento', reciboId: null, oportunidadId: o.id, fecha: a.fecha }
+  }
+  const recibos = ctx.recibosPendientes
+  if (!recibos) return { motivo: 'recibos_no_leidos' }
+  let reciboId: string
+  if (ctx.saliente?.reciboId) {
+    // El recibo del vínculo vale SOLO si es de una póliza en vigor de esta ficha (si no, no se cae a otro).
+    if (!recibos.some((r) => r.id === ctx.saliente?.reciboId)) return { motivo: 'recibo_no_en_vigor' }
+    reciboId = ctx.saliente.reciboId
+  } else if (recibos.length === 1) reciboId = recibos[0].id
+  else return { motivo: recibos.length === 0 ? 'sin_recibo' : 'recibo_ambiguo' }
+  if (a.tipo === 'proponerFechaCobro') {
+    if (a.fecha < ctx.hoy) return { motivo: 'fecha_pasada' }
+    return { tipo: 'proponer', propuesta: 'fecha_cobro', reciboId, oportunidadId: null, fecha: a.fecha }
+  }
+  return { tipo: 'proponer', propuesta: 'pagado', reciboId, oportunidadId: null, fecha: null }
 }
 
 // ── Ejecución ──────────────────────────────────────────────────────────────────
@@ -194,6 +255,8 @@ export interface DepsEjecutor {
   crearTarea(clienteId: string, p: Extract<Paso, { tipo: 'createTask' }>): Promise<Hecho<{ id: string }>>
   rellenarNombre(clienteId: string, nombre: string): Promise<boolean>
   anotarNota(clienteId: string, texto: string): Promise<void>
+  /** Deja una PROPUESTA (nada más): `whatsapp_propuestas`, una pendiente por tipo y ancla. */
+  crearPropuesta(clienteId: string, p: Extract<Paso, { tipo: 'proponer' }>): Promise<Hecho<{ id: string }>>
   /** Fila en `auditoria` (actor agente:whatsapp-ia). Sin datos personales: tipo, resultado e ids. */
   auditar(e: { accion: string; resultado: ResultadoPaso['resultado']; motivo?: string; ids: Record<string, string> }): Promise<void>
 }
@@ -234,6 +297,10 @@ export async function ejecutar(plan: Plan, ctx: ContextoEjecucion, deps: DepsEje
       case 'addConversationNote':
         await deps.anotarNota(clienteId, p.texto)
         return { tipo: p.tipo, resultado: 'hecho' }
+      case 'proponer': {
+        const r = await deps.crearPropuesta(clienteId, p)
+        return r.ok ? { tipo: p.tipo, resultado: 'hecho', id: r.id } : { tipo: p.tipo, resultado: 'omitido', motivo: r.motivo }
+      }
     }
   }
 
@@ -249,7 +316,7 @@ export async function ejecutar(plan: Plan, ctx: ContextoEjecucion, deps: DepsEje
     resultados.push(r)
     const ids: Record<string, string> = { conversacionId: ctx.conversacionId }
     if (clienteId) ids.clienteId = clienteId
-    if (r.id && p.tipo !== 'crearLead') ids[p.tipo === 'createTask' ? 'tareaId' : 'oportunidadId'] = r.id
+    if (r.id && p.tipo !== 'crearLead') ids[p.tipo === 'createTask' ? 'tareaId' : p.tipo === 'proponer' ? 'propuestaId' : 'oportunidadId'] = r.id
     if (p.tipo === 'updateOpportunity') ids.oportunidadId = p.oportunidadId
     try {
       await deps.auditar({ accion: p.tipo, resultado: r.resultado, ...(r.motivo ? { motivo: r.motivo } : {}), ids })

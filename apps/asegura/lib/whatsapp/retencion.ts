@@ -75,6 +75,27 @@ export async function borrarConversacion(correduriaId: string, conversacionId: s
     if (!conv) return { ok: false as const, motivo: 'no_encontrada' as const }
     const crudos = await tx.$executeRaw(Prisma.sql`
       delete from channel_inbound_messages where conversacion_id = ${conversacionId}::uuid and correduria_id = ${correduriaId}::uuid`)
+    // 04/11/2026 (SQL 2026-11-04, si está aplicado; se comprueba ANTES para no abortar la transacción): los salientes
+    // previstos casados con sus echos y los ficheros que el cliente mandó por WhatsApp (spec §8: la supresión los incluye).
+    // Una PÓLIZA ya leída (tipo 'poliza') alimentó una oportunidad: es dato de la cartera y va por el procedimiento de
+    // la ficha (y otras tablas la referencian sin ON DELETE); aquí solo se borran los ficheros que no pasaron de 'otro'.
+    const [ext] = await tx.$queryRaw<{ salientes: boolean; media: boolean }[]>(Prisma.sql`
+      select to_regclass('whatsapp_salientes_previstos') is not null as salientes,
+             exists (select 1 from information_schema.columns where table_schema = current_schema() and table_name = 'mensajes'
+                      and column_name = 'media_documento_id') as media`)
+    if (ext?.salientes) {
+      await tx.$executeRaw(Prisma.sql`
+        delete from whatsapp_salientes_previstos s
+         where s.correduria_id = ${correduriaId}::uuid
+           and (s.mensaje_id in (select id from mensajes where conversacion_id = ${conversacionId}::uuid)
+                or s.telefono_hash = (select wa_telefono_hash from conversaciones where id = ${conversacionId}::uuid and correduria_id = ${correduriaId}::uuid))`)
+    }
+    if (ext?.media) {
+      await tx.$executeRaw(Prisma.sql`
+        delete from documentos d
+         where d.correduria_id = ${correduriaId}::uuid and d.subido_por = 'cliente' and d.notas = 'Recibido por WhatsApp' and d.tipo = 'otro'
+           and d.id in (select media_documento_id from mensajes where conversacion_id = ${conversacionId}::uuid and media_documento_id is not null)`)
+    }
     // Las trazas del bot heredado apuntan a conversaciones (FK): las de esta, fuera también.
     await tx.$executeRaw(Prisma.sql`delete from bot_turn_traces where conversacion_id = ${conversacionId}::uuid`)
     const mensajes = await tx.$executeRaw(Prisma.sql`delete from mensajes where conversacion_id = ${conversacionId}::uuid`)
