@@ -34,6 +34,7 @@ import { caducidadOfertas, type FilaOferta } from './ofertas-reglas'
 import { leerOportunidadParaOfertas } from './oportunidad-ofertas'
 import { autocompletarNecesidades } from './presupuesto'
 import { gastoIaAuto } from './ia-tope-estudio'
+import { masBarataPorNivel, type ResultadoNiveles } from './tarificacion-niveles'
 import { comprobarCoherenciaPrecios, fechaEfectoDeRiesgos, lineasRevisar, type AvisoCoherencia } from './tarificacion-coherencia'
 import { cargarPropuestaOportunidad, referenciaOportunidad } from './propuesta-oportunidad'
 import { trabajosVigentes, type TrabajoParaPropuesta } from './propuesta-oportunidad-reglas'
@@ -231,6 +232,9 @@ async function preparar(correduriaId: string, oportunidadId: string, opts: Opcio
   // 04/11/2026: comprobador de COHERENCIA de los precios (prima absurda, modalidades al revés, desviación, precio repetido,
   // fraccionado descuadrado, efecto pasado). NO bloquea: va al Telegram como «⚠️ Revisar» y se guarda en `estudio.rpa.coherencia`.
   const coherencia = avisosCoherencia(vivas, leidaDe, op.ramo ?? op.ramoOferta, filas, ahora)
+  // 04/11/2026: la más barata POR NIVEL de cobertura (no se compara un terceros con un todo riesgo). Va al Telegram y a
+  // `estudio.rpa.niveles`. Sin datos suficientes, la oferta queda «sin clasificar» (nunca se inventa el nivel). Nunca tumba el borrador.
+  const niveles = nivelesDeOpciones(op.ramo ?? op.ramoOferta, opciones, (ofertaId) => leidaDe.get(claveRpaDeFila(vivas.find((v) => v.id === ofertaId)?.datosExtra) ?? ''))
   const { venceEl } = calcularVencimiento({ creadoAt: ahora, fechaEfecto: null, expiraOferta: cad.expira })
   // El token en claro no se guarda ni se devuelve: es un borrador; el aviso (`accion:'avisar'`) genera el enlace.
   const tokenHash = await hashTokenVista(generarTokenVista())
@@ -245,7 +249,7 @@ async function preparar(correduriaId: string, oportunidadId: string, opts: Opcio
     actualId: null,
     comparacion,
     narrativa,
-    rpa: { tarificaciones, trabajos, sinIa, ...(incompletas.length ? { incompleto: incompletas } : {}), ...(coherencia ? { coherencia } : {}), ...(descartadas.length ? { companiasSinLeer: descartadas } : {}), analisis },
+    rpa: { tarificaciones, trabajos, sinIa, ...(incompletas.length ? { incompleto: incompletas } : {}), ...(coherencia ? { coherencia } : {}), ...(niveles ? { niveles } : {}), ...(descartadas.length ? { companiasSinLeer: descartadas } : {}), analisis },
   }
 
   // 3. El borrador (bajo cerrojo: dos trabajos que acaban a la vez no dejan dos).
@@ -316,9 +320,27 @@ async function preparar(correduriaId: string, oportunidadId: string, opts: Opcio
         alertas,
         incompletas,
         revisar: coherencia ? lineasRevisar(coherencia) : [],
+        niveles,
       }))
     : false
   return { estado: 'creado', presupuestoId: hecho.creado.id, referencia: hecho.creado.referencia ?? null, ofertas: opciones.length, narrativa: narrativa.fuente, sinIa, avisado, sustituidos: hecho.sustituidos, conservados: hecho.conservados }
+}
+
+/** «La más barata» por nivel de las opciones del borrador. `null` = no se pudo calcular (no se afirma nada). Nunca lanza. */
+function nivelesDeOpciones(
+  ramo: string | null,
+  opciones: readonly { ofertaId: string; compania: string; producto: string; primaEur: number; franquiciaEur: number | null }[],
+  leidaDeOferta: (ofertaId: string) => OfertaRpaLeida | undefined,
+): ResultadoNiveles | null {
+  try {
+    return masBarataPorNivel(ramo, opciones.map((o) => ({
+      id: o.ofertaId, compania: o.compania, producto: o.producto, primaEur: o.primaEur, franquiciaEur: o.franquiciaEur,
+      coberturas: sobreCoberturasRpa(leidaDeOferta(o.ofertaId)?.oferta.coberturas, '')?.lista ?? null,
+    })))
+  } catch (e) {
+    registrarErrorCartera('presupuesto/rpa/niveles', e)
+    return null
+  }
 }
 
 /**

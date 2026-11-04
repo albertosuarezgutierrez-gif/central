@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
 import { correduriaUnica } from '@/lib/cartera'
+import { masBarataPorNivel } from '@/lib/tarificacion-niveles'
 import { RAMOS_RETOMABLES, ultimaTarificacionNueva, ultimaTarificacionRealAuto, type RamoRetomable } from '@/lib/codeoscopic/tarificacion-guardada'
 
 export const runtime = 'nodejs'
@@ -52,7 +53,13 @@ export async function GET(req: Request) {
       ? await ultimaTarificacionRealAuto(correduria.id, polizaId)
       : await ultimaTarificacionNueva(correduria.id, clienteId, ramo as RamoRetomable, { oportunidadId, tarificacionId })
     if (!t) return NextResponse.json({ estado: 'ninguna' })
-    return NextResponse.json({ estado: 'ok', ...t })
+    // 04/11/2026: la más barata POR NIVEL de cobertura (terceros básico/ampliado, todo riesgo con/sin franquicia; hogar por
+    // continente/contenido). Solo lectura de lo ya guardado; sin datos suficientes, «sin clasificar» (no compite).
+    const niveles = masBarataPorNivel(polizaId ? 'auto' : ramo, t.precios.map((p) => ({
+      id: p.id, compania: p.compania ?? '', producto: p.producto ?? '', modalidad: p.modalidad, categoria: p.categoria,
+      primaEur: p.primaEur, franquiciaEur: p.franquiciaEur, garantias: p.garantias?.porClave ?? null,
+    })))
+    return NextResponse.json({ estado: 'ok', ...t, niveles })
   } catch (e) {
     return NextResponse.json(
       { estado: 'error', causa: 'otro', mensaje: e instanceof Error ? e.message : String(e) },
