@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse, after } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
-import { parseCallback, tgAnswerCallback, tgAskForReply, tgSend, tgSendButtons, tgEditMessage, escapeHtml, verifyTelegramWebhook, emisorAutorizado } from '@central/core-telegram'
+import { parseCallback, tgAnswerCallback, tgAskForReply, tgSend, tgSendButtons, tgEditMessage, tgQuitarBotones, escapeHtml, verifyTelegramWebhook, emisorAutorizado } from '@central/core-telegram'
 import { enviarAlHuespedDetallado } from '@/lib/sivra/agente-huesped/enviar'
 import { avisoFalloEnvio } from '@/lib/sivra/agente-huesped/motivo-envio'
 import { detectarExtra, mencionaImporte } from '@/lib/sivra/agente-huesped/extras'
@@ -41,7 +41,7 @@ import { PREFIJO_CLP, decidirBotonClp, idDeEdicion } from '@/lib/correo/lead-cor
 import { guardarEdicionClp, resolverBotonClp } from '@/lib/correo/lead-correduria-pendiente'
 import { PREFIJO_CSG, decidirBotonCsg } from '@/lib/correo/contacto-sugerido'
 import { PREFIJO_FEX, decidirBotonFex, decidirFexEnAsegura, lineaTrasPulsarFex } from '@/lib/felicitaciones-exclientes-asegura'
-import { PREFIJO_WAP, actorTitular, decidirBotonWap, idDeCorreccionWap, lineaTrasPulsarWap, resolverPropuestaEnAsegura, textoPedirCorreccionWap } from '@/lib/correduria/whatsapp-propuesta-tg'
+import { PREFIJO_WAP, actorTitular, decidirBotonWap, idDeCorreccionWap, lineaTrasPulsarWap, mensajeOriginalDeCorreccionWap, resueltaParaQuitarBotones, resolverPropuestaEnAsegura, textoPedirCorreccionWap } from '@/lib/correduria/whatsapp-propuesta-tg'
 import { cuentaTitularTelegram } from '@/lib/correduria/whatsapp-propuesta-tg-cuenta'
 import { PREFIJO_RRC, decidirBotonRrc, decidirRrcCompaniaEnAsegura, decidirRrcEnAsegura, editarRrcCompaniaEnAsegura, editarRrcEnAsegura, idDeEdicionRrc, idDeEdicionRrcCompania, lineaPushRrc, lineaTrasPulsarRrc, textoPedirEdicionRrc, textoPedirEdicionRrcCompania } from '@/lib/regularizacion-rc-asegura'
 import { resolverBotonCsg } from '@/lib/correo/contacto-sugerido-pendiente'
@@ -1057,7 +1057,8 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
       }
       if (d.decision === 'modificar') {
         await tgAnswerCallback(cb.id, '✏️ Escribe la corrección')
-        await tgAskForReply(textoPedirCorreccionWap(d.id)).catch(() => null)
+        // La marca lleva el id del mensaje original; al resolverse la corrección se le quitan (si no, el ✅/❌ viejo daría 409).
+        await tgAskForReply(textoPedirCorreccionWap(d.id, cb.message?.message_id)).catch(() => null)
         return NextResponse.json({ ok: true })
       }
       const decision = d.decision
@@ -1500,6 +1501,8 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
       after(async () => {
         const actor = actorTitular(await cuentaTitularTelegram())
         const r = await resolverPropuestaEnAsegura({ id: wapEdit, decision: 'modificar', correccion, actor })
+        const originalId = mensajeOriginalDeCorreccionWap(String(msg.reply_to_message.text))
+        if (originalId && resueltaParaQuitarBotones(r)) await tgQuitarBotones(originalId).catch(() => {})
         await tgSend(lineaTrasPulsarWap('modificar', r)).catch(() => {})
       })
       return NextResponse.json({ ok: true })

@@ -133,13 +133,33 @@ export async function tgEditMessage(messageId: number, text: string, opts: { cha
   const token = process.env.TELEGRAM_BOT_TOKEN
   const chat_id = opts.chatId || process.env.TELEGRAM_CHAT_ID
   if (!token || !chat_id) return false
-  const reply_markup = opts.botones
-    ? { inline_keyboard: opts.botones.map(fila => fila.map(b => b.url ? { text: b.texto, url: b.url } : { text: b.texto, callback_data: b.callback || '' })) }
-    : undefined
   try {
     const res = await fetch(API(token, 'editMessageText'), {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id, message_id: messageId, text, parse_mode: 'HTML', disable_web_page_preview: true, ...(reply_markup ? { reply_markup } : {}) }),
+      body: JSON.stringify(cuerpoEditMessage(chat_id, messageId, text, opts.botones)),
+    })
+    const d = await res.json().catch(() => null)
+    return d?.ok === true
+  } catch { return false }
+}
+
+/** Cuerpo de `editMessageText`: SIN `botones` no lleva `reply_markup` (Telegram quita el teclado); con ellos, los sustituye. PURO. */
+export function cuerpoEditMessage(chatId: string, messageId: number, text: string, botones?: Boton[][]): Record<string, unknown> {
+  const reply_markup = botones
+    ? { inline_keyboard: botones.map(fila => fila.map(b => b.url ? { text: b.texto, url: b.url } : { text: b.texto, callback_data: b.callback || '' })) }
+    : undefined
+  return { chat_id: chatId, message_id: messageId, text, parse_mode: 'HTML', disable_web_page_preview: true, ...(reply_markup ? { reply_markup } : {}) }
+}
+
+/** Quita los botones de un mensaje sin tocar su texto (`editMessageReplyMarkup` con teclado vacío). `true` = aceptado. */
+export async function tgQuitarBotones(messageId: number, opts: { chatId?: string } = {}): Promise<boolean> {
+  const token = process.env.TELEGRAM_BOT_TOKEN
+  const chat_id = opts.chatId || process.env.TELEGRAM_CHAT_ID
+  if (!token || !chat_id) return false
+  try {
+    const res = await fetch(API(token, 'editMessageReplyMarkup'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id, message_id: messageId, reply_markup: { inline_keyboard: [] } }),
     })
     const d = await res.json().catch(() => null)
     return d?.ok === true

@@ -20,6 +20,11 @@ export type RegistroSaliente = {
   solicitudId?: string | null
 }
 
+/** WhatsApp genérico de la cabecera de la ficha: `generico` con el clienteId que la ficha ya conoce. */
+export function registroWaCabecera(clienteId: string | null | undefined): RegistroSaliente {
+  return { origen: 'generico', clienteId: clienteId ?? null }
+}
+
 export type CuerpoSaliente = RegistroSaliente & { telefono: string; texto: string | null }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
