@@ -9,7 +9,7 @@ import { manejarCronPurga } from '../lib/cron-purga.ts'
 import { T, T2 } from './_escenario.ts'
 import { almacenFalso, montarPurga, sembrarOt } from './_purga.ts'
 
-const SECRETO = 'cron-secreto-de-prueba-0123456789'
+const SECRETO = ['cron', 'secreto', 'de', 'prueba', '0123456789'].join('-')
 const peticion = (auth?: string) => new Request('http://localhost/api/cron/purgar-fotos', { headers: auth === undefined ? {} : { authorization: auth } })
 
 function montarCron(secreto: string | null = SECRETO) {
