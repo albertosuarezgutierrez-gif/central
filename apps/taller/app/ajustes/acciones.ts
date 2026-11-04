@@ -8,6 +8,9 @@ import { getSession } from '@/lib/session'
 import { usuarioConRol, type Acceso } from '@/lib/acceso'
 import { aplicarAjuste, type CambioAjustes } from '@/lib/ajustes'
 import { auditar, guardarConfig, leerConfig, type TxConfig } from '@/lib/config-repo'
+import { almacenActivo, mimeReal } from '@/lib/almacen'
+import { direccionOpcional } from '@/lib/direccion'
+import { ErrorMarca, guardarColores, guardarLogoRuta, type TxMarca } from '@/lib/marca-repo'
 import { altaUsuario, bajaUsuario, ErrorPersonal, guardarProveedor, resetPinUsuario, ROLES, type TxPersonal } from '@/lib/personal'
 
 export type Respuesta<T = object> = ({ ok: true } & T) | { ok: false; errores: string[] }
@@ -30,7 +33,7 @@ async function responder<T extends object>(fn: () => Promise<T>): Promise<Respue
     return { ok: true, ...r }
   } catch (e) {
     if (e instanceof NoAutorizado) return { ok: false, errores: ['Solo el dueño puede cambiar los ajustes'] }
-    if (e instanceof ErrorPersonal) return { ok: false, errores: [e.message] }
+    if (e instanceof ErrorPersonal || e instanceof ErrorMarca) return { ok: false, errores: [e.message] }
     if (e && typeof e === 'object' && 'errores' in e && Array.isArray((e as { errores: unknown }).errores)) {
       return { ok: false, errores: (e as { errores: string[] }).errores }
     }
@@ -80,6 +83,10 @@ const Cambio = z.discriminatedUnion('seccion', [
     series: z.array(z.object({ codigo: txt, prefijo: z.string().max(10), descripcion: txt, rectificativa: z.boolean(), porDefecto: z.boolean() })).max(20),
   }),
   z.object({
+    seccion: z.literal('seguridad_login'),
+    seguridad: z.object({ maxFallosTaller: ent, ventanaMinutos: ent, bloqueoMinutos: ent, sesionMinutos: ent, inactividadMinutos: ent }),
+  }),
+  z.object({
     seccion: z.literal('horario'),
     franjas: z.array(z.object({ diaSemana: ent, desde: z.string().max(5), hasta: z.string().max(5) })).max(50),
     duracionHuecoMinutos: ent,
@@ -118,22 +125,79 @@ export async function guardarAjuste(entrada: unknown): Promise<Respuesta> {
   )
 }
 
-const Datos = z.object({ razonSocial: txt, nombreComercial: txt, nif: z.string().max(20) })
+const Datos = z.object({
+  razonSocial: txt, nombreComercial: txt, nif: z.string().max(20),
+  direccion: z.object({ cp: z.string().max(5), provincia: z.string().max(100), municipio: z.string().max(100), via: z.string().max(200), numero: z.string().max(20) }),
+})
 
 export async function guardarDatosTaller(entrada: unknown): Promise<Respuesta> {
   const p = Datos.safeParse(entrada)
   if (!p.success) return { ok: false, errores: ['Datos inválidos'] }
   const d = { razonSocial: p.data.razonSocial.trim(), nombreComercial: p.data.nombreComercial.trim(), nif: p.data.nif.trim().toUpperCase() }
   if (!d.razonSocial || !d.nombreComercial) return { ok: false, errores: ['Faltan la razón social o el nombre comercial'] }
+  // Dirección: CP → provincia → municipio → calle → número. Vacía = sin dirección; a medias, no se guarda.
+  const dir = direccionOpcional(p.data.direccion)
+  if (!dir.ok) return { ok: false, errores: dir.errores }
   return responder(() =>
     comoDueno(async (tx, s) => {
-      const antes = await tx.taller.findFirst({ where: { id: s.tallerId }, select: { razonSocial: true, nombreComercial: true, nif: true } })
+      const antes = await tx.taller.findFirst({
+        where: { id: s.tallerId }, select: { razonSocial: true, nombreComercial: true, nif: true, cp: true, provincia: true, municipio: true, via: true, numero: true },
+      })
       // NIF vacío = no se sabe (NULL), nunca una cadena vacía que parezca un dato.
-      const despues = { razonSocial: d.razonSocial, nombreComercial: d.nombreComercial, nif: d.nif || null }
+      const despues = {
+        razonSocial: d.razonSocial, nombreComercial: d.nombreComercial, nif: d.nif || null,
+        cp: dir.direccion?.cp ?? null, provincia: dir.direccion?.provincia ?? null, municipio: dir.direccion?.municipio ?? null,
+        via: dir.direccion?.via ?? null, numero: dir.direccion?.numero ?? null,
+        // Una dirección nueva invalida la referencia catastral de la anterior.
+        ...(antes && (antes.via !== (dir.direccion?.via ?? null) || antes.numero !== (dir.direccion?.numero ?? null) || antes.cp !== (dir.direccion?.cp ?? null)) ? { referenciaCatastral: null } : {}),
+      }
       await tx.taller.update({ where: { id: s.tallerId }, data: despues })
       await auditar(tx as unknown as TxConfig, {
         tallerId: s.tallerId, usuarioId: s.usuarioId, entidad: 'talleres', entidadId: s.tallerId, accion: 'ajustes:datos', antes, despues,
       })
+      return {}
+    }),
+  )
+}
+
+// ── Marca (logo y colores): solo el dueño. El texto fijo «con Grupo ASegura» NO está aquí a propósito. ──
+const Colores = z.object({ primario: z.string().max(9).nullable(), secundario: z.string().max(9).nullable() })
+
+export async function guardarMarcaColores(entrada: unknown): Promise<Respuesta<{ avisos: string[] }>> {
+  const p = Colores.safeParse(entrada)
+  if (!p.success) return { ok: false, errores: ['Datos inválidos'] }
+  return responder(() =>
+    comoDueno(async (tx, s) => {
+      const ev = await guardarColores(tx as unknown as TxMarca, { tallerId: s.tallerId, usuarioId: s.usuarioId, ...p.data })
+      revalidatePath('/', 'layout')
+      return { avisos: ev.avisos }
+    }),
+  )
+}
+
+const MAX_LOGO = 1024 * 1024
+export async function subirLogo(fd: FormData): Promise<Respuesta> {
+  const f = fd.get('logo')
+  if (!(f instanceof File) || f.size === 0) return { ok: false, errores: ['Elige un archivo de imagen'] }
+  if (f.size > MAX_LOGO) return { ok: false, errores: ['El logo pesa más de 1 MB'] }
+  const bytes = new Uint8Array(await f.arrayBuffer())
+  const mime = mimeReal(bytes)
+  if (!mime) return { ok: false, errores: ['El logo debe ser PNG, JPG o WebP'] }
+  return responder(() =>
+    comoDueno(async (tx, s) => {
+      const r = await almacenActivo().guardar({ tallerId: s.tallerId, carpeta: 'marca', nombre: 'logo', mime, bytes })
+      await guardarLogoRuta(tx as unknown as TxMarca, { tallerId: s.tallerId, usuarioId: s.usuarioId, ruta: r.ruta })
+      revalidatePath('/', 'layout')
+      return {}
+    }),
+  )
+}
+
+export async function quitarLogo(): Promise<Respuesta> {
+  return responder(() =>
+    comoDueno(async (tx, s) => {
+      await guardarLogoRuta(tx as unknown as TxMarca, { tallerId: s.tallerId, usuarioId: s.usuarioId, ruta: null })
+      revalidatePath('/', 'layout')
       return {}
     }),
   )

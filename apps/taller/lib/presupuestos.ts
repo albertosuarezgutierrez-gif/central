@@ -13,6 +13,7 @@ type Delegado = {
   findFirst(a?: any): Promise<any>
   create(a: any): Promise<any>
   update(a: any): Promise<any>
+  deleteMany?(a: any): Promise<any>
 }
 export type TxPresupuestos = TxConsent & {
   ordenTrabajo: Delegado
@@ -22,6 +23,7 @@ export type TxPresupuestos = TxConsent & {
   otLinea: Delegado
   parteHoras: Delegado
   vehiculo: Delegado
+  ampliacionFoto?: Delegado
 }
 
 export class ErrorPresupuesto extends Error {}
@@ -43,6 +45,21 @@ export function tallerDeToken(token: unknown): string | null {
   if (resto !== undefined || !t || !s || !UUID_SIN_GUIONES.test(t) || !SECRETO_B64URL.test(s)) return null
   const h = t.toLowerCase()
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`
+}
+
+type LineaCalculada = ReturnType<typeof calcularPresupuesto> extends infer R ? (R extends { ok: true; presupuesto: { lineas: infer L } } ? L : never) : never
+
+async function insertarLineas(tx: Pick<TxPresupuestos, 'presupuestoLinea'>, tallerId: string, presupuestoId: string, lineas: LineaCalculada) {
+  for (const [i, l] of (lineas as any[]).entries()) {
+    await tx.presupuestoLinea.create({
+      data: {
+        tallerId, presupuestoId, orden: i + 1, tipo: l.tipo, descripcion: l.descripcion,
+        paqueteCodigo: l.paqueteCodigo, referencia: l.referencia ?? null, cantidad: l.cantidad, unidad: l.unidad,
+        baremoMinutos: l.baremoMinutos, precioCerrado: l.precioCerrado, baseCent: BigInt(l.baseCent), ivaCodigo: l.ivaCodigo,
+        ivaPuntosBasicos: l.ivaPuntosBasicos, cuotaIvaCent: BigInt(l.cuotaIvaCent), totalCent: BigInt(l.totalCent),
+      },
+    })
+  }
 }
 
 // ── Crear ────────────────────────────────────────────────────────────────────
@@ -80,17 +97,36 @@ export async function crearPresupuestoDesdeOt(tx: TxPresupuestos, e: EntradaCrea
       caducaEn: new Date(e.ahora.getTime() + config.validezPresupuestoDias * 86_400_000),
     },
   })
-  for (const [i, l] of p.lineas.entries()) {
-    await tx.presupuestoLinea.create({
-      data: {
-        tallerId: e.tallerId, presupuestoId: pres.id, orden: i + 1, tipo: l.tipo, descripcion: l.descripcion,
-        paqueteCodigo: l.paqueteCodigo, referencia: l.referencia ?? null, cantidad: l.cantidad, unidad: l.unidad,
-        baremoMinutos: l.baremoMinutos, precioCerrado: l.precioCerrado, baseCent: BigInt(l.baseCent), ivaCodigo: l.ivaCodigo,
-        ivaPuntosBasicos: l.ivaPuntosBasicos, cuotaIvaCent: BigInt(l.cuotaIvaCent), totalCent: BigInt(l.totalCent),
-      },
-    })
-  }
+  await insertarLineas(tx, e.tallerId, pres.id, p.lineas)
   await tx.ordenTrabajo.update({ where: { id: ot.id }, data: { presupuestoId: pres.id, estado: t.estado } })
+  return { ok: true, presupuestoId: pres.id }
+}
+
+/**
+ * SUSTITUYE el contenido de un presupuesto mientras sea BORRADOR (nadie lo ha recibido). Recalcula con la configuración VIGENTE,
+ * borra las líneas y escribe las nuevas; el presupuesto (y su vínculo con la OT) se conserva. Enviado, aceptado, rechazado o
+ * caducado: no se toca (el cliente ya lo vio o lo respondió); hay que hacer otro.
+ */
+export async function reemplazarBorrador(
+  tx: TxPresupuestos, e: { tallerId: string; presupuestoId: string; tipoVehiculo: string | null; lineas: LineaSolicitada[]; ahora: Date }, config: ConfigTaller,
+): Promise<ResultadoCrear> {
+  const pres = await tx.presupuesto.findFirst({ where: { tallerId: e.tallerId, id: e.presupuestoId } })
+  if (!pres) return { ok: false, errores: ['presupuesto no encontrado'] }
+  if (pres.estado !== 'borrador') return { ok: false, errores: [`solo se rehace un borrador (este está «${pres.estado}»)`] }
+  const c = calcularPresupuesto(config, { tipoVehiculo: e.tipoVehiculo, lineas: e.lineas })
+  if (!c.ok) return { ok: false, errores: c.errores }
+  const p = c.presupuesto
+  if (!tx.presupuestoLinea.deleteMany) throw new Error('presupuestoLinea.deleteMany no disponible')
+  await tx.presupuestoLinea.deleteMany({ where: { tallerId: e.tallerId, presupuestoId: pres.id } })
+  await tx.presupuesto.update({
+    where: { id: pres.id },
+    data: {
+      tipoVehiculoCodigo: e.tipoVehiculo, precioHoraCent: BigInt(config.precioHoraCent),
+      baseCent: BigInt(p.baseCent), cuotaIvaCent: BigInt(p.cuotaIvaCent), totalCent: BigInt(p.totalCent),
+      caducaEn: new Date(e.ahora.getTime() + config.validezPresupuestoDias * 86_400_000),
+    },
+  })
+  await insertarLineas(tx, e.tallerId, pres.id, p.lineas)
   return { ok: true, presupuestoId: pres.id }
 }
 
@@ -158,6 +194,7 @@ export async function aceptarPorToken(
   const matricula = v.vehiculo?.matricula ?? ''
   const texto = `Acepto el presupuesto de ${formatearEur(Number(p.totalCent))} (IVA incluido) para el vehículo ${matricula}.`
 
+  if (p.origen === 'ampliacion') return aceptarAmpliacion(tx, e, v, texto, deps)
   const ot = await tx.ordenTrabajo.findFirst({ where: { tallerId: e.tallerId, presupuestoId: p.id } })
   let otId: string | null = null
   if (ot) {
@@ -187,6 +224,11 @@ export async function aceptarPorToken(
     })
   }
 
+  await registrarCasillas(tx, e, p, deps)
+  return { ok: true, otId }
+}
+
+async function registrarCasillas(tx: TxPresupuestos, e: EntradaAceptar, p: any, deps: { textoTaller: { version: string; texto: string } }) {
   // Casillas: solo si el cliente las marca y aún no las tenía; el servicio ya está aceptado pase lo que pase.
   if (p.clienteId && (e.casillas.asegura || e.casillas.taller)) {
     const pend = await casillasPendientes(tx, e.tallerId, p.clienteId, e.ahora)
@@ -196,7 +238,44 @@ export async function aceptarPorToken(
       ip: e.ip, userAgent: e.userAgent, ahora: e.ahora,
     })
   }
-  return { ok: true, otId }
+}
+
+/** Ampliaciones ENVIADAS al cliente y aún sin respuesta ni caducadas, de una OT (las que impiden terminarla). */
+export async function contarAmpliacionesPendientes(
+  tx: Pick<TxPresupuestos, 'presupuesto'>, o: { tallerId: string; presupuestoPadreId: string | null; ahora: Date; excepto?: string },
+): Promise<number> {
+  if (!o.presupuestoPadreId) return 0
+  const xs = await tx.presupuesto.findMany({ where: { tallerId: o.tallerId, presupuestoPadreId: o.presupuestoPadreId, origen: 'ampliacion', estado: 'enviado' } })
+  return xs.filter((x) => x.id !== o.excepto && (!x.caducaEn || x.caducaEn.getTime() >= o.ahora.getTime())).length
+}
+
+/** Acepta una AMPLIACIÓN: sus líneas entran en la OT (origen «ampliacion») y, si no quedan más pendientes, la OT vuelve a en_curso. */
+async function aceptarAmpliacion(
+  tx: TxPresupuestos, e: EntradaAceptar, v: Extract<VistaPublica, { ok: true }>, texto: string, deps: { textoTaller: { version: string; texto: string } },
+): Promise<ResultadoAceptar> {
+  const p = v.presupuesto
+  const ot = p.presupuestoPadreId ? await tx.ordenTrabajo.findFirst({ where: { tallerId: e.tallerId, presupuestoId: p.presupuestoPadreId } }) : null
+  if (!ot) return { ok: false, status: 409, motivo: 'la orden de esta ampliación ya no existe' }
+  await tx.presupuesto.update({ where: { id: p.id }, data: { estado: 'aceptado', aceptadoEn: e.ahora, aceptadoIp: e.ip, aceptadoTexto: texto } })
+  for (const l of v.lineas) {
+    await tx.otLinea.create({
+      data: {
+        tallerId: e.tallerId, otId: ot.id, tipo: l.tipo, descripcion: l.descripcion, cantidad: l.cantidad, unidad: l.unidad,
+        baseCent: l.baseCent, ivaCodigo: l.ivaCodigo, ivaPuntosBasicos: l.ivaPuntosBasicos, cuotaIvaCent: l.cuotaIvaCent,
+        totalCent: l.totalCent, baremoMinutos: l.baremoMinutos ?? null, minutosReales: null, origen: 'ampliacion', aceptadaEn: e.ahora,
+      },
+    })
+  }
+  await volverDeAmpliacion(tx, e.tallerId, ot, p.id, e.ahora)
+  await registrarCasillas(tx, e, p, deps)
+  return { ok: true, otId: ot.id }
+}
+
+async function volverDeAmpliacion(tx: TxPresupuestos, tallerId: string, ot: any, presupuestoId: string, ahora: Date) {
+  if (ot.estado !== 'ampliacion_pendiente') return
+  const quedan = await contarAmpliacionesPendientes(tx, { tallerId, presupuestoPadreId: ot.presupuestoId, ahora, excepto: presupuestoId })
+  const t = transicionarOt('ampliacion_pendiente', 'en_curso', { ampliacionesPendientes: quedan })
+  if (t.ok) await tx.ordenTrabajo.update({ where: { id: ot.id }, data: { estado: t.estado } })
 }
 
 export async function rechazarPorToken(
@@ -206,5 +285,10 @@ export async function rechazarPorToken(
   if (!v.ok) return { ok: false, status: 404, motivo: 'no encontrado' }
   if (v.estado !== 'abierto') return { ok: false, status: 409, motivo: `el presupuesto está ${v.estado}` }
   await tx.presupuesto.update({ where: { id: v.presupuesto.id }, data: { estado: 'rechazado' } })
+  // Una ampliación rechazada no bloquea la OT: la línea no entra y, sin más pendientes, vuelve a en_curso.
+  if (v.presupuesto.origen === 'ampliacion' && v.presupuesto.presupuestoPadreId) {
+    const ot = await tx.ordenTrabajo.findFirst({ where: { tallerId: e.tallerId, presupuestoId: v.presupuesto.presupuestoPadreId } })
+    if (ot) await volverDeAmpliacion(tx, e.tallerId, ot, v.presupuesto.id, e.ahora)
+  }
   return { ok: true, otId: null }
 }

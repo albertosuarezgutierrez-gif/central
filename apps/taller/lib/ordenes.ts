@@ -3,6 +3,7 @@
 import {
   abrirParte, cerrarParte, esEstadoOt, margenHoras, minutosRealesOt, transicionarOt, type EstadoOt, type MargenHoras, type ParteHoras,
 } from '@central/module-taller'
+import { contarAmpliacionesPendientes } from './presupuestos.ts'
 
 type Delegado = {
   findMany(a?: any): Promise<any[]>
@@ -39,13 +40,17 @@ export async function cambiarEstadoOt(
     recepcionFirmada: !!rec && rec.firmadoEn != null,
     presupuestoAceptado: !!pres && pres.estado === 'aceptado',
     partesAbiertos: partes.length,
-    ampliacionesPendientes: 0, // F2: ampliaciones con fotos
+    ampliacionesPendientes: await contarAmpliacionesPendientes(tx as never, { tallerId: o.tallerId, presupuestoPadreId: ot.presupuestoId ?? null, ahora: o.ahora }),
     facturaEmitida: false, // F2: facturas
   })
   if (!r.ok) return r
   await tx.ordenTrabajo.update({
     where: { id: ot.id },
-    data: { estado: r.estado, ...(r.estado === 'terminado' ? { terminadoEn: o.ahora } : {}) },
+    data: {
+      estado: r.estado,
+      ...(r.estado === 'terminado' ? { terminadoEn: o.ahora } : {}),
+      ...(r.estado === 'entregado' ? { entregadoEn: o.ahora } : {}),
+    },
   })
   return r
 }

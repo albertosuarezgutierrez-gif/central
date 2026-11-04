@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { emitirRootCss } from '@central/brand'
-import { resolverMarca, tallerPilotoId } from '@/lib/marca'
+import { marcaActual } from '@/lib/marca-servidor'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -8,9 +8,9 @@ export const metadata: Metadata = {
   description: 'Gestión de taller: recepción, órdenes y presupuestos',
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  // TODO(F1): resolver el taller de la sesión/subdominio; hoy, el piloto por configuración.
-  const m = resolverMarca(tallerPilotoId())
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Marca del taller de la sesión (o del despliegue, en el login): sus colores y logo, con fallback a los por defecto.
+  const m = await marcaActual()
   return (
     <html lang="es">
       <head>

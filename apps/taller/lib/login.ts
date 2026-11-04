@@ -1,8 +1,9 @@
 // Login por PIN de un taller: TODO (bloqueo, verificación, registro) en UNA transacción con RLS del taller.
 import { loginConPin, type ResultadoLoginPin } from '@central/core-identity/pin'
-import { configDeAlta, type SeguridadLogin } from '@central/module-taller'
+import { configDeAlta } from '@central/module-taller'
 import { esTallerId, type ConTaller } from './rls.ts'
 import { claveBloqueoPin, crearPinStoreBd, type TxPin } from './pin-store-bd.ts'
+import type { PoliticaTope } from './tope-taller.ts'
 import { anotarFalloTope, leerTope, topeBloqueado, type TxTope } from './tope-taller.ts'
 
 /** PBKDF2 × mecánicos del taller dentro de la transacción: margen sobre los 5 s por defecto de Prisma. */
@@ -15,7 +16,7 @@ type TxConfigLogin = {
 }
 
 /** Política del tope por taller: la de su configuración; sin fila de configuración, la de ALTA (nunca «sin tope»). */
-async function politicaTope(tx: TxConfigLogin, tallerId: string): Promise<SeguridadLogin> {
+async function politicaTope(tx: TxConfigLogin, tallerId: string): Promise<PoliticaTope> {
   const c = await tx.configuracion?.findUnique({ where: { tallerId } })
   if (!c) return configDeAlta().seguridadLogin
   return { maxFallosTaller: c.loginMaxFallosTaller, ventanaMinutos: c.loginVentanaMinutos, bloqueoMinutos: c.loginBloqueoTallerMinutos }
@@ -50,6 +51,15 @@ export function loginTaller<Tx extends TxPin & TxConfigLogin & Pick<TxTope, '$ex
     },
     { timeout: TIMEOUT_LOGIN_MS },
   )
+}
+
+type TxSesion = { configuracion: { findUnique(a: unknown): Promise<{ loginSesionMinutos: number; loginInactividadMinutos: number } | null> } }
+
+/** Sesión del taller: la de su configuración; sin fila, la de ALTA (nunca «sin caducidad»). */
+export async function politicaSesion(conTaller: ConTaller<TxSesion>, tallerId: string): Promise<{ sesionMinutos: number; inactividadMinutos: number }> {
+  const c = await conTaller(tallerId, (tx) => tx.configuracion.findUnique({ where: { tallerId } }))
+  if (!c) { const a = configDeAlta().seguridadLogin; return { sesionMinutos: a.sesionMinutos, inactividadMinutos: a.inactividadMinutos } }
+  return { sesionMinutos: c.loginSesionMinutos, inactividadMinutos: c.loginInactividadMinutos }
 }
 
 /** Taller de ESTE despliegue/dispositivo (F1: uno, por configuración). null si falta o no es uuid: sin login. */

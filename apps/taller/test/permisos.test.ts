@@ -6,7 +6,8 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-import { CAPACIDADES, exigir, SinPermisoError, tienePermiso, type Capacidad } from '../lib/permisos.ts'
+import { capacidadParaTransicion, CAPACIDADES, DebeCambiarPinError, exigir, SinPermisoError, tienePermiso, TRANSICIONES_RECEPCION, type Capacidad } from '../lib/permisos.ts'
+import { TRANSICIONES_OT } from '@central/module-taller'
 import { montar, T, T2 } from './_escenario.ts'
 
 const roles = ['dueno', 'admin', 'recepcion', 'mecanico'] as const
@@ -14,6 +15,9 @@ const esperado: Record<Capacidad, string[]> = {
   recepcion: ['dueno', 'admin', 'recepcion'],
   ordenes_ver: ['dueno', 'admin', 'recepcion', 'mecanico'],
   ordenes_gestionar: ['dueno'],
+  ordenes_avanzar: ['dueno', 'recepcion'],
+  ot_trabajo: ['dueno', 'mecanico'],
+  ampliaciones: ['dueno', 'admin', 'recepcion'],
   partes: ['dueno', 'mecanico'],
   presupuestos: ['dueno', 'admin', 'recepcion'],
   precios_ver: ['dueno', 'admin', 'recepcion'],
@@ -74,6 +78,7 @@ test('toda acción de servidor exige permiso (salvo Ajustes, que exige dueño, y
       assert.ok(src.includes('tallerDeToken('), `${f}: la pública valida el token`)
       continue
     }
+    if (f.includes('cambiar-pin')) { assert.ok(src.includes('getSession()') && src.includes('s.usuarioId'), `${f}: solo el usuario de la sesión`); continue }
     if (f.includes('ajustes')) { assert.ok(src.includes("usuarioConRol(tx as never, s, ['dueno'])"), f); continue }
     const llamadas = [...src.matchAll(/conPermiso\('(\w+)'/g)].map((x) => x[1] as Capacidad)
     assert.ok(llamadas.length >= exportadas, `${f}: ${exportadas} acciones y solo ${llamadas.length} conPermiso`)
@@ -85,7 +90,10 @@ test('presupuestos exige «presupuestos»; cambiar estado exige «ordenes_gestio
   const lee = (r: string) => readFileSync(join(APP, r), 'utf8')
   assert.ok([...lee('presupuestos/acciones.ts').matchAll(/conPermiso\('(\w+)'/g)].every((x) => x[1] === 'presupuestos'))
   const o = lee('ordenes/acciones.ts')
-  assert.match(o, /conPermiso\('ordenes_gestionar'[\s\S]*cambiarEstadoOt/)
+  assert.match(o, /conPermiso\('ordenes_avanzar'[\s\S]*capacidadParaTransicion[\s\S]*cambiarEstadoOt/)
+  assert.match(o, /cap !== 'ordenes_avanzar'\) await exigir\(/, 'el resto de transiciones exige ordenes_gestionar (dueño)')
+  assert.match(o, /conPermiso\('ot_trabajo'[\s\S]*anadirNota/)
+  assert.match(o, /conPermiso\('ampliaciones'[\s\S]*enviarPropuesta/)
   assert.match(o, /conPermiso\('partes'[\s\S]*abrirParteMecanico/)
   assert.match(o, /conPermiso\('partes'[\s\S]*cerrarParteMecanico/)
 })
@@ -108,4 +116,43 @@ test('la página pública devuelve 404 con token inválido o desconocido', () =>
   assert.match(src, /if \(!datos \|\| !datos\.v\.ok\) notFound\(\)/)
   assert.ok(!src.includes('getSession'), 'la pública no usa sesión')
   assert.ok(readFileSync(join(import.meta.dirname, '..', 'middleware.ts'), 'utf8').includes("'/p/'"))
+})
+
+// ── Decisión de Alberto (04/11/2026): recepción avanza en_curso→terminado y terminado→entregado; el resto, dueño ──
+// Cepo visto fallar: añadir ['en_curso','ampliacion_pendiente'] a TRANSICIONES_RECEPCION → rojo en 'solo esas dos…'.
+test('recepción puede SOLO en_curso→terminado y terminado→entregado; todas las demás transiciones son del dueño', () => {
+  assert.deepEqual(TRANSICIONES_RECEPCION, [['en_curso', 'terminado'], ['terminado', 'entregado']])
+  for (const [d, hs] of Object.entries(TRANSICIONES_OT)) {
+    for (const h of hs) {
+      const cap = capacidadParaTransicion(d, h)
+      const esRecepcion = (d === 'en_curso' && h === 'terminado') || (d === 'terminado' && h === 'entregado')
+      assert.equal(cap, esRecepcion ? 'ordenes_avanzar' : 'ordenes_gestionar', `${d}→${h}`)
+      assert.equal(tienePermiso('recepcion', cap), esRecepcion, `recepción ${d}→${h}`)
+      assert.equal(tienePermiso('dueno', cap), true, `dueño ${d}→${h}`)
+      assert.equal(tienePermiso('mecanico', cap), false, `mecánico ${d}→${h}`)
+    }
+  }
+})
+
+test('mecánico: notas, fotos y propuestas (ot_trabajo) sí; poner precio y enviar al cliente (ampliaciones) no', () => {
+  assert.equal(tienePermiso('mecanico', 'ot_trabajo'), true)
+  assert.equal(tienePermiso('mecanico', 'ampliaciones'), false)
+  assert.equal(tienePermiso('recepcion', 'ot_trabajo'), false)
+  assert.equal(tienePermiso('recepcion', 'ampliaciones'), true)
+})
+
+test('PIN temporal: hasta que lo cambie no pasa por ninguna capacidad (en servidor)', async () => {
+  const m = montar()
+  m.bd.sembrar('usuarioTaller', { tallerId: T, nombre: 'Nuevo', rol: 'recepcion', pinHash: 'x', debeCambiarPin: true })
+  const nuevo = m.bd.filas('usuarioTaller').find((u) => u.nombre === 'Nuevo')
+  await m.conTaller(T, async (tx: any) => {
+    await assert.rejects(exigir(tx, { tallerId: T, usuarioId: nuevo.id, rol: 'recepcion' }, 'recepcion'), DebeCambiarPinError)
+    assert.equal(await exigir(tx, { tallerId: T, usuarioId: m.dueno.id, rol: 'dueno' }, 'recepcion'), 'dueno')
+  })
+})
+
+test('guardián: la acción de cambio de PIN solo toca al usuario de la sesión (nunca un id del navegador)', () => {
+  const src = readFileSync(join(APP, 'cambiar-pin/acciones.ts'), 'utf8')
+  assert.match(src, /usuarioId: s\.usuarioId/)
+  assert.ok(!/usuarioId: p\.data|fd\.get\('usuarioId/.test(src))
 })

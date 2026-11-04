@@ -6,6 +6,8 @@
 // Compromiso asumido: quien falle 30 PIN seguidos puede dejar fuera al taller unos minutos (denegación temporal, no acceso).
 import type { SeguridadLogin } from '@central/module-taller'
 
+export type PoliticaTope = Pick<SeguridadLogin, 'maxFallosTaller' | 'ventanaMinutos' | 'bloqueoMinutos'>
+
 export type FilaTope = { intentos: number; bloqueadoHasta: Date | null; creadoEn: Date }
 
 /** Clave en `bloqueos_pin` (empieza por `<tallerId>:` como exige el PinStore; `#` no puede ser una IP). */
@@ -24,7 +26,7 @@ export function topeBloqueado(f: FilaTope | null, ahora: Date): { bloqueado: fal
 export type FalloTope = { intentos: number; bloqueadoHasta: Date | null; reiniciar: boolean }
 
 /** Estado tras UN fallo de PIN. `reiniciar` = empieza ventana nueva (la fila vieja se sustituye). Puro. */
-export function registrarFalloTope(f: FilaTope | null, ahora: Date, pol: SeguridadLogin): FalloTope {
+export function registrarFalloTope(f: FilaTope | null, ahora: Date, pol: PoliticaTope): FalloTope {
   if (f && topeBloqueado(f, ahora).bloqueado) return { intentos: f.intentos, bloqueadoHasta: f.bloqueadoHasta, reiniciar: false }
   const vencida = !f || f.bloqueadoHasta !== null || ahora.getTime() - f.creadoEn.getTime() >= pol.ventanaMinutos * MIN
   const intentos = (vencida ? 0 : f!.intentos) + 1
@@ -52,7 +54,7 @@ export async function leerTope(tx: TxTope, tallerId: string): Promise<FilaTope |
   return tx.bloqueoPin.findUnique({ where: { tallerId_clave: { tallerId, clave } } })
 }
 
-export async function anotarFalloTope(tx: TxTope, tallerId: string, previa: FilaTope | null, ahora: Date, pol: SeguridadLogin) {
+export async function anotarFalloTope(tx: TxTope, tallerId: string, previa: FilaTope | null, ahora: Date, pol: PoliticaTope) {
   const clave = claveTope(tallerId)
   const n = registrarFalloTope(previa, ahora, pol)
   if (n.reiniciar) await tx.bloqueoPin.deleteMany({ where: { tallerId, clave } })

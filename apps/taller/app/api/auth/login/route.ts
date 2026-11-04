@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { conTaller } from '@/lib/db'
-import { loginTaller, tallerDelDespliegue } from '@/lib/login'
-import { COOKIE_NAME, COOKIE_OPTS, emitirCookie } from '@/lib/sesion-cookie'
+import { loginTaller, politicaSesion, tallerDelDespliegue } from '@/lib/login'
+import { COOKIE_NAME, cookieOpts, emitirCookie } from '@/lib/sesion-cookie'
 
 const Body = z.object({ pin: z.string() })
 
@@ -24,11 +24,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Demasiados intentos. Prueba en ${r.minutos} min` }, { status: 429 })
     return NextResponse.json({ error: `PIN incorrecto. Te quedan ${r.intentosRestantes}` }, { status: 401 })
   }
+  // Duración de la sesión e inactividad: de la configuración del taller (editable por el dueño).
+  const pol = await politicaSesion(conTaller as never, tallerId)
   const token = await emitirCookie(
     { tallerId, usuarioId: r.credencial.usuarioId, rol: String(r.credencial.rol) },
-    ahora,
+    ahora, pol,
   )
   const res = NextResponse.json({ ok: true })
-  res.cookies.set(COOKIE_NAME, token, COOKIE_OPTS)
+  res.cookies.set(COOKIE_NAME, token, cookieOpts(pol.sesionMinutos))
   return res
 }

@@ -1,5 +1,7 @@
 'use client'
 import { useRef, useState, useTransition } from 'react'
+import { DIRECCION_VACIA, type Direccion } from '@/lib/direccion'
+import { DireccionCp } from '../_direccion/DireccionCp'
 import { buscarMatriculaAccion, guardarRecepcion, type FichaMatricula } from './acciones'
 
 // Posiciones guiadas de las fotos (spec 4.1). Son etiquetas de pantalla, no datos del taller.
@@ -26,6 +28,7 @@ export function RecepcionCliente({ textoAsegura, textoTaller }: { textoAsegura: 
   const [nombre, setNombre] = useState('')
   const [movil, setMovil] = useState('')
   const [correo, setCorreo] = useState('')
+  const [direccion, setDireccion] = useState<Direccion>({ ...DIRECCION_VACIA })
   const [km, setKm] = useState('')
   const [combustible, setCombustible] = useState('')
   const [objetos, setObjetos] = useState('')
@@ -59,6 +62,7 @@ export function RecepcionCliente({ textoAsegura, textoTaller }: { textoAsegura: 
         setNombre(r.ficha.cliente.nombre)
         setMovil(r.ficha.cliente.movil ?? '')
         setCorreo(r.ficha.cliente.correo ?? '')
+        setDireccion(r.ficha.cliente.direccion)
       } else setClienteId(null)
     })
   }
@@ -94,7 +98,7 @@ export function RecepcionCliente({ textoAsegura, textoTaller }: { textoAsegura: 
     iniciar(async () => {
       const fd = new FormData()
       fd.set('datos', JSON.stringify({
-        matricula, clienteId, nombre, movil, correo, km, combustible, objetos, motivo, danos,
+        matricula, clienteId, nombre, movil, correo, direccion, km, combustible, objetos, motivo, danos,
         seguro: { vigente: segVigente, aseguradora: segAseg, vence: segVence },
         casillas: { asegura: cAsegura, taller: cTaller },
         fotoPosiciones: fotos.map((f) => f.posicion),
@@ -162,6 +166,8 @@ export function RecepcionCliente({ textoAsegura, textoTaller }: { textoAsegura: 
           <label className="campo">Teléfono<input type="tel" value={movil} onChange={(e) => setMovil(e.target.value)} maxLength={30} /></label>
           <label className="campo">Correo<input type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} maxLength={200} /></label>
         </div>
+        <p className="tenue">Dirección (opcional; si la rellenas, completa los cinco campos):</p>
+        <DireccionCp valor={direccion} onChange={setDireccion} />
       </fieldset>
 
       <fieldset>

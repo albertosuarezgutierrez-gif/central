@@ -2,8 +2,9 @@
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
-import { almacen, MIME_ACEPTADOS } from '@/lib/almacen'
+import { almacenActivo, MIME_ACEPTADOS } from '@/lib/almacen'
 import { conPermiso, configDe, mensajeDeAcceso } from '@/lib/contexto'
+import { direccionOpcional } from '@/lib/direccion'
 import { ipDeCabecera } from '@/lib/ip'
 import { notificadorRegistro } from '@/lib/notificador'
 import { buscarPorMatricula, crearRecepcion, ErrorRecepcion, type FotoEntrada, type TxRecepcion } from '@/lib/recepcion'
@@ -12,7 +13,7 @@ export type Respuesta<T = object> = ({ ok: true } & T) | { ok: false; errores: s
 
 export type FichaMatricula = {
   vehiculo: { marca: string | null; modelo: string | null; kmActuales: number | null }
-  cliente: { id: string; nombre: string; movil: string | null; correo: string | null } | null
+  cliente: { id: string; nombre: string; movil: string | null; correo: string | null; direccion: { cp: string; provincia: string; municipio: string; via: string; numero: string } } | null
   historial: { fecha: string; km: number | null; motivo: string | null }[]
 }
 
@@ -26,7 +27,10 @@ export async function buscarMatriculaAccion(matricula: unknown): Promise<Respues
         ok: true as const,
         ficha: {
           vehiculo: { marca: r.vehiculo.marca, modelo: r.vehiculo.modelo, kmActuales: r.vehiculo.kmActuales },
-          cliente: r.cliente ? { id: r.cliente.id, nombre: r.cliente.nombre, movil: r.cliente.movil, correo: r.cliente.correo } : null,
+          cliente: r.cliente ? {
+            id: r.cliente.id, nombre: r.cliente.nombre, movil: r.cliente.movil, correo: r.cliente.correo,
+            direccion: { cp: r.cliente.cp ?? '', provincia: r.cliente.provincia ?? '', municipio: r.cliente.municipio ?? '', via: r.cliente.via ?? '', numero: r.cliente.numero ?? '' },
+          } : null,
           historial: r.historial.map((h) => ({ fecha: h.recibidoEn.toISOString(), km: h.kmEntrada, motivo: h.motivo })),
         },
       }
@@ -47,6 +51,7 @@ const Datos = z.object({
   movil: z.string().max(30),
   correo: z.string().max(200),
   km: z.string().max(9),
+  direccion: z.object({ cp: z.string().max(5), provincia: z.string().max(100), municipio: z.string().max(100), via: z.string().max(200), numero: z.string().max(20) }),
   combustible: z.enum(COMBUSTIBLE),
   objetos: z.string().max(1000),
   motivo: z.string().max(2000),
@@ -76,6 +81,9 @@ export async function guardarRecepcion(fd: FormData): Promise<Respuesta<{ recepc
   if (Number.isNaN(km)) return { ok: false, errores: ['Los kilómetros son un número entero'] }
   const vence = d.seguro.vence.trim()
   if (vence && !/^\d{4}-\d{2}-\d{2}$/.test(vence)) return { ok: false, errores: ['Fecha de vencimiento del seguro inválida'] }
+  // Dirección del cliente (opcional): si se empieza, debe quedar COMPLETA y coherente con su código postal.
+  const dir = direccionOpcional(d.direccion)
+  if (!dir.ok) return { ok: false, errores: dir.errores }
   const h = await headers()
   try {
     const firma = await bytesDe(fd.get('firma'), MAX_FIRMA, ['image/png'])
@@ -89,14 +97,14 @@ export async function guardarRecepcion(fd: FormData): Promise<Respuesta<{ recepc
       if (!config) throw new ErrorRecepcion('El taller no tiene configuración de alta')
       return crearRecepcion(tx as unknown as TxRecepcion, {
         tallerId: c.tallerId, usuarioId: c.usuarioId, matricula: d.matricula, clienteId: d.clienteId,
-        cliente: { nombre: d.nombre, movil: d.movil, correo: d.correo }, km, combustible: d.combustible || null,
+        cliente: { nombre: d.nombre, movil: d.movil, correo: d.correo }, direccion: dir.direccion, km, combustible: d.combustible || null,
         objetos: d.objetos, motivo: d.motivo, danos: d.danos.trim() ? { nota: d.danos } : null,
         seguro: d.seguro.vigente === '' && !d.seguro.aseguradora.trim() && !vence ? null
           : { vigente: d.seguro.vigente === '' ? null : d.seguro.vigente === 'si', aseguradora: d.seguro.aseguradora.trim(), vence: vence || null },
         fotos, firma, casillas: d.casillas, ip: ipDeCabecera(h.get('x-forwarded-for')), userAgent: h.get('user-agent')?.slice(0, 300) ?? null,
         ahora: new Date(),
       }, {
-        config, almacen, notificador: notificadorRegistro(tx as never, c.usuarioId),
+        config, almacen: almacenActivo(), notificador: notificadorRegistro(tx as never, c.usuarioId),
         textoTaller: { version: config.textos.versionTextoComercialTaller, texto: config.textos.textoConsentimientoComercialTaller },
       })
     })

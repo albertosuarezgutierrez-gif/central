@@ -1,9 +1,9 @@
 import { SalirBoton } from './_salir'
-import { resolverMarca, tallerPilotoId } from '@/lib/marca'
+import { marcaActual } from '@/lib/marca-servidor'
 
-/** Logo del taller + sello pequeño «con Grupo ASegura» (coMarca de la marca). */
-export function Cabecera({ conSalir = false }: { conSalir?: boolean }) {
-  const m = resolverMarca(tallerPilotoId())
+/** Logo del taller (el suyo si lo subió) + sello fijo «con Grupo ASegura» (no editable). */
+export async function Cabecera({ conSalir = false }: { conSalir?: boolean }) {
+  const m = await marcaActual()
   return (
     <header className="cabecera">
       <a href="/" className="marca">
@@ -14,9 +14,4 @@ export function Cabecera({ conSalir = false }: { conSalir?: boolean }) {
       {conSalir && <SalirBoton />}
     </header>
   )
-}
-
-export function Sello() {
-  const m = resolverMarca(tallerPilotoId())
-  return m.sello ? <span className="sello">{m.sello.texto}</span> : null
 }

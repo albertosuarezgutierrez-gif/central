@@ -32,7 +32,7 @@ export function montar() {
 export function entrada(o: Partial<EntradaRecepcion> = {}): EntradaRecepcion {
   return {
     tallerId: T, usuarioId: 'u', matricula: '1234 bcd', clienteId: null,
-    cliente: { nombre: 'Ana Pérez', movil: '600111222', correo: '' }, km: 120000, combustible: '1/2', objetos: '', motivo: 'Ruido',
+    cliente: { nombre: 'Ana Pérez', movil: '600111222', correo: '' }, direccion: null, km: 120000, combustible: '1/2', objetos: '', motivo: 'Ruido',
     danos: null, seguro: null, fotos: [], firma: { mime: 'image/png', bytes: new Uint8Array([1, 2, 3]) },
     casillas: { asegura: false, taller: false }, ip: null, userAgent: null, ahora: AHORA, ...o,
   }

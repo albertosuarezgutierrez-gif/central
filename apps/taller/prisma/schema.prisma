@@ -55,6 +55,11 @@ model Configuracion {
   loginMaxFallosTaller           Int      @default(30) @map("login_max_fallos_taller")
   loginVentanaMinutos            Int      @default(15) @map("login_ventana_minutos")
   loginBloqueoTallerMinutos      Int      @default(15) @map("login_bloqueo_taller_minutos")
+  loginSesionMinutos             Int      @default(300) @map("login_sesion_minutos")
+  loginInactividadMinutos        Int      @default(30) @map("login_inactividad_minutos")
+  marcaLogoRuta                  String?  @map("marca_logo_ruta")
+  marcaColorPrimario             String?  @map("marca_color_primario")
+  marcaColorSecundario           String?  @map("marca_color_secundario")
   creadoEn                       DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
   actualizadoEn                  DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
 
@@ -222,6 +227,7 @@ model UsuarioTaller {
   intentosFallidos Int       @default(0) @map("intentos_fallidos")
   bloqueadoHasta   DateTime? @map("bloqueado_hasta") @db.Timestamptz(6)
   rrhhPersonaId    String?   @map("rrhh_persona_id") @db.Uuid
+  debeCambiarPin   Boolean   @default(false) @map("debe_cambiar_pin")
   creadoEn         DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
   actualizadoEn    DateTime  @default(now()) @map("actualizado_en") @db.Timestamptz(6)
 
@@ -496,5 +502,81 @@ model Consentimiento {
   actualizadoEn  DateTime  @default(now()) @map("actualizado_en") @db.Timestamptz(6)
 
   @@map("consentimientos")
+  @@schema("taller")
+}
+
+// ─── 0004: mecánico en su OT (notas, fotos, propuestas de ampliación) ────────────────────────────────────────
+model OtNota {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId      String   @map("taller_id") @db.Uuid
+  otId          String   @map("ot_id") @db.Uuid
+  autorId       String   @map("autor_id") @db.Uuid
+  texto         String
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("ot_notas")
+  @@schema("taller")
+}
+
+model OtPropuesta {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId      String   @map("taller_id") @db.Uuid
+  otId          String   @map("ot_id") @db.Uuid
+  autorId       String   @map("autor_id") @db.Uuid
+  explicacion   String   @default("")
+  estado        String   @default("pendiente_envio")
+  presupuestoId String?  @map("presupuesto_id") @db.Uuid
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("ot_propuestas")
+  @@schema("taller")
+}
+
+model OtPropuestaLinea {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId      String   @map("taller_id") @db.Uuid
+  propuestaId   String   @map("propuesta_id") @db.Uuid
+  orden         Int
+  descripcion   String
+  referencia    String?
+  cantidad      Int
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("ot_propuesta_lineas")
+  @@schema("taller")
+}
+
+model OtFoto {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId      String   @map("taller_id") @db.Uuid
+  otId          String   @map("ot_id") @db.Uuid
+  propuestaId   String?  @map("propuesta_id") @db.Uuid
+  autorId       String   @map("autor_id") @db.Uuid
+  ruta          String
+  huellaSha256  String   @map("huella_sha256")
+  nota          String?
+  capturadaEn   DateTime @map("capturada_en") @db.Timestamptz(6)
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("ot_fotos")
+  @@schema("taller")
+}
+
+/// Fotos de una ampliación enviada al cliente (0001): copia de las del mecánico, mostradas en /p/[token].
+model AmpliacionFoto {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId      String   @map("taller_id") @db.Uuid
+  presupuestoId String   @map("presupuesto_id") @db.Uuid
+  ruta          String
+  huellaSha256  String   @map("huella_sha256")
+  nota          String?
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("ampliaciones_fotos")
   @@schema("taller")
 }

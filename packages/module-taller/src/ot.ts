@@ -2,6 +2,8 @@
 //
 //   recepcion → presupuesto → aceptado → en_curso ⇄ ampliacion_pendiente
 //                                          en_curso → terminado → facturado → entregado
+//   terminado → entregado (decisión de Alberto, 04/11/2026: recepción entrega el coche sin esperar a la factura, que es F2;
+//                          exige la recepción firmada: se devuelve contra el resguardo)
 //   terminado → en_curso (reapertura ANTES de facturar)
 //   recepcion | presupuesto | aceptado → cancelada (rechazo o retirada antes de empezar)
 //
@@ -27,7 +29,7 @@ export const TRANSICIONES_OT: Readonly<Record<EstadoOt, readonly EstadoOt[]>> = 
   aceptado: ['en_curso', 'cancelada'],
   en_curso: ['ampliacion_pendiente', 'terminado'],
   ampliacion_pendiente: ['en_curso'],
-  terminado: ['facturado', 'en_curso'],
+  terminado: ['facturado', 'entregado', 'en_curso'],
   facturado: ['entregado'],
   entregado: [],
   cancelada: [],
@@ -79,6 +81,9 @@ export function transicionarOt(desde: EstadoOt, hacia: EstadoOt, ctx: ContextoTr
   if (hacia === 'facturado') {
     if (ctx.recepcionFirmada !== true) return { ok: false, motivo: 'no se factura sin recepción firmada' }
     if (ctx.facturaEmitida !== true) return { ok: false, motivo: 'la factura no está emitida' }
+  }
+  if (desde === 'terminado' && hacia === 'entregado' && ctx.recepcionFirmada !== true) {
+    return { ok: false, motivo: 'no se entrega el vehículo sin la recepción firmada' }
   }
   return { ok: true, estado: hacia }
 }

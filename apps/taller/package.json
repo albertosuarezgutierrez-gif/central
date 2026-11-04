@@ -6,10 +6,12 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test test/*.test.ts"
+    "test": "node --import ./test/_registro.mjs --test test/*.test.ts"
   },
   "dependencies": {
     "@central/brand": "workspace:*",
+    "@central/core-catastro": "workspace:*",
+    "@central/core-direccion": "workspace:*",
     "@central/core-identity": "workspace:*",
     "@central/module-taller": "workspace:*",
     "@prisma/client": "^5.22.0",

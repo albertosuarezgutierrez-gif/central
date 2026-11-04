@@ -3,7 +3,7 @@
 // ConfigTaller, que SIEMPRE pasa por `validarConfig` de module-taller. Sin BD.
 import {
   TIPOS_LINEA, validarConfig,
-  type Aceite, type ConfigTaller, type FranjaHorario, type IntervalosAvisos, type MedioCobro, type SerieFactura, type TipoIva,
+  type Aceite, type ConfigTaller, type FranjaHorario, type IntervalosAvisos, type SeguridadLogin, type MedioCobro, type SerieFactura, type TipoIva,
   type TipoLinea, type TipoVehiculo,
 } from '@central/module-taller'
 
@@ -59,6 +59,7 @@ export type CambioAjustes =
   | { seccion: 'medios_cobro'; medios: MedioCobro[] }
   | { seccion: 'ivas'; ivas: TipoIva[] }
   | { seccion: 'series'; series: SerieFactura[] }
+  | { seccion: 'seguridad_login'; seguridad: SeguridadLogin }
   | { seccion: 'horario'; franjas: FranjaHorario[]; duracionHuecoMinutos: number; puestos: number }
   | {
       seccion: 'textos'
@@ -147,6 +148,10 @@ export function aplicarAjuste(antes: ConfigTaller, cambio: CambioAjustes): Resul
         if (!cambio.series.some((n) => n.codigo === s.codigo)) previos.push(`la serie «${s.codigo}» no se puede borrar`)
       }
       c.series = cambio.series.map((x) => ({ ...x }))
+      break
+    case 'seguridad_login':
+      // Tope de login (N, ventana, bloqueo), duración de la sesión PIN y cierre por inactividad: todo dato del taller.
+      c.seguridadLogin = { ...cambio.seguridad }
       break
     case 'horario':
       c.horarioCitas = {

@@ -2,7 +2,7 @@
 import { useState, useTransition } from 'react'
 import { formatearEur } from '@central/module-taller'
 import { eurosACent } from '@/lib/ajustes'
-import { crearPresupuestoAccion } from '../acciones'
+import { crearPresupuestoAccion, reemplazarBorradorAccion } from '../acciones'
 
 type Op = { codigo: string; nombre: string }
 type Linea =
@@ -23,7 +23,7 @@ const deLinea = (l: Linea) => {
 }
 
 export function NuevoPresupuesto(p: {
-  otId: string; tipoInicial: string | null; litrosInicialMl: number | null
+  otId: string; reemplazaId?: string; tipoInicial: string | null; litrosInicialMl: number | null
   tipos: Op[]; paquetes: (Op & { requiereAceite: boolean })[]; aceites: Op[]
 }) {
   const [tipo, setTipo] = useState(p.tipoInicial ?? '')
@@ -65,6 +65,11 @@ export function NuevoPresupuesto(p: {
   function enviar(soloCalcular: boolean) {
     setErrores([])
     iniciar(async () => {
+      if (p.reemplazaId && !soloCalcular) {
+        const rr = await reemplazarBorradorAccion({ presupuestoId: p.reemplazaId, tipoVehiculo: tipo || null, lineas: lineas.map(deLinea) })
+        if (!rr.ok) return setErrores(rr.errores)
+        return location.assign(`/presupuestos/${rr.presupuestoId}`)
+      }
       const r = await crearPresupuestoAccion({ otId: p.otId, tipoVehiculo: tipo || null, lineas: lineas.map(deLinea), soloCalcular })
       if (!r.ok) return setErrores(r.errores)
       if (soloCalcular) return setTotal(r.totalCent)
@@ -133,7 +138,7 @@ export function NuevoPresupuesto(p: {
       {errores.map((m) => <p key={m} className="aviso-error" role="alert">{m}</p>)}
       <div className="fila">
         <button type="button" className="btn btn-sec" disabled={pend || lineas.length === 0} onClick={() => enviar(true)}>Calcular</button>
-        <button type="button" className="btn" disabled={pend || lineas.length === 0} onClick={() => enviar(false)}>Crear presupuesto</button>
+        <button type="button" className="btn" disabled={pend || lineas.length === 0} onClick={() => enviar(false)}>{p.reemplazaId ? 'Sustituir el borrador' : 'Crear presupuesto'}</button>
       </div>
     </div>
   )

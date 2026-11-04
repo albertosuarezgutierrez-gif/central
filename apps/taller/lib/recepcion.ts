@@ -30,6 +30,8 @@ export type EntradaRecepcion = {
   matricula: string
   clienteId: string | null
   cliente: { nombre: string; movil: string; correo: string }
+  /** Dirección del cliente ya VALIDADA (CP → … → número) o null si no se dio. Nunca a medias. */
+  direccion: { cp: string; provincia: string; municipio: string; via: string; numero: string } | null
   km: number | null
   combustible: string | null
   objetos: string
@@ -69,7 +71,7 @@ export async function crearRecepcion(
   const t = e.tallerId
 
   // Cliente: el que cargó la matrícula (se actualizan sus datos de contacto) o uno nuevo. Vacío = null (no «sin dato»).
-  const datosCliente = { nombre, movil: e.cliente.movil.trim() || null, correo: correo || null }
+  const datosCliente = { nombre, movil: e.cliente.movil.trim() || null, correo: correo || null, ...(e.direccion ?? {}) }
   let clienteId: string
   if (e.clienteId) {
     const c = await tx.cliente.findFirst({ where: { tallerId: t, id: e.clienteId } })
@@ -104,12 +106,12 @@ export async function crearRecepcion(
 
   let firmaRuta: string | null = null
   if (e.firma) {
-    const f = await deps.almacen.guardar({ tallerId: t, carpeta: `firmas/${rec.id}`, nombre: 'firma.png', mime: e.firma.mime, bytes: e.firma.bytes })
+    const f = await deps.almacen.guardar({ tallerId: t, carpeta: rec.id, nombre: 'firma.png', mime: e.firma.mime, bytes: e.firma.bytes })
     firmaRuta = f.ruta
     await tx.recepcion.update({ where: { id: rec.id }, data: { firmaRuta: f.ruta, firmadoEn: e.ahora } })
   }
   for (const [i, foto] of e.fotos.entries()) {
-    const f = await deps.almacen.guardar({ tallerId: t, carpeta: `recepciones/${rec.id}`, nombre: foto.nombre, mime: foto.mime, bytes: foto.bytes })
+    const f = await deps.almacen.guardar({ tallerId: t, carpeta: rec.id, nombre: foto.nombre, mime: foto.mime, bytes: foto.bytes })
     await tx.recepcionFoto.create({
       data: { tallerId: t, recepcionId: rec.id, orden: i + 1, posicion: foto.posicion, ruta: f.ruta, huellaSha256: f.huellaSha256, capturadaEn: foto.capturadaEn },
     })

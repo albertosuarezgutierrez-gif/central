@@ -34,6 +34,7 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
         <p><span className="estado">{p.estado}</span> {cli?.nombre ?? ''} {ot ? <a href={`/ordenes/${ot.id}`}>· OT {ot.numero}</a> : null}</p>
         <TablaPresupuesto lineas={lineas} baseCent={p.baseCent} cuotaIvaCent={p.cuotaIvaCent} totalCent={p.totalCent} />
         <p className="tenue">Caduca: {fecha(p.caducaEn)}{p.aceptadoEn ? ` · Aceptado: ${fecha(p.aceptadoEn)}` : ''}</p>
+        {p.estado === 'borrador' && ot && <p><a className="btn btn-sec" href={`/presupuestos/nuevo?ot=${ot.id}&reemplaza=${p.id}`}>Rehacer el borrador</a></p>}
         {(p.estado === 'borrador' || p.estado === 'enviado') && <EnlaceCliente presupuestoId={p.id} yaGenerado={p.estado === 'enviado'} />}
         <p><a href="/presupuestos" className="btn btn-sec">Volver</a></p>
       </main>

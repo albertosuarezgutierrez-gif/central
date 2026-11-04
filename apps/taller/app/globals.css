@@ -105,3 +105,15 @@ h1 { font-family: var(--serif); font-size: 28px; margin: 0 0 16px; }
   body { background: #fff; color: #000; }
   .contenido { max-width: none; padding: 0; }
 }
+
+/* Dirección (CP → provincia → municipio → calle Catastro → número). */
+.direccion { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); }
+.sugerencias {
+  position: absolute; top: 100%; left: 0; right: 0; z-index: 20; margin: 2px 0 0; padding: 0; list-style: none;
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radio); max-height: min(60vh, 360px); overflow-y: auto;
+}
+.sugerencias li { min-height: 44px; display: flex; align-items: center; gap: 6px; padding: 8px 12px; cursor: pointer; overflow-wrap: anywhere; color: var(--text); }
+.sugerencias li.activa { background: var(--brand-soft); }
+.desactivado { opacity: .6; pointer-events: none; }
+.firma-img { max-width: min(100%, 360px); height: auto; background: #fff; border: 1px solid var(--border); border-radius: var(--radio); }
+@media print { .fotos-mini img { height: 120px; } }

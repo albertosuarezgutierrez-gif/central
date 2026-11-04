@@ -4,6 +4,7 @@ import { conTaller } from '@/lib/db'
 import { configDe } from '@/lib/contexto'
 import { casillasPendientes, tallerDeToken, vistaPorToken, type TxPresupuestos } from '@/lib/presupuestos'
 import { textoAsegura } from '@/lib/consentimientos'
+import { firmarVarias } from '@/lib/almacen'
 import { Cabecera } from '../../_marca'
 import { TablaPresupuesto } from '../../_presupuesto'
 import { AceptarCliente } from './AceptarCliente'
@@ -22,16 +23,30 @@ export default async function Pagina({ params }: { params: Promise<{ token: stri
     if (!v.ok) return null
     const config = await configDe(tx, tallerId)
     const pend = await casillasPendientes(tx as unknown as TxPresupuestos, tallerId, v.presupuesto.clienteId, ahora)
-    return { v, config, pend }
+    // Fotos de la ampliación (si las hay): URL firmada de corta duración, solo para quien tiene el enlace.
+    const fotos = v.presupuesto.origen === 'ampliacion'
+      ? await tx.ampliacionFoto.findMany({ where: { tallerId, presupuestoId: v.presupuesto.id } })
+      : []
+    const urls = await firmarVarias(tallerId, fotos.map((f) => f.ruta))
+    return { v, config, pend, fotos: fotos.map((f) => ({ id: f.id as string, url: urls.get(f.ruta) ?? null, nota: (f.nota ?? null) as string | null })) }
   })
   if (!datos || !datos.v.ok) notFound()
-  const { v, config, pend } = datos
+  const { v, config, pend, fotos } = datos
   const p = v.presupuesto
   return (
     <>
       <Cabecera />
       <main className="contenido">
-        <h1>Tu presupuesto · {v.vehiculo?.matricula ?? ''}</h1>
+        <h1>{p.origen === 'ampliacion' ? 'Trabajo adicional' : 'Tu presupuesto'} · {v.vehiculo?.matricula ?? ''}</h1>
+        {p.origen === 'ampliacion' && <p>El mecánico ha detectado algo más en tu vehículo. Mira las fotos y di si lo aceptas.</p>}
+        {fotos.length > 0 && (
+          <div className="fotos-mini">
+            {fotos.map((f) => (
+              <figure key={f.id}>{/* eslint-disable-next-line @next/next/no-img-element */}
+                {f.url ? <img src={f.url} alt={f.nota ?? 'Foto del trabajo adicional'} /> : <span className="tenue">sin imagen</span>}</figure>
+            ))}
+          </div>
+        )}
         <TablaPresupuesto lineas={v.lineas} baseCent={p.baseCent} cuotaIvaCent={p.cuotaIvaCent} totalCent={p.totalCent} />
         {p.caducaEn && <p className="tenue">Válido hasta el {p.caducaEn.toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid' })}.</p>}
         {config?.textos.condicionesPresupuesto && <p className="pie-resguardo">{config.textos.condicionesPresupuesto}</p>}

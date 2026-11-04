@@ -51,3 +51,13 @@ test('seguridadLogin: de alta es válida y valores 0 o ausentes se rechazan', as
   delete d.seguridadLogin
   assert.ok(validarConfig(d as never).some((e) => e.includes('seguridadLogin')))
 })
+
+test('seguridadLogin: sesión 5 h e inactividad 30 min de alta; 0 se rechaza', async () => {
+  const { configDeAlta } = await import('../src/index.ts')
+  const c = configDeAlta()
+  assert.equal(c.seguridadLogin.sesionMinutos, 300)
+  assert.equal(c.seguridadLogin.inactividadMinutos, 30)
+  assert.deepEqual(validarConfig(c), [])
+  c.seguridadLogin.sesionMinutos = 0
+  assert.ok(validarConfig(c).some((e) => e.includes('seguridadLogin.sesionMinutos')))
+})

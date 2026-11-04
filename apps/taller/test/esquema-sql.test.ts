@@ -124,3 +124,47 @@ test('espejo: 0003 (tope de login por taller) ≡ seguridadLogin de configDeAlta
   assert.equal(d('login_ventana_minutos'), a.ventanaMinutos)
   assert.equal(d('login_bloqueo_taller_minutos'), a.bloqueoMinutos)
 })
+
+// ── 0004: marca, sesión, PIN temporal, notas/fotos/propuestas, alta de talleres ──────────────────────────────────
+const S4 = readFileSync(join(DIR, '0004_marca_pin_ot_alta.sql'), 'utf8')
+const tablas4 = [...S4.matchAll(/CREATE TABLE IF NOT EXISTS taller\.(\w+) \(([\s\S]*?)\n\);/g)].map((m) => ({ nombre: m[1], cuerpo: m[2] }))
+
+test('0004: tablas nuevas con taller_id NOT NULL, RLS forzado y política por taller, y concedidas al rol', () => {
+  assert.deepEqual(tablas4.map((t) => t.nombre).sort(), ['ot_fotos', 'ot_notas', 'ot_propuesta_lineas', 'ot_propuestas'])
+  for (const t of tablas4) {
+    assert.match(t.cuerpo, /taller_id\s+uuid NOT NULL/, t.nombre)
+    assert.match(S4, new RegExp(`'${t.nombre}'`), `${t.nombre} entra en el bucle de RLS`)
+    assert.match(S4, new RegExp(`GRANT [^;]*taller\\.${t.nombre}[^;]* TO prisma_taller;`), `GRANT ${t.nombre}`)
+  }
+  assert.match(S4, /FORCE ROW LEVEL SECURITY/)
+  assert.match(S4, /USING \(taller_id = taller\.taller_actual\(\)\) WITH CHECK/)
+  // FK compuestas (taller_id, x): una fila nunca apunta a otra de otro taller.
+  assert.ok(!/REFERENCES taller\.\w+\(id\)/.test(S4.replace(/REFERENCES taller\.talleres/g, '')))
+})
+
+test('0004: ninguna columna de marca en `talleres` (el rol no puede escribirla): van en `configuracion`', () => {
+  assert.match(S4, /ALTER TABLE taller\.configuracion[\s\S]*marca_logo_ruta[\s\S]*marca_color_primario[\s\S]*marca_color_secundario/)
+  assert.doesNotMatch(S4, /ALTER TABLE taller\.talleres/)
+  assert.match(S4, /\^#\[0-9a-f\]\{6\}\$/)
+})
+
+test('espejo: 0004 (sesión e inactividad) ≡ seguridadLogin de configDeAlta()', () => {
+  const d = (col: string) => Number(S4.match(new RegExp(`${col}\\s+integer NOT NULL DEFAULT (\\d+)`))?.[1])
+  const a = configDeAlta().seguridadLogin
+  assert.equal(d('login_sesion_minutos'), a.sesionMinutos)
+  assert.equal(d('login_inactividad_minutos'), a.inactividadMinutos)
+})
+
+test('0004: alta_taller es SECURITY DEFINER, con search_path fijo, solo EXECUTE para el rol, y NIF único', () => {
+  assert.match(S4, /FUNCTION taller\.alta_taller\([^)]*\)[\s\S]*SECURITY DEFINER SET search_path = taller, pg_temp/)
+  assert.match(S4, /REVOKE ALL ON FUNCTION taller\.alta_taller\(text, text, text\) FROM PUBLIC;/)
+  assert.match(S4, /GRANT EXECUTE ON FUNCTION taller\.alta_taller\(text, text, text\) TO prisma_taller;/)
+  assert.match(S4, /CREATE UNIQUE INDEX IF NOT EXISTS ux_talleres_nif ON taller\.talleres \(nif\) WHERE nif IS NOT NULL;/)
+  assert.doesNotMatch(S4, /GRANT INSERT[^;]*taller\.talleres/)
+})
+
+test('0004: PIN temporal y propuestas sin precio', () => {
+  assert.match(S4, /ADD COLUMN IF NOT EXISTS debe_cambiar_pin boolean NOT NULL DEFAULT false/)
+  const prop = tablas4.find((t) => t.nombre === 'ot_propuesta_lineas')!
+  assert.doesNotMatch(prop.cuerpo, /precio|_cent/, 'el mecánico no ve ni escribe precios')
+})

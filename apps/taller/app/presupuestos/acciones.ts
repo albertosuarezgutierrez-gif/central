@@ -5,7 +5,8 @@ import { z } from 'zod'
 import { calcularPresupuesto, type LineaSolicitada } from '@central/module-taller'
 import { conPermiso, configDe, mensajeDeAcceso } from '@/lib/contexto'
 import { notificadorRegistro } from '@/lib/notificador'
-import { crearPresupuestoDesdeOt, generarEnlace, type TxPresupuestos } from '@/lib/presupuestos'
+import { crearPresupuestoDesdeOt, generarEnlace, reemplazarBorrador, type TxPresupuestos } from '@/lib/presupuestos'
+import { auditar, type TxConfig } from '@/lib/config-repo'
 
 export type Respuesta<T = object> = ({ ok: true } & T) | { ok: false; errores: string[] }
 
@@ -79,6 +80,35 @@ export async function generarEnlaceAccion(presupuestoId: unknown): Promise<Respu
       void (await headers())
       revalidatePath(`/presupuestos/${id.data}`)
       return { ok: true as const, ruta: `/p/${r.token}` }
+    }),
+  )
+}
+
+const Reemplazo = z.object({
+  presupuestoId: z.string().uuid(),
+  tipoVehiculo: z.string().max(60).nullable(),
+  lineas: z.array(Linea).min(1).max(60),
+})
+
+/** Rehace un presupuesto en BORRADOR con la configuración vigente. Enviado o aceptado: se rechaza (hay que hacer otro). */
+export async function reemplazarBorradorAccion(entrada: unknown): Promise<Respuesta<{ presupuestoId: string }>> {
+  const p = Reemplazo.safeParse(entrada)
+  if (!p.success) return { ok: false, errores: ['Datos inválidos'] }
+  return resp(() =>
+    conPermiso('presupuestos', async (tx, c) => {
+      const config = await configDe(tx, c.tallerId)
+      if (!config) return { ok: false as const, errores: ['El taller no tiene configuración de alta'] }
+      const antes = await tx.presupuesto.findFirst({ where: { tallerId: c.tallerId, id: p.data.presupuestoId } })
+      const r = await reemplazarBorrador(tx as unknown as TxPresupuestos, {
+        tallerId: c.tallerId, presupuestoId: p.data.presupuestoId, tipoVehiculo: p.data.tipoVehiculo, lineas: p.data.lineas as LineaSolicitada[], ahora: new Date(),
+      }, config)
+      if (!r.ok) return { ok: false as const, errores: r.errores }
+      await auditar(tx as unknown as TxConfig, {
+        tallerId: c.tallerId, usuarioId: c.usuarioId, entidad: 'presupuestos', entidadId: r.presupuestoId, accion: 'borrador_rehecho',
+        antes: antes ? { totalCent: Number(antes.totalCent) } : null, despues: { lineas: p.data.lineas.length },
+      })
+      revalidatePath('/presupuestos'); revalidatePath(`/presupuestos/${r.presupuestoId}`)
+      return { ok: true as const, presupuestoId: r.presupuestoId }
     }),
   )
 }

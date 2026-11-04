@@ -17,7 +17,6 @@ test('transiciones no permitidas', () => {
   assert.equal(puedeTransicionar('presupuesto', 'en_curso'), false)
   assert.equal(puedeTransicionar('facturado', 'en_curso'), false) // facturar es irreversible
   assert.equal(puedeTransicionar('en_curso', 'cancelada'), false)
-  assert.equal(transicionarOt('terminado', 'entregado', listo).ok, false) // no se entrega sin facturar
 })
 
 test('estados finales y tabla cerrada', () => {
@@ -41,4 +40,13 @@ test('guardias: sin el dato explícito NO se avanza (undefined ≠ true)', () =>
 test('reapertura antes de facturar y cancelación antes de empezar', () => {
   assert.equal(transicionarOt('terminado', 'en_curso').ok, true)
   assert.equal(transicionarOt('aceptado', 'cancelada').ok, true)
+})
+
+test('entrega sin factura (decisión de Alberto 04/11/2026): terminado → entregado solo con la recepción firmada', () => {
+  assert.equal(puedeTransicionar('terminado', 'entregado'), true)
+  assert.equal(transicionarOt('terminado', 'entregado', { recepcionFirmada: true }).ok, true)
+  assert.equal(transicionarOt('terminado', 'entregado', { recepcionFirmada: false }).ok, false)
+  assert.equal(transicionarOt('terminado', 'entregado').ok, false, 'sin el dato explícito no se entrega')
+  assert.equal(transicionarOt('facturado', 'entregado').ok, true, 'la vía con factura sigue igual')
+  assert.equal(transicionarOt('en_curso', 'entregado', { recepcionFirmada: true }).ok, false)
 })

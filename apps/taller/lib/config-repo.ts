@@ -135,6 +135,8 @@ export async function leerConfig(tx: TxConfig, tallerId: string): Promise<Config
       maxFallosTaller: cfg.loginMaxFallosTaller,
       ventanaMinutos: cfg.loginVentanaMinutos,
       bloqueoMinutos: cfg.loginBloqueoTallerMinutos,
+      sesionMinutos: cfg.loginSesionMinutos,
+      inactividadMinutos: cfg.loginInactividadMinutos,
     },
   }
 }
@@ -146,35 +148,39 @@ async function desactivarAusentes(d: Delegado, tallerId: string, codigos: Set<st
   }
 }
 
+/** Columnas escalares de `configuracion` a partir de la ConfigTaller (alta y guardado comparten el mapeo). */
+export function escalaresDeConfig(c: ConfigTaller) {
+  return {
+    precioHoraCent: BigInt(c.precioHoraCent),
+    validezPresupuestoDias: c.validezPresupuestoDias,
+    itvAntelacionDias: c.intervalosAvisos.itvAntelacionDias,
+    revisionFechaAntelacionDias: c.intervalosAvisos.revisionFechaAntelacionDias,
+    revisionKmAntelacion: c.intervalosAvisos.revisionKmAntelacion,
+    seguroAntelacionDias: c.intervalosAvisos.seguroAntelacionDias,
+    recordatorioCitaHoras: c.intervalosAvisos.recordatorioCitaHoras,
+    citaDuracionHuecoMinutos: c.horarioCitas.duracionHuecoMinutos,
+    citaPuestos: c.horarioCitas.puestos,
+    textoPieResguardo: c.textos.pieResguardo,
+    textoPieFactura: c.textos.pieFactura,
+    textoCondicionesPresupuesto: c.textos.condicionesPresupuesto,
+    textoFirmaCorreo: c.textos.firmaCorreo,
+    textoConsentimientoComercial: c.textos.textoConsentimientoComercialTaller,
+    versionConsentimientoComercial: c.textos.versionTextoComercialTaller,
+    loginMaxFallosTaller: c.seguridadLogin.maxFallosTaller,
+    loginVentanaMinutos: c.seguridadLogin.ventanaMinutos,
+    loginBloqueoTallerMinutos: c.seguridadLogin.bloqueoMinutos,
+    loginSesionMinutos: c.seguridadLogin.sesionMinutos,
+    loginInactividadMinutos: c.seguridadLogin.inactividadMinutos,
+  }
+}
+
 /** Escribe la configuración COMPLETA (upserts por código). Valida antes de tocar nada. */
 export async function guardarConfig(tx: TxConfig, tallerId: string, c: ConfigTaller): Promise<void> {
   const errores = validarConfig(c)
   if (errores.length > 0) throw new ConfigInvalidaError(errores)
   const k = (codigo: string) => ({ tallerId_codigo: { tallerId, codigo } })
 
-  await tx.configuracion.update({
-    where: { tallerId },
-    data: {
-      precioHoraCent: BigInt(c.precioHoraCent),
-      validezPresupuestoDias: c.validezPresupuestoDias,
-      itvAntelacionDias: c.intervalosAvisos.itvAntelacionDias,
-      revisionFechaAntelacionDias: c.intervalosAvisos.revisionFechaAntelacionDias,
-      revisionKmAntelacion: c.intervalosAvisos.revisionKmAntelacion,
-      seguroAntelacionDias: c.intervalosAvisos.seguroAntelacionDias,
-      recordatorioCitaHoras: c.intervalosAvisos.recordatorioCitaHoras,
-      citaDuracionHuecoMinutos: c.horarioCitas.duracionHuecoMinutos,
-      citaPuestos: c.horarioCitas.puestos,
-      textoPieResguardo: c.textos.pieResguardo,
-      textoPieFactura: c.textos.pieFactura,
-      textoCondicionesPresupuesto: c.textos.condicionesPresupuesto,
-      textoFirmaCorreo: c.textos.firmaCorreo,
-      textoConsentimientoComercial: c.textos.textoConsentimientoComercialTaller,
-      versionConsentimientoComercial: c.textos.versionTextoComercialTaller,
-      loginMaxFallosTaller: c.seguridadLogin.maxFallosTaller,
-      loginVentanaMinutos: c.seguridadLogin.ventanaMinutos,
-      loginBloqueoTallerMinutos: c.seguridadLogin.bloqueoMinutos,
-    },
-  })
+  await tx.configuracion.update({ where: { tallerId }, data: escalaresDeConfig(c) })
 
   for (const i of c.ivas) {
     const d = { nombre: i.nombre, puntosBasicos: i.puntosBasicos, activo: true }

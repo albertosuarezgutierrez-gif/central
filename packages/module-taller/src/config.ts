@@ -115,6 +115,10 @@ export interface SeguridadLogin {
   maxFallosTaller: number
   ventanaMinutos: number
   bloqueoMinutos: number
+  /** Duración máxima de la sesión PIN (minutos desde que se entra). */
+  sesionMinutos: number
+  /** Cierre por inactividad (minutos sin usar la app). */
+  inactividadMinutos: number
 }
 
 export interface ConfigTaller {

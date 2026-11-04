@@ -4,14 +4,19 @@
 import { useState, useTransition, type ReactNode } from 'react'
 import {
   formatearEur, importeManoObraCent, TIPOS_LINEA,
-  type Aceite, type ConfigTaller, type FranjaHorario, type IntervalosAvisos, type MedioCobro, type SerieFactura, type TipoIva,
+  type Aceite, type ConfigTaller, type FranjaHorario, type IntervalosAvisos, type SeguridadLogin, type MedioCobro, type SerieFactura, type TipoIva,
   type TipoLinea, type TipoVehiculo,
 } from '@central/module-taller'
 import {
   codigoDesdeNombre, eurosACent, horasAMinutos, minutosAHoras, pbAPorcentaje, porcentajeAPb, type PaqueteEditable,
 } from '@/lib/ajustes'
+import { contraste, evaluarMarca, normalizarHex, textoSobre } from '@/lib/contraste'
+import { DIRECCION_VACIA, type Direccion } from '@/lib/direccion'
+import { coloresPorDefecto, fondosMarca } from '@/lib/marca'
+import { DireccionCp } from '../_direccion/DireccionCp'
 import {
-  altaPersona, bajaPersona, guardarAjuste, guardarDatosTaller, guardarProveedorAccion, resetPinPersona, type Respuesta,
+  altaPersona, bajaPersona, guardarAjuste, guardarDatosTaller, guardarMarcaColores, guardarProveedorAccion, quitarLogo, resetPinPersona,
+  subirLogo, type Respuesta,
 } from './acciones'
 
 export type DatosAjustes = {
@@ -23,6 +28,7 @@ export type DatosAjustes = {
     nif: string | null
     direccion: { cp: string | null; provincia: string | null; municipio: string | null; via: string | null; numero: string | null }
   }
+  marca: { primario: string | null; secundario: string | null; tieneLogo: boolean }
   personas: { id: string; nombre: string; rol: string; activo: boolean }[]
   proveedores: { id: string; nombre: string; correo: string | null; activo: boolean }[]
 }
@@ -84,18 +90,101 @@ function Campo({ etiqueta, children }: { etiqueta: string; children: ReactNode }
 // ── Datos del taller ─────────────────────────────────────────────────────────
 function DatosTaller({ t }: { t: DatosAjustes['taller'] }) {
   const [d, setD] = useState({ razonSocial: t.razonSocial, nombreComercial: t.nombreComercial, nif: t.nif ?? '' })
-  const g = useGuardar()
   const dir = t.direccion
-  const direccion = dir.via
-    ? `${dir.via} ${dir.numero ?? 's/n'}, ${dir.cp ?? '¿CP?'} ${dir.municipio ?? ''} (${dir.provincia ?? '¿provincia?'})`
-    : 'Sin dirección'
+  const [direccion, setDireccion] = useState<Direccion>({
+    ...DIRECCION_VACIA, cp: dir.cp ?? '', provincia: dir.provincia ?? '', municipio: dir.municipio ?? '', via: dir.via ?? '', numero: dir.numero ?? '',
+  })
+  const g = useGuardar()
   return (
     <Seccion titulo="Datos del taller">
       <Campo etiqueta="Razón social"><input value={d.razonSocial} onChange={(e) => setD({ ...d, razonSocial: e.target.value })} /></Campo>
       <Campo etiqueta="Nombre comercial"><input value={d.nombreComercial} onChange={(e) => setD({ ...d, nombreComercial: e.target.value })} /></Campo>
       <Campo etiqueta="NIF"><input value={d.nif} placeholder="Sin NIF todavía" onChange={(e) => setD({ ...d, nif: e.target.value })} /></Campo>
-      <p className="tenue">Dirección: {direccion}. Se cambia con el buscador por código postal y Catastro (próximamente).</p>
-      <button type="button" className="btn" disabled={g.pendiente} onClick={() => g.guardar(() => guardarDatosTaller(d))}>Guardar datos</button>
+      <DireccionCp valor={direccion} onChange={setDireccion} />
+      <button type="button" className="btn" disabled={g.pendiente} onClick={() => g.guardar(() => guardarDatosTaller({ ...d, direccion }))}>Guardar datos</button>
+      {g.aviso}
+    </Seccion>
+  )
+}
+
+// ── Marca: logo y colores (el sello «con Grupo ASegura» es fijo y no aparece aquí) ──
+function Marca({ m }: { m: DatosAjustes['marca'] }) {
+  const def = coloresPorDefecto()
+  const [prim, setPrim] = useState(m.primario ?? '')
+  const [sec, setSec] = useState(m.secundario ?? '')
+  const [avisos, setAvisos] = useState<string[]>([])
+  const g = useGuardar()
+  const pOk = prim.trim() === '' || normalizarHex(prim) !== null
+  const sOk = sec.trim() === '' || normalizarHex(sec) !== null
+  const p = normalizarHex(prim) ?? def.primario
+  const s2 = normalizarHex(sec) ?? def.secundario
+  // Vista previa en vivo del contraste (el servidor vuelve a calcularlo al guardar).
+  const previo = evaluarMarca({ primario: p, secundario: s2 }, fondosMarca())
+  return (
+    <Seccion titulo="Marca: logo y colores">
+      <p className="tenue">El texto «con Grupo ASegura» aparece siempre, pequeño, junto al logo: no se puede cambiar.</p>
+      <form onSubmit={(e) => {
+        e.preventDefault()
+        const fd = new FormData(e.currentTarget)
+        g.guardar(() => subirLogo(fd))
+      }}>
+        <Campo etiqueta="Logo (PNG, JPG o WebP, máx. 1 MB)"><input type="file" name="logo" accept="image/png,image/jpeg,image/webp" required /></Campo>
+        <div className="fila">
+          <button type="submit" className="btn" disabled={g.pendiente}>Subir logo</button>
+          {m.tieneLogo && <button type="button" className="btn btn-sec" disabled={g.pendiente} onClick={() => g.guardar(() => quitarLogo())}>Volver al logo por defecto</button>}
+        </div>
+      </form>
+      <Campo etiqueta={`Color principal (por defecto ${def.primario})`}>
+        <input value={prim} placeholder={def.primario} onChange={(e) => setPrim(e.target.value)} aria-invalid={!pOk} />
+      </Campo>
+      <Campo etiqueta={`Color secundario (por defecto ${def.secundario})`}>
+        <input value={sec} placeholder={def.secundario} onChange={(e) => setSec(e.target.value)} aria-invalid={!sOk} />
+      </Campo>
+      {(!pOk || !sOk) && <p className="error" role="alert">Usa 6 cifras hexadecimales, por ejemplo #3364ee.</p>}
+      <div className="fila" aria-label="Vista previa">
+        <span className="btn" style={{ background: p, borderColor: p, color: textoSobre(p) }}>Botón ({contraste(textoSobre(p), p).toFixed(1).replace('.', ',')}:1)</span>
+        <span className="btn btn-sec" style={{ borderColor: s2, color: 'inherit' }}>Detalle secundario</span>
+      </div>
+      {[...previo.avisos, ...avisos.filter((a) => !previo.avisos.includes(a))].map((a) => <p key={a} className="aviso-error" role="status">Contraste: {a}</p>)}
+      <div className="fila">
+        <button type="button" className="btn" disabled={g.pendiente || !pOk || !sOk}
+          onClick={() => g.guardar(() => guardarMarcaColores({ primario: prim.trim() || null, secundario: sec.trim() || null }), (r) => setAvisos(r.avisos))}>Guardar colores</button>
+        <button type="button" className="btn btn-sec" disabled={g.pendiente}
+          onClick={() => { setPrim(''); setSec(''); g.guardar(() => guardarMarcaColores({ primario: null, secundario: null }), (r) => setAvisos(r.avisos)) }}>Restablecer los de la marca</button>
+      </div>
+      {g.aviso}
+    </Seccion>
+  )
+}
+
+// ── Acceso: tope de login, duración de la sesión y cierre por inactividad ──
+const CAMPOS_ACCESO: [keyof SeguridadLogin, string][] = [
+  ['maxFallosTaller', 'Fallos de PIN que bloquean el taller (N)'],
+  ['ventanaMinutos', 'Ventana donde se cuentan los fallos (minutos)'],
+  ['bloqueoMinutos', 'Duración del bloqueo (minutos)'],
+  ['sesionMinutos', 'Duración máxima de la sesión (minutos)'],
+  ['inactividadMinutos', 'Cierre por inactividad (minutos)'],
+]
+
+function Acceso({ c }: { c: ConfigTaller }) {
+  const [v, setV] = useState<Record<string, string>>(Object.fromEntries(CAMPOS_ACCESO.map(([k]) => [k, String(c.seguridadLogin[k])])))
+  const g = useGuardar()
+  const guardar = () => {
+    const seguridad = {} as SeguridadLogin
+    for (const [k, et] of CAMPOS_ACCESO) {
+      if (!/^[1-9]\d*$/.test(v[k].trim())) return g.setMsg({ ok: false, texto: `Valor no válido (entero mayor que 0): ${et}` })
+      seguridad[k] = Number(v[k].trim())
+    }
+    g.guardar(() => guardarAjuste({ seccion: 'seguridad_login', seguridad }))
+  }
+  return (
+    <Seccion titulo="Acceso: PIN, sesión e inactividad">
+      {CAMPOS_ACCESO.map(([k, et]) => (
+        <Campo key={k} etiqueta={et}><input inputMode="numeric" value={v[k]} onChange={(e) => setV({ ...v, [k]: e.target.value })} /></Campo>
+      ))}
+      <p className="tenue">Sesión de {minutosAHoras(Number(v.sesionMinutos) || 0)} h como máximo; se cierra sola tras {v.inactividadMinutos || 0} min sin usarla.
+        Los cambios valen para las sesiones que se abran desde ahora.</p>
+      <button type="button" className="btn" disabled={g.pendiente} onClick={guardar}>Guardar acceso</button>
       {g.aviso}
     </Seccion>
   )
@@ -558,6 +647,8 @@ export function AjustesCliente({ datos }: { datos: DatosAjustes }) {
       <Horario c={c} />
       <Avisos c={c} />
       <Textos c={c} />
+      <Marca m={datos.marca} />
+      <Acceso c={c} />
       <Personal personas={datos.personas} yoId={datos.yoId} />
       {/* key: remonta solo si cambia el conjunto (alta nueva), sin perder la edición en curso de los demás */}
       <Proveedores key={datos.proveedores.map((p) => p.id).join()} proveedores={datos.proveedores} />

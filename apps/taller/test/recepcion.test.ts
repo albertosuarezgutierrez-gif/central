@@ -71,7 +71,9 @@ test('fotos: se guardan metadatos (ruta + huella) en orden; no se exige ninguna'
   const f = m.bd.filas('recepcionFoto')
   assert.equal(f.length, 1)
   assert.match(f[0].huellaSha256, /^[0-9a-f]{64}$/)
-  assert.ok(f[0].ruta.startsWith(`${T}/recepciones/`))
+  const rec = m.bd.filas('recepcion')[0]
+  assert.ok(f[0].ruta.startsWith(`${T}/${rec.id}/`), f[0].ruta) // ruta <tallerId>/<recepcionId>/…
+  assert.ok(rec.firmaRuta.startsWith(`${T}/${rec.id}/`), rec.firmaRuta)
   assert.equal(f[0].orden, 1)
 })
 
