@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-11-04T08:53:05Z",
+  "generadoEn": "2026-11-04T10:56:39Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1543,7 +1543,7 @@
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 6
+        "evidencias": 7
       },
       "sivra": {
         "estado": "no",
@@ -5866,6 +5866,7 @@
       "/api/admin/cuenta/documentos/[id]",
       "/api/admin/documentos/analizar",
       "/api/admin/documentos/asignar",
+      "/api/admin/documentos/distribuir-pdf",
       "/api/admin/documentos/staging",
       "/api/admin/empleados",
       "/api/admin/empleados/[id]",
@@ -7285,7 +7286,7 @@
     "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1885,
+    "apis": 1886,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
