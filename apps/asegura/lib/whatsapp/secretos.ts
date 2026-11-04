@@ -2,13 +2,16 @@
 // Falta uno → `null` y quien llama responde 503 (nunca un valor de relleno).
 
 import { requireSecret } from '@central/core-identity'
+import { recortarSecreto } from './forma-secreto.ts'
+
+export { formaSecreto } from './forma-secreto.ts'
 
 /** Un secreto, o `null` si falta (quien llama responde 503). Nunca un literal de relleno. */
 export type NombreSecretoWhatsapp = 'WHATSAPP_APP_SECRET' | 'WHATSAPP_VERIFY_TOKEN' | 'WHATSAPP_PHONE_NUMBER_ID' | 'WHATSAPP_APP_ID'
 
 export function secretoWhatsapp(nombre: NombreSecretoWhatsapp): string | null {
   try {
-    return requireSecret(nombre)
+    return recortarSecreto(requireSecret(nombre))
   } catch {
     return null
   }

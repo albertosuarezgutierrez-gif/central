@@ -2,7 +2,7 @@ import { NextResponse, after } from 'next/server'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { importarHistorial, whatsappActivo } from '@/lib/whatsapp/config'
-import { secretoWhatsapp } from '@/lib/whatsapp/secretos'
+import { formaSecreto, secretoWhatsapp } from '@/lib/whatsapp/secretos'
 import { verificarFirmaMeta, verificarSuscripcion } from '@/lib/whatsapp/firma'
 import { extraerMensajes, zWebhookWhatsapp } from '@/lib/whatsapp/payload'
 import { guardarCrudos, guardarNoReconocido, procesarPendientes } from '@/lib/whatsapp/procesar'
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
   const firmaCabecera = req.headers.get('x-hub-signature-256')
   if (!verificarFirmaMeta(cuerpoCrudo, firmaCabecera, appSecret)) {
     console.warn(
-      `[webhooks/whatsapp] firma inválida (¿WHATSAPP_APP_SECRET de otra app?) cabecera_X-Hub-Signature-256=${firmaCabecera !== null}`,
+      `[webhooks/whatsapp] firma inválida (¿WHATSAPP_APP_SECRET de otra app?) cabecera_X-Hub-Signature-256=${firmaCabecera !== null} secreto(${formaSecreto(process.env.WHATSAPP_APP_SECRET ?? null)})`,
     )
     return NextResponse.json({ estado: 'firma_invalida' }, { status: 401 })
   }
