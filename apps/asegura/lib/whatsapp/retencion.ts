@@ -94,7 +94,9 @@ export async function borrarConversacion(correduriaId: string, conversacionId: s
       await tx.$executeRaw(Prisma.sql`
         delete from documentos d
          where d.correduria_id = ${correduriaId}::uuid and d.subido_por = 'cliente' and d.notas = 'Recibido por WhatsApp' and d.tipo = 'otro'
-           and d.id in (select media_documento_id from mensajes where conversacion_id = ${conversacionId}::uuid and media_documento_id is not null)`)
+           and d.id in (select media_documento_id from mensajes where conversacion_id = ${conversacionId}::uuid and media_documento_id is not null)
+           and not exists (select 1 from tarificador_fichas x where x.origen_documento_id = d.id)
+           and not exists (select 1 from solicitud_regularizacion x where x.documento_id = d.id)`)
     }
     // Las trazas del bot heredado apuntan a conversaciones (FK): las de esta, fuera también.
     await tx.$executeRaw(Prisma.sql`delete from bot_turn_traces where conversacion_id = ${conversacionId}::uuid`)

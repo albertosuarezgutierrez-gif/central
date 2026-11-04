@@ -12,8 +12,9 @@
 
 import { z } from 'zod'
 import { RAMOS_OPORTUNIDAD, redactarPii } from '@central/module-seguros'
+import { fechaIsoReal } from './propuestas-reglas.ts'
 
-const fechaIso = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+const fechaIso = z.string().refine(fechaIsoReal, 'fecha no válida')
 const nulo = <T extends z.ZodTypeAny>(t: T) => t.nullable().default(null)
 const ramo = z.enum(RAMOS_OPORTUNIDAD)
 

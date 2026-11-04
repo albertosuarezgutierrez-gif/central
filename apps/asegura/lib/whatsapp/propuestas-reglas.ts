@@ -65,10 +65,18 @@ export function puedeResolver(p: EstadoActual, decision: Decision, ahora: Date):
 
 const FECHA = /^\d{4}-\d{2}-\d{2}$/
 
+/** aaaa-mm-dd que existe de verdad en el calendario (2026-02-30 no). */
+export function fechaIsoReal(s: string): boolean {
+  if (!FECHA.test(s)) return false
+  const [a, m, d] = s.split('-').map(Number)
+  const t = new Date(Date.UTC(a, m - 1, d))
+  return t.getUTCFullYear() === a && t.getUTCMonth() === m - 1 && t.getUTCDate() === d
+}
+
 /** El payload que se guarda: solo la fecha (aaaa-mm-dd) cuando el tipo la lleva. Nada del texto del cliente. */
 export function payloadPropuesta(tipo: TipoPropuesta, fecha: string | null): { fecha?: string } | null {
   if (tipo === 'pagado') return {}
-  return fecha && FECHA.test(fecha) ? { fecha } : null
+  return fecha && fechaIsoReal(fecha) ? { fecha } : null
 }
 
 /** Una línea del aviso de Telegram, sin PII (ramo, fecha e importe ya formateados por quien llama). */
@@ -86,4 +94,13 @@ export function tareaAlAplicar(tipo: TipoPropuesta, fecha: string | null, hoy: s
   if (tipo === 'fecha_cobro' && fecha) return { descripcion: `Comprobar cobro del recibo prometido para el ${fecha.split('-').reverse().join('/')} (WhatsApp)`, fechaLimite: fecha < hoy ? hoy : fecha }
   if (tipo === 'pagado') return { descripcion: 'Verificar cobro: el cliente dice por WhatsApp que ya lo pagó', fechaLimite: hoy }
   return null
+}
+
+/** Aplicar falló: intenta devolver la propuesta a `pendiente`; si eso falla también, la deja `descartada` (nunca `aplicada` sin efecto). */
+export async function cerrarSiFallaDevolver(devolver: () => Promise<void>, descartar: () => Promise<void>): Promise<void> {
+  try {
+    await devolver()
+  } catch {
+    await descartar()
+  }
 }

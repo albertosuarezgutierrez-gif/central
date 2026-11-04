@@ -1,6 +1,6 @@
 // Media que manda un cliente por WhatsApp → `documentos` → (si es una póliza) oportunidad (spec 2026-11-04 §6, §7).
 //
-// Lo llama `procesarPendientes` (en el `after()` del webhook y en el cron de rescate). Solo trabaja con mensajes
+// Lo llama SOLO el cron `whatsapp-analizar` (no el `after()` del webhook). Solo trabaja con mensajes
 // encolados (`mensajes.media_estado = 'pendiente'`), que `procesar.ts` solo encola con UNA ficha exacta y sin opt-out;
 // aquí se REPITE la comprobación (la conversación pudo cambiar entre medias).
 //
@@ -29,7 +29,7 @@ import { ACTOR_IA } from './ejecutor'
 
 export type ResumenMedia = { estado: 'ok' | 'sin_migracion' | 'sin_token'; descargados: number; descartados: number; errores: number; leidos: number }
 
-type FilaMedia = { id: string; media: unknown; cliente_id: string | null; candidatos: number | null; opt_out: boolean; personal: boolean }
+type FilaMedia = { id: string; media: unknown; cliente_id: string | null; candidatos: number | null; opt_out: boolean; personal: boolean; reintento: boolean }
 
 const EXT: Record<string, string> = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png', 'image/heic': 'heic', 'image/heif': 'heif' }
 
@@ -41,12 +41,18 @@ export async function procesarMediaPendiente(correduriaId: string, opciones: { l
     filas = await db.$queryRaw<FilaMedia[]>(Prisma.sql`
       select m.id::text as id, m.metadata->'media' as media, c.cliente_id::text as cliente_id, c.clientes_candidatos as candidatos,
              (c.wa_opt_out_at is not null or coalesce(cl.wa_opt_out_at is not null, false)) as opt_out,
-             (c.estado = 'descartada_personal') as personal
+             (c.estado = 'descartada_personal') as personal, (m.media_estado = 'descargado') as reintento
         from mensajes m
         join conversaciones c on c.id = m.conversacion_id and c.correduria_id = ${correduriaId}::uuid
         left join clientes cl on cl.id = c.cliente_id and cl.correduria_id = ${correduriaId}::uuid
-       where m.media_estado = 'pendiente' and m.direccion = 'entrante'
-       order by m.enviado_at asc
+        left join documentos d on d.id = m.media_documento_id and d.correduria_id = ${correduriaId}::uuid
+       where m.direccion = 'entrante'
+         and (m.media_estado = 'pendiente'
+              -- Reintento: descargado y archivado pero SIN lectura (cayó antes de leer, o sin cupo/IA). Solo con la IA
+              -- activa y durante 2 días (tope de intentos: el cron corre cada 15 min), para no repetir descargas sin fin.
+              or (${iaWhatsappActiva()} and m.media_estado = 'descargado' and d.id is not null and d.extraccion is null
+                  and d.tipo = 'otro' and m.enviado_at > now() - interval '2 days'))
+       order by (m.media_estado = 'pendiente') desc, m.enviado_at asc
        limit ${opciones.limite ?? 5}`)
   } catch (e) {
     if (esTablaAusente(e) || esColumnaAusente(e)) return { ...r, estado: 'sin_migracion' }
@@ -57,7 +63,7 @@ export async function procesarMediaPendiente(correduriaId: string, opciones: { l
   const marcar = (id: string, estado: 'descargado' | 'descartado' | 'error', documentoId: string | null = null) =>
     db.$executeRaw(Prisma.sql`
       update mensajes set media_estado = ${estado}, media_documento_id = coalesce(${documentoId}::uuid, media_documento_id)
-       where id = ${id}::uuid and media_estado = 'pendiente'
+       where id = ${id}::uuid and media_estado in ('pendiente', 'descargado')
          and exists (select 1 from conversaciones c where c.id = mensajes.conversacion_id and c.correduria_id = ${correduriaId}::uuid)`)
 
   const token = await tokenCorreduria(correduriaId)
@@ -101,8 +107,8 @@ export async function procesarMediaPendiente(correduriaId: string, opciones: { l
         continue
       }
       await marcar(f.id, 'descargado', g.documento.id)
-      r.descargados++
-      if (g.repetido || cupo <= 0 || !iaWhatsappActiva()) continue
+      if (!f.reintento) r.descargados++
+      if ((g.repetido && !f.reintento) || cupo <= 0 || !iaWhatsappActiva()) continue
       cupo--
       const lectura = await oportunidadDesdeFichero({
         correduriaId,
@@ -136,11 +142,12 @@ async function tokenCorreduria(correduriaId: string): Promise<string | null> {
   }
 }
 
-/** Documentos de WhatsApp LEÍDOS hoy (Madrid): los que ya tienen `extraccion`. */
+/** Documentos de WhatsApp LEÍDOS hoy (Madrid): solo los que ya tienen `extraccion`. */
 async function leidasHoy(correduriaId: string): Promise<number> {
   const [f] = await prismaAsegura().$queryRaw<{ n: number }[]>(Prisma.sql`
     select count(*)::int as n from documentos
      where correduria_id = ${correduriaId}::uuid and subido_por = 'cliente' and notas = 'Recibido por WhatsApp'
+       and extraccion is not null
        and created_at >= (date_trunc('day', now() at time zone 'Europe/Madrid') at time zone 'Europe/Madrid')`)
   return f?.n ?? 0
 }

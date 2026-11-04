@@ -23,7 +23,6 @@ import { prismaAsegura } from '../asegura-db'
 import { crudoMinimizado, mediaDeMensaje, textoDeMensaje, type MensajeExtraido } from './payload'
 import { interpretarEdicion, type Edicion } from './eventos'
 import { casarEchoGuardado } from './salientes'
-import { procesarMediaPendiente } from './media-procesar'
 import { debeEncolarMedia } from './media'
 
 const CANAL = 'whatsapp'
@@ -133,10 +132,8 @@ export async function procesarPendientes(correduriaId: string, ids?: readonly st
       await marcar(f.id, 'error', 'excepcion').catch(() => {})
     }
   }
-  // Media (imagen/PDF) de los entrantes con UNA ficha: descarga, archivo y lectura de póliza (spec §6). Nunca tumba nada.
-  if (r.procesados > 0) {
-    await procesarMediaPendiente(correduriaId).catch((e) => console.error('[whatsapp] media:', e instanceof Error ? e.name : 'error'))
-  }
+  // La media (imagen/PDF) NO se procesa aquí (el `after()` del webhook no debe descargar ni llamar a la IA): la procesa
+  // el cron `whatsapp-analizar` con `procesarMediaPendiente` en cada pasada.
   return r
 }
 

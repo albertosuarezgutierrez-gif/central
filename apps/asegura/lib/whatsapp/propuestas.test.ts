@@ -1,17 +1,22 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import {
   CALLBACK_APLICAR,
   PREFIJO_WAP,
   botonesPropuesta,
+  cerrarSiFallaDevolver,
+  fechaIsoReal,
   leerCallbackPropuesta,
   payloadPropuesta,
   puedeResolver,
   tareaAlAplicar,
   validarResolucion,
 } from './propuestas-reglas.ts'
+import { zAccion } from './analisis.ts'
 
 const ID = '33333333-3333-4333-8333-333333333333'
 const AHORA = new Date('2026-11-04T10:00:00Z')
@@ -46,10 +51,54 @@ test('callback `wap_`: ida y vuelta, ≤64 bytes y nada que no sea nuestro', () 
   assert.equal(leerCallbackPropuesta(`wap_ok:${ID}:extra`), null)
 })
 
-test('el prefijo `wap` no lo usa ningún otro callback del monorepo (plataforma enruta por prefijo)', () => {
-  const ruta = new URL('../../../plataforma/app/api/sivra/mensajes/telegram-webhook/route.ts', import.meta.url)
-  const fuente = readFileSync(ruta, 'utf8')
-  assert.ok(!/prefix === 'wap'/.test(fuente), 'otro handler ya usa el prefijo wap')
+test('el prefijo `wap` tiene UNA sola definición en plataforma y ningún handler lo compara a mano', () => {
+  const raiz = fileURLToPath(new URL('../../../plataforma/', import.meta.url))
+  const ficheros: string[] = []
+  const recorrer = (dir: string) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      if (e.name === 'node_modules' || e.name === '.next' || e.name === 'generated') continue
+      const ruta = join(dir, e.name)
+      if (e.isDirectory()) recorrer(ruta)
+      else if (/\.(ts|tsx)$/.test(e.name) && !/\.test\.tsx?$/.test(e.name)) ficheros.push(ruta)
+    }
+  }
+  recorrer(raiz)
+  assert.ok(ficheros.length > 50, 'el cepo no está leyendo plataforma')
+  const definiciones: string[] = []
+  const literales: string[] = []
+  for (const f of ficheros) {
+    const fuente = sinComentarios(readFileSync(f, 'utf8'))
+    // Cualquier constante cuyo valor sea 'wap' (PREFIJO_WAP u otra con distinto nombre).
+    const n = (fuente.match(/\b(?:const|let|var)\s+\w+\s*=\s*['"]wap['"]|\bPREFIJO_\w+\s*=\s*['"]wap['"]/g) ?? []).length
+    for (let i = 0; i < n; i++) definiciones.push(f)
+    if (/prefix\s*===?\s*['"]wap['"]/.test(fuente)) literales.push(f)
+  }
+  assert.equal(definiciones.length, 1, `el prefijo wap debe definirse una sola vez: ${definiciones.join(', ')}`)
+  assert.deepEqual(literales, [], 'ningún handler compara el prefijo `wap` como literal')
+})
+
+test('fecha real: 2026-02-30 se rechaza en el payload y en el análisis de la IA; 2028-02-29 (bisiesto) vale', () => {
+  assert.equal(fechaIsoReal('2026-02-30'), false)
+  assert.equal(fechaIsoReal('2026-13-01'), false)
+  assert.equal(fechaIsoReal('2027-02-29'), false)
+  assert.equal(fechaIsoReal('2028-02-29'), true)
+  assert.equal(payloadPropuesta('fecha_cobro', '2026-02-30'), null)
+  assert.equal(zAccion.safeParse({ tipo: 'proponerFechaCobro', fecha: '2026-02-30' }).success, false)
+  assert.equal(zAccion.safeParse({ tipo: 'proponerFechaCobro', fecha: '2026-11-15' }).success, true)
+})
+
+test('si devolver la propuesta a pendiente falla (uq_wa_propuesta_pendiente), se descarta con el error; nunca queda `aplicada` sin efecto', async () => {
+  const llamadas: string[] = []
+  await cerrarSiFallaDevolver(
+    async () => { llamadas.push('devolver'); throw new Error('duplicate key value violates unique constraint "uq_wa_propuesta_pendiente"') },
+    async () => { llamadas.push('descartar') },
+  )
+  assert.deepEqual(llamadas, ['devolver', 'descartar'])
+  const ok: string[] = []
+  await cerrarSiFallaDevolver(async () => { ok.push('devolver') }, async () => { ok.push('descartar') })
+  assert.deepEqual(ok, ['devolver'])
+  const fuente = sinComentarios(readFileSync(new URL('./propuestas.ts', import.meta.url), 'utf8'))
+  assert.ok(/estado = 'descartada'[\s\S]*estado = 'aplicada'/.test(fuente), 'el fallback descarta la propuesta aplicada')
 })
 
 test('validación del endpoint de resolución', () => {

@@ -15,7 +15,7 @@ import { editarOportunidad } from '../oportunidad-seguimiento'
 import { enlaceFichaCliente } from '../datos-cotizados'
 import { eur } from '../dinero'
 import { ORIGEN_TAREA_IA } from './ejecutor'
-import { botonesPropuesta, lineaPropuesta, payloadPropuesta, puedeResolver, tareaAlAplicar, type Decision, type TipoPropuesta } from './propuestas-reglas'
+import { botonesPropuesta, cerrarSiFallaDevolver, lineaPropuesta, payloadPropuesta, puedeResolver, tareaAlAplicar, type Decision, type TipoPropuesta } from './propuestas-reglas'
 
 const faltaMigracion = (e: unknown) => esTablaAusente(e) || esColumnaAusente(e)
 
@@ -147,19 +147,35 @@ export async function resolverPropuesta(correduriaId: string, id: string, decisi
   try {
     const r = await aplicar(correduriaId, reclamada, actor, ahora)
     if (!r.ok) {
-      await devolverAPendiente(correduriaId, id, { error: r.motivo })
+      await cerrarSinEfecto(correduriaId, id, { error: r.motivo })
       return { ok: false, estado: r.motivo === 'sin_ancla' ? 'sin_ancla' : 'fallo_al_aplicar', status: r.status, motivo: r.motivo }
     }
     resultado = r.resultado
   } catch (e) {
     console.error('[whatsapp-ia] aplicar propuesta:', e instanceof Error ? e.name : 'error')
-    await devolverAPendiente(correduriaId, id, { error: faltaMigracion(e) ? 'sin_migracion' : 'excepcion' }).catch(() => {})
+    await cerrarSinEfecto(correduriaId, id, { error: faltaMigracion(e) ? 'sin_migracion' : 'excepcion' }).catch(() => {})
     return { ok: false, estado: faltaMigracion(e) ? 'sin_migracion' : 'fallo_al_aplicar', status: faltaMigracion(e) ? 503 : 500 }
   }
   await db.$executeRaw(Prisma.sql`
     update whatsapp_propuestas set resultado = ${JSON.stringify(resultado)}::jsonb
      where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`)
   return { ok: true, estado: 'aplicada', tipo: reclamada.tipo, resultado }
+}
+
+/**
+ * Aplicar falló: la propuesta vuelve a `pendiente` para reintentarla. Si ESO falla también (p. ej. choca con
+ * `uq_wa_propuesta_pendiente`: ya hay otra pendiente del mismo asunto), se marca `descartada` con el error en
+ * `resultado`; NUNCA se deja `aplicada` sin efecto.
+ */
+async function cerrarSinEfecto(correduriaId: string, id: string, resultado: Record<string, unknown>): Promise<void> {
+  await cerrarSiFallaDevolver(
+    () => devolverAPendiente(correduriaId, id, resultado),
+    () =>
+      prismaAsegura().$executeRaw(Prisma.sql`
+        update whatsapp_propuestas set estado = 'descartada', resuelta_por = 'sistema:fallo_al_aplicar',
+               resultado = ${JSON.stringify({ ...resultado, devolver_a_pendiente: 'fallo' })}::jsonb
+         where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'aplicada'`).then(() => undefined),
+  )
 }
 
 async function devolverAPendiente(correduriaId: string, id: string, resultado: Record<string, unknown>): Promise<void> {
