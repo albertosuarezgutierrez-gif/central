@@ -69,10 +69,9 @@ export async function resolverBotonAsig(c: Extract<CallbackAsig, { ok: true }>):
 
   const tomado = await transicionIg(cuentaId, c.id, 'pendiente', 'publicando')
   if (!tomado) return { linea: NO_PENDIENTE }
+  let igId: string
   try {
-    const igId = await publicarImagen(decision.credenciales, fila.image_url, fila.caption)
-    await transicionIg(cuentaId, c.id, 'publicando', 'publicado', { igPostId: igId, motivo: null })
-    return { linea: `✅ <b>Publicado en Instagram.</b> <code>${escapeHtml(igId)}</code>` }
+    igId = await publicarImagen(decision.credenciales, fila.image_url, fila.caption)
   } catch (e) {
     const motivo = (e instanceof Error ? e.message : String(e)).slice(0, 300)
     // Vuelve a pendiente para poder reintentarlo con el botón (no se reintenta solo: un
@@ -83,4 +82,12 @@ export async function resolverBotonAsig(c: Extract<CallbackAsig, { ok: true }>):
       botones: [[{ texto: '✅ Reintentar', callback: callbackAsig('aprobar', c.id) }, { texto: '🗑️ Descartar', callback: callbackAsig('descartar', c.id) }]],
     }
   }
+  // Ya está publicado en Instagram: si falla anotarlo en BD NO se ofrece reintento (sería un segundo post).
+  try {
+    await transicionIg(cuentaId, c.id, 'publicando', 'publicado', { igPostId: igId, motivo: null })
+  } catch (e) {
+    console.error('[ig asegura] publicado pero no anotado:', e instanceof Error ? e.message : e)
+    return { linea: `✅ <b>Publicado en Instagram</b> <code>${escapeHtml(igId)}</code>, pero no se pudo anotar en BD (queda «publicando»). NO lo vuelvas a publicar.` }
+  }
+  return { linea: `✅ <b>Publicado en Instagram.</b> <code>${escapeHtml(igId)}</code>` }
 }
