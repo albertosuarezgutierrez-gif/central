@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-11-04T20:57:30Z",
+  "generadoEn": "2026-11-04T21:42:15Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -752,7 +752,7 @@
       },
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "ialimp": {
         "estado": "usado",
@@ -794,7 +794,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 9
+        "evidencias": 10
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2882,7 +2882,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 84
+        "evidencias": 85
       },
       "asegura-portal": {
         "estado": "usado",
