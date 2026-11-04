@@ -27,7 +27,10 @@ export async function extraerTextoPorPagina(bytes: ArrayBuffer): Promise<string[
   // `workerSrc = ''` rompía pdfjs 4 en Node («Setting up fake worker failed», medido el
   // 29/09/2026): el fake worker se busca en `globalThis.pdfjsWorker`.
   ;(globalThis as { pdfjsWorker?: unknown }).pdfjsWorker = worker
-  const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(bytes), useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true })
+  // COPIA propia: pdfjs transfiere (detach) el buffer que recibe; si fuera el mismo `bytes`,
+  // el `PDFDocument.load(bytes)` posterior de `extraerPagina` fallaría con
+  // «Cannot perform Construct on a detached ArrayBuffer» (producción 04/11/2026).
+  const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(bytes.slice(0)), useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true })
   const doc = await loadingTask.promise
   const paginas: string[] = []
   for (let i = 1; i <= doc.numPages; i++) {
