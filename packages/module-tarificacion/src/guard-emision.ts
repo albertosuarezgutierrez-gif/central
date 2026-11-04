@@ -441,7 +441,16 @@ export function esLanzadorAplicacionNseMapfre(d: string | null | undefined): boo
  * al prefijo nombra una acción de emisión real (emitir, contratar, confirmar, firma, pago, formalizar, grabar…), NO se neutraliza nada.
  * La declara cada entrada de exploración (`rutasAppTolerables`); sin regla, todo igual.
  */
-export type RutaTolerable = { origen: string; prefijo: string }
+export type RutaTolerable = {
+  origen: string
+  prefijo: string
+  /**
+   * 0.3.41 (Pelayo, wizard `apps.pelayo.com/contratacion-autos/`): si está, SOLO se neutraliza el prefijo cuando lo que sigue (la RUTA, sin
+   * query ni fragmento, sin «/» final, en minúsculas) es EXACTAMENTE uno de estos restos. Otro resto = no se neutraliza = el prefijo
+   * («contratacion») sigue bloqueando. Fail-closed: un paso del wizard que no está en la lista no se navega. Sin la clave = cualquier resto.
+   */
+  rutasExactas?: readonly string[]
+}
 export const RE_ACCION_REAL_TRAS_PREFIJO = /emit|emiss|contrat|confirm|firm|assina|pago|pagar|pagam|formaliz|grab|suplement|anul|baja|domicili|tarjeta|iban/i
 /** Estado (abierto/cerrado) de un panel JSF de la pantalla de productos de NSE: no es una acción. ANCLADO. */
 export const RE_ESTADO_PANEL_JSF = /^formProductos:panelConfirm[A-Z]{1,4}OpenedState$/
@@ -652,6 +661,13 @@ export function textoDetalleCuerpo(d: { parametro: string; patron: string; param
   return `${cab}${cuerpo}${n < lista.length ? ` (+${lista.length - n} más)` : ''}`
 }
 
+/** ¿El resto de ruta tras el prefijo está en `rutasExactas` (si la regla la declara)? Sin la clave = sí. PURA. */
+function restoExactoPermitido(r: RutaTolerable, restoRuta: string): boolean {
+  if (r.rutasExactas === undefined) return true
+  const t = restoRuta.toLowerCase().replace(/\/+$/, '')
+  return r.rutasExactas.some((x) => x.toLowerCase() === t)
+}
+
 /**
  * `origenPagina`: origen de la ventana/marco donde está la ruta. Una ruta RELATIVA (`/…`) solo se tolera si es EXACTAMENTE el de la
  * regla; sin él, nunca (fail-closed). Una URL absoluta lleva su propio origen.
@@ -674,6 +690,7 @@ export function neutralizarRutaTolerable(texto: string | null | undefined, regla
       if (origen !== r.origen) continue
       const ruta = plano(decodificarUrlTolerante(u.pathname))
       if (!ruta.toLowerCase().startsWith(r.prefijo.toLowerCase())) continue
+      if (!restoExactoPermitido(r, ruta.slice(r.prefijo.length))) continue
       resto = ruta.slice(r.prefijo.length) + plano(decodificarUrlTolerante(u.search + u.hash))
     } else if (t.startsWith('/') && !t.startsWith('//')) {
       // Ruta sola (el `hrefRuta` del inventario, que solo lleva la ruta si el enlace es del MISMO origen que la ventana): solo si la
@@ -681,6 +698,8 @@ export function neutralizarRutaTolerable(texto: string | null | undefined, regla
       if (origenPagina !== r.origen) continue
       const ruta = plano(decodificarUrlTolerante(t))
       if (!ruta.toLowerCase().startsWith(r.prefijo.toLowerCase())) continue
+      // La ruta sola del inventario puede traer query/fragmento: la lista exacta se mira sobre la RUTA.
+      if (!restoExactoPermitido(r, ruta.slice(r.prefijo.length).split(/[?#]/)[0] ?? '')) continue
       resto = ruta.slice(r.prefijo.length)
     } else {
       continue

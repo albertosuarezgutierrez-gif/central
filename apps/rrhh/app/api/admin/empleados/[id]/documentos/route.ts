@@ -5,6 +5,7 @@ import { listarExpediente, subirDocumento } from '@/lib/documental'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { avisarSolicitudFirma } from '@/lib/avisos'
+import { normalizarVisible, validarVisibilidad } from '@/lib/visibilidad-documento'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -30,8 +31,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const requiereEmpresa = form.get('requiere_firma_empresa') === 'true'
     const soloEmpleado = form.get('solo_empleado') === 'true'
     if (!file) return NextResponse.json({ error: 'Falta el archivo' }, { status: 400 })
+    // «Visible para el empleado» (default sí). Con firma debe ser visible: se valida ANTES de subir nada.
+    const visible = normalizarVisible(form.get('visible_empleado'))
+    const errVis = validarVisibilidad({ carpeta, visible, firma: requiereEmpresa ? 'empresa_y_empleado' : soloEmpleado ? 'solo_empleado' : 'none' })
+    if (errVis) return NextResponse.json({ error: errVis }, { status: 400 })
     const doc = await subirDocumento(empresa_id, id, ACTOR_GESTOR, {
-      carpeta, nombre: file.name, tipo: file.type, tamano: file.size, bytes: await file.arrayBuffer(),
+      carpeta, nombre: file.name, tipo: file.type, tamano: file.size, bytes: await file.arrayBuffer(), visible_empleado: visible,
     })
     if (requiereEmpresa) {
       await prisma.$executeRaw(Prisma.sql`
@@ -48,7 +53,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ documento: { ...doc, estado_firma } }, { status: 201 })
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: 401 })
-    if (e instanceof Error && /permiso|obligatorio|máximo|desconocida|no encontrado/.test(e.message)) {
+    if (e instanceof Error && /permiso|obligatorio|máximo|desconocida|no encontrado|debe ser visible|nóminas/.test(e.message)) {
       return NextResponse.json({ error: e.message }, { status: 400 })
     }
     if (e instanceof Error && /Storage upload/.test(e.message)) {

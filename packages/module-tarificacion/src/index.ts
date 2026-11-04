@@ -715,6 +715,9 @@ export {
   requiereNavegacionLibre,
   guardadosEnDialogoDe,
   entradaConTomadorMediador,
+  riesgoTomadorDeMediador,
+  type IdentidadTomadorMediador,
+  type RiesgoTomadorMediador,
   casaGuardadoEnDialogo,
   esGuardadoEnDialogoAutorizado,
   MAX_GUARDADOS_DIALOGO,
@@ -919,3 +922,18 @@ export {
   type ValidacionPista,
   type DescripcionPista,
 } from './pista.ts'
+
+// Pelayo «Nueva contratación» + TOPE DURO del wizard de autos (0.3.41, 04/11/2026).
+export {
+  ORIGEN_PORTAL_PELAYO,
+  RUTA_NUEVO_PRESUPUESTO_PELAYO,
+  ORIGEN_APP_PELAYO,
+  PREFIJO_WIZARD_AUTOS_PELAYO,
+  PASOS_PULSABLES_WIZARD_AUTOS_PELAYO,
+  RUTAS_RED_WIZARD_AUTOS_PELAYO,
+  RUTA_TOLERABLE_WIZARD_AUTOS_PELAYO,
+  esTextoNuevaContratacionPelayo,
+  esUbicacionNuevaContratacionPelayo,
+  esNuevaContratacionPelayoInventario,
+  bloqueoZonaWizardPelayo,
+} from './pelayo-contratacion.ts'

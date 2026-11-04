@@ -1,123 +1,123 @@
 {
  "sesion": "7b03f7c2-db2b-54bc-8a4a-e28d208d86c2",
  "inicio": "2026-11-01T05:03:33.366Z",
- "fin": "2026-11-04T09:38:23.898Z",
- "llamadas": 6638,
+ "fin": "2026-11-04T11:48:56.453Z",
+ "llamadas": 6905,
  "categorias": {
   "agente:agente-architect": {
-   "llamadas": 8,
-   "chars_in": 26226,
-   "chars_out": 27889,
+   "llamadas": 9,
+   "chars_in": 30120,
+   "chars_out": 31993,
    "errores": 0,
-   "archivos_citados": 3,
-   "chars_citados": 43190,
+   "archivos_citados": 6,
+   "chars_citados": 238791,
    "tools": {
-    "Agent": 8
+    "Agent": 9
    }
   },
   "otro": {
-   "llamadas": 705,
-   "chars_in": 87660,
-   "chars_out": 1470188,
+   "llamadas": 744,
+   "chars_in": 96458,
+   "chars_out": 1502191,
    "errores": 0,
    "archivos_citados": 5,
    "chars_citados": 3508537,
    "tools": {
-    "ToolSearch": 125,
-    "SendMessage": 21,
-    "TaskStop": 26,
-    "ReadNotifications": 235,
-    "Monitor": 291,
+    "ToolSearch": 131,
+    "SendMessage": 22,
+    "TaskStop": 27,
+    "ReadNotifications": 239,
+    "Monitor": 318,
     "SendUserFile": 5,
     "AskUserQuestion": 2
    }
   },
   "bash": {
-   "llamadas": 3913,
-   "chars_in": 2096482,
-   "chars_out": 10643108,
+   "llamadas": 4093,
+   "chars_in": 2205304,
+   "chars_out": 11143532,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 3913
+    "Bash": 4093
    }
   },
   "lectura-directa": {
-   "llamadas": 272,
-   "chars_in": 38860,
-   "chars_out": 1568157,
+   "llamadas": 288,
+   "chars_in": 41299,
+   "chars_out": 1586453,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 211,
-    "Grep": 61
+    "Read": 216,
+    "Grep": 72
    }
   },
   "sql": {
-   "llamadas": 639,
-   "chars_in": 238078,
-   "chars_out": 1984012,
+   "llamadas": 650,
+   "chars_in": 241343,
+   "chars_out": 1995915,
    "errores": 6,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 639
+    "mcp__Supabase__execute_sql": 650
    }
   },
   "mcp:github": {
-   "llamadas": 355,
-   "chars_in": 114002,
-   "chars_out": 440767,
+   "llamadas": 366,
+   "chars_in": 117811,
+   "chars_out": 445341,
    "errores": 11,
    "archivos_citados": 1,
    "chars_citados": 18398,
    "tools": {
-    "mcp__github__actions_run_trigger": 142,
-    "mcp__github__actions_list": 55,
+    "mcp__github__actions_run_trigger": 147,
+    "mcp__github__actions_list": 57,
     "mcp__github__get_job_logs": 24,
-    "mcp__github__create_pull_request": 50,
+    "mcp__github__create_pull_request": 52,
     "mcp__github__update_pull_request": 12,
     "mcp__github__pull_request_read": 22,
-    "mcp__github__merge_pull_request": 49,
+    "mcp__github__merge_pull_request": 51,
     "mcp__github__add_issue_comment": 1
    }
   },
   "agente:general-purpose": {
-   "llamadas": 74,
-   "chars_in": 168778,
-   "chars_out": 182676,
+   "llamadas": 75,
+   "chars_in": 172174,
+   "chars_out": 186245,
    "errores": 0,
-   "archivos_citados": 76,
-   "chars_citados": 3417604,
+   "archivos_citados": 77,
+   "chars_citados": 3437230,
    "tools": {
-    "Agent": 74
+    "Agent": 75
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 220,
-   "chars_in": 82960,
-   "chars_out": 30887,
+   "llamadas": 223,
+   "chars_in": 83628,
+   "chars_out": 31247,
    "errores": 0,
    "archivos_citados": 2,
    "chars_citados": 12117,
    "tools": {
-    "mcp__claude-code-remote__send_later": 162,
+    "mcp__claude-code-remote__send_later": 163,
     "mcp__claude-code-remote__subscribe_pr_activity": 5,
-    "mcp__claude-code-remote__unsubscribe_pr_activity": 49,
+    "mcp__claude-code-remote__unsubscribe_pr_activity": 51,
     "mcp__claude-code-remote__delete_trigger": 4
    }
   },
   "escritura": {
-   "llamadas": 422,
-   "chars_in": 1354729,
-   "chars_out": 50081333,
+   "llamadas": 427,
+   "chars_in": 1397835,
+   "chars_out": 50168906,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Write": 159,
+    "Write": 164,
     "Edit": 263
    }
   },

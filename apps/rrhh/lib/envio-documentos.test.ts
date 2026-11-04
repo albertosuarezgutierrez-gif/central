@@ -22,6 +22,7 @@ vi.mock('@/lib/ai', () => ({ iaChat: vi.fn(), iaDisponible: () => false }))
 vi.mock('@/lib/distribuir-nominas', () => ({ extraerTextoPorPagina: vi.fn() }))
 
 import { asignarStaging, type EntradaAsignar } from '@/lib/envio-documentos'
+import { avisarDocumento, avisarSolicitudFirma } from '@/lib/avisos'
 
 const EMP = '11111111-1111-1111-1111-111111111111'
 const E1 = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
@@ -126,5 +127,31 @@ describe('asignarStaging: tamaño y tipo del objeto REAL del staging', () => {
     infoObjeto.mockImplementation(async () => null)
     await expect(asignarStaging(EMP, 'u1', base())).rejects.toThrow(/no encontrado/)
     expect(copiarObjeto).not.toHaveBeenCalled()
+  })
+})
+
+describe('asignarStaging: documentos OCULTOS al empleado (visible_empleado = false)', () => {
+  it('por defecto se inserta VISIBLE (comportamiento de siempre)', async () => {
+    await asignarStaging(EMP, 'u1', base({ empleado_ids: [E1] }))
+    expect(inserts[0].sql).toMatch(/visible_empleado/)
+    expect(inserts[0].values).toContain(true)
+  })
+  it('oculto: se guarda false, y NO se avisa aunque «avisar» venga a true', async () => {
+    const r = await asignarStaging(EMP, 'u1', base({ empleado_ids: [E1, E2], visible_empleado: false, avisar: true }))
+    expect(r.ok).toBe(2)
+    expect(inserts).toHaveLength(2)
+    for (const i of inserts) { expect(i.sql).toMatch(/visible_empleado/); expect(i.values).toContain(false) }
+    expect(avisarDocumento).not.toHaveBeenCalled()
+    expect(avisarSolicitudFirma).not.toHaveBeenCalled()
+  })
+  for (const firma of ['solo_empleado', 'empresa_y_empleado'] as const) {
+    it(`oculto + ${firma} → rechazado sin tocar nada (requiere firma ⇒ visible)`, async () => {
+      await expect(asignarStaging(EMP, 'u1', base({ firma, visible_empleado: false }))).rejects.toThrow(/firma.*visible/i)
+      expect(queryRaw).not.toHaveBeenCalled()
+      expect(copiarObjeto).not.toHaveBeenCalled()
+    })
+  }
+  it('nóminas no se pueden ocultar', async () => {
+    await expect(asignarStaging(EMP, 'u1', base({ carpeta: 'nominas', visible_empleado: false }))).rejects.toThrow(/nóminas/i)
   })
 })

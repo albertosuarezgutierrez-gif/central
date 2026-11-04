@@ -225,9 +225,10 @@ describe('0.3.5 · ruta de aplicación NSE tolerada SOLO en Mapfre patinete (dec
   const R = rutasAppTolerablesDe('mapfre:automoviles:patinetes')
   const CARGA = 'https://wmediadores.mapfre.com/EVT21_NSE_FWEB/app/emision/cargaOperacion/cargaOperacion.jsf'
   const bloquea = (u: string, reglas = R) => pareceEmision(neutralizarRutaTolerable(u, reglas))
-  it('solo la entrada de patinete la declara (Mapfre auto, Allianz… ninguna)', () => {
+  it('solo la entrada de patinete la declara (Mapfre auto, Allianz… ninguna) y, 0.3.41, Pelayo Auto (su wizard, restos exactos)', () => {
     const con = Object.entries(ENTRADAS_EXPLORACION).filter(([, e]) => (e.rutasAppTolerables ?? []).length > 0).map(([k]) => k)
-    expect(con).toEqual(['mapfre:automoviles:patinetes'])
+    expect(con).toEqual(['mapfre:automoviles:patinetes', 'pelayo:presupuestos:auto'])
+    expect(ENTRADAS_EXPLORACION['pelayo:presupuestos:auto'].rutasAppTolerables?.every((r) => (r.rutasExactas?.length ?? 0) > 0)).toBe(true)
     expect(R).toEqual([{ origen: 'https://wmediadores.mapfre.com', prefijo: '/EVT21_NSE_FWEB/app/emision/' }])
   })
   it('cargaOperacion.jsf pasa; sin la regla (otra entrada) sigue bloqueada', () => {

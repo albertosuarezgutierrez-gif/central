@@ -1,4 +1,4 @@
-// Cepos de las exploraciones de PATINETE (28/10/2026): tomador = el MEDIADOR, solo en las dos entradas de patinete.
+// Cepos de las exploraciones de PATINETE (28/10/2026): tomador = el MEDIADOR, solo en las dos entradas de patinete (y, 0.3.41, las de Pelayo).
 // Los datos del mediador NO viven aquí (ni en el módulo): asegura los pone en `riesgo.tomador` desde `MEDIADOR`
 // (`apps/asegura/lib/tarificador-explorador-mediador.test.ts` prueba que salen de `MEDIADOR` y que no hay literales).
 // Fixtures SINTÉTICAS: un NIF y una fecha inventados, claramente de prueba.
@@ -6,19 +6,22 @@ import { describe, it, expect } from 'vitest'
 import { CATALOGO_EXPLORACION, ENTRADAS_EXPLORACION, entradaConTomadorMediador, esAvanceAutorizado, resolverDato } from './index.ts'
 
 const ENTRADAS_PATINETE = ['allianz:autos:movilidad_personal', 'mapfre:automoviles:patinetes']
+const ENTRADAS_PELAYO = ['pelayo:presupuestos:auto', 'pelayo:presupuestos:hogar']
+const ENTRADAS_MEDIADOR = [...ENTRADAS_PATINETE, ...ENTRADAS_PELAYO]
 const RIESGO = { tomador: { nif: 'NIF-SINTETICO', nombre: 'Nombre', apellido1: 'Uno', apellido2: 'Dos', nombreCompleto: 'Nombre Uno Dos', fechaNacimiento: '1970-02-03' } }
 const ctx = (ramo: string, tomadorMediador: boolean, riesgo: unknown = RIESGO) =>
   ({ ramo, conDatosReales: false, tomadorMediador, riesgo, env: {}, hoy: new Date('2026-10-28T10:00:00Z') })
 
 describe('exploraciones de patinete: tomador = mediador', () => {
-  it('SOLO las dos entradas de patinete (y de ramo patinete) llevan tomadorMediador', () => {
+  it('SOLO las dos entradas de patinete y (0.3.41) las dos de Pelayo llevan tomadorMediador', () => {
     const con = Object.entries(ENTRADAS_EXPLORACION).filter(([, e]) => e.tomadorMediador).map(([k]) => k).sort()
-    expect(con).toEqual([...ENTRADAS_PATINETE].sort())
+    expect(con).toEqual([...ENTRADAS_MEDIADOR].sort())
     for (const k of ENTRADAS_PATINETE) {
       expect(ENTRADAS_EXPLORACION[k].ramo).toBe('patinete')
       expect(entradaConTomadorMediador(k)).toBe(true)
     }
-    for (const k of Object.keys(ENTRADAS_EXPLORACION).filter((x) => !ENTRADAS_PATINETE.includes(x))) expect(entradaConTomadorMediador(k), k).toBe(false)
+    for (const k of ENTRADAS_PELAYO) expect(entradaConTomadorMediador(k), k).toBe(true)
+    for (const k of Object.keys(ENTRADAS_EXPLORACION).filter((x) => !ENTRADAS_MEDIADOR.includes(x))) expect(entradaConTomadorMediador(k), k).toBe(false)
     expect(entradaConTomadorMediador('no:existe:x')).toBe(false)
   })
 

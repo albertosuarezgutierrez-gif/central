@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-04T08:53:05Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-04T12:15:34Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 45 packages · 23 capacidades · 44 skills · 1885 rutas API.
+**Resumen:** 13 apps · 45 packages · 23 capacidades · 44 skills · 1887 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -61,7 +61,7 @@
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Informes, Notificaciones (push), Asistente / copiloto IA
 - **Tablas (17):** rrhh.acceso_otps, rrhh.avisos, rrhh.avisos_admin, rrhh.contratos_laborales, rrhh.documentos, rrhh.empleados, rrhh.empresas, rrhh.firma_otps, rrhh.firmas, rrhh.incidencias_mes, rrhh.incidencias_ubicacion, rrhh.material_empleado, rrhh.mensajes, rrhh.nominas, rrhh.push_subscriptions, rrhh.solicitudes, rrhh.usuarios_rrhh
-- **Rutas API:** 84
+- **Rutas API:** 86
 ### sivra
 - **Módulos que usa:** core-ai, core-email, core-identity, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
 - **Capacidades:** Eventos / catering / BEO, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, Marketing (blog/IG/SEO), Almacén / stock / ASN, Proveedores / compras, Asistente / copiloto IA
@@ -281,6 +281,8 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (04/11/2026) 04/11/2026) Portal cliente · hoja QR: logo de compañía + cobalto
+- (04/11/2026) 04/11/2026) Correduría · WhatsApp: SQL APLICADOS en prod + remates
 - (04/11/2026) 04/11/2026) Correduría · WhatsApp: aprendizaje + autonomía gradual
 - (04/11/2026) 04/11/2026) Correduría · WhatsApp: respuestas del cliente → propuestas CRM — PR #5486
 - (03/11/2026) 03/11/2026) Correduría · regularización RC fase 3 (respuesta a Occident + cierre manual) — ✅ PR #5472 mergeado
@@ -289,6 +291,4 @@
 - (03/11/2026) 03/11/2026) Sivra · mensajes de huésped de Agoda por correo (PR #5455, mergeado y desplegado)
 - (03/11/2026) 03/11/2026) Correduría · cuadre de comisiones por compañía + Drive reorganizado
 - (03/11/2026) 03/11/2026) Facturas · auditoría del lector: tipo de documento obligatorio y documento completo - Causa raíz de los errores básicos: `tipo_documento` salía null en 28/51 y `procesar.ts` no lo miraba; el texto se cortaba a 4.000 car. (la IA solo veía el encabezado). Ahora: prompt con vocabulario cerrado (presupuesto/solicitud/liquidación/resumen/aviso → omitido; null/otro → bandeja con aviso), emisor≠cliente≠dirección del piso, `numero_albaran` aparte, hasta 12.000 car. (inicio+final). Helpers `tipo-documento.ts`, `revision-lectura.ts`, `recorte-texto.ts`; dedupe por nº de factura sin separadores. - Bandeja revisada con Alberto: Netflix → pisos compartidos; PEPEMOBILE → correduría; Anthropic 170 € = bonos reales; TotalEnergies 310,01 € = Monte Carmelo (personal); Vercel B2DRQ0QS-0007 duplicado descartado. - EMASESA 2026 completo
-- (03/11/2026) 03/11/2026) Captación · parado el mailing en frío de ia-rest/ialimp; foco 100% correduría
-- (03/11/2026) 03/11/2026) Facturas · pólizas de clientes y comisiones de portal NO son gasto + bandeja de pendientes
 

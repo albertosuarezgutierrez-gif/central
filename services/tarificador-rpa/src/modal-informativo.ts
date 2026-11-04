@@ -7,6 +7,7 @@
 // (3) el veredicto «modal INFORMATIVO» (sin campos y sin ningún término prohibido del vocabulario de bloqueo en todo su texto/atributos).
 
 import { pareceDatoPersonalInventario } from '@central/module-tarificacion'
+import { redactarMediador } from './privacidad-mediador.ts'
 import { casaAtributoInternoNavegacion, casaBloqueoNavegacion } from './vocabulario.ts'
 
 /** Contenedores que cuentan como modal/diálogo. El `body`/`html` (p. ej. `class="modal-open"`) y los fondos (`backdrop`…) se descartan en el script. */
@@ -173,7 +174,7 @@ const clases = (x: unknown, n: number): string => {
 }
 /** Texto visible → una línea, recortada y SIN forma de dato personal (si la tiene, se sustituye entero). */
 export function textoModalRedactado(x: unknown, max: number): string {
-  const s = String(x ?? '').replace(/\s+/g, ' ').trim().slice(0, max)
+  const s = redactarMediador(String(x ?? '').replace(/\s+/g, ' ').trim()).slice(0, max)
   if (s === '') return '-'
   return pareceDatoPersonalInventario(s) ? '(texto redactado)' : s
 }

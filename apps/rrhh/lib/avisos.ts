@@ -10,6 +10,7 @@ import { pushEmpleadoResultado, type ResultadoPush } from '@/lib/push'
 import { solicitarFirma } from '@/lib/firma'
 import { textoAviso, basePortal, enlacePortal, estadoEmailPrevio, type TipoAviso } from '@/lib/avisos-reglas'
 import { diasEntre } from '@/lib/recordatorios-firma'
+import { empleadoPuedeVerDocumento } from '@/lib/visibilidad-documento'
 
 export type EstadoEmail = 'enviado' | 'sin_email' | 'sin_transporte' | 'error'
 export type ResultadoAviso = { aviso_id: string; email_estado: EstadoEmail; push_estado: ResultadoPush }
@@ -33,7 +34,7 @@ type Params = {
  */
 export async function avisarDocumento(p: Params): Promise<ResultadoAviso | null> {
   const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
-    SELECT d.nombre AS doc_nombre, d.resumen, d.firma_solicitada_at,
+    SELECT d.nombre AS doc_nombre, d.resumen, d.firma_solicitada_at, d.visible_empleado, d.carpeta,
            e.nombre, e.email, em.nombre AS empresa
     FROM rrhh.documentos d
     JOIN rrhh.empleados e ON e.id = d.empleado_id AND e.empresa_id = d.empresa_id
@@ -42,6 +43,8 @@ export async function avisarDocumento(p: Params): Promise<ResultadoAviso | null>
     LIMIT 1`)
   const r = rows[0]
   if (!r) throw new Error('Documento no encontrado')
+  // Documento oculto al empleado: ni aviso en la intranet, ni email, ni push (migración 0029).
+  if (!empleadoPuedeVerDocumento({ carpeta: r.carpeta, visible_empleado: r.visible_empleado })) return null
 
   const url = enlacePortal(basePortal(process.env.RRHH_PUBLIC_URL, p.origen))
   const dias = r.firma_solicitada_at ? diasEntre(new Date(r.firma_solicitada_at), new Date()) : null
@@ -132,12 +135,15 @@ export async function listarAvisosEmpleado(empresaId: string, empleadoId: string
       FROM rrhh.avisos a
       LEFT JOIN rrhh.documentos d ON d.id = a.documento_id AND d.empresa_id = a.empresa_id AND d.empleado_id = a.empleado_id
       WHERE a.empresa_id = ${empresaId}::uuid AND a.empleado_id = ${empleadoId}::uuid
+        AND (a.documento_id IS NULL OR d.id IS NULL OR d.visible_empleado OR d.carpeta = 'nominas')
       ORDER BY a.creado_at DESC
       LIMIT 30`),
     prisma.$queryRaw<{ n: number }[]>(Prisma.sql`
       SELECT count(DISTINCT COALESCE(a.documento_id, a.id))::int AS n
       FROM rrhh.avisos a
-      WHERE a.empresa_id = ${empresaId}::uuid AND a.empleado_id = ${empleadoId}::uuid AND a.visto_en IS NULL`),
+      LEFT JOIN rrhh.documentos d ON d.id = a.documento_id AND d.empresa_id = a.empresa_id AND d.empleado_id = a.empleado_id
+      WHERE a.empresa_id = ${empresaId}::uuid AND a.empleado_id = ${empleadoId}::uuid AND a.visto_en IS NULL
+        AND (a.documento_id IS NULL OR d.id IS NULL OR d.visible_empleado OR d.carpeta = 'nominas')`),
   ])
   return { avisos, sin_ver: cnt[0]?.n ?? 0 }
 }
@@ -146,7 +152,8 @@ export async function listarAvisosEmpleado(empresaId: string, empleadoId: string
 export async function marcarDocumentoVisto(empresaId: string, empleadoId: string, docId: string): Promise<boolean> {
   const n = await prisma.$executeRaw(Prisma.sql`
     UPDATE rrhh.documentos SET visto_empleado_at = COALESCE(visto_empleado_at, now())
-    WHERE id = ${docId}::uuid AND empleado_id = ${empleadoId}::uuid AND empresa_id = ${empresaId}::uuid`)
+    WHERE id = ${docId}::uuid AND empleado_id = ${empleadoId}::uuid AND empresa_id = ${empresaId}::uuid
+      AND (visible_empleado OR carpeta = 'nominas')`)
   if (!n) return false
   await prisma.$executeRaw(Prisma.sql`
     UPDATE rrhh.avisos SET visto_en = now()

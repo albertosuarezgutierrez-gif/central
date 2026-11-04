@@ -2610,7 +2610,8 @@ h1 em {
   align-items: center;
   gap: 14px;
   padding-bottom: 12px;
-  border-bottom: 2px solid var(--text);
+  /* Cobalto de marca (Alberto, 04/11/2026): la hoja NO es en negro. */
+  border-bottom: 2px solid var(--brand);
 }
 @media (min-width: 480px) {
   .hoja-masthead {
@@ -2626,14 +2627,14 @@ h1 em {
   gap: 10px;
   min-width: 0;
 }
-/* 🚨 El monograma toma `currentColor` sobre `--text`, NO su cuadro
+/* 🚨 El monograma toma `currentColor` en cobalto (`--brand`), NO su cuadro
    `--brand-soft`: ese cuadro es un BACKGROUND, y Chrome descarta los fondos
    al imprimir salvo que el usuario marque una casilla que no sabe que
-   existe. En negro pleno es line-art: imprime en cualquier láser y aguanta
-   un año de cocina. */
+   existe. Es line-art de relleno `currentColor`, así que sale en color sin
+   depender de la casilla de fondos (y `print-color-adjust: exact` en `.hoja`). */
 .hoja-monograma {
   flex: 0 0 auto;
-  color: var(--text);
+  color: var(--brand);
 }
 .hoja-identidad {
   display: grid;
@@ -2645,7 +2646,8 @@ h1 em {
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: -0.01em;
-  color: var(--text);
+  font-family: var(--display, var(--serif));
+  color: var(--brand);
 }
 /* La clave DGSFP sale de `MEDIADOR`, nunca tecleada: es el átomo legal que
    hace que el papel parezca de una firma regulada y no una nota. */
@@ -2668,9 +2670,11 @@ h1 em {
 .hoja-titulo-bloque h1 {
   margin: 0;
   font-size: 22px;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.2;
   letter-spacing: -0.02em;
+  font-family: var(--display, var(--serif));
+  color: var(--brand);
 }
 /* La hoja se lee EN VIVO, así que esta fecha es honesta — y es lo único que
    le dice a alguien, dentro de un año, «esto es viejo, escanea». */
@@ -2719,6 +2723,8 @@ h1 em {
 }
 .hoja-poliza h2 {
   margin: 0;
+  font-family: var(--display, var(--serif));
+  color: var(--brand);
   font-size: 18px;
   font-weight: 700;
   line-height: 1.25;
@@ -2889,8 +2895,9 @@ h1 em {
     --muted2: #333;
     --border: #999;
     --border-soft: #999;
-    --brand: #000;
-    --brand-ink: #000;
+    /* La hoja impresa va en cobalto de marca (04/11/2026); solo el QR es negro sobre blanco. */
+    --brand: #3364ee;
+    --brand-ink: oklch(0.34 0.13 265);
     --brand-soft: #fff;
     --accent: #000;
     --accent-ink: #000;
@@ -2939,7 +2946,9 @@ h1 em {
     max-width: 100%;
     margin: 0;
     padding: 10mm 8mm;
-    border: 1px solid var(--text);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    border: 1px solid var(--brand);
     border-radius: 4mm;
     break-inside: avoid;
   }
@@ -3000,7 +3009,7 @@ h1 em {
        lo ancho del folio era una línea que cortaba una página vacía en dos. */
     width: 100%;
     padding-bottom: 6mm;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--brand);
   }
   .hoja-titulo-bloque h1 {
     font-size: 26px;
@@ -3015,6 +3024,11 @@ h1 em {
   .hoja-qr svg {
     width: 52mm;
     height: 52mm;
+    /* El QR no se tiñe: negro sobre blanco para que el escaneo no falle. */
+    background: #fff;
+    color: #000;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   /* 🚨 Sin `max-width`: el <p> tiene que ocupar el ancho de la tarjeta para
      que `text-align: center` lo centre BAJO el QR. Con los 220 px de antes era

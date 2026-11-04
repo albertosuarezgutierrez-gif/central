@@ -18,6 +18,6 @@ export async function POST(req: Request) {
 
   // Conserva «Recordar este dispositivo» y recuerda la empresa elegida para la próxima entrada.
   const res = NextResponse.json({ ok: true })
-  await emitirSesionResponsable(res, s.usuario_id, empresa_id, s.recordar === true)
+  await emitirSesionResponsable(res, s.usuario_id, empresa_id, s.recordar === true, s.jti)
   return res
 }

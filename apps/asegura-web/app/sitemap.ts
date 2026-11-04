@@ -64,6 +64,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: url('/quienes-somos'), changeFrequency: 'yearly', priority: 0.5 },
     { url: url('/legal/informacion-mediador'), lastModified: LEGALES, changeFrequency: 'yearly', priority: 0.3 },
     { url: url('/legal/privacidad'), lastModified: LEGALES, changeFrequency: 'yearly', priority: 0.3 },
+    { url: url('/legal/condiciones'), lastModified: LEGALES, changeFrequency: 'yearly', priority: 0.3 },
+    { url: url('/legal/eliminacion-datos'), lastModified: LEGALES, changeFrequency: 'yearly', priority: 0.3 },
     { url: url('/legal/aviso-legal'), lastModified: LEGALES, changeFrequency: 'yearly', priority: 0.3 },
     { url: url('/legal/cookies'), lastModified: LEGALES, changeFrequency: 'yearly', priority: 0.3 },
   ]
