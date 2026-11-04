@@ -15,6 +15,7 @@ const VARIABLE_DE: Record<keyof PaletaMarca, string | null> = {
   primario: '--brand',
   primarioInk: '--brand-ink',
   primarioSuave: '--brand-soft',
+  sobrePrimario: '--on-brand',
   acento: '--accent',
   acentoInk: '--accent-ink',
   acentoSuave: '--accent-soft',
