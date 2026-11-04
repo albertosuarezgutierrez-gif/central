@@ -73,7 +73,7 @@ async function abrir(m: Modo) {
 const ESP = { menuMs: 4_000, paginaMs: 4_000, formularioMs: 6_000, reintentoMs: 2_500 }
 const hayFormulario = async (p: import('playwright').Page) => (await p.getByText('Datos del vehículo').count()) > 0
 
-test('versión del explorador 0.3.49', () => assert.equal(EXPLORADOR_VERSION, '0.3.49'))
+test('versión del explorador 0.3.50', () => assert.equal(EXPLORADOR_VERSION, '0.3.50'))
 
 test('nota de diagnóstico: forma cerrada (solo contadores), acotada', () => {
   const n = notaDiagnosticoRamoPelayo({ tarjetas: 1, clic: true, cambio: false, pestana: false, dialogo: 0, modal: 1, reintento: true })

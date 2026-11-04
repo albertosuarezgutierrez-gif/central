@@ -61,7 +61,7 @@ async function abrir(m: Modo) {
 const ESP = { menuMs: 4_000, paginaMs: 4_000, formularioMs: 6_000 }
 const campos = async (p: Page) => { let n = 0; for (const f of p.frames()) n += await f.locator('input:not([type=hidden]),select,textarea').count(); return n }
 
-test('versión del explorador 0.3.49', () => assert.equal(EXPLORADOR_VERSION, '0.3.49'))
+test('versión del explorador 0.3.50', () => assert.equal(EXPLORADOR_VERSION, '0.3.50'))
 
 test('puras: la huella de pantalla cambia con ruta, títulos, acciones, nº de campos y desplegables (y no con el orden de nada más)', () => {
   const e: EstructuraPelayo = { ruta: '/x', titulos: ['Nuevo presupuesto'], acciones: ['AUTOS', 'HOGAR'], campos: 0, selects: [] }

@@ -9,6 +9,9 @@
 //            avance por id con precio…) y el clic SOLO por `pulsar()` de guard.ts. Las puertas autorizadas del explorador
 //            (`pulsarExploracionAutorizada`, `pulsarGuardadoDialogoAutorizado`) NO se usan aquí: son del explorador (cepo de
 //            test/regression-tarificador-rpa.test.ts); un control que solo pasa por ellas se rechaza en el pilotaje;
+//          · marcar (0.3.50) → radio/casilla con el MISMO validador (`marcar`: sin acción final ni onclick que envíe, ni campo de cuenta,
+//            tarjeta o firma) y la MISMA implementación del explorador (`marcarControl`: casilla ya marcada sin pulsar; input oculto a la
+//            vista → su `<label for>`, por `pulsar()`); sobre una `<label>` del inventario, actúa sobre SU casilla/radio inventariada;
 //          · rellenar/seleccionar → datos FICTICIOS (clave del catálogo o literal inocuo), nunca en un campo de cuenta, tarjeta o
 //            firma (`exigirCampoNoBancario` de guard.ts sobre el control VIVO antes de escribir);
 //          · esperar/volver/fin.
@@ -60,7 +63,7 @@ import { clasificar } from './errores.ts'
 import { exigirSinVerificacion } from './verificacion.ts'
 import { capturarInventarioExploracion, type InventarioExploracion } from './inventario-dom.ts'
 import { elegirDesplegableCustom, MOTIVO_DESPLEGABLE_CUSTOM } from './desplegable-custom.ts'
-import { ATRIBUTO_MARCA, PORTALES_EXPLORACION, abrirSesionEntrada, crearCtxEntrada, elegirNxDropdown, entrarAlPortal, localizar, valorParaControl } from './explorador.ts'
+import { ATRIBUTO_MARCA, PORTALES_EXPLORACION, abrirSesionEntrada, crearCtxEntrada, elegirNxDropdown, entrarAlPortal, localizar, marcarControl, valorParaControl } from './explorador.ts'
 import {
   cerrarFaseEntrada,
   exigirCampoNoBancario,
@@ -78,6 +81,8 @@ import {
   registrarPrecioVisto,
   tolerarRutasApp,
   permisosNavegacionEn,
+  TIPOS_INPUT_MARCABLES,
+  esTipoInputMarcable,
   type GuardEmision,
 } from './guard.ts'
 import { TOPES_PILOTAJE, esCampoTexto, leerComando, loteExploradorDe, motivoCampoProhibido, motivoValorLiteralProhibido, textoDiagnostico, type ComandoPilotaje } from './pilotaje-reglas.ts'
@@ -194,9 +199,18 @@ export async function ejecutarComando(page: Page, captura: InventarioExploracion
 
   // pulsar / rellenar / seleccionar: el ref tiene que ser de ESTE inventario.
   const inv = captura.inventario
-  const hit = indiceRefs(inv).get(c.ref)
-  const nodo = captura.nodos.get(c.ref)
+  let hit = indiceRefs(inv).get(c.ref)
+  let nodo = captura.nodos.get(c.ref)
+  /** El ref que ve el validador (el de la casilla si `marcar` llegó por su etiqueta). */
+  let refEfectiva = c.ref
   if (!hit || !nodo) return rechazo('ref_no_existe')
+  if (c.accion === 'marcar' && hit.el.tag === 'label') {
+    // 0.3.50: `marcar` sobre la ETIQUETA = sobre SU casilla/radio inventariada (mismo marco, misma identidad viva): el validador mira el input.
+    const ctl = await controlDeEtiquetaInventariado(captura, hit, nodo)
+    if (!ctl) return rechazo('validador', ['la etiqueta no es de una única casilla/botón de opción del inventario'])
+    ;({ hit, nodo } = ctl)
+    refEfectiva = ctl.ref
+  }
   const el = hit.el
   if (c.accion === 'inspeccionar') {
     // 0.3.37: SOLO LECTURA. Diagnóstico de accionabilidad del control (forma cerrada, sin PII), sin pulsarlo ni desplazarlo.
@@ -218,7 +232,7 @@ export async function ejecutarComando(page: Page, captura: InventarioExploracion
   let valorLiteral: string | null = null
   /** La opción que el VALIDADOR resolvió para `seleccionar` (forma inequívoca: valor o texto exacto de UNA opción). */
   let opcionValidada: string | null = null
-  const lote = loteExploradorDe(c, el)
+  const lote = loteExploradorDe(c.accion === 'marcar' ? { ...c, ref: refEfectiva } : c, el)
   if (lote !== null) {
     // EL validador del explorador, contra el inventario PROPIO: lista blanca, emisión, avance por id con precio, opciones…
     const v = validarRespuestaExplorador(lote, { inventario: inv, ramo: k.ramo, entrada: k.entrada, datosReales: null, presupuestoEnCurso: false, precioVisto: precioVistoEn(k.guard), permisos: permisosNavegacionEn(k.guard) })
@@ -282,8 +296,21 @@ export async function ejecutarComando(page: Page, captura: InventarioExploracion
       k.guard.comprobar()
       return hecho('seleccionado')
     }
-    // pulsar: una casilla ya marcada no se vuelve a pulsar (desmarcaría); lo demás, por la puerta del guard.
-    if (el.tag === 'input' && (el.type ?? '').toLowerCase() === 'checkbox' && (await loc.isChecked({ timeout: 5_000 }))) return hecho('ya marcada')
+    // marcar (y pulsar sobre un radio/casilla): la implementación del explorador (`marcarControl`): una casilla ya marcada no se vuelve a
+    // pulsar (desmarcaría), un radio ya marcado re-emite su `change` y, si el input está oculto a la vista, se pulsa su `<label for>`; todo
+    // por la puerta del guard (`k.pulsar`).
+    const tipoCtl = (el.type ?? '').toLowerCase()
+    if (c.accion === 'marcar' || (el.tag === 'input' && esTipoInputMarcable(tipoCtl))) {
+      await k.pausaAccion()
+      const m = await marcarControl(loc, nodo.marco, el, k.pulsar, k.guard)
+      if (m.yaMarcada) return hecho('ya marcada')
+      await page.waitForLoadState('domcontentloaded', { timeout: TOPE_PASO_MS }).catch(() => undefined)
+      await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined)
+      k.guard.comprobar()
+      if (m.estado === 'marcado') return hecho(c.accion === 'marcar' ? 'marcado' : 'pulsado')
+      if (m.estado === 'por_etiqueta') return hecho('marcado por su etiqueta')
+      return hecho(`pulsado sin quedar marcado (${m.estado})`)
+    }
     await k.pulsar(loc)
     await page.waitForLoadState('domcontentloaded', { timeout: TOPE_PASO_MS }).catch(() => undefined)
     await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined)
@@ -304,6 +331,36 @@ export async function ejecutarComando(page: Page, captura: InventarioExploracion
   } finally {
     await loc.evaluate((n, at) => n.removeAttribute(at), ATRIBUTO_MARCA, { timeout: 2_000 }).catch(() => undefined)
   }
+}
+
+/**
+ * 0.3.50: la casilla/radio de una `<label>` del inventario: su `control` (input checkbox/radio con id, ÚNICA etiqueta y `for` = ese id),
+ * inventariado en el MISMO marco con ese id y tipo, y el MISMO nodo vivo que `label.control`. Si no casa todo: `null` (fail-closed).
+ */
+async function controlDeEtiquetaInventariado(
+  captura: InventarioExploracion,
+  hit: NonNullable<ReturnType<ReturnType<typeof indiceRefs>['get']>>,
+  nodo: NonNullable<ReturnType<InventarioExploracion['nodos']['get']>>,
+): Promise<{ hit: typeof hit; nodo: typeof nodo; ref: string } | null> {
+  const ctl = await nodo.handle
+    .evaluate((n, tipos) => {
+      const l = n as HTMLLabelElement
+      if (l.tagName !== 'LABEL') return null
+      const c = l.control as HTMLInputElement | null
+      if (!c || c.tagName !== 'INPUT' || !c.id || l.htmlFor !== c.id || !c.labels || c.labels.length !== 1) return null
+      const tipo = String(c.type).toLowerCase()
+      return tipos.includes(tipo) ? { id: c.id, tipo } : null
+    }, [...TIPOS_INPUT_MARCABLES])
+    .catch(() => null)
+  if (!ctl) return null
+  const candidatos = hit.marco.elementos.filter((e) => e.tag === 'input' && e.id === ctl.id && (e.type ?? '').toLowerCase() === ctl.tipo && typeof e.ref === 'string')
+  if (candidatos.length !== 1) return null
+  const ref = candidatos[0].ref!
+  const hit2 = indiceRefs(captura.inventario).get(ref)
+  const nodo2 = captura.nodos.get(ref)
+  if (!hit2 || !nodo2 || hit2.marco !== hit.marco) return null
+  const mismo = await nodo.handle.evaluate((l, i) => (l as HTMLLabelElement).control === i, nodo2.handle).catch(() => false)
+  return mismo ? { hit: hit2, nodo: nodo2, ref } : null
 }
 
 /** Espera a que una pestaña recién abierta tenga URL real (un `window.open()` empieza en about:blank) y cargue. Nunca lanza. */

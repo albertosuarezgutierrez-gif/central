@@ -1,6 +1,6 @@
 // MODO PILOTADO del tarificador RPA (03/11/2026) — reglas PURAS del worker. El bucle está en `pilotaje.ts`.
 //
-// El operador manda comandos {accion: pulsar|rellenar|seleccionar|inspeccionar|cerrar_modal|esperar|volver|fin, ref?, valor?, dato?, efecto?, ms?} por la BD.
+// El operador manda comandos {accion: pulsar|marcar|rellenar|seleccionar|inspeccionar|cerrar_modal|esperar|volver|fin, ref?, valor?, dato?, efecto?, ms?} por la BD.
 // Aquí se REVALIDAN enteros (asegura solo miró la forma; un comando escrito por SQL ni eso) y se traducen al lenguaje de acciones
 // del explorador para pasar por SU validador (`validarRespuestaExplorador`, contra el inventario PROPIO de la pantalla). Ninguna
 // regla de aquí autoriza un clic: los clics van SIEMPRE por las puertas de guard.ts (`pulsar`, `pulsarExploracionAutorizada`,
@@ -14,7 +14,8 @@ export const TOPES_PILOTAJE = Object.freeze({ maxComandos: 60, maxMs: 30 * 60_00
 
 /** `inspeccionar` (0.3.37): diagnóstico de accionabilidad de un control SIN pulsarlo; nunca toca el portal. */
 /** `cerrar_modal` (0.3.38): cierra un modal INFORMATIVO (sin campos ni términos de acción final) por Escape › botón de cierre › fondo; sin ref. */
-export const ACCIONES_PILOTAJE = ['pulsar', 'rellenar', 'seleccionar', 'inspeccionar', 'cerrar_modal', 'esperar', 'volver', 'fin'] as const
+/** `marcar` (0.3.50): radio/casilla (o su `<label for>` si el input está oculto) con el validador y la implementación del explorador; sin efecto. */
+export const ACCIONES_PILOTAJE = ['pulsar', 'marcar', 'rellenar', 'seleccionar', 'inspeccionar', 'cerrar_modal', 'esperar', 'volver', 'fin'] as const
 export type AccionPilotaje = (typeof ACCIONES_PILOTAJE)[number]
 /** `guardar_presupuesto` NO: el guardado del presupuesto tiene su puerta y su PDF en el explorador, no se pilota. */
 export const EFECTOS_PULSAR = ['siguiente_pantalla', 'calcular', 'abrir_seccion', 'ver_resultado'] as const
@@ -24,6 +25,7 @@ export type ComandoPilotaje =
   | { accion: 'rellenar'; ref: string; valor: string }
   | { accion: 'rellenar'; ref: string; dato: string }
   | { accion: 'seleccionar'; ref: string; valor: string }
+  | { accion: 'marcar'; ref: string }
   | { accion: 'inspeccionar'; ref: string }
   | { accion: 'cerrar_modal' }
   | { accion: 'esperar'; ms: number }
@@ -41,7 +43,7 @@ export function leerComando(v: unknown): { ok: true; c: ComandoPilotaje } | { ok
   const accion = ACCIONES_PILOTAJE.find((a) => a === c.accion)
   if (!accion) return { ok: false, errores: ['accion fuera de lista'] }
   const permitidas: Record<AccionPilotaje, string[]> = {
-    pulsar: ['accion', 'ref', 'efecto'], rellenar: ['accion', 'ref', 'valor', 'dato'], seleccionar: ['accion', 'ref', 'valor'], inspeccionar: ['accion', 'ref'], cerrar_modal: ['accion'],
+    pulsar: ['accion', 'ref', 'efecto'], marcar: ['accion', 'ref'], rellenar: ['accion', 'ref', 'valor', 'dato'], seleccionar: ['accion', 'ref', 'valor'], inspeccionar: ['accion', 'ref'], cerrar_modal: ['accion'],
     esperar: ['accion', 'ms'], volver: ['accion'], fin: ['accion'],
   }
   const errores: string[] = []
@@ -65,6 +67,7 @@ export function leerComando(v: unknown): { ok: true; c: ComandoPilotaje } | { ok
       if (!efecto) return { ok: false, errores: ['efecto fuera de lista'] }
       return { ok: true, c: { accion, ref, efecto } }
     }
+    case 'marcar':
     case 'inspeccionar': {
       if (!ref) return { ok: false, errores: ['ref no válido'] }
       return { ok: true, c: { accion, ref } }
@@ -153,6 +156,8 @@ export function loteExploradorDe(c: ComandoPilotaje, el: ElementoInventario): un
     if (el.tag === 'input' && !['submit', 'button', 'image', 'reset'].includes(tipo)) return envolver({ accion: 'marcar', ref: c.ref })
     return envolver({ accion: 'avanzar', ref: c.ref, efectoEsperado: c.efecto, confianza: 'alta' })
   }
+  // 0.3.50: `marcar` es SIEMPRE la acción `marcar` del explorador (el validador exige radio/casilla sin acción final ni onclick que envíe).
+  if (c.accion === 'marcar') return envolver({ accion: 'marcar', ref: c.ref })
   if (c.accion === 'seleccionar') return envolver({ accion: 'elegir', ref: c.ref, opcion: c.valor })
   if (c.accion === 'rellenar' && 'dato' in c) return envolver({ accion: 'rellenar', ref: c.ref, dato: c.dato })
   return null

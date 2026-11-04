@@ -86,7 +86,7 @@ function contexto(guard: GuardEmision) {
 }
 const ids = (inv: InventarioDom) => inv.marcos.flatMap((m) => m.elementos.map((e) => e.id)).filter(Boolean)
 
-test('versión del explorador 0.3.49', () => assert.equal(EXPLORADOR_VERSION, '0.3.49'))
+test('versión del explorador 0.3.50', () => assert.equal(EXPLORADOR_VERSION, '0.3.50'))
 
 test('urlDePortalCompania: https de un dominio de la compañía (o subdominio), sin puerto ni credenciales; lo demás no', () => {
   assert.equal(urlDePortalCompania('https://apps.pelayo.com/contratacion-autos?x=1', 'pelayo'), true)
