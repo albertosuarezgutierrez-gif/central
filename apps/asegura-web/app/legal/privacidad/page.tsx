@@ -509,7 +509,11 @@ export default function Privacidad() {
             ese plazo se borra; quedan solo la fecha y quién escribió. Los datos en bruto que nos
             entrega Meta se reducen a lo imprescindible en cuanto se procesan y, si no se ha
             podido, a los 30 días. Puedes pedir en cualquier momento que borremos una conversación
-            entera siguiendo lo que se explica en{' '}
+            entera siguiendo las{' '}
+            <Link href="/legal/eliminacion-datos" style={enlace}>
+              instrucciones de eliminación de datos
+            </Link>{' '}
+            o lo que se explica en{' '}
             <a href="#derechos" style={enlace}>
               tus derechos
             </a>
