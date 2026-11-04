@@ -1,4 +1,4 @@
--- 2026-11-04d — PERMISOS DE NAVEGACIÓN del tarificador RPA en BD (explorador 0.3.45). Código: packages/module-tarificacion/src/
+-- 2026-11-04d — PERMISOS DE NAVEGACIÓN del tarificador RPA en BD (explorador 0.3.46). Código: packages/module-tarificacion/src/
 -- permisos-navegacion.ts (validación + fusión, PURA), apps/asegura/lib/tarificador-permisos-navegacion*.ts (lectura y paso al worker),
 -- services/tarificador-rpa (revalida y aplica: guard.ts `fijarPermisosNavegacion`).
 --
@@ -6,9 +6,12 @@
 -- compañía sin reconstruir la imagen del worker. Solo AÑADEN; dos tipos con esquema CERRADO (el validador de código es la verdad: una fila
 -- que no pase se IGNORA y se registra en el log del worker/asegura con su código, nunca abre más):
 --   · 'ruta_tolerada' {origen, ruta, pulsable}: origen https EXACTO de un dominio de la compañía (`DOMINIOS_PORTAL_COMPANIA`), ruta EXACTA
---     sin comodines/query/codificación y sin verbos de acción final; deja de contar como emisión SOLO en navegaciones GET (documento/marco).
---     `pulsable: true` = también en el href de un control que lleve a ella. Nunca en POST, query ni cuerpos.
---   · 'avance_texto' {texto, origen, rutaMarco, tag, contenedor?, maxUsos}: un avance tipo «Aceptar» por texto EXACTO, en el marco de ese
+--     sin comodines/query/codificación y sin verbos de acción final en NINGÚN segmento (tampoco padres «emision»/«contratacion»: eso es
+--     solo de código), y su URL no puede casar el patrón de emisión: lo único que relaja es que, en una navegación GET (documento/marco)
+--     a ESA ruta, el texto de la query (p. ej. un `redirect_uri`) no cuente; los nombres de parámetro de acción se siguen mirando.
+--     `pulsable: true` = también en el href de un control que lleve a ella. Nunca en POST ni cuerpos.
+--   · 'avance_texto' {texto, origen, rutaMarco, tag, contenedor?, maxUsos}: un avance por texto EXACTO de una LISTA BLANCA cerrada
+--     (aceptar, siguiente, continuar, cerrar, entendido, volver, cancelar; cualquier otro se ignora), en el marco de ese
 --     origen + ruta EXACTOS, tag button|a|input, dentro de `contenedor` (selector simple) si se da, ≤ maxUsos (1-3) por trabajo. Solo lo
 --     pulsa la puerta del explorador (`pulsarExploracionAutorizada`), que lo repite VIVO (único, sin precio, sin títulos de emisión…).
 -- 🚨 TARIFICAR ≠ EMITIR. Los bloqueos DUROS siguen en código y la BD no los toca: verbos de acción final (emitir, contratar, pagar,
@@ -20,9 +23,11 @@
 -- todas las corredurías; no hay datos de clientes ni de nadie. Sin PII: orígenes, rutas y rótulos de botones.
 --
 -- Auditoría APPEND-ONLY: `tarificador_permisos_navegacion_auditoria` recibe por trigger cada alta y cada cambio de estado (fila entera).
--- Nadie borra: DELETE prohibido por trigger en las dos tablas (desactivar = `activo = false`); en la de permisos solo cambian `activo`,
+-- Nadie borra: DELETE prohibido por trigger de fila y TRUNCATE por trigger de sentencia en las dos tablas (desactivar = `activo = false`); en la de permisos solo cambian `activo`,
 -- `desactivado_por` y `desactivado_at` (otro permiso = otra fila). La app (prisma_seguros) SOLO LEE la tabla de permisos; las altas las
 -- hace el operador por SQL (plantilla al final).
+-- Fuera de estas barreras POR DISEÑO: `postgres` (dueño, puede DROP/ALTER ... DISABLE TRIGGER) y `service_role` (BYPASSRLS, sin GRANT
+-- aquí). Son los roles del operador; la auditoría protege contra la app y contra errores, no contra el dueño de la BD.
 --
 -- ⚠️ NO APLICADA. En transacción. Se deshace con el bloque ROLLBACK del final.
 
@@ -102,13 +107,28 @@ DROP TRIGGER IF EXISTS trg_permisos_nav_auditoria_solo_alta ON seguros.tarificad
 CREATE TRIGGER trg_permisos_nav_auditoria_solo_alta BEFORE UPDATE OR DELETE ON seguros.tarificador_permisos_navegacion_auditoria
   FOR EACH ROW EXECUTE FUNCTION seguros.permisos_nav_auditoria_solo_alta();
 
+-- TRUNCATE no dispara los triggers de fila: trigger de SENTENCIA en las dos tablas (vacía la tabla sin pasar por la auditoría).
+CREATE OR REPLACE FUNCTION seguros.permisos_nav_sin_truncate() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION '%: TRUNCATE prohibido (desactiva con activo = false)', TG_TABLE_NAME;
+END $$;
+
+DROP TRIGGER IF EXISTS trg_permisos_nav_sin_truncate ON seguros.tarificador_permisos_navegacion;
+CREATE TRIGGER trg_permisos_nav_sin_truncate BEFORE TRUNCATE ON seguros.tarificador_permisos_navegacion
+  FOR EACH STATEMENT EXECUTE FUNCTION seguros.permisos_nav_sin_truncate();
+DROP TRIGGER IF EXISTS trg_permisos_nav_auditoria_sin_truncate ON seguros.tarificador_permisos_navegacion_auditoria;
+CREATE TRIGGER trg_permisos_nav_auditoria_sin_truncate BEFORE TRUNCATE ON seguros.tarificador_permisos_navegacion_auditoria
+  FOR EACH STATEMENT EXECUTE FUNCTION seguros.permisos_nav_sin_truncate();
+
 -- Permisos (mismo patrón que tarificador_pilotaje_*): RLS sin policies, nada público; la app SOLO lee los permisos y no ve la auditoría.
 ALTER TABLE seguros.tarificador_permisos_navegacion ENABLE ROW LEVEL SECURITY;
 ALTER TABLE seguros.tarificador_permisos_navegacion_auditoria ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON seguros.tarificador_permisos_navegacion, seguros.tarificador_permisos_navegacion_auditoria FROM PUBLIC, anon, authenticated, crm_seguros;
 REVOKE ALL ON seguros.tarificador_permisos_navegacion, seguros.tarificador_permisos_navegacion_auditoria FROM prisma_seguros;
 GRANT SELECT ON seguros.tarificador_permisos_navegacion TO prisma_seguros;
-REVOKE ALL ON FUNCTION seguros.permisos_nav_guardia(), seguros.permisos_nav_auditoria_solo_alta() FROM PUBLIC, anon, authenticated;
+-- Redundante con el REVOKE ALL (queda explícito y lo vigila un test): la app nunca vacía estas tablas.
+REVOKE TRUNCATE ON seguros.tarificador_permisos_navegacion, seguros.tarificador_permisos_navegacion_auditoria FROM prisma_seguros;
+REVOKE ALL ON FUNCTION seguros.permisos_nav_guardia(), seguros.permisos_nav_auditoria_solo_alta(), seguros.permisos_nav_sin_truncate() FROM PUBLIC, anon, authenticated;
 
 COMMIT;
 
@@ -118,10 +138,11 @@ COMMIT;
 --   select has_table_privilege('prisma_seguros', 'seguros.tarificador_permisos_navegacion', 'select');           -- t
 --   select has_table_privilege('prisma_seguros', 'seguros.tarificador_permisos_navegacion', 'insert');           -- f
 --   select has_table_privilege('prisma_seguros', 'seguros.tarificador_permisos_navegacion', 'delete');           -- f
+--   select has_table_privilege('prisma_seguros', 'seguros.tarificador_permisos_navegacion', 'truncate');         -- f
 --   select has_table_privilege('prisma_seguros', 'seguros.tarificador_permisos_navegacion_auditoria', 'select'); -- f
 --   select has_table_privilege('anon', 'seguros.tarificador_permisos_navegacion', 'select');                     -- f
 --   select tgname from pg_trigger where tgrelid in ('seguros.tarificador_permisos_navegacion'::regclass,
---     'seguros.tarificador_permisos_navegacion_auditoria'::regclass) and not tgisinternal;                         -- 2 triggers
+--     'seguros.tarificador_permisos_navegacion_auditoria'::regclass) and not tgisinternal;                         -- 4 triggers
 --
 -- ─── ROLLBACK (con ninguna fila que conservar; la auditoría se pierde: expórtala antes si hace falta) ────────
 --   BEGIN;
@@ -129,6 +150,7 @@ COMMIT;
 --   DROP TABLE IF EXISTS seguros.tarificador_permisos_navegacion_auditoria;
 --   DROP FUNCTION IF EXISTS seguros.permisos_nav_guardia();
 --   DROP FUNCTION IF EXISTS seguros.permisos_nav_auditoria_solo_alta();
+--   DROP FUNCTION IF EXISTS seguros.permisos_nav_sin_truncate();
 --   COMMIT;
 --   (El código sigue funcionando sin la tabla: asegura lee 0 permisos y el worker hace lo de siempre.)
 --

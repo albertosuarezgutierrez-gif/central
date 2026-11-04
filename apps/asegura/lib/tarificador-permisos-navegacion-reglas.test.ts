@@ -1,6 +1,7 @@
-// 0.3.45 · Permisos de navegación de BD: alcance por modo de lo que viaja al worker (asegura). La validación es la del módulo.
+// 0.3.46 · Permisos de navegación de BD: alcance por modo de lo que viaja al worker (asegura). La validación es la del módulo.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { permisosNavegacionDe } from '@central/module-tarificacion'
 import { entradasParaPermisos, permisosParaWorker } from './tarificador-permisos-navegacion-reglas.ts'
 
@@ -22,7 +23,7 @@ test('exploración/pilotaje: las de SU entrada, canónicas; la del verbo final s
     assert.deepEqual(entradasParaPermisos(modo, 'pelayo', 'auto', E), [E])
     const r = permisosParaWorker(modo, { ...T, entrada: E }, [ruta, avance, emitir])
     assert.equal(r.filas?.length, 2)
-    assert.deepEqual(r.ignorados.map((i) => i.motivo), ['texto_accion_final'])
+    assert.deepEqual(r.ignorados.map((i) => i.motivo), ['texto_fuera_de_lista'])
     // Lo que llega al worker se revalida igual (mismo resultado, sin ignorados).
     const w = permisosNavegacionDe(E, r.filas)
     assert.deepEqual(w.ignorados, [])
@@ -42,4 +43,12 @@ test('tarificar: solo RUTAS de las entradas de su compañía/ramo; avances nunca
 
 test('fail-closed: filas ilegibles o vacías → nada', () => {
   for (const f of [null, undefined, 'x', { filas: [] }, []]) assert.equal(permisosParaWorker('exploracion', { ...T, entrada: E }, f).filas, null)
+})
+
+test('(4) migración: TRUNCATE bloqueado por trigger en las dos tablas y revocado explícitamente a prisma_seguros', () => {
+  const sql = readFileSync(new URL('../prisma/sql/2026-11-04d_tarificador_permisos_navegacion.sql', import.meta.url), 'utf8')
+  const ejecutable = sql.split('\n').filter((l) => !l.trimStart().startsWith('--')).join('\n')
+  for (const t of ['tarificador_permisos_navegacion', 'tarificador_permisos_navegacion_auditoria'])
+    assert.match(ejecutable, new RegExp(`BEFORE TRUNCATE ON seguros\\.${t}\\s+FOR EACH STATEMENT`), t)
+  assert.match(ejecutable, /REVOKE TRUNCATE ON seguros\.tarificador_permisos_navegacion, seguros\.tarificador_permisos_navegacion_auditoria FROM prisma_seguros/)
 })

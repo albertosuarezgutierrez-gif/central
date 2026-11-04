@@ -418,7 +418,7 @@ export async function ejecutarPilotaje(p: EntradaPilotaje): Promise<number> {
   try {
     browser = await chromium.launch({ headless: true })
     // MISMO camino que el explorador (04/11/2026): sesión, ctx de entrada y login + entrada son las funciones del explorador, sin copia.
-    // 0.3.45: permisos de BD de la entrada, REVALIDADOS (rutas GET/href; un avance de BD pasa el validador pero el pilotaje solo pulsa por
+    // 0.3.46: permisos de BD de la entrada, REVALIDADOS (rutas GET/href; un avance de BD pasa el validador pero el pilotaje solo pulsa por
     // `pulsar()`, que sigue bloqueando «aceptar»: el avance de BD es del explorador). Sin valores en el log.
     const rp = permisosNavegacionDe(entradaClave, trabajo.permisosNavegacion)
     if (rp.ignorados.length > 0 || rp.permisos.rutas.length > 0 || rp.permisos.avances.length > 0) log('permisos_navegacion', resumenPermisos(rp))

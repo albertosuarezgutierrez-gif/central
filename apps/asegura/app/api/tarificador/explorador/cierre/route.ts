@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     // Re-validación con las MISMAS reglas que el paso: con datos reales, elegir/marcar solo con valor conocido. Sin riesgo
     // legible (`null`), esos pasos no entran en el mapa (conservador).
     const datosReales = e.conDatosReales ? { riesgo: await riesgoDeExploracion(e).catch(() => null) } : null
-    // 0.3.45: los mismos permisos de navegación de BD que validaron cada paso (fail-closed: sin tabla = solo código).
+    // 0.3.46: los mismos permisos de navegación de BD que validaron cada paso (fail-closed: sin tabla = solo código).
     const permisos = await permisosNavegacionDeEntrada(e.entrada)
     let resumen: { pantallas: number; huecos: number; resultado: boolean; coste: { llamadas: number; eurEstimado: number } } | null = null
     const out = await ejecutarCierre<Bd>({

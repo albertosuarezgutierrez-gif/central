@@ -119,7 +119,7 @@ export type EntradaPaso = {
   incidencias?: IncidenciaEjecucion[]
   /** Vista aria ya saneada (opcional). */
   vistaAria?: string
-  /** 0.3.45: permisos de navegación de BD YA validados de ESTA entrada (los mismos que revalida el worker). Sin la clave = solo código. */
+  /** 0.3.46: permisos de navegación de BD YA validados de ESTA entrada (los mismos que revalida el worker). Sin la clave = solo código. */
   permisos?: PermisosNavegacion | null
   /**
    * `login` = fase de LOGIN ASISTIDO (14/10/2026): prompt y validador propios (`validarRespuestaLogin`: solo claves

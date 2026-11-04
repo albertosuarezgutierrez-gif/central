@@ -1,4 +1,4 @@
-// PERMISOS DE NAVEGACIÓN del tarificador RPA (0.3.45) — la LECTURA de BD. Reglas puras en `tarificador-permisos-navegacion-reglas.ts`.
+// PERMISOS DE NAVEGACIÓN del tarificador RPA (0.3.46) — la LECTURA de BD. Reglas puras en `tarificador-permisos-navegacion-reglas.ts`.
 // Tabla global (sin correduria_id: describe la navegación de un portal, como `ENTRADAS_EXPLORACION`), SOLO lectura para la app.
 // 🚨 Fail-closed: tabla ausente, BD caída o fila rara → 0 permisos (el worker hace lo de siempre). Nunca abre más que el código.
 

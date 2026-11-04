@@ -530,7 +530,7 @@ export type TrabajoParaWorker = {
   /** Solo en `modo = 'exploracion'`: la entrada cerrada y si va ligada a una petición real (la verdad: `cliente_id`). */
   exploracion?: { entrada: string; conDatosReales: boolean }
   /**
-   * 0.3.45: permisos de navegación de BD YA validados (filas canónicas; el worker los revalida). Solo exploración, pilotaje (los de su
+   * 0.3.46: permisos de navegación de BD YA validados (filas canónicas; el worker los revalida). Solo exploración, pilotaje (los de su
    * entrada) y tarificar (solo rutas de las entradas de su compañía/ramo); nunca emisión ni humo. Sin la clave = ninguno.
    */
   permisosNavegacion?: unknown[]
@@ -618,7 +618,7 @@ export async function trabajoParaWorker(id: string, modosWorker: readonly string
   }
   const base = { id: f.id, compania: f.compania, ramo: f.ramo, riesgo, leaseHasta: f.lease_hasta.toISOString(), modo }
   if (modo === 'tarificar') {
-    // 0.3.45: solo las RUTAS exactas de BD de las entradas de esta compañía/ramo (fail-closed: sin tabla o sin filas, nada).
+    // 0.3.46: solo las RUTAS exactas de BD de las entradas de esta compañía/ramo (fail-closed: sin tabla o sin filas, nada).
     const permisosNavegacion = await permisosNavegacionParaWorker('tarificar', { id: f.id, compania: f.compania, ramo: f.ramo, entrada: null })
     return permisosNavegacion ? { ...base, permisosNavegacion } : base
   }

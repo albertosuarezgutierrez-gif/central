@@ -35,7 +35,7 @@ export type Trabajo = {
   /** MODO PILOTADO (03/11/2026): la entrada cerrada; la sesión es siempre sintética (riesgo `{}`). */
   pilotaje?: { entrada: string }
   /**
-   * 0.3.45: filas de permisos de navegación de BD (`seguros.tarificador_permisos_navegacion`) que asegura ya validó. SIN VALIDAR aquí:
+   * 0.3.46: filas de permisos de navegación de BD (`seguros.tarificador_permisos_navegacion`) que asegura ya validó. SIN VALIDAR aquí:
    * el worker las vuelve a pasar por `permisosNavegacionDe` (exploración/pilotaje) o `permisosTarificacionDe` (tarificar). Ausente = ninguna.
    */
   permisosNavegacion?: unknown

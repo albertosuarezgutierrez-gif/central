@@ -1,11 +1,11 @@
-// PERMISOS DE NAVEGACIÓN EN BD (0.3.45, 04/11/2026) — validación y fusión PURAS. Sin BD, sin red, sin Playwright.
+// PERMISOS DE NAVEGACIÓN EN BD (0.3.46, 04/11/2026) — validación y fusión PURAS. Sin BD, sin red, sin Playwright.
 //
 // Para pilotar/explorar una compañía nueva sin reconstruir la imagen del worker, el operador puede AÑADIR por entrada (fila de
 // `seguros.tarificador_permisos_navegacion`, SQL 2026-11-04) dos tipos de permiso ESTRECHO:
-//   (a) `ruta_tolerada` — {origen https EXACTO, ruta EXACTA sin comodines, pulsable}: esa ruta deja de contar como emisión SOLO en una
-//       navegación GET (documento/marco). `pulsable: true` = además se neutraliza en el href de un enlace/botón que lleve a ella (el
+//   (a) `ruta_tolerada` — {origen https EXACTO, ruta EXACTA sin comodines, pulsable}: en una navegación GET (documento/marco) a esa ruta
+//       su query deja de contar (0.3.46: la RUTA misma nunca puede casar emisión ni llevar padres «emision»/«contratacion»: eso es código). `pulsable: true` = además se neutraliza en el href de un enlace/botón que lleve a ella (el
 //       clic sigue pasando por todo el guard; si provoca un POST, la red lo mira sin el permiso). Nunca en POST/cuerpos/query.
-//   (b) `avance_texto` — {texto EXACTO, origen + ruta del marco EXACTOS, tag, contenedor opcional, maxUsos}: un avance «Aceptar»-like
+//   (b) `avance_texto` — {texto EXACTO de `TEXTOS_AVANCE_BD_PERMITIDOS`, origen + ruta del marco EXACTOS, tag, contenedor opcional, maxUsos}: un avance «Aceptar»-like
 //       que el guard bloquea por «aceptar» y que solo se pulsa por `pulsarExploracionAutorizada` (worker), que lo repite VIVO.
 //
 // 🚨 TARIFICAR ≠ EMITIR. Los bloqueos DUROS siguen en código y la BD NO los relaja: verbos/rótulos de acción final (emitir, contratar,
@@ -33,7 +33,7 @@ export type PermisosNavegacion = Readonly<{ entrada: string; rutas: readonly Per
 export type MotivoPermisoIgnorado =
   | 'no_es_lista' | 'tope_filas' | 'no_objeto' | 'id_invalido' | 'id_duplicado' | 'entrada_desconocida' | 'entrada_distinta' | 'inactivo'
   | 'tipo_desconocido' | 'datos_malformados' | 'clave_desconocida' | 'origen_invalido' | 'origen_fuera_de_compania' | 'ruta_invalida'
-  | 'ruta_con_comodin' | 'ruta_de_accion_final' | 'pulsable_invalido' | 'texto_invalido' | 'texto_accion_final' | 'tag_invalido'
+  | 'ruta_con_comodin' | 'ruta_de_accion_final' | 'pulsable_invalido' | 'texto_invalido' | 'texto_fuera_de_lista' | 'texto_accion_final' | 'tag_invalido'
   | 'contenedor_invalido' | 'max_usos_invalido' | 'tope_tipo' | 'no_aplica_tarificar'
 export type PermisoIgnorado = { id: string | null; motivo: MotivoPermisoIgnorado }
 export type ResultadoPermisos = { permisos: PermisosNavegacion; ignorados: PermisoIgnorado[] }
@@ -68,12 +68,13 @@ const RE_ORIGEN = /^https:\/\/[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](
 const RE_SEGMENTO = /^[A-Za-z0-9._~-]{1,80}$/
 const MAX_RUTA = 200
 /**
- * Palabras de ACCIÓN FINAL o de dinero que NINGÚN segmento de ruta de BD puede llevar (además de `RE_ACCION_REAL_TRAS_PREFIJO`). En los
- * segmentos ANTERIORES al último se descuentan SOLO los sustantivos exactos «emision» y «contratacion» (aplicaciones de TARIFICAR que
- * viven bajo esos nombres: Mapfre NSE `/app/emision/`, Pelayo `/contratacion-autos/`); el último segmento no admite ni eso.
+ * Palabras de ACCIÓN FINAL, de dinero o de guardado/envío que NINGÚN segmento de ruta de BD puede llevar (además de
+ * `RE_ACCION_REAL_TRAS_PREFIJO`), en NINGUNA posición. Revisión 0.3.46: ya NO se descuentan los sustantivos padre «emision» /
+ * «contratacion» (Mapfre NSE `/app/emision/`, Pelayo `/contratacion-autos/`): con padre de emisión en la ruta, la tolerancia es SOLO de
+ * código (`rutasAppTolerables`), porque cualquier último segmento no listado (`/app/emision/{guardar,enviar,submit,store,ok}`) colaba y
+ * la BD relajaba un bloqueo de código. Además, la ruta aceptada no puede casar `pareceEmision` (ver `validarRuta`).
  */
-const RE_SEGMENTO_PROHIBIDO = /emit|emis|emiss|contrat|contract|confirm|firm|signatur|assina|pag|pay|checkout|formaliz|grab|suplement|anul|baja|domicili|tarjet|card|iban|banc|bank|cuenta|account|poliz|policy|cobr|charge|purchase|compra/i
-const SUSTANTIVOS_PADRE_TOLERADOS = /emision|contratacion/gi
+const RE_SEGMENTO_PROHIBIDO = /emit|emis|emiss|contrat|contract|confirm|firm|signatur|sign|assina|pag|pay|checkout|formaliz|grab|guard|envi|send|submit|finaliz|store|archiv|generar|suplement|anul|baja|domicili|tarjet|card|iban|banc|bank|cuenta|account|poliz|policy|cobr|charge|purchase|compra/i
 /** Texto de avance: letras/cifras sueltas por un espacio tras normalizar (sin tildes, minúsculas), 1-40 car. */
 const RE_TEXTO_AVANCE = /^[a-z0-9]+(?: [a-z0-9]+){0,5}$/
 /**
@@ -82,6 +83,12 @@ const RE_TEXTO_AVANCE = /^[a-z0-9]+(?: [a-z0-9]+){0,5}$/
  * puede autorizar; «Tarificar», «Precio», «Contratar», «Emitir», «Pagar», «Firmar», «Confirmar»… no.
  */
 export const RE_TEXTO_AVANCE_BD_PROHIBIDO = /emit|emis|contrat|contract|confirm|firm|sign|pag|pay|formaliz|tarific|precio|price|iban|tarjet|card|cuenta|banc|domicili|grab|guard|save|archiv|suplement|anul|baja|envi|send|solicit|finaliz|termin|complet|compr|suscri|acepto|polic|poliz/
+/**
+ * Revisión 0.3.46: LISTA BLANCA CERRADA de textos de avance de BD (ya normalizados: sin tildes, minúsculas, un espacio). Solo rótulos de
+ * cerrar/aceptar un aviso o pasar de paso; cualquier otro texto (también «aceptar oferta/condiciones», «alta», «venta», «conforme», «de
+ * acuerdo», «ok»…) se IGNORA con `texto_fuera_de_lista`. La lista negra de arriba sigue corriendo detrás (defensa en profundidad).
+ */
+export const TEXTOS_AVANCE_BD_PERMITIDOS: readonly string[] = Object.freeze(['aceptar', 'siguiente', 'continuar', 'cerrar', 'entendido', 'volver', 'cancelar'])
 /** Títulos de pantalla con los que un avance de BD NUNCA se pulsa (inventario y, VIVO, el worker sobre todos los marcos). */
 export const NUNCA_TITULO_AVANCE_BD = /tarific|revisi|emisi|contrat|pago|pagar|firma|iban|resumen|formaliz|confirm|precio|tarjeta|cuenta|poliza|oferta final/
 /** Contenedor: selector SIMPLE (tag con hasta 3 `.clase`/`#id`), sin combinadores, atributos ni pseudoclases. */
@@ -117,17 +124,14 @@ function rutaExacta(v: unknown): { ruta: string } | { motivo: MotivoPermisoIgnor
   return { ruta: r }
 }
 
-/** ¿Algún segmento de la ruta nombra una acción final? El último, entero; los anteriores sin los sustantivos tolerados. PURA. */
+/** ¿Algún segmento de la ruta (cualquiera, también los padres) nombra una acción final? PURA. */
 export function rutaNombraAccionFinal(ruta: string): boolean {
-  const segs = ruta.split('/').filter(Boolean).map((s) => plano(s))
-  return segs.some((s, i) => {
-    const t = i === segs.length - 1 ? s : s.replace(SUSTANTIVOS_PADRE_TOLERADOS, '')
-    return RE_SEGMENTO_PROHIBIDO.test(t) || RE_ACCION_REAL_TRAS_PREFIJO.test(t)
-  })
+  return ruta.split('/').filter(Boolean).map((s) => plano(s)).some((t) => RE_SEGMENTO_PROHIBIDO.test(t) || RE_ACCION_REAL_TRAS_PREFIJO.test(t))
 }
 
 /** ¿El texto (YA normalizado) de un avance nombra algo que la BD no puede autorizar nunca? PURA. Lo repite el worker al recibirlo. */
 export function textoAvanceProhibido(texto: string): boolean {
+  if (!TEXTOS_AVANCE_BD_PERMITIDOS.includes(texto)) return true
   if (!RE_TEXTO_AVANCE.test(texto) || texto.length > 40) return true
   if (tieneLetraAjena(texto) || rotuloNombraAccionFinal(texto) || RE_TEXTO_AVANCE_BD_PROHIBIDO.test(texto)) return true
   const cat = clasificarAccionPortal([texto])
@@ -141,7 +145,8 @@ function validarRuta(id: string, d: Record<string, unknown>, compania: string): 
   if (mo) return mo
   const r = rutaExacta(d.ruta)
   if ('motivo' in r) return r.motivo
-  if (rutaNombraAccionFinal(r.ruta)) return 'ruta_de_accion_final'
+  // Revisión 0.3.46: invariante, la BD NUNCA hace que `pareceEmision` pase de true a false en la URL de su ruta (eso es solo de código).
+  if (rutaNombraAccionFinal(r.ruta) || pareceEmision(`${d.origen as string}${r.ruta}`)) return 'ruta_de_accion_final'
   if (typeof d.pulsable !== 'boolean') return 'pulsable_invalido'
   return Object.freeze({ id, origen: d.origen as string, ruta: r.ruta, pulsable: d.pulsable })
 }
@@ -151,6 +156,7 @@ function validarAvance(id: string, d: Record<string, unknown>, compania: string)
   if (typeof d.texto !== 'string' || d.texto.length > 60 || truncado(d.texto)) return 'texto_invalido'
   const texto = plano(d.texto)
   if (!RE_TEXTO_AVANCE.test(texto)) return 'texto_invalido'
+  if (!TEXTOS_AVANCE_BD_PERMITIDOS.includes(texto)) return 'texto_fuera_de_lista'
   if (textoAvanceProhibido(texto)) return 'texto_accion_final'
   const mo = motivoOrigen(d.origen, compania)
   if (mo) return mo

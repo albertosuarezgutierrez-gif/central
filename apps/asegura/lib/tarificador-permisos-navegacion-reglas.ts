@@ -1,4 +1,4 @@
-// PERMISOS DE NAVEGACIÓN del tarificador RPA (0.3.45, 04/11/2026) — reglas PURAS de asegura: qué filas de BD viajan al worker en cada
+// PERMISOS DE NAVEGACIÓN del tarificador RPA (0.3.46, 04/11/2026) — reglas PURAS de asegura: qué filas de BD viajan al worker en cada
 // modo. La validación es la del módulo (`permisos-navegacion.ts`); aquí solo se decide el ALCANCE por modo. Lectura de BD en
 // `tarificador-permisos-navegacion.ts`; SQL en prisma/sql/2026-11-04d_tarificador_permisos_navegacion.sql.
 //

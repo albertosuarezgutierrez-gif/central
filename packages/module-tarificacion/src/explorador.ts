@@ -1379,7 +1379,7 @@ export type ContextoValidacion = {
   presupuestoEnCurso?: boolean
   /** `true` si en un paso ANTERIOR de este trabajo se vio un importe en cualquier marco: ningún avance por id más (precio pegajoso). */
   precioVisto?: boolean
-  /** 0.3.45: permisos de navegación de BD YA validados de ESTA entrada (`permisosNavegacionDe`). Sin la clave = solo código. */
+  /** 0.3.46: permisos de navegación de BD YA validados de ESTA entrada (`permisosNavegacionDe`). Sin la clave = solo código. */
   permisos?: PermisosNavegacion | null
 }
 
@@ -1581,7 +1581,7 @@ export function esAvanceAutorizado(entrada: string, el: ElementoInventario, marc
   const e = esEntradaExploracion(entrada) ? ENTRADAS_EXPLORACION[entrada] : null
   // 0.3.18: el input submit sin rótulo de una entrada que lo declara (no tiene `texto`).
   if (e && avanceSinTextoAutorizado(entrada, el, marco) !== null) return true
-  // 0.3.45: avance por texto EXACTO de BD (`permisos-navegacion.ts`), SOLO de ESTA entrada; `bloqueoAvance` sigue mirando la emisión dura.
+  // 0.3.46: avance por texto EXACTO de BD (`permisos-navegacion.ts`), SOLO de ESTA entrada; `bloqueoAvance` sigue mirando la emisión dura.
   if (e && avanceBdDeEntrada(entrada, el, marco, permisos) !== null) return true
   if (!e || typeof el.texto !== 'string') return false
   // Lista de títulos en el TOPE = recortada: el título de Tarificar podría ser justo el que no llegó → ningún «Aceptar» POR TÍTULO.
@@ -1884,7 +1884,7 @@ export function rutasAppTolerablesDe(entrada: string): readonly RutaTolerable[] 
 }
 
 /**
- * 0.3.45: los permisos de navegación de BD de UNA entrada, validados contra su compañía de CÓDIGO (`permisos-navegacion.ts`). Entrada
+ * 0.3.46: los permisos de navegación de BD de UNA entrada, validados contra su compañía de CÓDIGO (`permisos-navegacion.ts`). Entrada
  * desconocida = todo ignorado. Lo llaman asegura (al leer la BD) y el worker (al recibir el trabajo). PURA.
  */
 export function permisosNavegacionDe(entrada: string, filas: unknown): ResultadoPermisos {
@@ -1898,7 +1898,7 @@ export function entradasDeCompaniaRamo(compania: string, ramo: string): string[]
 }
 
 /**
- * 0.3.45 TARIFICACIÓN REAL: las rutas de BD de TODAS las entradas de esa compañía y ramo, revalidadas cada una con su entrada y unidas
+ * 0.3.46 TARIFICACIÓN REAL: las rutas de BD de TODAS las entradas de esa compañía y ramo, revalidadas cada una con su entrada y unidas
  * bajo la primera (misma compañía: el origen se valida igual). Los AVANCES de BD no aplican a tarificar (los adaptadores pulsan por código):
  * se descartan siempre. Sin entradas = nada. PURA.
  */

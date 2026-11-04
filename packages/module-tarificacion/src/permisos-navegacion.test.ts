@@ -1,4 +1,4 @@
-// 0.3.45 · Permisos de navegación en BD: validación (fail-closed) y fusión código ∪ BD. Los bloqueos DUROS ganan siempre.
+// 0.3.46 · Permisos de navegación en BD: validación (fail-closed) y fusión código ∪ BD. Los bloqueos DUROS ganan siempre.
 import { describe, expect, it } from 'vitest'
 import {
   avanceTextoBdAutorizado,
@@ -36,11 +36,11 @@ describe('validación de filas (fail-closed)', () => {
   it('una ruta exacta y un avance válidos SUMAN (y las filas canónicas se revalidan igual)', () => {
     const r = permisosNavegacionDe(E_PELAYO, [
       ruta(1, { origen: 'https://acceso12.pelayo.com', ruta: '/oauth2/rest/authorize', pulsable: false }),
-      ruta(2, { origen: 'https://apps.pelayo.com', ruta: '/contratacion-autos/drivers/', pulsable: true }),
+      ruta(2, { origen: 'https://mediadores.pelayo.com', ruta: '/portalmediador-datos/', pulsable: true }),
       avance(3, {}),
     ])
     expect(r.ignorados).toEqual([])
-    expect(r.permisos.rutas.map((x) => x.ruta)).toEqual(['/oauth2/rest/authorize', '/contratacion-autos/drivers'])
+    expect(r.permisos.rutas.map((x) => x.ruta)).toEqual(['/oauth2/rest/authorize', '/portalmediador-datos'])
     expect(r.permisos.avances).toHaveLength(1)
     expect(r.permisos.avances[0]).toMatchObject({ texto: 'aceptar', tag: 'button', contenedor: null, maxUsos: 2 })
     const otra = permisosNavegacionDe(E_PELAYO, filasDePermisos(r.permisos))
@@ -48,9 +48,11 @@ describe('validación de filas (fail-closed)', () => {
     expect(otra.ignorados).toEqual([])
   })
 
-  it('texto con verbo de acción final → ignorado (texto_accion_final)', () => {
-    for (const texto of ['Emitir', 'Contratar', 'Confirmar', 'Pagar', 'Firmar', 'Tarificar', 'Aceptar y emitir', 'Acepto y contrato', 'Finalizar', 'Guardar', 'Enviar', 'Precio final', 'Ir al pago', 'Domiciliar'])
-      expect(motivos([avance(1, { texto })]), texto).toEqual(['texto_accion_final'])
+  it('texto con verbo de acción final → ignorado (fuera de la lista blanca; y la lista negra también lo prohíbe)', () => {
+    for (const texto of ['Emitir', 'Contratar', 'Confirmar', 'Pagar', 'Firmar', 'Tarificar', 'Aceptar y emitir', 'Acepto y contrato', 'Finalizar', 'Guardar', 'Enviar', 'Precio final', 'Ir al pago', 'Domiciliar']) {
+      expect(motivos([avance(1, { texto })]), texto).toEqual(['texto_fuera_de_lista'])
+      expect(textoAvanceProhibido(texto.toLowerCase()), texto).toBe(true)
+    }
   })
 
   it('ruta con comodín, query, codificada o relativa → ignorada', () => {
@@ -70,8 +72,8 @@ describe('validación de filas (fail-closed)', () => {
   it('ruta de emisión/pago/firma (no la exacta tolerable) → ignorada (ruta_de_accion_final)', () => {
     for (const r of ['/emitir', '/app/pago/datos', '/contratar', '/contratacion-autos/contratacion', '/poliza/emision', '/x/firma', '/checkout', '/x/iban', '/x/tarjeta-credito', '/emision'])
       expect(motivos([ruta(1, { origen: 'https://apps.pelayo.com', ruta: r, pulsable: false })]), r).toEqual(['ruta_de_accion_final'])
-    // Los sustantivos «emision»/«contratacion» se toleran SOLO en carpetas padre (apps de TARIFICAR: NSE, wizard de Pelayo).
-    expect(motivos([ruta(1, { origen: 'https://apps.pelayo.com', ruta: '/contratacion-autos/vehicle', pulsable: false })])).toEqual([])
+    // 0.3.46: tampoco en carpetas padre: «emision»/«contratacion» en la ruta = tolerancia SOLO de código (`rutasAppTolerables`).
+    expect(motivos([ruta(1, { origen: 'https://apps.pelayo.com', ruta: '/contratacion-autos/vehicle', pulsable: false })])).toEqual(['ruta_de_accion_final'])
   })
 
   it('tipo desconocido, jsonb malformado, claves de más/de menos → ignorados', () => {
@@ -120,6 +122,46 @@ describe('validación de filas (fail-closed)', () => {
   })
 })
 
+// ─── Revisión adversarial 0.3.46 ───────────────────────────────────────────────
+
+describe('revisión adversarial 0.3.46: la BD nunca relaja un bloqueo de emisión de código', () => {
+  const O = 'https://wmediadores.mapfre.com'
+  const filaMapfre = (r: string) => ({ id: ID(1), entrada: E_MAPFRE, tipo: 'ruta_tolerada', datos: { origen: O, ruta: r, pulsable: false } })
+
+  it('(1) con padre de emisión/contratación en la ruta, la BD no puede tolerarla (solo código), sea cual sea el último segmento', () => {
+    for (const r of ['/app/emision/guardar', '/app/emision/enviar', '/app/emision/finalizar', '/app/emision/submit', '/app/emision/store', '/app/emision/ok', '/app/emision/vehicle', '/EVT/app/contratacion/tarifas', '/app/Emision/datos'])
+      expect(permisosNavegacionDe(E_MAPFRE, [filaMapfre(r)]).ignorados.map((i) => i.motivo), r).toEqual(['ruta_de_accion_final'])
+    for (const r of ['/contratacion-autos/vehicle', '/contratacion-autos/drivers', '/contratacion-autos'])
+      expect(motivos([ruta(1, { origen: 'https://apps.pelayo.com', ruta: r, pulsable: false })]), r).toEqual(['ruta_de_accion_final'])
+  })
+
+  it('(1) invariante: ninguna ruta de BD aceptada hace que `pareceEmision` pase de true a false en su propia URL', () => {
+    const candidatas = ['/app/emision/ok', '/x/aceptar', '/x/aceptar-condiciones', '/x/guardar', '/oauth2/rest/authorize', '/portalmediador-datos', '/x/vehicle']
+    for (const r of candidatas) {
+      const res = permisosNavegacionDe(E_MAPFRE, [filaMapfre(r)])
+      const url = O + r
+      if (res.permisos.rutas.length === 0) continue
+      const neutra = neutralizarRutaTolerable(url, rutasRedGetBd(res.permisos)) ?? url
+      expect(pareceEmision(url) && !pareceEmision(neutra), r).toBe(false)
+    }
+  })
+
+  it('(2) textos de avance: LISTA BLANCA cerrada; cualquier otro (aunque parezca inocuo) → ignorado', () => {
+    for (const t of ['Aceptar', 'Siguiente', 'Continuar', 'Cerrar', 'Entendido', 'Volver', 'Cancelar', 'ACEPTAR', ' aceptar '])
+      expect(motivos([avance(1, { texto: t })]), t).toEqual([])
+    for (const t of ['Aceptar oferta', 'Aceptar condiciones', 'Alta', 'Dar de alta', 'Venta', 'Conforme', 'De acuerdo', 'OK', 'Sí', 'Ok continuar', 'Aceptar y continuar', 'Seguir', 'Next', 'Validar'])
+      expect(motivos([avance(1, { texto: t })]), t).toEqual(['texto_fuera_de_lista'])
+    expect(textoAvanceProhibido('aceptar oferta')).toBe(true)
+    expect(textoAvanceProhibido('conforme')).toBe(true)
+    expect(textoAvanceProhibido('cerrar')).toBe(false)
+  })
+
+  it('(3) segmentos de ruta con guard/envi/send/submit/finaliz/store/archiv/generar/sign/esign/docusign → ignorados', () => {
+    for (const r of ['/x/guardado', '/x/enviar', '/x/send', '/x/submit', '/x/finalizar', '/x/store', '/x/archivar', '/x/generar-pdf', '/x/sign', '/x/esign', '/x/docusign', '/guard/x', '/submit/datos'])
+      expect(motivos([ruta(1, { origen: 'https://apps.pelayo.com', ruta: r, pulsable: false })]), r).toEqual(['ruta_de_accion_final'])
+  })
+})
+
 // ─── Fusión ────────────────────────────────────────────────────────────────────
 
 const marco = (url: string, elementos: ElementoInventario[], extra: Partial<MarcoInventario> = {}): MarcoInventario => ({ url, nombre: null, elementos, ...extra })
@@ -165,8 +207,9 @@ describe('fusión: avance de BD', () => {
       expect(bloqueoAvance(E_PELAYO, el, marco(URL_DATOS, [el]), p), JSON.stringify(extra)).toBe('boton_de_emision')
     }
     // TOPE DURO del wizard de Pelayo: un permiso en apps.pelayo.com no añade pasos pulsables.
-    const wiz = permisosNavegacionDe(E_PELAYO, [avance(2, { origen: 'https://apps.pelayo.com', rutaMarco: '/contratacion-autos/price' })]).permisos
-    expect(wiz.avances).toHaveLength(1)
+    // 0.3.46: un marco bajo «contratacion» ya ni valida; aun FORJADO (sin pasar la validación), el tope del wizard gana.
+    expect(motivos([avance(2, { origen: 'https://apps.pelayo.com', rutaMarco: '/contratacion-autos/price' })])).toEqual(['ruta_de_accion_final'])
+    const wiz: PermisosNavegacion = { entrada: E_PELAYO, rutas: [], avances: [{ id: ID(2), texto: 'aceptar', origen: 'https://apps.pelayo.com', rutaMarco: '/contratacion-autos/price', tag: 'button', contenedor: null, maxUsos: 2 }] }
     const elw = boton('Aceptar')
     const mw = marco('https://apps.pelayo.com/contratacion-autos/price', [elw])
     expect(avanceTextoBdAutorizado(wiz, elw, mw)).not.toBeNull()
@@ -188,15 +231,16 @@ describe('fusión: avance de BD', () => {
 })
 
 describe('fusión: ruta tolerada de BD', () => {
-  it('la ruta exacta se neutraliza (también con query o «/» final); otra ruta u otro origen no', () => {
-    const p = permisosNavegacionDe(E_PELAYO, [ruta(1, { origen: 'https://apps.pelayo.com', ruta: '/contratacion-autos/drivers', pulsable: false })]).permisos
+  it('la ruta exacta se neutraliza (su query de redirección no cuenta, con o sin «/» final); otra ruta u otro origen no', () => {
+    const p = permisosNavegacionDe(E_PELAYO, [ruta(1, { origen: 'https://acceso9.pelayo.com', ruta: '/sso/authorize', pulsable: false })]).permisos
     const reglas = rutasRedGetBd(p)
-    expect(rutaBdComoTolerable(p.rutas[0])).toEqual({ origen: 'https://apps.pelayo.com', prefijo: '/contratacion-autos/', rutasExactas: ['drivers'] })
-    for (const u of ['https://apps.pelayo.com/contratacion-autos/drivers', 'https://apps.pelayo.com/contratacion-autos/drivers/', 'https://apps.pelayo.com/contratacion-autos/drivers?q=abc']) {
+    expect(rutaBdComoTolerable(p.rutas[0])).toEqual({ origen: 'https://acceso9.pelayo.com', prefijo: '/sso/', rutasExactas: ['authorize'] })
+    const q = '?redirect_uri=https%3A%2F%2Fapps.pelayo.com%2Fcontratacion-autos'
+    for (const u of [`https://acceso9.pelayo.com/sso/authorize${q}`, `https://acceso9.pelayo.com/sso/authorize/${q}`]) {
       expect(pareceEmision(u), u).toBe(true)
       expect(pareceEmision(neutralizarRutaTolerable(u, reglas)), u).toBe(false)
     }
-    for (const u of ['https://apps.pelayo.com/contratacion-autos/drivers/emitir', 'https://apps.pelayo.com/contratacion-autos/payment', 'https://otro.pelayo.com/contratacion-autos/drivers', 'http://apps.pelayo.com/contratacion-autos/drivers'])
+    for (const u of [`https://acceso9.pelayo.com/sso/authorize/emitir${q}`, `https://acceso9.pelayo.com/sso/token${q}`, `https://otro.pelayo.com/sso/authorize${q}`, `http://acceso9.pelayo.com/sso/authorize${q}`])
       expect(pareceEmision(neutralizarRutaTolerable(u, reglas)), u).toBe(true)
     // Ruta de un solo segmento y raíz.
     expect(rutaBdComoTolerable({ origen: 'https://a.pelayo.com', ruta: '/authorize' })).toEqual({ origen: 'https://a.pelayo.com', prefijo: '/', rutasExactas: ['authorize'] })
@@ -211,11 +255,14 @@ describe('fusión: ruta tolerada de BD', () => {
     const no = permisosNavegacionDe(E_MAPFRE, [fila(false)]).permisos
     expect(rutasHrefBd(no)).toEqual([])
     expect(bloqueoAvance(E_MAPFRE, el, m, no)).toBe('boton_de_emision')
-    const si = permisosNavegacionDe(E_MAPFRE, [fila(true)]).permisos
-    expect(bloqueoAvance(E_MAPFRE, el, m, si)).toBeNull()
-    // …pero un TEXTO de acción final en el enlace sigue siendo emisión dura.
-    const elc = { ...el, texto: 'Contratar' }
-    expect(bloqueoAvance(E_MAPFRE, elc, marco('https://wmediadores.mapfre.com/EVT/inicio', [elc]), si)).toBe('boton_de_emision')
+    // 0.3.46: ni con `pulsable: true` una ruta con «contratacion» valida desde BD (solo código): el href sigue siendo emisión.
+    const si = permisosNavegacionDe(E_MAPFRE, [fila(true)])
+    expect(si.ignorados.map((i) => i.motivo)).toEqual(['ruta_de_accion_final'])
+    expect(rutasHrefBd(si.permisos)).toEqual([])
+    expect(bloqueoAvance(E_MAPFRE, el, m, si.permisos)).toBe('boton_de_emision')
+    // Una ruta limpia `pulsable: true` sí llega al href.
+    const limpia = permisosNavegacionDe(E_MAPFRE, [{ ...fila(true), datos: { origen: 'https://wmediadores.mapfre.com', ruta: '/EVT/app/tarifas', pulsable: true } }]).permisos
+    expect(rutasHrefBd(limpia)).toHaveLength(1)
   })
 
   it('tarificación real: entradas de la compañía y ramo', () => {

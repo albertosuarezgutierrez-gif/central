@@ -81,7 +81,7 @@ export async function POST(req: Request) {
     const inventario = redactarValoresInventario(p.inventario, valores)
 
     let inicio: Date | null = null
-    // 0.3.45: permisos de navegación de BD de la entrada (validados; fail-closed: sin tabla o sin filas = solo código).
+    // 0.3.46: permisos de navegación de BD de la entrada (validados; fail-closed: sin tabla o sin filas = solo código).
     const permisos = await permisosNavegacionDeEntrada(e.entrada)
     const out = await ejecutarPaso<Bd>(
       { inventario, avancesFallidos: p.avancesFallidos, ramo: e.ramo, entrada: e.entrada, conDatosReales: e.conDatosReales, modelo, riesgo, incidencias: p.incidencias, vistaAria: sanearVistaAria(p.vistaAria, valores), fase: p.fase, permisos },

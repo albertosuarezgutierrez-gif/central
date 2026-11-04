@@ -145,7 +145,7 @@ type Comun = {
   log: (m: string, d?: Record<string, unknown>) => void
   /** Relevo del código SMS por Telegram (adaptador con `codigoSms`). UNO por trabajo: `usado` lo apaga tras el primero. */
   relevoSms?: { usado: boolean; relevar: (page: Page, guard: GuardEmision) => Promise<Relevo> }
-  /** 0.3.45: rutas exactas de BD de la compañía/ramo (solo GET y href `pulsable`; sin avances), ya revalidadas. `null` = ninguna. */
+  /** 0.3.46: rutas exactas de BD de la compañía/ramo (solo GET y href `pulsable`; sin avances), ya revalidadas. `null` = ninguna. */
   permisosBd: PermisosNavegacion | null
 }
 
@@ -774,7 +774,7 @@ async function main(): Promise<number> {
   const meta = () => ({ pasos: traza.pasos(), botVersion: adaptador.version })
   // Recorrido del trabajo (15/10/2026): mismo redactor que el resto de lo que sale + los valores del riesgo; tope ~60 KB.
   const recorrido = crearCapturadorRecorrido({ redactar: redactarTrabajo, valores: valoresSensiblesDeRiesgo(trabajo.riesgo), log })
-  // 0.3.45: permisos de RUTA de BD de las entradas de esta compañía/ramo (TARIFICAR: nunca avances; la emisión no llega aquí).
+  // 0.3.46: permisos de RUTA de BD de las entradas de esta compañía/ramo (TARIFICAR: nunca avances; la emisión no llega aquí).
   const rp = permisosTarificacionDe(trabajo.compania, trabajo.ramo, trabajo.permisosNavegacion)
   if (rp.ignorados.length > 0 || rp.permisos.rutas.length > 0) log('permisos_navegacion', resumenPermisos(rp))
   const permisosBd = rp.permisos.rutas.length > 0 ? rp.permisos : null

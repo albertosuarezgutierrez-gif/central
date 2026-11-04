@@ -1,4 +1,4 @@
-// Explorador 0.3.45 (04/11/2026) · PERMISOS DE NAVEGACIÓN DE BD en el worker (guard VIVO). Portal SINTÉTICO (sin PII): `page.route`
+// Explorador 0.3.46 (04/11/2026) · PERMISOS DE NAVEGACIÓN DE BD en el worker (guard VIVO). Portal SINTÉTICO (sin PII): `page.route`
 // sirve solo las URLs exactas; el resto cae al guard de contexto y a un proxy muerto.
 //   · ruta exacta de BD: tolerada SOLO en navegación GET; un POST a la misma URL sigue bloqueado; otra ruta, bloqueada;
 //   · avance de BD: pulsa SOLO el control exacto (texto, marco, tag, contenedor, único, sin precio) y hasta su `maxUsos`;
@@ -30,9 +30,12 @@ after(async () => { await browser?.close() })
 const E = 'pelayo:presupuestos:auto'
 const ID = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`
 const DATOS = 'https://mediadores.pelayo.com/portalmediador-datos'
-const RUTA_BD = 'https://apps.pelayo.com/contratacion-autos/drivers'
+// 0.3.46: una ruta de BD ya no puede llevar padres «contratacion»/«emision» ni casar emisión en su RUTA; lo que relaja es la QUERY de
+// una navegación GET (p. ej. el `redirect_uri` de un SSO que apunta al wizard). Host ficticio de Pelayo.
+const RUTA_BD = 'https://acceso9.pelayo.com/sso/authorize?redirect_uri=https%3A%2F%2Fapps.pelayo.com%2Fcontratacion-autos'
 const permisos = (filas: unknown[]): PermisosNavegacion => permisosNavegacionDe(E, filas).permisos
-const filaRuta = (pulsable = false) => ({ id: ID(1), entrada: E, tipo: 'ruta_tolerada', datos: { origen: 'https://apps.pelayo.com', ruta: '/contratacion-autos/drivers', pulsable } })
+const filaRuta = (pulsable = false) => ({ id: ID(1), entrada: E, tipo: 'ruta_tolerada', datos: { origen: 'https://acceso9.pelayo.com', ruta: '/sso/authorize', pulsable } })
+const filaRutaPadreContratacion = () => ({ id: ID(4), entrada: E, tipo: 'ruta_tolerada', datos: { origen: 'https://apps.pelayo.com', ruta: '/contratacion-autos/drivers', pulsable: false } })
 const filaAvance = (extra: Record<string, unknown> = {}) => ({ id: ID(2), entrada: E, tipo: 'avance_texto', datos: { texto: 'Aceptar', origen: 'https://mediadores.pelayo.com', rutaMarco: '/portalmediador-datos', tag: 'button', contenedor: 'section.aviso', maxUsos: 2, ...extra } })
 
 async function abrir(html: string, p: PermisosNavegacion | null): Promise<{ context: BrowserContext; page: Page; guard: GuardEmision }> {
@@ -52,7 +55,7 @@ const PAGINA_NAV = (destino: string, metodo: 'get' | 'post') => `<!doctype html>
 <script>document.getElementById('ir').addEventListener('click', () => { ${metodo === 'get' ? `location.href = ${JSON.stringify(destino)}` : `document.getElementById('f').submit()`} })</script>
 </body></html>`
 
-test('versión del explorador 0.3.45', () => assert.equal(EXPLORADOR_VERSION, '0.3.45'))
+test('versión del explorador 0.3.46', () => assert.equal(EXPLORADOR_VERSION, '0.3.46'))
 
 test('ruta exacta de BD: la navegación GET pasa; sin el permiso, el guard la corta', async () => {
   for (const [p, esperaViolacion] of [[permisos([filaRuta()]), false], [null, true]] as const) {
@@ -80,7 +83,20 @@ test('BRAZO ruta de BD: un POST a la MISMA URL sigue bloqueado (solo GET)', asyn
 })
 
 test('BRAZO ruta de BD: otra ruta del mismo prefijo sigue bloqueada', async () => {
-  const { context, page, guard } = await abrir(PAGINA_NAV('https://apps.pelayo.com/contratacion-autos/payment', 'get'), permisos([filaRuta()]))
+  const { context, page, guard } = await abrir(PAGINA_NAV('https://acceso9.pelayo.com/sso/token?redirect_uri=https%3A%2F%2Fapps.pelayo.com%2Fcontratacion-autos', 'get'), permisos([filaRuta()]))
+  try {
+    await pulsar(page.locator('#ir'), guard).catch(() => undefined)
+    await page.waitForTimeout(400)
+    assert.ok(guard.violacion() instanceof EmisionBloqueadaError)
+  } finally {
+    await context.close()
+  }
+})
+
+test('BRAZO 0.3.46: una fila de BD con padre «contratacion» se ignora y la navegación GET a esa ruta sigue cortada', async () => {
+  const r = permisosNavegacionDe(E, [filaRutaPadreContratacion()])
+  assert.deepEqual(r.ignorados.map((i) => i.motivo), ['ruta_de_accion_final'])
+  const { context, page, guard } = await abrir(PAGINA_NAV('https://apps.pelayo.com/contratacion-autos/drivers', 'get'), r.permisos)
   try {
     await pulsar(page.locator('#ir'), guard).catch(() => undefined)
     await page.waitForTimeout(400)

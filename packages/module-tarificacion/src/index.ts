@@ -946,7 +946,7 @@ export {
   bloqueoZonaWizardPelayo,
 } from './pelayo-contratacion.ts'
 
-// Permisos de navegación en BD (0.3.45, 04/11/2026): ampliaciones ESTRECHAS por entrada (ruta exacta GET, avance por texto exacto),
+// Permisos de navegación en BD (0.3.46, 04/11/2026): ampliaciones ESTRECHAS por entrada (ruta exacta GET, avance por texto exacto),
 // validadas en asegura y otra vez en el worker. Los bloqueos duros siguen en código (`permisos-navegacion.ts`).
 export {
   TIPOS_PERMISO_NAVEGACION,
@@ -964,6 +964,7 @@ export {
   origenDeCompania,
   rutaNombraAccionFinal,
   textoAvanceProhibido,
+  TEXTOS_AVANCE_BD_PERMITIDOS,
   rutaBdComoTolerable,
   rutasRedGetBd,
   rutasHrefBd,
