@@ -66,6 +66,7 @@ compartida `wswbehlcuxqxyinousql` (con ialimp+plataforma).
   idempotencia, graduación, auto-cortesía) · **🧾 Facturas a huéspedes** (`/sivra/facturas`:
   series, ✅ en Telegram, correo + aviso Smoobu, pendientes).
   → Léelo para cualquier tarea del agente de huéspedes o para ubicar dónde vive una feature.
+- **Agoda (03/11/2026):** los mensajes del huésped llegan por CORREO (`@agoda-messaging.com`), no por Smoobu; el agente responde respondiendo a ese correo (`apps/plataforma/lib/correo/agoda-*.ts`, tabla `agoda_hilos_correo`, exige DKIM de Agoda). Detalle: skill `correo-triaje`.
 - **`references/infra-seo-landmines.md`** — Infra (Supabase compartida, Prisma, pasarela IA,
   envs) · agente SEO de housesevillana (DOS rutas: botón en plataforma vs cron semanal en
   sivra, kill-switch `SEO_AGENT_ENABLED`) · landmines completos de BD · frontera multi-tenant.
