@@ -37,11 +37,11 @@ test('envía TEXTO: POST /{pnid}/messages, sin «+», preview_url false, Bearer'
 test('CEPO error: código de Meta sin token ni número; red caída = error, nunca excepción; UN intento', async () => {
   const e = falso({ status: 400, json: { error: { code: 131047, message: 'Re-engagement message' } } })
   const r = await crearEnviador({ version: 'v24.0', fetch: e.f }).enviarTexto(P)
-  assert.deepEqual(r, { ok: false, http: 400, codigo: 131047 })
+  assert.deepEqual(r, { ok: false, http: 400, codigo: 131047, incierto: false })
   assert.ok(!JSON.stringify(r).includes('TOKEN') && !JSON.stringify(r).includes('600123456'))
   assert.equal(e.llamadas.length, 1)
   const red = falso('red')
-  assert.deepEqual(await crearEnviador({ version: 'v24.0', fetch: red.f }).enviarTexto(P), { ok: false, http: 0, codigo: null })
+  assert.deepEqual(await crearEnviador({ version: 'v24.0', fetch: red.f }).enviarTexto(P), { ok: false, http: 0, codigo: null, incierto: true })
   assert.equal(red.llamadas.length, 1)
 })
 
@@ -77,4 +77,10 @@ test('CEPO: el enviador de texto lo usa SOLO lib/whatsapp/respuesta.ts (la reser
     .filter((f) => /whatsapp-salida\/texto['.]/.test(sinComentarios(readFileSync(f, 'utf8'))))
     .map((f) => f.slice(RAIZ.length))
   assert.deepEqual(usan, ['lib/whatsapp/respuesta.ts'])
+})
+
+test('CEPO incierto: 5xx de Meta = pudo salir (incierto); 4xx = no salió', async () => {
+  const cinco = falso({ status: 503, json: { error: { code: 2 } } })
+  assert.deepEqual(await crearEnviador({ version: 'v24.0', fetch: cinco.f }).enviarTexto(P), { ok: false, http: 503, codigo: 2, incierto: true })
+  assert.equal(cinco.llamadas.length, 1)
 })

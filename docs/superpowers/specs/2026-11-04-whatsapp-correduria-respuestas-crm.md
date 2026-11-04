@@ -28,6 +28,14 @@
    - **Debounce: se mantienen los 10 min** (no 2): el cron corre cada 15 min (bajar el umbral apenas adelanta nada), los
      clientes escriben a ráfagas (contestar a medio mensaje y re-analizar duplica coste IA) y esos minutos son el margen para que
      Alberto conteste desde el móvil (si lo hace, la IA calla).
+   - **Revisión adversarial PR #5528 (04/11/2026):** la IA ya NO redacta: elige un id de la LISTA CERRADA `FRASES`
+     (`acuse`, `nota_fecha`, `alberto_revisa`, `pedir_poliza`, `saludo`; `baja` solo la pone el servidor), con el nombre de pila
+     de la FICHA como única variable; el filtro sigue de segunda capa (más: cobertura/siniestro afirmados, precios en letra).
+     Con el flag, sin importes en el contexto. Opt-out de MENSAJES («no me escribáis», «stop») → confirmación fija una vez +
+     `wa_opt_out_at` (conversación y ficha) + Telegram informativo; mezclado con baja de póliza → nada y Telegram. No contesta
+     si Alberto escribió desde el móvil en las últimas 4 h. Timeout/5xx de Meta = `incierto` (sin reintento; Telegram «no sé si
+     salió») y no cuenta como dicho en el contexto. Propuestas de leads sin póliza en vigor nunca autónomas. El historial valida
+     la conversación antes del upsert (`admiteHistorial`).
 2. **Cambios de datos** siguen como propuesta ✅ (autonomía gradual intacta). **D4 ajustada:** `proponerVencimiento` ya no exige
    póliza en vigor, solo ficha única + oportunidad ABIERTA del ramo (el vencimiento de un lead). Las de recibo siguen exigiéndola.
    «Baja»/«ya no tengo el seguro» no es tipo de propuesta: Telegram urgente + tarea si la IA la crea.

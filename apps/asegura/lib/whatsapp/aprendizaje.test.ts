@@ -56,10 +56,10 @@ test('racha: N aprobadas seguidas sin modificar = N', () => {
 test('umbral: con 19 aprobadas no es autónoma; con 20 sí (por defecto 20)', () => {
   assert.equal(UMBRAL_POR_DEFECTO, 20)
   const base = { flag: '1', umbral: undefined, tipo: 'fecha_cobro' }
-  assert.deepEqual(decidirAutonomia({ ...base, racha: calcularRacha(aprobadas(19)) }), { autonoma: false, motivo: 'racha_corta' })
-  assert.deepEqual(decidirAutonomia({ ...base, racha: calcularRacha(aprobadas(20)) }), { autonoma: true })
-  assert.deepEqual(decidirAutonomia({ ...base, umbral: '25', racha: 24 }), { autonoma: false, motivo: 'racha_corta' })
-  assert.deepEqual(decidirAutonomia({ ...base, umbral: '25', racha: 25 }), { autonoma: true })
+  assert.deepEqual(decidirAutonomia({ polizaEnVigor: true,  ...base, racha: calcularRacha(aprobadas(19)) }), { autonoma: false, motivo: 'racha_corta' })
+  assert.deepEqual(decidirAutonomia({ polizaEnVigor: true,  ...base, racha: calcularRacha(aprobadas(20)) }), { autonoma: true })
+  assert.deepEqual(decidirAutonomia({ polizaEnVigor: true,  ...base, umbral: '25', racha: 24 }), { autonoma: false, motivo: 'racha_corta' })
+  assert.deepEqual(decidirAutonomia({ polizaEnVigor: true,  ...base, umbral: '25', racha: 25 }), { autonoma: true })
 })
 
 test('umbral mal configurado → nunca autónomo (0, 1, negativo, texto); vacío → 20', () => {
@@ -67,7 +67,7 @@ test('umbral mal configurado → nunca autónomo (0, 1, negativo, texto); vacío
   assert.equal(leerUmbral(undefined), 20)
   for (const v of ['0', '1', '4', '-3', 'veinte', '20.5', '1001']) {
     assert.equal(leerUmbral(v), null, v)
-    assert.deepEqual(decidirAutonomia({ flag: '1', umbral: v, tipo: 'pagado', racha: 999 }), { autonoma: false, motivo: 'umbral_invalido' }, v)
+    assert.deepEqual(decidirAutonomia({ polizaEnVigor: true,  flag: '1', umbral: v, tipo: 'pagado', racha: 999 }), { autonoma: false, motivo: 'umbral_invalido' }, v)
   }
 })
 
@@ -99,7 +99,7 @@ test('una autónoma NO deshecha ni suma ni corta (la autonomía no se alimenta a
 test('CEPO flag apagado ⇒ nunca autónomo, con cualquier racha y tipo', () => {
   for (const flag of [undefined, '', '0', 'true', 'si', ' 1x', 'TRUE']) {
     for (const tipo of TIPOS_AUTONOMIZABLES) {
-      assert.deepEqual(decidirAutonomia({ flag, umbral: '5', tipo, racha: 10_000 }), { autonoma: false, motivo: 'flag_apagado' }, `${flag}/${tipo}`)
+      assert.deepEqual(decidirAutonomia({ polizaEnVigor: true,  flag, umbral: '5', tipo, racha: 10_000 }), { autonoma: false, motivo: 'flag_apagado' }, `${flag}/${tipo}`)
     }
   }
   assert.equal(autonomiaActiva('1'), true)
@@ -117,15 +117,15 @@ test('CEPO aplicarSiAutonoma mira el flag ANTES de leer nada y solo aplica con d
 })
 
 test('racha ilegible (tabla sin aplicar o error) → nunca autónomo', () => {
-  assert.deepEqual(decidirAutonomia({ flag: '1', umbral: '5', tipo: 'pagado', racha: null }), { autonoma: false, motivo: 'racha_ilegible' })
-  assert.deepEqual(decidirAutonomia({ flag: '1', umbral: '5', tipo: 'pagado', racha: -1 }), { autonoma: false, motivo: 'racha_ilegible' })
+  assert.deepEqual(decidirAutonomia({ polizaEnVigor: true,  flag: '1', umbral: '5', tipo: 'pagado', racha: null }), { autonoma: false, motivo: 'racha_ilegible' })
+  assert.deepEqual(decidirAutonomia({ polizaEnVigor: true,  flag: '1', umbral: '5', tipo: 'pagado', racha: -1 }), { autonoma: false, motivo: 'racha_ilegible' })
 })
 
 // ── RPA / terceros: NUNCA autónomo ─────────────────────────────────────────────
 
 test('CEPO bots RPA / tarificar / enviar: nunca autónomos, con flag y racha a tope', () => {
   for (const tipo of ['tarificar', 'tarificar_bots', 'lanzar_bots', 'rpa', 'clp_tar', 'enviar_presupuesto', 'enviar_whatsapp', 'emitir', '']) {
-    assert.deepEqual(decidirAutonomia({ flag: '1', umbral: '5', tipo, racha: 10_000 }), { autonoma: false, motivo: 'tipo_no_autonomizable' }, tipo)
+    assert.deepEqual(decidirAutonomia({ polizaEnVigor: true,  flag: '1', umbral: '5', tipo, racha: 10_000 }), { autonoma: false, motivo: 'tipo_no_autonomizable' }, tipo)
   }
   // La lista blanca son EXACTAMENTE los tres tipos de propuesta (cartera propia, reversible).
   assert.deepEqual([...TIPOS_AUTONOMIZABLES].sort(), [...TIPOS_PROPUESTA].sort())
@@ -263,4 +263,13 @@ test('CEPO los casos entran al prompt solo con ficha única y (póliza en vigor 
   const src = fuente('./analizar.ts')
   assert.match(src, /const casos = fichaUnica && \(enVigor === true \|\| oportunidades\.length > 0\) \? await casosResueltos\(correduriaId\) : undefined/)
   assert.match(src, /casos_previos: casos === null \? null :/)
+})
+
+test('CEPO D4 leads: sin póliza en vigor (lead) o «no se sabe» NUNCA se aplica sola, aunque haya racha', () => {
+  for (const polizaEnVigor of [false, null]) {
+    assert.deepEqual(decidirAutonomia({ flag: '1', umbral: '5', tipo: 'vencimiento', racha: 10_000, polizaEnVigor }), { autonoma: false, motivo: 'sin_poliza_en_vigor' })
+  }
+  assert.deepEqual(decidirAutonomia({ flag: '1', umbral: '5', tipo: 'vencimiento', racha: 10_000, polizaEnVigor: true }), { autonoma: true })
+  const src = fuente('./analizar.ts')
+  assert.match(src, /aplicarSiAutonoma\(correduriaId, id, enVigor\)/)
 })

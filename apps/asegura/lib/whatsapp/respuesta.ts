@@ -7,7 +7,8 @@
 //      con `responde_a_mensaje_id` = el entrante, bajo el índice ÚNICO `uq_mensajes_responde_a` (SQL 2026-11-04c). El
 //      INSERT re-comprueba en la MISMA sentencia: silenciada, opt-out, ningún saliente posterior al entrante, ningún
 //      entrante más nuevo y el tope del día;
-//   3. UN intento de envío. Si falla (o se corta tras reservar) la fila queda `fallido`/`enviando` y NO se reintenta.
+//   3. UN intento de envío. Si falla la fila queda `fallido`; si no se sabe (timeout, corte, 5xx) `incierto`; si se corta
+//      tras reservar, `enviando`. Ninguna se reintenta y ninguna cuenta como «dicha» en el contexto de la IA.
 // Sin el SQL 2026-11-04c: `sin_migracion`, no se envía nada.
 //
 // 🔐 Ni número ni texto en logs. El texto enviado se guarda CIFRADO como cualquier mensaje.
@@ -38,7 +39,7 @@ export async function leerEstadoRespuesta(correduriaId: string, conversacionId: 
       silenciada: boolean
       ent_id: string | null; ent_tipo: string | null; ent_fecha: Date | null; ent_historial: boolean | null
       sal_fecha: Date | null; sal_ia: boolean | null
-      humano_previo: boolean; ya: boolean; hoy_conv: number; hoy_total: number
+      humano_previo: boolean; humano_ultimo: Date | null; ya: boolean; hoy_conv: number; hoy_total: number
     }[]>(Prisma.sql`
       with c as (
         select id, ia_silenciada_at from conversaciones where id = ${conversacionId}::uuid and correduria_id = ${correduriaId}::uuid
@@ -60,6 +61,8 @@ export async function leerEstadoRespuesta(correduriaId: string, conversacionId: 
              exists (select 1 from mensajes m join c on c.id = m.conversacion_id
                       where m.direccion = 'saliente' and m.generado_por is null
                         and m.enviado_at < coalesce((select enviado_at from ent), now())) as humano_previo,
+             (select max(m.enviado_at) from mensajes m join c on c.id = m.conversacion_id
+               where m.direccion = 'saliente' and m.rol = 'corredor' and m.generado_por is null) as humano_ultimo,
              exists (select 1 from mensajes m join c on c.id = m.conversacion_id
                       where m.responde_a_mensaje_id = (select id from ent)) as ya,
              (select count(*)::int from mensajes m join c on c.id = m.conversacion_id
@@ -74,6 +77,7 @@ export async function leerEstadoRespuesta(correduriaId: string, conversacionId: 
       ultimaEntrante: f.ent_id && f.ent_fecha ? { id: f.ent_id, tipo: f.ent_tipo ?? '', fecha: f.ent_fecha, historial: f.ent_historial === true } : null,
       ultimoSaliente: f.sal_fecha ? { fecha: f.sal_fecha, ia: f.sal_ia === true } : null,
       haySalienteHumanoPrevio: f.humano_previo,
+      ultimoSalienteHumano: f.humano_ultimo,
       yaRespondida: f.ya,
       respuestasHoyConversacion: f.hoy_conv,
       respuestasHoyTotal: f.hoy_total,
@@ -85,7 +89,7 @@ export async function leerEstadoRespuesta(correduriaId: string, conversacionId: 
   }
 }
 
-export type ResultadoRespuesta = 'enviada' | 'fallida' | 'ya_respondida' | 'sin_conexion' | 'sin_migracion'
+export type ResultadoRespuesta = 'enviada' | 'fallida' | 'incierta' | 'ya_respondida' | 'sin_conexion' | 'sin_migracion'
 
 /**
  * Reserva + envío + sello. `telefonoCifrado` = `conversaciones.wa_telefono_cifrado`. `clase` solo para el registro.
@@ -93,7 +97,7 @@ export type ResultadoRespuesta = 'enviada' | 'fallida' | 'ya_respondida' | 'sin_
  */
 export async function enviarRespuesta(
   correduriaId: string,
-  p: { conversacionId: string; entranteId: string; telefonoCifrado: string | null; texto: string; clase: 'ia' | 'acuse' | 'baja' },
+  p: { conversacionId: string; entranteId: string; telefonoCifrado: string | null; texto: string; clase: 'ia' | 'acuse' | 'baja' | 'opt_out' },
 ): Promise<ResultadoRespuesta> {
   const db = prismaAsegura()
   // Antes de reservar: si no hay con qué enviar, no se deja una fila «enviando» que bloquee para siempre.
@@ -142,15 +146,37 @@ export async function enviarRespuesta(
   }
 
   const r = await crearEnviador({ version }).enviarTexto({ phoneNumberId: destino, token, toE164: telefono, texto: p.texto })
+  const estado = r.ok ? 'enviado' : r.incierto ? 'incierto' : 'fallido'
   await db.$executeRaw(Prisma.sql`
-    update mensajes set estado = ${r.ok ? 'enviado' : 'fallido'},
+    update mensajes set estado = ${estado},
            wa_message_id = ${r.ok && r.wamid ? r.wamid : null},
            metadata = metadata || ${JSON.stringify(r.ok ? {} : { error_meta: r.codigo, http: r.http })}::jsonb
      where id = ${reservada}::uuid
        and exists (select 1 from conversaciones c where c.id = mensajes.conversacion_id and c.correduria_id = ${correduriaId}::uuid)`)
-  if (!r.ok) console.error(`[whatsapp-ia] respuesta no enviada: http=${r.http} codigo=${r.codigo ?? 'sin_codigo'}`)
-  await auditar(p.conversacionId, reservada, r.ok ? 'enviada' : 'fallida')
-  return r.ok ? 'enviada' : 'fallida'
+  if (!r.ok) console.error(`[whatsapp-ia] respuesta ${estado}: http=${r.http} codigo=${r.codigo ?? 'sin_codigo'}`)
+  const resultado: ResultadoRespuesta = r.ok ? 'enviada' : r.incierto ? 'incierta' : 'fallida'
+  await auditar(p.conversacionId, reservada, resultado)
+  return resultado
+}
+
+/**
+ * Opt-out de los MENSAJES pedido por el cliente («no me escribáis», «stop»): la conversación y, con ficha única, la ficha
+ * (`coalesce`: una baja anterior conserva su fecha y su origen). Tras esto el analizador no la reclama más.
+ */
+export async function marcarOptOut(correduriaId: string, conversacionId: string, clienteId: string | null): Promise<'marcado' | 'no_encontrada'> {
+  const db = prismaAsegura()
+  return db.$transaction(async (tx) => {
+    const n = await tx.$executeRaw(Prisma.sql`
+      update conversaciones set wa_opt_out_at = coalesce(wa_opt_out_at, now()), updated_at = now()
+       where id = ${conversacionId}::uuid and correduria_id = ${correduriaId}::uuid`)
+    if (n === 0) return 'no_encontrada' as const
+    if (clienteId) {
+      await tx.$executeRaw(Prisma.sql`
+        update clientes set wa_opt_out_at = coalesce(wa_opt_out_at, now()), wa_opt_out_source = coalesce(wa_opt_out_source, 'whatsapp_ia')
+         where id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid and merged_into_cliente_id is null`)
+    }
+    return 'marcado' as const
+  })
 }
 
 /** 🔇 Silenciar la IA en UNA conversación (botón de Telegram `wap_si`, solo el titular). Idempotente. */

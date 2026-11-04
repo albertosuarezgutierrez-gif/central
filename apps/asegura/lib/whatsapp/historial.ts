@@ -16,7 +16,7 @@ import { computeTelefonoLookupHash, encryptField } from '@central/module-seguros
 import { Prisma } from '../generated/asegura-client'
 import { prismaAsegura } from '../asegura-db'
 import { fichasPorHashes } from './procesar'
-import { hilosDeHistorial } from './eventos'
+import { admiteHistorial, hilosDeHistorial } from './eventos'
 
 /** Lo que Alberto comparte (6 meses) con holgura; lo anterior no se importa aunque llegue. */
 export const DIAS_HISTORIAL = 186
@@ -56,6 +56,12 @@ export async function importarHistorial(correduriaId: string, valor: unknown, ah
     const telefonoCifrado = encryptField(e164)
     const filas = hilo.mensajes.map((m) => ({ ...m, cifrado: encryptField(m.texto) }))
     const n = await db.$transaction(async (tx) => {
+      // Se VALIDA antes de escribir (revisión PR #5528): una conversación que no admite el hilo no se toca (ni
+      // `clientes_candidatos` ni `cliente_id`).
+      const [previa] = await tx.$queryRaw<{ estado: string; opt_out: boolean; cliente_id: string | null }[]>(Prisma.sql`
+        select estado, wa_opt_out_at is not null as opt_out, cliente_id::text as cliente_id from conversaciones
+         where correduria_id = ${correduriaId}::uuid and wa_telefono_hash = ${hash} for update`)
+      if (!admiteHistorial(previa ?? null, clienteId)) return null
       // Misma conversación que usaría `procesar.ts` (una por correduría + teléfono), SIN ultimo_mensaje_at.
       const [conv] = await tx.$queryRaw<{ id: string; estado: string; opt_out: boolean; cliente_id: string | null }[]>(Prisma.sql`
         insert into conversaciones

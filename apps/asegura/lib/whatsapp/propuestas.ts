@@ -142,6 +142,7 @@ export async function avisarTelegram(
 function lineaRespuesta(r: { estado: string; texto?: string; motivo?: string }): string {
   if (r.estado === 'enviada' && r.texto) return `🤖 <b>Respondí:</b> «${escapeHtml(r.texto)}»`
   if (r.estado === 'fallida') return '🤖 ⚠️ Intenté responder y Meta no lo aceptó: no se reintenta. Contesta tú si hace falta.'
+  if (r.estado === 'incierta') return `🤖 ⚠️ No sé si salió la respuesta${r.texto ? ` («${escapeHtml(r.texto)}»)` : ''}: compruébalo en el móvil. No se reintenta.`
   if (r.estado === 'no_enviada') return `🤖 No he contestado (${escapeHtml(r.motivo ?? 'sin motivo')}): contesta tú si hace falta.`
   if (r.estado === 'ya_respondida') return '🤖 No he contestado: ya había respuesta o escribiste tú.'
   return `🤖 No he contestado (${escapeHtml(r.estado)}).`
@@ -280,7 +281,7 @@ export async function resolverPropuesta(
  * ↩️ Deshacer. Cualquier puerta cerrada o fallo → `false` y queda pendiente con sus botones, como siempre.
  * Solo los tres tipos de propuesta (cartera propia, reversible): nada de bots, tarificación ni envíos a terceros.
  */
-export async function aplicarSiAutonoma(correduriaId: string, id: string, ahora: Date = new Date()): Promise<boolean> {
+export async function aplicarSiAutonoma(correduriaId: string, id: string, polizaEnVigor: boolean | null, ahora: Date = new Date()): Promise<boolean> {
   try {
     // El flag primero: apagado, ni siquiera se lee nada.
     if (!autonomiaActiva(process.env[ENV_AUTONOMIA])) return false
@@ -288,7 +289,7 @@ export async function aplicarSiAutonoma(correduriaId: string, id: string, ahora:
       select tipo from whatsapp_propuestas where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'pendiente'`)
     if (!p) return false
     const racha = await rachaDe(correduriaId, p.tipo)
-    const v = decidirAutonomia({ flag: process.env[ENV_AUTONOMIA], umbral: process.env[ENV_UMBRAL], tipo: p.tipo, racha })
+    const v = decidirAutonomia({ flag: process.env[ENV_AUTONOMIA], umbral: process.env[ENV_UMBRAL], tipo: p.tipo, racha, polizaEnVigor })
     if (!v.autonoma) return false
     const r = await resolverPropuesta(correduriaId, id, 'aplicar', ACTOR_AUTONOMO, ahora, { autonoma: true })
     return r.ok

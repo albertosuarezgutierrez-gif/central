@@ -156,6 +156,19 @@ export function decisionHistorial(h: EventoHistorial, importar: boolean): 'no_co
 
 // ── Hilos del historial (para importar SOLO los de ficha única) ─────────────────
 
+/**
+ * ¿Admite la conversación (si ya existe) el historial de la ficha `clienteId`? No: opt-out, enlazada a OTRA ficha, o en un
+ * estado que no sea `abierta` (salvo `pendiente_clasificar` sin ficha, que pasa a `abierta` con ella). Sin conversación, sí.
+ * Se decide ANTES de escribir nada. PURO.
+ */
+export function admiteHistorial(previa: { estado: string; opt_out: boolean; cliente_id: string | null } | null, clienteId: string): boolean {
+  if (previa === null) return true
+  if (previa.opt_out) return false
+  if (previa.cliente_id !== null && previa.cliente_id !== clienteId) return false
+  if (previa.estado === 'abierta') return true
+  return previa.estado === 'pendiente_clasificar' && previa.cliente_id === null
+}
+
 export type MensajeHistorial = { wamid: string; direccion: 'entrante' | 'saliente'; tipo: string; texto: string; fecha: Date }
 export type HiloHistorial = { waId: string; mensajes: MensajeHistorial[] }
 

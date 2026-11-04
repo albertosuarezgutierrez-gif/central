@@ -5,6 +5,13 @@ import { readFileSync } from 'node:fs'
 import { redactarPii } from '@central/module-seguros'
 import {
   ACUSE_GENERICO,
+  CONFIRMACION_OPT_OUT,
+  FRASES,
+  FRASE_NOTA_FECHA_AVISO,
+  IDS_FRASE,
+  clasificarOptOut,
+  montarFrase,
+  nombrePilaSeguro,
   MAX_RESPUESTAS_CONVERSACION_DIA,
   MAX_RESPUESTAS_DIA,
   RESPUESTA_BAJA,
@@ -34,6 +41,7 @@ function estado(p: Partial<EstadoConversacionRespuesta> = {}): EstadoConversacio
     ultimaEntrante: { id: 'e1', tipo: 'text', fecha: hace(12), historial: false },
     ultimoSaliente: { fecha: hace(30 * 60), ia: false },
     haySalienteHumanoPrevio: true,
+    ultimoSalienteHumano: hace(30 * 60),
     yaRespondida: false,
     respuestasHoyConversacion: 0,
     respuestasHoyTotal: 0,
@@ -95,6 +103,11 @@ test('CEPO no contesta a mensajes ANTIGUOS del historial importado', () => {
   assert.equal(motivo({ ultimaEntrante: { id: 'e1', tipo: 'text', fecha: hace(12), historial: true } }), 'entrante_historial')
 })
 
+test('CEPO no contesta si Alberto escribió desde el móvil en las últimas 4 h (aunque el cliente conteste después)', () => {
+  assert.equal(motivo({ ultimoSalienteHumano: hace(3 * 60), ultimoSaliente: { fecha: hace(3 * 60), ia: false }, ultimaEntrante: { id: 'e1', tipo: 'text', fecha: hace(10), historial: false } }), 'alberto_reciente')
+  assert.equal(motivo({ ultimoSalienteHumano: hace(5 * 60), ultimoSaliente: { fecha: hace(5 * 60), ia: false } }), 'ok')
+})
+
 test('CEPO no contesta si Alberto no abrió la conversación (nadie le escribió antes)', () => {
   assert.equal(motivo({ haySalienteHumanoPrevio: false, ultimoSaliente: null }), 'sin_saliente_previo')
 })
@@ -111,8 +124,8 @@ test('CEPO tipos: sticker/reacción/ubicación no; imagen/documento/audio solo a
   }
   for (const tipo of ['image', 'document', 'audio']) {
     assert.equal(motivo({ ultimaEntrante: { id: 'e1', tipo, fecha: hace(12), historial: false } }), 'ok', tipo)
-    const d = decidirRespuesta({ esComercial: true, descartaPersonal: false, baja: false, tipoEntrante: tipo, respuestaIA: 'Muy bien, gracias', promesaAviso: false, redactar })
-    assert.deepEqual(d, { enviar: true, texto: ACUSE_GENERICO, clase: 'acuse' }, tipo)
+    const d = decidirRespuesta({ esComercial: true, descartaPersonal: false, baja: false, tipoEntrante: tipo, respuestaIA: 'saludo', promesaAviso: false, redactar })
+    assert.deepEqual(d, { enviar: true, texto: ACUSE_GENERICO, clase: 'acuse', frase: 'acuse' }, tipo)
   }
 })
 
@@ -163,8 +176,8 @@ test('CEPO filtro: prometer avisos futuros solo con el aviso por plantilla dispo
   assert.equal(motivoFiltro(t, false), 'promesa_aviso')
   assert.equal(motivoFiltro('Tomo nota, le avisaré antes del vencimiento.', false), 'promesa_aviso')
   assert.equal(motivoFiltro(t, true), 'ok')
-  assert.match(sistemaRespuesta({ promesaAviso: false }), /NO prometas avisos/)
-  assert.doesNotMatch(sistemaRespuesta({ promesaAviso: true }), /NO prometas avisos/)
+  assert.doesNotMatch(sistemaRespuesta({ promesaAviso: false }), /Le avisaremos/)
+  assert.match(sistemaRespuesta({ promesaAviso: true }), /Le avisaremos/)
 })
 
 test('CEPO filtro: largo, vacío o no-texto → no', () => {
@@ -174,16 +187,49 @@ test('CEPO filtro: largo, vacío o no-texto → no', () => {
   assert.equal(filtrarContenido(42, { promesaAviso: false, redactar }).ok, false)
 })
 
-// ── Decisión tras la IA ─────────────────────────────────────────────────────────
+// ── Decisión tras la IA: LISTA CERRADA ──────────────────────────────────────────
 
 const decide = (p: Partial<Parameters<typeof decidirRespuesta>[0]>) =>
-  decidirRespuesta({ esComercial: true, descartaPersonal: false, baja: false, tipoEntrante: 'text', respuestaIA: 'Recibido, Alberto lo revisa.', promesaAviso: false, redactar, ...p })
+  decidirRespuesta({ esComercial: true, descartaPersonal: false, baja: false, tipoEntrante: 'text', respuestaIA: 'alberto_revisa', promesaAviso: false, redactar, ...p })
 
-test('decisión: texto de la IA filtrado → se envía tal cual', () => {
-  assert.deepEqual(decide({}), { enviar: true, texto: 'Recibido, Alberto lo revisa.', clase: 'ia' })
+test('decisión: la IA elige un id de la lista → se envía esa frase, con el nombre de pila de la FICHA si es válido', () => {
+  assert.deepEqual(decide({}), { enviar: true, texto: 'Gracias. Alberto lo revisa y le contesta en cuanto pueda.', clase: 'ia', frase: 'alberto_revisa' })
+  assert.deepEqual(decide({ nombrePila: 'maría josé García' }), { enviar: true, texto: 'Gracias, María. Alberto lo revisa y le contesta en cuanto pueda.', clase: 'ia', frase: 'alberto_revisa' })
+  assert.equal(nombrePilaSeguro('(sin nombre)'), null)
+  assert.equal(nombrePilaSeguro('🔥'), null)
+  assert.equal(nombrePilaSeguro('12345678Z'), null)
 })
 
-test('CEPO decisión: IA no segura (null) → no se envía nada, ni plantilla', () => {
+test('CEPO lista cerrada: texto libre, ids inventados o «baja» elegida por la IA → no sale nada', () => {
+  for (const r of ['Su siniestro está aprobado.', 'La grúa está incluida.', 'Sigue cubierto.', 'precio', 'acuse ', 'ACUSE', { id: 'acuse' }, 42]) {
+    const d = decide({ respuestaIA: r })
+    assert.equal(d.enviar && d.frase !== 'acuse', false, JSON.stringify(r))
+  }
+  assert.deepEqual(decide({ respuestaIA: 'Su siniestro está aprobado.' }), { enviar: false, motivo: 'contenido_prohibido', detalle: 'fuera_de_lista' })
+  assert.deepEqual(decide({ respuestaIA: 'baja' }), { enviar: false, motivo: 'contenido_prohibido', detalle: 'baja_sin_baja' })
+})
+
+test('CEPO frases aprobadas: TODAS pasan el filtro (segunda capa), con y sin nombre y con la variante de aviso', () => {
+  for (const id of IDS_FRASE) {
+    for (const nombre of [null, 'Lucía']) assert.equal(filtrarContenido(montarFrase(FRASES[id], nombre), { promesaAviso: false, redactar }).ok, true, `${id}/${nombre}`)
+  }
+  assert.equal(filtrarContenido(montarFrase(FRASE_NOTA_FECHA_AVISO, null), { promesaAviso: true, redactar }).ok, true)
+  assert.equal(filtrarContenido(montarFrase(FRASE_NOTA_FECHA_AVISO, null), { promesaAviso: false, redactar }).ok, false)
+  assert.equal(filtrarContenido(CONFIRMACION_OPT_OUT, { promesaAviso: false, redactar }).ok, true)
+})
+
+test('CEPO promesa de aviso: «nota_fecha» solo promete aviso con el aviso por plantilla disponible', () => {
+  assert.match((decide({ respuestaIA: 'nota_fecha' }) as { texto: string }).texto, /Alberto se lo revisa antes del vencimiento/)
+  assert.match((decide({ respuestaIA: 'nota_fecha', promesaAviso: true }) as { texto: string }).texto, /Le avisaremos antes del vencimiento/)
+})
+
+test('CEPO filtro (segunda capa): coberturas/siniestros afirmados y precios en letra', () => {
+  for (const t of ['Su siniestro está aprobado.', 'La grúa está incluida.', 'Sigue cubierto.', 'Le sale por doscientos al año.', 'Es gratis.']) {
+    assert.equal(filtrarContenido(t, { promesaAviso: false, redactar }).ok, false, t)
+  }
+})
+
+test('CEPO decisión: IA no segura (null) → no se envía nada, ni frase fija', () => {
   assert.deepEqual(decide({ respuestaIA: null }), { enviar: false, motivo: 'ia_no_segura' })
   assert.deepEqual(decide({ respuestaIA: null, baja: true }), { enviar: false, motivo: 'ia_no_segura' })
 })
@@ -193,18 +239,49 @@ test('CEPO decisión: no comercial o personal → no', () => {
   assert.equal(decide({ descartaPersonal: true }).enviar, false)
 })
 
-test('CEPO decisión: contenido prohibido → no (el texto rechazado no viaja)', () => {
-  const d = decide({ respuestaIA: 'Ya está dado de baja, le sale a 0 €.' })
-  assert.equal(d.enviar, false)
-  if (!d.enviar) assert.equal(d.motivo, 'contenido_prohibido')
-  assert.ok(!JSON.stringify(d).includes('baja,'))
-})
-
-test('CEPO bajas: SIEMPRE el texto fijo «Alberto lo gestiona», nunca lo que diga la IA, y nunca «hecho»', () => {
-  const d = decide({ baja: true, respuestaIA: 'Hecho, ya está dada de baja.' })
-  assert.deepEqual(d, { enviar: true, texto: RESPUESTA_BAJA, clase: 'baja' })
+test('CEPO bajas: SIEMPRE la frase fija «Alberto lo gestiona», elija lo que elija la IA, y nunca «hecho»', () => {
+  const d = decide({ baja: true, respuestaIA: 'saludo' })
+  assert.deepEqual(d, { enviar: true, texto: RESPUESTA_BAJA, clase: 'baja', frase: 'baja' })
   assert.match(RESPUESTA_BAJA, /Alberto/)
   assert.doesNotMatch(RESPUESTA_BAJA, /\b(ya est[aá]|dad[oa] de baja|anulad|hecho)\b/i)
+})
+
+// ── Opt-out de los mensajes ─────────────────────────────────────────────────────
+
+test('CEPO opt-out: «no me escribáis / stop / no quiero avisos» → opt_out; mezclado con baja de póliza → ambiguo', () => {
+  for (const t of ['No me escribáis más por aquí', 'STOP', 'No quiero recibir avisos', 'Dadme de baja de los avisos', 'Dejad de escribirme', 'no me escriban.']) {
+    assert.equal(clasificarOptOut(null, t), 'opt_out', t)
+  }
+  assert.equal(clasificarOptOut(null, 'Quiero dar de baja la póliza y no me escribáis más'), 'ambiguo')
+  assert.equal(clasificarOptOut('baja', 'Stop'), 'ambiguo')
+  for (const t of ['No me mande el presupuesto todavía', 'No me escribió nadie de la compañía', 'Quiero la baja del coche', 'Gracias']) {
+    assert.equal(clasificarOptOut(null, t), null, t)
+  }
+})
+
+test('CEPO opt-out: confirmación fija (aunque la IA no esté segura o no sea comercial); ambiguo → no se contesta', () => {
+  assert.deepEqual(decide({ optOut: 'opt_out', respuestaIA: null, esComercial: false }), { enviar: true, texto: CONFIRMACION_OPT_OUT, clase: 'opt_out', frase: 'opt_out' })
+  assert.deepEqual(decide({ optOut: 'ambiguo', baja: true }), { enviar: false, motivo: 'opt_out_ambiguo' })
+  const src = readFileSync(new URL('./analizar.ts', import.meta.url), 'utf8')
+  // Una sola vez: se marca DESPUÉS de contestar, y una conversación con opt-out ya no se reclama.
+  assert.ok(src.indexOf('enviarRespuesta(') < src.indexOf('await marcarOptOut('), 'el opt-out se marca tras la confirmación')
+  assert.match(src, /and wa_opt_out_at is null/)
+  assert.match(src, /optOut !== 'opt_out' && esBaja\(/, 'la baja de AVISOS no es una baja de póliza')
+})
+
+test('CEPO importes fuera del contexto con la respuesta activa', () => {
+  const src = readFileSync(new URL('./analizar.ts', import.meta.url), 'utf8')
+  assert.match(src, /importe: flagRespuesta \? null : saliente\.importe/)
+  assert.match(src, /importe: flagRespuesta \? null : r\.importe/)
+})
+
+test('CEPO incierta: no cuenta como dicha en el contexto de la IA ni se reintenta', () => {
+  const src = readFileSync(new URL('./analizar.ts', import.meta.url), 'utf8')
+  assert.match(src, /and not \(coalesce\(metadata->>'ia', ''\) = 'true' and coalesce\(estado, ''\) in \('enviando', 'incierto', 'fallido'\)\)/)
+  const resp = readFileSync(new URL('./respuesta.ts', import.meta.url), 'utf8')
+  assert.match(resp, /r\.incierto \? 'incierto' : 'fallido'/)
+  const prop = readFileSync(new URL('./propuestas.ts', import.meta.url), 'utf8')
+  assert.match(prop, /No sé si salió la respuesta/)
 })
 
 test('esBaja: por la intención de la IA o por el texto', () => {

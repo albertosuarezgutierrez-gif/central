@@ -10,11 +10,13 @@
 //     (si el echo más reciente es suyo, él lleva la conversación);
 //   · por debajo del tope diario (por conversación y total);
 //   · tipo texto (o imagen/documento/audio/vídeo → solo el acuse genérico fijo);
-//   · la IA dio una respuesta (null = no está segura → solo Telegram) y pasa el FILTRO de contenido.
-// Bajas / oposición a la prórroga: NUNCA «hecho»; texto FIJO («Alberto lo gestiona») + Telegram urgente (art. 22 LCS).
-// Prohibido en el texto: precios/importes, recomendar productos o coberturas (IDD), confirmar trámites, datos personales
-// (también de terceros), enlaces, marcadores de redacción ([NOMBRE]…) y, mientras no haya avisos por plantilla, prometer
-// avisos futuros.
+//   · Alberto no ha escrito desde el móvil en las últimas 4 h (está en la conversación aunque el cliente conteste después);
+//   · la IA eligió una FRASE de la lista cerrada (null = no está segura → solo Telegram) y el texto montado pasa el FILTRO.
+// LISTA CERRADA (revisión adversarial PR #5528): la IA NO redacta texto libre; elige un id de `FRASES` (aprobadas) y la
+// única variable es el NOMBRE DE PILA de la ficha, que pone el servidor. El filtro de contenido queda como segunda capa.
+// Bajas / oposición a la prórroga: NUNCA «hecho»; frase FIJA («Alberto lo gestiona») + Telegram urgente (art. 22 LCS).
+// Opt-out de los MENSAJES («no me escribáis», «stop»): confirmación fija una vez + `wa_opt_out_at`; si se mezcla con una baja
+// de póliza (ambiguo) no se contesta y se avisa por Telegram.
 
 export const VENTANA_MS = 24 * 60 * 60 * 1000
 /** Margen de seguridad para no rozar el cierre de la ventana de 24 h de Meta (el envío tarda y el reloj difiere). */
@@ -22,18 +24,51 @@ export const MARGEN_VENTANA_MS = 30 * 60 * 1000
 export const MAX_RESPUESTAS_CONVERSACION_DIA = 3
 export const MAX_RESPUESTAS_DIA = 40
 export const MAX_CARACTERES_RESPUESTA = 400
+/** Si Alberto escribió desde el móvil en estas horas, él está en la conversación: la IA calla. */
+export const HORAS_SILENCIO_TRAS_ALBERTO = 4
 /** Tipos de entrante a los que solo se contesta con el acuse genérico (no se interpreta su contenido). */
 export const TIPOS_ACUSE = ['image', 'document', 'audio', 'voice', 'video'] as const
 
-export const ACUSE_GENERICO = 'Recibido, muchas gracias. Alberto lo revisa y le dice algo.'
-export const RESPUESTA_BAJA =
-  'Recibido. Las bajas las gestiona Alberto personalmente: se pone en contacto con usted para tramitarla. Hasta entonces no se ha cambiado nada en su póliza.'
+// ── Lista CERRADA de frases aprobadas (la IA solo elige el id) ─────────────────────
+// `{nombre}` = nombre de pila de la FICHA (lo pone el servidor; sin nombre válido se quita con su coma).
+export const FRASES = {
+  acuse: 'Recibido{nombre}, muchas gracias. Alberto lo revisa y le dice algo.',
+  nota_fecha: 'Perfecto{nombre}, tomo nota. Alberto se lo revisa antes del vencimiento.',
+  alberto_revisa: 'Gracias{nombre}. Alberto lo revisa y le contesta en cuanto pueda.',
+  pedir_poliza: 'Si quiere que le preparemos un presupuesto, envíenos por aquí una foto de su póliza actual y Alberto lo revisa.',
+  saludo: 'Gracias a usted{nombre}, un saludo.',
+  baja: 'Recibido. Las bajas las gestiona Alberto personalmente y se pondrá en contacto con usted. Hasta entonces su póliza sigue igual.',
+} as const
+/** Solo con `avisoVencimientoDisponible()` (aviso por plantilla encendido): la única frase que promete un aviso. */
+export const FRASE_NOTA_FECHA_AVISO = 'Perfecto{nombre}, tomo nota. Le avisaremos antes del vencimiento.'
+/** Confirmación del opt-out de MENSAJES (la pone el servidor, nunca la IA). Una sola vez: tras ella no se reclama más. */
+export const CONFIRMACION_OPT_OUT = 'Entendido, no le volveremos a escribir por aquí. Si necesita algo, escríbanos cuando quiera.'
+export type IdFrase = keyof typeof FRASES
+export const IDS_FRASE = Object.keys(FRASES) as IdFrase[]
+
+const NOMBRE_PILA = /^[\p{L}][\p{L}'-]{1,29}$/u
+
+/** El nombre de pila de la ficha, solo si parece un nombre (una palabra de letras); si no, null. PURO. */
+export function nombrePilaSeguro(nombre: string | null | undefined): string | null {
+  const primera = (nombre ?? '').trim().split(/\s+/)[0] ?? ''
+  if (!NOMBRE_PILA.test(primera) || /^(sin|nombre|cliente|lead)$/i.test(primera)) return null
+  return primera.charAt(0).toUpperCase() + primera.slice(1).toLowerCase()
+}
+
+/** Monta una frase de la lista con el nombre de pila (o sin él). */
+export function montarFrase(plantilla: string, nombrePila: string | null): string {
+  return plantilla.replace('{nombre}', nombrePila ? `, ${nombrePila}` : '')
+}
+
+/** Compatibilidad: acuse de media y frase de baja (las usa también el Telegram y los tests). */
+export const ACUSE_GENERICO = montarFrase(FRASES.acuse, null)
+export const RESPUESTA_BAJA = FRASES.baja
 
 export type MotivoNoResponder =
   | 'flag_apagado' | 'sin_ficha_unica' | 'tipo_ficha' | 'conversacion_no_abierta' | 'opt_out' | 'silenciada'
   | 'sin_entrante' | 'ultimo_no_es_entrante' | 'entrante_historial' | 'fuera_de_ventana' | 'ya_respondida'
   | 'alberto_lleva_conversacion' | 'sin_saliente_previo' | 'tope_conversacion' | 'tope_diario' | 'tipo_no_admitido'
-  | 'no_comercial' | 'ia_no_segura' | 'contenido_prohibido' | 'sin_migracion'
+  | 'no_comercial' | 'ia_no_segura' | 'contenido_prohibido' | 'sin_migracion' | 'alberto_reciente' | 'opt_out_ambiguo'
 
 /** Lo que el servidor sabe de la conversación ANTES de llamar a la IA. */
 export type EstadoConversacionRespuesta = {
@@ -49,6 +84,8 @@ export type EstadoConversacionRespuesta = {
   ultimoSaliente: { fecha: Date; ia: boolean } | null
   /** ¿Hay algún saliente de Alberto (no de la IA) en la conversación ANTES del último entrante? */
   haySalienteHumanoPrevio: boolean
+  /** El echo más reciente de ALBERTO (escrito desde el móvil; `rol = 'corredor'`). null = ninguno. */
+  ultimoSalienteHumano: Date | null
   /** ¿La IA ya contestó a ESE entrante (sea cual sea el estado del envío)? */
   yaRespondida: boolean
   respuestasHoyConversacion: number
@@ -78,6 +115,9 @@ export function puedeResponder(e: EstadoConversacionRespuesta): Pre {
   // Una fecha futura (reloj de Meta adelantado) tampoco es de fiar: fuera.
   if (edad < -5 * 60 * 1000 || edad > VENTANA_MS - MARGEN_VENTANA_MS) return no('fuera_de_ventana')
   if (!e.haySalienteHumanoPrevio) return no('sin_saliente_previo')
+  if (e.ultimoSalienteHumano && e.ahora.getTime() - e.ultimoSalienteHumano.getTime() < HORAS_SILENCIO_TRAS_ALBERTO * 3_600_000) {
+    return no('alberto_reciente')
+  }
   if (e.respuestasHoyConversacion >= MAX_RESPUESTAS_CONVERSACION_DIA) return no('tope_conversacion')
   if (e.respuestasHoyTotal >= MAX_RESPUESTAS_DIA) return no('tope_diario')
   if (ent.tipo !== 'text' && !(TIPOS_ACUSE as readonly string[]).includes(ent.tipo)) return no('tipo_no_admitido')
@@ -96,6 +136,9 @@ const PROHIBIDO: { motivo: string; re: RegExp }[] = [
     motivo: 'tramite_confirmado',
     re: /\b(ya (esta|estan|queda|quedan|lo|la|se)|he |hemos |queda |quedan |esta |estan )?(dad[oa]s? de baja|anulad[oa]s?|cancelad[oa]s?|tramitad[oa]s?|cambiad[oa]s?|modificad[oa]s?|actualizad[oa]s?|renovad[oa]s?|aplicad[oa]s?|confirmad[oa]s?|hech[oa]s?|resuelt[oa]s?|realizad[oa]s?|gestionad[oa]s?|cobrad[oa]s?|pagad[oa]s?)\b|\b(le|te) confirmo\b|\bconfirmamos\b/,
   },
+  // «Su siniestro está aprobado», «la grúa está incluida», «sigue cubierto»: afirmar cobertura o resultado también compromete.
+  { motivo: 'cobertura_afirmada', re: /\b(aprobad[oa]s?|autorizad[oa]s?|aceptad[oa]s?|incluid[oa]s?|cubiert[oa]s?|cubre|cubren|siniestro|siniestros|indemniz\w*|peritaje|perito|grua|reparacion)\b/ },
+  { motivo: 'precio_en_letra', re: /\b(cien|ciento|doscient\w*|trescient\w*|cuatrocient\w*|quinient\w*|seiscient\w*|setecient\w*|ochocient\w*|novecient\w*|mil|veinte|treinta|cuarenta|cincuenta|sesenta|setenta|ochenta|noventa|gratis|pagar|pague|cobrar|cobro|cargo|recibo)\b/ },
   { motivo: 'enlace', re: /https?:|www\.|\.(es|com|net|org)\b/ },
   { motivo: 'dato_personal', re: /\b(dni|nif|nie|iban|cuenta bancaria|numero de cuenta|tarjeta|contrasena|clave|codigo|direccion|domicilio|matricula|n(umero)? de poliza)\b/ },
 ]
@@ -138,35 +181,73 @@ export function esBaja(intencion: string | null | undefined, textoEntrante: stri
   return BAJA.test(quitarTildes((textoEntrante ?? '').toLowerCase()))
 }
 
+// ── Opt-out de los MENSAJES (≠ baja de la póliza) ─────────────────────────────────
+
+const OPT_OUT = /\b(no (me|nos) (vuelva[ns]? a |volvais a )?(escrib(a|an|ais|as|ir)|mand(e|en|eis|es|ar)|envi(e|en|eis|es|ar)|contact(e|en|eis|es|ar)|molest(e|en|eis|es|ar)) (mas|nada|por aqui|por whatsapp|por este medio)|no (me|nos) (escrib(an|ais)|contact(en|eis)|molest(en|eis))(?=\s*([.!,;]|$))|no quiero (recibir )?(mas )?(avisos|mensajes|whatsapps?|publicidad|recordatorios)|(de )?baja de (los |estos )?(avisos|mensajes|whatsapps?|recordatorios|publicidad)|dej(a|ad|en|e) de (escribir\w*|mandar\w*|enviar\w*)|stop|basta de mensajes)\b/g
+
+export type OptOut = 'opt_out' | 'ambiguo' | null
+
+/**
+ * ¿Pide que no le escribamos? `opt_out` = claro; `ambiguo` = además habla de dar de baja la PÓLIZA (o la IA lo leyó
+ * como baja): no se contesta nada y decide Alberto; null = no lo pide. PURO.
+ */
+export function clasificarOptOut(intencion: string | null | undefined, textoEntrante: string | null | undefined): OptOut {
+  const llano = quitarTildes((textoEntrante ?? '').toLowerCase())
+  if (!OPT_OUT.test(llano)) return null
+  OPT_OUT.lastIndex = 0
+  const resto = llano.replace(OPT_OUT, ' ')
+  OPT_OUT.lastIndex = 0
+  return intencion === 'baja' || BAJA.test(resto) ? 'ambiguo' : 'opt_out'
+}
+
 export type DecisionRespuesta =
-  | { enviar: true; texto: string; clase: 'ia' | 'acuse' | 'baja' }
+  | { enviar: true; texto: string; clase: 'ia' | 'acuse' | 'baja' | 'opt_out'; frase: IdFrase | 'opt_out' }
   | { enviar: false; motivo: MotivoNoResponder; detalle?: string }
 
 /**
- * Tras la IA: qué se envía. `respuestaIA` llega SIN validar (la IA puede devolver cualquier cosa).
- * La baja manda sobre todo (texto fijo), luego el acuse de media, luego el texto libre filtrado.
+ * Tras la IA: qué se envía. `respuestaIA` llega SIN validar: debe ser un id de `FRASES` (o null). Orden: opt-out (fijo,
+ * ambiguo = nada), baja (fija), acuse de media (fijo), y la frase elegida. TODO texto montado pasa además el filtro.
  */
 export function decidirRespuesta(p: {
   esComercial: boolean
   descartaPersonal: boolean
   baja: boolean
+  optOut?: OptOut
   tipoEntrante: string
   respuestaIA: unknown
   promesaAviso: boolean
+  nombrePila?: string | null
   redactar: (s: string) => string
 }): DecisionRespuesta {
+  if (p.optOut === 'ambiguo') return { enviar: false, motivo: 'opt_out_ambiguo' }
+  if (p.optOut === 'opt_out') return conFiltro(CONFIRMACION_OPT_OUT, 'opt_out', 'opt_out', p)
   if (!p.esComercial || p.descartaPersonal) return { enviar: false, motivo: 'no_comercial' }
-  // null = la IA no está segura: nada sale, ni siquiera la plantilla (lo decide Alberto con el aviso).
+  // null = la IA no está segura: nada sale, ni siquiera la frase fija (lo decide Alberto con el aviso).
   if (p.respuestaIA === null || p.respuestaIA === undefined) return { enviar: false, motivo: 'ia_no_segura' }
-  if (p.baja) return { enviar: true, texto: RESPUESTA_BAJA, clase: 'baja' }
+  const nombre = nombrePilaSeguro(p.nombrePila)
+  if (p.baja) return conFiltro(FRASES.baja, 'baja', 'baja', p)
   if (p.tipoEntrante !== 'text') {
     return (TIPOS_ACUSE as readonly string[]).includes(p.tipoEntrante)
-      ? { enviar: true, texto: ACUSE_GENERICO, clase: 'acuse' }
+      ? conFiltro(montarFrase(FRASES.acuse, nombre), 'acuse', 'acuse', p)
       : { enviar: false, motivo: 'tipo_no_admitido' }
   }
-  const f = filtrarContenido(p.respuestaIA, { promesaAviso: p.promesaAviso, redactar: p.redactar })
-  if (!f.ok) return { enviar: false, motivo: 'contenido_prohibido', detalle: f.motivo }
-  return { enviar: true, texto: f.texto, clase: 'ia' }
+  const id = typeof p.respuestaIA === 'string' ? p.respuestaIA.trim() : ''
+  if (!(IDS_FRASE as string[]).includes(id)) return { enviar: false, motivo: 'contenido_prohibido', detalle: 'fuera_de_lista' }
+  // La baja SOLO la pone el servidor (texto/intención): elegida por la IA sin serlo, no se manda.
+  if (id === 'baja') return { enviar: false, motivo: 'contenido_prohibido', detalle: 'baja_sin_baja' }
+  const plantilla = id === 'nota_fecha' && p.promesaAviso ? FRASE_NOTA_FECHA_AVISO : FRASES[id as IdFrase]
+  return conFiltro(montarFrase(plantilla, nombre), 'ia', id as IdFrase, p)
+}
+
+function conFiltro(
+  texto: string,
+  clase: 'ia' | 'acuse' | 'baja' | 'opt_out',
+  frase: IdFrase | 'opt_out',
+  p: { promesaAviso: boolean; redactar: (s: string) => string },
+): DecisionRespuesta {
+  // Segunda capa: una frase aprobada SIEMPRE pasa (lo fija un test); si un día no, no sale.
+  const f = filtrarContenido(texto, { promesaAviso: p.promesaAviso, redactar: p.redactar })
+  return f.ok ? { enviar: true, texto: f.texto, clase, frase } : { enviar: false, motivo: 'contenido_prohibido', detalle: f.motivo }
 }
 
 /** Línea del Telegram para un motivo de NO responder (sin datos personales). */
@@ -175,19 +256,19 @@ export const TEXTO_MOTIVO: Partial<Record<MotivoNoResponder, string>> = {
   contenido_prohibido: 'la respuesta propuesta no pasó el filtro',
   tipo_no_admitido: 'tipo de mensaje que no se contesta',
   no_comercial: 'no es una conversación de seguros',
+  opt_out_ambiguo: 'pide que no le escribamos y además habla de baja de póliza: decide tú',
 }
 
 /** Añadido al prompt de sistema SOLO cuando se le pide respuesta (si no, el prompt es el de siempre). */
 export function sistemaRespuesta(o: { promesaAviso: boolean }): string {
-  const aviso = o.promesaAviso
-    ? '«Perfecto, tomo nota; le aviso antes del vencimiento»'
-    : `«Perfecto, ${FRASE_SIN_PROMESA}» (NO prometas avisos ni recordatorios futuros)`
+  const lista = IDS_FRASE.filter((id) => id !== 'baja')
+    .map((id) => `  "${id}": «${montarFrase(id === 'nota_fecha' && o.promesaAviso ? FRASE_NOTA_FECHA_AVISO : FRASES[id], null)}»`)
+    .join('\n')
   return `
 
-ADEMÁS devuelve el campo "respuesta": el mensaje de WhatsApp que se enviará TAL CUAL al Contacto en nombre de la correduría, contestando a su ÚLTIMO mensaje. Reglas de "respuesta":
-- Español, de usted, 1 o 2 frases cortas, máximo 300 caracteres, sin emojis, sin saludo largo ni firma, sin nombres.
-- Solo acuse + qué pasará después, sin comprometer nada. Ejemplos: ${aviso}; «Recibido, Alberto lo revisa y le dice algo».
-- PROHIBIDO: precios, importes, porcentajes o descuentos; recomendar productos, compañías o coberturas; decir que un trámite (baja, anulación, cambio, pago, renovación) está hecho o confirmado; pedir o repetir DNI, IBAN, cuentas, direcciones, matrículas o números de póliza; datos de otras personas; enlaces; los marcadores [NOMBRE], [DNI]….
-- Si pide una baja o no renovar: no la confirmes; di solo que Alberto la gestiona.
-- Si no estás SEGURO de qué contestar, o el mensaje no necesita respuesta, o no es de seguros: "respuesta": null.`
+ADEMÁS devuelve el campo "respuesta": el ID de UNA frase aprobada que se enviará al Contacto contestando a su ÚLTIMO mensaje, o null. NO redactes texto: solo el id (una cadena de esta lista):
+${lista}
+- "nota_fecha": si da una fecha (vencimiento, cobro…). "pedir_poliza": si quiere presupuesto o comparar y no ha mandado su póliza. "saludo": si solo da las gracias o se despide. "acuse"/"alberto_revisa": el resto de consultas que Alberto debe mirar.
+- Si pide una baja o no renovar, o que no le escribamos: "respuesta": "acuse" (el sistema pone la frase correcta).
+- Si no estás SEGURO, el mensaje no necesita respuesta, o no es de seguros: "respuesta": null.`
 }

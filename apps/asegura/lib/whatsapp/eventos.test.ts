@@ -5,6 +5,7 @@ import { zWebhookWhatsapp, crudoMinimizado } from './payload.ts'
 import {
   decisionHistorial,
   hilosDeHistorial,
+  admiteHistorial,
   MAX_MENSAJES_HILO,
   estadoDeEventoCuenta,
   extraerEventos,
@@ -200,4 +201,17 @@ test('CEPO historial: ya no se guarda NUNCA el crudo (todos los chats en claro);
   const codigo = hist.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n')
   assert.doesNotMatch(codigo, /ultimo_mensaje_at|analizada_hasta/)
   assert.match(codigo, /origen: 'historial'/)
+})
+
+test('CEPO admiteHistorial: se decide ANTES de escribir; opt-out, otra ficha o personal → no se toca la conversación', async () => {
+  const F = 'ficha-1'
+  assert.equal(admiteHistorial(null, F), true)
+  assert.equal(admiteHistorial({ estado: 'abierta', opt_out: false, cliente_id: F }, F), true)
+  assert.equal(admiteHistorial({ estado: 'pendiente_clasificar', opt_out: false, cliente_id: null }, F), true)
+  assert.equal(admiteHistorial({ estado: 'abierta', opt_out: true, cliente_id: F }, F), false)
+  assert.equal(admiteHistorial({ estado: 'abierta', opt_out: false, cliente_id: 'otra' }, F), false)
+  assert.equal(admiteHistorial({ estado: 'descartada_personal', opt_out: false, cliente_id: null }, F), false)
+  const { readFileSync } = await import('node:fs')
+  const hist = readFileSync(new URL('./historial.ts', import.meta.url), 'utf8')
+  assert.ok(hist.indexOf('admiteHistorial(previa') < hist.indexOf('insert into conversaciones'), 'valida antes del upsert')
 })

@@ -14,7 +14,11 @@ import { idMetaValido, type FetchLike } from '../whatsapp/graph.ts'
 const BASE = 'https://graph.facebook.com'
 export const MAX_TEXTO_ENVIO = 1000
 
-export type ResultadoEnvio = { ok: true; wamid: string } | { ok: false; http: number; codigo: number | null }
+/**
+ * `incierto`: red caída, timeout o 5xx de Meta → PUDO salir. No se reintenta y se dice «no sé si salió»; un 4xx (o una
+ * entrada rechazada antes de llamar) es un no rotundo.
+ */
+export type ResultadoEnvio = { ok: true; wamid: string } | { ok: false; http: number; codigo: number | null; incierto: boolean }
 
 const zOk = z.object({ messages: z.array(z.object({ id: z.string().min(1).max(255) }).passthrough()).min(1) }).passthrough()
 const zErr = z.object({ error: z.object({ code: z.number().optional() }).passthrough() }).passthrough()
@@ -26,9 +30,9 @@ export function crearEnviador(opts: { version: string; fetch?: FetchLike; timeou
     /** `toE164` con o sin «+»; se manda solo con dígitos (formato wa_id). */
     async enviarTexto(p: { phoneNumberId: string; token: string; toE164: string; texto: string }): Promise<ResultadoEnvio> {
       const to = p.toE164.replace(/^\+/, '')
-      if (!idMetaValido(p.phoneNumberId) || !/^\d{8,15}$/.test(to)) return { ok: false, http: 0, codigo: null }
+      if (!idMetaValido(p.phoneNumberId) || !/^\d{8,15}$/.test(to)) return { ok: false, http: 0, codigo: null, incierto: false }
       const texto = p.texto.trim()
-      if (texto === '' || texto.length > MAX_TEXTO_ENVIO) return { ok: false, http: 0, codigo: null }
+      if (texto === '' || texto.length > MAX_TEXTO_ENVIO) return { ok: false, http: 0, codigo: null, incierto: false }
       let res: Response
       try {
         res = await f(`${BASE}/${opts.version}/${p.phoneNumberId}/messages`, {
@@ -39,12 +43,13 @@ export function crearEnviador(opts: { version: string; fetch?: FetchLike; timeou
           signal: AbortSignal.timeout(timeoutMs),
         })
       } catch {
-        return { ok: false, http: 0, codigo: null }
+        // Corte o timeout: la petición pudo llegar a Meta.
+        return { ok: false, http: 0, codigo: null, incierto: true }
       }
       const cuerpo: unknown = await res.json().catch(() => null)
       if (!res.ok) {
         const e = zErr.safeParse(cuerpo)
-        return { ok: false, http: res.status, codigo: e.success ? e.data.error.code ?? null : null }
+        return { ok: false, http: res.status, codigo: e.success ? e.data.error.code ?? null : null, incierto: res.status >= 500 }
       }
       const v = zOk.safeParse(cuerpo)
       // 200 sin wamid: Meta lo aceptó pero no sabemos su id. Cuenta como ENVIADO (no se reintenta) sin id.
