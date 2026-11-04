@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-03T22:22:43Z",
-  "sha": "ea3988ec0a6a06e599a69b4ae3459522ed3a8abd",
+  "generadoEn": "2026-11-04T06:12:53Z",
+  "sha": "e31ad5824645ed1d58ff4164d76827244aad4c60",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -246472,7 +246472,7 @@
           "exportada": true,
           "params": "ramo: RamoOportunidad | string | null",
           "retorno": "ContratoDatos",
-          "linea": 279,
+          "linea": 293,
           "resumen": "El contrato de un ramo de oportunidad. Ramo sin cotizador (RC, comercio, mascotas…) → `sin_cotizador`; sin ramo (`null`) → `generico`. Nunca lanza."
         },
         {
@@ -246481,7 +246481,7 @@
           "exportada": true,
           "params": "contrato: ContratoDatos",
           "retorno": "Set<string>",
-          "linea": 286,
+          "linea": 300,
           "resumen": "Todas las claves que un contrato cubre (las suyas y las de los validadores). Para los cepos."
         },
         {
@@ -246490,7 +246490,7 @@
           "exportada": true,
           "params": "f: CampoContrato",
           "retorno": "boolean",
-          "linea": 296,
+          "linea": 310,
           "resumen": "¿Se le pregunta al cliente en la PRIMERA petición? Lo obligatorio, lo condicional y lo opcional que mueve el precio."
         },
         {
@@ -246499,7 +246499,7 @@
           "exportada": true,
           "params": "ramos: readonly (RamoOportunidad | string)[], conocidos: ReadonlySet<string> = new Set()",
           "retorno": "BloquePeticion[]",
-          "linea": 310,
+          "linea": 324,
           "resumen": "La petición de datos: SOLO lo que falta. `conocidos` = claves del contrato que ya se saben (las dio el correo, las trajo el Catastro…). Una pregunta compartida se omite solo si TODAS sus claves pedibl"
         },
         {
@@ -246508,13 +246508,13 @@
           "exportada": true,
           "params": "ramos: readonly (RamoOportunidad | string)[], claves: ReadonlySet<string>",
           "retorno": "string[]",
-          "linea": 342,
+          "linea": 356,
           "resumen": "Etiquetas de un conjunto de claves de un contrato, para decir en Telegram qué se sabe ya."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6baeffa0036e"
+      "hash": "7c2c6cc22753"
     },
     {
       "ruta": "packages/module-seguros/src/copy-regulado.ts",
@@ -267544,6 +267544,69 @@
       "hash": "22885b908d67"
     },
     {
+      "ruta": "packages/module-tarificacion/src/formulario-patinete.ts",
+      "ambito": "packages/module-tarificacion",
+      "resumen": "Formulario CANÓNICO de PATINETE / VMP (vehículo de movilidad personal) (03/11/2026). PURO: ni BD, ni red, ni Playwright. Lo que un robot necesita para TARIFICAR un patinete en un portal de compañía. Primera compañía: Allianz ePAC «Movilidad Personal» (servlet `/drvp00/`, pantallas «Figuras Intervini",
+      "exporta": [
+        "validarFormularioPatinete"
+      ],
+      "funciones": [
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 53
+        },
+        {
+          "nombre": "vacio",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": null,
+          "linea": 55
+        },
+        {
+          "nombre": "fechaIsoReal",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "boolean",
+          "linea": 57
+        },
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, campo: string, errores: string[], max: number, obligatorio: boolean",
+          "retorno": "string | null",
+          "linea": 64
+        },
+        {
+          "nombre": "booleanoExplicito",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, campo: string, errores: string[]",
+          "retorno": "boolean | null",
+          "linea": 77,
+          "resumen": "Booleano EXPLÍCITO: ausente o de otro tipo es error (sin valor por defecto)."
+        },
+        {
+          "nombre": "validarFormularioPatinete",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: unknown, hoy: Date = new Date()",
+          "retorno": "ValidacionFormularioPatinete",
+          "linea": 87,
+          "resumen": "Riesgo crudo (de asegura) → `FormularioPatinete`, todo o nada. `hoy` fija la edad del conductor. Rechaza (fail-closed) el uso profesional, lo no homologado y la velocidad no confirmada: esas solicitud"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c7075755c868"
+    },
+    {
       "ruta": "packages/module-tarificacion/src/formulario-rc.ts",
       "ambito": "packages/module-tarificacion",
       "resumen": "Formulario CANÓNICO de RC general / de actividad (08/10/2026). PURO: ni BD, ni red. Datos de riesgo comunes a cualquier compañía. Todavía no hay ninguna registrada (la primera: Occident, pendiente de grabar su portal): este ramo existe solo a nivel canónico y NO está en `RamoRpa`. Importes en EUROS ",
@@ -269084,7 +269147,7 @@
           "exportada": true,
           "params": "ramo: string",
           "retorno": "readonly CampoObligatorio[] | null",
-          "linea": 135,
+          "linea": 148,
           "resumen": "Obligatorios de FORMA de un ramo (sin compañía). `null` = ramo sin validador conocido aquí. PURA."
         },
         {
@@ -269093,7 +269156,7 @@
           "exportada": false,
           "params": "r: Record<string, unknown>",
           "retorno": "Record<string, unknown> | null",
-          "linea": 142,
+          "linea": 155,
           "resumen": "¿El tomador de este riesgo es una persona física con datos de alta (bloque `tomador` o `datosTomador` de la ficha)?"
         },
         {
@@ -269102,7 +269165,7 @@
           "exportada": false,
           "params": "r: Record<string, unknown>",
           "retorno": null,
-          "linea": 143
+          "linea": 156
         },
         {
           "nombre": "estuvoAseguradoMoto",
@@ -269110,7 +269173,7 @@
           "exportada": false,
           "params": "r: Record<string, unknown>",
           "retorno": "boolean",
-          "linea": 175,
+          "linea": 188,
           "resumen": "Allianz Moto: «asegurado en otra compañía» = Sí salvo que el riesgo diga `0` años (sin dato: el supuesto favorable es «más de 5»)."
         },
         {
@@ -269119,7 +269182,7 @@
           "exportada": false,
           "params": "",
           "retorno": "readonly CampoObligatorio[]",
-          "linea": 259,
+          "linea": 272,
           "resumen": "Allianz Comunidades: los desplegables obligatorios de ePAC, DERIVADOS de los extras de su capacidad (capacidades.ts)."
         },
         {
@@ -269128,7 +269191,7 @@
           "exportada": false,
           "params": "compania: string, ramo: string",
           "retorno": null,
-          "linea": 296
+          "linea": 312
         },
         {
           "nombre": "llegaAPrecio",
@@ -269136,7 +269199,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string",
           "retorno": "boolean",
-          "linea": 302,
+          "linea": 318,
           "resumen": "¿El bot de `compania`/`ramo` llega hoy a precio? `false` también sin declaración (no se sabe = no se lanza desde un lead). PURA."
         },
         {
@@ -269145,7 +269208,7 @@
           "exportada": true,
           "params": "",
           "retorno": "",
-          "linea": 307,
+          "linea": 323,
           "resumen": "Compañía × ramo con declaración (para cepos y pantallas). PURA."
         },
         {
@@ -269154,7 +269217,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string",
           "retorno": "readonly CampoObligatorio[] | null",
-          "linea": 315,
+          "linea": 331,
           "resumen": "Obligatorios de un bot: forma del ramo + propios de su portal (sin repetir clave). `null` = no hay declaración para esa compañía/ramo (no se sabe qué pide: nunca «nada»). PURA."
         },
         {
@@ -269163,7 +269226,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string, formulario: unknown, opciones: { sinFicha?: boolean } = {}",
           "retorno": "Faltante[] | null",
-          "linea": 334,
+          "linea": 350,
           "resumen": "Lo que FALTA en `formulario` para que el bot de `compania`/`ramo` llegue a precio, en el orden de la declaración. `[]` = no falta nada · `null` = no hay declaración (no se sabe). `sinFicha`: no mira l"
         },
         {
@@ -269172,7 +269235,7 @@
           "exportada": false,
           "params": "ramo: string",
           "retorno": null,
-          "linea": 348
+          "linea": 364
         },
         {
           "nombre": "conSupuestosFavorables",
@@ -269180,7 +269243,7 @@
           "exportada": false,
           "params": "ramo: string, r: Record<string, unknown>",
           "retorno": "Record<string, unknown>",
-          "linea": 351,
+          "linea": 367,
           "resumen": "Vehículo: el riesgo con los antecedentes que falten al valor FAVORABLE (en memoria); otro ramo, tal cual. PURA."
         },
         {
@@ -269189,7 +269252,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string, formulario: unknown",
           "retorno": "string[] | null",
-          "linea": 360,
+          "linea": 376,
           "resumen": "Claves de los obligatorios de este bot que NO trae el riesgo y se cubren con el SUPUESTO FAVORABLE (no bloquean; el bot los declara en «Precio con supuestos: …»). Para que una pantalla los pinte como "
         },
         {
@@ -269198,13 +269261,13 @@
           "exportada": true,
           "params": "faltan: readonly Faltante[]",
           "retorno": "string",
-          "linea": 369,
+          "linea": 385,
           "resumen": "«Faltan: CP de circulación, fecha del carné.» — el mensaje legible (sin valores). Lista vacía → `''`. PURA."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "34baee9264c4"
+      "hash": "1f855008be26"
     },
     {
       "ruta": "packages/module-tarificacion/src/ofertas.ts",
@@ -272994,7 +273057,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5598,
-    "funciones": 22074
+    "archivos": 5599,
+    "funciones": 22080
   }
 }
