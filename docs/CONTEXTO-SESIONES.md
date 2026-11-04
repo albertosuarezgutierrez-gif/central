@@ -96,11 +96,11 @@ original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados
 - ✅ PR #5460 mergeado; SQL `2026-11-03b_solicitud_regularizacion_rc.sql` APLICADO en central (RLS on, solo `prisma_seguros` S/I/U, verificado). Revisión architect sin bloqueantes; arreglados atasco en `enviando` y 422 en editar.
 - Fase 3 (responder a Occident con la cifra + cierre automático) sin hacer. Subtipo filtrable en bandeja exigiría migración del CHECK.
 
-## (03/11/2026) Sivra · mensajes de huésped de Agoda por correo
-- Agoda ya NO es de una sola dirección: manda 1 correo por mensaje desde `@agoda-messaging.com` («Reply from …») y responder a ese correo le llega al huésped. El detector solo conocía el digest de `@agoda.com` → los mensajes de Nicolas Iha (Luxury) quedaron sin contestar.
-- Ahora el parser reconoce ambos formatos, el mensaje entra al agente de huéspedes (misma política auto/botón que Booking) y la respuesta sale por correo (In-Reply-To) en vez de Smoobu. Tabla nueva `agoda_hilos_correo` (aplicada en central).
-- Regla nueva en `mensajes_hechos` (ids 55-58, un piso cada una): wifi sin internet → pedir FOTO DE LAS LUCES DEL ROUTER (la pide el proveedor). Un piso nuevo necesita su fila.
-- Pendiente: primera prueba real del envío SMTP a Agoda (que acepte el From y enlace el hilo).
+## (03/11/2026) Sivra · mensajes de huésped de Agoda por correo (PR #5455, mergeado y desplegado)
+- Agoda ya NO es de una sola dirección: 1 correo por mensaje desde `@agoda-messaging.com` («Reply from …»); responder a ese correo le llega al huésped. El detector solo conocía el digest de `@agoda.com` → los mensajes de Nicolas Iha (Luxury) quedaron sin contestar.
+- Ahora: parser de ambos formatos → agente de huéspedes (misma política auto/botón que Booking) → respuesta por correo (In-Reply-To) en vez de Smoobu. Tabla `agoda_hilos_correo` (aplicada). Exige DKIM/DMARC de Agoda; un hilo no cambia de destino en silencio; si el agente no lo resuelve → aviso Telegram con motivo.
+- Regla en `mensajes_hechos` (ids 55-58, una por piso): wifi sin internet → pedir FOTO DE LAS LUCES DEL ROUTER (la pide el proveedor). Piso nuevo = su fila.
+- Pendiente: 1.ª prueba real del envío SMTP a Agoda (respuesta de Nicolas). Límites: el agente no lee fotos ni ve los correos previos del hilo (solo el último mensaje).
 
 ## (03/11/2026) Correduría · cuadre de comisiones por compañía + Drive reorganizado
 - Comisiones 2026 en BBVA (neto) ≈ 6.239 €: Occident 2.193, Mapfre 1.268, Generali 987, Allianz 705, Asisa 409 (`M1454`, 45,15 €/mes), Caser 351 (`-FRA-COMIS-` 12,66 €/mes + `PD005 SALDO`), Pelayo, Reale, Aegon, AXA. Asisa/Caser/Pelayo/Aegon/AXA NO están en CIMA → el cuadre `/correduria?s=comisiones` no los ve; para renta el bruto ≥ banco. `finanzas.ts` ya nombra M1454=Asisa y PD005=Caser. «MBI» (47,06 € 13/03) = compañía de seguros (simulación de riesgo; comisión por la póliza de RC de corredor) — Alberto.
