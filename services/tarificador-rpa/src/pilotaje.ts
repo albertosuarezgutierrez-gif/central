@@ -31,6 +31,7 @@ import {
   nombresCredencial,
   pistasOpcionesInventario,
   resolverDato,
+  riesgoTomadorDeMediador,
   rutasAppTolerablesDe,
   validarRespuestaExplorador,
   type Credenciales,
@@ -62,6 +63,8 @@ import {
 } from './guard.ts'
 import { TOPES_PILOTAJE, esCampoTexto, leerComando, loteExploradorDe, motivoCampoProhibido, motivoValorLiteralProhibido, textoDiagnostico, type ComandoPilotaje } from './pilotaje-reglas.ts'
 import type { Log } from './log.ts'
+// Datos canónicos del mediador: el MISMO fichero puro que ya copia el Dockerfile para `privacidad-mediador.ts` (nada nuevo que copiar).
+import { MEDIADOR } from '../../../packages/module-seguros/src/mediador.ts'
 
 /** Versión del modo pilotado (va en `bot_version`). */
 export const PILOTAJE_VERSION = '0.1.0'
@@ -105,6 +108,16 @@ export type ContextoPilotaje = {
 }
 
 type Ejecucion = { r: ResultadoComandoPilotaje; fin?: boolean }
+
+/**
+ * 0.3.41 (Pelayo «Datos del Tomador»): el `riesgo` con el que se RESUELVEN los datos del pilotaje. El trabajo lleva `riesgo = '{}'` (CHECK
+ * `trabajo_pilotaje_riesgo_vacio`); con una entrada `tomadorMediador` el tomador se arma aquí, EN MEMORIA, desde `MEDIADOR` con el mismo
+ * mapeo que asegura (`riesgoTomadorDeMediador`). 🔑 Solo lo lee `resolverDato` justo antes de escribir en el portal: nunca va a la BD, al
+ * log, al inventario ni al resultado (que solo lleva códigos). Sin la marca = `{}` (lo personal sin sintético para). Pura.
+ */
+export function riesgoResolverPilotaje(entrada: string): Record<string, unknown> {
+  return entradaConTomadorMediador(entrada) ? riesgoTomadorDeMediador(MEDIADOR.identidad) : {}
+}
 
 const rechazo = (motivo: string, detalle?: string[]): Ejecucion => ({ r: { estado: 'rechazado', motivo, ...(detalle?.length ? { detalle: detalle.slice(0, 10) } : {}) } })
 const hecho = (motivo: string): Ejecucion => ({ r: { estado: 'hecho', motivo } })
@@ -211,7 +224,7 @@ export async function ejecutarComando(page: Page, captura: InventarioExploracion
     if (c.accion === 'rellenar') {
       let valor = valorLiteral
       if (valor === null && 'dato' in c) {
-        const d = resolverDato(c.dato, { ramo: k.ramo, tomadorMediador: entradaConTomadorMediador(k.entrada), conDatosReales: false, riesgo: {}, env: k.env, hoy: new Date() })
+        const d = resolverDato(c.dato, { ramo: k.ramo, tomadorMediador: entradaConTomadorMediador(k.entrada), conDatosReales: false, riesgo: riesgoResolverPilotaje(k.entrada), env: k.env, hoy: new Date() })
         if (!d.ok) return rechazo('sin_dato', [d.motivo])
         valor = d.valor
       }

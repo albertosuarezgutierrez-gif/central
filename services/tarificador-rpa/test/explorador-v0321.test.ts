@@ -75,7 +75,7 @@ function contexto(page: Page, guard: GuardEmision, entrada: string, ramo: string
   }
 }
 
-test('versión del explorador 0.3.40', () => assert.equal(EXPLORADOR_VERSION, '0.3.40'))
+test('versión del explorador 0.3.41', () => assert.equal(EXPLORADOR_VERSION, '0.3.41'))
 
 // ─── 1) Fidelidade ────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 const FI = 'fidelidade:particulares:vivienda'
