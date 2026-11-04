@@ -468,6 +468,12 @@ export type RutaTolerable = {
    * («contratacion») sigue bloqueando. Fail-closed: un paso del wizard que no está en la lista no se navega. Sin la clave = cualquier resto.
    */
   rutasExactas?: readonly string[]
+  /**
+   * 0.3.45 (Pelayo real 04/11/2026: el wizard redirige al SSO `https://acceso12.pelayo.com/oauth2/rest/authorize?…`, Oracle OAM, y
+   * la URL casa con el patrón de emisión por su QUERY: `redirect_uri` → …/contratacion-autos). Si es `true`, la regla SOLO vale para una NAVEGACIÓN GET (documento/redirección) con URL
+   * ABSOLUTA: `neutralizarRutaTolerable` la ignora si no recibe `{ navegacionGet: true }` (href de botones, rutas solas, POST, XHR…).
+   */
+  soloNavegacionGet?: true
 }
 export const RE_ACCION_REAL_TRAS_PREFIJO = /emit|emiss|contrat|confirm|firm|assina|pago|pagar|pagam|formaliz|grab|suplement|anul|baja|domicili|tarjeta|iban/i
 /** Estado (abierto/cerrado) de un panel JSF de la pantalla de productos de NSE: no es una acción. ANCLADO. */
@@ -699,10 +705,17 @@ function restoExactoDeRuta(r: RutaTolerable & { rutasExactas: readonly string[] 
  * `origenPagina`: origen de la ventana/marco donde está la ruta. Una ruta RELATIVA (`/…`) solo se tolera si es EXACTAMENTE el de la
  * regla; sin él, nunca (fail-closed). Una URL absoluta lleva su propio origen.
  */
-export function neutralizarRutaTolerable(texto: string | null | undefined, reglas: readonly RutaTolerable[], origenPagina?: string | null): string | null | undefined {
+export function neutralizarRutaTolerable(
+  texto: string | null | undefined,
+  reglas: readonly RutaTolerable[],
+  origenPagina?: string | null,
+  contexto: { navegacionGet?: boolean } = {},
+): string | null | undefined {
   if (typeof texto !== 'string' || texto === '' || reglas.length === 0) return texto
   const t = texto.trim()
   for (const r of reglas) {
+    // 0.3.45: una regla de SOLO navegación GET no vale para nada más (fail-closed: sin contexto explícito, no aplica) ni para rutas solas.
+    if (r.soloNavegacionGet === true && (contexto.navegacionGet !== true || !/^https:\/\//i.test(t))) continue
     let origen = ''
     let resto: string | null = null
     if (/^https?:\/\//i.test(t)) {

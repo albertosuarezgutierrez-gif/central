@@ -59,8 +59,8 @@ async function pagina(cuerpo: string) {
 const portal = (tag: string, shadow: string, estiloHost = `${CAJA};background:#fff`) =>
   `<h1>Nuevo presupuesto</h1>${TARJETA}<${tag} class="no-footer" style="${estiloHost}"></${tag}>${definir(tag, shadow)}`
 
-test('versión del explorador 0.3.44', () => {
-  assert.equal(EXPLORADOR_VERSION, '0.3.44')
+test('versión del explorador 0.3.45', () => {
+  assert.equal(EXPLORADOR_VERSION, '0.3.45')
 })
 
 test('custom element con «×» en su shadowRoot: se cierra por el botón de cierre del shadow y la tarjeta se pulsa (sin force)', async () => {

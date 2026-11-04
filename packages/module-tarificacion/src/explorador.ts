@@ -18,7 +18,7 @@
 import { neutralizarRutaTolerable, pareceEmision, type RutaTolerable } from './guard-emision.ts'
 import { clasificarAccionPortal, descripcionesSinExcepcionProyecto, fronteraEmisionPorCampos, MOTIVO_FRONTERA_CUENTA, referenciaPresupuestoValida } from './acciones-portal.ts'
 import { navegacionLibre, type ResultadoNavegacionLibre } from './navegacion-libre.ts'
-import { bloqueoZonaWizardPelayo, esNuevaContratacionPelayoInventario, RUTA_TOLERABLE_WIZARD_AUTOS_PELAYO } from './pelayo-contratacion.ts'
+import { bloqueoZonaWizardPelayo, esNuevaContratacionPelayoInventario, RUTA_TOLERABLE_SSO_AUTHORIZE_PELAYO, RUTA_TOLERABLE_WIZARD_AUTOS_PELAYO } from './pelayo-contratacion.ts'
 import {
   MAX_TITULOS_MARCO,
   conOnclickCompleto,
@@ -435,7 +435,8 @@ export const ENTRADAS_EXPLORACION: Readonly<Record<string, EntradaExploracion>> 
     tomadorMediador: true as const,
     // 0.3.41: «Nueva contratación» navega a https://apps.pelayo.com/contratacion-autos/<paso>: la ruta tolerada SOLO con restos exactos
     // (`rutasExactas`; hoy la raíz y `vehicle`), y el botón por su regla exacta. Hogar: no se sabe dónde vive su wizard → nada.
-    rutasAppTolerables: Object.freeze([RUTA_TOLERABLE_WIZARD_AUTOS_PELAYO]),
+    // 0.3.45: el wizard redirige al SSO (acceso12 `/oauth2/rest/authorize`): SOLO como navegación GET, path exacto (`soloNavegacionGet`).
+    rutasAppTolerables: Object.freeze([RUTA_TOLERABLE_WIZARD_AUTOS_PELAYO, RUTA_TOLERABLE_SSO_AUTHORIZE_PELAYO]),
     nuevaContratacionPelayo: true as const,
   }),
   'pelayo:presupuestos:hogar': Object.freeze({

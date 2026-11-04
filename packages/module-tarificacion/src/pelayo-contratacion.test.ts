@@ -72,7 +72,7 @@ describe('TOPE DURO del wizard de autos de Pelayo', () => {
   })
   it('red: /contratacion-autos/ solo deja de contar como emisión con un resto EXACTO (raíz o vehicle); el resto sigue bloqueado', () => {
     const reglas = rutasAppTolerablesDe('pelayo:presupuestos:auto')
-    expect(reglas).toHaveLength(1)
+    expect(reglas).toHaveLength(2) // 0.3.45: + SSO authorize (solo navegación GET)
     expect(rutasAppTolerablesDe('pelayo:presupuestos:hogar')).toEqual([])
     for (const u of [`${WIZ}vehicle`, `${WIZ}vehicle?token=abc`, WIZ]) expect(pareceEmision(neutralizarRutaTolerable(u, reglas)), u).toBe(false)
     for (const u of [`${WIZ}payment`, `${WIZ}final-price`, `${WIZ}vehicle/contract`, 'https://otro.pelayo.com/contratacion-autos/vehicle'])
@@ -131,5 +131,47 @@ describe('0.3.44 · privacidad: el mensaje de bloqueo de URL va SIN query ni has
     expect(m).toBe('guard_emision: url bloqueada (casa con el patrón de emisión): «https://x.test/contratacion-autos»')
     expect(m).not.toContain('?')
     expect(m).not.toContain('eyJ')
+  })
+})
+
+// 0.3.45 (Pelayo real 04/11/2026): apps.pelayo.com/contratacion-autos?… redirige al SSO (Oracle OAM)
+// https://acceso12.pelayo.com/oauth2/rest/authorize?… y la URL casaba con el patrón de emisión (por su QUERY: redirect_uri → …/contratacion-autos). Query OAuth2 FICTICIA, sin PII.
+describe('0.3.45 · SSO de Pelayo: /oauth2/rest/authorize SOLO como navegación GET, path exacto, solo en Pelayo Auto', () => {
+  const SSO = 'https://acceso12.pelayo.com'
+  const QA = '?response_type=code&client_id=FICTICIO&redirect_uri=https%3A%2F%2Fapps.pelayo.com%2Fcontratacion-autos&state=abc123&scope=openid'
+  const reglas = rutasAppTolerablesDe('pelayo:presupuestos:auto')
+  const bloqueaNav = (u: string, rs = reglas) => pareceEmision(neutralizarRutaTolerable(u, rs, null, { navegacionGet: true }) ?? '') || parametrosParecenEmision(u)
+  it('pasa como navegación GET: con y sin «/» final, con query OAuth2 ficticia o sin ella', () => {
+    for (const ruta of [`${SSO}/oauth2/rest/authorize`, `${SSO}/oauth2/rest/authorize/`])
+      for (const cola of ['', QA, `${QA}#x`]) expect(bloqueaNav(`${ruta}${cola}`), `${ruta}${cola}`).toBe(false)
+  })
+  it('otro path de acceso12, otro host, otra entrada: siguen bloqueados', () => {
+    // Lo que casaba en real era la QUERY (redirect_uri → …/contratacion-autos), no la ruta: sin query, esos paths no casan ni antes ni ahora.
+    for (const u of [`${SSO}/oauth2/rest/authorize/x${QA}`, `${SSO}/oauth2/rest/authorizeX${QA}`, `${SSO}/oauth2/rest/token${QA}`, `${SSO}/oauth2/rest/authorize/token${QA}`])
+      expect(bloqueaNav(u), u).toBe(true)
+    for (const u of [`https://acceso1.pelayo.com/oauth2/rest/authorize${QA}`, `https://apps.pelayo.com/oauth2/rest/authorize${QA}`, `http://acceso12.pelayo.com/oauth2/rest/authorize${QA}`])
+      expect(bloqueaNav(u), u).toBe(true)
+    for (const e of ['pelayo:presupuestos:hogar', 'mapfre:patrimoniales:hogar']) expect(bloqueaNav(`${SSO}/oauth2/rest/authorize${QA}`, rutasAppTolerablesDe(e)), e).toBe(true)
+  })
+  it('SOLO navegación GET: sin el contexto (POST, XHR, href de un botón, ruta sola) la regla no aplica', () => {
+    const u = `${SSO}/oauth2/rest/authorize${QA}`
+    expect(pareceEmision(neutralizarRutaTolerable(u, reglas) ?? '')).toBe(true)
+    expect(pareceEmision(neutralizarRutaTolerable(u, reglas, null, { navegacionGet: false }) ?? '')).toBe(true)
+    expect(pareceEmision(neutralizarRutaTolerable(`/oauth2/rest/authorize${QA}`, reglas, SSO, { navegacionGet: true }) ?? '')).toBe(true)
+    expect(pareceEmision(neutralizarRutaTolerable(`/oauth2/rest/authorize${QA}`, reglas, SSO) ?? '')).toBe(true)
+  })
+  it('un parámetro con forma de acción de emisión en la query sigue cortando', () => {
+    for (const q of ['?accion=contratar', `${QA}&action=contract`, '?evento=emitir&state=x']) expect(bloqueaNav(`${SSO}/oauth2/rest/authorize${q}`), q).toBe(true)
+  })
+  it('en esa pantalla no se pulsa nada (cualquier entrada, cualquier rótulo); el login de acceso12 en otra ruta no cambia', () => {
+    for (const u of [`${SSO}/oauth2/rest/authorize${QA}`, `${SSO}/oauth2/rest/authorize/`, `${SSO}/OAUTH2/rest/authorize`])
+      expect(bloqueoZonaWizardPelayo(u, ['Continuar']), u).toBe('pelayo_sso_authorize_no_pulsable')
+    expect(bloqueoAvance('pelayo:presupuestos:auto', boton({ texto: 'Continuar' }), marco(`${SSO}/oauth2/rest/authorize${QA}`, []))).toBe('pelayo_sso_authorize_no_pulsable')
+    expect(bloqueoZonaWizardPelayo(`${SSO}/oam/server/obrareq.cgi`, ['Entrar'])).toBeNull()
+  })
+  it('la vuelta a apps.pelayo.com no se abre a ciegas: un callback bajo /contratacion-autos/ sigue bloqueado y su mensaje va sin query', () => {
+    const cb = `https://apps.pelayo.com/contratacion-autos/callback?code=FICTICIO&state=abc123`
+    expect(bloqueaNav(cb)).toBe(true)
+    expect(urlParaMensaje(cb)).toBe('https://apps.pelayo.com/contratacion-autos/callback')
   })
 })
