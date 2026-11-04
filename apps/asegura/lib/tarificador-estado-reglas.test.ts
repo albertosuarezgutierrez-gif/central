@@ -34,7 +34,7 @@ test('redactarError: SOLO tipo (lista cerrada), clave identificador y URL redact
     tipo: 'portal', mensaje: 'No se encontró la matrícula 1234ABC de Juan Pérez (DNI 12345678Z)', atascoClave: 'hueco_mapa',
     url: 'https://www.generali.es/mediadores/tarificar?nif=12345678Z', html_documento_id: 'abc', capturaConDatos: 'data:…',
   })
-  assert.deepEqual(r, { tipo: 'portal', clave: 'hueco_mapa', origen: 'https://www.generali.es', ruta: '/mediadores/tarificar' })
+  assert.deepEqual(r, { tipo: 'portal', codigo: 'otro', clave: 'hueco_mapa', origen: 'https://www.generali.es', ruta: '/mediadores/tarificar' })
   const json = JSON.stringify(r)
   for (const prohibido of ['1234ABC', '12345678Z', 'Juan', 'mensaje', 'html', 'captura', 'nif']) assert.ok(!json.includes(prohibido), prohibido)
 
@@ -85,7 +85,7 @@ test('proyectarEstado: último precio entre canales, ventanas, último error red
   assert.deepEqual(az.d7, { ok: 3, error: 1 })
   assert.deepEqual(az.d30, { ok: 10, error: 4 })
   assert.equal(az.estadoBot, 'activo')
-  assert.deepEqual(az.ultimoError, { tipo: 'portal', clave: null, origen: 'https://www.e-pacallianz.com', ruta: '/a', fecha: '2026-10-27T00:00:00.000Z', modo: 'tarificar' })
+  assert.deepEqual(az.ultimoError, { tipo: 'portal', codigo: 'otro', clave: null, origen: 'https://www.e-pacallianz.com', ruta: '/a', fecha: '2026-10-27T00:00:00.000Z', modo: 'tarificar' })
   assert.equal(por('reale', 'moto')!.estadoBot, 'sin_bot', 'solo precio de Avant2: no hay bot')
   assert.deepEqual(por('reale', 'moto')!.d30, { ok: 0, error: 0 })
   assert.equal(por('pelayo', 'auto')!.estadoBot, 'pilotaje')
@@ -111,4 +111,25 @@ test('indicadores y Avant2 del mes', () => {
   assert.equal(a.facturables, 13)
   assert.deepEqual(a.porRamo.map((r) => r.ramo), ['auto', 'sin_ramo', 'moto'])
   assert.deepEqual(proyectarAvant2('2026-11', []), { mes: '2026-11', totalEur: 0, facturables: 0, porRamo: [] }, 'mes sin consumo: 0 € leído (≠ null)')
+})
+
+test('causas de 7 días: agrupa por código (guardado o derivado del tipo+mensaje), sin repetir el mensaje', async () => {
+  const { causaDominante } = await import('./tarificador-estado-reglas.ts')
+  const filas = proyectarEstado(vacia({
+    trabajos: [{ compania: 'generali', ramo: 'auto', ok_7d: 0, error_7d: 4, ok_30d: 0, error_30d: 4, tarificar_total: 4 }],
+    causas: [
+      { compania: 'generali', ramo: 'auto', error: { tipo: 'portal', codigo: 'timeout' } },
+      { compania: 'generali', ramo: 'auto', error: { tipo: 'portal', mensaje: 'page.goto: Timeout 45000ms exceeded. matrícula 1234ABC' } },
+      { compania: 'generali', ramo: 'auto', error: { tipo: 'emision', mensaje: 'guard_emision: boton bloqueada' } },
+      { compania: 'generali', ramo: 'auto', error: null },
+    ],
+  }))
+  const g = filas.find((f) => f.compania === 'generali')!
+  assert.deepEqual(g.causas7d, [{ codigo: 'timeout', n: 2 }, { codigo: 'guard_emision', n: 1 }])
+  assert.deepEqual(causaDominante(g.causas7d), { codigo: 'timeout', n: 2 })
+  assert.ok(!JSON.stringify(filas).includes('1234ABC'), 'el mensaje no sale')
+  // Sin leer (null) ≠ sin errores ([]).
+  assert.equal(proyectarEstado(vacia({ trabajos: [{ compania: 'x', ramo: 'auto', ok_7d: 1, error_7d: 0, ok_30d: 1, error_30d: 0, tarificar_total: 1 }] }))[0]!.causas7d, null)
+  assert.deepEqual(proyectarEstado(vacia({ causas: [], trabajos: [{ compania: 'x', ramo: 'auto', ok_7d: 1, error_7d: 0, ok_30d: 1, error_30d: 0, tarificar_total: 1 }] }))[0]!.causas7d, [])
+  assert.equal(causaDominante(null), null)
 })

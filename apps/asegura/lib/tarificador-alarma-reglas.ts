@@ -8,7 +8,7 @@
 //     ni cortan la racha).
 // 🔒 Sin datos de clientes: el motivo del error sale ya REDACTADO (tipo + clave + origen/ruta) como en el panel.
 
-import type { ErrorRedactado, FilaEstado } from './tarificador-estado-reglas'
+import { causaDominante, type CausaCuenta, type ErrorRedactado, type FilaEstado } from './tarificador-estado-reglas.ts'
 
 export const DIAS_SIN_PRECIO = 3
 export const ERRORES_SEGUIDOS = 3
@@ -31,6 +31,8 @@ export type Alerta = {
   /** Errores seguidos al final de la racha (0 si el motivo es solo sin_precio). */
   erroresSeguidos: number
   ultimoError: ErrorRedactado | null
+  /** Causa que más se repite en los errores de 7 días (05/11/2026). `null` = sin errores o no se pudo leer. */
+  causaDominante: CausaCuenta | null
 }
 
 const k2 = (c: string, r: string) => `${c}\u0000${r}`
@@ -63,7 +65,7 @@ export function calcularAlertas(filas: FilaEstado[], trabajos: TrabajoReciente[]
     }
     if (racha >= ERRORES_SEGUIDOS) motivos.push('errores_seguidos')
 
-    if (motivos.length) out.push({ compania: f.compania, ramo: f.ramo, motivos, erroresSeguidos: racha >= ERRORES_SEGUIDOS ? racha : 0, ultimoError: f.ultimoError ? { tipo: f.ultimoError.tipo, clave: f.ultimoError.clave, origen: f.ultimoError.origen, ruta: f.ultimoError.ruta } : null })
+    if (motivos.length) out.push({ compania: f.compania, ramo: f.ramo, motivos, erroresSeguidos: racha >= ERRORES_SEGUIDOS ? racha : 0, ultimoError: f.ultimoError ? { tipo: f.ultimoError.tipo, codigo: f.ultimoError.codigo, clave: f.ultimoError.clave, origen: f.ultimoError.origen, ruta: f.ultimoError.ruta } : null, causaDominante: causaDominante(f.causas7d ?? null) })
   }
   return out.sort((a, b) => a.compania.localeCompare(b.compania) || a.ramo.localeCompare(b.ramo))
 }
@@ -73,7 +75,7 @@ const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 /** Motivo corto del último error, igual de redactado que en el panel. */
 export function textoMotivoError(e: ErrorRedactado | null): string {
   if (!e) return ''
-  const partes = [e.tipo, e.clave, e.origen && e.ruta ? `${e.origen}${e.ruta}` : e.origen ?? e.ruta].filter((x): x is string => !!x)
+  const partes = [e.codigo, e.tipo, e.clave, e.origen && e.ruta ? `${e.origen}${e.ruta}` : e.origen ?? e.ruta].filter((x): x is string => !!x)
   return partes.join(' · ')
 }
 
@@ -86,7 +88,8 @@ export function textoAlarma(alertas: Alerta[]): string | null {
       a.erroresSeguidos > 0 ? `${a.erroresSeguidos} errores seguidos` : '',
     ].filter(Boolean).join(', ')
     const m = textoMotivoError(a.ultimoError)
-    return `· <b>${esc(a.compania)}</b> ${esc(a.ramo)}: ${que}${m ? ` (${esc(m)})` : ''}`
+    const causa = a.causaDominante ? `; causa más repetida en 7 días: ${a.causaDominante.codigo} (${a.causaDominante.n})` : ''
+    return `· <b>${esc(a.compania)}</b> ${esc(a.ramo)}: ${que}${m ? ` (${esc(m)})` : ''}${esc(causa)}`
   })
   if (alertas.length > MAX_LINEAS_ALARMA) lineas.push(`… y ${alertas.length - MAX_LINEAS_ALARMA} más`)
   const n = alertas.length

@@ -167,6 +167,18 @@ export function clasificarIntento(e: unknown, pistas: PistasIntento): Clasificac
   return { ...c, transitorio: null }
 }
 
+/**
+ * Causa que el worker PROPONE a asegura en `error.codigo` (05/11/2026, lista cerrada de apps/asegura/lib/tarificador-error-codigo.ts).
+ * Solo lo que el runner sabe mejor que el mensaje: el timeout de NAVEGACIÓN y el 5xx/fallo pasajero del portal. El resto lo deriva
+ * asegura (y asegura nunca deja que esto vuelva transitorio un guard, un OTP, un login o unos datos que faltan). PURA.
+ */
+export type CodigoCable = 'timeout' | 'portal_caido'
+export function codigoCable(transitorio: MotivoTransitorio | null): CodigoCable | null {
+  if (transitorio === 'timeout_navegacion') return 'timeout'
+  if (transitorio === 'portal_5xx' || transitorio === 'portal_transitorio') return 'portal_caido'
+  return null
+}
+
 /** Espera antes del reintento: 20–40 s aleatorios (ritmo humano; `aleatorio` inyectable para los tests). */
 export function esperaReintentoMs(aleatorio: () => number = Math.random): number {
   return Math.round(20_000 + aleatorio() * 20_000)
