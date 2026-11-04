@@ -81,6 +81,11 @@ Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; ti
 original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados revisado/falta_roto/devuelto + bloque en ficha. `rrhh.material_empleado`
 (0028, aplicada). Pendiente fase 2: revisión periódica mensual.
 
+## (04/11/2026) Portal cliente · hoja QR: logo de compañía + cobalto
+- `/hoja/[token]`: cada póliza pinta `LogoCompania` (nunca el nombre en texto; sin logo cae a texto). Regla de Alberto: compañía = LOGO.
+- Hoja en marca: cobalto `--brand`, Quicksand/Nunito Sans; impresión ya no fuerza negro (`print-color-adjust: exact`). QR sigue negro sobre blanco.
+- Pendiente: `FilaPoliza.tsx`/`resumen` aún muestran «Compañía · ramo» en texto (no tocado). Impresión sin probar visualmente.
+
 ## (04/11/2026) Correduría · WhatsApp: SQL APLICADOS en prod + remates
 - Con OK expreso de Alberto: aplicados en prod (MCP Supabase, central) `2026-11-04_whatsapp_respuestas_crm.sql` y `2026-11-04b_whatsapp_aprendizaje.sql`, tras validarlos ×2 + rollback en Postgres local. RLS on, sin DELETE en propuestas/aprendizaje, crm_seguros sin acceso.
 - Remates: botones fuera tras ✏️, clienteId en botón de cabecera, motivo `fuera_de_correduria`. Flags siguen APAGADOS. Pendiente Alberto: número → WhatsApp Business + alta Meta (prompt Chrome).
