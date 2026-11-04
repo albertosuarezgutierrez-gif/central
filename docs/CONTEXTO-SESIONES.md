@@ -78,11 +78,11 @@ Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; ti
 original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados revisado/falta_roto/devuelto + bloque en ficha. `rrhh.material_empleado`
 (0028, aplicada). Pendiente fase 2: revisión periódica mensual.
 
-## (04/11/2026) Correduría · WhatsApp: respuestas del cliente → CRM — spec (sin código)
-- Inventario: central tiene WhatsApp→CRM solo ENTRANTE (apps/asegura/lib/whatsapp, apagado); responder solo existe en el repo antiguo `asegura` (nunca activado). Meta: Grupo ASegura **ya verificada** (04/11, MCP Whassap).
-- Decisión Alberto: SOLO correduría. Enfoque nuevo (sustituye al «modo sombra»): nada se redacta ni envía; Alberto escribe con los `wa.me`; la IA lee la respuesta del cliente casada con el echo y actúa: oportunidad (auto), fecha de cobro/vencimiento (propuesta ✅/❌ por Telegram), póliza recibida → lectura + bots RPA gratis con botón; aviso con `wa.me` de cierre (presupuesto o `/datos`).
-- Spec: `docs/superpowers/specs/2026-11-04-whatsapp-correduria-respuestas-crm.md`. Dudas D1-D4 abiertas para Alberto.
-- Pendiente Alberto: pasar el número a WhatsApp Business app (Coexistence) + revisar app review/publicación en developers.facebook.com.
+## (04/11/2026) Correduría · WhatsApp: respuestas del cliente → propuestas CRM — PR #5486
+- Enfoque Alberto: él envía por wa.me (coste 0); el cliente contesta → el agente crea oportunidad / PROPONE fecha de cobro, «ya pagado», vencimiento (Telegram `wap_` ✅/❌) / lee la póliza (media) → presupuesto con bots RPA siempre con botón. Nada se envía por API (cepos).
+- Hecho: parte A (apps/asegura: casado echo↔saliente, media, propuestas, endpoints operador) + parte B (plataforma: registro de salientes en botones wa.me, handler `wap_`). Spec `docs/superpowers/specs/2026-11-04-whatsapp-correduria-respuestas-crm.md`.
+- ⚠️ SQL `apps/asegura/prisma/sql/2026-11-04_whatsapp_respuestas_crm.sql` SIN aplicar (pide OK de Alberto). Sin él, 503 `sin_migracion` y no-op. `fecha_prometida_pago` fuera del modelo Prisma a propósito (SQL crudo).
+- Pendiente: tarea 7 (/datos acotado a lo que falta al bot + presupuesto desde aviso); Alberto: número → WhatsApp Business + app Meta revisada/publicada (verificación empresa ✅ 04/11).
 
 ## (03/11/2026) Correduría · regularización RC fase 3 (respuesta a Occident + cierre manual) — ✅ PR #5472 mergeado
 - Al completar el cliente: borrador a la compañía → Telegram ✏️/🏁 (✅ solo cuando hay buzón elegido de contactos activos del Directorio; anti-replay `compania_version`). 🏁 Resuelta cierra solicitud + tarea (también clave antigua `suplemento:<póliza>` del mismo periodo).
