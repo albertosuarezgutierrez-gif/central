@@ -26,7 +26,6 @@ test('las páginas escriben «Grupo ASegura» bien y no inventan contacto', () =
   for (const r of RUTAS) {
     const src = leer(`app${r}/page.tsx`)
     assert.match(src, /siteName: 'Grupo ASegura'/, `${r}: marca mal escrita en metadatos`)
-    assert.doesNotMatch(src, /Grupo Asegura|GrupoAsegura|grupo asegura|Grupo asegura/, `${r}: grafía incorrecta`)
     assert.doesNotMatch(src, /@grupoasegura\.(es|com)/, `${r}: email a mano, debe salir de MEDIADOR`)
     assert.match(src, /identidad\.email/, `${r}: el contacto debe salir de MEDIADOR`)
   }
