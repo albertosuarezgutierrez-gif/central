@@ -129,7 +129,7 @@ const CUERPO_DIAGNOSTICO = LIB_MODAL_PAGINA + `
   let intCrudo = null;
   if (hit.rel === 'otro' && h) {
     let cont = h;
-    for (let p = h, i = 0; p && i < 10; p = salto(p), i++) { if (p !== doc.body && p !== doc.documentElement && p.matches && p.matches(SEL_MODAL)) cont = p; }
+    for (let p = h, i = 0; p && i < 10; p = salto(p), i++) { if (p !== doc.body && p !== doc.documentElement && esContM(p)) cont = p; }
     try { intCrudo = leerModalCrudo(cont); } catch (e) { intCrudo = null; }
   }
   let anim = 0;

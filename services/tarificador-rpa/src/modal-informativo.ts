@@ -34,10 +34,45 @@ export const LIB_MODAL_PAGINA = String.raw`
     const r = e.getBoundingClientRect();
     return r.width > 0 && r.height > 0;
   };
+  // 0.3.39: CUSTOM ELEMENT (web component, p. ej. <pelayo-modal class="no-footer"> de Stencil, z-index 1040) que hace de modal: su tag (con guion) contiene
+  // modal|dialog|popup|aviso, o cubre >= 50 % de la ventana con z-index >= 1000. Los fondos (tag backdrop|overlay|mask|veil|scrim) no cuentan.
+  const RE_TAG_MODAL = /modal|dialog|popup|aviso/;
+  const RE_TAG_FONDO = /backdrop|overlay|mask|veil|scrim/;
+  const esCustomM = (e) => {
+    const t = String(e.localName || '');
+    if (t.indexOf('-') < 1 || RE_TAG_FONDO.test(t)) return false;
+    if (RE_TAG_MODAL.test(t)) return true;
+    const w = e.ownerDocument.defaultView;
+    const z = parseInt(w.getComputedStyle(e).zIndex, 10);
+    if (!(z >= 1000)) return false;
+    const r = e.getBoundingClientRect();
+    return r.width * r.height >= 0.5 * w.innerWidth * w.innerHeight;
+  };
+  const esContM = (e) => !!(e.matches && e.matches(SEL_MODAL)) || esCustomM(e);
   const modalesVisibles = (raiz) => {
     const doc = raiz.ownerDocument || raiz;
-    const c = Array.from(raiz.querySelectorAll(SEL_MODAL)).filter((e) => e !== doc.body && e !== doc.documentElement && !RE_FONDO.test(clasesDe(e)) && visM(e));
+    const base = Array.from(raiz.querySelectorAll(SEL_MODAL));
+    const custom = Array.from(raiz.querySelectorAll('*')).filter((e) => String(e.localName || '').indexOf('-') > 0 && esCustomM(e) && base.indexOf(e) < 0);
+    const todos = base.concat(custom);
+    if (custom.length) todos.sort((a, b) => (a.compareDocumentPosition(b) & 4 ? -1 : 1));
+    const c = todos.filter((e) => e !== doc.body && e !== doc.documentElement && !RE_FONDO.test(clasesDe(e)) && visM(e));
     return c.filter((e) => !c.some((o) => o !== e && o.contains(e)));
+  };
+  // Descendientes en orden de documento, ENTRANDO en los shadowRoot ABIERTOS (hasta 3 niveles, tope 400). raices recoge los shadowRoot recorridos.
+  const recorrer = (raiz, acc, raices, prof) => {
+    for (const el of Array.from(raiz.querySelectorAll('*'))) {
+      if (acc.length >= 400) return;
+      acc.push(el);
+      if (el.shadowRoot && prof < 3) { raices.push(el.shadowRoot); recorrer(el.shadowRoot, acc, raices, prof + 1); }
+    }
+  };
+  // El modal más cercano (sube por light DOM y por el host de cada shadowRoot).
+  const modalDe = (el) => {
+    for (let n = el, i = 0; n && i < 80; i++) {
+      if (n.nodeType === 1 && n !== el.ownerDocument.body && n !== el.ownerDocument.documentElement && esContM(n)) return n;
+      n = n.parentElement || ((n.getRootNode && n.getRootNode().host) || null);
+    }
+    return null;
   };
   const esCierreM = (e) => {
     const cls = clasesDe(e).toLowerCase().split(/\s+/).filter(Boolean);
@@ -61,7 +96,11 @@ export const LIB_MODAL_PAGINA = String.raw`
     }
     const role = String(m.getAttribute('role') || '').toLowerCase();
     const tag = m.tagName.toLowerCase();
-    const nodos = [m].concat(Array.from(m.querySelectorAll('*')).slice(0, 400));
+    const desc = [];
+    const raices = [];
+    recorrer(m, desc, raices, 0);
+    if (m.shadowRoot) { raices.unshift(m.shadowRoot); recorrer(m.shadowRoot, desc, raices, 1); }
+    const nodos = [m].concat(desc);
     let campos = 0;
     const attrs = [];
     const rotulos = [];
@@ -93,12 +132,31 @@ export const LIB_MODAL_PAGINA = String.raw`
       if (!visM(e)) continue;
       const cierre = esCierreM(e);
       if (cierre) nCierre++;
-      if (ctl.length < 12) ctl.push({ i: i, tag: e.tagName.toLowerCase(), type: String(e.getAttribute('type') || ''), cls: clasesDe(e), aria: String(e.getAttribute('aria-label') || ''), title: String(e.getAttribute('title') || ''), txt: String(e.innerText || e.textContent || e.getAttribute('value') || '').replace(/\s+/g, ' ').trim().slice(0, 80), cierre: cierre });
+      if (ctl.length < 12) ctl.push({ i: i, sh: false, tag: e.tagName.toLowerCase(), type: String(e.getAttribute('type') || ''), cls: clasesDe(e), aria: String(e.getAttribute('aria-label') || ''), title: String(e.getAttribute('title') || ''), txt: String(e.innerText || e.textContent || e.getAttribute('value') || '').replace(/\s+/g, ' ').trim().slice(0, 80), cierre: cierre });
     }
+    // Controles que viven en un shadowRoot (el de m o el de un descendiente): i = su posición entre ellos.
+    const enShadow = desc.filter((e) => e.getRootNode() !== m.getRootNode() && e.matches(SEL_CTL));
+    for (let i = 0; i < enShadow.length && i < 600; i++) {
+      const e = enShadow[i];
+      if (!(e.matches(SEL_FUERTE) || esCierreM(e))) continue;
+      if (!visM(e)) continue;
+      const cierre = esCierreM(e);
+      if (cierre) nCierre++;
+      if (ctl.length < 12) ctl.push({ i: i, sh: true, tag: e.tagName.toLowerCase(), type: String(e.getAttribute('type') || ''), cls: clasesDe(e), aria: String(e.getAttribute('aria-label') || ''), title: String(e.getAttribute('title') || ''), txt: String(e.innerText || e.textContent || e.getAttribute('value') || '').replace(/\s+/g, ' ').trim().slice(0, 80), cierre: cierre });
+    }
+    // Texto visible del shadow (sin <style>/<script>/<template>).
+    let textoSh = '';
+    for (const rz of raices) textoSh += ' ' + Array.from(rz.children).filter((c) => !/^(style|script|template|link|slot)$/i.test(c.tagName)).map((c) => String(c.innerText || c.textContent || '')).join(' ');
+    const textoTotal = (String(m.innerText || m.textContent || '') + ' ' + textoSh).replace(/\s+/g, ' ').trim();
+    const primero = Array.from(m.shadowRoot ? m.shadowRoot.children : m.children).find((c) => !/^(style|script|template|link)$/i.test(c.tagName) && visM(c));
+    const rh = primero ? primero.getBoundingClientRect() : null;
+    const conMedios = desc.some((n) => visM(n) && /^(img|svg|canvas|video|picture|iframe|object|embed)$/.test(n.localName));
+    const vacio = textoTotal === '' && ctl.length === 0 && nCierre === 0 && campos === 0 && !conMedios;
     return {
       tag: tag, cls: clasesDe(m), vis: visM(m), w: r.width, h: r.height, z: z,
       dlg: role === 'dialog' || role === 'alertdialog' || tag === 'dialog', amodal: m.getAttribute('aria-modal') === 'true',
-      esM: m.matches(SEL_MODAL), texto: String(m.innerText || m.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 4000),
+      esM: esContM(m), texto: textoTotal.slice(0, 4000),
+      shdM: !!m.shadowRoot, shd: raices.length > 0, hw: rh ? rh.width : 0, hh: rh ? rh.height : 0, vacio: vacio,
       campos: campos, ctl: ctl, nCierre: nCierre, attrs: attrs.slice(0, 1500), rotulos: rotulos.slice(0, 600),
     };
   };
@@ -120,7 +178,8 @@ export function textoModalRedactado(x: unknown, max: number): string {
   return pareceDatoPersonalInventario(s) ? '(texto redactado)' : s
 }
 
-export type ControlModal = { i: number; tag: string; type: string; cls: string; aria: string; title: string; txt: string; cierre: boolean }
+/** `sh`: el control vive en un shadowRoot (0.3.39); `i` es su posición entre los controles de shadow, no entre los de light DOM. */
+export type ControlModal = { i: number; sh: boolean; tag: string; type: string; cls: string; aria: string; title: string; txt: string; cierre: boolean }
 export type ModalLeido = {
   tag: string
   /** Hasta 2 clases, cada una recortada a [a-z0-9_-]{1,24}, unidas por «.» (o «-»). */
@@ -140,6 +199,14 @@ export type ModalLeido = {
   nCierre: number
   /** Primer término prohibido (vocabulario de bloqueo) en el texto/atributos de TODO el modal, o `null`. Solo el término, nunca el texto. */
   bloqueo: string | null
+  /** 0.3.39: el host tiene shadowRoot ABIERTO propio (`false` = sin shadow o CERRADO: no se distinguen desde la página). */
+  shd: boolean
+  /** Hay algún shadowRoot abierto en el árbol del modal (el índice de sus controles ya no es el de `querySelectorAll`). */
+  conShadow: boolean
+  /** Tamaño `WxH` del primer hijo visible del shadow (o del light DOM si no hay shadow), o `-`. */
+  hijo: string
+  /** Sin contenido visible alguno (sin texto, controles, campos ni imágenes) y aun así cubre la página: NO se toca, lo decide la sesión principal. */
+  vacio: boolean
   /** Huella interna para comprobar que dos lecturas son del mismo nodo (no sale del worker). */
   huella: string
 }
@@ -156,7 +223,7 @@ export function evaluarModal(crudo: unknown): ModalLeido | null {
     const o = obj(x)
     if (!o) continue
     ctl.push({
-      i: num(o.i, 0, 9999), tag: etiqueta(o.tag, 20) || 'x', type: etiqueta(o.type, 12), cls: clases(o.cls, 1),
+      i: num(o.i, 0, 9999), sh: o.sh === true, tag: etiqueta(o.tag, 20) || 'x', type: etiqueta(o.type, 12), cls: clases(o.cls, 1),
       aria: textoModalRedactado(o.aria, 24), title: textoModalRedactado(o.title, 24), txt: textoModalRedactado(o.txt, 24), cierre: o.cierre === true,
     })
   }
@@ -195,14 +262,16 @@ export function evaluarModal(crudo: unknown): ModalLeido | null {
     dlg: c.dlg === true, amodal: c.amodal === true, esModal: c.esM === true || c.dlg === true || c.amodal === true,
     texto: textoModalRedactado(texto, 160), campos: num(c.campos, 0, 9999), ctl, nCierre: num(c.nCierre, 0, 99),
     bloqueo: bloqueo === null ? null : etiqueta(bloqueo, 30) || 'x',
+    shd: c.shdM === true, conShadow: c.shd === true, hijo: Number(c.hw) > 0 && Number(c.hh) > 0 ? `${num(c.hw, 0, 99999)}x${num(c.hh, 0, 99999)}` : '-', vacio: c.vacio === true,
     huella: `${etiqueta(c.tag, 20)}|${String(c.cls ?? '').slice(0, 120)}|${texto.slice(0, 60)}`,
   }
   return m
 }
 
 /** ¿Es un modal INFORMATIVO que se puede cerrar? Sin campos de formulario y sin ningún término prohibido. Pura. */
-export function veredictoModal(m: ModalLeido): { ok: true } | { ok: false; motivo: 'no_es_modal' | 'con_campos' | 'termino_prohibido' } {
+export function veredictoModal(m: ModalLeido): { ok: true } | { ok: false; motivo: 'no_es_modal' | 'vacio' | 'con_campos' | 'termino_prohibido' } {
   if (!m.esModal) return { ok: false, motivo: 'no_es_modal' }
+  if (m.vacio) return { ok: false, motivo: 'vacio' }
   if (m.campos > 0) return { ok: false, motivo: 'con_campos' }
   if (m.bloqueo !== null) return { ok: false, motivo: 'termino_prohibido' }
   return { ok: true }
@@ -222,6 +291,9 @@ export function lineasInterceptor(m: ModalLeido): string[] {
     `int: ${m.tag} cls=${m.cls} vis=${b(m.vis)} bb=${m.w}x${m.h} z=${m.z} dlg=${b(m.dlg)} amodal=${b(m.amodal)} modal=${b(m.esModal)} campos=${m.campos} cierre=${m.nCierre} bloqueo=${m.bloqueo ?? '-'}`,
     `int-texto: «${m.texto}»`,
   ]
-  for (const c of m.ctl.slice(0, 7)) out.push(`int-ctl: ${c.tag}/${c.type || '-'}/${c.cls} cierre=${b(c.cierre)} aria=«${c.aria}» title=«${c.title}» txt=«${c.txt}»`.slice(0, 160))
+  // 0.3.39: custom element con shadowRoot / host vacío (una línea más: el tope sigue en 9).
+  const extra = m.shd || m.conShadow || m.vacio
+  if (extra) out.push(`int-shd: shadow=${m.shd ? 'open' : m.conShadow ? 'anidado' : 'sin'} host=${m.w}x${m.h} hijo=${m.hijo} vacio=${b(m.vacio)}`)
+  for (const c of m.ctl.slice(0, extra ? 6 : 7)) out.push(`int-ctl: ${c.tag}/${c.type || '-'}/${c.cls}${c.sh ? ' sh=1' : ''} cierre=${b(c.cierre)} aria=«${c.aria}» title=«${c.title}» txt=«${c.txt}»`.slice(0, 160))
   return out
 }

@@ -1433,16 +1433,17 @@ export async function pulsarTarjetaRamoPelayo(boton: Locator, guard: GuardEmisio
 /** Lectura (solo lectura) de los modales visibles de un marco: cuántos, el índice del primero en `querySelectorAll(SEL_MODAL)` y su lectura cruda. */
 const SCRIPT_MODALES_VISIBLES = new Function(`${LIB_MODAL_PAGINA}
   const v = modalesVisibles(document);
-  const todos = Array.from(document.querySelectorAll(SEL_MODAL));
-  return { n: v.length, idx: v.length ? todos.indexOf(v[0]) : -1, crudo: v.length ? leerModalCrudo(v[0]) : null };
-`) as () => { n: number; idx: number; crudo: unknown }
+  const base = v.length && v[0].matches(SEL_MODAL);
+  const sel = !v.length ? '' : base ? SEL_MODAL : String(v[0].localName);
+  const todos = !v.length ? [] : Array.from(document.querySelectorAll(sel));
+  return { n: v.length, sel: sel, idx: v.length ? todos.indexOf(v[0]) : -1, crudo: v.length ? leerModalCrudo(v[0]) : null };
+`) as () => { n: number; sel: string; idx: number; crudo: unknown }
 const SCRIPT_LEER_MODAL = new Function('el', `${LIB_MODAL_PAGINA}
   return leerModalCrudo(el);
 `) as (el: Element) => unknown
 /** ¿El control es de cierre típico, visible y está DENTRO de un modal? (la puerta del botón de cierre lo exige sobre el nodo vivo). */
 const SCRIPT_ES_CIERRE_EN_MODAL = new Function('el', `${LIB_MODAL_PAGINA}
-  const m = el.closest(SEL_MODAL);
-  return !!m && m !== el.ownerDocument.body && m !== el.ownerDocument.documentElement && esCierreM(el) && visM(el);
+  return !!modalDe(el) && esCierreM(el) && visM(el);
 `) as (el: Element) => boolean
 /** Fondo candidato: caja que cubre ≥ 50 % de la ventana, FUERA de todo modal visible. */
 const SCRIPT_ES_FONDO = new Function('el', `${LIB_MODAL_PAGINA}
@@ -1453,7 +1454,7 @@ const SCRIPT_ES_FONDO = new Function('el', `${LIB_MODAL_PAGINA}
 /** ¿La esquina del modal queda FUERA de su contenido (un hijo con caja que no la cubre)? Es decir: el propio contenedor hace de fondo. */
 const SCRIPT_MODAL_ES_SU_FONDO = new Function('el', `
   const r = el.getBoundingClientRect();
-  const hijo = Array.from(el.children).find((c) => { const b = c.getBoundingClientRect(); return b.width > 0 && b.height > 0; });
+  const hijo = Array.from(el.shadowRoot ? el.shadowRoot.children : el.children).find((c) => { const b = c.getBoundingClientRect(); return b.width > 0 && b.height > 0; });
   if (!hijo) return false;
   const b = hijo.getBoundingClientRect();
   return b.left > r.left + 8 && b.top > r.top + 8;
@@ -1462,25 +1463,25 @@ const SCRIPT_MODAL_ES_SU_FONDO = new Function('el', `
 export type ResultadoCierreModal =
   | { estado: 'sin_modal' }
   | { estado: 'cerrado'; via: 'escape' | 'boton' | 'backdrop'; intentos: string[] }
-  | { estado: 'no_cerrable'; motivo: 'no_es_modal' | 'con_campos' | 'termino_prohibido' | 'varios_modales' | 'modal_no_ubicado'; modal: ModalLeido | null }
+  | { estado: 'no_cerrable'; motivo: 'no_es_modal' | 'vacio' | 'con_campos' | 'termino_prohibido' | 'varios_modales' | 'modal_no_ubicado'; modal: ModalLeido | null }
   | { estado: 'no_cerrado'; intentos: string[]; modal: ModalLeido | null }
 
 type ModalUbicado = { loc: Locator; leido: ModalLeido }
 
 async function ubicarModalVisible(page: Page): Promise<{ r: 'ninguno' } | { r: 'varios' } | { r: 'no_ubicado' } | { r: 'uno'; modal: ModalUbicado }> {
   let total = 0
-  let unico: { f: Frame; idx: number; crudo: unknown } | null = null
+  let unico: { f: Frame; sel: string; idx: number; crudo: unknown } | null = null
   for (const f of marcosVivos(page)) {
     const r = await f.evaluate(SCRIPT_MODALES_VISIBLES).catch(() => null)
     if (!r || !(r.n > 0)) continue
     total += r.n
-    if (r.n === 1) unico = { f, idx: r.idx, crudo: r.crudo }
+    if (r.n === 1) unico = { f, sel: r.sel, idx: r.idx, crudo: r.crudo }
   }
   if (total === 0) return { r: 'ninguno' }
   if (total > 1 || !unico) return { r: 'varios' }
   const leido = evaluarModal(unico.crudo)
   if (!leido || unico.idx < 0) return { r: 'no_ubicado' }
-  const loc = unico.f.locator(SEL_MODAL).nth(unico.idx)
+  const loc = unico.f.locator(unico.sel).nth(unico.idx)
   const otra = evaluarModal(await loc.evaluate(SCRIPT_LEER_MODAL, undefined, { timeout: 2_000 }).catch(() => null))
   if (!otra || otra.huella !== leido.huella) return { r: 'no_ubicado' }
   return { r: 'uno', modal: { loc, leido: otra } }
@@ -1490,6 +1491,18 @@ async function modalesVisiblesAhora(page: Page): Promise<number> {
   let total = 0
   for (const f of marcosVivos(page)) total += (await f.evaluate(SCRIPT_MODALES_VISIBLES).catch(() => null))?.n ?? 0
   return total
+}
+
+/** Modal con shadowRoot abierto: el ÚNICO control de cierre típico, visible y dentro del modal (light o shadow), o `null` si no hay exactamente uno. */
+async function ubicarCierreConShadow(modal: Locator): Promise<Locator | null> {
+  const cand = modal.locator(SEL_CTL_MODAL)
+  const n = Math.min(await cand.count().catch(() => 0), 400)
+  const ok: Locator[] = []
+  for (let k = 0; k < n; k++) {
+    const c = cand.nth(k)
+    if (await c.evaluate(SCRIPT_ES_CIERRE_EN_MODAL, undefined, { timeout: 1_000 }).catch(() => false)) ok.push(c)
+  }
+  return ok.length === 1 ? ok[0] : null
 }
 
 /**
@@ -1561,8 +1574,10 @@ export async function cerrarModalInformativo(page: Page, guard: GuardEmision, es
   // 2) Botón de cierre típico: exactamente UNO entre los controles visibles del modal; se re-ubica por su índice y se re-verifica vivo en la puerta.
   const cierres = leido.ctl.filter((c) => c.cierre)
   if (leido.nCierre === 1 && cierres.length === 1) {
-    const boton = loc.locator(SEL_CTL_MODAL).nth(cierres[0].i)
-    if (await intentar('boton', () => pulsarCierreModal(boton, guard))) return { estado: 'cerrado', via: 'boton', intentos }
+    // Con shadowRoot abierto en el árbol el índice de `querySelectorAll` ya no vale (Playwright mezcla light y shadow): se busca el ÚNICO control de cierre vivo.
+    const boton = leido.conShadow ? await ubicarCierreConShadow(loc) : loc.locator(SEL_CTL_MODAL).nth(cierres[0].i)
+    if (!boton) intentos.push('boton:no_ubicado')
+    else if (await intentar('boton', () => pulsarCierreModal(boton, guard))) return { estado: 'cerrado', via: 'boton', intentos }
   } else {
     intentos.push(`boton:${leido.nCierre === 0 ? 'sin_control' : 'varios_controles'}`)
   }

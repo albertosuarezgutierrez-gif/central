@@ -40,6 +40,7 @@ import { cerrarPilotaje, enviarResultado, pedirComandoPilotaje, publicarEstadoPi
 import { exigirSinCaptcha } from './captcha.ts'
 import { ClicNoAccionableError, cuerpoDiagnosticoClic, esTimeoutAccionabilidad, leerDiagnosticoClic } from './diagnostico-clic.ts'
 import { lineasInterceptor } from './modal-informativo.ts'
+import { fallosDeRed, leerEntornoNavegador, lineasEntorno } from './entorno-navegador.ts'
 import { clasificar } from './errores.ts'
 import { exigirSinVerificacion } from './verificacion.ts'
 import { capturarInventarioExploracion, type InventarioExploracion } from './inventario-dom.ts'
@@ -171,7 +172,7 @@ export async function ejecutarComando(page: Page, captura: InventarioExploracion
     if (!('loc' in l0)) return rechazo('no_localizado', [l0.motivo])
     try {
       const d = await leerDiagnosticoClic(l0.loc)
-      return d ? { r: { estado: 'hecho', motivo: 'inspeccionado', detalle: [`diag: ${cuerpoDiagnosticoClic(d)}`, ...(d.int ? lineasInterceptor(d.int).map((x) => textoDiagnostico(x, red)) : [])].slice(0, 10) } } : rechazo('no_localizado', ['el nodo ya no está'])
+      return d ? { r: { estado: 'hecho', motivo: 'inspeccionado', detalle: [`diag: ${cuerpoDiagnosticoClic(d)}`, ...lineasEntorno(await leerEntornoNavegador(page), fallosDeRed(page.context())), ...(d.int ? lineasInterceptor(d.int).map((x) => textoDiagnostico(x, red)) : [])].slice(0, 10) } } : rechazo('no_localizado', ['el nodo ya no está'])
     } finally {
       await l0.loc.evaluate((n, at) => n.removeAttribute(at), ATRIBUTO_MARCA, { timeout: 2_000 }).catch(() => undefined)
     }
