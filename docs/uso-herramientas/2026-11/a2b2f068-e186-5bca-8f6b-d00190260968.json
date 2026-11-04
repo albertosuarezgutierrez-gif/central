@@ -1,8 +1,8 @@
 {
  "sesion": "a2b2f068-e186-5bca-8f6b-d00190260968",
  "inicio": "2026-11-04T08:02:49.298Z",
- "fin": "2026-11-04T13:26:11.196Z",
- "llamadas": 184,
+ "fin": "2026-11-04T14:18:50.161Z",
+ "llamadas": 196,
  "categorias": {
   "lectura-directa": {
    "llamadas": 30,
@@ -18,16 +18,16 @@
    }
   },
   "otro": {
-   "llamadas": 18,
-   "chars_in": 8898,
-   "chars_out": 125889,
+   "llamadas": 25,
+   "chars_in": 8912,
+   "chars_out": 190053,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "SubagentHandback": 2,
     "ToolSearch": 3,
-    "ReadNotifications": 13
+    "ReadNotifications": 20
    }
   },
   "agente:rastreador-codigo": {
@@ -42,14 +42,14 @@
    }
   },
   "bash": {
-   "llamadas": 111,
-   "chars_in": 42578,
-   "chars_out": 367125,
+   "llamadas": 116,
+   "chars_in": 43791,
+   "chars_out": 367962,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 111
+    "Bash": 116
    }
   },
   "mcp:github": {
