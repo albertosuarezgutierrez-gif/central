@@ -1,0 +1,20 @@
+{
+ "sesion": "21f16ac8-e776-593e-8b9c-bfb4973e56c1",
+ "inicio": "2026-11-04T08:41:12.045Z",
+ "fin": "2026-11-04T08:41:31.301Z",
+ "llamadas": 2,
+ "categorias": {
+  "otro": {
+   "llamadas": 2,
+   "chars_in": 617,
+   "chars_out": 609,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "PushNotification": 1
+   }
+  }
+ }
+}
