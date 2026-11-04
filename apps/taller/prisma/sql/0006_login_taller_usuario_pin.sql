@@ -60,6 +60,15 @@ END $$;
 REVOKE ALL ON FUNCTION taller.fijar_rrhh_empresa(uuid, uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION taller.fijar_rrhh_empresa(uuid, uuid) TO prisma_taller;
 
+-- ─── 6. Límite de intentos del CÓDIGO del taller por IP (aún no hay taller resuelto: sin taller_id ni RLS; solo IP y contadores) ───
+CREATE TABLE IF NOT EXISTS taller.bloqueos_codigo (
+  clave           text PRIMARY KEY,           -- 'codigo:<ip>'
+  intentos        integer NOT NULL DEFAULT 0 CHECK (intentos >= 0),
+  bloqueado_hasta timestamptz,
+  creado_en       timestamptz NOT NULL DEFAULT now()
+);
+GRANT SELECT, INSERT, UPDATE, DELETE ON taller.bloqueos_codigo TO prisma_taller;
+
 COMMIT;
 
 -- ── Verificación tras aplicar (solo lectura) ─────────────────────────────────

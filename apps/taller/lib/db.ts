@@ -1,6 +1,7 @@
 // Cliente Prisma del schema `taller` (rol prisma_taller, NOBYPASSRLS). Úsalo SOLO a través de `conTaller`.
 import { PrismaClient, type Prisma } from '@prisma/client'
 import { crearConTaller, type ClienteConTx } from './rls.ts'
+import { resolverCodigoLimitado } from './limite-codigo.ts'
 
 const globalForPrisma = globalThis as unknown as { prismaTaller?: PrismaClient }
 
@@ -37,4 +38,29 @@ export async function tallerPorCodigoBd(codigo: string): Promise<string | null> 
 export async function fijarRrhhEmpresaBd(tallerId: string, empresaId: string | null): Promise<boolean> {
   const filas = await prisma.$queryRaw<Array<{ ok: boolean }>>`SELECT taller.fijar_rrhh_empresa(${tallerId}::uuid, ${empresaId}::uuid) AS ok`
   return filas[0]?.ok === true
+}
+
+/** Código → taller con límite de intentos por IP (`taller.bloqueos_codigo`, candado de transacción). null = inexistente o IP bloqueada. */
+export function tallerPorCodigoLimitado(codigo: string, ip: string, ahora: Date): Promise<string | null> {
+  return prisma.$transaction(async (tx) => {
+    const porCodigo = async (c: string) => {
+      const f = await tx.$queryRaw<Array<{ id: string | null }>>`SELECT taller.taller_por_codigo(${c}::text) AS id`
+      return f[0]?.id ?? null
+    }
+    return resolverCodigoLimitado({
+      async leer(clave) {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${clave}))`
+        const f = await tx.$queryRaw<Array<{ intentos: number; bloqueado_hasta: Date | null; creado_en: Date }>>`
+          SELECT intentos, bloqueado_hasta, creado_en FROM taller.bloqueos_codigo WHERE clave = ${clave}`
+        return f[0] ? { intentos: f[0].intentos, bloqueadoHasta: f[0].bloqueado_hasta, creadoEn: f[0].creado_en } : null
+      },
+      async guardar(clave, f) {
+        await tx.$executeRaw`INSERT INTO taller.bloqueos_codigo (clave, intentos, bloqueado_hasta, creado_en) VALUES (${clave}, ${f.intentos}, ${f.bloqueadoHasta}, ${f.creadoEn})
+          ON CONFLICT (clave) DO UPDATE SET intentos = EXCLUDED.intentos, bloqueado_hasta = EXCLUDED.bloqueado_hasta, creado_en = EXCLUDED.creado_en`
+      },
+      async borrar(clave) {
+        await tx.$executeRaw`DELETE FROM taller.bloqueos_codigo WHERE clave = ${clave}`
+      },
+    }, { codigo, ip, ahora, porCodigo })
+  })
 }
