@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-04T13:05:29Z",
-  "sha": "4b2335104d75fe3e44b814d67a93e1ce8d4e69c2",
+  "generadoEn": "2026-11-04T13:53:32Z",
+  "sha": "9e6abbd48a264eabd14f8992d37c970e703d4d15",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -34603,12 +34603,12 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 40
+          "linea": 43
         }
       ],
       "tablas": [],
       "rutaApi": "/api/webhooks/whatsapp",
-      "hash": "aa16afac93db"
+      "hash": "7d26f39fa2a5"
     },
     {
       "ruta": "apps/asegura/app/layout.tsx",
