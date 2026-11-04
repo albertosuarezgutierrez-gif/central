@@ -1,5 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import { paraPagina, configDe } from '@/lib/contexto'
+import { textoFotoPurgada } from '@central/module-taller'
 import { firmarVarias } from '@/lib/almacen'
 import { Cabecera } from '../../../_marca'
 import { ImprimirBoton } from '../../ImprimirBoton'
@@ -24,7 +25,7 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
       configDe(tx, c.tallerId),
     ])
     // Firma y fotos por URL firmada de corta duración (bucket privado): se pintan en el resguardo.
-    const urls = await firmarVarias(c.tallerId, [...fotos.map((x) => x.ruta), ...(rec.firmaRuta ? [rec.firmaRuta] : [])])
+    const urls = await firmarVarias(c.tallerId, [...fotos.filter((x) => !x.purgadaEn).map((x) => x.ruta), ...(rec.firmaRuta ? [rec.firmaRuta] : [])])
     return { rec, taller, veh, cli, fotos, ot, pie: config?.textos.pieResguardo ?? '', urls }
   })
   if (datos === 'sin_sesion') redirect('/login')
@@ -54,7 +55,7 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
             <div className="fotos-mini">
               {fotos.map((x) => (
                 <figure key={x.id}>
-                  {urls.get(x.ruta) ? <img src={urls.get(x.ruta)} alt={`Foto ${x.orden}: ${x.posicion ?? 'vehículo'}`} /> : <span className="tenue">sin imagen</span>}
+                  {x.purgadaEn ? <span className="tenue">{textoFotoPurgada(x.purgadaEn)}</span> : urls.get(x.ruta) ? <img src={urls.get(x.ruta)} alt={`Foto ${x.orden}: ${x.posicion ?? 'vehículo'}`} /> : <span className="tenue">sin imagen</span>}
                   {x.orden}. {x.posicion ?? 'foto'} · huella {x.huellaSha256.slice(0, 12)}
                 </figure>
               ))}

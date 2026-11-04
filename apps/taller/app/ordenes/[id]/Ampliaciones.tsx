@@ -1,6 +1,7 @@
 'use client'
 // Ampliaciones: el mecánico PROPONE (piezas/trabajos y fotos, sin precios); recepción/dueño pone precio y la manda al cliente.
 import { useState, useTransition } from 'react'
+import { textoFotoPurgada } from '@central/module-taller'
 import { eurosACent } from '@/lib/ajustes'
 import { descartarPropuestaAccion, enviarPropuestaAccion, proponerAmpliacionAccion } from '../acciones'
 
@@ -60,7 +61,7 @@ export function ProponerAmpliacion({ otId }: { otId: string }) {
 export type PropuestaVista = {
   id: string; estado: string; explicacion: string; autor: string
   lineas: { orden: number; descripcion: string; referencia: string | null; cantidad: number }[]
-  fotos: { id: string; url: string | null; nota: string | null }[]
+  fotos: { id: string; url: string | null; nota: string | null; purgadaEn: string | null }[]
 }
 
 /** Recepción/dueño: precio por línea → «Enviar al cliente». */
@@ -92,7 +93,7 @@ export function GestionPropuesta({ p, puedeGestionar }: { p: PropuestaVista; pue
         <div className="fotos-mini">
           {p.fotos.map((f) => (
             <figure key={f.id}>
-              {f.url ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={f.url} alt={f.nota ?? 'Foto de la ampliación'} /> : <span className="tenue">sin imagen</span>}
+              {f.purgadaEn ? <span className="tenue">{textoFotoPurgada(new Date(f.purgadaEn))}</span> : f.url ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={f.url} alt={f.nota ?? 'Foto de la ampliación'} /> : <span className="tenue">sin imagen</span>}
             </figure>
           ))}
         </div>

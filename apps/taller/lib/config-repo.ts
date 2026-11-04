@@ -156,6 +156,12 @@ export async function leerConfig(tx: TxConfig, tallerId: string): Promise<Config
       sesionMinutos: cfg.loginSesionMinutos,
       inactividadMinutos: cfg.loginInactividadMinutos,
     },
+    retirada: {
+      firmaObligatoria: cfg.retiradaFirmaObligatoria,
+      textoConformidad: cfg.retiradaTextoConformidad,
+      versionTextoConformidad: cfg.retiradaVersionTexto,
+    },
+    fotosRetencionDias: cfg.fotosRetencionDias,
   }
 }
 
@@ -200,6 +206,10 @@ export function escalaresDeConfig(c: ConfigTaller) {
     loginBloqueoUsuarioMinutos: c.seguridadLogin.bloqueoUsuarioMinutos,
     loginSesionMinutos: c.seguridadLogin.sesionMinutos,
     loginInactividadMinutos: c.seguridadLogin.inactividadMinutos,
+    fotosRetencionDias: c.fotosRetencionDias,
+    retiradaFirmaObligatoria: c.retirada.firmaObligatoria,
+    retiradaTextoConformidad: c.retirada.textoConformidad,
+    retiradaVersionTexto: c.retirada.versionTextoConformidad,
   }
 }
 

@@ -3,7 +3,7 @@
 // vuelve a validar TODO (validarConfig) y audita. Aquí solo se convierte lo tecleado a unidades.
 import { useState, useTransition, type ReactNode } from 'react'
 import {
-  formatearEur, importeManoObraCent, TIPOS_LINEA,
+  formatearEur, importeManoObraCent, FOTOS_RETENCION_MIN_DIAS, TIPOS_LINEA,
   type Aceite, type ConfigTaller, type FranjaHorario, type IntervalosAvisos, type SeguridadLogin, type MedioCobro, type SerieFactura, type TipoIva,
   type TipoLinea, type TipoVehiculo,
 } from '@central/module-taller'
@@ -191,6 +191,35 @@ function Acceso({ c }: { c: ConfigTaller }) {
       <p className="tenue">Sesión de {minutosAHoras(Number(v.sesionMinutos) || 0)} h como máximo; se cierra sola tras {v.inactividadMinutos || 0} min sin usarla.
         Los cambios valen para las sesiones que se abran desde ahora.</p>
       <button type="button" className="btn" disabled={g.pendiente} onClick={guardar}>Guardar acceso</button>
+      {g.aviso}
+    </Seccion>
+  )
+}
+
+// ── Entrega del vehículo y conservación de fotos ──
+function RetiradaYFotos({ c }: { c: ConfigTaller }) {
+  const [firma, setFirma] = useState(c.retirada.firmaObligatoria)
+  const [texto, setTexto] = useState(c.retirada.textoConformidad)
+  const [dias, setDias] = useState(String(c.fotosRetencionDias))
+  const g = useGuardar()
+  const guardar = () => {
+    if (!/^[1-9]\d*$/.test(dias.trim()) || Number(dias.trim()) < FOTOS_RETENCION_MIN_DIAS)
+      return g.setMsg({ ok: false, texto: `El plazo de conservación de las fotos no puede ser menor de ${FOTOS_RETENCION_MIN_DIAS} días (garantía legal de la reparación: 3 meses o 2.000 km)` })
+    g.guardar(() => guardarAjuste({ seccion: 'retirada_fotos', firmaObligatoria: firma, textoConformidad: texto, fotosRetencionDias: Number(dias.trim()) }))
+  }
+  return (
+    <Seccion titulo="Entrega del vehículo y conservación de fotos">
+      <label className="casilla"><input type="checkbox" checked={firma} onChange={(e) => setFirma(e.target.checked)} />
+        <span>Exigir la firma de conformidad de quien retira el vehículo al entregarlo</span></label>
+      <Campo etiqueta="Texto de conformidad (se guarda con cada firma, con su versión)">
+        <textarea value={texto} onChange={(e) => setTexto(e.target.value)} maxLength={4000} rows={5} />
+      </Campo>
+      <p className="tenue">Versión actual: {c.retirada.versionTextoConformidad}. Si cambias el texto, la versión sube sola; las firmas ya hechas conservan el texto que firmaron.</p>
+      <Campo etiqueta={`Días que se conservan las fotos de daños y de trabajo, desde la entrega (mínimo ${FOTOS_RETENCION_MIN_DIAS})`}>
+        <input inputMode="numeric" value={dias} onChange={(e) => setDias(e.target.value)} />
+      </Campo>
+      <p className="tenue">Pasado el plazo se borran del almacén solo esas fotos. Las firmas, el resguardo, los presupuestos y las facturas no se borran.</p>
+      <button type="button" className="btn" disabled={g.pendiente} onClick={guardar}>Guardar entrega y fotos</button>
       {g.aviso}
     </Seccion>
   )
@@ -790,6 +819,7 @@ export function AjustesCliente({ datos }: { datos: DatosAjustes }) {
       <Marca m={datos.marca} />
       <CodigoTaller inicial={datos.taller.codigoAcceso} />
       <Acceso c={c} />
+      <RetiradaYFotos c={c} />
       <Personal personas={datos.personas} yoId={datos.yoId} rrhhVinculada={datos.taller.rrhhVinculada} bloqueados={datos.bloqueos.usuariosBloqueados} />
       {/* key: remonta solo si cambia el conjunto (alta nueva), sin perder la edición en curso de los demás */}
       <Proveedores key={datos.proveedores.map((p) => p.id).join()} proveedores={datos.proveedores} />

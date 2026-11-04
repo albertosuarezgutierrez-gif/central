@@ -161,6 +161,22 @@ export interface SeguridadLogin {
   inactividadMinutos: number
 }
 
+/**
+ * Retirada del vehículo: al pasar la OT a «entregado» el cliente firma la conformidad. El texto lo edita el taller (se guarda
+ * con su versión junto a la firma, como el consentimiento); `firmaObligatoria` puede desactivarla.
+ */
+export interface ConfigRetirada {
+  firmaObligatoria: boolean
+  textoConformidad: string
+  versionTextoConformidad: string
+}
+
+/**
+ * Mínimo legal de conservación de las fotos de una OT, en días desde la entrega: la garantía de una reparación es de 3 meses
+ * o 2.000 km. NO es un precio ni un intervalo del taller: el dueño puede alargar el plazo, nunca acortarlo por debajo de esto.
+ */
+export const FOTOS_RETENCION_MIN_DIAS = 90
+
 export interface ConfigTaller {
   precioHoraCent: number
   ivas: TipoIva[]
@@ -176,6 +192,9 @@ export interface ConfigTaller {
   textos: TextosTaller
   validezPresupuestoDias: number
   seguridadLogin: SeguridadLogin
+  retirada: ConfigRetirada
+  /** Días que se conservan las fotos de daños y de trabajo, contados desde la entrega. Mínimo `FOTOS_RETENCION_MIN_DIAS`. */
+  fotosRetencionDias: number
 }
 
 const esEnteroNoNeg = (n: unknown): n is number => typeof n === 'number' && Number.isInteger(n) && n >= 0
@@ -226,6 +245,21 @@ function validarAgenda(c: ConfigTaller): string[] {
   if (!esEnteroPos(a.duracionDiagnosticoMinutos)) e.push('agenda.duracionDiagnosticoMinutos debe ser un entero > 0')
   if (!esEnteroPos(a.invitacionCaducaDias)) e.push('agenda.invitacionCaducaDias debe ser un entero > 0')
   if (c.paquetes.some((p) => p.codigo === SERVICIO_DIAGNOSTICO)) e.push(`el código de paquete «${SERVICIO_DIAGNOSTICO}» está reservado`)
+  return e
+}
+
+function validarRetiradaYRetencion(c: ConfigTaller): string[] {
+  const e: string[] = []
+  const r = c.retirada
+  if (!r) e.push('falta la configuración de retirada')
+  else {
+    if (typeof r.firmaObligatoria !== 'boolean') e.push('retirada.firmaObligatoria debe ser sí/no')
+    if (typeof r.textoConformidad !== 'string' || !r.textoConformidad.trim()) e.push('falta el texto de conformidad de la retirada')
+    if (typeof r.versionTextoConformidad !== 'string' || !r.versionTextoConformidad.trim()) e.push('falta la versión del texto de conformidad')
+  }
+  if (!esEnteroPos(c.fotosRetencionDias) || c.fotosRetencionDias < FOTOS_RETENCION_MIN_DIAS) {
+    e.push(`fotosRetencionDias debe ser un entero ≥ ${FOTOS_RETENCION_MIN_DIAS} (garantía legal de la reparación: 3 meses o 2.000 km)`)
+  }
   return e
 }
 
@@ -304,6 +338,7 @@ export function validarConfig(c: ConfigTaller): string[] {
       if (!esEnteroPos(c.seguridadLogin[k])) e.push(`seguridadLogin.${k} debe ser un entero > 0`)
     }
   }
+  e.push(...validarRetiradaYRetencion(c))
   if (!c.textos.versionTextoComercialTaller.trim() || !c.textos.textoConsentimientoComercialTaller.trim()) {
     e.push('falta el texto/versión del consentimiento comercial del taller')
   }

@@ -212,3 +212,47 @@ test('espejo: estados de cita ≡ ESTADOS_CITA', () => {
   assert.ok(m)
   assert.deepEqual([...m[1].matchAll(/'([^']+)'/g)].map((x) => x[1]), [...ESTADOS_CITA])
 })
+
+// ── 0008: firma de retirada y retención de fotos ─────────────────────────────────────────────────────────────────
+import { RETIRADA_ALTA, FOTOS_RETENCION_DIAS_ALTA, FOTOS_RETENCION_MIN_DIAS } from '@central/module-taller'
+const S8 = readFileSync(join(DIR, '0008_retirada_y_retencion_fotos.sql'), 'utf8')
+
+test('0008: espejo de los valores de alta (plazo 180, mínimo 90, firma obligatoria, texto y versión)', () => {
+  assert.equal(Number(S8.match(/fotos_retencion_dias integer NOT NULL DEFAULT (\d+)/)?.[1]), FOTOS_RETENCION_DIAS_ALTA)
+  assert.equal(Number(S8.match(/CHECK \(fotos_retencion_dias >= (\d+)\)/)?.[1]), FOTOS_RETENCION_MIN_DIAS)
+  assert.match(S8, new RegExp(`retirada_firma_obligatoria boolean NOT NULL DEFAULT ${RETIRADA_ALTA.firmaObligatoria}`))
+  assert.equal(S8.match(/retirada_texto_conformidad text NOT NULL DEFAULT '([^']*)'/)?.[1], RETIRADA_ALTA.textoConformidad)
+  assert.equal(S8.match(/retirada_version_texto text NOT NULL DEFAULT '([^']*)'/)?.[1], RETIRADA_ALTA.versionTextoConformidad)
+})
+
+test('0008: idempotente, sin tablas nuevas (nada sin RLS), purgada_en en las dos tablas de fotos y NO en firmas/presupuestos/facturas', () => {
+  assert.doesNotMatch(S8, /CREATE TABLE/)
+  assert.match(S8, /ALTER TABLE taller\.recepcion_fotos ADD COLUMN IF NOT EXISTS purgada_en timestamptz;/)
+  assert.match(S8, /ALTER TABLE taller\.ot_fotos ADD COLUMN IF NOT EXISTS purgada_en timestamptz;/)
+  assert.equal([...S8.matchAll(/purgada_en timestamptz/g)].length, 2, 'solo las dos tablas de fotos')
+  // Cada ALTER/CREATE es reejecutable: ADD COLUMN IF NOT EXISTS, CREATE INDEX IF NOT EXISTS, CREATE OR REPLACE, constraint tras comprobar pg_constraint.
+  const codigo = S8.replace(/^--.*$/gm, '')
+  assert.equal([...codigo.matchAll(/ADD COLUMN(?! IF NOT EXISTS)/g)].length, 0)
+  assert.equal([...codigo.matchAll(/CREATE (UNIQUE )?INDEX(?! IF NOT EXISTS)/g)].length, 0)
+  assert.match(codigo, /IF NOT EXISTS \(SELECT 1 FROM pg_constraint WHERE conname = 'ck_ot_entrega_firma'\)/)
+  assert.match(S8, /^BEGIN;$/m)
+  assert.match(S8, /^COMMIT;$/m)
+})
+
+test('0008: la entrega guarda firma + texto + versión + nombre juntos (CHECK) y los campos existen en OT', () => {
+  for (const c of ['entrega_firma_ruta', 'entrega_conformidad_texto', 'entrega_conformidad_version', 'entrega_retira_nombre']) {
+    assert.match(S8, new RegExp(`ADD COLUMN IF NOT EXISTS ${c} text`))
+  }
+  assert.match(S8, /ck_ot_entrega_firma/)
+  assert.match(S8, /entregado_en IS NOT NULL/)
+})
+
+test('0008: talleres_activos() es SECURITY DEFINER, devuelve solo ids, sin PUBLIC y con EXECUTE para el rol de la app', () => {
+  assert.match(S8, /FUNCTION taller\.talleres_activos\(\)\s+RETURNS SETOF uuid[\s\S]*SECURITY DEFINER SET search_path = taller, pg_temp/)
+  assert.match(S8, /REVOKE ALL ON FUNCTION taller\.talleres_activos\(\) FROM PUBLIC;/)
+  assert.match(S8, /GRANT EXECUTE ON FUNCTION taller\.talleres_activos\(\) TO prisma_taller;/)
+})
+
+test('0008: bloqueos_codigo sigue sin taller_id a propósito y esta migración no la toca', () => {
+  assert.doesNotMatch(S8.replace(/^--.*$/gm, ''), /bloqueos_codigo/)
+})

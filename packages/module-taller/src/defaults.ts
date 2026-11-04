@@ -35,6 +35,19 @@ export const AGENDA_ALTA = {
   invitacionCaducaDias: 14,
 } as const
 
+/** Conservación de las fotos de daños y de trabajo desde la entrega (el mínimo legal es `FOTOS_RETENCION_MIN_DIAS`). */
+export const FOTOS_RETENCION_DIAS_ALTA = 180
+
+/** Retirada del vehículo de un taller nuevo: firma obligatoria. El texto es BORRADOR hasta que el taller lo revise. */
+export const RETIRADA_ALTA = {
+  firmaObligatoria: true,
+  textoConformidad:
+    'Recojo el vehículo tras haberlo revisado, de conformidad con los trabajos realizados según la orden de trabajo y sin ' +
+    'reservas sobre su estado en este momento. Sé que el taller conserva las fotografías de la recepción y de los trabajos ' +
+    'durante el plazo de conservación indicado por el taller.',
+  versionTextoConformidad: 'retirada-borrador-1',
+} as const
+
 /** Construye la configuración de alta. Siempre devuelve un objeto NUEVO (nunca compartas el de otro taller). */
 export function configDeAlta(): ConfigTaller {
   return {
@@ -86,5 +99,7 @@ export function configDeAlta(): ConfigTaller {
     },
     validezPresupuestoDias: 30,
     seguridadLogin: { ...SEGURIDAD_LOGIN_ALTA },
+    retirada: { ...RETIRADA_ALTA },
+    fotosRetencionDias: FOTOS_RETENCION_DIAS_ALTA,
   }
 }

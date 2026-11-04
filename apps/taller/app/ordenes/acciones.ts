@@ -12,6 +12,7 @@ import {
   anadirFotos, anadirNota, descartarPropuesta, enviarPropuesta, ErrorTrabajo, proponerAmpliacion, type FotoSubida, type TxTrabajo,
 } from '@/lib/trabajo-ot'
 import { abrirParteMecanico, cambiarEstadoOt, cerrarParteMecanico, type TxOrdenes } from '@/lib/ordenes'
+import { entregarOt, MAX_FIRMA_BYTES } from '@/lib/entrega'
 
 const Id = z.string().uuid()
 
@@ -44,6 +45,8 @@ export async function cambiarEstadoAccion(fd: FormData): Promise<void> {
   const id = Id.safeParse(fd.get('otId'))
   const hacia = z.string().max(40).safeParse(fd.get('hacia'))
   if (!id.success || !hacia.success) return volver(null, 'Datos inválidos')
+  // La entrega lleva la firma de retirada y tiene su propia acción: por aquí no se puede saltar.
+  if (hacia.data === 'entregado') return volver(id.data, 'La entrega se hace desde el botón «Entregar el vehículo», con la firma de quien retira')
   await ejecutar(id.data, () =>
     conPermiso('ordenes_avanzar', async (tx, c) => {
       const ot = await tx.ordenTrabajo.findFirst({ where: { tallerId: c.tallerId, id: id.data }, select: { estado: true } })
@@ -53,6 +56,45 @@ export async function cambiarEstadoAccion(fd: FormData): Promise<void> {
       return cambiarEstadoOt(tx as unknown as TxOrdenes, { tallerId: c.tallerId, otId: id.data, hacia: hacia.data, ahora: new Date() })
     }),
   )
+}
+
+/**
+ * Entrega del vehículo con la firma de retirada (terminado → entregado). Misma capacidad que el cambio de estado a mano; la firma
+ * (PNG real, ≤ 1 MB) se exige o no según la configuración del taller, que se lee en SERVIDOR.
+ */
+export async function entregarOtAccion(fd: FormData): Promise<RespuestaTrabajo | void> {
+  const id = Id.safeParse(fd.get('otId'))
+  const nombre = z.string().max(200).safeParse(fd.get('nombre') ?? '')
+  const version = z.string().max(100).safeParse(fd.get('versionTexto') ?? '')
+  if (!id.success || !nombre.success || !version.success) return { ok: false, errores: ['Datos inválidos'] }
+  let firma: { mime: string; bytes: Uint8Array } | null = null
+  const f = fd.get('firma')
+  if (f instanceof File && f.size > 0) {
+    if (f.size > MAX_FIRMA_BYTES) return { ok: false, errores: ['La firma pesa demasiado'] }
+    const bytes = new Uint8Array(await f.arrayBuffer())
+    if (mimeReal(bytes) !== 'image/png') return { ok: false, errores: ['La firma no es una imagen válida'] }
+    firma = { mime: 'image/png', bytes }
+  }
+  let msg: string | null = null
+  try {
+    msg = await conPermiso('ordenes_avanzar', async (tx, c) => {
+      const ot = await tx.ordenTrabajo.findFirst({ where: { tallerId: c.tallerId, id: id.data }, select: { estado: true } })
+      if (!ot) return 'orden no encontrada'
+      const cap = capacidadParaTransicion(ot.estado, 'entregado')
+      if (cap !== 'ordenes_avanzar') await exigir(tx as never, c, cap)
+      const config = await configDe(tx, c.tallerId)
+      if (!config) return 'El taller no tiene configuración de alta'
+      const r = await entregarOt(tx as unknown as TxOrdenes, almacenActivo(), config, {
+        tallerId: c.tallerId, otId: id.data, ahora: new Date(), retira: { nombre: nombre.data, firma }, versionTextoVista: version.data || null,
+      })
+      return r.ok ? null : r.motivo
+    }, { timeout: 40_000 })
+  } catch (e) {
+    msg = mensajeDeAcceso(e)
+    if (!msg) { console.error('[ordenes/entrega]', e); msg = 'No se pudo completar. Inténtalo de nuevo' }
+  }
+  if (msg) return { ok: false, errores: [msg] }
+  return volver(id.data, null)
 }
 
 export async function abrirMiParteAccion(fd: FormData): Promise<void> {

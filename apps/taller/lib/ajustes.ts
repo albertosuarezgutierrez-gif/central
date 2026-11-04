@@ -2,7 +2,7 @@
 // (euros «50,00», porcentajes «10,5», horas «1,5») a unidades del dominio y aplica UN cambio sobre la
 // ConfigTaller, que SIEMPRE pasa por `validarConfig` de module-taller. Sin BD.
 import {
-  TIPOS_LINEA, validarConfig,
+  TIPOS_LINEA, validarConfig, validarTextoConformidad, siguienteVersionTexto,
   type Aceite, type ConfigAgenda, type ConfigTaller, type FranjaHorario, type IntervalosAvisos, type SeguridadLogin, type MedioCobro, type SerieFactura, type TipoIva,
   type TipoLinea, type TipoVehiculo,
 } from '@central/module-taller'
@@ -61,6 +61,8 @@ export type CambioAjustes =
   | { seccion: 'series'; series: SerieFactura[] }
   | { seccion: 'seguridad_login'; seguridad: SeguridadLogin }
   | { seccion: 'agenda'; agenda: ConfigAgenda }
+  /** Entrega del vehículo y conservación de fotos. La versión del texto la sube el servidor si el texto cambia. */
+  | { seccion: 'retirada_fotos'; firmaObligatoria: boolean; textoConformidad: string; fotosRetencionDias: number }
   | { seccion: 'horario'; franjas: FranjaHorario[]; duracionHuecoMinutos: number; puestos: number }
   | {
       seccion: 'textos'
@@ -169,6 +171,15 @@ export function aplicarAjuste(antes: ConfigTaller, cambio: CambioAjustes): Resul
       // Cierres ordenados y sin duplicar; el resto lo valida validarConfig (rangos, zona horaria, confirmación).
       c.agenda = { ...cambio.agenda, cierres: cambio.agenda.cierres.map((x) => ({ fecha: x.fecha, motivo: x.motivo.trim() })).sort((a, b) => a.fecha.localeCompare(b.fecha)) }
       break
+    case 'retirada_fotos': {
+      const texto = cambio.textoConformidad.trim()
+      previos.push(...validarTextoConformidad(texto))
+      // Un texto distinto es OTRA versión (cada firma guarda el texto exacto y su versión).
+      const versionTextoConformidad = texto === antes.retirada.textoConformidad.trim() ? antes.retirada.versionTextoConformidad : siguienteVersionTexto(antes.retirada.versionTextoConformidad)
+      c.retirada = { firmaObligatoria: cambio.firmaObligatoria, textoConformidad: texto, versionTextoConformidad }
+      c.fotosRetencionDias = cambio.fotosRetencionDias
+      break
+    }
     case 'textos':
       c.textos = { ...c.textos, ...cambio.textos }
       c.validezPresupuestoDias = cambio.validezPresupuestoDias

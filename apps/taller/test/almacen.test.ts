@@ -71,3 +71,17 @@ test('rutaDe / rutaEsDelTaller', () => {
   assert.equal(rutaEsDelTaller(T, `${T2}/a.png`), false)
   assert.ok(rutaDe({ tallerId: T, carpeta: 'marca', nombre: 'logo.png', mime: 'image/png', bytes }).ruta.startsWith(`${T}/marca/logo-`))
 })
+
+test('borrar: DELETE al objeto del taller con la clave de servicio; 404 (ya no está) es éxito; otro fallo lanza; ruta ajena se rechaza sin llamar', async () => {
+  const ruta = `${T}/ot-1/trabajo-0.jpg`
+  const ok = fetchFalso([{ ok: true }])
+  await almacenSupabase(cfg(ok.fn)).borrar(T, ruta)
+  assert.equal(ok.llamadas[0].init.method, 'DELETE')
+  assert.equal(ok.llamadas[0].url, `https://x.supabase.test/storage/v1/object/taller/${ruta}`)
+  assert.equal((ok.llamadas[0].init.headers as Record<string, string>).Authorization, 'Bearer sb_secret_x')
+  await almacenSupabase(cfg(fetchFalso([{ ok: false, status: 404 }]).fn)).borrar(T, ruta) // idempotente
+  await assert.rejects(almacenSupabase(cfg(fetchFalso([{ ok: false, status: 500 }]).fn)).borrar(T, ruta), /Storage delete 500/)
+  const ajeno = fetchFalso([{ ok: true }])
+  await assert.rejects(almacenSupabase(cfg(ajeno.fn)).borrar(T2, ruta), /no es del taller/)
+  assert.equal(ajeno.llamadas.length, 0)
+})

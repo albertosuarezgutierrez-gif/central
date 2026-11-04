@@ -75,6 +75,11 @@ model Configuracion {
   agendaConfirmacion             String   @default("manual") @map("agenda_confirmacion")
   agendaDiagnosticoMinutos       Int      @default(60) @map("agenda_diagnostico_minutos")
   agendaInvitacionCaducaDias     Int      @default(14) @map("agenda_invitacion_caduca_dias")
+  /// 0008: días que se conservan las fotos de daños y de trabajo desde la entrega (mínimo 90, alta 180).
+  fotosRetencionDias             Int      @default(180) @map("fotos_retencion_dias")
+  retiradaFirmaObligatoria       Boolean  @default(true) @map("retirada_firma_obligatoria")
+  retiradaTextoConformidad       String   @map("retirada_texto_conformidad")
+  retiradaVersionTexto           String   @default("retirada-borrador-1") @map("retirada_version_texto")
   creadoEn                       DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
   actualizadoEn                  DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
 
@@ -384,6 +389,8 @@ model RecepcionFoto {
   ruta          String
   huellaSha256  String   @map("huella_sha256")
   capturadaEn   DateTime @map("capturada_en") @db.Timestamptz(6)
+  /// 0008: el archivo de Storage se borró al cumplirse el plazo de conservación (la fila se queda).
+  purgadaEn     DateTime? @map("purgada_en") @db.Timestamptz(6)
   creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
   actualizadoEn DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
 
@@ -401,6 +408,11 @@ model OrdenTrabajo {
   estado        String    @default("recepcion")
   terminadoEn   DateTime? @map("terminado_en") @db.Timestamptz(6)
   entregadoEn   DateTime? @map("entregado_en") @db.Timestamptz(6)
+  /// 0008: firma de retirada (ruta en Storage), texto EXACTO de conformidad, su versión y quién retira.
+  entregaFirmaRuta          String? @map("entrega_firma_ruta")
+  entregaConformidadTexto   String? @map("entrega_conformidad_texto")
+  entregaConformidadVersion String? @map("entrega_conformidad_version")
+  entregaRetiraNombre       String? @map("entrega_retira_nombre")
   creadoEn      DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
   actualizadoEn DateTime  @default(now()) @map("actualizado_en") @db.Timestamptz(6)
 
@@ -578,6 +590,8 @@ model OtFoto {
   huellaSha256  String   @map("huella_sha256")
   nota          String?
   capturadaEn   DateTime @map("capturada_en") @db.Timestamptz(6)
+  /// 0008: el archivo de Storage se borró al cumplirse el plazo de conservación (la fila se queda).
+  purgadaEn     DateTime? @map("purgada_en") @db.Timestamptz(6)
   creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
   actualizadoEn DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
 

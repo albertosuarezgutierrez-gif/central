@@ -1,5 +1,5 @@
 import { notFound, redirect } from 'next/navigation'
-import { formatearEur, TRANSICIONES_OT, type EstadoOt } from '@central/module-taller'
+import { formatearEur, textoFotoPurgada, TRANSICIONES_OT, type EstadoOt } from '@central/module-taller'
 import { configDe, paraPagina } from '@/lib/contexto'
 import { firmarVarias } from '@/lib/almacen'
 import { capacidadParaTransicion, tienePermiso } from '@/lib/permisos'
@@ -8,6 +8,7 @@ import { horasYMargen, ESTADOS_TRABAJABLES, type TxOrdenes } from '@/lib/ordenes
 import { Cabecera } from '../../_marca'
 import { abrirMiParteAccion, cambiarEstadoAccion, cerrarMiParteAccion } from '../acciones'
 import { GestionPropuesta, ProponerAmpliacion } from './Ampliaciones'
+import { EntregaCliente } from './EntregaCliente'
 import { FotosOt } from './FotosOt'
 import { NotaDictado } from './NotaDictado'
 
@@ -32,7 +33,7 @@ export default async function Pagina({ params, searchParams }: { params: Promise
       tx.recepcion.findFirst({ where: { tallerId: c.tallerId, id: ot.recepcionId } }),
       tx.otLinea.findMany({ where: { tallerId: c.tallerId, otId: id }, orderBy: { creadoEn: 'asc' } }),
       tx.parteHoras.findMany({ where: { tallerId: c.tallerId, otId: id }, orderBy: { inicio: 'desc' } }),
-      verPrecios || tienePermiso(c.rol, 'margenes_ver') ? configDe(tx, c.tallerId) : Promise.resolve(null),
+      configDe(tx, c.tallerId), // precios/márgenes (según rol) y texto de la entrega
     ])
     const cli = rec ? await tx.cliente.findFirst({ where: { tallerId: c.tallerId, id: rec.clienteId } }) : null
     const nombres = new Map((await tx.usuarioTaller.findMany({ where: { tallerId: c.tallerId }, select: { id: true, nombre: true } })).map((u) => [u.id, u.nombre]))
@@ -49,15 +50,18 @@ export default async function Pagina({ params, searchParams }: { params: Promise
     const lineasProp = propuestas.length
       ? await tx.otPropuestaLinea.findMany({ where: { tallerId: c.tallerId, propuestaId: { in: propuestas.map((p) => p.id) } }, orderBy: { orden: 'asc' } })
       : []
-    const urls = await firmarVarias(c.tallerId, fotosOt.map((f) => f.ruta))
+    // Las fotos purgadas ya no están en Storage: no se firman. La firma de la entrega sí (no se purga).
+    const urls = await firmarVarias(c.tallerId, [...fotosOt.filter((f) => !f.purgadaEn).map((f) => f.ruta), ...(ot.entregaFirmaRuta ? [ot.entregaFirmaRuta] : [])])
     const vistaProp = propuestas.map((p) => ({
       id: p.id as string, estado: p.estado as string, explicacion: p.explicacion as string, autor: nombres.get(p.autorId) ?? '—',
       lineas: lineasProp.filter((l) => l.propuestaId === p.id).map((l) => ({ orden: l.orden as number, descripcion: l.descripcion as string, referencia: (l.referencia ?? null) as string | null, cantidad: l.cantidad as number })),
-      fotos: fotosOt.filter((f) => f.propuestaId === p.id).map((f) => ({ id: f.id as string, url: urls.get(f.ruta) ?? null, nota: (f.nota ?? null) as string | null })),
+      fotos: fotosOt.filter((f) => f.propuestaId === p.id).map((f) => ({ id: f.id as string, url: urls.get(f.ruta) ?? null, nota: (f.nota ?? null) as string | null, purgadaEn: f.purgadaEn ? (f.purgadaEn as Date).toISOString() : null })),
     }))
     return {
       notas: notas.map((n) => ({ id: n.id as string, texto: n.texto as string, quien: nombres.get(n.autorId) ?? '—', cuando: n.creadoEn as Date })),
-      fotosSueltas: fotosOt.filter((f) => !f.propuestaId).map((f) => ({ id: f.id as string, url: urls.get(f.ruta) ?? null, nota: (f.nota ?? null) as string | null })),
+      fotosSueltas: fotosOt.filter((f) => !f.propuestaId).map((f) => ({ id: f.id as string, url: urls.get(f.ruta) ?? null, nota: (f.nota ?? null) as string | null, purgadaEn: (f.purgadaEn ?? null) as Date | null })),
+      retirada: config?.retirada ?? null,
+      urlFirmaEntrega: ot.entregaFirmaRuta ? urls.get(ot.entregaFirmaRuta) ?? null : null,
       propuestas: vistaProp,
       puedeTrabajar: tienePermiso(c.rol, 'ot_trabajo') && ESTADOS_ABIERTOS.includes(ot.estado as EstadoOt),
       puedeAmpliar: tienePermiso(c.rol, 'ampliaciones'),
@@ -152,13 +156,24 @@ export default async function Pagina({ params, searchParams }: { params: Promise
           </ul>
         )}
 
+        {estado === 'entregado' && (
+          <>
+            <h2>Entrega</h2>
+            <p className="tenue">Entregado el {ot.entregadoEn ? hora(ot.entregadoEn) : '—'}
+              {ot.entregaRetiraNombre ? ` · retira ${ot.entregaRetiraNombre}` : ''}
+              {ot.entregaFirmaRuta ? ` · conformidad firmada (texto ${ot.entregaConformidadVersion})` : ' · sin firma de retirada'}</p>
+            {datos.urlFirmaEntrega && <>{/* eslint-disable-next-line @next/next/no-img-element */}<img src={datos.urlFirmaEntrega} alt="Firma de retirada" className="firma-img" /></>}
+          </>
+        )}
+
         <h2>Fotos</h2>
         {datos.puedeTrabajar && <FotosOt otId={ot.id} />}
         {datos.fotosSueltas.length === 0 ? <p className="tenue">Sin fotos.</p> : (
           <div className="fotos-mini">
             {datos.fotosSueltas.map((f) => (
               <figure key={f.id}>{/* eslint-disable-next-line @next/next/no-img-element */}
-                {f.url ? <img src={f.url} alt={f.nota ?? 'Foto de la orden'} /> : <span className="tenue">sin imagen</span>}</figure>
+                {f.purgadaEn ? <span className="tenue">{textoFotoPurgada(f.purgadaEn)}</span>
+                  : f.url ? <img src={f.url} alt={f.nota ?? 'Foto de la orden'} /> : <span className="tenue">sin imagen</span>}</figure>
             ))}
           </div>
         )}
@@ -171,7 +186,9 @@ export default async function Pagina({ params, searchParams }: { params: Promise
           <>
             <h2>Cambiar estado</h2>
             <div className="fila">
-              {TRANSICIONES_OT[estado].filter((h) => datos.puedeGestionar || capacidadParaTransicion(estado, h) === 'ordenes_avanzar').map((h) => (
+              {TRANSICIONES_OT[estado].filter((h) => datos.puedeGestionar || capacidadParaTransicion(estado, h) === 'ordenes_avanzar').map((h) => h === 'entregado' && datos.retirada ? (
+                <EntregaCliente key={h} otId={ot.id} texto={datos.retirada.textoConformidad} version={datos.retirada.versionTextoConformidad} obligatoria={datos.retirada.firmaObligatoria} />
+              ) : (
                 <form key={h} action={cambiarEstadoAccion}>
                   <input type="hidden" name="otId" value={ot.id} /><input type="hidden" name="hacia" value={h} />
                   <button className="btn btn-sec">{h.replace('_', ' ')}</button>

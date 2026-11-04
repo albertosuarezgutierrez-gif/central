@@ -22,6 +22,10 @@
 - **Configuración autoservicio:** precios, IVA, intervalos y horarios son datos que edita el dueño en Ajustes; ningún
   literal de ese tipo en código (spec 3bis).
 - **Citas por enlace (`/c/[token]`, público) y agenda `/citas`:** motor por capacidad en `module-taller/src/agenda.ts`; la reserva es atómica (candado `cita:<taller>` + UPDATE condicionado del token) y el enlace solo guarda hash. No hay transporte de correo: la invitación se REGISTRA y se enseña el enlace. Límite por IP `enlace:<ip>`. Spec: «Citas por enlace y agenda con capacidad». SQL 0007 sin aplicar.
+- **Retirada y retención de fotos (SQL 0008 sin aplicar):** al pasar la OT a `entregado` el cliente firma la conformidad (`lib/entrega.ts`, `EntregaCliente`); la firma, el texto exacto, su versión y quién retira
+  quedan en la OT. Texto y obligatoriedad editables en Ajustes (alta en `RETIRADA_ALTA`); `cambiarEstadoAccion` NO entrega. `fotos_retencion_dias` (alta 180, **mínimo 90**: garantía legal 3 meses/2.000 km) cuenta desde la entrega.
+  Cron diario `/api/cron/purgar-fotos` (`CRON_SECRET`, `lib/purga-fotos.ts`): borra de Storage SOLO fotos de daños y de trabajo de OT entregadas fuera de plazo y marca `purgada_en` (la fila se queda); nunca firmas, resguardo, presupuestos ni facturas.
+  Talleres a recorrer: `taller.talleres_activos()` (SECURITY DEFINER). Qué toca lo decide el helper puro `fotosAPurgar` de module-taller.
 - **Sin WhatsApp:** avisos por push de la app + correo. Nada sale a terceros ni a proveedores sin botón del dueño.
 - Dinero en formato español (`2.162,49€`); UI usable a ≥320 px, botones ≥44 px.
 - Vercel: `vercel.json` con `ignoreCommand` y `--sin-previews`; app en la matriz de `tests.yml`.

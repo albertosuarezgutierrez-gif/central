@@ -116,6 +116,12 @@ const Cambio = z.discriminatedUnion('seccion', [
     validezPresupuestoDias: ent,
   }),
   z.object({
+    seccion: z.literal('retirada_fotos'),
+    firmaObligatoria: z.boolean(),
+    textoConformidad: z.string().max(4000),
+    fotosRetencionDias: ent,
+  }),
+  z.object({
     seccion: z.literal('medios_cobro'),
     medios: z.array(z.object({ codigo: txt, nombre: txt, esEfectivo: z.boolean(), activo: z.boolean() })).max(100),
   }),

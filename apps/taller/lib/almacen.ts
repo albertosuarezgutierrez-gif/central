@@ -13,6 +13,11 @@ export interface AlmacenArchivos {
   guardar(a: ArchivoSubido): Promise<{ ruta: string; huellaSha256: string }>
   /** URL firmada de lectura. `null` si la ruta no es del taller o el firmado falla (el llamante muestra «sin imagen»). */
   urlFirmada(tallerId: string, ruta: string, segundos?: number): Promise<string | null>
+  /**
+   * Borra el archivo. Idempotente: que ya no exista (404) es éxito. Rechaza una ruta que no es del taller y LANZA si Storage
+   * falla (el llamante no debe marcar nada como borrado en ese caso).
+   */
+  borrar(tallerId: string, ruta: string): Promise<void>
 }
 
 export const BUCKET_TALLER = 'taller'
@@ -69,6 +74,11 @@ export function almacenSupabase(config: ConfigAlmacen): AlmacenArchivos {
       if (!r.ok) throw new Error(`Storage upload ${r.status}`)
       return { ruta, huellaSha256: huella }
     },
+    async borrar(tallerId, ruta) {
+      if (!rutaEsDelTaller(tallerId, ruta)) throw new Error('la ruta no es del taller')
+      const r = await f(`${base}/storage/v1/object/${BUCKET_TALLER}/${codificar(ruta)}`, { method: 'DELETE', headers: cab })
+      if (!r.ok && r.status !== 404) throw new Error(`Storage delete ${r.status}`)
+    },
     async urlFirmada(tallerId, ruta, segundos = SEGUNDOS_URL_FIRMADA) {
       if (!rutaEsDelTaller(tallerId, ruta)) return null
       try {
@@ -94,6 +104,9 @@ export const almacenSoloMetadatos: AlmacenArchivos = {
   },
   async urlFirmada() {
     return null
+  },
+  async borrar(tallerId, ruta) {
+    if (!rutaEsDelTaller(tallerId, ruta)) throw new Error('la ruta no es del taller')
   },
 }
 

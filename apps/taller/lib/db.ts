@@ -37,6 +37,15 @@ export async function tallerPorCodigoBd(codigo: string): Promise<string | null> 
   return filas[0]?.id ?? null
 }
 
+/**
+ * Ids de los talleres activos (0008) para el cron de purga: `taller.talleres_activos()` es SECURITY DEFINER porque sin taller
+ * fijado RLS no deja listar `talleres`. Devuelve SOLO ids; cada taller se trabaja después con `conTaller`.
+ */
+export async function talleresActivosBd(): Promise<string[]> {
+  const filas = await prisma.$queryRaw<Array<{ id: string }>>`SELECT taller.talleres_activos() AS id`
+  return filas.map((f) => f.id)
+}
+
 /** Vínculo con la empresa de rrhh: SOLO el operador (0006). Devuelve false si el taller no existe. */
 export async function fijarRrhhEmpresaBd(tallerId: string, empresaId: string | null): Promise<boolean> {
   const filas = await prisma.$queryRaw<Array<{ ok: boolean }>>`SELECT taller.fijar_rrhh_empresa(${tallerId}::uuid, ${empresaId}::uuid) AS ok`

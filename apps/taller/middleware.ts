@@ -6,7 +6,8 @@ import { COOKIE_NAME, RENOVAR_CADA_MS, cookieOpts, leerCookie, renovarCookie } f
 // `/api/operador/`: puerto de operador (Bearer propio, sin PIN).
 // `/c/<token>`: enlace público de invitación a pedir cita (sin login; el token autoriza y hay límite por IP).
 // `/p/<token>`: enlace público de aceptación de presupuesto (sin login; la autorización es el token).
-const PUBLIC = ['/login', '/api/auth', '/api/fichar', '/brand', '/p/', '/c/', '/api/operador/']
+// `/api/cron/`: crons de Vercel (Bearer CRON_SECRET comprobado en la propia ruta; sin sesión de PIN).
+const PUBLIC = ['/login', '/api/auth', '/api/fichar', '/brand', '/p/', '/c/', '/api/operador/', '/api/cron/']
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
