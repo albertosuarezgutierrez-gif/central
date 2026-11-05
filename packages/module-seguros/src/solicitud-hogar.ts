@@ -10,7 +10,7 @@
  *   (lo que la correduría ya tenía escrito manda). Nunca en la ficha del cliente.
  */
 import { TRAMOS_CONTENIDO, TRAMOS_CONTINENTE, claveDireccion, importeDeTramo, type Respuesta } from './solicitud-datos.ts'
-import { ALARMA_ID_CODEOSCOPIC, idViviendaDeOpcion } from './solicitud-destinos.ts'
+import { ALARMA_ID_CODEOSCOPIC, claveBotDeOpcion, idViviendaDeOpcion } from './solicitud-destinos.ts'
 
 export type DireccionDeclarada = {
   cp: string | null
@@ -134,6 +134,14 @@ export function viviendaDeSolicitud(
   if (ultimoPiso) out.ultimoPiso = true
   const idTipo = ultimoPiso ? null : idViviendaDeOpcion('tipoVivienda', tipo)
   if (idTipo) out.tipoVivienda = idTipo
+  // 05/11/2026: lo declarado, también en la CLAVE del bot (sin id atestiguado no había dónde ponerlo y el bot lo seguía echando en
+  // falta). El tipo, con la misma cautela que el id: el último piso NO se declara «piso».
+  for (const [clave, campo] of [['regimen', 'regimenDeclarado'], ['usoVivienda', 'usoDeclarado']] as const) {
+    const c = claveBotDeOpcion(clave, r[clave])
+    if (c) out[campo] = c
+  }
+  const tipoBot = ultimoPiso ? null : claveBotDeOpcion('tipoVivienda', tipo)
+  if (tipoBot) out.tipoViviendaDeclarado = tipoBot
   if (r.alarma === false) out.alarma = ALARMA_ID_CODEOSCOPIC.no
   for (const k of ['propietarioEsTomador', 'urbanizacionCerrada', 'conMadera', 'puertaPrincipalBlindada', 'ventanasSeguras', 'vigilante'] as const) {
     const v = r[k]
@@ -184,7 +192,7 @@ export const CLAVES_BLOQUE_CATASTRO = ['referenciaCatastral', 'catastroReferenci
 
 /** Campos que se escriben uno a uno, solo si estaban vacíos (lo que escribió la correduría manda). */
 export const CLAVES_SUELTAS_VIVIENDA = [
-  'capitalContenido', 'capitalContinente', 'uso', 'ocupacion', 'tipoVivienda', 'ultimoPiso', 'alarma', 'habitaciones', 'anioUltimaReforma',
+  'capitalContenido', 'capitalContinente', 'uso', 'ocupacion', 'tipoVivienda', 'usoDeclarado', 'regimenDeclarado', 'tipoViviendaDeclarado', 'ultimoPiso', 'alarma', 'habitaciones', 'anioUltimaReforma',
   'propietarioEsTomador', 'urbanizacionCerrada', 'conMadera', 'puertaPrincipalBlindada', 'ventanasSeguras', 'vigilante',
   'joyasEnCajaFuerte', 'joyasFueraDeCaja', 'objetosDeValor', 'perrosPeligrosos',
 ] as const
@@ -208,6 +216,11 @@ export function planEscrituraVivienda(actual: Record<string, unknown> | null, pr
   const conflictos: string[] = []
   const de = (claves: readonly string[]) => Object.fromEntries(claves.flatMap((k) => (k in propuesta ? [[k, propuesta[k]]] : [])))
 
+  // ¿El Catastro de la propuesta choca con la referencia guardada? Se mira ANTES de la dirección: con otra referencia no se
+  // rellena ningún hueco de dirección (se mezclaría una calle nueva con la referencia, los m² y el año de OTRA vivienda).
+  const refPropuesta = 'referenciaCatastral' in propuesta && !vacio(propuesta.referenciaCatastral) ? refNorm(propuesta.referenciaCatastral) : null
+  const chocaReferencia = refPropuesta !== null && !vacio(a.referenciaCatastral) && refNorm(a.referenciaCatastral) !== refPropuesta
+
   // Dirección.
   const dir = de(CLAVES_BLOQUE_DIRECCION)
   if (Object.keys(dir).length > 0) {
@@ -218,6 +231,20 @@ export function planEscrituraVivienda(actual: Record<string, unknown> | null, pr
         && (!('planta' in dir) || vacio(a.planta) || norm(a.planta) === norm(dir.planta))
         && (!('puertaVivienda' in dir) || vacio(a.puertaVivienda) || norm(a.puertaVivienda) === norm(dir.puertaVivienda))
       if (!misma) conflictos.push('dirección distinta de la guardada: revisar (no se ha tocado la guardada)')
+      else {
+        // 05/11/2026: la MISMA dirección con huecos (p. ej. la póliza traía CP y municipio pero no la calle): se rellenan SOLO los
+        // huecos; lo guardado no se toca. Solo si el texto guardado (`direccion`, el de la precarga de la póliza) está vacío o
+        // CONTIENE la vía y el número declarados, y el Catastro no trae otra referencia. Si no, es conflicto (puede ser otra vivienda).
+        const huecos = Object.entries(dir).filter(([k]) => vacio(a[k]))
+        if (huecos.length > 0) {
+          const via = norm(dir.nombreVia ?? a.nombreVia)
+          const numero = norm(dir.numeroVia ?? a.numeroVia)
+          const texto = norm(a.direccion)
+          const casaTexto = vacio(a.direccion) || (via !== '' && numero !== '' && texto.includes(via) && texto.includes(numero))
+          if (casaTexto && !chocaReferencia) for (const [k, v] of huecos) escribir[k] = v
+          else conflictos.push('dirección guardada incompleta que no casa con la declarada: revisar (no se ha tocado la guardada)')
+        }
+      }
     }
   }
 

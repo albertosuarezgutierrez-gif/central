@@ -58,6 +58,13 @@ export const ESPEC_VIVIENDA = [
   // 19/10/2026: Allianz Hogar (bot) lo pregunta («Sin madera / Con madera») y decide la tarifa. Pregunta EXPLÍCITA, sin valor
   // por defecto: `null` = no contestado (≠ «sin madera»). Codeoscopic no lo pide: no entra en `faltanDatosVivienda`.
   { clave: 'conMadera', etiqueta: 'Construcción con madera', tipo: { t: 'bool' } },
+  // 05/11/2026: lo que el CLIENTE declaró de uso, régimen y tipo, ya en la CLAVE del bot de hogar (`USOS_VIVIENDA`, `REGIMENES_VIVIENDA`,
+  // `TIPOS_VIVIENDA` de module-tarificacion). Hace falta porque casi ninguna opción (segunda residencia, casa adosada…) tiene id de
+  // Codeoscopic atestiguado y no se puede escribir en `ocupacion`/`uso`/`tipoVivienda`. NO va a Codeoscopic: solo lo lee el bot
+  // (`eleccionesInicialesHogar`), que lo descarta si choca con el id del catálogo. Declarado, sin confirmar.
+  { clave: 'usoDeclarado', etiqueta: 'Uso declarado por el cliente', tipo: { t: 'texto', max: 20 } },
+  { clave: 'regimenDeclarado', etiqueta: 'Régimen declarado por el cliente', tipo: { t: 'texto', max: 20 } },
+  { clave: 'tipoViviendaDeclarado', etiqueta: 'Tipo de vivienda declarado por el cliente', tipo: { t: 'texto', max: 20 } },
   // 20/10/2026: hipoteca y reformas (≥40 años). `null` = no contestado (≠ «no»). El banco solo tiene sentido con hipoteca = sí.
   { clave: 'hipoteca', etiqueta: 'Hay hipoteca', tipo: { t: 'bool' } },
   { clave: 'bancoHipoteca', etiqueta: 'Banco beneficiario de la hipoteca', tipo: { t: 'texto', max: 80 } },
@@ -81,7 +88,7 @@ export type CampoVivienda =
   | 'tipoVivienda' | 'uso' | 'ocupacion' | 'ubicacion' | 'material' | 'calidad' | 'alarma' | 'puertasSecundarias'
   | 'asentamiento' | 'puertaPrincipalBlindada' | 'ventanasSeguras' | 'urbanizacionCerrada' | 'vigilante' | 'propietarioEsTomador'
   | 'capitalContinente' | 'capitalContenido' | 'joyasEnCajaFuerte' | 'joyasFueraDeCaja' | 'objetosDeValor' | 'perrosPeligrosos'
-  | 'conMadera' | 'hipoteca' | 'bancoHipoteca' | 'reformaTuberias' | 'reformaElectrica'
+  | 'conMadera' | 'usoDeclarado' | 'regimenDeclarado' | 'tipoViviendaDeclarado' | 'hipoteca' | 'bancoHipoteca' | 'reformaTuberias' | 'reformaElectrica'
   | 'catastroConsultadoAt' | 'usoCatastral' | 'catastroMetrosCuadrados' | 'catastroAnioConstruccion'
   | 'catastroReferencia' | 'catastroMetrosVivienda' | 'catastroMetrosAnexos' | 'catastroAnexos'
 
@@ -89,7 +96,7 @@ export type DatosViviendaRiesgo = {
   [K in CampoVivienda]: K extends
     | 'referenciaCatastral' | 'direccion' | 'cp' | 'municipio' | 'provincia' | 'tipoViaId' | 'nombreVia' | 'numeroVia' | 'planta'
     | 'puertaVivienda' | 'tipoVivienda' | 'uso' | 'ocupacion' | 'ubicacion' | 'material' | 'calidad' | 'alarma'
-    | 'puertasSecundarias' | 'asentamiento' | 'bancoHipoteca' | 'catastroConsultadoAt' | 'usoCatastral' | 'catastroAnexos' | 'catastroReferencia'
+    | 'puertasSecundarias' | 'asentamiento' | 'bancoHipoteca' | 'usoDeclarado' | 'regimenDeclarado' | 'tipoViviendaDeclarado' | 'catastroConsultadoAt' | 'usoCatastral' | 'catastroAnexos' | 'catastroReferencia'
     ? string | null
     : K extends 'puertaPrincipalBlindada' | 'ventanasSeguras' | 'urbanizacionCerrada' | 'vigilante' | 'propietarioEsTomador' | 'conMadera'
       | 'hipoteca' | 'reformaTuberias' | 'reformaElectrica' | 'ultimoPiso'

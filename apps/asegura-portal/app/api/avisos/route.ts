@@ -17,6 +17,7 @@ import { polizasModificadasDeIdentidad } from '@/lib/polizas-modificadas'
 import { avisosDePatrimonio } from '@/lib/patrimonio/calendario'
 import { calendarioDeIdentidad } from '@/lib/patrimonio/calendario-bd'
 import { presupuestosParaAvisoDeIdentidad } from '@/lib/presupuestos-aviso'
+import { datosRenovacionParaAvisoDeIdentidad } from '@/lib/datos-renovacion'
 import { requireIdentidad } from '@/lib/session'
 import { vehiculosParaAvisoDeIdentidad } from '@/lib/vehiculos-aviso'
 
@@ -46,7 +47,7 @@ export async function GET() {
     return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
   }
 
-  const [autorizaciones, obligaciones, peticiones, datos, carnets, firmas, felicitaciones, polizasNuevas, partes, polizasModificadas, leidos, antelacion, carnetSilenciado, vehiculos, itvSilenciada, patrimonio, presupuestos] = await Promise.allSettled([
+  const [autorizaciones, obligaciones, peticiones, datos, carnets, firmas, felicitaciones, polizasNuevas, partes, polizasModificadas, leidos, antelacion, carnetSilenciado, vehiculos, itvSilenciada, patrimonio, presupuestos, datosRenovacion] = await Promise.allSettled([
     autorizacionesDeIdentidad(identidad.id),
     obligacionesDeIdentidad(identidad.id),
     peticionesDeIdentidad(identidad.id),
@@ -79,6 +80,8 @@ export async function GET() {
     calendarioDeIdentidad(identidad.id),
     // Decimosexta (04/11/2026): la renovación con alternativas publicada en su app y sin elegir (solo la ficha del tomador).
     presupuestosParaAvisoDeIdentidad(identidad.id),
+    // Decimoséptima (05/11/2026): la solicitud de datos de la renovación publicada y sin contestar (tomador que opera o autorizado).
+    datosRenovacionParaAvisoDeIdentidad(identidad.id),
   ])
 
   // Se deja rastro del fallo: la respuesta lo declara, pero sin el error en el
@@ -100,6 +103,7 @@ export async function GET() {
   if (itvSilenciada.status === 'rejected') console.error('[avisos] interruptor de la ITV ilegible: se avisa', itvSilenciada.reason)
   if (patrimonio.status === 'rejected') console.error('[avisos] calendario del patrimonio ilegible', patrimonio.reason)
   if (presupuestos.status === 'rejected') console.error('[avisos] renovaciones publicadas ilegibles', presupuestos.reason)
+  if (datosRenovacion.status === 'rejected') console.error('[avisos] solicitudes de datos de renovación ilegibles', datosRenovacion.reason)
   // `null` del puente = no se pudo mirar (no «no hay»).
   const firmasLeidas = firmas.status === 'fulfilled' && firmas.value !== null
     ? firmas.value.anulaciones.map((a) => ({ id: a.id, compania: a.compania }))
@@ -129,6 +133,7 @@ export async function GET() {
     // Leída sin patrimonio (`null` de la lectura) = lista vacía; fallo de lectura = fuente ilegible (`null`), nunca «0».
     patrimonio: patrimonio.status === 'fulfilled' ? (patrimonio.value === null ? [] : avisosDePatrimonio(patrimonio.value.vencimientos)) : null,
     presupuestos: presupuestos.status === 'fulfilled' ? presupuestos.value : null,
+    datosRenovacion: datosRenovacion.status === 'fulfilled' ? datosRenovacion.value : null,
     hoy: new Date(),
   })
 

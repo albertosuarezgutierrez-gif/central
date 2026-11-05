@@ -248,6 +248,12 @@ export {
   textoYaElegida,
 } from './renovacion-eleccion.ts'
 export type { FilaAutorizacionRenovacion, ElectorRenovacion, DuenoEleccion } from './renovacion-eleccion.ts'
+// Solicitud de datos de la renovación por la app (05/11/2026): quién la ve y la contesta (tomador que opera o autorizado Gestión/Total).
+export {
+  MOTIVO_SOLICITUD_RENOVACION, TITULO_AVISO_DATOS_RENOVACION, DETALLE_AVISO_DATOS_RENOVACION, quienContestaDatosRenovacion, textoQuienContesto,
+  hrefDatosRenovacion,
+} from './datos-renovacion.ts'
+export type { QuienContestaDatos, VinculoTomador, DatosRenovacionParaAviso } from './datos-renovacion.ts'
 export type {
   Alcance,
   AutorizacionFechas,

@@ -1174,6 +1174,7 @@ export {
   camposDelBloque,
   destinoCampoSolicitud,
   idViviendaDeOpcion,
+  claveBotDeOpcion,
   type ColumnaFichaSolicitud,
   type DestinoCampoSolicitud,
 } from './solicitud-destinos.ts'

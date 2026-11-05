@@ -214,6 +214,13 @@ export const OPCIONES_HOGAR_A_VIVIENDA = {
   },
 } as const satisfies Record<string, { campo: string; canonica: Record<string, string>; idCodeoscopic: Record<string, string> }>
 
+/** La clave CANÓNICA del bot de una opción de hogar (05/11/2026); `null` = no es una opción conocida (nunca un valor de cajón). */
+export function claveBotDeOpcion(clave: keyof typeof OPCIONES_HOGAR_A_VIVIENDA, valor: unknown): string | null {
+  if (typeof valor !== 'string') return null
+  const m: Record<string, string> = OPCIONES_HOGAR_A_VIVIENDA[clave].canonica
+  return Object.hasOwn(m, valor) ? m[valor] : null
+}
+
 /** Alarma (sí/no) → catálogo `alarm-types`: solo «no» tiene id atestiguado (`NoAlarm`). */
 export const ALARMA_ID_CODEOSCOPIC = { no: 'NoAlarm' } as const
 

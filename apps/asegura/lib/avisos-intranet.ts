@@ -45,13 +45,14 @@ import {
   DIAS_AVISO_POLIZA_MODIFICADA, polizasModificadasParaAviso, type FilaCambioPoliza,
   DIAS_AVISO_PARTE, partesParaAviso, type ParteFilaAviso,
   fechaAccionable, idVencimientoDerivado, TIPOS_RECORDATORIO_PROPIO,
-  debeRecordarVencimiento, DIAS_RECORDATORIO_VENCIMIENTO, identidadesQueEligenRenovacion,
+  debeRecordarVencimiento, DIAS_RECORDATORIO_VENCIMIENTO, identidadesQueEligenRenovacion, nivelPuedeOperar,
 } from '@central/module-seguros-portal'
 import { computeEmailLookupHash } from '@central/module-seguros-pii'
 import { Prisma } from './generated/asegura-client'
 import { WHERE_CARTERA_VIVA, WHERE_CARTERA_EN_VIGOR, leerSitio, textoReparoSitio, caducidadCarnet, sqlCarteraEnVigor } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { filasAutorizacionRenovacion } from './renovacion-autorizados'
+import { solicitudesPublicadasPendientes } from './solicitud-renovacion-lectura'
 import { leerFichasConCarnetSilenciado } from './avisos-carnet-silencio'
 import { avisosActivos, esSoloContar, leerCanalesDeFichas } from './avisos-vencimiento'
 import { decidirAvisoVencimiento, diasEfectivosDeFicha, type OrigenAviso } from './avisos-vencimiento-canal'
@@ -518,6 +519,43 @@ export async function reunirPendientes(
         const d = dame(clienteId)
         if ((d.presupuestos ?? []).some((x) => x.id === f.id)) continue
         d.presupuestos = [...(d.presupuestos ?? []), { id: f.id, ramo: f.ramo }]
+      }
+    }
+  } catch (e) {
+    if (!/42703|does not exist|no existe/i.test(e instanceof Error ? e.message : String(e))) throw e
+  }
+
+  // Solicitudes de datos de la RENOVACIÓN publicadas (✅ de Alberto) y sin contestar (05/11/2026, `2026-11-05d`). A la ficha del
+  // TOMADOR solo si alguien entra con ella y puede OPERAR (si no, el correo diría «tienes un aviso» que no verá en su campana), y a
+  // la FICHA de quien él autoriza con Gestión/Total sobre esa póliza (`identidadesQueEligenRenovacion`, la misma regla que la
+  // página). Sin la migración no hay ninguna (`[]`). Un fallo leyendo autorizaciones NO tumba el aviso del tomador.
+  try {
+    const sols = await solicitudesPublicadasPendientes(correduriaId)
+    for (const s of sols) {
+      const destinos: string[] = []
+      const vinc = await db.$queryRaw<{ nivel: string }[]>`
+        select nivel::text as nivel from portal_vinculo
+        where correduria_id = ${correduriaId}::uuid and cliente_id = ${s.clienteId}::uuid and origen::text <> 'corredor'`
+      if (vinc.some((v) => nivelPuedeOperar(v.nivel))) destinos.push(s.clienteId)
+      try {
+        const filas = await filasAutorizacionRenovacion(correduriaId, s.clienteId, null)
+        const eligen = identidadesQueEligenRenovacion(filas, s.polizaId, hoy)
+        for (const x of filas) if (eligen.has(x.identidadId) && x.autorizadoClienteId && x.autorizadoClienteId !== s.clienteId) destinos.push(x.autorizadoClienteId)
+      } catch (e) {
+        console.error('[avisos-intranet] autorizados de una solicitud de datos ilegibles:', e instanceof Error ? e.message : e)
+      }
+      const faltan = [...new Set(destinos)].filter((c) => !fichaPorId.has(c))
+      if (faltan.length > 0) {
+        for (const c of await db.cliente.findMany({
+          where: { id: { in: faltan }, correduriaId, mergedIntoClienteId: null },
+          select: { id: true, nombre: true, apellidos: true, codigoPostal: true, ciudad: true, provincia: true, fechaNacimiento: true },
+        })) fichaPorId.set(c.id, c)
+      }
+      for (const clienteId of new Set(destinos)) {
+        if (!fichaPorId.has(clienteId)) continue
+        const d = dame(clienteId)
+        if ((d.datosRenovacion ?? []).some((x) => x.id === s.id)) continue
+        d.datosRenovacion = [...(d.datosRenovacion ?? []), { id: s.id }]
       }
     }
   } catch (e) {

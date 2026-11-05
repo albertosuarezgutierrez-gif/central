@@ -41,6 +41,7 @@ import { PREFIJO_CLP, decidirBotonClp, idDeEdicion } from '@/lib/correo/lead-cor
 import { guardarEdicionClp, resolverBotonClp } from '@/lib/correo/lead-correduria-pendiente'
 import { PREFIJO_CSG, decidirBotonCsg } from '@/lib/correo/contacto-sugerido'
 import { PREFIJO_FEX, decidirBotonFex, decidirFexEnAsegura, lineaTrasPulsarFex } from '@/lib/felicitaciones-exclientes-asegura'
+import { PREFIJO_CDR, decidirBotonCdr, estadoDeCdr, lineaTrasEnviarCdr, publicarSolicitudRenovacionAsegura } from '@/lib/solicitud-renovacion-asegura'
 import { PREFIJO_CRV, decidirBotonCrv, estadoDe as estadoCrv, lineaTrasPublicarCrv, publicarRenovacionAsegura, whatsappDe as whatsappCrv } from '@/lib/renovacion-asegura'
 import { PREFIJO_WAP, actorTitular, decidirBotonWap, idDeCorreccionWap, lineaTrasPulsarWap, mensajeOriginalDeCorreccionWap, resueltaParaQuitarBotones, resolverPropuestaEnAsegura, textoPedirCorreccionWap } from '@/lib/correduria/whatsapp-propuesta-tg'
 import { cuentaTitularTelegram } from '@/lib/correduria/whatsapp-propuesta-tg-cuenta'
@@ -1066,6 +1067,29 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
         // WhatsApp: el wa.me (móvil del tomador + enlace + código) va SOLO a este chat del titular; no sale nada solo.
         const wa = d.canal === 'whatsapp_enlace' ? whatsappCrv(r) : null
         const linea = lineaTrasPublicarCrv(estadoCrv(r)) + (wa ? `\n<a href="${escapeHtml(wa)}">📲 Abrir el WhatsApp para mandarlo</a>` : '')
+        if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${linea}`).catch(() => {})
+        else await tgSend(linea).catch(() => {})
+      })
+      return NextResponse.json({ ok: true })
+    }
+
+    // ── 📝 Solicitud de datos de la renovación de Grupo ASegura: ✅ Enviar al cliente por la app (cdr_env:<solicitudId>, 05/11/2026) ──
+    // Sale a un TERCERO (el cliente): solo la PERSONA autorizada (from.id = TELEGRAM_CHAT_ID). asegura exige que sea el ÚLTIMO
+    // mensaje de revisión (409 `no_vigente`), publica una sola vez (CAS) y NUNCA se reintenta desde aquí. ✏️ es un botón de enlace.
+    if (prefix === PREFIJO_CDR) {
+      const d = decidirBotonCdr(cb, action, args, process.env.TELEGRAM_CHAT_ID)
+      if (!d.ok) {
+        await tgAnswerCallback(cb.id, d.toast)
+        return NextResponse.json({ ok: true })
+      }
+      await tgAnswerCallback(cb.id, '⏳ Enviando a su app…')
+      const original = escapeHtml(cb.message?.text ?? '')
+      const mensajeId: number | undefined = cb.message?.message_id
+      if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n⏳ <i>Pulsado…</i>`).catch(() => {})
+      after(async () => {
+        const r = await publicarSolicitudRenovacionAsegura({ solicitudId: d.solicitudId, actor: 'telegram:titular', via: 'telegram', telegramMessageId: mensajeId ?? null }, 'sistema:telegram-datos-renovacion')
+          .catch(() => ({ status: 502, json: null }))
+        const linea = lineaTrasEnviarCdr(estadoDeCdr(r))
         if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${linea}`).catch(() => {})
         else await tgSend(linea).catch(() => {})
       })
