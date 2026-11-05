@@ -1255,6 +1255,7 @@ export async function origenRetarificacion(
       codigoEntidadDgs: true,
       fechaInicio: true,
       fechaEfectoInicial: true,
+      fechaEfectoActual: true,
       fechaVencimiento: true,
       primaAnual: true,
       datosEspecificos: true,
@@ -1355,6 +1356,7 @@ export async function origenRetarificacion(
     // vale el inicio de esta póliza. Si tampoco, `null` = no se sabe.
     fechaEfectoInicial: fechaIso(p.fechaEfectoInicial) ?? fechaIso(p.fechaInicio),
     fechaVencimiento: fechaIso(p.fechaVencimiento),
+    fechaEfectoActual: fechaIso(p.fechaEfectoActual),
     siniestrosRegistrados: siniestros,
   }
 

@@ -260,6 +260,13 @@ export const POST = auditado(async (req: Request) => {
     )
 
     if (fechaEfectoCorregida) {
+      // Regla de renovación (05/11/2026): se emite con la MISMA fecha cotizada; otra fecha obliga a re-tarificar
+      // (ReRate = otro cargo). Solo se AVISA en el log (no bloquea ni relaja nada).
+      if (cotizacion.fechaEfecto && cotizacion.fechaEfecto !== fechaEfectoCorregida) {
+        console.warn(
+          `[oferta] AVISO: fecha de efecto de emisión ${fechaEfectoCorregida} distinta de la cotizada ${cotizacion.fechaEfecto} (proyecto ${projectId}): obliga a re-tarificar`,
+        )
+      }
       // GRATIS. El PATCH corrige effectiveDate pero el vendor exige
       // `insuranceLine` en el mismo cuerpo (quinto 400 real, 12/09/2026) —
       // se relee del proyecto, nunca se supone por ramo.

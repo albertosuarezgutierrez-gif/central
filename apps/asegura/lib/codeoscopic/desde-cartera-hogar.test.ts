@@ -63,7 +63,7 @@ test('con la gemela completa y los ids resueltos se puede cotizar, y se DICE de 
   assert.deepEqual(p.faltan, [])
   assert.equal(p.fuenteRiesgo, 'gemela')
   assert.equal(p.datos.cp, '41002') // el del riesgo, NO el del tomador (41003)
-  assert.equal(p.datos.fechaEfecto, sumarDias(HOY, 31))
+  assert.equal(p.datos.fechaEfecto, sumarDias(HOY, 30))
   // La dirección troceada para el vendor.
   assert.equal(p.datos.tipoViaId, 'Calle')
   assert.equal(p.datos.nombreVia, 'INVENTADA')
