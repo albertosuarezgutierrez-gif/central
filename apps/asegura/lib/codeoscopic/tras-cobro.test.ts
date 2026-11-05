@@ -11,8 +11,8 @@ test('200 sin projectId: no lanza y dice «cobrada, reintenta sin pagar»', () =
 })
 
 test('respuesta válida se interpreta', () => {
-  const r = leerTrasCobro({ id: 123, mainQuotes: [] })
-  assert.ok(r.ok && r.cotizacion.projectId === '123')
+  const res = leerTrasCobro({ id: 123, mainQuotes: [] })
+  assert.ok(res.ok && res.cotizacion.projectId === '123')
 })
 
 test('un lector que lanza algo raro tampoco escapa', () => {
