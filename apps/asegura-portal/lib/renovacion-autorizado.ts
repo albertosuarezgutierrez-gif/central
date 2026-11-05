@@ -120,3 +120,38 @@ export async function renovacionesParaAutorizado(identidadId: string): Promise<P
   }
   return out
 }
+
+/**
+ * SOLICITUD DE DATOS DE LA RENOVACIÓN (05/11/2026): las PUBLICADAS (✅ de Alberto), pendientes y vivas de los tomadores que
+ * autorizan a la identidad de la SESIÓN con Gestión o Total sobre esa póliza (la misma regla que la renovación). Sin la
+ * migración 2026-11-05d no puede haber ninguna: `[]`. Cualquier otro fallo LANZA (la campana lo declara ilegible).
+ */
+export async function solicitudesDatosParaAutorizado(identidadId: string): Promise<{ id: string }[]> {
+  const sesion = await requireIdentidad()
+  if (sesion.id !== identidadId || sesion.corredor) return []
+  const { filas, concesiones } = await filasDeIdentidad(identidadId, null)
+  const propios = new Set((await prisma.portalVinculo.findMany({ where: { identidadId }, select: { clienteId: true, nivel: true } }))
+    .filter((v) => nivelPuedeOperar(v.nivel)).map((v) => v.clienteId))
+  const otorgantes = new Map<string, string>()
+  for (const c of concesiones) if (!propios.has(c.otorganteClienteId)) otorgantes.set(c.otorganteClienteId, c.correduriaId)
+  const out: { id: string }[] = []
+  for (const [otorgante, correduriaId] of otorgantes) {
+    let sols: { id: string; poliza_id: string | null }[]
+    try {
+      sols = await prisma.$queryRaw<{ id: string; poliza_id: string | null }[]>`
+        select s.id::text as id, s.poliza_id::text as poliza_id from seguros.solicitud_datos s
+        where s.correduria_id = ${correduriaId}::uuid and s.cliente_id = ${otorgante}::uuid
+          and s.motivo = 'renovacion_poliza' and s.publicada_at is not null and s.estado = 'pendiente' and s.caduca_at > now()
+        order by s.publicada_at desc limit 5`
+    } catch (e) {
+      if (/42703|does not exist|no existe/i.test(e instanceof Error ? e.message : String(e))) return []
+      throw e
+    }
+    const deEste = new Set(concesiones.filter((c) => c.otorganteClienteId === otorgante && c.correduriaId === correduriaId).map((c) => c.id))
+    const suyas = filas.filter((f) => deEste.has(f.autorizacionId))
+    for (const s of sols) {
+      if (identidadesQueEligenRenovacion(suyas, s.poliza_id, new Date()).has(identidadId)) out.push({ id: s.id })
+    }
+  }
+  return out
+}

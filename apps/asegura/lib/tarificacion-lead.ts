@@ -330,7 +330,7 @@ async function riesgoHogarDeOportunidadDelCliente(correduriaId: string, clienteI
  * Los tres catálogos de hogar que la pantalla de plataforma lee para traducir lo guardado (`useCatalogosHogar`: property-types,
  * occupancy-types, uses). GET gratis. Uno que no se pueda leer queda fuera (`undefined`): no se inventa nada, solo valen los ids atestiguados.
  */
-async function catalogosHogarVivos(): Promise<CatalogosHogarLeidos> {
+export async function catalogosHogarVivos(): Promise<CatalogosHogarLeidos> {
   const r = resolverConfig(process.env, { ignorarInterruptor: true })
   if (r.estado !== 'lista') return {}
   const leer = (n: 'property-types' | 'occupancy-types' | 'uses') => catalogoHogar(r.config, n).catch(() => undefined)

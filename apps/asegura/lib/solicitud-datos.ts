@@ -544,17 +544,37 @@ export function textoAPreguntar(campos: readonly CampoSolicitud[], respuestas: R
   return partes.length === 0 ? '' : ` A preguntar en la llamada — ${partes.join('. ')}`.slice(0, 700)
 }
 
+export type ResultadoResponder = { ok: true } | { ok: false; estado: 'muerta' | 'completada' } | { ok: false; estado: 'errores'; errores: Record<string, string> }
+
 /** El cliente manda sus datos. Una sola vez; lo que no se pidió se ignora. */
 export async function responderSolicitud(
   token: string,
   entrada: Record<string, unknown>,
   consentimiento = false,
-): Promise<{ ok: true } | { ok: false; estado: 'muerta' | 'completada' } | { ok: false; estado: 'errores'; errores: Record<string, string> }> {
+): Promise<ResultadoResponder> {
   const f = await porToken(token)
   if (!f) return { ok: false, estado: 'muerta' }
   if (f.estado === 'completada') return { ok: false, estado: 'completada' }
   if (estadoEfectivo(f.estado, f.caduca) !== 'pendiente') return { ok: false, estado: 'muerta' }
-  const campos = await camposVigentes(f)
+  return responderFila(f, await camposVigentes(f), entrada, consentimiento)
+}
+
+/** La fila de una solicitud, tal como la lee el puente (por token o, en la renovación por la app, por id ya autorizado). */
+export type FilaSolicitud = FilaToken
+
+/**
+ * Lo que hay detrás de responder (05/11/2026, extraído de `responderSolicitud` para la SOLICITUD DE LA RENOVACIÓN por la app,
+ * `solicitud-renovacion.ts`, que llega por identidad y no por token). `campos` = los que se enseñaron (los mismos que se
+ * aceptan). `quien` (solo renovación): quién contestó; va al historial, al sello `respondida_por_*` (migración 2026-11-05d) y al
+ * Telegram. Quien llama ya comprobó que la solicitud es PENDIENTE y vive, y quién puede contestarla.
+ */
+export async function responderFila(
+  f: FilaSolicitud,
+  campos: CampoSolicitud[],
+  entrada: Record<string, unknown>,
+  consentimiento = false,
+  quien: { papel: 'tomador' | 'autorizado'; identidadId: string; nombre: string | null; texto: string; alTerminar?: () => Promise<void> } | null = null,
+): Promise<ResultadoResponder> {
   // Dirección: provincia/municipio contra la tabla del CP y la calle «oficial» solo si el callejero la confirma.
   const vias = campos.some((c) => c.tipo === 'direccion') ? await viasValidadas(campos, entrada) : new Map<string, ViaValidada>()
   const v = validarRespuestas(campos, entrada, new Date(), { zonaCp: zonaCpServidor, viaValidada: (clave) => vias.get(clave) ?? null })
@@ -587,6 +607,13 @@ export async function responderSolicitud(
         consentimiento_at = case when tercero then now() else null end
       where id = ${f.id}::uuid and estado = 'pendiente' and caduca_at > now()`)
     if (n === 0) return false
+    // Renovación por la app: quién contestó (nombre de pila como mucho; nunca DNI ni dirección). Misma transacción.
+    if (quien) {
+      await tx.$executeRaw(Prisma.sql`
+        update solicitud_datos set respondida_por_papel = ${quien.papel}, respondida_por_identidad_id = ${quien.identidadId}::uuid,
+          respondida_por_nombre = ${quien.nombre ? quien.nombre.slice(0, 60) : null}
+        where id = ${f.id}::uuid and correduria_id = ${f.correduriaId}::uuid`)
+    }
     if (Object.keys(ficha).length > 0) {
       const [fila] = await tx.$queryRaw<{ lecturas: string | null }[]>(Prisma.sql`
         select lecturas from solicitud_datos where id = ${f.id}::uuid`)
@@ -607,7 +634,7 @@ export async function responderSolicitud(
         insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
         values (${f.correduriaId}::uuid, ${f.oportunidadId}::uuid, 'datos_recibidos', cast(${o.estado} as estado_comercial),
                 cast(${nuevo} as estado_comercial), ${JSON.stringify({ solicitudId: f.id, tercero: f.tercero })}::jsonb,
-                ${f.tercero ? 'un tercero, por el enlace (con consentimiento)' : 'el cliente, por el enlace'})`)
+                ${quien ? quien.texto : f.tercero ? 'un tercero, por el enlace (con consentimiento)' : 'el cliente, por el enlace'})`)
       await tx.$executeRaw(Prisma.sql`
         insert into gestiones (correduria_id, tipo, prioridad, estado, observaciones, fecha_limite, cliente_id, oportunidad_id, origen_trigger)
         values (${f.correduriaId}::uuid, 'tarea', 'alta', 'pendiente',
@@ -619,7 +646,7 @@ export async function responderSolicitud(
     await tx.$executeRaw(Prisma.sql`
       insert into historial_interno (correduria_id, cliente_id, tipo, texto)
       values (${f.correduriaId}::uuid, ${f.clienteId}::uuid, cast('gestion' as tipo_historial_interno),
-              ${`${PREFIJO_HISTORIAL_DATOS_PRESUPUESTO} ${ramoTexto}. Ya se puede tarificar.${textoAPreguntar(campos, v.respuestas)}`})`)
+              ${`${PREFIJO_HISTORIAL_DATOS_PRESUPUESTO} ${ramoTexto}.${quien ? ` Contestó ${quien.texto} (renovación).` : ''} Ya se puede tarificar.${textoAPreguntar(campos, v.respuestas)}`})`)
     return true
   })
   // Completada (el borrador sobra: no se guarda dos veces) o anulada por oportunidad cerrada: el borrador se borra.
@@ -651,7 +678,8 @@ export async function responderSolicitud(
         try {
           const [o] = await prismaAsegura().$queryRaw<{ clienteId: string }[]>(Prisma.sql`
             select cliente_id::text as "clienteId" from oportunidades where id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid`)
-          await trasCompletarHogar({ correduriaId, oportunidadId, clienteId: o?.clienteId ?? f.clienteId, respuestas, campos, tercero })
+          await trasCompletarHogar({ correduriaId, oportunidadId, clienteId: o?.clienteId ?? f.clienteId, respuestas, campos, tercero, ...(quien ? { encabezado: `🔁 <b>Renovación: datos pedidos por la app</b> · contestó ${quien.texto}` } : {}) })
+          if (quien?.alTerminar) await quien.alTerminar()
         } catch (e) {
           console.error('[solicitud-datos] aviso de hogar tras completar falló:', e instanceof Error ? e.message : e)
         }

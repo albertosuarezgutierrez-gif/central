@@ -255,6 +255,8 @@ function nombreFuente(f: Avisos['fuentesIlegibles'][number]): string {
       return 'el calendario de tu patrimonio'
     case 'presupuestos':
       return 'el precio de tu renovación'
+    case 'datos_renovacion':
+      return 'los datos que te pedimos para tu renovación'
   }
 }
 

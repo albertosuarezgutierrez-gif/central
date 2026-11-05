@@ -173,8 +173,8 @@ export { validarFormularioPatinete, type DatosVmp, type FormularioPatinete, type
 
 // Constructor del riesgo de HOGAR para los bots (movido de plataforma el 27/10/2026; lo usan «pedir precio» y «Probar» de asegura).
 export {
-  formularioBotHogar, datosViviendaParaBot, eleccionesInicialesHogar,
-  type CampoDeFichaHogar, type CatalogosHogarLeidos, type DatosViviendaBot, type EleccionesHogar, type EntradaBotHogar, type FormularioBotHogar, type RiesgoParaBotsHogar,
+  formularioBotHogar, faltasHogarBot, datosViviendaParaBot, eleccionesInicialesHogar,
+  type CampoDeFichaHogar, type CampoFaltaHogar, type FaltaHogarBot, type CatalogosHogarLeidos, type DatosViviendaBot, type EleccionesHogar, type EntradaBotHogar, type FormularioBotHogar, type RiesgoParaBotsHogar,
 } from './hogar-bot-formulario.ts'
 
 // Ayudas puras de la oportunidad de HOGAR (20/10/2026): capital sugerido, infraseguro, discrepancias Catastro, antigüedad, bots por uso.

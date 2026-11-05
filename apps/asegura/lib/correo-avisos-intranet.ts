@@ -50,6 +50,11 @@ export const ETIQUETA_POR_TIPO: Record<TipoAviso, EtiquetaCorreo> = {
     uno: 'una propuesta de tu corredor esperando tu respuesta',
     varios: 'propuestas de tu corredor esperando tu respuesta',
   },
+  // Solicitud de datos de la renovación (05/11/2026). 🚨 Sin ramo, compañía ni qué datos: solo que hay algo pendiente.
+  datos_renovacion: {
+    uno: 'una consulta de tu corredor esperando tu respuesta',
+    varios: 'consultas de tu corredor esperando tu respuesta',
+  },
   peticion_recibida: {
     uno: 'una solicitud de acceso a tus seguros',
     varios: 'solicitudes de acceso a tus seguros',
@@ -225,6 +230,7 @@ export const ASUNTO_POR_TIPO: Record<TipoAviso, string> = {
   parte_actualizado: 'novedades de un parte de siniestro',
   poliza_modificada: 'cambios en una de tus pólizas',
   presupuesto_disponible: 'propuesta pendiente de tu respuesta',
+  datos_renovacion: 'consulta pendiente de tu respuesta',
 }
 
 /**
@@ -250,6 +256,7 @@ export const ICONO_POR_TIPO: Record<TipoAviso, string> = {
   parte_actualizado: '📋',
   poliza_modificada: '🔄',
   presupuesto_disponible: '💬',
+  datos_renovacion: '📝',
 }
 
 export const ICONO_VARIOS = '🔔'

@@ -48,36 +48,52 @@ const clave = (v: string | null | undefined, lista: readonly string[]): string |
 }
 
 /**
+ * Qué campo de la vivienda falta para que el bot avance (05/11/2026): la MISMA lista que `formularioBotHogar` devuelve como
+ * `faltan`, pero con la CLAVE del campo además de la frase. Sirve para preguntar al cliente SOLO lo que falta (la «solicitud de
+ * datos» de la renovación, asegura) sin duplicar las reglas: `formularioBotHogar` sale de aquí. `empresa` no se pregunta (no
+ * tiene arreglo por el cliente: el bot de Allianz Hogar no tarifica empresas). PURA.
+ */
+export type CampoFaltaHogar = 'empresa' | 'codigoPostal' | 'nombreVia' | 'numero' | 'anioConstruccion' | 'superficieM2' | 'uso' | 'regimen' | 'tipoVivienda' | 'conMadera'
+export type FaltaHogarBot = { campo: CampoFaltaHogar; etiqueta: string }
+
+export function faltasHogarBot(e: EntradaBotHogar): FaltaHogarBot[] {
+  const f: FaltaHogarBot[] = []
+  const falta = (campo: CampoFaltaHogar, etiqueta: string) => f.push({ campo, etiqueta })
+  if (e.tomadorEmpresa) falta('empresa', 'El tomador es una empresa: el bot de hogar de Allianz solo tarifica a una persona con DNI/NIE')
+  const cp = txt(e.codigoPostal)
+  if (cp === null || !/^\d{5}$/.test(cp)) falta('codigoPostal', 'Código postal de la vivienda (5 cifras)')
+  if (txt(e.nombreVia) === null) falta('nombreVia', 'Calle de la vivienda (solo el nombre, sin el tipo de vía)')
+  if (txt(e.numero) === null) falta('numero', 'Número de la calle')
+  const anio = e.anioConstruccion
+  if (typeof anio !== 'number' || !Number.isInteger(anio)) falta('anioConstruccion', 'Año de construcción (el bot no avanza sin él; el Catastro lo trae)')
+  const m2 = e.superficieM2
+  if (typeof m2 !== 'number' || !Number.isFinite(m2) || m2 <= 0) falta('superficieM2', 'Superficie construida (m²) (el bot no avanza sin ella; el Catastro la trae)')
+  else if (!Number.isInteger(m2)) falta('superficieM2', 'Superficie (m²): el bot pide un número entero; corrígela en los datos de la vivienda')
+  if (clave(e.uso, USOS_VIVIENDA) === null) falta('uso', 'Uso de la vivienda (elígelo: decide la tarifa; el Catastro no lo sabe)')
+  if (clave(e.regimen, REGIMENES_VIVIENDA) === null) falta('regimen', 'Régimen: propietario o inquilino (elígelo: decide la tarifa)')
+  if (clave(e.tipoVivienda, TIPOS_VIVIENDA) === null) falta('tipoVivienda', 'Tipo de vivienda (elígelo)')
+  const madera = txt(e.conMadera)
+  if (madera !== 'si' && madera !== 'no') falta('conMadera', 'Si la construcción lleva madera (pregunta explícita: sin respuesta no se asume «sin madera»)')
+  return f
+}
+
+/**
  * Vivienda + elecciones → `riesgo` de hogar, o QUÉ falta (en castellano, sin valores). El tomador NO va: lo pone asegura desde la
  * ficha. Lo que arma pasa por el MISMO validador que asegura (`validarFormularioHogarSinTomador`); sus errores nombran campos.
  */
 export function formularioBotHogar(e: EntradaBotHogar, hoy: Date = new Date()): FormularioBotHogar {
-  const faltan: string[] = []
-  if (e.tomadorEmpresa) faltan.push('El tomador es una empresa: el bot de hogar de Allianz solo tarifica a una persona con DNI/NIE')
-
-  const cp = txt(e.codigoPostal)
-  if (cp === null || !/^\d{5}$/.test(cp)) faltan.push('Código postal de la vivienda (5 cifras)')
-  const nombreVia = txt(e.nombreVia)
-  if (nombreVia === null) faltan.push('Calle de la vivienda (solo el nombre, sin el tipo de vía)')
-  const numero = txt(e.numero)
-  if (numero === null) faltan.push('Número de la calle')
-  const anio = e.anioConstruccion
-  if (typeof anio !== 'number' || !Number.isInteger(anio)) faltan.push('Año de construcción (el bot no avanza sin él; el Catastro lo trae)')
-  const m2 = e.superficieM2
-  if (typeof m2 !== 'number' || !Number.isFinite(m2) || m2 <= 0) faltan.push('Superficie construida (m²) (el bot no avanza sin ella; el Catastro la trae)')
-  else if (!Number.isInteger(m2)) faltan.push('Superficie (m²): el bot pide un número entero; corrígela en los datos de la vivienda')
-
-  const uso = clave(e.uso, USOS_VIVIENDA)
-  if (uso === null) faltan.push('Uso de la vivienda (elígelo: decide la tarifa; el Catastro no lo sabe)')
-  const regimen = clave(e.regimen, REGIMENES_VIVIENDA)
-  if (regimen === null) faltan.push('Régimen: propietario o inquilino (elígelo: decide la tarifa)')
-  const tipo = clave(e.tipoVivienda, TIPOS_VIVIENDA)
-  if (tipo === null) faltan.push('Tipo de vivienda (elígelo)')
-  const madera = txt(e.conMadera)
-  const conMadera = madera === 'si' ? true : madera === 'no' ? false : null
-  if (conMadera === null) faltan.push('Si la construcción lleva madera (pregunta explícita: sin respuesta no se asume «sin madera»)')
-
+  const faltan = faltasHogarBot(e).map((x) => x.etiqueta)
   if (faltan.length) return { ok: false, faltan }
+
+  const cp = txt(e.codigoPostal) as string
+  const nombreVia = txt(e.nombreVia) as string
+  const numero = txt(e.numero) as string
+  const anio = e.anioConstruccion as number
+  const m2 = e.superficieM2 as number
+  const uso = clave(e.uso, USOS_VIVIENDA) as string
+  const regimen = clave(e.regimen, REGIMENES_VIVIENDA) as string
+  const tipo = clave(e.tipoVivienda, TIPOS_VIVIENDA) as string
+  const conMadera = txt(e.conMadera) === 'si'
 
   const municipio = txt(e.municipio)
   const planta = txt(e.planta)
@@ -148,6 +164,22 @@ export type CatalogosHogarLeidos = {
 }
 
 /**
+ * La clave del catálogo, o la DECLARADA por el cliente (05/11/2026: `usoDeclarado`, `regimenDeclarado`, `tipoViviendaDeclarado` de
+ * `datosVivienda`, ya en clave del bot). Hace falta porque la mayoría de las opciones (segunda residencia, casa adosada…) no tienen id de
+ * Codeoscopic atestiguado y no se pueden escribir en el campo del catálogo. Fail-closed:
+ *   - id del catálogo guardado y reconocido + declarada IGUAL o sin declarar → la del catálogo;
+ *   - id guardado y reconocido + declarada DISTINTA → '' (lo decide una persona);
+ *   - id guardado pero NO reconocido (sin catálogo vivo que lo traduzca) → '' (puede ser una elección de Alberto que no casa con la del cliente);
+ *   - sin id guardado → la declarada si está en la lista cerrada; si no, ''.
+ */
+function conDeclarada(deCatalogo: string | null, idGuardado: unknown, declarada: unknown, lista: readonly string[]): string {
+  const dec = typeof declarada === 'string' && lista.includes(declarada.trim()) ? declarada.trim() : null
+  const hayId = typeof idGuardado === 'string' && idGuardado.trim() !== ''
+  if (hayId) return deCatalogo !== null && (dec === null || dec === deCatalogo) ? deCatalogo : ''
+  return dec ?? ''
+}
+
+/**
  * Elecciones iniciales del bloque desde los datos guardados: SOLO lo que casa EXACTAMENTE (id atestiguado o nombre del catálogo);
  * el resto, '' («Elegir…»). La madera: sí/no solo si se contestó (`null` = '' = sin contestar). Ojo: en Codeoscopic `ocupacion` es
  * el USO de la vivienda y `uso` el RÉGIMEN. PURA.
@@ -158,9 +190,9 @@ export function eleccionesInicialesHogar(r: RiesgoParaBotsHogar, catalogos: Cata
   const nombre = (lista: CatalogosHogarLeidos[keyof CatalogosHogarLeidos], id: unknown): string | undefined =>
     typeof id === 'string' ? lista?.find((o) => o.id === id)?.nombre : undefined
   return {
-    uso: claveHogarDeCatalogo('uso', d?.ocupacion, nombre(catalogos.ocupacion, d?.ocupacion)) ?? '',
-    regimen: claveHogarDeCatalogo('regimen', d?.uso, nombre(catalogos.uso, d?.uso)) ?? '',
-    tipoVivienda: claveHogarDeCatalogo('tipoVivienda', d?.tipoVivienda, nombre(catalogos.tipoVivienda, d?.tipoVivienda)) ?? '',
+    uso: conDeclarada(claveHogarDeCatalogo('uso', d?.ocupacion, nombre(catalogos.ocupacion, d?.ocupacion)), d?.ocupacion, d?.usoDeclarado, USOS_VIVIENDA),
+    regimen: conDeclarada(claveHogarDeCatalogo('regimen', d?.uso, nombre(catalogos.uso, d?.uso)), d?.uso, d?.regimenDeclarado, REGIMENES_VIVIENDA),
+    tipoVivienda: conDeclarada(claveHogarDeCatalogo('tipoVivienda', d?.tipoVivienda, nombre(catalogos.tipoVivienda, d?.tipoVivienda)), d?.tipoVivienda, d?.tipoViviendaDeclarado, TIPOS_VIVIENDA),
     conMadera: d?.conMadera === true ? 'si' : d?.conMadera === false ? 'no' : '',
   }
 }

@@ -10,7 +10,7 @@
  *   (lo que la correduría ya tenía escrito manda). Nunca en la ficha del cliente.
  */
 import { TRAMOS_CONTENIDO, TRAMOS_CONTINENTE, claveDireccion, importeDeTramo, type Respuesta } from './solicitud-datos.ts'
-import { ALARMA_ID_CODEOSCOPIC, idViviendaDeOpcion } from './solicitud-destinos.ts'
+import { ALARMA_ID_CODEOSCOPIC, claveBotDeOpcion, idViviendaDeOpcion } from './solicitud-destinos.ts'
 
 export type DireccionDeclarada = {
   cp: string | null
@@ -134,6 +134,14 @@ export function viviendaDeSolicitud(
   if (ultimoPiso) out.ultimoPiso = true
   const idTipo = ultimoPiso ? null : idViviendaDeOpcion('tipoVivienda', tipo)
   if (idTipo) out.tipoVivienda = idTipo
+  // 05/11/2026: lo declarado, también en la CLAVE del bot (sin id atestiguado no había dónde ponerlo y el bot lo seguía echando en
+  // falta). El tipo, con la misma cautela que el id: el último piso NO se declara «piso».
+  for (const [clave, campo] of [['regimen', 'regimenDeclarado'], ['usoVivienda', 'usoDeclarado']] as const) {
+    const c = claveBotDeOpcion(clave, r[clave])
+    if (c) out[campo] = c
+  }
+  const tipoBot = ultimoPiso ? null : claveBotDeOpcion('tipoVivienda', tipo)
+  if (tipoBot) out.tipoViviendaDeclarado = tipoBot
   if (r.alarma === false) out.alarma = ALARMA_ID_CODEOSCOPIC.no
   for (const k of ['propietarioEsTomador', 'urbanizacionCerrada', 'conMadera', 'puertaPrincipalBlindada', 'ventanasSeguras', 'vigilante'] as const) {
     const v = r[k]
@@ -184,7 +192,7 @@ export const CLAVES_BLOQUE_CATASTRO = ['referenciaCatastral', 'catastroReferenci
 
 /** Campos que se escriben uno a uno, solo si estaban vacíos (lo que escribió la correduría manda). */
 export const CLAVES_SUELTAS_VIVIENDA = [
-  'capitalContenido', 'capitalContinente', 'uso', 'ocupacion', 'tipoVivienda', 'ultimoPiso', 'alarma', 'habitaciones', 'anioUltimaReforma',
+  'capitalContenido', 'capitalContinente', 'uso', 'ocupacion', 'tipoVivienda', 'usoDeclarado', 'regimenDeclarado', 'tipoViviendaDeclarado', 'ultimoPiso', 'alarma', 'habitaciones', 'anioUltimaReforma',
   'propietarioEsTomador', 'urbanizacionCerrada', 'conMadera', 'puertaPrincipalBlindada', 'ventanasSeguras', 'vigilante',
   'joyasEnCajaFuerte', 'joyasFueraDeCaja', 'objetosDeValor', 'perrosPeligrosos',
 ] as const
@@ -218,6 +226,9 @@ export function planEscrituraVivienda(actual: Record<string, unknown> | null, pr
         && (!('planta' in dir) || vacio(a.planta) || norm(a.planta) === norm(dir.planta))
         && (!('puertaVivienda' in dir) || vacio(a.puertaVivienda) || norm(a.puertaVivienda) === norm(dir.puertaVivienda))
       if (!misma) conflictos.push('dirección distinta de la guardada: revisar (no se ha tocado la guardada)')
+      // 05/11/2026: la MISMA dirección con huecos (p. ej. la póliza traía CP y municipio pero no la calle): se rellenan SOLO los
+      // huecos; lo guardado no se toca. Sin esto, la calle que el cliente acaba de dar no llegaba nunca al riesgo.
+      else for (const [k, v] of Object.entries(dir)) if (vacio(a[k])) escribir[k] = v
     }
   }
 

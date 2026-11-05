@@ -22,6 +22,7 @@ import type { ParteParaAviso } from './parte-aviso.ts'
 import { textoPolizaModificada, type PolizaModificadaParaAviso } from './poliza-cambios.ts'
 import { itvParaAviso, textoAvisoItv, type VehiculoParaAviso } from './aviso-itv.ts'
 import { RUTA_CALENDARIO } from './calendario-unico.ts'
+import { DETALLE_AVISO_DATOS_RENOVACION, TITULO_AVISO_DATOS_RENOVACION, hrefDatosRenovacion, type DatosRenovacionParaAviso } from './datos-renovacion.ts'
 import { patrimonioSeAvisa, textoAvisoPatrimonio, type PatrimonioParaAviso } from './aviso-patrimonio.ts'
 
 export const TIPOS_AVISO = [
@@ -46,6 +47,8 @@ export const TIPOS_AVISO = [
   'patrimonio_en_ventana',
   // Renovación con alternativas publicada en la app por el corredor (04/11/2026): se va sola al elegir (no se descarta).
   'presupuesto_disponible',
+  // Solicitud de datos de la renovación (05/11/2026): unas preguntas para tarificar; se va sola al contestar (no se descarta).
+  'datos_renovacion',
 ] as const
 export type TipoAviso = (typeof TIPOS_AVISO)[number]
 
@@ -162,7 +165,7 @@ function hrefPoliza(polizaId: string | null | undefined, porDefecto: string): st
   return polizaId ? `/boveda/poliza/${encodeURIComponent(polizaId)}` : porDefecto
 }
 
-export const FUENTES_AVISO = ['autorizaciones', 'obligaciones', 'peticiones', 'datos', 'carnets', 'firmas', 'felicitaciones', 'polizas_nuevas', 'partes', 'polizas_modificadas', 'vehiculos', 'patrimonio', 'presupuestos'] as const
+export const FUENTES_AVISO = ['autorizaciones', 'obligaciones', 'peticiones', 'datos', 'carnets', 'firmas', 'felicitaciones', 'polizas_nuevas', 'partes', 'polizas_modificadas', 'vehiculos', 'patrimonio', 'presupuestos', 'datos_renovacion'] as const
 export type FuenteAviso = (typeof FUENTES_AVISO)[number]
 
 /** Lo mínimo que la campana necesita de una autorización; el resto de `AutorizacionVista` no se mira. */
@@ -318,6 +321,11 @@ export type EntradaAvisos = {
    */
   presupuestos?: PresupuestoParaAviso[] | null
   /**
+   * Solicitudes de datos de la renovación PUBLICADAS (✅ de Alberto) y sin contestar (`DatosRenovacionParaAviso`, 05/11/2026).
+   * `null` = no se han podido leer. Ausente = esta superficie no lo consulta (no cuenta para el «!»).
+   */
+  datosRenovacion?: DatosRenovacionParaAviso[] | null
+  /**
    * Claves (`claveAviso`) de los avisos que la persona ya pulsó. Solo quitan DESCARTABLES.
    * `null`/ausente = no se sabe (o esta superficie no lo mira): se enseñan todos, que repetir un
    * aviso ya leído es mejor que esconder uno que no lo está.
@@ -388,6 +396,8 @@ export const HREF_POR_TIPO: Record<TipoAviso, string> = {
   patrimonio_en_ventana: RUTA_CALENDARIO,
   // La página del presupuesto (el id va en el aviso): es donde se elige.
   presupuesto_disponible: '/boveda',
+  // La página de la solicitud (el id va en el aviso): es donde se contesta.
+  datos_renovacion: '/boveda',
 }
 
 const FECHA = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', timeZone: 'UTC' })
@@ -777,6 +787,14 @@ export function avisosDe(x: EntradaAvisos): Avisos {
     }
   }
 
+  if (x.datosRenovacion === null) {
+    fuentesIlegibles.push('datos_renovacion')
+  } else {
+    for (const d of x.datosRenovacion ?? []) {
+      avisos.push({ tipo: 'datos_renovacion', id: d.id, titulo: TITULO_AVISO_DATOS_RENOVACION, detalle: DETALLE_AVISO_DATOS_RENOVACION, href: hrefDatosRenovacion(d.id) })
+    }
+  }
+
   // Las fuentes que ESTA superficie consulta: una ausente (`undefined`) no cuenta para el «!».
   const ausentes =
     (x.felicitaciones === undefined ? 1 : 0) +
@@ -785,7 +803,8 @@ export function avisosDe(x: EntradaAvisos): Avisos {
     (x.polizasModificadas === undefined ? 1 : 0) +
     (x.vehiculos === undefined ? 1 : 0) +
     (x.patrimonio === undefined ? 1 : 0) +
-    (x.presupuestos === undefined ? 1 : 0)
+    (x.presupuestos === undefined ? 1 : 0) +
+    (x.datosRenovacion === undefined ? 1 : 0)
   const descartables = new Set<string>(TIPOS_AVISO_DESCARTABLES)
   const visibles = avisos
     .map(({ ciclo, ...a }) => ({ ...a, descartable: descartables.has(a.tipo), clave: claveAviso(a, ciclo) }))

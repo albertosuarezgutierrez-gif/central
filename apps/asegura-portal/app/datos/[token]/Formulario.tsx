@@ -37,8 +37,16 @@ type ClaseSubida = 'documento' | 'poliza'
 const PAUSA_BORRADOR_MS = 2500
 type EstadoBorrador = 'nada' | 'guardando' | 'guardado' | 'fallo'
 
+/**
+ * Por dónde habla el formulario. `token` (el de siempre): el enlace público, sin sesión. `app` (05/11/2026, solicitud de datos de
+ * la renovación): con la SESIÓN del portal y el id de la solicitud; sin borrador ni subida de documentos (solo unas preguntas) y
+ * con las ayudas de dirección y del Catastro que exigen sesión. El servidor vuelve a decidir quién puede contestar.
+ */
+export type ModoFormulario = { tipo: 'token' } | { tipo: 'app'; solicitudId: string }
+
 /** El formulario del enlace de datos. Pinta los campos que manda asegura y nada más. */
-export default function Formulario({ token, campos, ramo, tercero = false, borrador = null }: { token: string; campos: CampoSolicitud[]; ramo: RamoSolicitud; tercero?: boolean; borrador?: BorradorLeido | null }) {
+export default function Formulario({ token, campos, ramo, tercero = false, borrador = null, modo = { tipo: 'token' } }: { token: string; campos: CampoSolicitud[]; ramo: RamoSolicitud; tercero?: boolean; borrador?: BorradorLeido | null; modo?: ModoFormulario }) {
+  const enApp = modo.tipo === 'app'
   // Al volver con el MISMO enlace, se sigue donde lo dejó (borrador guardado en el servidor, por token; sin cookies).
   const [inicial] = useState(() => estadoDesdeBorrador(campos, borrador))
   const [direcciones, setDirecciones] = useState<Record<string, ValorDireccionDatos>>(inicial.direcciones)
@@ -76,26 +84,27 @@ export default function Formulario({ token, campos, ramo, tercero = false, borra
   const dir = campoDir ? direcciones[campoDir.clave] : undefined
   const via = dir && viaSigueVigente(dir.direccion, dir.viaOficial) ? dir.viaOficial : null
   const claveCatastro = conTarjeta && dir && via && dir.numero.trim()
-    ? new URLSearchParams({ token, provincia: dir.provincia, municipio: dir.municipio, sigla: via.tipo, calle: via.nombre, numero: dir.numero, planta: dir.planta, puerta: dir.puerta, cp: dir.cp }).toString()
+    ? new URLSearchParams({ ...(modo.tipo === 'app' ? { solicitud: modo.solicitudId } : { token }), provincia: dir.provincia, municipio: dir.municipio, sigla: via.tipo, calle: via.nombre, numero: dir.numero, planta: dir.planta, puerta: dir.puerta, cp: dir.cp }).toString()
     : null
   useEffect(() => {
     if (!claveCatastro) return
     let vivo = true
     const t = setTimeout(() => {
-      fetch(`/api/datos/vivienda?${claveCatastro}`)
+      fetch(`${enApp ? '/api/datos-renovacion/vivienda' : '/api/datos/vivienda'}?${claveCatastro}`)
         .then((r) => (r.ok ? r.json() : null))
         .then((j: ViviendaCatastroPublica | null) => { if (vivo && j && (j.estado === 'ok' || j.estado === 'sin_datos')) setLectura({ clave: claveCatastro, v: j }) })
         .catch(() => {})
     }, 700)
     return () => { vivo = false; clearTimeout(t) }
-  }, [claveCatastro])
+  }, [claveCatastro, enApp])
   const catastro = lectura && lectura.clave === claveCatastro ? lectura.v : null
   const confirmacionVigente = claveCatastro !== null && confirmadoPara === claveCatastro && typeof valores.confirmaCatastro === 'boolean'
 
   // GUARDADO AUTOMÁTICO (26/10/2026): tras una pausa sin teclear, el borrador va al servidor (por token). Nunca
   // completa nada: completar es solo «Enviar». Sin la columna en la BD (`sin_migracion`) se deja de intentar, en silencio.
   // Un tercero, solo con su permiso marcado (como los documentos).
-  const borradorApagado = useRef(false)
+  // En la app no hay borrador por token (la solicitud es corta y va con sesión).
+  const borradorApagado = useRef(enApp)
   const primeraVez = useRef(true)
   const pendiente = useRef<string | null>(null)
   useEffect(() => {
@@ -135,7 +144,7 @@ export default function Formulario({ token, campos, ramo, tercero = false, borra
   }, [])
 
   if (estado.tipo === 'hecho') {
-    return <p><strong>¡Gracias!</strong> Ya tenemos tus datos. Te escribimos en cuanto tengamos el precio.</p>
+    return <p><strong>¡Gracias!</strong> {enApp ? 'Ya tenemos los datos. Te avisamos en cuanto tengamos el precio de la renovación.' : 'Ya tenemos tus datos. Te escribimos en cuanto tengamos el precio.'}</p>
   }
 
   const poner = (clave: string, v: string | boolean) => setValores((p) => ({ ...p, [clave]: v }))
@@ -216,11 +225,11 @@ export default function Formulario({ token, campos, ramo, tercero = false, borra
     let status = 0
     let json: Record<string, unknown> | null = null
     try {
-      const res = await fetch('/api/datos', {
+      const res = await fetch(enApp ? '/api/datos-renovacion' : '/api/datos', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          token,
+          ...(modo.tipo === 'app' ? { solicitudId: modo.solicitudId } : { token }),
           respuestas: {
             ...enviados,
             [CLAVE_NO_LO_SE]: [...noLoSe].filter((k) => aLaVista.has(k)),
@@ -235,11 +244,12 @@ export default function Formulario({ token, campos, ramo, tercero = false, borra
       /* sin conexión */
     }
     if (status === 200) { pendiente.current = null; return setEstado({ tipo: 'hecho' }) }
+    if (enApp && status === 404) return setEstado({ tipo: 'fallo', texto: 'Esta solicitud ya no está disponible para tu cuenta.' })
     if (status === 422 && json?.errores && typeof json.errores === 'object') {
       setErrores(json.errores as Record<string, string>)
       return setEstado({ tipo: 'fallo', texto: 'Revisa los campos marcados.' })
     }
-    if (status === 410) return setEstado({ tipo: 'fallo', texto: 'Este enlace ya no sirve (caducado o ya usado). Escríbenos y te mandamos uno nuevo.' })
+    if (status === 410) return setEstado({ tipo: 'fallo', texto: enApp ? 'Esta solicitud ya está contestada o ha caducado. Si hace falta algo más, te lo pedimos de nuevo.' : 'Este enlace ya no sirve (caducado o ya usado). Escríbenos y te mandamos uno nuevo.' })
     if (status === 403 && typeof json?.mensaje === 'string') return setEstado({ tipo: 'fallo', texto: json.mensaje })
     if (status === 429) return setEstado({ tipo: 'fallo', texto: 'Demasiados intentos. Espera unos minutos.' })
     setEstado({ tipo: 'fallo', texto: 'No se ha podido enviar. Vuelve a probar en un momento.' })
@@ -311,7 +321,9 @@ export default function Formulario({ token, campos, ramo, tercero = false, borra
             valor={d}
             onCambio={(v) => fijar(v)}
             disabled={estado.tipo === 'enviando'}
-            rutas={{ cp: (cp) => `/api/datos/codigo-postal?token=${tk}&cp=${cp}`, vias: (q) => `/api/datos/vias?token=${tk}&${q}` }}
+            rutas={enApp
+              ? { cp: (cp) => `/api/patrimonio/codigo-postal?cp=${cp}`, vias: (q) => `/api/patrimonio/vias?${q}` }
+              : { cp: (cp) => `/api/datos/codigo-postal?token=${tk}&cp=${cp}`, vias: (q) => `/api/datos/vias?token=${tk}&${q}` }}
             calle={{ etiqueta: 'Calle', ejemplo: 'Calle San Vicente' }}
           />
           <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 96px), 1fr))', marginTop: 10 }}>
@@ -409,7 +421,7 @@ export default function Formulario({ token, campos, ramo, tercero = false, borra
       {tercero && errores.consentimiento && <span className="editor-error" role="alert">{errores.consentimiento}</span>}
       {/* minWidth 0 + overflowWrap: sin ellos el <input type=file> nativo (botón + «Ningún archivo seleccionado»)
           dimensiona la caja con su ancho mínimo y el texto se sale en un móvil de 360 px. */}
-      <div className="editor-campo datos-subida">
+      {!enApp && <div className="editor-campo datos-subida">
         <span className="datos-subida-titulo">📎 Súbenos tus documentos y te rellenamos el formulario</span>
         <span className="editor-ayuda">
           {ayudaDocumentosSolicitud(ramo)} Foto o PDF, uno o varios. Los guardamos para tu contratación.
@@ -440,7 +452,7 @@ export default function Formulario({ token, campos, ramo, tercero = false, borra
             ))}
           </ul>
         )}
-      </div>
+      </div>}
       {(['esencial', 'opcional'] as const).map((nivel) => {
         const grupo = visibles.filter((c) => c.tipo !== 'vehiculo_catalogo' && (c.nivel ?? (c.obligatorio ? 'esencial' : 'opcional')) === nivel)
         if (grupo.length === 0) return null
@@ -461,17 +473,23 @@ export default function Formulario({ token, campos, ramo, tercero = false, borra
         )
       })}
       {estado.tipo === 'fallo' && <p className="editor-error" role="alert">{estado.texto}</p>}
-      <p className="suave" style={{ margin: 0, fontSize: 13 }}>
-        Usamos estos datos solo para prepararte el presupuesto (Grupo ASegura, correduría de seguros). Lo que escribes se
-        guarda mientras lo rellenas para que puedas seguir otro día con este mismo enlace; al enviarlo, ese borrador se borra.
-      </p>
+      {enApp ? (
+        <p className="suave" style={{ margin: 0, fontSize: 13 }}>
+          Usamos estos datos solo para revisar el precio de la renovación (Grupo ASegura, correduría de seguros). Contestar no contrata nada.
+        </p>
+      ) : (
+        <p className="suave" style={{ margin: 0, fontSize: 13 }}>
+          Usamos estos datos solo para prepararte el presupuesto (Grupo ASegura, correduría de seguros). Lo que escribes se
+          guarda mientras lo rellenas para que puedas seguir otro día con este mismo enlace; al enviarlo, ese borrador se borra.
+        </p>
+      )}
       {guardadoBorrador !== 'nada' && (
         <p className="suave" role="status" aria-live="polite" style={{ margin: 0, fontSize: 13 }}>
           {guardadoBorrador === 'guardando' ? 'Guardando…' : guardadoBorrador === 'guardado' ? '✓ Guardado: puedes seguir luego con este enlace.' : 'No se ha podido guardar el borrador; tus datos siguen aquí.'}
         </p>
       )}
       <button type="submit" className="boton" style={{ minHeight: 48 }} disabled={estado.tipo === 'enviando' || subiendo || sinPermiso}>
-        {estado.tipo === 'enviando' ? 'Enviando…' : subiendo ? 'Leyendo los documentos…' : tercero ? 'Enviar los datos' : 'Enviar mis datos'}
+        {estado.tipo === 'enviando' ? 'Enviando…' : subiendo ? 'Leyendo los documentos…' : tercero || enApp ? 'Enviar los datos' : 'Enviar mis datos'}
       </button>
     </form>
   )
