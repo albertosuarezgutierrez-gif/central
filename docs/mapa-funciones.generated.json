@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-05T07:06:06Z",
-  "sha": "8f3d928251e7cbd693b4ac93d8dcdae1a92d3154",
+  "generadoEn": "2026-11-05T07:19:55Z",
+  "sha": "3a03f755a3799431cfad03f78dd36b53a161a43e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -30288,7 +30288,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 567
+          "linea": 574
         },
         {
           "nombre": "respuestaGastoBloqueado",
@@ -30296,7 +30296,7 @@
           "exportada": false,
           "params": "gasto: Extract<GastoEmision<never>, { ok: false }>",
           "retorno": null,
-          "linea": 585,
+          "linea": 592,
           "resumen": "El libro dijo que no. **Sin llamada al vendor**, y por eso se contesta con dos códigos distintos: se arreglan en sitios distintos. - `sin_libro` (503): no se ha podido leer `codeoscopic_consumo`. Es u"
         },
         {
@@ -30305,7 +30305,7 @@
           "exportada": false,
           "params": "v: unknown,",
           "retorno": "",
-          "linea": 612,
+          "linea": 619,
           "resumen": "Solo claves de la lista blanca y valores con la forma que el vendor acepta (mismas reglas que `revisarPersona`): un municipio no numérico o una fecha en formato español llegarían al PATCH y volverían "
         },
         {
@@ -30314,7 +30314,7 @@
           "exportada": false,
           "params": "campo: CampoPersona, s: string",
           "retorno": "string | null",
-          "linea": 631
+          "linea": 638
         },
         {
           "nombre": "respuestaSigueFaltando",
@@ -30322,7 +30322,7 @@
           "exportada": false,
           "params": "campos: CampoPersona[], mensajeVendor: string",
           "retorno": null,
-          "linea": 649
+          "linea": 656
         },
         {
           "nombre": "registrarFaltaProducto",
@@ -30330,7 +30330,7 @@
           "exportada": false,
           "params": "correduriaId: string, tarificacionId: string, campos: CampoProducto[]",
           "retorno": null,
-          "linea": 677,
+          "linea": 684,
           "resumen": "Telemetría de `faltan_producto` por COMPAÑÍA (20/09/2026): saber a qué compañías les falta cobertura del Product Form Library, no solo que «alguna vez pasa». Reutiliza `seguros.operational_events` (ge"
         },
         {
@@ -30339,7 +30339,7 @@
           "exportada": false,
           "params": "c: Extract<ResultadoCompletar, { estado: 'no_aplicado' }>",
           "retorno": null,
-          "linea": 695
+          "linea": 702
         }
       ],
       "tablas": [
@@ -30352,7 +30352,7 @@
         "tarificaciones"
       ],
       "rutaApi": "/api/operador/codeoscopic/oferta",
-      "hash": "aed9741d7207"
+      "hash": "ef581b547b1b"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/precalificar-auto-nuevo/route.ts",
@@ -39072,7 +39072,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string,",
           "retorno": "Promise<ClienteOrigen | null>",
-          "linea": 1390,
+          "linea": 1392,
           "resumen": "La persona de una ficha, SIN pasar por ninguna póliza — para una oportunidad nueva sobre un cliente que hoy no tiene ninguna (hogar desde el Catastro, no desde una póliza de la cartera). Misma discipl"
         },
         {
@@ -39081,7 +39081,7 @@
           "exportada": true,
           "params": "v: string | null",
           "retorno": "string | null",
-          "linea": 1442,
+          "linea": 1444,
           "resumen": "La fecha de nacimiento se guardó como texto cifrado y no siempre en ISO (fue `date` antes). Se aceptan `aaaa-mm-dd` y `dd/mm/aaaa`; cualquier otra cosa es `null` — no se adivina el orden de un `01/02/"
         },
         {
@@ -39090,7 +39090,7 @@
           "exportada": false,
           "params": "rs: Array<{ claseRecibo: string | null; situacion: unknown; primaTotal: string | null; fechaVencimiento: Date | null }> | undefined,",
           "retorno": "ReciboVigencia[]",
-          "linea": 1452
+          "linea": 1454
         }
       ],
       "tablas": [
@@ -39098,7 +39098,7 @@
         "polizas"
       ],
       "rutaApi": null,
-      "hash": "59477f1f17a4"
+      "hash": "e6cc918fdca0"
     },
     {
       "ruta": "apps/asegura/lib/cartera-filtro.ts",
@@ -43530,7 +43530,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 129
+          "linea": 131
         },
         {
           "nombre": "precalificarHogarCartera",
@@ -43538,7 +43538,7 @@
           "exportada": true,
           "params": "cliente: ClienteCartera, poliza: PolizaHogarCartera, resueltos: ResueltosHogar, hoy: string, catastro: CatastroHogar | null = null,",
           "retorno": "PrecalificacionHogar",
-          "linea": 152
+          "linea": 154
         },
         {
           "nombre": "habitacionesPorSuperficie",
@@ -43546,7 +43546,7 @@
           "exportada": true,
           "params": "m2: number",
           "retorno": "number",
-          "linea": 342,
+          "linea": 344,
           "resumen": "Habitaciones (dormitorios) estimadas por superficie construida. Es un supuesto declarado, no un dato: el vendor exige el número y la ficha no lo tiene. Tramos típicos de vivienda española."
         },
         {
@@ -43555,7 +43555,7 @@
           "exportada": false,
           "params": "v: string | null",
           "retorno": "string | null",
-          "linea": 351
+          "linea": 353
         },
         {
           "nombre": "hogarDeDatos",
@@ -43563,7 +43563,7 @@
           "exportada": true,
           "params": "datos: Record<string, unknown> | null, fuente: 'poliza' | 'gemela', direccionDescifrada: string | null = null,",
           "retorno": "HogarCartera | null",
-          "linea": 368,
+          "linea": 370,
           "resumen": "Lee el riesgo de hogar de un `datos_especificos` (póliza o gemela). Los números del volcado vienen como TEXTO («76», «61000»): se convierten, y lo que no es número queda a `null` — nunca a 0."
         },
         {
@@ -43572,7 +43572,7 @@
           "exportada": true,
           "params": "propio: HogarCartera | null, gemela: HogarCartera | null",
           "retorno": "HogarCartera | null",
-          "linea": 390,
+          "linea": 392,
           "resumen": "El riesgo que se usa: el de la póliza si está completa; si no, la gemela; si ninguna, lo que haya."
         },
         {
@@ -43581,7 +43581,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 397
+          "linea": 399
         },
         {
           "nombre": "entero",
@@ -43589,7 +43589,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 401
+          "linea": 403
         },
         {
           "nombre": "cpDe",
@@ -43597,12 +43597,12 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 405
+          "linea": 407
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d9cc4a892a7f"
+      "hash": "6e7041776247"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/desde-cartera-salud.ts",
@@ -43705,7 +43705,7 @@
           "exportada": true,
           "params": "cliente: Pick<ClienteCartera, 'direccion'>, catalogo: ReadonlyArray<{ id: string; nombre: string }>,",
           "retorno": "",
-          "linea": 189,
+          "linea": 192,
           "resumen": "El `roadType` del tomador para `Resueltos.tipoViaId`: la dirección de la ficha se queda DENTRO de esta función (la ruta del puerto no puede nombrarla — guardián `test/regression-retarificar-plataforma"
         },
         {
@@ -43714,7 +43714,7 @@
           "exportada": true,
           "params": "cliente: Pick<ClienteCartera, 'direccion'>",
           "retorno": "string | null",
-          "linea": 197,
+          "linea": 200,
           "resumen": "El tipo de vía tal y como lo trocea la ficha («Calle», «Avenida»…), sin catálogo. Para explicar por qué no casa."
         },
         {
@@ -43723,7 +43723,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 211
+          "linea": 214
         },
         {
           "nombre": "aniosEntre",
@@ -43731,7 +43731,7 @@
           "exportada": true,
           "params": "desde: string | null, hasta: string",
           "retorno": "number | null",
-          "linea": 224,
+          "linea": 227,
           "resumen": "Años completos entre dos fechas aaaa-mm-dd. `null` si alguna no es fecha."
         },
         {
@@ -43740,7 +43740,7 @@
           "exportada": true,
           "params": "f: string",
           "retorno": "string",
-          "linea": 233,
+          "linea": 236,
           "resumen": "El día siguiente a una fecha aaaa-mm-dd."
         },
         {
@@ -43749,7 +43749,7 @@
           "exportada": false,
           "params": "poliza: PolizaCartera, hoy: string, suponer: (campo: 'fechaEfecto' | 'aniosAsegurado' | 'aniosSinSiniestros', valor: unknown, porque: string, optimista?: boolean) => unknown,",
           "retorno": "",
-          "linea": 244,
+          "linea": 247,
           "resumen": "Fecha de efecto e historial de una póliza que se RETARIFICA: común a auto y moto. La póliza actual pasa a ser la anterior (compañía, número, antigüedad), y lo que no consta se supone y se declara con "
         },
         {
@@ -43758,7 +43758,7 @@
           "exportada": true,
           "params": "cliente: ClienteCartera, poliza: PolizaCartera, resueltos: Resueltos, hoy: string,",
           "retorno": "Precalificacion",
-          "linea": 326,
+          "linea": 329,
           "resumen": "Construye la precalificación. `hoy` entra por parámetro para que la función sea pura y los tests no dependan del calendario."
         },
         {
@@ -43767,7 +43767,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 476,
+          "linea": 479,
           "resumen": "Los km supuestos que propone la pantalla, si son un kilometraje plausible; si no, `null` (manda la media)."
         },
         {
@@ -43776,7 +43776,7 @@
           "exportada": true,
           "params": "cliente: ClienteCartera, resueltos: ResueltosAutoNueva, hoy: string,",
           "retorno": "Precalificacion",
-          "linea": 480
+          "linea": 483
         },
         {
           "nombre": "sePuedeCotizar",
@@ -43784,7 +43784,7 @@
           "exportada": true,
           "params": "p: Precalificacion",
           "retorno": "boolean",
-          "linea": 599,
+          "linea": 602,
           "resumen": "¿Se puede cotizar ya? Azúcar para la pantalla y para el puerto, que tienen que decidir lo mismo y no deben hacerlo cada uno a su manera."
         },
         {
@@ -43793,7 +43793,7 @@
           "exportada": true,
           "params": "p: Precalificacion",
           "retorno": "Supuesto[]",
-          "linea": 608,
+          "linea": 611,
           "resumen": "Los supuestos que cambian el precio a mejor. La pantalla los enseña aparte porque son los que pueden decepcionar luego: si el cliente sí tuvo siniestros, la prima real sube respecto a lo que se le ha "
         },
         {
@@ -43802,7 +43802,7 @@
           "exportada": true,
           "params": "carnets: ClienteCartera['carnets'],",
           "retorno": "",
-          "linea": 658,
+          "linea": 661,
           "resumen": "El carné de MOTO que consta en la ficha, con su fecha: el de mayor rango (A > A2 > A1 > AM). `null` = no consta ninguno con fecha legible — y entonces NO se inventa: se cae al carné del conductor y se"
         },
         {
@@ -43811,7 +43811,7 @@
           "exportada": true,
           "params": "carnets: ClienteCartera['carnets']",
           "retorno": "string | null",
-          "linea": 674,
+          "linea": 677,
           "resumen": "La fecha del carné B de la ficha, para declararlo junto al de moto. Solo el B de la tabla de carnés, con su fecha: `cliente.fechaCarnet` es «la del conductor» y no dice de qué carné es, así que no se "
         },
         {
@@ -43820,7 +43820,7 @@
           "exportada": true,
           "params": "cliente: ClienteCartera, resueltos: ResueltosMotoNueva, hoy: string,",
           "retorno": "PrecalificacionMoto",
-          "linea": 679
+          "linea": 682
         },
         {
           "nombre": "precalificarMoto",
@@ -43828,13 +43828,13 @@
           "exportada": true,
           "params": "cliente: ClienteCartera, poliza: PolizaCartera, resueltos: ResueltosMoto, hoy: string,",
           "retorno": "PrecalificacionMoto",
-          "linea": 801,
+          "linea": 804,
           "resumen": "Hermana de `precalificarAuto()` para una póliza de MOTO: persona, vehículo y circulación como `precalificarMotoNueva()` (catálogo `/motorcycle/*`, experiencia de conducción), y encima la fecha de efec"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b6342bf0dfca"
+      "hash": "91732635b15f"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/direccion.ts",
@@ -44007,6 +44007,75 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "30186d854352"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/efecto-renovacion.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Regla de la RENOVACIÓN (Alberto, 05/11/2026), aplicada ANTES de pagar: Fecha de efecto de la renovación (coordinador, 05/11/2026, con datos de BD): si `fecha_efecto_actual` > hoy (la compañía YA emitió la anualidad nueva y aún no empezó) → efecto = fecha_efecto_actual; si no → el vencimiento. La ven",
+      "exporta": [
+        "sumarMeses",
+        "fechaBaseRenovacion",
+        "corteDeVencimiento",
+        "evaluarEfectoRenovacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "sumarMeses",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: string, n: number",
+          "retorno": "string",
+          "linea": 35,
+          "resumen": "`f` (aaaa-mm-dd) más `n` meses en UTC, sin desbordar el día (31/01 + 1 mes = 28/29-02)."
+        },
+        {
+          "nombre": "iso",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 45
+        },
+        {
+          "nombre": "dias",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: string, b: string",
+          "retorno": "number",
+          "linea": 50,
+          "resumen": "Días entre dos fechas ISO (b - a)."
+        },
+        {
+          "nombre": "fechaBaseRenovacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "vencimiento: string | null | undefined, efectoActual: string | null | undefined, hoy: string,",
+          "retorno": "string | null",
+          "linea": 58,
+          "resumen": "La fecha de efecto de la renovación: `fecha_efecto_actual` si es futura (anualidad nueva ya emitida), si no el vencimiento. `null` = no consta ninguna."
+        },
+        {
+          "nombre": "corteDeVencimiento",
+          "kind": "function",
+          "exportada": true,
+          "params": "vencimiento: string | null | undefined, efectoActual: string | null | undefined, hoy: string,",
+          "retorno": "",
+          "linea": 69,
+          "resumen": "El corte (si lo hay) de la renovación, sin tener en cuenta lo que fuerce el operador."
+        },
+        {
+          "nombre": "evaluarEfectoRenovacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: { vencimiento: string | null | undefined /** `fecha_efecto_actual` de la póliza (CIMA). */ efectoActual?: string | null hoy: string explicita?: unknown }",
+          "retorno": "EvaluacionRenovacion",
+          "linea": 121,
+          "resumen": "La decisión entera de una RENOVACIÓN: la fecha de efecto con la que se cotiza, o el corte GRATIS. `explicita` = la fecha de efecto que el operador puso a mano (correcciones): manda, y queda registrada"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "cfa3cd8c0ff8"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/emision-externa.ts",
@@ -63637,16 +63706,16 @@
           "exportada": false,
           "params": "polizaId: string",
           "retorno": "Promise<ProyectoVigente | null>",
-          "linea": 219,
+          "linea": 221,
           "resumen": "¿Ya hay un proyecto de Codeoscopic con una oferta CONFIRMADA (ReRate) para esta póliza, sin emitir todavía y sin caducar? 🚨 Existe por Alberto (12/09/2026): un reintento de emisión de Pilar Franco Ru"
         },
         {
           "nombre": "prepararRetarificacion",
           "kind": "function",
           "exportada": true,
-          "params": "entrada: { polizaId: string solicitadoPor: string cuerpo: CuerpoRetarificacion }",
+          "params": "entrada: { polizaId: string solicitadoPor: string cuerpo: CuerpoRetarificacion /** Solo tests: «hoy» inyectado (aaaa-mm-dd). En producción, hoy en Madrid. */ hoy?: string }",
           "retorno": "Promise<PreparadoRetarificacion>",
-          "linea": 282,
+          "linea": 284,
           "resumen": "Prepara la retarificación de `polizaId`: resuelve la correduría, lee la póliza, mapea el ramo y **revisa el cuerpo GRATIS**. Devuelve o la petición lista para `cotizar()`, o el corte que hay que respo"
         },
         {
@@ -63655,7 +63724,7 @@
           "exportada": true,
           "params": "r: ResultadoCotizacion, preparado: Extract<PreparadoRetarificacion, { estado: 'listo' }>,",
           "retorno": "ResultadoRetarificar",
-          "linea": 411,
+          "linea": 447,
           "resumen": "Redacta la respuesta a partir de lo que devolvió `cotizar()`. Las dos rutas usan esta, así que la forma del JSON es la misma campo por campo: la pantalla de plataforma y la de asegura leen exactamente"
         },
         {
@@ -63664,7 +63733,7 @@
           "exportada": false,
           "params": "cuerpo: Record<string, unknown>, status: number",
           "retorno": "ResultadoRetarificar",
-          "linea": 472,
+          "linea": 509,
           "resumen": "Respuesta que declara, con su cifra, que NO se ha llamado al vendor."
         },
         {
@@ -63673,7 +63742,7 @@
           "exportada": false,
           "params": "cuerpo: Record<string, unknown>, status: number",
           "retorno": "",
-          "linea": 477,
+          "linea": 514,
           "resumen": "La misma, envuelta para cortar la preparación de un ramo."
         },
         {
@@ -63682,7 +63751,7 @@
           "exportada": false,
           "params": "origen: OrigenRetarificacion, cuerpo: CuerpoRetarificacion, polizaId: string,",
           "retorno": "Promise<Preparado>",
-          "linea": 483
+          "linea": 520
         },
         {
           "nombre": "versionMotoElegida",
@@ -63690,7 +63759,7 @@
           "exportada": false,
           "params": "resueltos: Record<string, unknown> | undefined, codigoCrudo: unknown,",
           "retorno": "VersionMotoElegida | null",
-          "linea": 549
+          "linea": 586
         },
         {
           "nombre": "reparoCarnetMoto",
@@ -63698,7 +63767,7 @@
           "exportada": false,
           "params": "config: Parameters<typeof limitesCarnetMoto>[0], tipo: string | null | undefined, version: VersionMotoElegida | null, esSupuesto = false,",
           "retorno": "Promise<",
-          "linea": 574,
+          "linea": 611,
           "resumen": "Dos comprobaciones gratis antes de pagar: 1. El tipo de carné tiene que existir en `/motorcycle/driving-licenses`: un id que no está es un 400. 2. Ese carné tiene que CUBRIR la versión elegida (cc y k"
         },
         {
@@ -63707,7 +63776,7 @@
           "exportada": false,
           "params": "supuestos: T[], aviso: string | null,",
           "retorno": "T[]",
-          "linea": 622,
+          "linea": 659,
           "resumen": "Añade el aviso al supuesto `tipoCarnet` (visible en pantalla junto al supuesto); sin supuesto, lo añade como uno nuevo."
         },
         {
@@ -63716,7 +63785,7 @@
           "exportada": false,
           "params": "origen: OrigenRetarificacion, cuerpo: CuerpoRetarificacion, polizaId: string,",
           "retorno": "Promise<Preparado>",
-          "linea": 636,
+          "linea": 673,
           "resumen": "Como `prepararAuto`, con el catálogo y el `risk` de moto: la póliza da la matrícula y el historial (`precalificarMoto`); la versión, el garaje y la experiencia de conducción los resuelve la pantalla ("
         },
         {
@@ -63725,16 +63794,16 @@
           "exportada": false,
           "params": "origen: OrigenRetarificacion, cuerpo: CuerpoRetarificacion, polizaId: string, modo: 'cotizar' | 'limites' = 'cotizar',",
           "retorno": "Promise<Preparado>",
-          "linea": 721,
+          "linea": 758,
           "resumen": "✅ El contrato del `risk` de hogar está verificado contra el portal del fabricante (02/09/2026; ver la cabecera de `peticion-hogar.ts`). Aun así el 502 devuelve el mensaje ENTERO del vendor: si el cont"
         },
         {
           "nombre": "prepararHogarDesde",
           "kind": "function",
           "exportada": false,
-          "params": "cliente: ClienteCartera, polizaInfo: { numeroPoliza: string | null; fechaVencimiento: string | null; hogar: HogarCartera | null }, cuerpo: CuerpoRetarificacion, externalId: string, catastro: CatastroHogar | null, /** `limites`: el cuerpo de",
+          "params": "cliente: ClienteCartera, polizaInfo: { numeroPoliza: string | null; fechaVencimiento: string | null; fechaEfectoActual?: string | null; hogar: HogarCartera | null }, cuerpo: CuerpoRetarificacion, externalId: string, catastro: CatastroHogar ",
           "retorno": "Promise<Preparado>",
-          "linea": 769,
+          "linea": 806,
           "resumen": "El cuerpo de hogar, ramo-agnóstico de origen: le da igual si el riesgo sale de una póliza (`prepararHogar`) o de un cliente sin ninguna (`prepararRetarificacionNuevaHogar`, oportunidad nueva desde el "
         },
         {
@@ -63743,7 +63812,7 @@
           "exportada": true,
           "params": "entrada: { polizaId: string cuerpo: CuerpoRetarificacion }",
           "retorno": "Promise<PreparadoLimitesHogar>",
-          "linea": 891,
+          "linea": 928,
           "resumen": "El cuerpo para pedir a Codeoscopic los capitales recomendados de la vivienda de una póliza de hogar. Misma precalificación que la retarificación (ficha, gemela o Catastro), pero sin exigir capital: es"
         },
         {
@@ -63752,7 +63821,7 @@
           "exportada": true,
           "params": "entrada: { clienteId: string solicitadoPor: string cuerpo: CuerpoRetarificacion catastro: CatastroHogar | null }",
           "retorno": "Promise<PreparadoRetarificacion>",
-          "linea": 933,
+          "linea": 970,
           "resumen": "Como `prepararRetarificacion`, pero para un cliente que HOY no tiene ninguna póliza de hogar: una oportunidad nueva, presupuestada desde el Catastro (`/correduria/hogar` en plataforma → aquí, con «Ped"
         },
         {
@@ -63761,7 +63830,7 @@
           "exportada": true,
           "params": "entrada: { clienteId: string solicitadoPor: string cuerpo: CuerpoRetarificacion }",
           "retorno": "Promise<PreparadoRetarificacion>",
-          "linea": 1003,
+          "linea": 1040,
           "resumen": "Como `prepararRetarificacionNuevaHogar`, pero para AUTO: un cliente que HOY no tiene ninguna póliza de auto en la cartera. No hay póliza que retarificar y por tanto ninguna «compañía anterior» que dec"
         },
         {
@@ -63770,7 +63839,7 @@
           "exportada": true,
           "params": "entrada: { clienteId: string solicitadoPor: string cuerpo: CuerpoRetarificacion }",
           "retorno": "Promise<PreparadoRetarificacion>",
-          "linea": 1114,
+          "linea": 1151,
           "resumen": "Como `prepararRetarificacionNuevaAuto`, pero para MOTO: la cartera viva tiene 1 sola póliza de moto (03/09/2026), así que «nueva» es prácticamente el único caso real de este ramo. Cotiza DE CALLE (`as"
         },
         {
@@ -63779,7 +63848,7 @@
           "exportada": false,
           "params": "entrada: { clienteId: string solicitadoPor: string ramo: 'vida' | 'salud' | 'decesos' resueltos: D correcciones: Record<string, unknown> | undefined precalificar: (cliente: ClienteCartera, resueltos: D, hoy: string) => { datos: Partial<any>",
           "retorno": "Promise<PreparadoRetarificacion>",
-          "linea": 1242
+          "linea": 1279
         },
         {
           "nombre": "prepararRetarificacionNuevaVida",
@@ -63787,7 +63856,7 @@
           "exportada": true,
           "params": "entrada: { clienteId: string solicitadoPor: string cuerpo: CuerpoRetarificacion /** El asegurado cuando NO es el tomador, armado en el SERVIDOR desde la ficha de la figura (nunca del cuerpo). */ asegurado?: AseguradoAdicional | null }",
           "retorno": "Promise<PreparadoRetarificacion>",
-          "linea": 1364
+          "linea": 1401
         },
         {
           "nombre": "prepararRetarificacionNuevaSalud",
@@ -63795,7 +63864,7 @@
           "exportada": true,
           "params": "entrada: { clienteId: string solicitadoPor: string cuerpo: CuerpoRetarificacion }",
           "retorno": "Promise<PreparadoRetarificacion>",
-          "linea": 1392
+          "linea": 1429
         },
         {
           "nombre": "prepararRetarificacionNuevaDecesos",
@@ -63803,7 +63872,7 @@
           "exportada": true,
           "params": "entrada: { clienteId: string solicitadoPor: string cuerpo: CuerpoRetarificacion }",
           "retorno": "Promise<PreparadoRetarificacion>",
-          "linea": 1416
+          "linea": 1453
         },
         {
           "nombre": "resolverCatalogo",
@@ -63811,7 +63880,7 @@
           "exportada": true,
           "params": "params: URLSearchParams",
           "retorno": "Promise<ResultadoCatalogo>",
-          "linea": 1474,
+          "linea": 1511,
           "resumen": "Resuelve UN catálogo por su `tipo` y los parámetros que ese tipo pida. Firma neutra (`URLSearchParams`) porque las dos rutas son `GET` con query."
         },
         {
@@ -63820,7 +63889,7 @@
           "exportada": true,
           "params": "params: URLSearchParams",
           "retorno": "Promise<ResultadoCrudo>",
-          "linea": 1643,
+          "linea": 1680,
           "resumen": "`tipo=versiones` **sin recortar**: las claves que manda el vendor de verdad y una muestra de entradas enteras. Existe para contestar con una medición, y no de memoria, a «¿trae el catálogo los años de"
         },
         {
@@ -63829,7 +63898,7 @@
           "exportada": false,
           "params": "p: SeguroAnteriorPublico, bonusSupuesto: boolean",
           "retorno": "SeguroAnteriorPublico",
-          "linea": 1690,
+          "linea": 1727,
           "resumen": "El seguro anterior público con la marca de bonus decidida sobre los datos FINALES (tras correcciones)."
         },
         {
@@ -63838,7 +63907,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 1694
+          "linea": 1731
         },
         {
           "nombre": "numero",
@@ -63846,7 +63915,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 1698
+          "linea": 1735
         },
         {
           "nombre": "booleano",
@@ -63854,7 +63923,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean | null",
-          "linea": 1705,
+          "linea": 1742,
           "resumen": "`true`/`false` (boolean o cadena) → boolean. Cualquier otra cosa → `null` (no es una respuesta)."
         },
         {
@@ -63863,7 +63932,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 1712
+          "linea": 1749
         },
         {
           "nombre": "hoyIso",
@@ -63871,7 +63940,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 1716
+          "linea": 1753
         },
         {
           "nombre": "limpiarCorrecciones",
@@ -63879,7 +63948,7 @@
           "exportada": false,
           "params": "c: Record<string, unknown> | undefined",
           "retorno": "Partial<T>",
-          "linea": 1721,
+          "linea": 1758,
           "resumen": "Solo se aceptan correcciones CON valor: un campo vacío no borra lo supuesto."
         }
       ],
@@ -63887,7 +63956,7 @@
         "codeoscopic_projects"
       ],
       "rutaApi": null,
-      "hash": "5d69d8acdc73"
+      "hash": "99c16ae805a1"
     },
     {
       "ruta": "apps/asegura/lib/revision-anual.ts",
@@ -291637,7 +291706,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5967,
-    "funciones": 23610
+    "archivos": 5968,
+    "funciones": 23616
   }
 }
