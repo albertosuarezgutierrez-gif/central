@@ -55,7 +55,18 @@ type Estado =
   | { fase: 'buscando' }
   | { fase: 'hecho'; r: Busqueda; ref: BusquedaReferencia | null }
 
-export default function BuscadorCartera() {
+export default function BuscadorCartera({
+  sincronizarUrl = true,
+  autoFocus = false,
+  onNavegar,
+}: {
+  /** `false` en el panel global de la barra superior: no debe leer ni tocar el `?q=` de la página en la que esté. */
+  sincronizarUrl?: boolean
+  /** Abre el teclado al montar (solo el panel emergente; en /correduria sigue SIN autofoco, ver más abajo). */
+  autoFocus?: boolean
+  /** Se llama al pulsar un enlace interno de los resultados (el panel se cierra). */
+  onNavegar?: () => void
+} = {}) {
   const [q, setQ] = useState('')
   const [estado, setEstado] = useState<Estado>({ fase: 'quieto' })
   // Cada búsqueda lleva número: si vuelven dos respuestas desordenadas (la
@@ -95,13 +106,15 @@ export default function BuscadorCartera() {
      `replaceState` a pelo no pasa por el router de Next, así que su hook puede
      ir un paso por detrás de lo que de verdad hay en la barra de direcciones. */
   useEffect(() => {
+    if (!sincronizarUrl) return
     const inicial = (new URLSearchParams(window.location.search).get('q') ?? '').trim()
     if (inicial.length < 3) return
     setQ(inicial)
     void lanzar(inicial)
-  }, [lanzar])
+  }, [lanzar, sincronizarUrl])
 
   function recordarEnUrl(termino: string) {
+    if (!sincronizarUrl) return
     const url = new URL(window.location.href)
     if (termino === '') url.searchParams.delete('q')
     else url.searchParams.set('q', termino)
@@ -123,7 +136,12 @@ export default function BuscadorCartera() {
   }
 
   return (
-    <div>
+    // Un solo punto para cerrar el panel: cualquier enlace interno de los resultados (ficha, oportunidad,
+    // «darlo de alta»…) lo dispara; tel:/mailto:/WhatsApp no cierran.
+    <div onClick={onNavegar ? (e) => {
+      const a = (e.target as HTMLElement).closest('a')
+      if (a && (a.getAttribute('href') ?? '').startsWith('/')) onNavegar()
+    } : undefined}>
       <form onSubmit={buscar} style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'stretch' }}>
         {/* El campo manda: ocupa el ancho y la lupa va DENTRO, posicionada — no
             como carácter, que se desalinea con la fuente del sistema. */}
@@ -147,7 +165,8 @@ export default function BuscadorCartera() {
             onChange={(e) => setQ(e.target.value)}
             placeholder="Nombre, NIF, matrícula, póliza…"
             aria-label="Buscar en la cartera"
-            /* SIN `autoFocus`: en móvil abría el teclado al entrar en la pantalla y
+            autoFocus={autoFocus}
+            /* SIN `autoFocus` por defecto (solo el panel global de la barra lo pide): en móvil abría el teclado al entrar en la pantalla y
                tapaba media pantalla antes de que a Alberto le diera tiempo a mirar
                lo que hay que hacer hoy, que es para lo que abre esta página. El
                placeholder se acorta por lo mismo: la explicación entera vive en el
