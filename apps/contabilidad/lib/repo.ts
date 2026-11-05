@@ -6,7 +6,7 @@
 //      filtro sigue ahí). Lo vigila test/aislamiento.test.ts sobre cada método.
 // Solo-añadir: aquí NO hay ningún UPDATE/DELETE de asientos ni apuntes (lo vigila test/inmutabilidad.test.ts); un hecho solo
 // avanza de estado. SQL siempre con plantilla parametrizada (nunca concatenación).
-import type { Centimos } from '@central/module-contabilidad'
+import { DIMENSION_RE, type Asiento, type Aviso, type Centimos, type FilaDimension, type PartidaDoc, type SumaMes } from '@central/module-contabilidad'
 import type { TxSql } from './rls.ts'
 import type { TipoHecho } from './hecho-entrada.ts'
 import { centimosDeBd, enteroDeBd, fechaDeBd } from './importes.ts'
@@ -24,6 +24,10 @@ export type LineaMayorLeida = { fecha: string; numero: number; concepto: string;
 export type EstadoHecho = 'asentado' | 'pendiente_de_regla' | 'rechazado'
 export type FilaHecho = { id: string; estado: EstadoHecho; motivo: string | null; asientoId: string | null; huella: string }
 export type SumaCuenta = { cuenta: string; debe: Centimos; haber: Centimos; n: number }
+
+export type AvisoLeido = Aviso & { id: string; creadoEn: string; leido: boolean }
+export type CobroPorMedio = { medio: string | null; importe: Centimos; n: number }
+export type CobroEfectivo = { ref: string; fecha: string; importe: Centimos }
 
 export type NuevoAsiento = {
   ejercicio: number; numero: number; fecha: string; concepto: string; origen: OrigenAsientoBd
@@ -60,6 +64,27 @@ export interface RepoContable {
   /** Σ debe / Σ haber / nº de apuntes por cuenta con fecha en [desde, hasta] (sin `desde` = desde el principio). */
   sumasPorCuenta(o: { desde?: string; hasta: string }): Promise<SumaCuenta[]>
   auditar(a: EntradaAuditoria): Promise<void>
+  // ── Informes, gráficas y avisos (F2) ──
+  /** Asientos con sus apuntes en [desde, hasta] por fecha y número. `truncado` = había más de `limite` (el informe debe decirlo). */
+  asientosPeriodo(o: { desde?: string; hasta: string; limite: number }): Promise<{ asientos: Asiento[]; truncado: boolean }>
+  /** Σ debe/haber por (mes, cuenta) de TODO el histórico hasta `hasta` (la caja es un saldo). */
+  sumasMensuales(o: { hasta: string }): Promise<SumaMes[]>
+  /** Σ por (valor de la dimensión, cuenta 6/7) de los asientos que nacieron de un hecho con esa dimensión; sin ella, `valor: null`. */
+  sumasPorDimension(dimension: string, o: { desde: string; hasta: string }): Promise<FilaDimension[]>
+  /** Σ por (cuenta, documento) de las cuentas con esos prefijos hasta `hasta`, con la fecha del primer apunte. */
+  partidasPorDocumento(prefijos: readonly string[], o: { hasta: string }): Promise<PartidaDoc[]>
+  /** Cobros ASENTADOS por medio (de los hechos recibidos) en el rango. */
+  cobrosPorMedio(o: { desde: string; hasta: string }): Promise<CobroPorMedio[]>
+  /** Cobros en efectivo asentados de importe ≥ umbral desde `desde` (los más recientes primero, máx. 50). */
+  cobrosEfectivoAltos(o: { desde: string; umbral: Centimos }): Promise<CobroEfectivo[]>
+  contarHechos(): Promise<{ pendientes: number; rechazados: number }>
+  /** Nueva VERSIÓN de la regla del tipo (no reescribe asientos pasados). Devuelve el nº de versión. */
+  guardarRegla(tipo: TipoHecho, cuentas: Readonly<Record<string, string>>, usuarioId: string | null): Promise<number>
+  /** true = aviso nuevo; false = ya existía esa clave para la empresa (deduplicado). */
+  insertarAviso(a: Aviso): Promise<boolean>
+  avisos(o: { limite: number }): Promise<AvisoLeido[]>
+  contarAvisosSinLeer(): Promise<number>
+  marcarAvisosLeidos(usuarioId: string | null): Promise<void>
   // ── Alta (operador) ──
   contarCuentas(): Promise<number>
   sembrarPlan(filas: readonly FilaCuenta[]): Promise<void>
@@ -289,6 +314,122 @@ export function repoSql(tx: TxSql, empresaId: string): RepoContable {
         INSERT INTO contabilidad.auditoria (empresa_id, usuario_id, actor, accion, entidad, entidad_id, detalle)
         VALUES (${e}::uuid, ${a.usuarioId ?? null}::uuid, ${a.actor}, ${a.accion}, ${a.entidad}, ${a.entidadId ?? null},
                 ${a.detalle === undefined ? null : JSON.stringify(a.detalle)}::jsonb)`
+    },
+
+    async asientosPeriodo({ desde, hasta, limite }) {
+      const f = await tx.$queryRaw<Fila[]>`
+        SELECT a.id, a.numero, a.ejercicio, a.fecha, a.concepto, a.origen
+          FROM contabilidad.asientos a
+         WHERE a.empresa_id = ${e}::uuid AND a.fecha <= ${hasta}::date AND (${desde ?? null}::date IS NULL OR a.fecha >= ${desde ?? null}::date)
+         ORDER BY a.fecha, a.numero LIMIT ${limite + 1}::int`
+      const visibles = f.slice(0, limite)
+      const ap = await apuntesDe(visibles.map((x) => String(x.id)))
+      return {
+        truncado: f.length > limite,
+        asientos: visibles.map((x): Asiento => ({
+          numero: enteroDeBd(x.numero, 'numero'), fecha: fechaDeBd(x.fecha), ejercicio: enteroDeBd(x.ejercicio, 'ejercicio'), concepto: String(x.concepto),
+          apuntes: (ap.get(String(x.id)) ?? []).map((p) => ({ cuenta: p.cuenta, debe: p.debe, haber: p.haber, ...(p.documento ? { documento: p.documento } : {}) })),
+        })),
+      }
+    },
+
+    async sumasMensuales({ hasta }) {
+      const f = await tx.$queryRaw<Fila[]>`
+        SELECT to_char(a.fecha, 'YYYY-MM') AS mes, p.cuenta, sum(p.debe)::bigint AS debe, sum(p.haber)::bigint AS haber, count(*)::int AS n
+          FROM contabilidad.apuntes p
+          JOIN contabilidad.asientos a ON a.empresa_id = p.empresa_id AND a.id = p.asiento_id
+         WHERE p.empresa_id = ${e}::uuid AND a.empresa_id = ${e}::uuid AND a.fecha <= ${hasta}::date
+         GROUP BY 1, 2`
+      return f.map((x) => ({ mes: String(x.mes), cuenta: String(x.cuenta), debe: centimosDeBd(x.debe), haber: centimosDeBd(x.haber), n: enteroDeBd(x.n) }))
+    },
+
+    async sumasPorDimension(dimension, { desde, hasta }) {
+      if (!DIMENSION_RE.test(dimension)) throw new Error('dimensión no válida')
+      const f = await tx.$queryRaw<Fila[]>`
+        SELECT nullif(btrim(h.payload -> 'dimensiones' ->> ${dimension}::text), '') AS valor, p.cuenta,
+               sum(p.debe)::bigint AS debe, sum(p.haber)::bigint AS haber
+          FROM contabilidad.apuntes p
+          JOIN contabilidad.asientos a ON a.empresa_id = p.empresa_id AND a.id = p.asiento_id
+          LEFT JOIN contabilidad.hechos_contables h ON h.empresa_id = a.empresa_id AND h.id = a.hecho_id
+         WHERE p.empresa_id = ${e}::uuid AND a.empresa_id = ${e}::uuid AND a.fecha >= ${desde}::date AND a.fecha <= ${hasta}::date
+           AND (p.cuenta LIKE '6%' OR p.cuenta LIKE '7%')
+         GROUP BY 1, 2`
+      return f.map((x) => ({ valor: s(x.valor), cuenta: String(x.cuenta), debe: centimosDeBd(x.debe), haber: centimosDeBd(x.haber) }))
+    },
+
+    async partidasPorDocumento(prefijos, { hasta }) {
+      const patrones = prefijos.map((x) => { if (!/^[0-9]{1,6}$/.test(x)) throw new Error('prefijo no válido'); return `${x}%` })
+      const f = await tx.$queryRaw<Fila[]>`
+        SELECT p.cuenta, p.documento, min(a.fecha) AS desde, sum(p.debe)::bigint AS debe, sum(p.haber)::bigint AS haber
+          FROM contabilidad.apuntes p
+          JOIN contabilidad.asientos a ON a.empresa_id = p.empresa_id AND a.id = p.asiento_id
+         WHERE p.empresa_id = ${e}::uuid AND a.empresa_id = ${e}::uuid AND a.fecha <= ${hasta}::date AND p.cuenta LIKE ANY(${patrones}::text[])
+         GROUP BY p.cuenta, p.documento`
+      return f.map((x) => ({ cuenta: String(x.cuenta), documento: s(x.documento), desde: fechaDeBd(x.desde), debe: centimosDeBd(x.debe), haber: centimosDeBd(x.haber) }))
+    },
+
+    async cobrosPorMedio({ desde, hasta }) {
+      const f = await tx.$queryRaw<Fila[]>`
+        SELECT payload ->> 'medio' AS medio, sum((payload ->> 'importe')::bigint)::bigint AS importe, count(*)::int AS n
+          FROM contabilidad.hechos_contables
+         WHERE empresa_id = ${e}::uuid AND tipo = 'cobro' AND estado = 'asentado' AND fecha >= ${desde}::date AND fecha <= ${hasta}::date
+         GROUP BY 1`
+      return f.map((x) => ({ medio: s(x.medio), importe: centimosDeBd(x.importe), n: enteroDeBd(x.n) }))
+    },
+
+    async cobrosEfectivoAltos({ desde, umbral }) {
+      const f = await tx.$queryRaw<Fila[]>`
+        SELECT ref, fecha, (payload ->> 'importe')::bigint AS importe FROM contabilidad.hechos_contables
+         WHERE empresa_id = ${e}::uuid AND tipo = 'cobro' AND estado = 'asentado' AND payload ->> 'medio' = 'efectivo'
+           AND fecha >= ${desde}::date AND (payload ->> 'importe')::bigint >= ${umbral}::bigint
+         ORDER BY fecha DESC LIMIT 50`
+      return f.map((x) => ({ ref: String(x.ref), fecha: fechaDeBd(x.fecha), importe: centimosDeBd(x.importe) }))
+    },
+
+    async contarHechos() {
+      const f = await tx.$queryRaw<Fila[]>`
+        SELECT count(*) FILTER (WHERE estado = 'pendiente_de_regla')::int AS pendientes, count(*) FILTER (WHERE estado = 'rechazado')::int AS rechazados
+          FROM contabilidad.hechos_contables WHERE empresa_id = ${e}::uuid`
+      return { pendientes: enteroDeBd(f[0]?.pendientes ?? 0), rechazados: enteroDeBd(f[0]?.rechazados ?? 0) }
+    },
+
+    async guardarRegla(tipo, cuentas, usuarioId) {
+      const f = await tx.$queryRaw<Fila[]>`
+        INSERT INTO contabilidad.reglas_asiento (empresa_id, tipo_hecho, cuentas, version, creado_por)
+        SELECT ${e}::uuid, ${tipo}, ${JSON.stringify(cuentas)}::jsonb, coalesce(max(version), 0) + 1, ${usuarioId}::uuid
+          FROM contabilidad.reglas_asiento WHERE empresa_id = ${e}::uuid AND tipo_hecho = ${tipo}
+        RETURNING version`
+      return enteroDeBd(f[0]?.version, 'version')
+    },
+
+    async insertarAviso(a) {
+      const f = await tx.$queryRaw<Fila[]>`
+        INSERT INTO contabilidad.avisos (empresa_id, clave, tipo, severidad, titulo, detalle, fecha_ref, enlace)
+        VALUES (${e}::uuid, ${a.clave}, ${a.tipo}, ${a.severidad}, ${a.titulo}, ${a.detalle}, ${a.fechaRef}::date, ${a.enlace})
+        ON CONFLICT (empresa_id, clave) DO NOTHING
+        RETURNING id`
+      return f.length > 0
+    },
+
+    async avisos({ limite }) {
+      const f = await tx.$queryRaw<Fila[]>`
+        SELECT id, clave, tipo, severidad, titulo, detalle, fecha_ref, enlace, creado_en, leido_en FROM contabilidad.avisos
+         WHERE empresa_id = ${e}::uuid ORDER BY creado_en DESC, id LIMIT ${limite}::int`
+      return f.map((x): AvisoLeido => ({
+        id: String(x.id), clave: String(x.clave), tipo: x.tipo as Aviso['tipo'], severidad: x.severidad as Aviso['severidad'], titulo: String(x.titulo),
+        detalle: String(x.detalle), fechaRef: x.fecha_ref == null ? null : fechaDeBd(x.fecha_ref), enlace: s(x.enlace),
+        creadoEn: x.creado_en instanceof Date ? x.creado_en.toISOString() : String(x.creado_en), leido: x.leido_en != null,
+      }))
+    },
+
+    async contarAvisosSinLeer() {
+      const f = await tx.$queryRaw<Fila[]>`SELECT count(*)::int AS n FROM contabilidad.avisos WHERE empresa_id = ${e}::uuid AND leido_en IS NULL`
+      return enteroDeBd(f[0]?.n ?? 0)
+    },
+
+    async marcarAvisosLeidos(usuarioId) {
+      await tx.$executeRaw`
+        UPDATE contabilidad.avisos SET leido_en = now(), leido_por = ${usuarioId}::uuid WHERE empresa_id = ${e}::uuid AND leido_en IS NULL`
     },
 
     async contarCuentas() {

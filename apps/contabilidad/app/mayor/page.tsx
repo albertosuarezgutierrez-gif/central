@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 const uno = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? ''
 
 export default async function Mayor({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const { ctx, empresa, variasEmpresas } = await datosPagina()
+  const { ctx, empresa, variasEmpresas, avisos } = await datosPagina()
   const sp = await searchParams
   const cuenta = /^[1-9][0-9]{0,11}$/.test(uno(sp.cuenta)) ? uno(sp.cuenta) : ''
   const limite = limiteDe(sp.n)
@@ -24,7 +24,7 @@ export default async function Mayor({ searchParams }: { searchParams: Promise<Re
   const qs = (n: number) => `/mayor?cuenta=${cuenta}&ejercicio=${anio}&n=${n}`
   return (
     <>
-      <Cabecera empresa={empresa} variasEmpresas={variasEmpresas} />
+      <Cabecera empresa={empresa} variasEmpresas={variasEmpresas} avisos={avisos} />
       <main className="contenido">
         <h1>Mayor</h1>
         <form className="fila" method="get" action="/mayor">

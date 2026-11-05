@@ -236,3 +236,10 @@ div.error:empty { display: none; }
   .datos, .tabla-scroll, .lista-simple li { box-shadow: none; }
   .fotos-mini img { height: 120px; }
 }
+
+/* ───────── Panel del dueño ───────── */
+.panel-kpis { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); margin-bottom: 12px; }
+.kpi { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 14px 16px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radio); box-shadow: var(--shadow-panel); }
+.kpi strong { font-family: var(--fuente-titulos); font-size: 22px; line-height: 1.2; overflow-wrap: anywhere; }
+.kpi-t { color: var(--muted); font-size: 13px; text-transform: capitalize; }
+.estado-neutro { background: var(--bg2); color: var(--ink-2); }

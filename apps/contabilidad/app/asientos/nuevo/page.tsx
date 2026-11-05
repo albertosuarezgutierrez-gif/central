@@ -6,7 +6,7 @@ import { conRepo } from '@/lib/db'
 export const dynamic = 'force-dynamic'
 
 export default async function NuevoAsiento() {
-  const { ctx, empresa, variasEmpresas } = await datosPagina()
+  const { ctx, empresa, variasEmpresas, avisos } = await datosPagina()
   const { cuentas, abiertos } = await conRepo(ctx.empresaId, async (r) => {
     const [plan, ejercicios] = await Promise.all([r.planCuentas(), r.ejercicios()])
     return {
@@ -16,7 +16,7 @@ export default async function NuevoAsiento() {
   })
   return (
     <>
-      <Cabecera empresa={empresa} variasEmpresas={variasEmpresas} />
+      <Cabecera empresa={empresa} variasEmpresas={variasEmpresas} avisos={avisos} />
       <main className="contenido">
         <h1>Nuevo asiento</h1>
         <p className="tenue">El asiento solo se guarda si cuadra (Debe = Haber), usa cuentas que admiten apuntes y cae dentro de un ejercicio abierto. Una vez guardado no se edita: se corrige con un contraasiento.</p>

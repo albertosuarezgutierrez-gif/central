@@ -10,11 +10,16 @@ export interface OrigenAsiento {
   ref: string
 }
 
+/** Ejes de análisis opcionales (rentabilidad): clave → valor. El núcleo no sabe qué significan; la plantilla del sector los nombra. */
+export type Dimensiones = Readonly<Record<string, string>>
+
 export interface ApunteAsiento {
   cuenta: string
   debe: Centimos
   haber: Centimos
   documento?: string
+  /** Sustituye, clave a clave, a las del asiento (opcional; retrocompatible). */
+  dimensiones?: Dimensiones
 }
 
 export interface Asiento {
@@ -26,6 +31,8 @@ export interface Asiento {
   concepto: string
   apuntes: readonly ApunteAsiento[]
   origen?: OrigenAsiento
+  /** Ejes de rentabilidad del asiento (opcional; vienen del hecho). */
+  dimensiones?: Dimensiones
   /** Si es un contraasiento: número (o ref) del asiento que rectifica. */
   rectificaA?: number | string
 }
@@ -86,9 +93,10 @@ export function validarAsiento(a: Asiento, plan: PlanDeCuentas, ejercicio: Ejerc
 }
 
 function congelar(a: Asiento): Asiento {
-  for (const p of a.apuntes) Object.freeze(p)
+  for (const p of a.apuntes) { if (p.dimensiones) Object.freeze(p.dimensiones); Object.freeze(p) }
   Object.freeze(a.apuntes)
   if (a.origen) Object.freeze(a.origen)
+  if (a.dimensiones) Object.freeze(a.dimensiones)
   return Object.freeze(a)
 }
 
@@ -96,8 +104,9 @@ function congelar(a: Asiento): Asiento {
 export function crearAsiento(entrada: Asiento, plan: PlanDeCuentas, ejercicio: EjercicioContable): Asiento {
   const copia: Asiento = {
     ...entrada,
-    apuntes: entrada.apuntes.map(p => ({ ...p })),
+    apuntes: entrada.apuntes.map(p => ({ ...p, ...(p.dimensiones ? { dimensiones: { ...p.dimensiones } } : {}) })),
     ...(entrada.origen ? { origen: { ...entrada.origen } } : {}),
+    ...(entrada.dimensiones ? { dimensiones: { ...entrada.dimensiones } } : {}),
   }
   const errs = validarAsiento(copia, plan, ejercicio)
   if (errs.length) throw new ErrorContable('asiento_invalido', errs.join('; '))
@@ -124,6 +133,7 @@ export function rectificar(
       ...(p.documento ? { documento: p.documento } : {}),
     })),
     ...(original.origen ? { origen: { ...original.origen } } : {}),
+    ...(original.dimensiones ? { dimensiones: { ...original.dimensiones } } : {}),
     rectificaA: original.numero ?? original.origen?.ref ?? original.concepto,
   }
   return congelar(asiento)

@@ -17,6 +17,7 @@ const ICONO = {
   ajustes: 'M4 7h10M18 7h2M4 17h2M10 17h10M16 4v6M8 14v6',
   pin: 'M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4',
   nominas: 'M3 6h18v12H3zM3 10h18M7 15h4',
+  panel: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
 } as const
 
 const SECCIONES = [
@@ -44,13 +45,17 @@ export default async function Inicio() {
   if (!u) redirect('/login') // baja, o PIN cambiado/reseteado desde otro sitio: la cookie vieja ya no vale
   if (u.debeCambiarPin === true) redirect('/cambiar-pin')
   const nominas = urlPortalEmpleado()
+  // El panel (márgenes) es solo del dueño; el servidor lo vuelve a comprobar en /panel.
+  const secciones = u.rol === 'dueno'
+    ? [...SECCIONES.slice(0, 5), { href: '/panel', titulo: 'Panel', desc: 'Márgenes, horas y facturación', icono: ICONO.panel }, ...SECCIONES.slice(5)]
+    : SECCIONES
   return (
     <>
       <Cabecera conSalir />
       <main className="contenido">
         <h1>Taller</h1>
         <nav className="rejilla" aria-label="Secciones">
-          {SECCIONES.map(s => (
+          {secciones.map(s => (
             <a key={s.href} href={s.href} className="tarjeta">
               <Icono d={s.icono} />
               <span className="tarjeta-texto"><strong>{s.titulo}</strong><span className="desc">{s.desc}</span></span>

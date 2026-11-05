@@ -9,7 +9,7 @@
 //       - todo bien → `asentado`.
 //     Misma clave con OTRO contenido → `conflicto` (409): nunca se pisa en silencio.
 import {
-  asientoDesdeHecho, combinarReglas, crearAsiento, rectificar, ErrorContable, REGLAS_PGC,
+  asientoDesdeHecho, crearAsiento, rectificar, ErrorContable, reglasEfectivasDeSector,
   type Asiento, type Cuenta, type EjercicioContable, type HechoContable, type PlanDeCuentas, type ReglasAsiento,
 } from '@central/module-contabilidad'
 import type { FilaCuenta, FilaEjercicio, RepoContable, Actor } from './repo.ts'
@@ -29,16 +29,9 @@ export function ejercicioContable(e: FilaEjercicio): EjercicioContable {
   return { anio: e.anio, inicio: e.inicio, fin: e.fin, abierto: e.estado === 'abierto' }
 }
 
-/** Reglas efectivas: genérica (REGLAS_PGC) ← regla vigente de la empresa. Solo se aceptan códigos con forma de cuenta. */
-export function reglasEfectivas(overrides: Partial<Record<TipoHecho, Record<string, string>>>): ReglasAsiento {
-  const limpio = (tipo: keyof ReglasAsiento) => {
-    const o = overrides[tipo] ?? {}
-    const validas = Object.keys(REGLAS_PGC[tipo])
-    return Object.fromEntries(Object.entries(o).filter(([k, v]) => validas.includes(k) && /^[1-9][0-9]{2,11}$/.test(v)))
-  }
-  return combinarReglas(REGLAS_PGC, {
-    venta: limpio('venta'), compra: limpio('compra'), cobro: limpio('cobro'), pago: limpio('pago'), nomina: limpio('nomina'),
-  })
+/** Reglas efectivas: genérica ← plantilla del sector ← regla vigente de la empresa (`categoria:x` y `medio:x` incluidos). */
+export function reglasEfectivas(overrides: Partial<Record<TipoHecho, Record<string, string>>>, sector: string = 'generico'): ReglasAsiento {
+  return reglasEfectivasDeSector(sector, overrides)
 }
 
 export const hashAsiento = (a: Pick<Asiento, 'fecha' | 'ejercicio' | 'concepto' | 'apuntes' | 'origen' | 'rectificaA'>) =>
@@ -147,7 +140,7 @@ export async function recibirHecho(repo: RepoContable, app: string, hecho: Hecho
 
   let propuesto: Asiento
   try {
-    propuesto = asientoDesdeHecho(hecho, reglasEfectivas(await repo.reglasVigentes()))
+    propuesto = asientoDesdeHecho(hecho, reglasEfectivas(await repo.reglasVigentes(), (await repo.empresa())?.sector))
   } catch (e) {
     if (e instanceof ErrorContable) return cerrar('rechazado', `${e.codigo}: ${e.message}`)
     throw e

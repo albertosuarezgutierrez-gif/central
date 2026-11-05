@@ -19,6 +19,7 @@ import {
   type CausaRectificativa, type CobroNuevo, type EstadoEnvioAeat, type EstadoOt, type GrupoIva, type LineaFactura,
   type LineaOtFacturable, type TotalesFactura,
 } from '@central/module-taller'
+import { encolarAnulacion, encolarCobro, encolarFactura, type TxOutbox } from './hechos-outbox.ts'
 import { CONFIG_SIF, sistemaInformatico, SistemaSinConfigurarError, type ConfigSif } from './sistema-informatico.ts'
 
 type Delegado = {
@@ -43,6 +44,7 @@ export type TxFacturas = {
   facturaLinea: Delegado
   registroVerifactu: Delegado
   cobro: Delegado
+  hechoPendiente: Delegado
 }
 
 export type Resultado<T> = ({ ok: true } & T) | { ok: false; motivo: string }
@@ -196,6 +198,11 @@ async function escribirAlta(tx: TxFacturas, a: AltaFactura, emisor: { razon: str
       estadoEnvio: 'no_enviado',
     },
   })
+  // Outbox contabilidad: MISMA transacción (si algo posterior lanza, el hecho se deshace con la factura). Sin HTTP aquí.
+  await encolarFactura(tx as TxOutbox, {
+    tallerId: a.tallerId, facturaId: f.id,
+    factura: { numSerie, fechaExpedicion: fecha, tipo: a.tipo, desglose: a.totales.desglose, clienteNombre: a.cliente.nombre, tipoRectificativa: a.rectificativa?.modo ?? null },
+  })
   return { ok: true, facturaId: f.id, numSerie, tipo: a.tipo, totalCent: a.totales.totalCent }
 }
 
@@ -211,7 +218,7 @@ async function resolverCobros(tx: TxFacturas, tallerId: string, cobros: readonly
   return { ok: true, nuevos }
 }
 
-async function escribirCobros(tx: TxFacturas, o: { tallerId: string; facturaId: string; totalCent: number; usuarioId: string | null; ahora: Date; cobros: readonly CobroSolicitado[] }):
+async function escribirCobros(tx: TxFacturas, o: { tallerId: string; facturaId: string; numSerie: string; totalCent: number; usuarioId: string | null; ahora: Date; cobros: readonly CobroSolicitado[] }):
   Promise<Resultado<{ pendienteCent: number }>> {
   const r = await resolverCobros(tx, o.tallerId, o.cobros)
   if (!r.ok) return r
@@ -220,11 +227,15 @@ async function escribirCobros(tx: TxFacturas, o: { tallerId: string; facturaId: 
   const plan = planCobros({ totalCent: o.totalCent, yaCobrados: ya, nuevos: r.nuevos })
   if (!plan.ok) return plan
   for (const c of r.nuevos) {
-    await tx.cobro.create({
+    const creado = await tx.cobro.create({
       data: {
         tallerId: o.tallerId, facturaId: o.facturaId, medioCobroId: c.medioId, medioCodigo: c.medioCodigo, esEfectivo: c.esEfectivo,
         importeCent: c.importeCent, cobradoEn: o.ahora, registradoPor: o.usuarioId, justificante: null,
       },
+    })
+    await encolarCobro(tx as TxOutbox, {
+      tallerId: o.tallerId, facturaId: o.facturaId,
+      cobro: { id: creado.id, fecha: fechaHoraHuso(o.ahora).slice(0, 10), importeCent: c.importeCent, medioCodigo: c.medioCodigo, numSerie: o.numSerie, esEfectivo: c.esEfectivo },
     })
   }
   return { ok: true, pendienteCent: plan.pendienteCent }
@@ -305,7 +316,7 @@ export async function emitirFactura(
   }
   let pendienteCent: number | null = null
   if (o.cobros?.length) {
-    const c = await escribirCobros(tx, { tallerId: o.tallerId, facturaId: alta.facturaId, totalCent: alta.totalCent, usuarioId: o.usuarioId, ahora: o.ahora, cobros: o.cobros })
+    const c = await escribirCobros(tx, { tallerId: o.tallerId, facturaId: alta.facturaId, numSerie: alta.numSerie, totalCent: alta.totalCent, usuarioId: o.usuarioId, ahora: o.ahora, cobros: o.cobros })
     if (!c.ok) throw new ErrorFacturacion(c.motivo)
     pendienteCent = c.pendienteCent
   }
@@ -320,7 +331,7 @@ export async function registrarCobros(
   const f = await tx.factura.findFirst({ where: { tallerId: o.tallerId, id: o.facturaId } })
   if (!f) return { ok: false, motivo: 'factura no encontrada' }
   if (f.estado !== 'emitida') return { ok: false, motivo: 'la factura está anulada' }
-  return escribirCobros(tx, { tallerId: o.tallerId, facturaId: f.id, totalCent: n(f.totalCent), usuarioId: o.usuarioId, ahora: o.ahora, cobros: o.cobros })
+  return escribirCobros(tx, { tallerId: o.tallerId, facturaId: f.id, numSerie: f.numSerie, totalCent: n(f.totalCent), usuarioId: o.usuarioId, ahora: o.ahora, cobros: o.cobros })
 }
 
 /** ANULAR: registro de anulación encadenado y estado `anulada`. Con cobros no se anula (se rectifica). */
@@ -351,6 +362,7 @@ export async function anularFactura(
       estadoEnvio: 'no_enviado',
     },
   })
+  await encolarAnulacion(tx as TxOutbox, { tallerId: o.tallerId, facturaId: f.id, numSerie: f.numSerie })
   await tx.factura.update({ where: { id: f.id }, data: { estado: 'anulada', anuladaEn: o.ahora, motivoAnulacion: motivo } })
   return { ok: true, numSerie: f.numSerie }
 }
