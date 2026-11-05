@@ -104,6 +104,14 @@ Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; ti
 original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados revisado/falta_roto/devuelto + bloque en ficha. `rrhh.material_empleado`
 (0028, aplicada). Pendiente fase 2: revisión periódica mensual.
 
+## (05/11/2026) Correduría · Avant2 sin gasto en balde + renovación por la app (PR #5555, #5557, #5562, #5569)
+- #5555: auditoría de gasto (`docs/avant2/AUDITORIA-GASTO-DATOS-2026-11-05.md`): reutiliza cotización idéntica 24 h, cobro ilegible no se repite, corte si solo hay PILOTO, dedupe ReRate, `confirmado` en cartera.
+- #5562: renovación Avant2 con efecto = `fecha_efecto_actual` futura (anualidad ya emitida) o vencimiento; corte gratis fuera de 90 días o fecha sospechosa (>400 d). Vencimientos de cartera OK (4/103 raros).
+- #5557 (+SQL 05c aplicada): el AUTORIZADO Gestión/Total ve, recibe y elige la renovación; primera elección gana; elegir también por enlace correo/WhatsApp.
+- #5569 (+SQL 05d aplicada): «pedir datos al cliente» por la app (preguntas del validador `riesgo_incompleto` de los bots → ✅ Telegram → campana + correo → formulario portal). Pendiente: auto-lanzar bots al contestar.
+- Piloto José (hogar Mapfre, efecto 10/12/2026): sin ofertas aún; Alberto debe pulsar «pedir datos» en la póliza. Borrador a Juan Manuel (Codeoscopic) en Gmail sin enviar (afinaciones, validez/ReRate, PILOTO Generali, Mapfre 2026, activar Pelayo).
+- Pelayo bot: espera la secuencia manual de la pantalla de vehículo.
+
 ## (05/11/2026) Plataforma · lupa de búsqueda de la correduría en la cabecera
 - `BotonBuscarCorreduria` (lupa 44 px) en la barra móvil junto a Nueva tarea/Subir factura, y «Buscar cliente» en el lateral de escritorio; atajo «/» (Ctrl+K es de CommandPalette).
 - Reutiliza `BuscadorCartera` con props `sincronizarUrl=false`, `autoFocus`, `onNavegar` (cierra al pulsar un enlace interno). Por defecto /correduria igual.
