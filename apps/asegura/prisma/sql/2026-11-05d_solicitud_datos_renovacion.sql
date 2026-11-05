@@ -5,7 +5,7 @@
 -- packages/module-seguros-portal/src/datos-renovacion.ts (regla única de quién la ve y la contesta); en el portal,
 -- apps/asegura-portal/lib/datos-renovacion.ts (campana, lectura fail-closed) y app/(portal)/boveda/datos-renovacion/[id].
 --
--- ⚠️ NO APLICADA. La aplica Alberto. Sin ella el código no escribe nada: el puerto contesta 503 `sin_migracion` y la campana
+-- ✅ APLICADA en producción el 05/11/2026 (transacción; 8 columnas comprobadas). Sin ella el código no escribe nada: el puerto contesta 503 `sin_migracion` y la campana
 --    del portal no tiene ninguna (`[]`, la columna no existe).
 --
 -- Decisión: columnas en `solicitud_datos` y NO tabla nueva (a diferencia de la regularización de RC, 2026-11-03b): esta solicitud
