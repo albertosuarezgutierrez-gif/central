@@ -81,6 +81,11 @@ describe('quién activa el módulo', () => {
     expect(sql).toMatch(/CHECK \(modo IN \('reparto', 'calculo'\)\)/)
     expect(sql).toMatch(/CREATE TABLE IF NOT EXISTS/)
   })
+  it('rrhh_app no tiene DELETE sobre empresa_modulos (se apaga con activo=false)', () => {
+    const sql = readFileSync(join(APP, 'prisma/migrations/0031_empresa_modulos.sql'), 'utf8').replace(/^\s*--.*$/gm, '')
+    expect(sql).toMatch(/GRANT SELECT, INSERT, UPDATE ON rrhh\.empresa_modulos TO rrhh_app;/)
+    expect(sql).not.toMatch(/GRANT[^;]*DELETE/)
+  })
 })
 
 describe('confirmar nómina', () => {

@@ -68,7 +68,7 @@ export function RevisionFactura({ albaranId, f, puedeConfirmar }: { albaranId: s
         )}
         {['revisar', 'confirmada'].includes(f.estado) && puedeConfirmar && b && (
           <button className="btn" type="button" disabled={pend} onClick={() => run(() => confirmarFacturaAccion(f.id, albaranId), 'Confirmada y contabilizada')}>
-            {f.estado === 'revisar' ? 'Confirmar (acepto las diferencias)' : 'Contabilizar'}</button>
+            {f.estado === 'revisar' ? (f.diferencias.length === 0 ? 'Confirmar (cuadra, leída por IA)' : 'Confirmar (acepto las diferencias)') : 'Contabilizar'}</button>
         )}
         {f.estado === 'revisar' && puedeConfirmar && b && (
           <button className="btn btn-sec" type="button" onClick={() => setCorrigiendo((x) => !x)}>Corregir</button>

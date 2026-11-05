@@ -9,6 +9,7 @@
 //   en 0012 lo repite en la BD).
 import {
   calcularCaducidad, casarTresBandas, estadoTrasCase, evaluarEnlace, generarToken, mapearExtraccion, puedeContabilizar,
+  type OrigenExtraccion,
   POLITICA_POR_DEFECTO, TOLERANCIAS_POR_DEFECTO, type BorradorFacturaRecibida, type LineaAlbaranBanda, type LineaPedidoBanda,
   type PoliticaSubida, type Proposito, type ResultadoCase, type Tolerancias,
 } from '@central/module-portal-proveedor'
@@ -36,7 +37,9 @@ export const MAX_MB_PLATAFORMA = 4
 export const MAX_DOCS_POR_ENLACE = 10
 
 // ─── Configuración ───────────────────────────────────────────────────────────
-export interface PoliticaPortal { caducaDias: number; subida: PoliticaSubida; tolerancias: Tolerancias }
+export interface PoliticaPortal { caducaDias: number; subida: PoliticaSubida; tolerancias: Tolerancias
+  /** Contabilizar sin persona también lo leído por IA. Por defecto false (solo el XML estructurado). Sin columna aún: el dueño lo activará cuando exista en Configuración. */
+  autoContabilizarLecturaIa: boolean }
 const ent = (v: unknown, def: number) => (v == null || !Number.isFinite(Number(v)) ? def : Number(v))
 
 export async function politicaPortal(tx: Pick<TxPortal, 'configuracion'>, tallerId: string): Promise<PoliticaPortal> {
@@ -44,6 +47,7 @@ export async function politicaPortal(tx: Pick<TxPortal, 'configuracion'>, taller
   const mb = Math.min(MAX_MB_PLATAFORMA, Math.max(1, ent(c?.portalMaxMb, MAX_MB_PLATAFORMA)))
   return {
     caducaDias: ent(c?.portalEnlaceCaducaDias, 14),
+    autoContabilizarLecturaIa: false,
     subida: { tipos: POLITICA_POR_DEFECTO.tipos, maxBytes: mb * 1024 * 1024 },
     tolerancias: {
       ...TOLERANCIAS_POR_DEFECTO,
@@ -199,6 +203,12 @@ export async function confirmarPedidoProveedor(tx: TxPortal, e: EnlaceFila, ahor
 
 export interface SubidaGuardada { ruta: string; huella: string; mime: string; bytes: number; nombre: string }
 
+/** ¿El enlace ya tiene el máximo de documentos? Se mira ANTES de subir nada al bucket. */
+export async function enlaceLlenoDeDocumentos(tx: TxPortal, e: Pick<EnlaceFila, 'tallerId' | 'id'>): Promise<boolean> {
+  const previos = await tx.documentoProveedor.findMany({ where: { tallerId: e.tallerId, enlaceId: e.id } })
+  return previos.length >= MAX_DOCS_POR_ENLACE
+}
+
 /**
  * Registra lo que subió el proveedor (el fichero ya está en Storage). Enlace de pedido → ALBARÁN; enlace de factura → FACTURA (y el
  * enlace se cierra: una factura por enlace). El mismo fichero dos veces por el mismo enlace devuelve el documento existente.
@@ -264,8 +274,11 @@ export async function casarFactura(tx: TxPortal, o: { tallerId: string; document
   if (!b) return { ok: false, motivo: 'Albarán no encontrado' }
   const pol = await politicaPortal(tx, o.tallerId)
   const resultado = casarTresBandas({ nifProveedor: b.nifProveedor, pedido: b.pedido, albaran: b.albaran, factura: d.extraccion as BorradorFacturaRecibida, tolerancias: pol.tolerancias })
-  const estado = estadoTrasCase(resultado.cuadra)
-  await tx.documentoProveedor.update({ where: { id: d.id }, data: { estado, caseCuadra: resultado.cuadra, caseResultado: resultado as any } })
+  const auto = { autoContabilizarLecturaIa: pol.autoContabilizarLecturaIa }
+  const estado = estadoTrasCase(resultado.cuadra, d.extraccionOrigen as OrigenExtraccion, auto)
+  // Cuadra pero la leyó la IA: queda en Revisar con el motivo; una persona la confirma con un toque (no se contabiliza sola).
+  const nota = resultado.cuadra === true && estado === 'revisar' ? 'Cuadra con el pedido y el albarán, pero la leyó la IA: confírmala con un toque' : undefined
+  await tx.documentoProveedor.update({ where: { id: d.id }, data: { estado, caseCuadra: resultado.cuadra, caseResultado: resultado as any, ...(nota ? { nota } : {}) } })
   if (estado === 'lista') {
     const c = await contabilizarFactura(tx, { tallerId: o.tallerId, documentoId: d.id, ahora: o.ahora })
     if (!c.ok) {
@@ -286,7 +299,7 @@ export async function casarFactura(tx: TxPortal, o: { tallerId: string; document
 export async function contabilizarFactura(tx: TxPortal, o: { tallerId: string; documentoId: string; ahora: Date }): Promise<Resultado<object>> {
   const d = await tx.documentoProveedor.findFirst({ where: { tallerId: o.tallerId, id: o.documentoId } })
   if (!d) return { ok: false, motivo: 'Factura no encontrada' }
-  const dec = puedeContabilizar({ tipo: d.tipo, estado: d.estado, caseCuadra: d.caseCuadra ?? null, confirmadoPor: d.confirmadoPor ?? null })
+  const dec = puedeContabilizar({ tipo: d.tipo, estado: d.estado, caseCuadra: d.caseCuadra ?? null, confirmadoPor: d.confirmadoPor ?? null, extraccionOrigen: d.extraccionOrigen as OrigenExtraccion, autoContabilizarLecturaIa: (await politicaPortal(tx, o.tallerId)).autoContabilizarLecturaIa })
   if (!dec.contabilizar) return { ok: false, motivo: dec.motivo }
   const borrador = d.extraccion as BorradorFacturaRecibida | null
   if (!borrador?.numero || !borrador.fecha) return { ok: false, motivo: 'Faltan el número o la fecha de la factura: corrígelos' }

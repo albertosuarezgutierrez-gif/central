@@ -6,12 +6,13 @@
 // (4) quitar 'documentos_proveedor' del ARRAY del bucle de RLS → rojo «RLS forzado».
 // (5) quitar `case_cuadra IS TRUE OR` del CHECK de contabilizada → rojo «nunca se contabiliza sin case o persona».
 // (6) cambiar el DEFAULT de portal_tol_total_cent a 5 → rojo «defaults ≡ TOLERANCIAS_POR_DEFECTO».
+// (8) quitar `OR (OLD.estado = 'confirmada' AND NEW.estado = 'contabilizada')` → rojo «transiciones»; añadir 'contabilizada' a recibida → rojo «sin saltos».
 // (7) añadir `, DELETE` al GRANT de las tablas nuevas → rojo «sin DELETE».
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { ESTADOS_DOCUMENTO, TOLERANCIAS_POR_DEFECTO } from '@central/module-portal-proveedor'
+import { ESTADOS_DOCUMENTO, TOLERANCIAS_POR_DEFECTO, puedeTransicionar } from '@central/module-portal-proveedor'
 
 const RAIZ = join(import.meta.dirname, '..')
 const SQL = readFileSync(join(RAIZ, 'prisma', 'sql', '0012_portal_proveedor.sql'), 'utf8')
@@ -73,4 +74,20 @@ test('0012: sin DELETE para el rol de la app', () => {
   assert.match(CODIGO, /REVOKE ALL ON taller\.enlaces_proveedor, taller\.documentos_proveedor FROM prisma_taller;/)
   assert.match(CODIGO, /GRANT SELECT, INSERT ON taller\.enlaces_proveedor, taller\.documentos_proveedor TO prisma_taller;/)
   assert.doesNotMatch(CODIGO, /GRANT[^;]*DELETE[^;]*(enlaces_proveedor|documentos_proveedor)/)
+})
+
+test('0012: el trigger valida transiciones de estado (espejo del módulo) y no deja saltar a «contabilizada»', () => {
+  const trg = CODIGO.match(/CREATE OR REPLACE FUNCTION taller\.documentos_proveedor_inmutables[\s\S]*?\$\$;/)?.[0] ?? ''
+  assert.match(trg, /transición de estado no permitida/)
+  const permitidas = [...trg.matchAll(/OLD\.estado = '(\w+)'\s+AND NEW\.estado (?:IN \(([^)]*)\)|= '(\w+)')/g)]
+  const mapa = new Map(permitidas.map((x) => [x[1], [...(x[2] ?? `'${x[3]}'`).matchAll(/'(\w+)'/g)].map((y) => y[1]).sort()]))
+  assert.deepEqual(Object.fromEntries(mapa), {
+    recibido: ['verificado'], recibida: ['extraida', 'ilegible', 'rechazada'], extraida: ['lista', 'revisar'],
+    ilegible: ['extraida', 'rechazada', 'revisar'], lista: ['contabilizada', 'revisar'], revisar: ['confirmada', 'lista', 'rechazada'], confirmada: ['contabilizada'],
+  })
+  for (const [desde, hacias] of mapa) for (const h of hacias) {
+    if (desde === 'recibido') continue
+    assert.ok(puedeTransicionar('factura', desde, h), `${desde} → ${h} debe existir en el módulo`)
+  }
+  assert.ok(!mapa.get('recibida')?.includes('contabilizada'))
 })

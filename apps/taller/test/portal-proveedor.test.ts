@@ -20,7 +20,7 @@ import { crearPedido, registrarAlbaran } from '../lib/pedidos.ts'
 import { crearArticulo, type DatosArticulo } from '../lib/stock.ts'
 import {
   confirmarFactura, confirmarPedidoProveedor, contabilizarFactura, corregirFactura, crearEnlacePedido, enlaceVigente, procesarFactura,
-  registrarDocumentoProveedor, verificarRecepcion, vistaProveedor, MAX_DOCS_POR_ENLACE, type ExtractorFactura,
+  enlaceLlenoDeDocumentos, registrarDocumentoProveedor, verificarRecepcion, vistaProveedor, MAX_DOCS_POR_ENLACE, type ExtractorFactura,
 } from '../lib/portal-proveedor.ts'
 import { aceptarRecambio, recambiosPendientes } from '../lib/recambios-pendientes.ts'
 import { claveProveedor, LIMITE_ENLACE, resolverProveedorLimitado } from '../lib/limite-enlace.ts'
@@ -173,15 +173,27 @@ test('una sola factura viva por albarán', async () => {
 })
 
 // ─── Case y contabilización ──────────────────────────────────────────────────
-test('case exacto: contabilizada sola; albarán valorado con los precios de la factura; hecho de compra en el outbox', async () => {
+test('case exacto leído del XML: contabilizada sola; albarán valorado con los precios de la factura; hecho de compra en el outbox', async () => {
   const w = await mundo()
   const { documentoId, albaranId } = await hastaFactura(w)
-  const r = await procesar(w.m, documentoId, extractor(facturaRaw()))
+  const r = await procesar(w.m, documentoId, extractor(facturaRaw(), 'xml'))
   assert.deepEqual(r, { ok: true, estado: 'contabilizada' })
   const d = w.m.bd.filas('documentoProveedor').find((x: any) => x.id === documentoId)
   assert.equal(d.caseCuadra, true)
   assert.equal(w.m.bd.filas('albaran').find((a: any) => a.id === albaranId).estado, 'valorado')
   assert.equal(w.m.bd.filas('albaran').find((a: any) => a.id === albaranId).facturaProveedorNumero, 'F-118')
+  assert.equal(compras(w.m).length, 1)
+})
+
+test('case exacto pero leído por IA (PDF/imagen): NO se contabiliza sola; queda en Revisar y una persona la confirma con un toque', async () => {
+  const w = await mundo()
+  const { documentoId } = await hastaFactura(w)
+  assert.deepEqual(await procesar(w.m, documentoId, extractor(facturaRaw(), 'ia')), { ok: true, estado: 'revisar' })
+  const d = w.m.bd.filas('documentoProveedor').find((x: any) => x.id === documentoId)
+  assert.equal(d.caseCuadra, true)
+  assert.equal(compras(w.m).length, 0)
+  const c = await w.m.conTaller(T, (tx: any) => confirmarFactura(tx, { tallerId: T, documentoId, usuarioId: w.m.dueno.id, ahora: AHORA }))
+  assert.deepEqual(c, { ok: true, contabilizada: true })
   assert.equal(compras(w.m).length, 1)
 })
 
@@ -205,12 +217,14 @@ test('no contabiliza sin case ni confirmación: precio distinto → Revisar, sin
   assert.equal(compras(w.m).length, 1)
 })
 
-test('NIF del proveedor sin registrar → Revisar; corregir guardando el NIF vuelve a casar y contabiliza', async () => {
+test('NIF del proveedor sin registrar → Revisar; corregir guardando el NIF vuelve a casar y, confirmada, contabiliza', async () => {
   const w = await mundo({ nif: null })
   const { documentoId } = await hastaFactura(w)
   assert.deepEqual(await procesar(w.m, documentoId, extractor(facturaRaw())), { ok: true, estado: 'revisar' })
   const r = await w.m.conTaller(T, (tx: any) => corregirFactura(tx, { tallerId: T, documentoId, usuarioId: w.m.dueno.id, ahora: AHORA, correccion: { nifEmisor: 'B41234567', guardarNifProveedor: true } }))
-  assert.deepEqual(r, { ok: true, estado: 'contabilizada' })
+  assert.deepEqual(r, { ok: true, estado: 'revisar' }) // corregida a mano (origen persona): cuadra, pero solo el XML contabiliza sin confirmar
+  assert.equal(compras(w.m).length, 0)
+  assert.deepEqual(await w.m.conTaller(T, (tx: any) => confirmarFactura(tx, { tallerId: T, documentoId, usuarioId: w.m.dueno.id, ahora: AHORA })), { ok: true, contabilizada: true })
   assert.equal(w.m.bd.filas('proveedor').find((p: any) => p.id === w.prov.id).nif, 'B41234567')
   assert.equal(w.m.bd.filas('documentoProveedor').find((x: any) => x.id === documentoId).extraccionOrigen, 'persona')
 })
@@ -284,4 +298,14 @@ test('el token nunca a un log y la respuesta ante token malo es uniforme', () =>
   // nada sale por nuestro servidor hacia el proveedor: ni correo ni HTTP en el adaptador
   const lib = lee('lib/portal-proveedor.ts')
   assert.doesNotMatch(lib, /fetch\(|sendMail|resend|nodemailer/i)
+})
+
+test('el tope de documentos del enlace se mira ANTES de subir al bucket', async () => {
+  const w = await mundo()
+  const { enlaceF } = await hastaFactura(w)
+  assert.equal(await w.m.conTaller(T, (tx: any) => enlaceLlenoDeDocumentos(tx, { tallerId: T, id: enlaceF.id })), false)
+  for (let i = 0; i < MAX_DOCS_POR_ENLACE; i++) w.m.bd.sembrar('documentoProveedor', { tallerId: T, enlaceId: enlaceF.id, tipo: 'factura', estado: 'recibida', huellaSha256: `h${i}` })
+  assert.equal(await w.m.conTaller(T, (tx: any) => enlaceLlenoDeDocumentos(tx, { tallerId: T, id: enlaceF.id })), true)
+  const ruta = lee('app/api/prov/[token]/route.ts')
+  assert.ok(ruta.indexOf('previo.lleno') > 0 && ruta.indexOf('previo.lleno') < ruta.indexOf('.guardar('), 'el tope va antes de almacenActivo().guardar()')
 })

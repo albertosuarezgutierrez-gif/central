@@ -7,7 +7,7 @@ import assert from 'node:assert/strict'
 import { estadoTrasCase, puedeContabilizar, puedeTransicionar } from '../src/index.ts'
 
 test('solo contabiliza con case que cuadra o confirmación de una persona', () => {
-  assert.deepEqual(puedeContabilizar({ tipo: 'factura', estado: 'lista', caseCuadra: true, confirmadoPor: null }), { contabilizar: true, via: 'case' })
+  assert.deepEqual(puedeContabilizar({ tipo: 'factura', estado: 'lista', caseCuadra: true, confirmadoPor: null, extraccionOrigen: 'xml' }), { contabilizar: true, via: 'case' })
   assert.deepEqual(puedeContabilizar({ tipo: 'factura', estado: 'confirmada', caseCuadra: false, confirmadoPor: 'u1' }), { contabilizar: true, via: 'persona' })
 })
 test('lista sin case', () => {
@@ -24,8 +24,26 @@ test('revisar, extraida, ilegible, rechazada, contabilizada y albaranes: nunca',
   }
   assert.equal(puedeContabilizar({ tipo: 'albaran', estado: 'verificado', caseCuadra: true, confirmadoPor: 'u1' }).contabilizar, false)
 })
+test('case que cuadra: solo el origen XML contabiliza sin persona; la lectura por IA no (salvo permiso del dueño)', () => {
+  assert.equal(estadoTrasCase(true, 'xml'), 'lista')
+  assert.equal(estadoTrasCase(true, 'ia'), 'revisar')
+  assert.equal(estadoTrasCase(true, 'persona'), 'revisar')
+  assert.equal(estadoTrasCase(true, null), 'revisar')
+  assert.equal(estadoTrasCase(true, 'ia', { autoContabilizarLecturaIa: true }), 'lista')
+  assert.equal(estadoTrasCase(false, 'xml'), 'revisar')
+  const base = { tipo: 'factura', estado: 'lista', caseCuadra: true, confirmadoPor: null } as const
+  assert.equal(puedeContabilizar({ ...base, extraccionOrigen: 'xml' }).contabilizar, true)
+  assert.equal(puedeContabilizar({ ...base, extraccionOrigen: 'ia' }).contabilizar, false)
+  assert.equal(puedeContabilizar({ ...base, extraccionOrigen: 'ia', autoContabilizarLecturaIa: true }).contabilizar, true)
+  assert.equal(puedeContabilizar({ tipo: 'factura', estado: 'confirmada', caseCuadra: true, confirmadoPor: 'u1', extraccionOrigen: 'ia' }).contabilizar, true)
+})
+test('transiciones reales: leer de nuevo (ilegible→extraida) y rechazar una recibida', () => {
+  assert.ok(puedeTransicionar('factura', 'ilegible', 'extraida'))
+  assert.ok(puedeTransicionar('factura', 'recibida', 'rechazada'))
+  assert.ok(!puedeTransicionar('factura', 'recibida', 'contabilizada'))
+})
 test('null no es cuadrar', () => {
-  assert.equal(estadoTrasCase(true), 'lista')
+  assert.equal(estadoTrasCase(true, 'xml'), 'lista')
   assert.equal(estadoTrasCase(false), 'revisar')
   assert.equal(estadoTrasCase(null), 'revisar')
 })

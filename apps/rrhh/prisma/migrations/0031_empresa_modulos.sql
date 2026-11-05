@@ -15,4 +15,5 @@ CREATE TABLE IF NOT EXISTS rrhh.empresa_modulos (
 );
 CREATE INDEX IF NOT EXISTS idx_empresa_modulos_activos ON rrhh.empresa_modulos (modulo, modo) WHERE activo;
 ALTER TABLE rrhh.empresa_modulos ENABLE ROW LEVEL SECURITY;
-GRANT SELECT, INSERT, UPDATE, DELETE ON rrhh.empresa_modulos TO rrhh_app;
+-- Sin DELETE: ningún código borra filas (se apaga con activo=false).
+GRANT SELECT, INSERT, UPDATE ON rrhh.empresa_modulos TO rrhh_app;

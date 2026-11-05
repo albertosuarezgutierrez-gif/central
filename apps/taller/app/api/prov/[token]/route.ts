@@ -7,7 +7,7 @@ import { RESPUESTA_ENLACE_NO_VALIDO, sinToken, validarSubida } from '@central/mo
 import { conTaller, enlaceProveedorLimitado } from '@/lib/db'
 import { almacenActivo } from '@/lib/almacen'
 import { ipDeCabecera } from '@/lib/ip'
-import { confirmarPedidoProveedor, enlaceVigente, politicaPortal, procesarFactura, registrarDocumentoProveedor, MAX_MB_PLATAFORMA, type TxPortal } from '@/lib/portal-proveedor'
+import { confirmarPedidoProveedor, enlaceLlenoDeDocumentos, enlaceVigente, politicaPortal, procesarFactura, registrarDocumentoProveedor, MAX_MB_PLATAFORMA, type TxPortal } from '@/lib/portal-proveedor'
 import { extractorFacturaIa } from '@/lib/extractor-factura'
 
 export const dynamic = 'force-dynamic'
@@ -44,9 +44,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     if (!(archivo instanceof File)) return malo('Falta el archivo')
     const previo = await conTaller(r.tallerId, async (t) => {
       const e = await enlaceVigente(tx(t), { tallerId: r.tallerId, enlaceId: r.enlaceId, token, ahora })
-      return e ? { e, pol: await politicaPortal(tx(t), r.tallerId) } : null
+      return e ? { e, pol: await politicaPortal(tx(t), r.tallerId), lleno: await enlaceLlenoDeDocumentos(tx(t), e) } : null
     })
     if (!previo) return noValido()
+    // Tope de documentos ANTES de subir al bucket: un enlace lleno no gasta almacenamiento.
+    if (previo.lleno) return malo('Has llegado al máximo de documentos de este enlace', 409)
     const bytes = new Uint8Array(await archivo.arrayBuffer())
     const v = validarSubida({ nombre: archivo.name, bytes }, previo.pol.subida)
     if (!v.ok) return malo(v.mensaje, v.motivo === 'demasiado_grande' ? 413 : 400)

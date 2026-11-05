@@ -183,6 +183,20 @@ BEGIN
   IF OLD.estado IN ('contabilizada', 'rechazada') AND NEW.estado IS DISTINCT FROM OLD.estado THEN
     RAISE EXCEPTION 'documento ya cerrado (%)', OLD.estado;
   END IF;
+  -- Transiciones permitidas (espejo de TRANSICIONES en module-portal-proveedor/estados.ts): nada salta de «recibida» a
+  -- «contabilizada» sin pasar por el case («lista») o la confirmación de una persona («confirmada»).
+  IF NEW.estado IS DISTINCT FROM OLD.estado AND NOT (
+       (OLD.tipo = 'albaran' AND OLD.estado = 'recibido' AND NEW.estado = 'verificado')
+    OR (OLD.tipo = 'factura' AND (
+         (OLD.estado = 'recibida'  AND NEW.estado IN ('extraida', 'ilegible', 'rechazada'))
+      OR (OLD.estado = 'extraida'  AND NEW.estado IN ('lista', 'revisar'))
+      OR (OLD.estado = 'ilegible'  AND NEW.estado IN ('extraida', 'revisar', 'rechazada'))
+      OR (OLD.estado = 'lista'     AND NEW.estado IN ('contabilizada', 'revisar'))
+      OR (OLD.estado = 'revisar'   AND NEW.estado IN ('confirmada', 'rechazada', 'lista'))
+      OR (OLD.estado = 'confirmada' AND NEW.estado = 'contabilizada')))
+  ) THEN
+    RAISE EXCEPTION 'transición de estado no permitida (% → %)', OLD.estado, NEW.estado;
+  END IF;
   RETURN NEW;
 END $$;
 DROP TRIGGER IF EXISTS trg_documentos_proveedor_inmutables ON taller.documentos_proveedor;
