@@ -14,6 +14,7 @@ import {
 import ThemeToggle from './ThemeToggle'
 import SubirFactura from './SubirFactura'
 import BotonNuevaTarea from './BotonNuevaTarea'
+import BotonBuscarCorreduria from './BotonBuscarCorreduria'
 import { activoPorRuta, activoEnLista } from '@/lib/nav-activo'
 
 // Iconos de lucide, NO emojis: cada sistema operativo pinta el emoji a su manera (color,
@@ -161,7 +162,7 @@ function seccionActiva(path: string, soloEmpresas: boolean): ClaveSeccion | null
 //   · las secciones plegables de aquí abajo, que solo mandan con el lateral abierto.
 // Se resuelve en CSS (no con el estado de React) para que valga desde el primer pintado: el
 // atributo lo pone el script anti-parpadeo del layout antes de que hidrate nada.
-export default function UserSidebar({ email, nombre, isOperator, operadorRol, rol }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string; rol?: string | null }) {
+export default function UserSidebar({ email, nombre, isOperator, operadorRol, rol, accesoCorreduria = false }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string; rol?: string | null; accesoCorreduria?: boolean }) {
   const path = usePathname()
   const tabActual = useSearchParams().get('tab')
   const router = useRouter()
@@ -435,12 +436,13 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
           >☰</button>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800, fontSize: '15px', minWidth: 0 }}>
             <img src="/icon.svg" alt="" width={22} height={22} style={{ borderRadius: 6, flexShrink: 0 }} />
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Mi grupo</span>
+            <span className="barra-movil-marca" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Mi grupo</span>
           </div>
           {/* Subir una factura desde CUALQUIER pantalla, sin pasar por /asistentes: es la acción que
               Alberto hace con el móvil en la mano delante del papel. `marginLeft:auto` la pega a la
               derecha sin empujar la marca (la barra mide 52px y el botón 44: cabe sin desbordar). */}
           <div style={{ marginLeft: 'auto', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+            {accesoCorreduria && <BotonBuscarCorreduria />}
             {!soloEmpresas && <BotonNuevaTarea />}
             <SubirFactura variante="barra" />
           </div>
@@ -510,6 +512,7 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
       {!plegado && (
         <div style={{ padding: '12px 12px 12px 20px', borderBottom: '1px solid var(--border)' }}>
           <SubirFactura variante="lateral" />
+          {accesoCorreduria && <BotonBuscarCorreduria variante="lateral" />}
         </div>
       )}
       <NavLinks />

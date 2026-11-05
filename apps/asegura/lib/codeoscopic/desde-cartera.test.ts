@@ -151,9 +151,15 @@ test('la póliza actual pasa a ser la ANTERIOR de la cotización', () => {
   assert.equal(datos.companiaAnteriorCodigo, 'C0058')
 })
 
-test('la fecha de efecto es el día siguiente al vencimiento de la póliza actual', () => {
+test('la fecha de efecto es el vencimiento EXACTO de la póliza actual (regla de renovación 05/11/2026)', () => {
   const { datos } = pre()
-  assert.equal(datos.fechaEfecto, sumarDias(VENCIMIENTO_POLIZA, 1))
+  assert.equal(datos.fechaEfecto, VENCIMIENTO_POLIZA)
+})
+
+test('si fecha_efecto_actual es futura (anualidad nueva ya emitida), el efecto es esa fecha y no el vencimiento', () => {
+  const efecto = sumarDias('2026-09-01', 40)
+  const r = pre({}, { fechaEfectoActual: efecto, fechaVencimiento: sumarDias(efecto, 365) })
+  assert.equal(r.datos.fechaEfecto, efecto)
 })
 
 test('si la póliza ya venció, se cotiza para mañana y se dice por qué', () => {
@@ -500,9 +506,9 @@ test('moto de cartera: la póliza actual es la ANTERIOR (bonus por antigüedad),
   assert.equal(r.datos.matricula, '1234ABC')
 })
 
-test('moto de cartera: efecto al día siguiente del vencimiento, y un solo supuesto de fecha', () => {
+test('moto de cartera: efecto = vencimiento exacto, y un solo supuesto de fecha', () => {
   const r = preMotoPoliza()
-  assert.equal(r.datos.fechaEfecto, sumarDias(VENCIMIENTO_POLIZA, 1))
+  assert.equal(r.datos.fechaEfecto, VENCIMIENTO_POLIZA)
   const fechas = r.supuestos.filter((x) => x.campo === 'fechaEfecto')
   assert.equal(fechas.length, 1)
   assert.match(String(fechas[0].porque), /vencimiento/)

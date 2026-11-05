@@ -774,6 +774,8 @@ em { font-style: normal; }
   border-top: 3px solid var(--acento-marca);
   border-bottom: 1px solid color-mix(in oklab, var(--primary) 12%, var(--border)) !important;
 }
+/* A 320 px caben logo + 3 botones de 44 + ☰ solo si el rótulo cede: se queda el icono. */
+@media (max-width: 360px) { .barra-movil .barra-movil-marca { display: none; } }
 :focus-visible { outline: 3px solid color-mix(in oklab, var(--primary) 50%, transparent); outline-offset: 2px; }
 
 /* Plegable de datos de consulta (DNI y carnés en la ficha): sin el triángulo nativo, con chevron

@@ -1,8 +1,8 @@
 {
  "sesion": "2f1666f8-df19-5af0-8a3e-c9f32e3638a9",
  "inicio": "2026-11-04T10:28:02.762Z",
- "fin": "2026-11-05T07:35:54.721Z",
- "llamadas": 2033,
+ "fin": "2026-11-05T07:39:01.660Z",
+ "llamadas": 2041,
  "categorias": {
   "agente:Explore": {
    "llamadas": 2,
@@ -16,27 +16,27 @@
    }
   },
   "agente:general-purpose": {
-   "llamadas": 27,
-   "chars_in": 72683,
-   "chars_out": 78665,
+   "llamadas": 28,
+   "chars_in": 75335,
+   "chars_out": 81513,
    "errores": 0,
    "archivos_citados": 56,
    "chars_citados": 685608,
    "tools": {
-    "Agent": 27
+    "Agent": 28
    }
   },
   "otro": {
-   "llamadas": 243,
-   "chars_in": 198306,
-   "chars_out": 1267057,
+   "llamadas": 244,
+   "chars_in": 198581,
+   "chars_out": 1267257,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "ToolSearch": 48,
     "SubagentHandback": 54,
-    "SendMessage": 16,
+    "SendMessage": 17,
     "ReadNotifications": 85,
     "AskUserQuestion": 2,
     "Monitor": 16,
@@ -47,14 +47,14 @@
    }
   },
   "bash": {
-   "llamadas": 1421,
-   "chars_in": 2766280,
-   "chars_out": 8592737,
+   "llamadas": 1427,
+   "chars_in": 2769067,
+   "chars_out": 8602112,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 1421
+    "Bash": 1427
    }
   },
   "mcp:Google_Drive": {

@@ -41,6 +41,8 @@
  */
 
 import { correduriaUnica } from '@/lib/cartera'
+import { evaluarEfectoRenovacion } from '@/lib/codeoscopic/efecto-renovacion'
+import { hoyEnMadrid } from '@/lib/codeoscopic/fecha-efecto'
 import { catastroPorReferencia, motivoCatastro } from '@/lib/codeoscopic/catastro-referencia'
 import { origenRetarificacion, clienteOrigenDe, type OrigenRetarificacion } from '@/lib/cartera-ficha'
 import {
@@ -283,6 +285,8 @@ export async function prepararRetarificacion(entrada: {
   polizaId: string
   solicitadoPor: string
   cuerpo: CuerpoRetarificacion
+  /** Solo tests: «hoy» inyectado (aaaa-mm-dd). En producción, hoy en Madrid. */
+  hoy?: string
 }): Promise<PreparadoRetarificacion> {
   const { polizaId, solicitadoPor } = entrada
   const cuerpo = entrada.cuerpo ?? {}
@@ -347,6 +351,34 @@ export async function prepararRetarificacion(entrada: {
     }
   }
 
+  // 🚨 REGLA DE RENOVACIÓN (Alberto, 05/11/2026): solo se cotiza con el vencimiento confirmado, dentro de
+  // la ventana de 90 días y no sospechoso; efecto = vencimiento exacto. Corte GRATIS (422, `gastado: 0,00€`).
+  // Una fecha de efecto explícita del operador (correcciones.fechaEfecto) se permite y queda en el libro.
+  let efectoForzado: string | null = null
+  if (origen.tipo === 'auto' || origen.tipo === 'moto' || origen.tipo === 'hogar') {
+    const explicita = esObjetoPlano(cuerpo.correcciones) ? cuerpo.correcciones.fechaEfecto : undefined
+    const ev = evaluarEfectoRenovacion({
+      vencimiento: origen.poliza.fechaVencimiento,
+      efectoActual: origen.poliza.fechaEfectoActual,
+      hoy: entrada.hoy ?? hoyEnMadrid(),
+      explicita,
+    })
+    if (!ev.ok) {
+      return {
+        estado: 'corte',
+        respuesta: sinGasto(
+          {
+            error: `No se cotiza esta renovación: ${ev.motivo}. No se ha llamado a Codeoscopic.`,
+            causa: 'renovacion_' + ev.causa,
+            faltan: [{ campo: 'fechaEfecto', motivo: ev.motivo }],
+          },
+          422,
+        ),
+      }
+    }
+    if (ev.forzada) efectoForzado = ev.aviso
+  }
+
   // ── El cuerpo que viaja, según el ramo. Todo lo de aquí es GRATIS ─────────
   let preparado: Preparado
   if (origen.tipo === 'auto') {
@@ -371,7 +403,8 @@ export async function prepararRetarificacion(entrada: {
     peticion: {
       correduriaId: correduria.id,
       cuerpo: preparado.peticion,
-      motivo: preparado.motivo,
+      // Una fecha de efecto forzada queda REGISTRADA en el libro de consumo (el motivo viaja a él).
+      motivo: efectoForzado ? `${preparado.motivo}-efecto-forzado` : preparado.motivo,
       solicitadoPor,
       // Sin esto la cotización se pide, se paga y NO se guarda: el precio moriría
       // en la pestaña del navegador y recargar volvería a costar 0,50€.
@@ -387,6 +420,7 @@ export async function prepararRetarificacion(entrada: {
     },
     supuestos: preparado.supuestos,
     fuenteRiesgo: preparado.fuenteRiesgo,
+    ...(efectoForzado ? { efectoForzado } : {}),
   }
 }
 
@@ -397,6 +431,8 @@ export type PreparadoRetarificacion =
       peticion: PeticionCotizacion
       supuestos: Supuesto[] | SupuestoHogar[] | SupuestoMoto[] | SupuestoVida[] | SupuestoSalud[] | SupuestoDecesos[]
       fuenteRiesgo?: 'poliza' | 'gemela' | 'catastro' | null
+      /** Renovación con fecha de efecto forzada por el operador: el aviso (también va al libro por el motivo). */
+      efectoForzado?: string
       /** Vehículo NUEVO: qué seguro anterior se ha imputado (o por qué ninguno) y si el bonus es supuesto. */
       seguroAnterior?: SeguroAnteriorPublico
     }
@@ -427,6 +463,7 @@ export function respuestaRetarificacion(
       // cuando es `true` va además la frase, para que se pueda pintar sin que la
       // pantalla tenga que redactarla.
       simulado: r.simulado,
+      ...(preparado.efectoForzado ? { avisoEfecto: preparado.efectoForzado } : {}),
       ...(r.simulado ? { avisoSimulacion: MARCA_SIMULACION } : {}),
       coste: r.coste,
       restantesHoy: r.restantesHoy,
@@ -733,7 +770,7 @@ async function prepararHogar(
     }
     return prepararHogarDesde(
       origen.cliente,
-      { numeroPoliza: origen.poliza.numeroPoliza, fechaVencimiento: origen.poliza.fechaVencimiento, hogar: origen.hogar },
+      { numeroPoliza: origen.poliza.numeroPoliza, fechaVencimiento: origen.poliza.fechaVencimiento, fechaEfectoActual: origen.poliza.fechaEfectoActual, hogar: origen.hogar },
       cuerpo,
       `poliza-${polizaId}`,
       c.catastro,
@@ -750,7 +787,7 @@ async function prepararHogar(
     : null
   return prepararHogarDesde(
     origen.cliente,
-    { numeroPoliza: origen.poliza.numeroPoliza, fechaVencimiento: origen.poliza.fechaVencimiento, hogar: origen.hogar },
+    { numeroPoliza: origen.poliza.numeroPoliza, fechaVencimiento: origen.poliza.fechaVencimiento, fechaEfectoActual: origen.poliza.fechaEfectoActual, hogar: origen.hogar },
     cuerpo,
     `poliza-${polizaId}`,
     catastro,
@@ -768,7 +805,7 @@ async function prepararHogar(
  */
 async function prepararHogarDesde(
   cliente: ClienteCartera,
-  polizaInfo: { numeroPoliza: string | null; fechaVencimiento: string | null; hogar: HogarCartera | null },
+  polizaInfo: { numeroPoliza: string | null; fechaVencimiento: string | null; fechaEfectoActual?: string | null; hogar: HogarCartera | null },
   cuerpo: CuerpoRetarificacion,
   externalId: string,
   catastro: CatastroHogar | null,
