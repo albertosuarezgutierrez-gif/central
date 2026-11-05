@@ -28,6 +28,7 @@
 import { revisarDatosHogar, type DatosHogar, type ReparoHogar } from './peticion-hogar.ts'
 import { partirApellidos, sexoDeSaludo, diaSiguiente, type ClienteCartera } from './desde-cartera.ts'
 import { DIAS_EFECTO_PRESUPUESTO_NUEVO, sumarDias } from './fecha-efecto.ts'
+import { fechaBaseRenovacion } from './efecto-renovacion.ts'
 import { partirDireccion, direccionDesdeCatastro, type DireccionPartida } from './direccion.ts'
 import type { ViviendaCatastro } from '@central/core-catastro'
 
@@ -123,6 +124,7 @@ export type PrecalificacionHogar = {
 type PolizaHogarCartera = {
   numeroPoliza: string | null
   fechaVencimiento: string | null
+  fechaEfectoActual?: string | null
   hogar: HogarCartera | null
 }
 
@@ -165,10 +167,10 @@ export function precalificarHogarCartera(
   const h = poliza.hogar
 
   // ── Fecha de efecto: el día después del vencimiento, o mañana ──
-  const vencimiento = limpio(poliza.fechaVencimiento)
+  const vencimiento = fechaBaseRenovacion(limpio(poliza.fechaVencimiento), limpio(poliza.fechaEfectoActual), hoy)
   const fechaEfecto =
     vencimiento && vencimiento >= hoy
-      ? suponer('fechaEfecto', diaSiguiente(vencimiento), `el día siguiente al vencimiento de la póliza actual (${vencimiento})`)
+      ? suponer('fechaEfecto', vencimiento, `el vencimiento exacto de la póliza actual (${vencimiento}): regla de renovación, se emite con esa misma fecha`)
       : vencimiento
           ? suponer('fechaEfecto', diaSiguiente(hoy), `la póliza actual venció el ${vencimiento}, así que se pide precio para mañana`)
           : suponer(

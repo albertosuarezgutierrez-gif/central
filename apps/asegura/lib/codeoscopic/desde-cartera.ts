@@ -38,6 +38,7 @@ import { partirDireccion, tipoViaDeFicha } from './direccion.ts'
 import { HISTORIAL_MAXIMO, KM_ANUALES_SUPUESTOS, sexoDeSaludo } from '@central/module-seguros'
 import { TIPO_CARNET_SUPUESTO, ZONA_CARNET_SUPUESTA } from './persona.ts'
 import { DIAS_EFECTO_PRESUPUESTO_NUEVO, sumarDias } from './fecha-efecto.ts'
+import { fechaBaseRenovacion } from './efecto-renovacion.ts'
 import { nombreUtil, partirApellidos } from '../nombre-ficha.ts'
 
 /** Un valor que NO venía en la ficha y se ha dado por bueno para poder cotizar. */
@@ -145,6 +146,8 @@ export type PolizaCartera = {
   /** aaaa-mm-dd. La más antigua que se conozca de la relación con la compañía. */
   fechaEfectoInicial: string | null
   fechaVencimiento: string | null
+  /** aaaa-mm-dd. `fecha_efecto_actual` (CIMA): si es futura, la anualidad nueva ya está emitida y ES el efecto. `undefined`/`null` = no se sabe. */
+  fechaEfectoActual?: string | null
   /**
    * Siniestros REGISTRADOS en el CRM para esta póliza.
    *
@@ -258,13 +261,13 @@ function historialDePoliza(
   // ── Fecha de efecto: el día después de que venza la póliza actual ──────────
   // Es lo que de verdad quiere el cliente («cuánto me costaría al renovar»), y
   // si la póliza no tiene vencimiento se cotiza para mañana.
-  const vencimiento = limpio(poliza.fechaVencimiento)
+  const vencimiento = fechaBaseRenovacion(limpio(poliza.fechaVencimiento), limpio(poliza.fechaEfectoActual), hoy)
   const fechaEfecto =
     vencimiento && vencimiento >= hoy
       ? (suponer(
           'fechaEfecto',
-          diaSiguiente(vencimiento),
-          `el día siguiente al vencimiento de la póliza actual (${vencimiento})`,
+          vencimiento,
+          `el vencimiento exacto de la póliza actual (${vencimiento}): regla de renovación, se emite con esa misma fecha`,
         ) as string)
       : ((vencimiento
           ? suponer('fechaEfecto', diaSiguiente(hoy), `la póliza actual venció el ${vencimiento}, así que se pide precio para mañana`)
