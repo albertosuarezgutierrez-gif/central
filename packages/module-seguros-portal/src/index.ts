@@ -235,6 +235,19 @@ export {
   duenaDeDeclarada,
 } from './capacidades.ts'
 export type { NivelCompartido, Capacidades, AccionDeclarada } from './capacidades.ts'
+// Renovación con alternativas (05/11/2026): quién la ve y la ELIGE (tomador o autorizado con Gestión/Total) y de quién es
+// la elección ya hecha (vale la primera). Lee la cabecera de `renovacion-eleccion.ts`.
+export {
+  EVENTO_ELECCION_RENOVACION,
+  autorizacionDejaElegir,
+  identidadesQueEligenRenovacion,
+  detalleElector,
+  duenoDeEleccion,
+  mismaPersonaQueElige,
+  eleccionDeOtraPersona,
+  textoYaElegida,
+} from './renovacion-eleccion.ts'
+export type { FilaAutorizacionRenovacion, ElectorRenovacion, DuenoEleccion } from './renovacion-eleccion.ts'
 export type {
   Alcance,
   AutorizacionFechas,

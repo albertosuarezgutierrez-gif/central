@@ -8,7 +8,7 @@ import { Actual, Garantias, Mediador, Salidas, SinEquivalenteAviso, Tarjeta, fec
 import { TodasLasOpciones } from './TodasLasOpciones'
 import { AceptarOpcion } from './AceptarOpcion'
 import { ElegirRenovacion } from './ElegirRenovacion'
-import { RENOVACION_NO_DISPONIBLE, TEXTOS_RENOVACION, puedeElegirRenovacion } from '@/lib/renovacion-vista'
+import { RENOVACION_NO_DISPONIBLE, TEXTOS_RENOVACION, puedeElegirRenovacion, textoAccesoAutorizado } from '@/lib/renovacion-vista'
 import { EstudioOfertas } from './EstudioOfertas'
 import { EstudioCliente } from './EstudioCliente'
 import { leerEstudioCliente } from '@/lib/estudio-cliente'
@@ -112,11 +112,14 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
   // (21/10/2026) Persona de contacto: lo VE, nada más. Sin «Revisa tus datos» (son del tomador y llevan «Datos
   // incorrectos»), sin «Aceptar»/«Firmar» y sin nombrar mediador. asegura se lo niega igual (`sin_permiso`).
   const tercero = p.accesoTercero
+  // (05/11/2026) AUTORIZADO del tomador con Gestión/Total en una renovación: ELIGE, pero los datos del tomador («Revisa tus
+  // datos», «Datos para contratar», el estudio y el PDF, que el puente sirve solo a su ficha) no son suyos: no se piden.
+  const autorizado = p.accesoAutorizado
   // «Revisa tus datos»: mientras no esté emitido ni retirado. `null` = no se han podido leer.
-  const mostrarCotizados = !p.retirado && p.emitidoAt === null && tercero === null
+  const mostrarCotizados = !p.retirado && p.emitidoAt === null && tercero === null && autorizado === null
   // «Datos para contratar» va por la identidad (su puente no admite el acceso por WhatsApp): quien
   // entró con el código del WhatsApp no lo ve, en vez de ver «no podemos comprobarlo» para siempre.
-  const identidad = mostrarDatos && !p.accesoWhatsapp ? await getIdentidad() : null
+  const identidad = mostrarDatos && !p.accesoWhatsapp && autorizado === null ? await getIdentidad() : null
   const datos = identidad && mostrarDatos ? await datosParaContratar(identidad.id, p.id) : null
   // «Revisa tus datos» (y con él, poder aceptar): con la sesión o con el acceso por WhatsApp.
   const puerta = mostrarCotizados ? await accesoPuenteDe(p.id) : null
@@ -138,12 +141,12 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
   const renovNoDisponible = p.renovacion === RENOVACION_NO_DISPONIBLE
   const renov = p.renovacion === RENOVACION_NO_DISPONIBLE ? null : p.renovacion
   // Las MISMAS condiciones para elegir en la portada y en «Todas las opciones». Solo si CONSTA que no es una renovación.
-  const puedeAceptar = p.renovacion === null && !p.caducado && !p.retirado && p.aceptadoAt === null && p.enviadoAt !== null && tercero === null
+  const puedeAceptar = p.renovacion === null && !p.caducado && !p.retirado && p.aceptadoAt === null && p.enviadoAt !== null && tercero === null && autorizado === null
   // «Ver como el cliente» un BORRADOR (18/10/2026): la misma página, con los botones de acción deshabilitados y rotulados.
   const vistaPrevia = esVistaPreviaBorrador(p) && !p.caducado && !p.retirado
   // El ESTUDIO (21/10/2026): el MISMO que el PDF, para los dos orígenes, pedido a asegura con la identidad de la sesión
   // (la ficha la decide asegura). Solo si ya salió hacia el cliente; si no hay o falla, la página sigue como antes.
-  const identidadEstudio = p.enviadoAt !== null && !p.retirado ? await getIdentidad() : null
+  const identidadEstudio = p.enviadoAt !== null && !p.retirado && autorizado === null ? await getIdentidad() : null
   const estudio = identidadEstudio ? await leerEstudioCliente(identidadEstudio.id, p.id) : null
   const vistaEstudio = estudio?.estado === 'ok' ? estudio.vista : null
 
@@ -181,6 +184,11 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
       {tercero && (
         <p className="pendiente" role="note">
           {textoAccesoTercero(tercero)}
+        </p>
+      )}
+      {autorizado && (
+        <p className="pendiente" role="note">
+          {textoAccesoAutorizado(autorizado.tomador)}
         </p>
       )}
 
@@ -255,7 +263,7 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
           bloqueoDatos={bloqueoDatos}
           corredor={p.vistaDeCorredor}
           codigoWhatsapp={p.accesoWhatsapp}
-          pdf={puedeDescargarPdf(p)}
+          pdf={autorizado === null && puedeDescargarPdf(p)}
           vistaPrevia={vistaPrevia && renov === null}
           supuestosEnDatos={mostrarCotizados}
         />
@@ -341,10 +349,11 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
           eleccionAt={renov.eleccionAt}
           puedeElegir={puedeElegirRenovacion({
             enviadoAt: p.enviadoAt, caducado: p.caducado, retirado: p.retirado, aceptadoAt: p.aceptadoAt, emitidoAt: p.emitidoAt,
-            accesoWhatsapp: p.accesoWhatsapp, tercero: tercero !== null, vistaDeCorredor: p.vistaDeCorredor,
+            accesoWhatsapp: p.accesoWhatsapp, tercero: tercero !== null, vistaDeCorredor: p.vistaDeCorredor, elegidaPorOtro: renov.elegidaPorOtro,
           })}
           vistaPrevia={p.vistaDeCorredor}
           caducado={p.caducado}
+          elegidaPorOtro={renov.elegidaPorOtro}
         />
       ) : (
         <Salidas

@@ -45,12 +45,13 @@ import {
   DIAS_AVISO_POLIZA_MODIFICADA, polizasModificadasParaAviso, type FilaCambioPoliza,
   DIAS_AVISO_PARTE, partesParaAviso, type ParteFilaAviso,
   fechaAccionable, idVencimientoDerivado, TIPOS_RECORDATORIO_PROPIO,
-  debeRecordarVencimiento, DIAS_RECORDATORIO_VENCIMIENTO,
+  debeRecordarVencimiento, DIAS_RECORDATORIO_VENCIMIENTO, identidadesQueEligenRenovacion,
 } from '@central/module-seguros-portal'
 import { computeEmailLookupHash } from '@central/module-seguros-pii'
 import { Prisma } from './generated/asegura-client'
 import { WHERE_CARTERA_VIVA, WHERE_CARTERA_EN_VIGOR, leerSitio, textoReparoSitio, caducidadCarnet, sqlCarteraEnVigor } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
+import { filasAutorizacionRenovacion } from './renovacion-autorizados'
 import { leerFichasConCarnetSilenciado } from './avisos-carnet-silencio'
 import { avisosActivos, esSoloContar, leerCanalesDeFichas } from './avisos-vencimiento'
 import { decidirAvisoVencimiento, diasEfectivosDeFicha, type OrigenAviso } from './avisos-vencimiento-canal'
@@ -481,19 +482,43 @@ export async function reunirPendientes(
     if (lista.length > 0) dame(clienteId).polizasNuevas = lista
   }
 
-  // Renovaciones con alternativas PUBLICADAS en la app y sin elegir (04/11/2026, `2026-11-05b`). Solo la ficha del TOMADOR
-  // (la del presupuesto): un autorizado no recibe este correo. Sin la migración no puede haber ninguna publicada: se omite.
+  // Renovaciones con alternativas PUBLICADAS en la app y sin elegir (04/11/2026, `2026-11-05b`). A la ficha del TOMADOR y
+  // (05/11/2026, Alberto) a la FICHA de quien él autoriza con Gestión o Total sobre esa póliza y la usa en la app (la misma
+  // regla que abre la página: `identidadesQueEligenRenovacion`). Un autorizado sin ficha (solo identidad) lo ve en su
+  // campana: aquí no hay correo al que escribirle. Sin la migración no puede haber ninguna publicada: se omite.
   try {
-    const pres = await db.$queryRaw<{ id: string; clienteId: string; ramo: string | null }[]>`
-      select p.id::text as id, p.cliente_id::text as "clienteId", p.ramo
+    const pres = await db.$queryRaw<{ id: string; clienteId: string; polizaId: string | null; ramo: string | null }[]>`
+      select p.id::text as id, p.cliente_id::text as "clienteId", p.poliza_id::text as "polizaId", p.ramo
       from presupuesto p
       where p.correduria_id = ${correduriaId}::uuid and p.modo = 'renovacion' and p.enviado_at is not null
         and p.retirado_at is null and p.aceptado_at is null and p.emitido_at is null and p.eleccion_cliente is null
         and p.vence_el > now()`
+    // Fichas autorizadas que ELIGEN, por presupuesto. Un fallo leyendo autorizaciones NO tumba el aviso del tomador.
+    const autorizadasDe = new Map<string, string[]>()
     for (const f of pres) {
-      if (!fichaPorId.has(f.clienteId)) continue
-      const d = dame(f.clienteId)
-      d.presupuestos = [...(d.presupuestos ?? []), { id: f.id, ramo: f.ramo }]
+      try {
+        const filas = await filasAutorizacionRenovacion(correduriaId, f.clienteId, null)
+        const eligen = identidadesQueEligenRenovacion(filas, f.polizaId, hoy)
+        const fichas = [...new Set(filas.filter((x) => eligen.has(x.identidadId) && x.autorizadoClienteId && x.autorizadoClienteId !== f.clienteId).map((x) => x.autorizadoClienteId!))]
+        if (fichas.length > 0) autorizadasDe.set(f.id, fichas)
+      } catch (e) {
+        console.error('[avisos-intranet] autorizados de una renovación ilegibles:', e instanceof Error ? e.message : e)
+      }
+    }
+    const faltanAut = [...new Set([...autorizadasDe.values()].flat())].filter((c) => !fichaPorId.has(c))
+    if (faltanAut.length > 0) {
+      for (const c of await db.cliente.findMany({
+        where: { id: { in: faltanAut }, correduriaId, mergedIntoClienteId: null },
+        select: { id: true, nombre: true, apellidos: true, codigoPostal: true, ciudad: true, provincia: true, fechaNacimiento: true },
+      })) fichaPorId.set(c.id, c)
+    }
+    for (const f of pres) {
+      for (const clienteId of [f.clienteId, ...(autorizadasDe.get(f.id) ?? [])]) {
+        if (!fichaPorId.has(clienteId)) continue
+        const d = dame(clienteId)
+        if ((d.presupuestos ?? []).some((x) => x.id === f.id)) continue
+        d.presupuestos = [...(d.presupuestos ?? []), { id: f.id, ramo: f.ramo }]
+      }
     }
   } catch (e) {
     if (!/42703|does not exist|no existe/i.test(e instanceof Error ? e.message : String(e))) throw e
