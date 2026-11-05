@@ -335,6 +335,7 @@ export default function Retarificador({
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
+          confirmado: true,
           resueltos: {
             codigoVehiculo,
             garaje,

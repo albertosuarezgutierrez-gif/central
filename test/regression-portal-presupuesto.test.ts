@@ -113,9 +113,14 @@ test('las DOS ramas de autorización están, y el `destino_hash` NULL no concede
   )
 })
 
-test('sin ninguna de las dos ramas NO se enseña, y el texto es NEUTRO', () => {
+test('sin ninguna de las ramas NO se enseña, y el texto es NEUTRO', () => {
   const src = codigo(LIB)
-  assert.match(src, /if \(vinculo === null && !porCanal\)/)
+  // 05/11/2026 (Alberto): tercera rama, SOLO en una RENOVACIÓN, el autorizado del tomador con Gestión o Total
+  // (`autorizadoEligeRenovacion`, regla única `identidadesQueEligenRenovacion`). Fuera de una renovación no abre nada.
+  assert.match(src, /if \(vinculo === null && !porCanal && !porAutorizado\)/)
+  assert.match(src, /\(await esRenovacion\(p\.id, p\.correduriaId\)\)\) \{\s+porAutorizado = await autorizadoEligeRenovacion\(/)
+  assert.match(src, /let porAutorizado = false\n/)
+  assert.equal((src.match(/porAutorizado = (?!false)/g) ?? []).length, 1, 'porAutorizado solo se enciende en esa rama')
   assert.match(src, /estado: 'ajeno'/)
   const vista = leer(VISTA)
   const i = vista.indexOf('export const TEXTO_AJENO')

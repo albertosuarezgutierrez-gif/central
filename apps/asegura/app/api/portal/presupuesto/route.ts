@@ -38,8 +38,11 @@ const HEX_64 = /^[0-9a-f]{64}$/
  *        { accion:'resumen_ia',  identidadId, presupuestoId }                          → resumen IA (cacheado)
  *        { accion:'pregunta_ia', identidadId, presupuestoId, opcionA, opcionB, pregunta } → respuesta IA (tope diario)
  *        { accion:'llamadme',    identidadId, presupuestoId }                          → «Prefiero que me llaméis»
- *        { accion:'elegir_renovacion', identidadId, presupuestoId, eleccion:'opcion'|'renovacion', opcionId? } → elige SIN firmar
- *             (solo una renovación publicada; NO emite: el Telegram a Alberto sale de aquí en `after()`, `avisarEleccion`)
+ *        { accion:'elegir_renovacion', identidadId | tokenWhatsapp, presupuestoId, eleccion:'opcion'|'renovacion', opcionId? } → elige SIN firmar
+ *             (solo una renovación publicada; NO emite: el Telegram a Alberto sale de aquí en `after()`, `avisarEleccion`).
+ *             05/11/2026: elige el tomador (su cuenta o el ENLACE del WhatsApp) o un AUTORIZADO con Gestión/Total; vale la
+ *             primera elección (`ya_elegida` 409 con el nombre de pila de quien eligió). El token de una persona de
+ *             contacto es `sin_permiso` (403).
  *        { accion:'actividad',   identidadId, presupuestoId, garantias: string[], comparadas: string[] }
  *             → telemetría: qué garantías marca y qué opciones compara (se recorta al catálogo y a las visibles)
  * Como el resto del puente: NO acepta `clienteId`, la ficha sale de `portal_vinculo`.
@@ -62,7 +65,7 @@ const STATUS: Record<string, number> = {
   documento_cambiado: 409, sin_codigo: 409, codigo_caducado: 410, demasiados_intentos: 429, codigo_incorrecto: 422,
   nombre_no_coincide: 422, sin_ficha: 409,
   // Una RENOVACIÓN con alternativas se ELIGE (`elegir_renovacion`), no se acepta ni se firma por preparar/código/firmar.
-  es_renovacion: 409, varias_fichas: 409, sin_permiso: 403, error: 503,
+  es_renovacion: 409, varias_fichas: 409, sin_permiso: 403, error: 503, ya_elegida: 409,
   sin_datos: 409, datos_en_revision: 409, sin_confirmar_datos: 422, invalido: 422, limite: 429,
   // La cuenta: elegirla es un paso más (200); sin ella o con un IBAN que no cuadra, no se firma.
   elegir_cuenta: 200, sin_cuenta: 422, iban_invalido: 422, sin_cifrado: 503,
@@ -95,7 +98,7 @@ export const POST = auditado(async (req: Request) => {
       b?.accion === 'elegir_renovacion'
     // Quien entró con el código del WhatsApp llega con el token y SIN identidad: solo para estas acciones.
     const admiteWhatsapp = b?.accion === 'datos' || b?.accion === 'datos_incorrectos' || b?.accion === 'preparar' ||
-      b?.accion === 'codigo' || b?.accion === 'firmar'
+      b?.accion === 'codigo' || b?.accion === 'firmar' || b?.accion === 'elegir_renovacion'
     const acceso: AccesoPortal | null = UUID.test(identidadId)
       ? { identidadId }
       : admiteWhatsapp && HEX_64.test(tokenWhatsapp) ? { tokenWhatsapp } : null
@@ -147,12 +150,13 @@ export const POST = auditado(async (req: Request) => {
       const r = await pideLlamada(correduria.id, identidadId, presupuestoId)
       return NextResponse.json(r, { status: STATUS[r.estado] ?? 500 })
     }
-    // Renovación con alternativas (04/11/2026): elige SIN firmar. Solo con identidad (nunca por el token del WhatsApp): la
-    // ficha la resuelve `portal_vinculo`; el cuerpo solo trae la elección (opción o «me quedo con mi renovación»).
+    // Renovación con alternativas (04/11/2026; 05/11/2026 también el ENLACE del WhatsApp y el autorizado con Gestión/Total):
+    // elige SIN firmar. La ficha la resuelven `portal_vinculo`, el token vigente de ESE presupuesto o la autorización
+    // vigente del tomador; nunca un clienteId. El cuerpo solo trae la elección (opción o «me quedo con mi renovación»).
     if (b?.accion === 'elegir_renovacion') {
       const eleccion = validarEleccion(b)
-      if (!eleccion || !UUID.test(identidadId)) return NextResponse.json({ estado: 'invalido' }, { status: 422 })
-      const r = await elegirRenovacion(correduria.id, identidadId, presupuestoId, eleccion)
+      if (!eleccion) return NextResponse.json({ estado: 'invalido' }, { status: 422 })
+      const r = await elegirRenovacion(correduria.id, acceso, presupuestoId, eleccion)
       if (r.estado === 'ok') {
         // El Telegram a Alberto sale DE AQUÍ, ya respondido el portal; si no sale, queda en el historial de la ficha.
         const aviso = r.aviso

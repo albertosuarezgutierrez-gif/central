@@ -24,7 +24,9 @@ import {
   type Topes,
 } from './config.ts'
 import { puedeCotizar, eurCents, type Veredicto, type Consumo } from './contador.ts'
-import { consumoActual, reservarSinDuplicado, cerrarFacturable, cerrarDescartado } from './consumo.ts'
+import { consumoActual, reservarSinDuplicado, cerrarFacturable, cerrarEmisionFacturable, cerrarDescartado } from './consumo.ts'
+import { evaluarRamoVivo, ramoDeCuerpo, type FilaCatalogoMin } from './guarda-catalogo.ts'
+import { leerTrasCobro } from './tras-cobro.ts'
 import { huellaCotizacion, MENSAJE_DUPLICADO } from './huella.ts'
 import { peticion, obtenerToken, ErrorCodeoscopic } from './cliente.ts'
 import { leerCotizacion, type Cotizacion } from './respuesta.ts'
@@ -122,6 +124,15 @@ export type DepsCotizar = {
   hilo?: (correduriaId: string, oportunidadId: string) => Promise<void>
   /** Topes aprendidos del historial. Con `guardar` doblado y sin esto, no se tocan (test). */
   topes?: { leer: () => Promise<TopesHistorial>; guardar: (t: TopesHistorial, mensaje: string) => Promise<void> }
+  /** Instantánea (gratis) del catálogo para la guarda de ramo sin producto vivo. Con `guardar` doblado y sin esto, no se comprueba (test). */
+  catalogo?: (correduriaId: string) => Promise<readonly FilaCatalogoMin[] | null>
+}
+
+/** Lectura real de la última instantánea. Sin tabla devuelve `null` (no se sabe ≠ no hay). */
+async function catalogoPorDefecto(correduriaId: string): Promise<readonly FilaCatalogoMin[] | null> {
+  const bd = await import('./catalogo-companias-bd.ts')
+  if (!(await bd.hayCatalogo())) return null
+  return bd.leerUltimaInstantanea(correduriaId)
 }
 
 /**
@@ -247,6 +258,12 @@ export async function estadoConsumo(
   }
 }
 
+/** `effectiveDate` (aaaa-mm-dd) del cuerpo; `null` si no consta. */
+function efectoDeCuerpo(cuerpo: unknown): string | null {
+  const v = typeof cuerpo === 'object' && cuerpo !== null ? (cuerpo as Record<string, unknown>).effectiveDate : null
+  return typeof v === 'string' ? v.slice(0, 10) : null
+}
+
 export async function cotizar(
   p: PeticionCotizacion,
   env: Record<string, string | undefined> = process.env,
@@ -318,6 +335,21 @@ export async function cotizar(
   const euros = await comprobarTopeEuros(p.correduriaId, COSTE_COTIZACION_CENTS, env)
   if (!euros.ok) return { ok: false, razon: euros.razon, mensaje: euros.mensaje }
 
+  // 4a bis — Guarda de CATÁLOGO (05/11/2026, gratis): si el ramo no tiene ningún producto vivo (todos PILOTO o
+  // DESCATALOGADO) la cotización saldría sin precios. Sin instantánea o sin poder leerla NO se bloquea: se avisa.
+  const leerCatalogo = deps.catalogo ?? (deps.guardar ? null : catalogoPorDefecto)
+  if (leerCatalogo) {
+    const filas = await leerCatalogo(p.correduriaId).catch((e) => {
+      console.warn('[codeoscopic] guarda de catálogo: no se pudo leer la instantánea', e instanceof Error ? e.message : e)
+      return null
+    })
+    const v = evaluarRamoVivo(filas, ramoDeCuerpo(p.cuerpo))
+    if (v.accion === 'cortar') {
+      return { ok: false, razon: 'vendor', mensaje: v.mensaje, sinCargo: true, claveVendor: 'validacion' }
+    }
+    if (v.aviso) console.warn(`[codeoscopic] ${v.aviso}`)
+  }
+
   // 4b — Topes APRENDIDOS del historial del seguro anterior (29/09/2026): el máximo declarado se
   // recorta a lo que el vendor ya rechazó una vez, para que ese 400 no vuelva a salir.
   const topes = deps.topes ?? (deps.guardar ? null : { leer: leerTopesHistorial, guardar: guardarTopesHistorial })
@@ -343,6 +375,7 @@ export async function cotizar(
       solicitadoPor: p.solicitadoPor,
       huella,
       forzar: p.forzar === true,
+      fechaEfecto: efectoDeCuerpo(p.cuerpo),
       // Se re-cuentan bajo el candado de gasto de la correduría: el paso 4 de arriba no basta
       // contra peticiones en paralelo (todas leerían el mismo gasto y todas pasarían).
       topes: config.topes,
@@ -388,9 +421,22 @@ export async function cotizar(
       timeoutMs: config.timeoutCotizacionMs,
     })
 
-    const cotizacion = leerCotizacion(crudo)
-    // 7 — Cierre. El projectId es la prueba del cargo y la clave del webhook.
-    await cerrarFacturable(intentoId, cotizacion.projectId)
+    // Desde aquí el 200 YA está cobrado: nada de lo que sigue puede acabar en el `catch` de abajo (que diría
+    // «error del vendor» y dejaría pagar otra vez a los 15 min).
+    const leida = leerTrasCobro(crudo)
+    if (!leida.ok) {
+      // Sin projectId no hay prueba normal, pero sí cargo: cerrar como facturable (cuenta en el tope y bloquea).
+      await cerrarEmisionFacturable(intentoId).catch(() => {})
+      return { ok: false, razon: 'vendor', mensaje: leida.mensaje }
+    }
+    const cotizacion = leida.cotizacion
+    // 7 — Cierre. El projectId es la prueba del cargo y la clave del webhook. Si la BD falla aquí, la reserva sigue
+    // abierta (cuenta igual) y se sigue con la copia: con ella el reintento se reutiliza en vez de pagarse.
+    try {
+      await cerrarFacturable(intentoId, cotizacion.projectId)
+    } catch (e) {
+      console.error('[codeoscopic] cobrada pero no se pudo cerrar la reserva como facturable', e instanceof Error ? e.message : e)
+    }
 
     // 8 — La copia de los precios. DESPUÉS del cierre, y nunca antes: si
     // guardar tumbara el paso 7, un cargo real de 0,50€ se quedaría sin apuntar

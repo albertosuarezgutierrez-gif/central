@@ -41,7 +41,7 @@ import { PREFIJO_CLP, decidirBotonClp, idDeEdicion } from '@/lib/correo/lead-cor
 import { guardarEdicionClp, resolverBotonClp } from '@/lib/correo/lead-correduria-pendiente'
 import { PREFIJO_CSG, decidirBotonCsg } from '@/lib/correo/contacto-sugerido'
 import { PREFIJO_FEX, decidirBotonFex, decidirFexEnAsegura, lineaTrasPulsarFex } from '@/lib/felicitaciones-exclientes-asegura'
-import { PREFIJO_CRV, decidirBotonCrv, estadoDe as estadoCrv, lineaTrasPublicarCrv, publicarRenovacionAsegura } from '@/lib/renovacion-asegura'
+import { PREFIJO_CRV, decidirBotonCrv, estadoDe as estadoCrv, lineaTrasPublicarCrv, publicarRenovacionAsegura, whatsappDe as whatsappCrv } from '@/lib/renovacion-asegura'
 import { PREFIJO_WAP, actorTitular, decidirBotonWap, idDeCorreccionWap, lineaTrasPulsarWap, mensajeOriginalDeCorreccionWap, resueltaParaQuitarBotones, resolverPropuestaEnAsegura, textoPedirCorreccionWap } from '@/lib/correduria/whatsapp-propuesta-tg'
 import { cuentaTitularTelegram } from '@/lib/correduria/whatsapp-propuesta-tg-cuenta'
 import { PREFIJO_RRC, decidirBotonRrc, decidirRrcCompaniaEnAsegura, decidirRrcEnAsegura, editarRrcCompaniaEnAsegura, editarRrcEnAsegura, idDeEdicionRrc, idDeEdicionRrcCompania, lineaPushRrc, lineaTrasPulsarRrc, textoPedirEdicionRrc, textoPedirEdicionRrcCompania } from '@/lib/regularizacion-rc-asegura'
@@ -1056,14 +1056,16 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
         await tgAnswerCallback(cb.id, d.toast)
         return NextResponse.json({ ok: true })
       }
-      await tgAnswerCallback(cb.id, '⏳ Publicando en su app…')
+      await tgAnswerCallback(cb.id, d.canal === 'app' ? '⏳ Publicando en su app…' : d.canal === 'email' ? '⏳ Enviando por correo…' : '⏳ Preparando el WhatsApp…')
       const original = escapeHtml(cb.message?.text ?? '')
       const mensajeId: number | undefined = cb.message?.message_id
       if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n⏳ <i>Pulsado…</i>`).catch(() => {})
       after(async () => {
-        const r = await publicarRenovacionAsegura({ presupuestoId: d.presupuestoId, actor: 'telegram:titular', via: 'telegram', telegramMessageId: mensajeId ?? null }, 'sistema:telegram-renovacion')
+        const r = await publicarRenovacionAsegura({ presupuestoId: d.presupuestoId, actor: 'telegram:titular', via: 'telegram', telegramMessageId: mensajeId ?? null, canal: d.canal }, 'sistema:telegram-renovacion')
           .catch(() => ({ status: 502, json: null }))
-        const linea = lineaTrasPublicarCrv(estadoCrv(r))
+        // WhatsApp: el wa.me (móvil del tomador + enlace + código) va SOLO a este chat del titular; no sale nada solo.
+        const wa = d.canal === 'whatsapp_enlace' ? whatsappCrv(r) : null
+        const linea = lineaTrasPublicarCrv(estadoCrv(r)) + (wa ? `\n<a href="${escapeHtml(wa)}">📲 Abrir el WhatsApp para mandarlo</a>` : '')
         if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${linea}`).catch(() => {})
         else await tgSend(linea).catch(() => {})
       })

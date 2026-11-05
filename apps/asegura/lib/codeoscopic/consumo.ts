@@ -25,7 +25,7 @@ import { esquema } from '../esquema-bd.ts'
 
 /** ¿Existe ya la columna `huella` (SQL 2026-10-08)? Vive aquí: solo este fichero nombra el libro. */
 const hayHuella = () => esquema.existeColumna('codeoscopic_consumo', 'huella')
-import { decidirDuplicado, VENTANA_DUPLICADO_MIN, type FilaPrevia } from './huella.ts'
+import { decidirDuplicado, VENTANA_DUPLICADO_MIN, VENTANA_REUTILIZAR_MIN, type FilaPrevia } from './huella.ts'
 
 export type Reserva = { intentoId: string; correduriaId: string }
 
@@ -193,6 +193,14 @@ export class TopeAlcanzadoBajoCandado extends Error {
   }
 }
 
+/** Misma operación de emisión (misma huella) ya reservada o cobrada hace menos de 15 min: NO se llama otra vez. */
+export class EmisionDuplicada extends Error {
+  constructor() {
+    super('Operación idéntica en curso o reciente (menos de 15 minutos): no se ha vuelto a llamar a la compañía.')
+    this.name = 'EmisionDuplicada'
+  }
+}
+
 export type ReservaAntiDuplicado =
   | { resultado: 'reservada' }
   | { resultado: 'tope'; razon: 'tope' | 'sin-libro'; mensaje: string }
@@ -202,7 +210,8 @@ export type ReservaAntiDuplicado =
 /**
  * Comprueba duplicado y RESERVA en la misma transacción, bajo `pg_advisory_xact_lock(hashtext(huella))`:
  * dos pestañas con la misma petición se serializan y la segunda ve la reserva de la primera. Sin `forzar`,
- * una fila con la misma huella reservada o facturable en los últimos 15 min impide la llamada.
+ * una fila con la misma huella reservada o facturable en los últimos 15 min impide la llamada; una facturable con copia
+ * se reutiliza hasta 24 h si la fecha de efecto sigue vigente (`decidirDuplicado`).
  * NO atrapa errores (fail-closed, como `reservar`): si no se puede comprobar, no se llama.
  */
 export async function reservarSinDuplicado(input: {
@@ -212,6 +221,8 @@ export async function reservarSinDuplicado(input: {
   solicitadoPor: string
   huella: string
   forzar?: boolean
+  /** Fecha de efecto (aaaa-mm-dd) del cuerpo: habilita reutilizar la copia hasta 24 h si sigue vigente. */
+  fechaEfecto?: string | null
   /** Topes de cotizar vigentes (los de `resolverConfig`): se re-cuentan bajo candado. */
   topes: Topes
   env?: Env
@@ -236,7 +247,7 @@ export async function reservarSinDuplicado(input: {
        where correduria_id = ${input.correduriaId}::uuid
          and huella = ${input.huella}
          and estado in ('reservado', 'facturable')
-         and creado_at >= now() - make_interval(mins => ${VENTANA_DUPLICADO_MIN}::int)
+         and creado_at >= now() - make_interval(mins => ${VENTANA_REUTILIZAR_MIN}::int)
        order by creado_at desc`
     const previas: FilaPrevia[] = filas.map((f) => ({ estado: f.estado, creadoAt: new Date(f.creado_at), intentoId: f.intento_id }))
     const copias = new Map<string, { respuesta: unknown; cotizacionId: string }>()
@@ -249,7 +260,7 @@ export async function reservarSinDuplicado(input: {
            and simulado = false and respuesta is not null`
       for (const r of t) copias.set(r.intento_id, { respuesta: r.respuesta, cotizacionId: r.id })
     }
-    const d = decidirDuplicado({ previas, copias: new Set(copias.keys()), ahora: new Date(), forzar: input.forzar })
+    const d = decidirDuplicado({ previas, copias: new Set(copias.keys()), ahora: new Date(), forzar: input.forzar, fechaEfecto: input.fechaEfecto })
     if (d.accion === 'reutilizar') {
       const c = copias.get(d.intentoId)!
       return { resultado: 'reutilizar', intentoId: d.intentoId, ...c }
@@ -330,12 +341,32 @@ export async function reservarEmision(input: {
   solicitadoPor: string
   costeCents: number
   projectId: string | null
+  /**
+   * Huella anti doble clic (05/11/2026), la MISMA columna y el mismo candado que `reservarSinDuplicado`: si hay otra
+   * línea con esta huella reservada o facturable en los últimos 15 min se lanza `EmisionDuplicada`. Sin la columna
+   * `huella` (esquema sin migrar) se reserva como antes, sin deduplicar.
+   */
+  huella?: string
   env?: Env
 }): Promise<Reserva> {
   const env = input.env ?? process.env
+  const huella = input.huella && (await hayHuella()) ? input.huella : null
   // Bajo el MISMO candado que cotizar (una sola bolsa en euros). Si ya no cabe, se LANZA: el
   // llamante (`libro-emision.ts`) trata cualquier excepción de la reserva como «no se llama».
   await prisma.$transaction(async (tx) => {
+    if (huella) {
+      // Orden de candados fijo (huella → correduría), como en `reservarSinDuplicado`.
+      await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${huella}))`
+      const previas = await tx.$queryRaw<{ intento_id: string }[]>`
+        select intento_id::text as intento_id
+          from seguros.codeoscopic_consumo
+         where correduria_id = ${input.correduriaId}::uuid
+           and huella = ${huella}
+           and estado in ('reservado', 'facturable')
+           and creado_at >= now() - make_interval(mins => ${VENTANA_DUPLICADO_MIN}::int)
+         limit 1`
+      if (previas.length > 0) throw new EmisionDuplicada()
+    }
     const corte = await recontarBajoCandado(
       tx,
       input.correduriaId,
@@ -345,10 +376,10 @@ export async function reservarEmision(input: {
     if (corte) throw new TopeAlcanzadoBajoCandado(corte.razon, corte.mensaje)
     await tx.$executeRaw`
       insert into seguros.codeoscopic_consumo
-        (correduria_id, intento_id, estado, motivo, solicitado_por, coste_cents, project_id_codeoscopic)
+        (correduria_id, intento_id, estado, motivo, solicitado_por, coste_cents, project_id_codeoscopic, huella)
       values
         (${input.correduriaId}::uuid, ${input.intentoId}::uuid, 'reservado',
-         ${input.operacion}, ${input.solicitadoPor}, ${input.costeCents}, ${input.projectId})
+         ${input.operacion}, ${input.solicitadoPor}, ${input.costeCents}, ${input.projectId}, ${huella})
     `
   })
   return { intentoId: input.intentoId, correduriaId: input.correduriaId }
