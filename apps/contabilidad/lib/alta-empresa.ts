@@ -7,7 +7,7 @@
 //   · Siembra: ejercicio natural ABIERTO (año de `ejercicio` o el de hoy, reloj inyectado) y plan de cuentas PGC pymes
 //     (`SEMILLA_PGC_PYMES` de @central/module-contabilidad, copia por empresa, editable después).
 //   · Sin envío de nada a nadie: el dueño entra con su correo y un código (que hoy queda «no enviado»: ver lib/acceso.ts).
-import { SEMILLA_PGC_PYMES } from '@central/module-contabilidad'
+import { filasPlanDeSector } from '@central/module-contabilidad'
 import type { FilaCuenta, RepoContable } from './repo.ts'
 import { APPS_ORIGEN } from './secretos.ts'
 
@@ -35,8 +35,9 @@ export function formaDesdeNif(nif: string): Forma | null {
   return null
 }
 
-export const filasSemillaPgc = (): FilaCuenta[] =>
-  SEMILLA_PGC_PYMES.map(([codigo, nombre, nat]) => ({
+/** Plan a sembrar: semilla PGC pymes + las cuentas extra de la plantilla del sector (sin sector = genérica = solo la semilla). */
+export const filasSemillaPgc = (sector?: string): FilaCuenta[] =>
+  filasPlanDeSector(sector ?? 'generico').map(([codigo, nombre, nat]) => ({
     codigo, nombre, grupo: Number(codigo[0]), naturaleza: nat === 'D' ? 'deudora' : 'acreedora', admiteApuntes: true, activa: true,
   }))
 
@@ -122,7 +123,7 @@ export async function altaEmpresa(deps: DepsAlta, cuerpo: unknown): Promise<Resu
     const ejercicioNuevo = await repo.crearEjercicio({ anio: d.anio, inicio: `${d.anio}-01-01`, fin: `${d.anio}-12-31`, estado: 'abierto' })
     if (ejercicioNuevo) completado.push(`ejercicio ${d.anio}`)
     if ((await repo.contarCuentas()) === 0) {
-      await repo.sembrarPlan(filasSemillaPgc())
+      await repo.sembrarPlan(filasSemillaPgc(d.sector))
       completado.push('plan de cuentas PGC pymes')
     }
     const vinculos = await repo.vinculos()

@@ -40,3 +40,17 @@ export { generarFechasRecurrente } from './recurrentes.ts'
 
 // Núcleo de DOBLE PARTIDA (partida): dinero en céntimos, plan de cuentas, asientos, hechos→asientos, libros.
 export * from './partida/index.ts'
+
+// ── F2: análisis (KPI, series, previsión, rentabilidad por dimensión, antigüedad), plantillas de sector y avisos ──
+export * from './analisis/periodos.ts'
+export * from './analisis/kpis.ts'
+export * from './analisis/gastos.ts'
+export * from './analisis/series.ts'
+export * from './analisis/antiguedad.ts'
+export * from './analisis/prevision.ts'
+export * from './analisis/dimensiones.ts'
+export * from './plantillas/plantillas.ts'
+export * from './plantillas/reglas.ts'
+export * from './avisos/fiscal.ts'
+export * from './avisos/motor.ts'
+export * from './analisis/medios.ts'

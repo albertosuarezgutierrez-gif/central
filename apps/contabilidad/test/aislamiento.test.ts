@@ -20,6 +20,8 @@ function txGrabadora(): { tx: TxSql; llamadas: Llamada[] } {
     cuenta: '572', orden: 1, documento: null, huella: 'a'.repeat(64), motivo: null, asiento_id: null, tipo_hecho: 'venta', cuentas: {},
     razon_social: 'X', nif: 'B1', forma: 'sociedad', sector: 'generico', logo_url: null, color_primario: null, usuario_id: E, rol: 'dueno',
     asiento_id_: null, ok: 1,
+    mes: '2026-01', valor: null, desde: new Date('2026-01-01'), medio: null, importe: 1, ref: 'R-1', pendientes: 0, rechazados: 0, version: 1,
+    clave: 'k', tipo: 'fiscal', severidad: 'info', titulo: 't', detalle: 'd', fecha_ref: null, enlace: null, creado_en: new Date('2026-01-01'), leido_en: null,
   }
   const tx: TxSql = {
     async $queryRaw<T>(q: TemplateStringsArray, ...valores: unknown[]) {
@@ -55,6 +57,19 @@ const LLAMADAS: [string, (r: RepoContable) => Promise<unknown>][] = [
   ['sumasPorCuenta periodo', (r) => r.sumasPorCuenta({ desde: '2026-01-01', hasta: '2026-01-31' })],
   ['sumasPorCuenta acumulado', (r) => r.sumasPorCuenta({ hasta: '2026-01-31' })],
   ['auditar', (r) => r.auditar({ actor: 'operador', accion: 'x', entidad: 'y' })],
+  ['asientosPeriodo', (r) => r.asientosPeriodo({ desde: '2026-01-01', hasta: '2026-12-31', limite: 10 })],
+  ['asientosPeriodo acumulado', (r) => r.asientosPeriodo({ hasta: '2026-12-31', limite: 10 })],
+  ['sumasMensuales', (r) => r.sumasMensuales({ hasta: '2026-12-31' })],
+  ['sumasPorDimension', (r) => r.sumasPorDimension('ot', { desde: '2026-01-01', hasta: '2026-12-31' })],
+  ['partidasPorDocumento', (r) => r.partidasPorDocumento(['43', '40'], { hasta: '2026-12-31' })],
+  ['cobrosPorMedio', (r) => r.cobrosPorMedio({ desde: '2026-01-01', hasta: '2026-12-31' })],
+  ['cobrosEfectivoAltos', (r) => r.cobrosEfectivoAltos({ desde: '2026-01-01', umbral: 100000 })],
+  ['contarHechos', (r) => r.contarHechos()],
+  ['guardarRegla', (r) => r.guardarRegla('venta', { ingreso: '705' }, E)],
+  ['insertarAviso', (r) => r.insertarAviso({ clave: 'k', tipo: 'fiscal', severidad: 'info', titulo: 't', detalle: 'd', fechaRef: '2026-01-02', enlace: '/informes' })],
+  ['avisos', (r) => r.avisos({ limite: 10 })],
+  ['contarAvisosSinLeer', (r) => r.contarAvisosSinLeer()],
+  ['marcarAvisosLeidos', (r) => r.marcarAvisosLeidos(E)],
   ['contarCuentas', (r) => r.contarCuentas()],
   ['sembrarPlan', (r) => r.sembrarPlan([{ codigo: '572', nombre: 'B', grupo: 5, naturaleza: 'deudora', admiteApuntes: true, activa: true }])],
   ['crearEjercicio', (r) => r.crearEjercicio({ anio: 2026, inicio: '2026-01-01', fin: '2026-12-31', estado: 'abierto' })],

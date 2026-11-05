@@ -31,6 +31,12 @@ export async function altaEmpresaBd(d: { nif: string; razonSocial: string; forma
   return { id: String(f[0].o_id), creado: f[0].o_creado === true }
 }
 
+/** Ids de las empresas activas (función SECURITY DEFINER de 0002): solo para el cron, que luego abre UNA transacción RLS por empresa. */
+export async function empresasActivasBd(): Promise<string[]> {
+  const f = await sql.$queryRaw<Fila[]>`SELECT o_id FROM contabilidad.empresas_activas()`
+  return f.map((x) => String(x.o_id))
+}
+
 export async function altaUsuarioBd(email: string, nombre: string): Promise<string> {
   const f = await sql.$queryRaw<Fila[]>`SELECT contabilidad.alta_usuario(${email}::text, ${nombre}::text) AS id`
   if (!f[0]?.id) throw new Error('alta_usuario no devolvió id')

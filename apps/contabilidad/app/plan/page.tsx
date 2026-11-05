@@ -10,12 +10,12 @@ const GRUPOS: Record<number, string> = {
 }
 
 export default async function Plan() {
-  const { ctx, empresa, variasEmpresas } = await datosPagina()
+  const { ctx, empresa, variasEmpresas, avisos } = await datosPagina()
   const cuentas = await conRepo(ctx.empresaId, (r) => r.planCuentas())
   const grupos = [...new Set(cuentas.map((c) => c.grupo))].sort((a, b) => a - b)
   return (
     <>
-      <Cabecera empresa={empresa} variasEmpresas={variasEmpresas} />
+      <Cabecera empresa={empresa} variasEmpresas={variasEmpresas} avisos={avisos} />
       <main className="contenido">
         <h1>Plan de cuentas</h1>
         <p className="tenue">PGC de pymes como punto de partida (copia propia de tu empresa). Una cuenta con apuntes no se borra: se desactiva.</p>

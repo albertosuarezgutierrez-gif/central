@@ -52,6 +52,12 @@ export async function fijarRrhhEmpresaBd(tallerId: string, empresaId: string | n
   return filas[0]?.ok === true
 }
 
+/** Vínculo con la empresa de contabilidad: SOLO el operador (0010). Devuelve false si el taller no existe. */
+export async function fijarContabilidadEmpresaBd(tallerId: string, empresaId: string | null): Promise<boolean> {
+  const filas = await prisma.$queryRaw<Array<{ ok: boolean }>>`SELECT taller.fijar_contabilidad_empresa(${tallerId}::uuid, ${empresaId}::uuid) AS ok`
+  return filas[0]?.ok === true
+}
+
 type TxRaw = Pick<Prisma.TransactionClient, '$queryRaw' | '$executeRaw'>
 
 /** Almacén del límite por IP (`taller.bloqueos_codigo`) bajo candado de transacción. */

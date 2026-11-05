@@ -10,12 +10,12 @@ export const dynamic = 'force-dynamic'
 const ORIGEN: Record<string, string> = { manual: 'Manual', hecho: 'Automático', rectificacion: 'Contraasiento', apertura: 'Apertura', cierre: 'Cierre' }
 
 export default async function Diario({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const { ctx, empresa, variasEmpresas } = await datosPagina()
+  const { ctx, empresa, variasEmpresas, avisos } = await datosPagina()
   const limite = limiteDe((await searchParams).n)
   const { asientos, hayMas } = await conRepo(ctx.empresaId, (r) => r.diario({ limite }))
   return (
     <>
-      <Cabecera empresa={empresa} variasEmpresas={variasEmpresas} />
+      <Cabecera empresa={empresa} variasEmpresas={variasEmpresas} avisos={avisos} />
       <main className="contenido">
         <h1>Libro diario</h1>
         <p className="tenue">Solo lectura. Los asientos no se editan ni se borran: un error se corrige con un contraasiento.</p>

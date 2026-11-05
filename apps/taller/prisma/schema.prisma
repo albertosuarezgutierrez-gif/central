@@ -31,6 +31,8 @@ model Taller {
   codigoAcceso        String?  @unique @map("codigo_acceso")
   /// Empresa de este taller en rrhh (migración 0005). El taller solo ENVÍA fichajes; no lee rrhh.
   rrhhEmpresaId       String?  @map("rrhh_empresa_id") @db.Uuid
+  /// Empresa de este taller en contabilidad (migración 0010). Solo la fija el operador (`taller.fijar_contabilidad_empresa`).
+  contabilidadEmpresaId String? @map("contabilidad_empresa_id") @db.Uuid
   activo              Boolean  @default(true)
   creadoEn            DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
   actualizadoEn       DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
@@ -436,6 +438,8 @@ model OtLinea {
   totalCent        BigInt    @map("total_cent")
   baremoMinutos    Int?      @map("baremo_minutos")
   minutosReales    Int?      @map("minutos_reales")
+  /// Coste TOTAL de la línea (0010). null = no se sabe (nunca 0 por defecto): sin él no hay margen.
+  costeCent        BigInt?   @map("coste_cent")
   articuloId       String?   @map("articulo_id") @db.Uuid
   pedidoLineaId    String?   @map("pedido_linea_id") @db.Uuid
   origen           String
@@ -803,5 +807,26 @@ model Cobro {
   actualizadoEn DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
 
   @@map("cobros")
+  @@schema("taller")
+}
+
+/// Outbox hacia contabilidad (0010): el hecho nace en la misma transacción que la factura/cobro; el cron lo envía.
+model HechoPendiente {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId       String    @map("taller_id") @db.Uuid
+  facturaId      String?   @map("factura_id") @db.Uuid
+  tipo           String
+  ref            String
+  hecho          Json
+  estado         String    @default("pendiente")
+  intentos       Int       @default(0)
+  ultimoError    String?   @map("ultimo_error")
+  proximoIntento DateTime? @map("proximo_intento") @db.Timestamptz(6)
+  enviadoEn      DateTime? @map("enviado_en") @db.Timestamptz(6)
+  creadoEn       DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn  DateTime  @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@unique([tallerId, tipo, ref])
+  @@map("hechos_pendientes")
   @@schema("taller")
 }

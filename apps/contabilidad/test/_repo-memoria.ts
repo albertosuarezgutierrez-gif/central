@@ -1,8 +1,9 @@
 // Fake en memoria de `RepoContable` para probar los casos de uso sin BD. Imita las garantías de 0001 que importan aquí:
 // datos separados por empresa, clave única de hechos (ON CONFLICT DO NOTHING → null), número correlativo por ejercicio y
 // solo-añadir (no expone ningún UPDATE/DELETE de asientos; los guarda congelados).
+import { aFechaISO, sumasMensualesDeAsientos, type Aviso } from '@central/module-contabilidad'
 import type {
-  RepoContable, FilaCuenta, FilaEjercicio, AsientoLeido, FilaHecho, NuevoAsiento, NuevoHecho, EntradaAuditoria, SumaCuenta, FilaEmpresa,
+  RepoContable, AvisoLeido, FilaCuenta, FilaEjercicio, AsientoLeido, FilaHecho, NuevoAsiento, NuevoHecho, EntradaAuditoria, SumaCuenta, FilaEmpresa,
 } from '../lib/repo.ts'
 import type { TipoHecho } from '../lib/hecho-entrada.ts'
 import { filasSemillaPgc } from '../lib/alta-empresa.ts'
@@ -17,6 +18,7 @@ type Datos = {
   origenes: Set<string>
   vinculos: { usuarioId: string; rol: 'dueno' | 'gestor'; activo: boolean }[]
   auditoria: EntradaAuditoria[]
+  avisos: (AvisoLeido & { leidoPor?: string | null })[]
 }
 
 export function crearAlmacen() {
@@ -25,7 +27,7 @@ export function crearAlmacen() {
   const nuevoId = () => `00000000-0000-4000-8000-${String(++seq).padStart(12, '0')}`
   const datos = (e: string): Datos => {
     if (!porEmpresa.has(e)) {
-      porEmpresa.set(e, { empresa: null, plan: [], ejercicios: [], asientos: [], hechos: [], reglas: [], origenes: new Set(), vinculos: [], auditoria: [] })
+      porEmpresa.set(e, { empresa: null, plan: [], ejercicios: [], asientos: [], hechos: [], reglas: [], origenes: new Set(), vinculos: [], auditoria: [], avisos: [] })
     }
     return porEmpresa.get(e)!
   }
@@ -77,7 +79,7 @@ export function crearAlmacen() {
       async insertarHecho(h: NuevoHecho) {
         if (d.hechos.some((x) => x.app === h.app && x.tipo === h.tipo && x.ref === h.ref)) return null
         const id = nuevoId()
-        d.hechos.push({ id, app: h.app, tipo: h.tipo, ref: h.ref, estado: 'pendiente_de_regla', motivo: 'en proceso', asientoId: null, huella: h.huella })
+        d.hechos.push({ id, app: h.app, tipo: h.tipo, ref: h.ref, estado: 'pendiente_de_regla', motivo: 'en proceso', asientoId: null, huella: h.huella, payload: h.payload } as never)
         return id
       },
       async cerrarHecho(id, estado, motivo, asientoId) {
@@ -104,6 +106,80 @@ export function crearAlmacen() {
         return [...m.values()]
       },
       async auditar(a) { d.auditoria.push(a) },
+      async asientosPeriodo({ desde, hasta, limite }) {
+        const xs = d.asientos.filter((a) => (!desde || a.fecha >= desde) && a.fecha <= hasta).sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : a.numero - b.numero))
+        return {
+          truncado: xs.length > limite,
+          asientos: xs.slice(0, limite).map((a) => ({ numero: a.numero, fecha: a.fecha, ejercicio: a.ejercicio, concepto: a.concepto, apuntes: a.apuntes.map((p) => ({ cuenta: p.cuenta, debe: p.debe, haber: p.haber, ...(p.documento ? { documento: p.documento } : {}) })) })),
+        }
+      },
+      async sumasMensuales({ hasta }) {
+        return sumasMensualesDeAsientos(d.asientos.filter((a) => a.fecha <= hasta).map((a) => ({ fecha: a.fecha, ejercicio: a.ejercicio, concepto: a.concepto, apuntes: a.apuntes.map((p) => ({ cuenta: p.cuenta, debe: p.debe, haber: p.haber, ...(p.documento ? { documento: p.documento } : {}) })) })))
+      },
+      async sumasPorDimension(dimension, { desde, hasta }) {
+        const m = new Map<string, { valor: string | null; cuenta: string; debe: number; haber: number }>()
+        for (const a of d.asientos) {
+          if (a.fecha < desde || a.fecha > hasta) continue
+          const hecho = d.hechos.find((h) => h.id === a.hechoId) as unknown as { payload?: { dimensiones?: Record<string, string> } } | undefined
+          const valor = hecho?.payload?.dimensiones?.[dimension]?.trim() || null
+          for (const p of a.apuntes) {
+            if (p.cuenta[0] !== '6' && p.cuenta[0] !== '7') continue
+            const x = m.get(`${valor}|${p.cuenta}`) ?? { valor, cuenta: p.cuenta, debe: 0, haber: 0 }
+            x.debe += p.debe; x.haber += p.haber
+            m.set(`${valor}|${p.cuenta}`, x)
+          }
+        }
+        return [...m.values()]
+      },
+      async partidasPorDocumento(prefijos, { hasta }) {
+        const m = new Map<string, { cuenta: string; documento: string | null; desde: string; debe: number; haber: number }>()
+        for (const a of d.asientos) {
+          if (a.fecha > hasta) continue
+          for (const p of a.apuntes) {
+            if (!prefijos.some((x) => p.cuenta.startsWith(x))) continue
+            const k = `${p.cuenta}|${p.documento ?? ''}`
+            const x = m.get(k) ?? { cuenta: p.cuenta, documento: p.documento, desde: a.fecha, debe: 0, haber: 0 }
+            x.debe += p.debe; x.haber += p.haber; if (a.fecha < x.desde) x.desde = a.fecha
+            m.set(k, x)
+          }
+        }
+        return [...m.values()]
+      },
+      async cobrosPorMedio({ desde, hasta }) {
+        const m = new Map<string | null, { medio: string | null; importe: number; n: number }>()
+        for (const h of d.hechos) {
+          const x = h as unknown as { tipo: string; estado: string; fecha?: string; payload?: { medio?: string; importe: number; fecha: string } }
+          if (x.tipo !== 'cobro' || x.estado !== 'asentado' || !x.payload || x.payload.fecha < desde || x.payload.fecha > hasta) continue
+          const k = x.payload.medio ?? null
+          const f = m.get(k) ?? { medio: k, importe: 0, n: 0 }
+          f.importe += x.payload.importe; f.n += 1
+          m.set(k, f)
+        }
+        return [...m.values()]
+      },
+      async cobrosEfectivoAltos({ desde, umbral }) {
+        return d.hechos.flatMap((h) => {
+          const x = h as unknown as { tipo: string; estado: string; ref: string; payload?: { medio?: string; importe: number; fecha: string } }
+          return x.tipo === 'cobro' && x.estado === 'asentado' && x.payload?.medio === 'efectivo' && x.payload.fecha >= desde && x.payload.importe >= umbral
+            ? [{ ref: x.ref, fecha: x.payload.fecha, importe: x.payload.importe }] : []
+        })
+      },
+      async contarHechos() {
+        return { pendientes: d.hechos.filter((h) => h.estado === 'pendiente_de_regla').length, rechazados: d.hechos.filter((h) => h.estado === 'rechazado').length }
+      },
+      async guardarRegla(tipo, cuentas) {
+        const version = Math.max(0, ...d.reglas.filter((r) => r.tipo === tipo).map((r) => r.version)) + 1
+        d.reglas.push({ tipo, cuentas: { ...cuentas }, version })
+        return version
+      },
+      async insertarAviso(a: Aviso) {
+        if (d.avisos.some((x) => x.clave === a.clave)) return false
+        d.avisos.push({ ...a, id: nuevoId(), creadoEn: aFechaISO(new Date(0)), leido: false })
+        return true
+      },
+      async avisos({ limite }) { return d.avisos.slice(0, limite).map((a) => ({ ...a })) },
+      async contarAvisosSinLeer() { return d.avisos.filter((a) => !a.leido).length },
+      async marcarAvisosLeidos(usuarioId) { for (const a of d.avisos) if (!a.leido) { a.leido = true; a.leidoPor = usuarioId } },
       async contarCuentas() { return d.plan.length },
       async sembrarPlan(filas) { for (const f of filas) if (!d.plan.some((c) => c.codigo === f.codigo)) d.plan.push({ ...f }) },
       async crearEjercicio(e) {
@@ -118,10 +194,10 @@ export function crearAlmacen() {
   }
 
   /** Empresa lista para asentar: plan PGC sembrado y ejercicio `anio` abierto. */
-  function empresaLista(empresaId: string, anio = 2026, estado: FilaEjercicio['estado'] = 'abierto') {
+  function empresaLista(empresaId: string, anio = 2026, estado: FilaEjercicio['estado'] = 'abierto', sector = 'generico') {
     const d = datos(empresaId)
-    d.empresa = { razonSocial: `Empresa ${empresaId.slice(-1)}`, nif: 'B00000000', forma: 'sociedad', sector: 'generico', logoUrl: null, colorPrimario: null }
-    d.plan = filasSemillaPgc()
+    d.empresa = { razonSocial: `Empresa ${empresaId.slice(-1)}`, nif: 'B00000000', forma: 'sociedad', sector, logoUrl: null, colorPrimario: null }
+    d.plan = filasSemillaPgc(sector)
     d.ejercicios.push({ anio, inicio: `${anio}-01-01`, fin: `${anio}-12-31`, estado, ultimo: 0 })
     return d
   }
