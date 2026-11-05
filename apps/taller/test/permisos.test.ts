@@ -24,6 +24,8 @@ const esperado: Record<Capacidad, string[]> = {
   contacto_cliente_ver: ['dueno', 'admin', 'recepcion'],
   margenes_ver: ['dueno'],
   citas: ['dueno', 'admin', 'recepcion'],
+  facturar: ['dueno', 'admin', 'recepcion'],
+  facturas_rectificar: ['dueno'],
 }
 
 test('matriz de permisos = la decisión de Alberto', () => {

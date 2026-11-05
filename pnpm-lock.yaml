@@ -47,7 +47,7 @@ importers:
         version: 5.10.0
       next:
         specifier: ^15.5.28
-        version: 15.5.28(@types/node@22.19.20)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        version: 15.5.28(@babel/core@7.29.7)(@types/node@22.19.20)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       react:
         specifier: ^19.0.0
         version: 19.2.4
@@ -75,7 +75,7 @@ importers:
         version: 9.39.4(jiti@2.7.0)
       eslint-config-next:
         specifier: ^16.2.6
-        version: 16.2.7(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+        version: 16.2.7(@typescript-eslint/parser@8.61.0(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
       prisma:
         specifier: ^5.22.0
         version: 5.22.0
@@ -105,7 +105,7 @@ importers:
         version: 5.10.0
       next:
         specifier: ^15.5.28
-        version: 15.5.28(@babel/core@7.29.7)(@types/node@20.19.42)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        version: 15.5.28(@types/node@20.19.42)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       prisma:
         specifier: ^5.22.0
         version: 5.22.0
@@ -196,7 +196,7 @@ importers:
         version: 5.10.0
       next:
         specifier: ^15.5.28
-        version: 15.5.28(@babel/core@7.29.7)(@types/node@20.19.42)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        version: 15.5.28(@types/node@20.19.42)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       pdf-lib:
         specifier: ^1.17.1
         version: 1.17.1
@@ -239,7 +239,7 @@ importers:
         version: 9.39.4(jiti@2.7.0)
       eslint-config-next:
         specifier: ^16.2.6
-        version: 16.2.7(@typescript-eslint/parser@8.61.0(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+        version: 16.2.7(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
       typescript:
         specifier: ^5
         version: 5.9.3
@@ -296,7 +296,7 @@ importers:
         version: 5.10.0
       next:
         specifier: ^15.5.28
-        version: 15.5.28(@babel/core@7.29.7)(@types/node@20.19.42)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        version: 15.5.28(@types/node@20.19.42)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       pdf-lib:
         specifier: ^1.17.1
         version: 1.17.1
@@ -357,7 +357,7 @@ importers:
         version: link:../../packages/module-seguros
       next:
         specifier: ^15.5.28
-        version: 15.5.28(@babel/core@7.29.7)(@types/node@20.19.42)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        version: 15.5.28(@types/node@20.19.42)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       react:
         specifier: ^19.0.0
         version: 19.2.4
@@ -387,6 +387,52 @@ importers:
         specifier: ^5
         version: 5.9.3
 
+  apps/contabilidad:
+    dependencies:
+      '@central/brand':
+        specifier: workspace:*
+        version: link:../../packages/brand
+      '@central/core-identity':
+        specifier: workspace:*
+        version: link:../../packages/core-identity
+      '@central/module-contabilidad':
+        specifier: workspace:*
+        version: link:../../packages/module-contabilidad
+      '@prisma/client':
+        specifier: ^5.22.0
+        version: 5.22.0(prisma@5.22.0)
+      next:
+        specifier: ^15.5.28
+        version: 15.5.28(@babel/core@7.29.7)(@types/node@22.19.20)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.4(react@19.2.4)
+    devDependencies:
+      '@types/node':
+        specifier: ^22
+        version: 22.19.20
+      '@types/react':
+        specifier: ^19
+        version: 19.2.17
+      '@types/react-dom':
+        specifier: ^19
+        version: 19.2.3(@types/react@19.2.17)
+      eslint:
+        specifier: ^9
+        version: 9.39.4(jiti@2.7.0)
+      eslint-config-next:
+        specifier: ^16.2.6
+        version: 16.2.7(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+      prisma:
+        specifier: ^5.22.0
+        version: 5.22.0
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
   apps/housesevillana:
     dependencies:
       '@central/core-consent':
@@ -394,7 +440,7 @@ importers:
         version: link:../../packages/core-consent
       next:
         specifier: 15.5.28
-        version: 15.5.28(@babel/core@7.29.7)(@types/node@20.19.42)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        version: 15.5.28(@types/node@20.19.42)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       react:
         specifier: ^19.0.0
         version: 19.2.4
@@ -639,7 +685,7 @@ importers:
         version: 5.10.0
       next:
         specifier: ^15.5.28
-        version: 15.5.28(@babel/core@7.29.7)(@types/node@20.19.42)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        version: 15.5.28(@types/node@20.19.42)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       node-ical:
         specifier: ^0.19.0
         version: 0.19.0
@@ -727,7 +773,7 @@ importers:
         version: 5.10.0
       next:
         specifier: ^15.5.28
-        version: 15.5.28(@babel/core@7.29.7)(@types/node@20.19.42)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        version: 15.5.28(@types/node@20.19.42)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       prisma:
         specifier: ^5.22.0
         version: 5.22.0
@@ -854,7 +900,7 @@ importers:
         version: 3.9.14
       next:
         specifier: ^15.5.28
-        version: 15.5.28(@babel/core@7.29.7)(@types/node@20.19.42)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        version: 15.5.28(@types/node@20.19.42)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       pdf-lib:
         specifier: ^1.17.1
         version: 1.17.1
@@ -972,7 +1018,7 @@ importers:
         version: 5.10.0
       next:
         specifier: ^15.5.28
-        version: 15.5.28(@babel/core@7.29.7)(@types/node@20.19.42)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        version: 15.5.28(@types/node@20.19.42)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       pdf-lib:
         specifier: ^1.17.1
         version: 1.17.1
@@ -1090,7 +1136,7 @@ importers:
         version: 3.9.14
       next:
         specifier: ^15.5.28
-        version: 15.5.28(@types/node@22.19.20)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        version: 15.5.28(@babel/core@7.29.7)(@types/node@22.19.20)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       next-auth:
         specifier: ^5.0.0-beta.32
         version: 5.0.0-beta.32(next@15.5.28(@types/node@22.19.20)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(nodemailer@9.0.3)(react@19.2.4)
@@ -1167,9 +1213,18 @@ importers:
       '@central/core-direccion':
         specifier: workspace:*
         version: link:../../packages/core-direccion
+      '@central/core-fiscal':
+        specifier: workspace:*
+        version: link:../../packages/core-fiscal
       '@central/core-identity':
         specifier: workspace:*
         version: link:../../packages/core-identity
+      '@central/core-receipts':
+        specifier: workspace:*
+        version: link:../../packages/core-receipts
+      '@central/module-contabilidad':
+        specifier: workspace:*
+        version: link:../../packages/module-contabilidad
       '@central/module-taller':
         specifier: workspace:*
         version: link:../../packages/module-taller
@@ -1178,7 +1233,10 @@ importers:
         version: 5.22.0(prisma@5.22.0)
       next:
         specifier: ^15.5.28
-        version: 15.5.28(@types/node@22.19.20)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        version: 15.5.28(@babel/core@7.29.7)(@types/node@22.19.20)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      qrcode:
+        specifier: ^1.5.4
+        version: 1.5.4
       react:
         specifier: ^19.0.0
         version: 19.2.4
@@ -1192,6 +1250,9 @@ importers:
       '@types/node':
         specifier: ^22
         version: 22.19.20
+      '@types/qrcode':
+        specifier: ^1.5.6
+        version: 1.5.6
       '@types/react':
         specifier: ^19
         version: 19.2.17
@@ -1242,7 +1303,7 @@ importers:
         version: 5.10.0
       next:
         specifier: ^15.5.28
-        version: 15.5.28(@babel/core@7.29.7)(@types/node@20.19.42)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        version: 15.5.28(@types/node@20.19.42)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       prisma:
         specifier: ^5.22.0
         version: 5.22.0
@@ -4231,6 +4292,7 @@ packages:
   eslint@9.39.4:
     resolution: {integrity: sha512-XoMjdBOwe/esVgEvLmNsD3IRHkm7fbKIUGvrleloJXUZgDHig2IPWNniv+GwjyJXzuNqVjlr5+4yVUZjycJwfQ==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
@@ -10071,7 +10133,31 @@ snapshots:
     transitivePeerDependencies:
       - '@swc/helpers'
 
-  next@15.5.28(@babel/core@7.29.7)(@types/node@20.19.42)(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
+  next@15.5.28(@babel/core@7.29.7)(@types/node@22.19.20)(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
+    dependencies:
+      '@next/env': 15.5.28
+      '@swc/helpers': 0.5.15
+      caniuse-lite: 1.0.30001797
+      postcss: 8.5.25
+      react: 19.2.4
+      react-dom: 19.2.4(react@19.2.4)
+      styled-jsx: 5.1.6(@babel/core@7.29.7)(react@19.2.4)
+    optionalDependencies:
+      '@next/swc-darwin-arm64': 15.5.28
+      '@next/swc-darwin-x64': 15.5.28
+      '@next/swc-linux-arm64-gnu': 15.5.28
+      '@next/swc-linux-arm64-musl': 15.5.28
+      '@next/swc-linux-x64-gnu': 15.5.28
+      '@next/swc-linux-x64-musl': 15.5.28
+      '@next/swc-win32-arm64-msvc': 15.5.28
+      '@next/swc-win32-x64-msvc': 15.5.28
+      sharp: 0.35.3(@types/node@22.19.20)
+    transitivePeerDependencies:
+      - '@babel/core'
+      - '@types/node'
+      - babel-plugin-macros
+
+  next@15.5.28(@types/node@20.19.42)(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
     dependencies:
       '@next/env': 15.5.28
       '@swc/helpers': 0.5.15

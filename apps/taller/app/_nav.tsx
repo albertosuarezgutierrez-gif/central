@@ -7,6 +7,7 @@ const ENLACES = [
   { href: '/citas', texto: 'Citas' },
   { href: '/ordenes', texto: 'Órdenes' },
   { href: '/presupuestos', texto: 'Presupuestos' },
+  { href: '/facturas', texto: 'Facturas' },
   { href: '/ajustes', texto: 'Ajustes' },
 ]
 
