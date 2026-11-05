@@ -393,7 +393,7 @@ test('🪤 la cabecera de la migración 2026-11-05c cita ficheros que existen y 
   const { existsSync } = await import('node:fs')
   const sql = readFileSync(new URL('../prisma/sql/2026-11-05c_presupuesto_renovacion_quien_elige.sql', import.meta.url), 'utf8')
   const cabecera = sql.slice(0, sql.indexOf('BEGIN;'))
-  assert.match(cabecera, /NO APLICADA/)
+  assert.match(cabecera, /(NO APLICADA|✅ APLICADA en producción)/, "la cabecera dice si está aplicada")
   assert.match(sql, /BEGIN;[\s\S]*COMMIT;/)
   assert.match(sql, /GRANT SELECT \(eleccion_por_papel, eleccion_por_identidad_id, eleccion_por_nombre, eleccion_via\) ON seguros\.presupuesto TO prisma_asegura_portal/)
   const raiz = new URL('../../../', import.meta.url)
