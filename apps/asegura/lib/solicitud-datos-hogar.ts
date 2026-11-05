@@ -177,13 +177,15 @@ export async function trasCompletarHogar(p: {
   /** Los campos que se pidieron (para listar lo que queda «a preguntar»). */
   campos: readonly CampoSolicitud[]
   tercero: boolean
+  /** Renovación por la app (05/11/2026): primera línea del Telegram (quién contestó). Sin datos personales. */
+  encabezado?: string
 }): Promise<void> {
   try {
     const { catastro, deducida } = await catastroDeSolicitud(p.respuestas)
     const propuesta = viviendaDeSolicitud(p.respuestas, catastro, new Date().toISOString(), deducida)
     const r = await anotarEnRiesgo(p.correduriaId, p.oportunidadId, propuesta)
     const enlace = enlaceFichaCliente(p.clienteId, process.env.PLATAFORMA_URL?.trim() || URL_PLATAFORMA_DEFECTO)
-    await tgSend(textoAvisoDatosHogar({
+    await tgSend((p.encabezado ? `${p.encabezado}\n` : '') + textoAvisoDatosHogar({
       respuestas: p.respuestas, catastro, deducida, campos: p.campos, enlaceFicha: enlace, tercero: p.tercero,
       anotados: r.anotados, conflictos: r.conflictos, confirmado: r.confirmado,
     }))

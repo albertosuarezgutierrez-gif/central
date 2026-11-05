@@ -87,7 +87,7 @@ export async function migracionQuienElige(): Promise<boolean> {
 // ─── Lecturas ────────────────────────────────────────────────────────────────
 
 /** La renovación actual de la póliza: prima con recibos, vencimiento con recibos, compañía. `null` = no es de aquí. */
-async function leerPoliza(correduriaId: string, polizaId: string) {
+export async function leerPoliza(correduriaId: string, polizaId: string) {
   const p = await db().poliza.findFirst({
     where: { id: polizaId, correduriaId },
     select: {
@@ -160,7 +160,7 @@ export async function quienVeEnApp(correduriaId: string, clienteId: string, poli
 // ─── Catastro (hogar) ────────────────────────────────────────────────────────
 
 /** Completa `info_riesgo.datosVivienda` de la oportunidad con el Catastro. Nunca lanza; nunca pisa lo escrito ni lo confirmado. */
-async function catastroDeOportunidad(correduriaId: string, oportunidadId: string, ahora: Date, intento = 1): Promise<EstadoCatastroRenovacion> {
+export async function catastroDeOportunidad(correduriaId: string, oportunidadId: string, ahora: Date, intento = 1): Promise<EstadoCatastroRenovacion> {
   try {
     const [o] = await db().$queryRaw<{ v: Record<string, unknown> | null }[]>`
       select info_riesgo->'datosVivienda' as v from oportunidades where id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid`

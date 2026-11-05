@@ -16,6 +16,7 @@ import {
   type FirmaParaAviso,
   type PolizaNuevaParaAviso,
   type PresupuestoParaAviso,
+  type DatosRenovacionParaAviso,
   type PolizaModificadaParaAviso,
   type ParteParaAviso,
   type Aviso,
@@ -82,6 +83,8 @@ export type Pendiente = {
   partes?: ParteParaAviso[]
   /** Renovaciones con alternativas PUBLICADAS en la app y sin elegir (04/11/2026). El correo no dice ni compañía ni importe. */
   presupuestos?: PresupuestoParaAviso[]
+  /** Solicitudes de datos de la renovación PUBLICADAS y sin contestar (05/11/2026). El correo no dice nada de ellas: solo que hay un aviso. */
+  datosRenovacion?: DatosRenovacionParaAviso[]
   /**
    * Antelación de los vencimientos de ESTA ficha (`diasEfectivosDeFicha`: max(7, la mayor de sus
    * identidades del portal), 14/10/2026). Ausente = 7, lo de siempre.
@@ -115,6 +118,7 @@ export function avisosNuevos(
     polizasModificadas: p.polizasModificadas ?? [],
     partes: p.partes ?? [],
     presupuestos: p.presupuestos ?? [],
+    datosRenovacion: p.datosRenovacion ?? [],
     diasAntelacion: p.diasAntelacion ?? null,
     hoy,
   })

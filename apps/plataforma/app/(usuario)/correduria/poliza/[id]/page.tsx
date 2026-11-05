@@ -16,6 +16,7 @@ import CimaPoliza from './CimaPoliza'
 import PersonasPoliza, { hayPersonas } from './PersonasPoliza'
 import PresupuestosPoliza from './PresupuestosPoliza'
 import PrepararRenovacion from './PrepararRenovacion'
+import PedirDatosRenovacion from './PedirDatosRenovacion'
 import AbrirRiesgo from './AbrirRiesgo'
 import CartaMediadorPoliza from './CartaMediadorPoliza'
 import Siniestros from '../../Siniestros'
@@ -300,6 +301,8 @@ function accesosPoliza(p: Poliza, cancelada: boolean, tareas: LecturaTareasVincu
           <AnulacionPoliza polizaId={p.id} vencimiento={p.fechaVencimiento ? p.fechaVencimiento.slice(0, 10) : null} />
           {/* Renovación con alternativas (04/11/2026): solo póliza de cartera viva y no cancelada. Nada sale sin su ✅. */}
           {p.viva && !cancelada && <PrepararRenovacion polizaId={p.id} />}
+          {/* Pedir datos al cliente por la app (05/11/2026): solo hogar de cartera viva; nada sale sin su ✅. */}
+          {p.viva && !cancelada && String(p.tipo).toLowerCase() === 'hogar' && <PedirDatosRenovacion polizaId={p.id} />}
           <PresupuestosPoliza polizaId={p.id} ramo={p.tipo} />
           {!cancelada && ['auto', 'moto'].includes(String(p.tipo).toLowerCase()) && (
             <p style={{ margin: '12px 0' }}>
