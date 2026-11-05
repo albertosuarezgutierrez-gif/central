@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-05T05:52:33Z",
-  "sha": "d09ce8084c103fb039b726c4cfd789122897eba5",
+  "generadoEn": "2026-11-05T06:34:34Z",
+  "sha": "f3c10a7ddfa85537544c55f81d5981d106cc2ecd",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -28073,7 +28073,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "27946e3fc1e0"
+      "hash": "eb56ba4b52c9"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/cartera/poliza/[polizaId]/retarificador.tsx",
@@ -28106,7 +28106,7 @@
           "exportada": false,
           "params": "{ r, simulacion, }: { r: Extract<Resultado, { estado: 'ok' }> simulacion: boolean }",
           "retorno": null,
-          "linea": 824
+          "linea": 825
         },
         {
           "nombre": "BannerSimulacion",
@@ -28114,7 +28114,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 1008,
+          "linea": 1009,
           "resumen": "El cartel de simulación, arriba del todo y sin ambigüedad. 🚨 Sustituye al aviso ROJO de «tarificación apagada» que se pintaba aquí. Ese aviso era falso con la simulación puesta: en `cotizar()` el pas"
         },
         {
@@ -28123,7 +28123,7 @@
           "exportada": false,
           "params": "{ n, titulo, sub }: { n: number; titulo: string; sub?: string }",
           "retorno": null,
-          "linea": 1034
+          "linea": 1035
         },
         {
           "nombre": "Paso",
@@ -28131,7 +28131,7 @@
           "exportada": false,
           "params": "{ n, titulo, sub, children, }: { n: number titulo: string sub?: string children: React.ReactNode }",
           "retorno": null,
-          "linea": 1066
+          "linea": 1067
         },
         {
           "nombre": "Campo",
@@ -28139,7 +28139,7 @@
           "exportada": false,
           "params": "{ id, etiqueta, falta, faltaTexto, ayuda, children, }: { id: string etiqueta: string falta: boolean faltaTexto?: string ayuda?: React.ReactNode children: React.ReactNode }",
           "retorno": null,
-          "linea": 1092,
+          "linea": 1093,
           "resumen": "Un campo del formulario: etiqueta, control, ayuda y —si falta— su marca. La marca va AQUÍ y no en una lista encima del botón: «falta la versión» a diez centímetros del desplegable de la versión obliga"
         },
         {
@@ -28148,7 +28148,7 @@
           "exportada": false,
           "params": "{ vehiculo, autoMarca, autoModelo, }: { vehiculo: VehiculoConocido autoMarca: Emparejamiento autoModelo: Emparejamiento }",
           "retorno": null,
-          "linea": 1133,
+          "linea": 1134,
           "resumen": "Lo que la cartera YA sabe del coche: informativo, compacto y sin competir con los campos. Sustituye al texto que durante un día negó que la compañía mandara el modelo. Era falso y medido al revés: las"
         },
         {
@@ -28157,7 +28157,7 @@
           "exportada": false,
           "params": "{ etiqueta, valor, estado, }: { etiqueta: string valor: string | null estado: Emparejamiento['estado'] }",
           "retorno": null,
-          "linea": 1173
+          "linea": 1174
         },
         {
           "nombre": "ProcedenciaCatalogo",
@@ -28165,7 +28165,7 @@
           "exportada": false,
           "params": "{ emp, elegido, que, }: { emp: Emparejamiento elegido: string que: string }",
           "retorno": null,
-          "linea": 1210,
+          "linea": 1211,
           "resumen": "De dónde sale lo que hay puesto en un desplegable — o por qué no hay nada."
         },
         {
@@ -28174,7 +28174,7 @@
           "exportada": false,
           "params": "{ versiones }: { versiones: VersionCandidata[] }",
           "retorno": null,
-          "linea": 1257,
+          "linea": 1258,
           "resumen": "Las versiones vistas en OTRAS pólizas de la misma matrícula. 🚨 Son PISTAS, nunca una selección. Son texto histórico de otra póliza, no códigos Base7 del catálogo, y con dos o más pueden contradecirse"
         },
         {
@@ -28183,7 +28183,7 @@
           "exportada": false,
           "params": "{ consumo, simulacion }: { consumo: Consumo; simulacion: boolean }",
           "retorno": null,
-          "linea": 1311,
+          "linea": 1312,
           "resumen": "El contador de gasto. En simulación no se toca el libro, así que su estado se cuenta como información de contexto y NO en rojo: un «tarificación apagada» en rojo sobre una pantalla que sí funciona y n"
         }
       ],
@@ -28191,7 +28191,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "c4a5eeee1703"
+      "hash": "8f1d1b8ae3b1"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/cartera/subir/page.tsx",
@@ -28406,7 +28406,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/cartera/cliente/[clienteId]/hogar-nuevo",
-      "hash": "9a1115f7f175"
+      "hash": "0adef311027a"
     },
     {
       "ruta": "apps/asegura/app/api/cartera/documentos/route.ts",
@@ -28451,7 +28451,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/cartera/polizas/[polizaId]/retarificar",
-      "hash": "7ae5f253e077"
+      "hash": "a1c024616184"
     },
     {
       "ruta": "apps/asegura/app/api/cron/avisos-intranet/route.ts",
@@ -30216,7 +30216,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 551
+          "linea": 567
         },
         {
           "nombre": "respuestaGastoBloqueado",
@@ -30224,7 +30224,7 @@
           "exportada": false,
           "params": "gasto: Extract<GastoEmision<never>, { ok: false }>",
           "retorno": null,
-          "linea": 569,
+          "linea": 585,
           "resumen": "El libro dijo que no. **Sin llamada al vendor**, y por eso se contesta con dos códigos distintos: se arreglan en sitios distintos. - `sin_libro` (503): no se ha podido leer `codeoscopic_consumo`. Es u"
         },
         {
@@ -30233,7 +30233,7 @@
           "exportada": false,
           "params": "v: unknown,",
           "retorno": "",
-          "linea": 586,
+          "linea": 612,
           "resumen": "Solo claves de la lista blanca y valores con la forma que el vendor acepta (mismas reglas que `revisarPersona`): un municipio no numérico o una fecha en formato español llegarían al PATCH y volverían "
         },
         {
@@ -30242,7 +30242,7 @@
           "exportada": false,
           "params": "campo: CampoPersona, s: string",
           "retorno": "string | null",
-          "linea": 605
+          "linea": 631
         },
         {
           "nombre": "respuestaSigueFaltando",
@@ -30250,7 +30250,7 @@
           "exportada": false,
           "params": "campos: CampoPersona[], mensajeVendor: string",
           "retorno": null,
-          "linea": 623
+          "linea": 649
         },
         {
           "nombre": "registrarFaltaProducto",
@@ -30258,7 +30258,7 @@
           "exportada": false,
           "params": "correduriaId: string, tarificacionId: string, campos: CampoProducto[]",
           "retorno": null,
-          "linea": 651,
+          "linea": 677,
           "resumen": "Telemetría de `faltan_producto` por COMPAÑÍA (20/09/2026): saber a qué compañías les falta cobertura del Product Form Library, no solo que «alguna vez pasa». Reutiliza `seguros.operational_events` (ge"
         },
         {
@@ -30267,7 +30267,7 @@
           "exportada": false,
           "params": "c: Extract<ResultadoCompletar, { estado: 'no_aplicado' }>",
           "retorno": null,
-          "linea": 669
+          "linea": 695
         }
       ],
       "tablas": [
@@ -30280,7 +30280,7 @@
         "tarificaciones"
       ],
       "rutaApi": "/api/operador/codeoscopic/oferta",
-      "hash": "47b6afc82471"
+      "hash": "aed9741d7207"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/precalificar-auto-nuevo/route.ts",
@@ -42585,9 +42585,9 @@
           "nombre": "reservarSinDuplicado",
           "kind": "function",
           "exportada": true,
-          "params": "input: { correduriaId: string intentoId: string motivo: string solicitadoPor: string huella: string forzar?: boolean /** Topes de cotizar vigentes (los de `resolverConfig`): se re-cuentan bajo candado. */ topes: Topes env?: Env }",
+          "params": "input: { correduriaId: string intentoId: string motivo: string solicitadoPor: string huella: string forzar?: boolean /** Fecha de efecto (aaaa-mm-dd) del cuerpo: habilita reutilizar la copia hasta 24 h si sigue vigente. */ fechaEfecto?: str",
           "retorno": "Promise<ReservaAntiDuplicado>",
-          "linea": 208,
+          "linea": 217,
           "resumen": "Comprueba duplicado y RESERVA en la misma transacción, bajo `pg_advisory_xact_lock(hashtext(huella))`: dos pestañas con la misma petición se serializan y la segunda ve la reserva de la primera. Sin `f"
         },
         {
@@ -42596,16 +42596,16 @@
           "exportada": true,
           "params": "correduriaId: string, operacion: OperacionEmision, db: Db = prisma,",
           "retorno": "Promise<Consumo>",
-          "linea": 279,
+          "linea": 290,
           "resumen": "Lo consumido hoy y este mes en UNA operación de emisión (`rerate` / `submit`). 🚨 Mismo contrato que `consumoActual`: **NO atrapa errores**. Si no se puede leer el libro, el llamante (`libro-emision.t"
         },
         {
           "nombre": "reservarEmision",
           "kind": "function",
           "exportada": true,
-          "params": "input: { correduriaId: string intentoId: string operacion: OperacionEmision solicitadoPor: string costeCents: number projectId: string | null env?: Env }",
+          "params": "input: { correduriaId: string intentoId: string operacion: OperacionEmision solicitadoPor: string costeCents: number projectId: string | null /** * Huella anti doble clic (05/11/2026), la MISMA columna y el mismo candado que `reservarSinDup",
           "retorno": "Promise<Reserva>",
-          "linea": 326,
+          "linea": 337,
           "resumen": "Abre la reserva de un ReRate o de un Submit ANTES de llamar al vendor. Gemela de `reservar()`, con dos diferencias que son el motivo de que exista aparte en vez de un parámetro opcional: el `motivo` e"
         },
         {
@@ -42614,7 +42614,7 @@
           "exportada": true,
           "params": "intentoId: string",
           "retorno": "Promise<void>",
-          "linea": 366,
+          "linea": 397,
           "resumen": "Cierra como facturable una línea de emisión. Aparte de `cerrarFacturable()` por una razón concreta: allí el `projectId` es lo que devuelve la cotización y no se conocía antes de llamar, así que el cie"
         },
         {
@@ -42623,7 +42623,7 @@
           "exportada": true,
           "params": "intentoId: string, projectId: string",
           "retorno": "Promise<void>",
-          "linea": 377,
+          "linea": 408,
           "resumen": "El vendor respondió: hay proyecto y, por tanto, cargo."
         },
         {
@@ -42632,7 +42632,7 @@
           "exportada": true,
           "params": "intentoId: string, evidencia: string, errorCodigo: string,",
           "retorno": "Promise<void>",
-          "linea": 399,
+          "linea": 430,
           "resumen": "Cierra como NO facturable. Exige evidencia por contrato (y por CHECK en BD). Solo hay tres evidencias admisibles, y todas significan que el vendor no llegó a tarificar: fallo de autenticación (401/403"
         },
         {
@@ -42641,7 +42641,7 @@
           "exportada": true,
           "params": "correduriaId: string, costes: { rerate: number; submit: number; limites: number }, db: Db = prisma,",
           "retorno": "Promise<number | null>",
-          "linea": 424,
+          "linea": 455,
           "resumen": "Lo gastado este mes natural (Madrid) en el libro, en céntimos. Lo lee el tope en euros (`tope-euros-bd.ts`), que no toca la tabla: el libro solo se mira desde aquí. Las líneas de ReRate/Submit/límites"
         }
       ],
@@ -42650,7 +42650,7 @@
         "ventana"
       ],
       "rutaApi": null,
-      "hash": "fbe06bab1216"
+      "hash": "b786a983eaad"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/contador.ts",
@@ -43020,8 +43020,17 @@
           "exportada": false,
           "params": "correduriaId: string, oportunidadId: string",
           "retorno": "Promise<void>",
-          "linea": 36,
+          "linea": 38,
           "resumen": "Import diferido: `propuesta-lead` tira de media app (Prisma, módulos) y `cotizar()` se prueba con `node --test`."
+        },
+        {
+          "nombre": "catalogoPorDefecto",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string",
+          "retorno": "Promise<readonly FilaCatalogoMin[] | null>",
+          "linea": 132,
+          "resumen": "Lectura real de la última instantánea. Sin tabla devuelve `null` (no se sabe ≠ no hay)."
         },
         {
           "nombre": "anotar",
@@ -43029,7 +43038,7 @@
           "exportada": false,
           "params": "deps: DepsCotizar, p: PeticionCotizacion, extra: { cotizacion: Cotizacion; intentoId: string | null; simulado: boolean; respuesta?: unknown },",
           "retorno": "Promise<Guardado>",
-          "linea": 135,
+          "linea": 146,
           "resumen": "Guarda la cotización sin poder tumbarla. 🚨 El orden y el `try` de aquí son la decisión de diseño del módulo: cuando se llega a este punto el cliente YA ha pagado los 0,50€ y YA tiene su precio. Perde"
         },
         {
@@ -43038,7 +43047,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined> = process.env,",
           "retorno": "Promise<",
-          "linea": 194,
+          "linea": 205,
           "resumen": "Sonda GRATIS: pide solo el token OAuth2. Sirve para verificar host y credenciales sin gastar una cotización — que es como hay que estrenar la integración, porque no hay sandbox utilizable. Un fallo de"
         },
         {
@@ -43047,8 +43056,17 @@
           "exportada": true,
           "params": "correduriaId: string, env: Record<string, string | undefined> = process.env,",
           "retorno": null,
-          "linea": 221,
+          "linea": 232,
           "resumen": "Lo consumido y lo que queda. Para pintarlo antes de que nadie pulse nada."
+        },
+        {
+          "nombre": "efectoDeCuerpo",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuerpo: unknown",
+          "retorno": "string | null",
+          "linea": 262,
+          "resumen": "`effectiveDate` (aaaa-mm-dd) del cuerpo; `null` si no consta."
         },
         {
           "nombre": "cotizar",
@@ -43056,12 +43074,12 @@
           "exportada": true,
           "params": "p: PeticionCotizacion, env: Record<string, string | undefined> = process.env, deps: DepsCotizar = {},",
           "retorno": "Promise<ResultadoCotizacion>",
-          "linea": 250
+          "linea": 267
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9a51dc06c172"
+      "hash": "b07bf80cd436"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/crudo.ts",
@@ -44141,7 +44159,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "e801c7930750"
+      "hash": "1c93a0f898b8"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/emitir-iban.ts",
@@ -44711,6 +44729,54 @@
       "hash": "825f0f42038e"
     },
     {
+      "ruta": "apps/asegura/lib/codeoscopic/guarda-catalogo.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Guarda ANTES de pagar (05/11/2026): ¿el ramo que se va a cotizar tiene algún producto VIVO en la última instantánea (gratis) del catálogo? PURO, sin BD ni alias `@/`. Avant2 cotiza todos los productos activos del ramo. Si todos llevan marca «PILOTO», el POST (0,50 €) sale sin precios útiles. OJO: «D",
+      "exporta": [
+        "esProductoVivo",
+        "ramoDeCuerpo",
+        "evaluarRamoVivo"
+      ],
+      "funciones": [
+        {
+          "nombre": "esProductoVivo",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "nombre: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 25
+        },
+        {
+          "nombre": "ramoDeCuerpo",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuerpo: unknown",
+          "retorno": "string | null",
+          "linea": 28,
+          "resumen": "`insuranceLine.id` del cuerpo (`Car`, `Home`…). `null` si no consta: entonces no se afirma nada."
+        },
+        {
+          "nombre": "extraDe",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "f: FilaCatalogoMin | undefined",
+          "retorno": "Record<string, unknown>",
+          "linea": 36
+        },
+        {
+          "nombre": "evaluarRamoVivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: readonly FilaCatalogoMin[] | null | undefined, ramo: string | null, ahora: Date = new Date(),",
+          "retorno": "VeredictoCatalogo",
+          "linea": 39
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5d63b7bb6733"
+    },
+    {
       "ruta": "apps/asegura/lib/codeoscopic/horquilla.ts",
       "ambito": "apps/asegura",
       "resumen": "Estimación propia de prima, a partir de casos que ya conocemos. PURO. Para qué sirve DE VERDAD: no tanto para enseñarle un precio al cliente como para decidir si merece la pena PEDIRLO. Cada cotización cuesta 0,50€ y no es idempotente. Si el cliente paga 250€ y lo que hemos visto en casas parecidas ",
@@ -44791,7 +44857,8 @@
         "jsonCanonico",
         "huellaCotizacion",
         "bloqueaDuplicado",
-        "decidirDuplicado"
+        "decidirDuplicado",
+        "huellaEmision"
       ],
       "funciones": [
         {
@@ -44800,7 +44867,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "string",
-          "linea": 12,
+          "linea": 20,
           "resumen": "JSON canónico: claves ordenadas a todos los niveles; `undefined` fuera (como hace `JSON.stringify`)."
         },
         {
@@ -44809,7 +44876,7 @@
           "exportada": true,
           "params": "e: { cuerpo: unknown ramo: string | null | undefined correduriaId: string oportunidadId?: string | null polizaId?: string | null }",
           "retorno": "string",
-          "linea": 28,
+          "linea": 36,
           "resumen": "sha256 (hex) de cuerpo canónico + ramo + correduría + contexto (`oportunidadId ?? polizaId`). El contexto evita que la misma petición lanzada desde OTRA oportunidad/póliza reutilice la copia de precio"
         },
         {
@@ -44818,22 +44885,31 @@
           "exportada": true,
           "params": "f: FilaPrevia, ahora: Date, ventanaMin = VENTANA_DUPLICADO_MIN",
           "retorno": "boolean",
-          "linea": 44,
+          "linea": 52,
           "resumen": "¿Esta fila previa bloquea? Reservada (en curso o timeout sin prueba) o facturable dentro de la ventana."
         },
         {
           "nombre": "decidirDuplicado",
           "kind": "function",
           "exportada": true,
-          "params": "e: { previas: FilaPrevia[] copias: ReadonlySet<string> ahora: Date forzar?: boolean ventanaMin?: number }",
+          "params": "e: { previas: FilaPrevia[] copias: ReadonlySet<string> ahora: Date forzar?: boolean ventanaMin?: number /** Fecha de efecto (aaaa-mm-dd) del cuerpo que se va a enviar (= la de la copia: misma huella). */ fechaEfecto?: string | null /** Hoy ",
           "retorno": "DecisionDuplicado",
-          "linea": 60,
-          "resumen": "Llamar / reutilizar / bloquear. `forzar` salta la guarda (recotización explícita del operador). `copias` = intentos cuya copia de precios consta en `tarificaciones` (con respuesta cruda). Solo una fac"
+          "linea": 71,
+          "resumen": "Llamar / reutilizar / bloquear. `forzar` salta la guarda (recotización explícita del operador). `copias` = intentos cuya copia de precios consta en `tarificaciones` (con respuesta cruda). Dentro de 15"
+        },
+        {
+          "nombre": "huellaEmision",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: { operacion: string correduriaId: string projectId: string precioId?: string | number | null productId?: string | number | null fechaEfecto?: string | null /** Opciones/descuentos/correcciones que viajan: otro cuerpo = otra operación (no",
+          "retorno": "string",
+          "linea": 111,
+          "resumen": "Huella de una operación de emisión (ReRate…) para frenar el doble clic (05/11/2026). Mismo contrato que `huellaCotizacion`: solo viaja el hash, nunca datos. Identifica «el mismo ReRate»: proyecto + pr"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d793f27e30a3"
+      "hash": "27195cb7cd96"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/importar.ts",
@@ -45106,15 +45182,15 @@
           "nombre": "conLibroDeEmision",
           "kind": "function",
           "exportada": true,
-          "params": "p: { correduriaId: string operacion: OperacionEmision solicitadoPor: string /** Para poder explicar la factura línea a línea. Puede no conocerse aún. */ projectId: string | null }, llamada: () => Promise<T>, opciones: { evidenciaSinCargo?: ",
+          "params": "p: { correduriaId: string operacion: OperacionEmision solicitadoPor: string /** Para poder explicar la factura línea a línea. Puede no conocerse aún. */ projectId: string | null /** Huella anti doble clic (ver `huellaEmision`). Sin ella no ",
           "retorno": "Promise<GastoEmision<T>>",
-          "linea": 69,
+          "linea": 70,
           "resumen": "Envuelve UNA llamada al vendor con su línea en el libro. `llamada` se invoca **una sola vez** y su excepción se propaga tal cual: el caller (la cascada de reparación de `/oferta` y `/emitir`) necesita"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "df9d5bbaeebc"
+      "hash": "5e4476998d1c"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/limites-hogar.ts",
@@ -47047,6 +47123,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "9a91f8e1abfe"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/tras-cobro.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Tras un 200 de `POST /insurances` el cargo (0,50 €) ya está hecho. PURO, sin BD. Si la respuesta no se puede interpretar (sin `projectId`…), NO se vuelve a cobrar al reintentar: la reserva se cierra como facturable y el mensaje lo dice claro.",
+      "exporta": [
+        "leerTrasCobro"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerTrasCobro",
+          "kind": "function",
+          "exportada": true,
+          "params": "crudo: unknown, leer: (raw: unknown) => Cotizacion = leerCotizacion,",
+          "retorno": "",
+          "linea": 10
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7864ead4fb8a"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/valores-ficha.ts",
@@ -287562,7 +287659,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5875,
-    "funciones": 23287
+    "archivos": 5877,
+    "funciones": 23295
   }
 }
