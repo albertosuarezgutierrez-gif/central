@@ -7,6 +7,7 @@ const ENLACES = [
   { href: '/rentabilidad', texto: 'Rentabilidad' },
   { href: '/compras', texto: 'Compras' },
   { href: '/banco', texto: 'Banco' },
+  { href: '/impuestos', texto: 'Impuestos' },
   { href: '/informes', texto: 'Informes' },
   { href: '/plan', texto: 'Plan de cuentas' },
   { href: '/diario', texto: 'Libro diario' },

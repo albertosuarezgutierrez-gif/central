@@ -34,6 +34,12 @@
   tomado lo PRIMERO y que no se suelta hasta el COMMIT (los triggers de 0009 toman el mismo). Numeración por (taller, serie, año) sin huecos (`contadores_factura`), cadena de registros por taller, todo inmutable
   (solo cambian `estado` y `estado_envio`). Lógica pura en `module-taller/src/factura.ts` (solo líneas aceptadas, F1/F2 ≤ 400 €, rectificativas, cobros con efectivo < 1.000 €).
   **Sin envío a la AEAT** (todo `no_enviado`). El NIF/razón del PRODUCTOR del software va en `lib/sistema-informatico.ts` (hoy `null` → la emisión falla «falta configurar el sistema informático»); nunca se inventa.
+- **Portal del proveedor (`/prov/[token]` + `/api/prov/[token]`, públicos; SQL 0012 escrita y SIN aplicar):** lógica en `@central/module-portal-proveedor` (agnóstico de sector), adaptador en `lib/portal-proveedor.ts`.
+  Pedido → enlace 1 (generarlo marca el pedido como enviado; lo comparte el dueño con la Web Share API o «Copiar», nunca nuestro servidor) → el proveedor confirma y sube el albarán →
+  «Recepción verificada» (una persona, en el albarán) → enlace 2 (factura, alcance = ese albarán) → XML Facturae/UBL se lee SIN IA; PDF/imagen con IA minimizada (`lib/extractor-factura.ts`) →
+  case a tres bandas con las tolerancias de `configuracion.portal_*` → `lista` (valora el albarán y encola `compra`) o `Revisar` (confirmar/corregir/rechazar). **Nada se contabiliza sin case o persona**
+  (`puedeContabilizar` + CHECK en 0012). En BD solo el hash del token; se resuelve con `taller.enlace_proveedor_por_hash()` (SECURITY DEFINER) + límite `proveedor:<ip>`; respuesta 404 uniforme; el token nunca a un log (`sinToken`).
+  Ficheros al bucket privado `taller` (`<taller>/proveedor/<enlace>/…`), solo URL firmada corta. Subida máx. 4 MB (límite de cuerpo de Vercel). Sin NIF del proveedor no casa (se fija en Ajustes o al corregir).
 - **Sin WhatsApp:** avisos por push de la app + correo. Nada sale a terceros ni a proveedores sin botón del dueño.
 - Dinero en formato español (`2.162,49€`); UI usable a ≥320 px, botones ≥44 px.
 - Vercel: `vercel.json` con `ignoreCommand` y `--sin-previews`; app en la matriz de `tests.yml`.

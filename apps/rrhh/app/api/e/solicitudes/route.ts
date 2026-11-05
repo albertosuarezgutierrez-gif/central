@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     const { empresa_id, empleado_id } = await getSesionEmpleado()
     const entrada = await leerEntrada(req, empleado_id)
     const solicitud = await crearSolicitud(empresa_id, empleado_id, entrada)
-    const nombre = await nombreEmpleado(empleado_id)
+    const nombre = await nombreEmpleado(empresa_id, empleado_id)
     await avisarResponsables(empresa_id, `Nueva solicitud de ${nombre}`, `${nombre} ha enviado una solicitud: ${tipoEtiqueta(solicitud.tipo)}.`)
     await pushResponsables(empresa_id, `Nueva solicitud de ${nombre}`, tipoEtiqueta(solicitud.tipo), '/admin/solicitudes')
     return NextResponse.json({ solicitud }, { status: 201 })

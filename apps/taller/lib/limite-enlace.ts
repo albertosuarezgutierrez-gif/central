@@ -12,3 +12,9 @@ export function resolverEnlaceLimitado(
 ): Promise<string | null> {
   return resolverConLimite(store, { clave: claveEnlace(o.ip ?? 'sin-ip'), limite: LIMITE_ENLACE, ahora: o.ahora, resolver: o.resolver })
 }
+
+/** Portal del proveedor `/prov/<token>`: mismo límite y misma tabla, clave `proveedor:<ip>`. Token malo o IP bloqueada → null (404 igual). */
+export const claveProveedor = (ip: string) => `proveedor:${ip}`
+export function resolverProveedorLimitado<T>(store: StoreCodigo, o: { ip: string | null; ahora: Date; resolver(): Promise<T | null> }): Promise<T | null> {
+  return resolverConLimite(store, { clave: claveProveedor(o.ip ?? 'sin-ip'), limite: LIMITE_ENLACE, ahora: o.ahora, resolver: o.resolver })
+}

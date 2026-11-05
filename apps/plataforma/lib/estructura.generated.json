@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-11-05T07:06:06Z",
+  "generadoEn": "2026-11-05T07:59:47Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -193,6 +193,11 @@
       "id": "module-pesca",
       "tipo": "module",
       "npm": "@central/module-pesca"
+    },
+    {
+      "id": "module-portal-proveedor",
+      "tipo": "module",
+      "npm": "@central/module-portal-proveedor"
     },
     {
       "id": "module-presupuestos",
@@ -437,8 +442,8 @@
         "evidencias": 2
       },
       "taller": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 2
       },
       "transporte": {
         "estado": "no",
@@ -1262,7 +1267,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 32
+        "evidencias": 34
       },
       "asegura-portal": {
         "estado": "usado",
@@ -1708,7 +1713,7 @@
       },
       "contabilidad": {
         "estado": "usado",
-        "evidencias": 39
+        "evidencias": 51
       },
       "housesevillana": {
         "estado": "no",
@@ -2290,7 +2295,7 @@
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 6
+        "evidencias": 7
       },
       "sivra": {
         "estado": "no",
@@ -2553,6 +2558,68 @@
         "evidencias": 0
       }
     },
+    "module-portal-proveedor": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "contabilidad": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "taller": {
+        "estado": "usado",
+        "evidencias": 8
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
     "module-presupuestos": {
       "almacen": {
         "estado": "no",
@@ -2750,11 +2817,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 355
+        "evidencias": 359
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 220
+        "evidencias": 222
       },
       "asegura-web": {
         "estado": "usado",
@@ -2874,11 +2941,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 58
+        "evidencias": 60
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 171
+        "evidencias": 172
       },
       "asegura-web": {
         "estado": "usado",
@@ -3104,7 +3171,7 @@
       },
       "taller": {
         "estado": "usado",
-        "evidencias": 62
+        "evidencias": 64
       },
       "transporte": {
         "estado": "no",
@@ -3122,7 +3189,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 86
+        "evidencias": 89
       },
       "asegura-portal": {
         "estado": "usado",
@@ -3620,7 +3687,7 @@
       },
       "asegura": {
         "presente": true,
-        "evidencias": 25
+        "evidencias": 26
       },
       "asegura-portal": {
         "presente": true,
@@ -4825,7 +4892,8 @@
     ],
     "module-concursos": [],
     "module-contabilidad": [
-      "core-fiscal"
+      "core-fiscal",
+      "module-nominas"
     ],
     "module-crm": [],
     "module-documental": [],
@@ -4846,6 +4914,7 @@
       "module-tarificacion"
     ],
     "module-pesca": [],
+    "module-portal-proveedor": [],
     "module-presupuestos": [],
     "module-proveedores": [],
     "module-rrhh": [
@@ -5142,6 +5211,8 @@
       "/api/operador/siniestros/esperando",
       "/api/operador/solicitud-datos",
       "/api/operador/solicitud-datos/lead-web",
+      "/api/operador/solicitud-renovacion/preparar",
+      "/api/operador/solicitud-renovacion/publicar",
       "/api/operador/supresiones",
       "/api/operador/sustituciones",
       "/api/operador/tareas",
@@ -5215,6 +5286,7 @@
       "/api/portal/solicitud-datos/borrador",
       "/api/portal/solicitud-datos/documento",
       "/api/portal/solicitud-datos/vehiculo",
+      "/api/portal/solicitud-renovacion",
       "/api/publico/campana/baja",
       "/api/publico/recaptacion/baja",
       "/api/tarificador/codigo-sms",
@@ -5259,6 +5331,8 @@
       "/api/cron/avisos-push",
       "/api/cron/patrimonio-gastos",
       "/api/datos",
+      "/api/datos-renovacion",
+      "/api/datos-renovacion/vivienda",
       "/api/datos/borrador",
       "/api/datos/codigo-postal",
       "/api/datos/documento",
@@ -5400,6 +5474,10 @@
       "/api/compras/proveedor",
       "/api/cron/avisos",
       "/api/hechos",
+      "/api/impuestos/calcular",
+      "/api/impuestos/declaraciones/[id]",
+      "/api/impuestos/declaraciones/[id]/borrador",
+      "/api/impuestos/libros",
       "/api/informes/[clave]",
       "/api/operador/empresas",
       "/api/pagos",
@@ -6334,6 +6412,8 @@
       "/api/correduria/siniestro/volcado",
       "/api/correduria/siniestros-esperando",
       "/api/correduria/solicitud-datos",
+      "/api/correduria/solicitud-renovacion/preparar",
+      "/api/correduria/solicitud-renovacion/publicar",
       "/api/correduria/solicitudes-portal",
       "/api/correduria/supresiones",
       "/api/correduria/sustituciones",
@@ -6735,6 +6815,7 @@
       "/api/e/solicitudes",
       "/api/operador/empresas",
       "/api/operador/empresas/fichaje-taller",
+      "/api/operador/empresas/modulos",
       "/api/operador/fichajes",
       "/api/operador/logos",
       "/api/operador/personas"
@@ -6842,7 +6923,8 @@
       "/api/direccion/vias",
       "/api/fichar",
       "/api/operador/contabilidad",
-      "/api/operador/talleres"
+      "/api/operador/talleres",
+      "/api/prov/[token]"
     ],
     "transporte": [
       "/api/auth/login",
@@ -7103,6 +7185,7 @@
       "contabilidad.avisos",
       "contabilidad.conciliaciones",
       "contabilidad.consentimiento_seguros",
+      "contabilidad.declaraciones",
       "contabilidad.ejercicios",
       "contabilidad.empresas",
       "contabilidad.facturas_recibidas",
@@ -7417,6 +7500,7 @@
       "rrhh.contratos_laborales",
       "rrhh.documentos",
       "rrhh.empleados",
+      "rrhh.empresa_modulos",
       "rrhh.empresas",
       "rrhh.firma_otps",
       "rrhh.firmas",
@@ -7452,6 +7536,8 @@
       "taller.consentimientos",
       "taller.contadores_factura",
       "taller.dictados",
+      "taller.documentos_proveedor",
+      "taller.enlaces_proveedor",
       "taller.factura_lineas",
       "taller.facturas",
       "taller.hechos_pendientes",
@@ -8220,10 +8306,10 @@
   },
   "resumen": {
     "verticales": 15,
-    "packages": 48,
+    "packages": 49,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1937,
+    "apis": 1950,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

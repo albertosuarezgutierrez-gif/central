@@ -8,6 +8,7 @@ import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { subirObjeto } from '@/lib/storage'
 import { iaChat } from '@/lib/ai'
+import { textoMinimoParaIA } from '@/lib/minimizar-ia'
 
 export type ResultadoDistribucion = {
   pagina: number
@@ -42,7 +43,8 @@ export async function extraerTextoPorPagina(bytes: ArrayBuffer): Promise<string[
 }
 
 /**
- * Pregunta a la IA qué empleado aparece en el texto de la página. Compartido con «Distribuir documentos desde PDF»
+ * Pregunta a la IA qué empleado aparece en el texto de la página. A la IA solo le llega el texto MINIMIZADO
+ * (`textoMinimoParaIA`: sin NSS, IBAN, DNI, correos ni cifras) y la lista de nombres. Compartido con «Distribuir documentos desde PDF»
  * (`opts.documento`: tipo de documento para el prompt; `opts.estricto`: SOLO coincidencia exacta con la lista,
  * sin el emparejado parcial por nombre de pila de las nóminas).
  */
@@ -59,7 +61,7 @@ export async function identificarEmpleado(
     },
     {
       role: 'user',
-      content: `Lista de empleados:\n${lista}\n\nTexto de la página:\n${textoPagina.slice(0, 2000)}\n\n¿A qué empleado pertenece esta página?`,
+      content: `Lista de empleados:\n${lista}\n\nTexto de la página:\n${textoMinimoParaIA(textoPagina)}\n\n¿A qué empleado pertenece esta página?`,
     },
   ])
   const resp = (res ?? '').trim()

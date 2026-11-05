@@ -2,7 +2,8 @@
 import { PrismaClient, type Prisma } from '@prisma/client'
 import { crearConTaller, type ClienteConTx } from './rls.ts'
 import { resolverCodigoLimitado, type StoreCodigo } from './limite-codigo.ts'
-import { resolverEnlaceLimitado } from './limite-enlace.ts'
+import { resolverEnlaceLimitado, resolverProveedorLimitado } from './limite-enlace.ts'
+import { formatoTokenValido, hashToken, type Proposito } from '@central/module-portal-proveedor'
 import { invitacionVigente, type TxCitas } from './citas.ts'
 import { tallerDeToken } from './presupuestos.ts'
 
@@ -103,6 +104,27 @@ export function tallerPorEnlaceLimitado(token: unknown, ip: string | null, ahora
         if (!tallerId) return null
         const vigente = await conTaller(tallerId, (t) => invitacionVigente(t as unknown as TxCitas, tallerId, token as string, ahora))
         return vigente ? tallerId : null
+      },
+    }),
+  )
+}
+
+export type EnlaceProveedorResuelto = { tallerId: string; enlaceId: string; proposito: Proposito }
+
+/**
+ * Portal del proveedor `/prov/<token>` → (taller, enlace, propósito), con límite de fallos por IP. La BD recibe SOLO el HASH
+ * (`taller.enlace_proveedor_por_hash`, SECURITY DEFINER de 0012: valida hash, caducidad, revocación, cierre y taller activo).
+ * null = inexistente, caducado, revocado, cerrado, mal formado O IP bloqueada (indistinguible: 404).
+ */
+export function enlaceProveedorLimitado(token: unknown, ip: string | null, ahora: Date): Promise<EnlaceProveedorResuelto | null> {
+  return prisma.$transaction(async (tx) =>
+    resolverProveedorLimitado<EnlaceProveedorResuelto>(almacenLimiteBd(tx), {
+      ip, ahora,
+      resolver: async () => {
+        if (!formatoTokenValido(token)) return null
+        const f = await tx.$queryRaw<Array<{ o_taller: string; o_enlace: string; o_proposito: Proposito }>>`
+          SELECT o_taller, o_enlace, o_proposito FROM taller.enlace_proveedor_por_hash(${hashToken(token)}::text)`
+        return f[0] ? { tallerId: f[0].o_taller, enlaceId: f[0].o_enlace, proposito: f[0].o_proposito } : null
       },
     }),
   )

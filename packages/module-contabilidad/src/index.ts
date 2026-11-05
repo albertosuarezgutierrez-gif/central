@@ -58,3 +58,6 @@ export * from './analisis/medios.ts'
 // ── F3: CNAE → plantilla, facturas recibidas (compras) ──
 export * from './plantillas/cnae.ts'
 export * from './compras/compras.ts'
+
+// ── F4: impuestos (libros de IVA, 303/390/111/115/190/180/347/349/130 como borradores, calendario, liquidación) ──
+export * from './impuestos/index.ts'

@@ -29,7 +29,7 @@ export default async function Pagina() {
       }),
       tx.proveedor.findMany({
         where: { tallerId: s.tallerId }, orderBy: [{ activo: 'desc' }, { nombre: 'asc' }],
-        select: { id: true, nombre: true, correoPedidos: true, activo: true },
+        select: { id: true, nombre: true, correoPedidos: true, nif: true, activo: true },
       }),
       leerMarcaGuardada(tx as never, s.tallerId),
       estadoBloqueosLogin(tx as never, s.tallerId, new Date()),
@@ -47,7 +47,7 @@ export default async function Pagina() {
       marca: { primario: marca.primario, secundario: marca.secundario, tieneLogo: marca.logoRuta !== null },
       personas,
       bloqueos,
-      proveedores: proveedores.map((p) => ({ id: p.id, nombre: p.nombre, correo: p.correoPedidos, activo: p.activo })),
+      proveedores: proveedores.map((p) => ({ id: p.id, nombre: p.nombre, correo: p.correoPedidos, nif: p.nif ?? null, activo: p.activo })),
     }
   })
 

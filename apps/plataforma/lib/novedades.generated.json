@@ -1,6 +1,10 @@
 {
   "novedades": [
     {
+      "titulo": "05/11/2026) Plataforma · lupa de búsqueda de la correduría en la cabecera",
+      "fecha": "05/11/2026"
+    },
+    {
       "titulo": "05/11/2026) Plataforma · «Nueva tarea» no guardaba + atajo en cabecera fija",
       "fecha": "05/11/2026"
     },
@@ -54,10 +58,6 @@
     },
     {
       "titulo": "03/11/2026) Facturas · pólizas de clientes y comisiones de portal NO son gasto + bandeja de pendientes",
-      "fecha": "03/11/2026"
-    },
-    {
-      "titulo": "03/11/2026) Facturas · el agente de correo duplicaba adjuntos sin proveedor",
       "fecha": "03/11/2026"
     }
   ]

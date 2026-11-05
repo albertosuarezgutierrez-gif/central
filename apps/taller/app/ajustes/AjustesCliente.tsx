@@ -34,7 +34,7 @@ export type DatosAjustes = {
   marca: { primario: string | null; secundario: string | null; tieneLogo: boolean }
   personas: { id: string; nombre: string; rol: string; activo: boolean; rrhhIdentificador: string | null }[]
   bloqueos: { topeMinutos: number | null; usuariosBloqueados: string[] }
-  proveedores: { id: string; nombre: string; correo: string | null; activo: boolean }[]
+  proveedores: { id: string; nombre: string; correo: string | null; nif: string | null; activo: boolean }[]
 }
 
 const TAM_PAGINA = 50
@@ -772,8 +772,8 @@ function Personal({ personas, yoId, rrhhVinculada, bloqueados }: { personas: Dat
 
 // ── Proveedores ──────────────────────────────────────────────────────────────
 function Proveedores({ proveedores }: { proveedores: DatosAjustes['proveedores'] }) {
-  const [ps, setPs] = useState(proveedores.map((p) => ({ ...p, correo: p.correo ?? '' })))
-  const [nuevo, setNuevo] = useState({ nombre: '', correo: '' })
+  const [ps, setPs] = useState(proveedores.map((p) => ({ ...p, correo: p.correo ?? '', nif: p.nif ?? '' })))
+  const [nuevo, setNuevo] = useState({ nombre: '', correo: '', nif: '' })
   const g = useGuardar()
   const cambiar = (i: number, p: Partial<(typeof ps)[number]>) => setPs(ps.map((x, j) => (j === i ? { ...x, ...p } : x)))
   return (
@@ -782,16 +782,18 @@ function Proveedores({ proveedores }: { proveedores: DatosAjustes['proveedores']
         <div key={p.id} className={`ficha${p.activo ? '' : ' inactiva'}`}>
           <Campo etiqueta="Nombre"><input value={p.nombre} onChange={(e) => cambiar(i, { nombre: e.target.value })} /></Campo>
           <Campo etiqueta="Correo de pedidos"><input type="email" value={p.correo} placeholder="Sin correo todavía" onChange={(e) => cambiar(i, { correo: e.target.value })} /></Campo>
+          <Campo etiqueta="NIF (para casar sus facturas)"><input value={p.nif} placeholder="Sin NIF todavía" maxLength={20} onChange={(e) => cambiar(i, { nif: e.target.value })} /></Campo>
           <label className="check"><input type="checkbox" checked={p.activo} onChange={(e) => cambiar(i, { activo: e.target.checked })} /> Activo</label>
           <button type="button" className="btn btn-sec" disabled={g.pendiente}
-            onClick={() => g.guardar(() => guardarProveedorAccion({ id: p.id, nombre: p.nombre, correo: p.correo, activo: p.activo }))}>Guardar</button>
+            onClick={() => g.guardar(() => guardarProveedorAccion({ id: p.id, nombre: p.nombre, correo: p.correo, nif: p.nif, activo: p.activo }))}>Guardar</button>
         </div>
       )} />
       <div className="ficha">
         <Campo etiqueta="Nuevo proveedor"><input value={nuevo.nombre} onChange={(e) => setNuevo({ ...nuevo, nombre: e.target.value })} /></Campo>
         <Campo etiqueta="Correo de pedidos"><input type="email" value={nuevo.correo} onChange={(e) => setNuevo({ ...nuevo, correo: e.target.value })} /></Campo>
+        <Campo etiqueta="NIF"><input value={nuevo.nif} maxLength={20} onChange={(e) => setNuevo({ ...nuevo, nif: e.target.value })} /></Campo>
         <button type="button" className="btn" disabled={g.pendiente || !nuevo.nombre.trim()}
-          onClick={() => g.guardar(() => guardarProveedorAccion(nuevo), () => setNuevo({ nombre: '', correo: '' }))}>Añadir proveedor</button>
+          onClick={() => g.guardar(() => guardarProveedorAccion(nuevo), () => setNuevo({ nombre: '', correo: '', nif: '' }))}>Añadir proveedor</button>
       </div>
       {g.aviso}
     </Seccion>

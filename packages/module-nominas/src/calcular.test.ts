@@ -1,83 +1,52 @@
 import { describe, it, expect } from 'vitest'
-import { calcularNomina } from './calcular'
-import { tablas2026 } from './tablas-2026'
-import type { ContratoLaboral, IncidenciaMes } from './tipos'
+import { calcularNomina, desgloseConfirmable } from './calcular'
+import { eurosACentimos, pctAPpm, fraccionAPpm, aplicarTipo } from './dinero'
+import { CifraPendienteError } from './cifras'
+import type { ContratoLaboral } from './tipos'
 
-const TABLAS = tablas2026(0.025, 22) // AT/EP hostelería, 22 días laborables
+const C: ContratoLaboral = { tipoContrato: 'indefinido', jornadaPct: 100, salarioBase: 3000, grupoCotizacion: 1, irpfRetencionPct: 15, conceptosFijos: [] }
 
-const CONTRATO_BASE: ContratoLaboral = {
-  tipoContrato: 'indefinido',
-  jornadaPct: 100,
-  salarioBase: 1800,
-  grupoCotizacion: 7,
-  irpfRetencionPct: 10,
-  conceptosFijos: [],
-}
-
-describe('calcularNomina', () => {
-  it('calcula neto básico sin incidencias', () => {
-    const r = calcularNomina(CONTRATO_BASE, [], TABLAS, '2026-06')
-    expect(r.devengos.total).toBe(1800)
-    // Deducciones: SS 4.70%+1.55%+0.10%=6.35% de base + IRPF 10%
-    const ss = Math.round(1800 * 0.0635 * 100) / 100
-    const irpf = Math.round(1800 * 0.10 * 100) / 100
-    expect(r.deducciones.total).toBeCloseTo(ss + irpf, 1)
-    expect(r.netoAPagar).toBeCloseTo(1800 - ss - irpf, 1)
+describe('dinero', () => {
+  it('convierte sin errores de float', () => {
+    expect(eurosACentimos(1.005)).toBe(101)
+    expect(eurosACentimos(0.1 + 0.2)).toBe(30)
+    expect(eurosACentimos(1424.4)).toBe(142_440)
+    expect(pctAPpm(4.7)).toBe(47_000)
+    expect(fraccionAPpm(0.0155)).toBe(15_500)
+    expect(aplicarTipo(198_930, 15_500)).toBe(3_083) // 3083,415
+    expect(() => aplicarTipo(1.5, 10)).toThrow()
   })
+})
 
-  it('aplica jornada parcial al salario base', () => {
-    const contrato = { ...CONTRATO_BASE, jornadaPct: 50 }
-    const r = calcularNomina(contrato, [], TABLAS, '2026-06')
-    expect(r.devengos.salarioBase).toBeCloseTo(900, 1)
+describe('adaptador euros (llamadores de rrhh)', () => {
+  it('devuelve el desglose en euros con la forma de siempre + MEI y pendientes', () => {
+    const d = calcularNomina(C, [], { periodo: '2026-04', atEp: 0.015, modo: 'simulacion' })
+    expect(d.devengos.total).toBe(3000)
+    expect(d.baseCotizacion).toBe(3000)
+    expect(d.deducciones).toMatchObject({ contingencias_comunes: 141, desempleo: 46.5, fp: 3, mei: 4.5, irpf: 450, total: 645 })
+    expect(d.netoAPagar).toBe(2355)
+    expect(d.cuotaPatronal.total).toBe(964.5)
+    expect(d.tablasAño).toBe(2026)
+    expect(d.cifrasPendientes).toEqual(['mei_empresa', 'mei_trabajador'])
   })
-
-  it('añade horas extra al devengo', () => {
-    const incidencias: IncidenciaMes[] = [
-      { tipo: 'horas_extra', concepto: 'Horas extra junio', horas: 8 },
-    ]
-    const r = calcularNomina(CONTRATO_BASE, incidencias, TABLAS, '2026-06')
-    // €/hora = 1800 / 160
-    const precioHora = 1800 / 160
-    expect(r.devengos.horasExtra).toBeCloseTo(precioHora * 8, 1)
-    expect(r.devengos.total).toBeGreaterThan(1800)
+  it('«parcial» sin duración → pendiente; con duración explícita, no', () => {
+    const p: ContratoLaboral = { ...C, tipoContrato: 'parcial', jornadaPct: 50, grupoCotizacion: 1 }
+    expect(calcularNomina(p, [], { periodo: '2026-04', atEp: 0.015, modo: 'simulacion' }).cifrasPendientes).toContain('regla:duracion_contrato')
+    expect(calcularNomina({ ...p, duracion: 'indefinido' }, [], { periodo: '2026-04', atEp: 0.015, modo: 'simulacion' }).cifrasPendientes).not.toContain('regla:duracion_contrato')
   })
-
-  it('descuenta días de baja IT', () => {
-    const incidencias: IncidenciaMes[] = [
-      { tipo: 'baja_it', concepto: 'Baja médica', dias: 5 },
-    ]
-    const r = calcularNomina(CONTRATO_BASE, incidencias, TABLAS, '2026-06')
-    // 5 de 22 días laborables
-    const descuento = (1800 / 22) * 5
-    expect(r.devengos.descuentos).toBeCloseTo(descuento, 1)
-    expect(r.devengos.total).toBeLessThan(1800)
+  it('modo cálculo con 2026 sin verificar lanza', () => {
+    expect(() => calcularNomina(C, [], { periodo: '2026-04', atEp: 0.015, modo: 'calculo' })).toThrow(CifraPendienteError)
   })
-
-  it('aplica base mínima SS si salario < mínimo del grupo', () => {
-    const contrato = { ...CONTRATO_BASE, salarioBase: 500, grupoCotizacion: 7 as const }
-    const r = calcularNomina(contrato, [], TABLAS, '2026-06')
-    // Base mínima grupo 7 = 1184.10
-    expect(r.baseCotizacion).toBe(1184.10)
+  it('AT/EP null («no se sabe») no se rellena en silencio: queda pendiente', () => {
+    expect(calcularNomina(C, [], { periodo: '2026-04', atEp: null, modo: 'simulacion' }).cifrasPendientes).toContain('regla:at_ep_empresa')
   })
+})
 
-  it('calcula cuota patronal correctamente', () => {
-    const r = calcularNomina(CONTRATO_BASE, [], TABLAS, '2026-06')
-    // base = 1800 (dentro de rango grupo 7)
-    expect(r.cuotaPatronal.contingencias_comunes).toBeCloseTo(1800 * 0.236, 1)
-    expect(r.cuotaPatronal.at_ep).toBeCloseTo(1800 * 0.025, 1)
-    expect(r.costeTotalEmpresa).toBeCloseTo(1800 + r.cuotaPatronal.total, 1)
-  })
-
-  it('añade complementos fijos al devengo', () => {
-    const contrato = {
-      ...CONTRATO_BASE,
-      conceptosFijos: [
-        { nombre: 'Plus transporte', importe: 50 },
-        { nombre: 'Plus productividad', importe: 100 },
-      ],
-    }
-    const r = calcularNomina(contrato, [], TABLAS, '2026-06')
-    expect(r.devengos.total).toBeCloseTo(1800 + 150, 1)
-    expect(r.devengos.complementosFijos).toHaveLength(2)
+describe('desgloseConfirmable', () => {
+  it('solo sin pendientes; un borrador antiguo (sin el campo) = no se sabe → no', () => {
+    expect(desgloseConfirmable({ cifrasPendientes: [] })).toEqual({ ok: true })
+    expect(desgloseConfirmable({ cifrasPendientes: ['mei_empresa'] }).ok).toBe(false)
+    expect(desgloseConfirmable({ netoAPagar: 1 }).ok).toBe(false)
+    expect(desgloseConfirmable(null).ok).toBe(false)
   })
 })

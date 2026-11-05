@@ -107,10 +107,8 @@ const SIN_FILTRO_A_PROPOSITO: Record<string, string> = {
   // hilos y listados que primero validan la empresa del empleado.
   'apps/rrhh/lib/chat.ts': POR_ID_TRAS_EXIGIR,
   'apps/rrhh/lib/solicitudes.ts': POR_ID_TRAS_EXIGIR,
-  'apps/rrhh/lib/nominas.ts': 'incidencias/nómina por nominaId/incId tras findFirst/obtenerNomina con empresa_id en la misma función',
   'apps/rrhh/lib/material-repo.ts': 'COUNT con el mismo fragmento `where` que ya incluye m.empresa_id (se construye con Prisma.join)',
   'apps/rrhh/lib/push.ts': 'borrar una suscripción caducada por endpoint (410/404 del servicio push)',
-  'apps/rrhh/lib/notificar.ts': 'nombreEmpleado(empleadoId) para componer un aviso; el id viene de una fila ya acotada (hueco menor: sin empresa)',
 }
 
 test('toda sentencia sobre una tabla con empresa_id en apps/rrhh la filtra (o está en la allowlist con motivo)', () => {

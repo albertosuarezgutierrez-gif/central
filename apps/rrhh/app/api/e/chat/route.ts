@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     const { empresa_id, empleado_id } = await getSesionEmpleado()
     const { texto } = await req.json().catch(() => ({}))
     const mensaje = await enviarMensaje(empresa_id, empleado_id, 'titular', String(texto ?? ''))
-    const nombre = await nombreEmpleado(empleado_id)
+    const nombre = await nombreEmpleado(empresa_id, empleado_id)
     await avisarResponsables(empresa_id, `Nuevo mensaje de ${nombre}`, `${nombre} te ha escrito por el chat de la intranet.`)
     await pushResponsables(empresa_id, `Nuevo mensaje de ${nombre}`, mensaje.texto.slice(0, 80))
     return NextResponse.json({ mensaje }, { status: 201 })

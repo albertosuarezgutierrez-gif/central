@@ -59,7 +59,7 @@ export async function avisarEmpleado(
 }
 
 /** Nombre del empleado (para componer los avisos). */
-export async function nombreEmpleado(empleadoId: string): Promise<string> {
-  const rows = await prisma.$queryRaw<any[]>(Prisma.sql`SELECT nombre FROM rrhh.empleados WHERE id = ${empleadoId}::uuid LIMIT 1`)
+export async function nombreEmpleado(empresaId: string, empleadoId: string): Promise<string> {
+  const rows = await prisma.$queryRaw<any[]>(Prisma.sql`SELECT nombre FROM rrhh.empleados WHERE id = ${empleadoId}::uuid AND empresa_id = ${empresaId}::uuid LIMIT 1`)
   return rows[0]?.nombre ?? 'Un empleado'
 }
