@@ -1,0 +1,77 @@
+{
+ "sesion": "95e82b54-197d-533e-9200-a95be5e2fcd6",
+ "inicio": "2026-11-05T06:35:56.835Z",
+ "fin": "2026-11-05T06:38:05.575Z",
+ "llamadas": 29,
+ "categorias": {
+  "bash": {
+   "llamadas": 12,
+   "chars_in": 2198,
+   "chars_out": 51693,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 12
+   }
+  },
+  "otro": {
+   "llamadas": 4,
+   "chars_in": 805,
+   "chars_out": 755,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 3,
+    "SendMessage": 1
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 1,
+   "chars_in": 2,
+   "chars_out": 391,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1
+   }
+  },
+  "sql": {
+   "llamadas": 6,
+   "chars_in": 1906,
+   "chars_out": 8694,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 6
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 5,
+   "chars_in": 407,
+   "chars_out": 2014,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Vercel__list_teams": 1,
+    "mcp__Vercel__list_projects": 2,
+    "mcp__Vercel__get_runtime_logs": 2
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 1,
+   "chars_in": 2654,
+   "chars_out": 2849,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  }
+ }
+}
