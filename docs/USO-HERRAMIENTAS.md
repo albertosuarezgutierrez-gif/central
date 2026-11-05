@@ -171,22 +171,22 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 431 | 82.585 | 71.983.960 | 0 | 0 |
-| `otro` | 425 | 19.019 | 38.345.277 | 21.502.739 | 0 |
-| `lectura-directa` | 364 | 12.294 | 34.928.578 | 0 | 0 |
-| `sql` | 278 | 9.359 | 5.325.829 | 3.040.710 | 37 |
-| `mcp:github` | 361 | 9.098 | 6.592.975 | 58.257.529 | 126 |
-| `escritura` | 260 | 7.113 | 112.015.630 | 0 | 0 |
+| `bash` | 431 | 83.017 | 72.446.212 | 0 | 0 |
+| `otro` | 425 | 19.046 | 38.404.648 | 21.502.739 | 0 |
+| `lectura-directa` | 364 | 12.311 | 34.981.449 | 0 | 0 |
+| `sql` | 278 | 9.375 | 5.335.125 | 3.040.710 | 37 |
+| `mcp:github` | 361 | 9.118 | 6.613.962 | 58.257.529 | 126 |
+| `escritura` | 260 | 7.156 | 112.183.135 | 0 | 0 |
 | `mcp:Vercel` | 94 | 1.584 | 1.369.995 | 237.328 | 51 |
-| `agente:general-purpose` | 162 | 1.537 | 912.107 | 28.605.381 | 0 |
-| `mcp:Gmail` | 74 | 1.532 | 1.656.992 | 0 | 101 |
-| `mcp:claude-code-remote` | 94 | 1.513 | 209.126 | 2.985.432 | 0 |
+| `agente:general-purpose` | 162 | 1.543 | 915.889 | 28.643.661 | 0 |
+| `mcp:Gmail` | 75 | 1.538 | 1.671.131 | 0 | 101 |
+| `mcp:claude-code-remote` | 94 | 1.520 | 209.460 | 2.985.432 | 0 |
 | `mcp:Booking-com` | 53 | 1.505 | 6.179.360 | 0 | 0 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
 | `mcp:Google_Drive` | 29 | 994 | 1.117.580 | 0 | 77 |
 | `mcp:Interactive-Brokers--IBKR-` | 18 | 716 | 834.704 | 0 | 0 |
+| `agente:agente-architect` | 94 | 559 | 392.873 | 13.473.705 | 0 |
 | `mcp:Supabase` | 163 | 557 | 208.484 | 33.495 | 9 |
-| `agente:agente-architect` | 94 | 555 | 389.526 | 13.447.703 | 0 |
 | `mcp:Google-Drive` | 37 | 178 | 185.960 | 0 | 2 |
 | `agente:agente-mecanico` | 67 | 171 | 89.654 | 8.202.670 | 0 |
 | `mcp:Booking_com` | 5 | 166 | 443.032 | 0 | 0 |
@@ -198,7 +198,7 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:Trivago` | 3 | 53 | 8.707.439 | 0 | 1 |
 | `mcp:posthog` | 5 | 47 | 64.610 | 0 | 1 |
 | `agente:jefe-contabilidad` | 5 | 46 | 21.986 | 584.358 | 0 |
-| `agente:verificador-esceptico` | 19 | 40 | 13.859 | 157.002 | 0 |
+| `agente:verificador-esceptico` | 19 | 41 | 14.238 | 189.362 | 0 |
 | `agente:general` | 15 | 36 | 25.304 | 1.456.441 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
 | `agente:lector-correo` | 8 | 24 | 8.569 | 0 | 0 |
