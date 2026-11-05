@@ -673,3 +673,135 @@ model InvitacionCita {
   @@map("invitaciones_cita")
   @@schema("taller")
 }
+
+// ─── 0009: facturación VeriFactu (facturas, líneas, cobros, contador sin huecos, registros encadenados) ──────────
+// Inmutables en BD (triggers + GRANT por columna): tras emitir solo cambian `estado` y `estado_envio`. Nada se borra.
+
+/// Contador por (taller, serie, año). Se lee y sube DENTRO de la emisión, bajo el candado `factura:<taller>`.
+model ContadorFactura {
+  tallerId      String   @map("taller_id") @db.Uuid
+  serieId       String   @map("serie_id") @db.Uuid
+  anio          Int
+  ultimoNumero  Int      @map("ultimo_numero")
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@id([tallerId, serieId, anio])
+  @@map("contadores_factura")
+  @@schema("taller")
+}
+
+/// Factura emitida (copia congelada). F1/F2 ordinarias; R1-R5 rectificativas (`rectificadaId`).
+model Factura {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId             String    @map("taller_id") @db.Uuid
+  otId                 String    @map("ot_id") @db.Uuid
+  serieId              String    @map("serie_id") @db.Uuid
+  serieCodigo          String    @map("serie_codigo")
+  anio                 Int
+  numero               Int
+  numSerie             String    @map("num_serie")
+  fechaExpedicion      DateTime  @map("fecha_expedicion") @db.Date
+  emitidaEn            DateTime  @map("emitida_en") @db.Timestamptz(6)
+  emitidaPor           String?   @map("emitida_por") @db.Uuid
+  tipo                 String
+  tipoRectificativa    String?   @map("tipo_rectificativa")
+  rectificadaId        String?   @map("rectificada_id") @db.Uuid
+  motivoRectificacion  String?   @map("motivo_rectificacion")
+  baseRectificadaCent  BigInt?   @map("base_rectificada_cent")
+  cuotaRectificadaCent BigInt?   @map("cuota_rectificada_cent")
+  emisorRazonSocial    String    @map("emisor_razon_social")
+  emisorNif            String    @map("emisor_nif")
+  emisorDomicilio      String?   @map("emisor_domicilio")
+  clienteId            String?   @map("cliente_id") @db.Uuid
+  clienteNombre        String?   @map("cliente_nombre")
+  clienteNif           String?   @map("cliente_nif")
+  clienteDomicilio     String?   @map("cliente_domicilio")
+  descripcion          String
+  desgloseIva          Json      @map("desglose_iva")
+  baseCent             BigInt    @map("base_cent")
+  cuotaIvaCent         BigInt    @map("cuota_iva_cent")
+  totalCent            BigInt    @map("total_cent")
+  huella               String
+  huellaAnterior       String?   @map("huella_anterior")
+  fechaHoraHuso        String    @map("fecha_hora_huso")
+  qrUrl                String    @map("qr_url")
+  xml                  String
+  estado               String    @default("emitida")
+  anuladaEn            DateTime? @map("anulada_en") @db.Timestamptz(6)
+  motivoAnulacion      String?   @map("motivo_anulacion")
+  estadoEnvio          String    @default("no_enviado") @map("estado_envio")
+  creadoEn             DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn        DateTime  @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@unique([tallerId, serieId, anio, numero])
+  @@unique([tallerId, numSerie])
+  @@map("facturas")
+  @@schema("taller")
+}
+
+/// Línea congelada de la factura (solo-añadir). Base negativa solo en rectificativas por diferencias.
+model FacturaLinea {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId         String   @map("taller_id") @db.Uuid
+  facturaId        String   @map("factura_id") @db.Uuid
+  orden            Int
+  otLineaId        String?  @map("ot_linea_id") @db.Uuid
+  tipo             String
+  descripcion      String
+  cantidad         Int
+  unidad           String
+  baseCent         BigInt   @map("base_cent")
+  ivaCodigo        String   @map("iva_codigo")
+  ivaPuntosBasicos Int      @map("iva_puntos_basicos")
+  creadoEn         DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn    DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@unique([tallerId, facturaId, orden])
+  @@map("factura_lineas")
+  @@schema("taller")
+}
+
+/// Registro VeriFactu (alta o anulación), cadena única por taller. Solo-añadir; solo cambia `estadoEnvio`.
+model RegistroVerifactu {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId        String   @map("taller_id") @db.Uuid
+  facturaId       String   @map("factura_id") @db.Uuid
+  tipo            String
+  secuencia       Int
+  idEmisor        String   @map("id_emisor")
+  numSerie        String   @map("num_serie")
+  fechaExpedicion DateTime @map("fecha_expedicion") @db.Date
+  huella          String
+  huellaAnterior  String?  @map("huella_anterior")
+  fechaHoraHuso   String   @map("fecha_hora_huso")
+  xml             String
+  estadoEnvio     String   @default("no_enviado") @map("estado_envio")
+  creadoEn        DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn   DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@unique([tallerId, secuencia])
+  @@unique([tallerId, huella])
+  @@unique([tallerId, facturaId, tipo])
+  @@map("registros_verifactu")
+  @@schema("taller")
+}
+
+/// Cobro de una factura (solo-añadir). Varios cobros = cobro dividido; nunca más que el total.
+model Cobro {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId      String   @map("taller_id") @db.Uuid
+  facturaId     String   @map("factura_id") @db.Uuid
+  medioCobroId  String   @map("medio_cobro_id") @db.Uuid
+  medioCodigo   String   @map("medio_codigo")
+  esEfectivo    Boolean  @map("es_efectivo")
+  importeCent   BigInt   @map("importe_cent")
+  cobradoEn     DateTime @map("cobrado_en") @db.Timestamptz(6)
+  registradoPor String?  @map("registrado_por") @db.Uuid
+  justificante  String?
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("cobros")
+  @@schema("taller")
+}

@@ -18,7 +18,7 @@
 - **Alta por operador (`POST /api/operador/talleres`, `lib/alta-taller.ts`):** sin `tallerId` busca/crea por NIF (`alta_taller`, 0004); con `tallerId`
   completa ESE taller (404 si no existe; NIF NULL → se fija con el de la entrada; NIF distinto o de otro taller → 409, nunca se pisa). Taller existente
   con configuración y **0 dueños activos** → crea el dueño con PIN temporal (201); con dueño → 409 sin PIN. Candado `alta_dueno:<taller>`. Sin SQL
-  nuevo (UPDATE de `nif` concedido en 0002). Migraciones 0001-0008 aplicadas en producción; no hay 0009.
+  nuevo (UPDATE de `nif` concedido en 0002). Migraciones 0001-0008 aplicadas en producción; **0009 (facturas) escrita y SIN aplicar**.
 - **RR.HH.:** `talleres.rrhh_empresa_id` lo fija SOLO el operador (`/api/operador/talleres`, POST o PATCH); rrhh solo ficha si esa empresa habilitó el taller
   (`empresas.fichaje_taller_id`). `/api/fichar` responde «registrado», sin datos de rrhh.
 - **Consentimiento:** el cliente final es del taller; solo pasa a lead de ASegura con su casilla propia, y el servicio
@@ -30,6 +30,10 @@
   quedan en la OT. Texto y obligatoriedad editables en Ajustes (alta en `RETIRADA_ALTA`); `cambiarEstadoAccion` NO entrega. `fotos_retencion_dias` (alta 180, **mínimo 90**: garantía legal 3 meses/2.000 km) cuenta desde la entrega.
   Cron diario `/api/cron/purgar-fotos` (`CRON_SECRET`, `lib/purga-fotos.ts`): borra de Storage SOLO fotos de daños y de trabajo de OT entregadas fuera de plazo y marca `purgada_en` (la fila se queda); nunca firmas, resguardo, presupuestos ni facturas.
   Talleres a recorrer: `taller.talleres_activos()` (SECURITY DEFINER). Qué toca lo decide el helper puro `fotosAPurgar` de module-taller.
+- **Facturación VeriFactu (SQL 0009, sin aplicar):** `lib/facturas.ts` emite/anula/rectifica en UNA transacción `conTaller()` con el candado `pg_advisory_xact_lock(hashtext('factura:<taller>'))`
+  tomado lo PRIMERO y que no se suelta hasta el COMMIT (los triggers de 0009 toman el mismo). Numeración por (taller, serie, año) sin huecos (`contadores_factura`), cadena de registros por taller, todo inmutable
+  (solo cambian `estado` y `estado_envio`). Lógica pura en `module-taller/src/factura.ts` (solo líneas aceptadas, F1/F2 ≤ 400 €, rectificativas, cobros con efectivo < 1.000 €).
+  **Sin envío a la AEAT** (todo `no_enviado`). El NIF/razón del PRODUCTOR del software va en `lib/sistema-informatico.ts` (hoy `null` → la emisión falla «falta configurar el sistema informático»); nunca se inventa.
 - **Sin WhatsApp:** avisos por push de la app + correo. Nada sale a terceros ni a proveedores sin botón del dueño.
 - Dinero en formato español (`2.162,49€`); UI usable a ≥320 px, botones ≥44 px.
 - Vercel: `vercel.json` con `ignoreCommand` y `--sin-previews`; app en la matriz de `tests.yml`.

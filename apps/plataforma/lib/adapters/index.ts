@@ -6,6 +6,7 @@ import { sivraAdapter } from './sivra'
 import { iarestAdapter } from './iarest'
 import { rrhhAdapter } from './rrhh'
 import { tallerAdapter } from './taller'
+import { contabilidadAdapter } from './contabilidad'
 import type { VerticalAdapter, Vertical, ClienteSaaS } from './types'
 
 export const ADAPTERS: Record<Vertical, VerticalAdapter> = {
@@ -14,6 +15,7 @@ export const ADAPTERS: Record<Vertical, VerticalAdapter> = {
   iarest: iarestAdapter,
   rrhh: rrhhAdapter,
   taller: tallerAdapter,
+  contabilidad: contabilidadAdapter,
 }
 
 export function getAdapter(v: string): VerticalAdapter | undefined {

@@ -2,7 +2,7 @@
 // liste y gestione sus clientes/tenants. Así el panel no conoce la BD ni la API
 // concreta de cada vertical — solo el puerto.
 
-export type Vertical = 'ialimp' | 'sivra' | 'iarest' | 'rrhh' | 'taller'
+export type Vertical = 'ialimp' | 'sivra' | 'iarest' | 'rrhh' | 'taller' | 'contabilidad'
 
 export interface Metrica { label: string; valor: string }
 

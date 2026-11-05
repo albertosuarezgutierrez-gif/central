@@ -5,6 +5,7 @@ import { firmarVarias } from '@/lib/almacen'
 import { capacidadParaTransicion, tienePermiso } from '@/lib/permisos'
 import { ESTADOS_ABIERTOS } from '@/lib/trabajo-ot'
 import { horasYMargen, ESTADOS_TRABAJABLES, type TxOrdenes } from '@/lib/ordenes'
+import { ESTADOS_FACTURABLES, facturaVivaDeOt, previsualizarFactura, type TxFacturas } from '@/lib/facturas'
 import { Cabecera } from '../../_marca'
 import { claseEstado } from '../../_ui'
 import { abrirMiParteAccion, cambiarEstadoAccion, cerrarMiParteAccion } from '../acciones'
@@ -12,6 +13,7 @@ import { GestionPropuesta, ProponerAmpliacion } from './Ampliaciones'
 import { EntregaCliente } from './EntregaCliente'
 import { FotosOt } from './FotosOt'
 import { NotaDictado } from './NotaDictado'
+import { Facturar, type Previa } from './Facturar'
 
 export const dynamic = 'force-dynamic'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -58,7 +60,21 @@ export default async function Pagina({ params, searchParams }: { params: Promise
       lineas: lineasProp.filter((l) => l.propuestaId === p.id).map((l) => ({ orden: l.orden as number, descripcion: l.descripcion as string, referencia: (l.referencia ?? null) as string | null, cantidad: l.cantidad as number })),
       fotos: fotosOt.filter((f) => f.propuestaId === p.id).map((f) => ({ id: f.id as string, url: urls.get(f.ruta) ?? null, nota: (f.nota ?? null) as string | null, purgadaEn: f.purgadaEn ? (f.purgadaEn as Date).toISOString() : null })),
     }))
+    // Facturación: factura viva (si la hay) y, si se puede facturar, qué saldría y con qué medios de cobro.
+    const puedeFacturar = tienePermiso(c.rol, 'facturar')
+    const fx = tx as unknown as TxFacturas
+    const viva = puedeFacturar ? await facturaVivaDeOt(fx, c.tallerId, id) : null
+    let previa: Previa | null = null
+    let medios: { codigo: string; nombre: string; esEfectivo: boolean }[] = []
+    if (puedeFacturar && !viva && ESTADOS_FACTURABLES.includes(ot.estado as EstadoOt) && rec?.firmadoEn != null) {
+      const p = await previsualizarFactura(fx, { tallerId: c.tallerId, otId: id })
+      previa = p.ok ? { ok: true, tipo: p.tipo, totalCent: p.totales.totalCent, lineas: p.lineas.length, excluidas: p.excluidas.length } : p
+      medios = (await tx.medioCobro.findMany({ where: { tallerId: c.tallerId, activo: true }, orderBy: { nombre: 'asc' } }))
+        .map((m) => ({ codigo: m.codigo, nombre: m.nombre, esEfectivo: m.esEfectivo }))
+    }
     return {
+      puedeFacturar, previa, medios,
+      facturaViva: viva ? { id: viva.id as string, numSerie: viva.numSerie as string } : null,
       notas: notas.map((n) => ({ id: n.id as string, texto: n.texto as string, quien: nombres.get(n.autorId) ?? '—', cuando: n.creadoEn as Date })),
       fotosSueltas: fotosOt.filter((f) => !f.propuestaId).map((f) => ({ id: f.id as string, url: urls.get(f.ruta) ?? null, nota: (f.nota ?? null) as string | null, purgadaEn: (f.purgadaEn ?? null) as Date | null })),
       retirada: config?.retirada ?? null,
@@ -144,6 +160,15 @@ export default async function Pagina({ params, searchParams }: { params: Promise
           </>
         )}
 
+        {datos.puedeFacturar && (datos.facturaViva || datos.previa) && (
+          <>
+            <h2>Factura</h2>
+            {datos.facturaViva
+              ? <p><a className="btn btn-sec" href={`/facturas/${datos.facturaViva.id}`}>Ver factura {datos.facturaViva.numSerie}</a></p>
+              : datos.previa && <Facturar otId={ot.id} previa={datos.previa} medios={datos.medios} />}
+          </>
+        )}
+
         <div className="fila">
           {datos.puedePresupuestar && !ot.presupuestoId && estado === 'recepcion' && <a className="btn" href={`/presupuestos/nuevo?ot=${ot.id}`}>Crear presupuesto</a>}
           {datos.pres && <a className="btn btn-sec" href={`/presupuestos/${datos.pres}`}>Ver presupuesto</a>}
@@ -183,11 +208,11 @@ export default async function Pagina({ params, searchParams }: { params: Promise
         {datos.puedeTrabajar && <ProponerAmpliacion otId={ot.id} />}
         {datos.propuestas.length === 0 ? <p className="tenue">Sin propuestas.</p> : datos.propuestas.map((p) => <GestionPropuesta key={p.id} p={p} puedeGestionar={datos.puedeAmpliar} />)}
 
-        {(datos.puedeGestionar || datos.puedeAvanzar) && TRANSICIONES_OT[estado].filter((h) => datos.puedeGestionar || capacidadParaTransicion(estado, h) === 'ordenes_avanzar').length > 0 && (
+        {(datos.puedeGestionar || datos.puedeAvanzar) && TRANSICIONES_OT[estado].filter((h) => h !== 'facturado' && (datos.puedeGestionar || capacidadParaTransicion(estado, h) === 'ordenes_avanzar')).length > 0 && (
           <>
             <h2>Cambiar estado</h2>
             <div className="fila">
-              {TRANSICIONES_OT[estado].filter((h) => datos.puedeGestionar || capacidadParaTransicion(estado, h) === 'ordenes_avanzar').map((h) => h === 'entregado' && datos.retirada ? (
+              {TRANSICIONES_OT[estado].filter((h) => h !== 'facturado' && (datos.puedeGestionar || capacidadParaTransicion(estado, h) === 'ordenes_avanzar')).map((h) => h === 'entregado' && datos.retirada ? (
                 <EntregaCliente key={h} otId={ot.id} texto={datos.retirada.textoConformidad} version={datos.retirada.versionTextoConformidad} obligatoria={datos.retirada.firmaObligatoria} />
               ) : (
                 <form key={h} action={cambiarEstadoAccion}>
