@@ -27,6 +27,7 @@ import {
   cerrarDescartado,
   cerrarEmisionFacturable,
   consumoEmision,
+  EmisionDuplicada,
   reservarEmision,
   TopeAlcanzadoBajoCandado,
 } from './consumo.ts'
@@ -48,7 +49,7 @@ export type GastoEmision<T> =
       /** Cuántas llamadas de ESTA operación quedan hoy tras esta. */
       restantesHoy: number
     }
-  | { ok: false; razon: 'sin-libro' | 'tope'; mensaje: string }
+  | { ok: false; razon: 'sin-libro' | 'tope' | 'duplicado'; mensaje: string }
 
 /** Evidencia de que el vendor NO llegó a cobrar. Exige texto, como la BD. */
 export type EvidenciaSinCargo = { evidencia: string; codigo: string }
@@ -73,6 +74,8 @@ export async function conLibroDeEmision<T>(
     solicitadoPor: string
     /** Para poder explicar la factura línea a línea. Puede no conocerse aún. */
     projectId: string | null
+    /** Huella anti doble clic (ver `huellaEmision`). Sin ella no hay deduplicación (comportamiento anterior). */
+    huella?: string
   },
   llamada: () => Promise<T>,
   opciones: {
@@ -125,9 +128,11 @@ export async function conLibroDeEmision<T>(
       solicitadoPor: p.solicitadoPor,
       costeCents,
       projectId: p.projectId,
+      huella: p.huella,
       env,
     })
   } catch (e) {
+    if (e instanceof EmisionDuplicada) return { ok: false, razon: 'duplicado', mensaje: e.message }
     // El tope re-contado bajo candado NO es un fallo del libro: es el tope.
     if (e instanceof TopeAlcanzadoBajoCandado) return { ok: false, razon: e.razon, mensaje: e.message }
     return {

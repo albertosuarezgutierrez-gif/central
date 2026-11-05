@@ -234,7 +234,7 @@ export default function RetarificadorHogar({
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ ...extra, resueltos: cuerpoResueltos(), correcciones: cuerpoCorrecciones() }),
+        body: JSON.stringify({ ...extra, confirmado: true, resueltos: cuerpoResueltos(), correcciones: cuerpoCorrecciones() }),
       })
       const j = (await res.json()) as Record<string, unknown>
       // 422 `causa: 'validacion'` = 400 del vendor SIN cargo: error del vendor con su mensaje, no «faltan datos».

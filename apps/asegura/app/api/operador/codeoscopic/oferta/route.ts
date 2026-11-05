@@ -27,6 +27,7 @@ import {
 } from '@/lib/codeoscopic/interprete-400'
 import { valoresPersonaDesdeFicha } from '@/lib/codeoscopic/valores-ficha'
 import { conLibroDeEmision, type GastoEmision } from '@/lib/codeoscopic/libro-emision'
+import { huellaEmision } from '@/lib/codeoscopic/huella'
 import { RE_FECHA, RE_TELEFONO } from '@/lib/codeoscopic/persona'
 import { fechaEfectoCaducada, reparoFechaCaducada, mensajeFechaCaducada, motivoFechaEfectoInvalida } from '@/lib/codeoscopic/fecha-efecto'
 import { auditado } from '@/lib/auditoria'
@@ -382,7 +383,21 @@ export const POST = auditado(async (req: Request) => {
           opcionesRerate = conDto.opciones as typeof opcionesBase
         }
         const gasto = await conLibroDeEmision(
-          { correduriaId: t.correduria_id, operacion: 'rerate', solicitadoPor: actor, projectId },
+          {
+            correduriaId: t.correduria_id,
+            operacion: 'rerate',
+            solicitadoPor: actor,
+            projectId,
+            // Doble clic en «Pre-emitir»: mismo proyecto + precio + fecha en 15 min = una sola llamada (409 la 2ª).
+            huella: huellaEmision({
+              operacion: 'rerate',
+              correduriaId: t.correduria_id,
+              projectId,
+              precioId: precio.id,
+              productId: typeof precio.productId === 'string' || typeof precio.productId === 'number' ? precio.productId : null,
+              fechaEfecto: fechaEfectoCorregida,
+            }),
+          },
           () =>
             reRate(
               r.config,
@@ -567,6 +582,16 @@ function cadena(v: unknown): string | null {
  * motivo.
  */
 function respuestaGastoBloqueado(gasto: Extract<GastoEmision<never>, { ok: false }>) {
+  if (gasto.razon === 'duplicado') {
+    return NextResponse.json(
+      {
+        estado: 'error',
+        causa: 'duplicado',
+        mensaje: `${gasto.mensaje} Espera el resultado de la primera pulsación.`,
+      },
+      { status: 409 },
+    )
+  }
   return NextResponse.json(
     {
       estado: 'error',

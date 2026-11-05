@@ -45,7 +45,23 @@ export async function POST(req: Request, ctx: { params: Promise<{ polizaId: stri
   const session = acceso.session
   const { polizaId } = await ctx.params
 
-  const cuerpo = (await req.json().catch(() => ({}))) as CuerpoRetarificacion
+  const cuerpo = (await req.json().catch(() => ({}))) as CuerpoRetarificacion & { confirmado?: unknown }
+
+  // 🚨 El cerrojo del dinero (05/11/2026), igual que en el puerto de operador: sin `confirmado === true` ESTRICTO
+  // no se llama a Codeoscopic. Cotizar cuesta 0,50 € reales.
+  if (cuerpo.confirmado !== true) {
+    return NextResponse.json(
+      {
+        estado: 'error',
+        causa: 'sin_confirmar',
+        mensaje:
+          'Esta llamada cuesta 0,50€ reales. Hay que mandar `confirmado: true` (booleano) para ' +
+          'pedirla: sin esa confirmación explícita no se llama a Codeoscopic.',
+        gastado: '0,00€',
+      },
+      { status: 400 },
+    )
+  }
 
   const p = await prepararRetarificacion({
     polizaId,

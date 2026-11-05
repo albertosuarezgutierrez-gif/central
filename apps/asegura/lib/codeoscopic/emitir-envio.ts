@@ -343,7 +343,7 @@ export async function enviarEmision(
       // dejarlo puesto bloquearía 10 minutos un envío que nunca salió.
       const mensaje = `${gasto.mensaje} NO se ha enviado nada a la compañía.`
       await cerrarEnvio(entrada.correduriaId, entrada.projectId, attemptId, 'error', mensaje).catch(() => {})
-      return { ok: false, razon: gasto.razon, mensaje }
+      return { ok: false, razon: gasto.razon === 'duplicado' ? 'en-vuelo' : gasto.razon, mensaje }
     }
 
     const { estadoHttp, correcto, texto } = gasto.valor

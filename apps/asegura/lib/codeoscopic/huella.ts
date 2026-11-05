@@ -4,9 +4,17 @@
 // Doble clic, recarga o dos pestañas = dos cargos; y un timeout (150 s) cuenta como facturable, así que
 // el usuario repite. La huella identifica «la misma petición» sin guardar el cuerpo ni datos personales.
 import { createHash } from 'node:crypto'
+import { RE_FECHA_ISO, fechaEfectoCaducada } from './fecha-efecto.ts'
 
-/** Ventana en la que una cotización idéntica no se vuelve a pagar. */
+/** Ventana en la que una cotización idéntica EN CURSO o sin copia se bloquea (409) en vez de pagarse otra vez. */
 export const VENTANA_DUPLICADO_MIN = 15
+
+/**
+ * Ventana (05/11/2026) en la que una cotización idéntica YA COBRADA y con copia guardada se reutiliza sin llamar ni
+ * cobrar, siempre que la fecha de efecto de esa copia siga siendo válida (hoy o futura). Medido: 2 de 5 cobros de más
+ * fueron repeticiones a las ~6 h y ~20 h. `forzar` sigue saltándola.
+ */
+export const VENTANA_REUTILIZAR_MIN = 24 * 60
 
 /** JSON canónico: claves ordenadas a todos los niveles; `undefined` fuera (como hace `JSON.stringify`). */
 export function jsonCanonico(v: unknown): string {
@@ -55,7 +63,10 @@ export type DecisionDuplicado =
 /**
  * Llamar / reutilizar / bloquear. `forzar` salta la guarda (recotización explícita del operador).
  * `copias` = intentos cuya copia de precios consta en `tarificaciones` (con respuesta cruda).
- * Solo una facturable con copia se reutiliza; una reservada, o sin copia, bloquea (409) sin cargo.
+ * Dentro de 15 min: solo una facturable con copia se reutiliza; una reservada, o sin copia, bloquea (409) sin cargo.
+ * Entre 15 min y 24 h: se reutiliza una con copia (facturable, o reservada cuyo cierre falló tras cobrar) SOLO si
+ * la fecha de efecto sigue vigente; sin fecha conocida no se afirma nada y se llama (conservador a favor de la copia
+ * caducada: nunca se sirve un precio que la compañía ya no confirmaría).
  */
 export function decidirDuplicado(e: {
   previas: FilaPrevia[]
@@ -63,18 +74,51 @@ export function decidirDuplicado(e: {
   ahora: Date
   forzar?: boolean
   ventanaMin?: number
+  /** Fecha de efecto (aaaa-mm-dd) del cuerpo que se va a enviar (= la de la copia: misma huella). */
+  fechaEfecto?: string | null
+  /** Hoy en Madrid (aaaa-mm-dd); se inyecta en los tests. */
+  hoy?: string
 }): DecisionDuplicado {
   if (e.forzar === true) return { accion: 'llamar' }
   const vivas = e.previas
     .filter((f) => bloqueaDuplicado(f, e.ahora, e.ventanaMin))
     .sort((a, b) => b.creadoAt.getTime() - a.creadoAt.getTime())
-  if (vivas.length === 0) return { accion: 'llamar' }
-  const conCopia = vivas.find((f) => f.estado === 'facturable' && e.copias.has(f.intentoId))
-  if (conCopia) return { accion: 'reutilizar', intentoId: conCopia.intentoId }
-  const f = vivas[0]!
-  return { accion: 'bloquear', intentoId: f.intentoId, estado: f.estado as 'reservado' | 'facturable' }
+  if (vivas.length > 0) {
+    const conCopia = vivas.find((f) => f.estado === 'facturable' && e.copias.has(f.intentoId))
+    if (conCopia) return { accion: 'reutilizar', intentoId: conCopia.intentoId }
+    const f = vivas[0]!
+    return { accion: 'bloquear', intentoId: f.intentoId, estado: f.estado as 'reservado' | 'facturable' }
+  }
+  // Fuera de los 15 min: reutilización de larga duración.
+  const fecha = e.fechaEfecto ?? null
+  const efectoVigente = typeof fecha === 'string' && RE_FECHA_ISO.test(fecha) && !fechaEfectoCaducada(fecha, e.hoy)
+  if (!efectoVigente) return { accion: 'llamar' }
+  const larga = e.previas
+    .filter((f) => f.estado !== 'descartado' && e.copias.has(f.intentoId))
+    .filter((f) => e.ahora.getTime() - f.creadoAt.getTime() <= VENTANA_REUTILIZAR_MIN * 60_000)
+    .sort((a, b) => b.creadoAt.getTime() - a.creadoAt.getTime())[0]
+  return larga ? { accion: 'reutilizar', intentoId: larga.intentoId } : { accion: 'llamar' }
 }
 
 export const MENSAJE_DUPLICADO =
   'Cotización idéntica en curso o reciente (menos de 15 minutos): no se ha vuelto a llamar a la compañía ni se ha ' +
   'cobrado nada. Espera el resultado o, si de verdad hace falta recotizar, fuerza la recotización.'
+
+/**
+ * Huella de una operación de emisión (ReRate…) para frenar el doble clic (05/11/2026). Mismo contrato que
+ * `huellaCotizacion`: solo viaja el hash, nunca datos. Identifica «el mismo ReRate»: proyecto + precio + producto + efecto.
+ */
+export function huellaEmision(e: {
+  operacion: string
+  correduriaId: string
+  projectId: string
+  precioId?: string | number | null
+  productId?: string | number | null
+  fechaEfecto?: string | null
+}): string {
+  return createHash('sha256')
+    .update(
+      `${e.operacion}\n${e.correduriaId}\n${e.projectId}\n${e.precioId ?? ''}\n${e.productId ?? ''}\n${e.fechaEfecto ?? ''}`,
+    )
+    .digest('hex')
+}

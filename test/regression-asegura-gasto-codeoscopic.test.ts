@@ -333,6 +333,23 @@ test('la recomendación de capital de hogar abre su línea en el libro y va detr
   }
 })
 
+test('🚨 TODA ruta que llama a cotizar() exige confirmado:true estricto (auditoría 05/11/2026)', () => {
+  const cotizan = RUTAS.filter((f) => llamaAlEmbudoDePago(FUENTE(f)))
+  assert.ok(cotizan.length >= 9, 'el cepo se ha quedado ciego: hay menos rutas que cotizan de las esperadas')
+  // Las dos de /api/cartera/* tienen que estar entre las vigiladas (fueron las que se olvidaron).
+  for (const f of [
+    'apps/asegura/app/api/cartera/polizas/[polizaId]/retarificar/route.ts',
+    'apps/asegura/app/api/cartera/cliente/[clienteId]/hogar-nuevo/route.ts',
+  ]) assert.ok(cotizan.includes(f), `${f} ya no figura como ruta que cotiza`)
+  for (const f of cotizan) {
+    const src = FUENTE(f)
+    const iConf = src.search(/cuerpo\.confirmado !== true/)
+    assert.ok(iConf > 0, `${f}: cotiza sin exigir confirmado:true (cuesta 0,50€)`)
+    const iCotizar = src.search(/\bawait cotizar\s*\(/)
+    assert.ok(iConf < iCotizar, `${f}: el confirmado tiene que comprobarse ANTES de cotizar()`)
+  }
+})
+
 // ─── El tope en EUROS del mes (Alberto, 29/09/2026) ─────────────────────────
 // Aviso a 60 €, bloqueo a 70 € hasta ampliar por Telegram. El modo de fallo que se persigue: que
 // uno de los dos embudos que gastan deje de mirar el tope en euros, o lo mire DESPUÉS de reservar
