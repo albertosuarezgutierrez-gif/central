@@ -13,6 +13,7 @@ import {
   type LucideIcon, BookUser } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
 import SubirFactura from './SubirFactura'
+import BotonNuevaTarea from './BotonNuevaTarea'
 import { activoPorRuta, activoEnLista } from '@/lib/nav-activo'
 
 // Iconos de lucide, NO emojis: cada sistema operativo pinta el emoji a su manera (color,
@@ -434,12 +435,13 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
           >☰</button>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800, fontSize: '15px', minWidth: 0 }}>
             <img src="/icon.svg" alt="" width={22} height={22} style={{ borderRadius: 6, flexShrink: 0 }} />
-            <span>Mi grupo</span>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Mi grupo</span>
           </div>
           {/* Subir una factura desde CUALQUIER pantalla, sin pasar por /asistentes: es la acción que
               Alberto hace con el móvil en la mano delante del papel. `marginLeft:auto` la pega a la
               derecha sin empujar la marca (la barra mide 52px y el botón 44: cabe sin desbordar). */}
-          <div style={{ marginLeft: 'auto', flexShrink: 0 }}>
+          <div style={{ marginLeft: 'auto', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+            {!soloEmpresas && <BotonNuevaTarea />}
             <SubirFactura variante="barra" />
           </div>
         </div>

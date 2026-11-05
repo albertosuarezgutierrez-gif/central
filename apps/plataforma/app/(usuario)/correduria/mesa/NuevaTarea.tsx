@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
+import { motivoAltaTarea } from '@/lib/correduria/alta-tarea'
 import SelectorCliente, { type ClienteElegido } from './SelectorCliente'
 
 /**
@@ -27,7 +28,7 @@ export function textoTarea(tipo: string, que: string): string {
 const CAMPO: React.CSSProperties = { width: '100%', boxSizing: 'border-box', minHeight: 44, borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', padding: '0 10px', fontSize: 16 }
 
 /** Alta rápida de tarea desde Mi mesa (`POST /api/correduria/tareas`, siempre con cliente). */
-export default function NuevaTarea({ hoy, onCerrar, onGuardada }: { hoy: string; onCerrar: () => void; onGuardada: () => Promise<void> }) {
+export default function NuevaTarea({ hoy, onCerrar, onGuardada }: { hoy: string; onCerrar: () => void; onGuardada?: () => Promise<void> | void }) {
   const [cliente, setCliente] = useState<ClienteElegido | null>(null)
   const [que, setQue] = useState('')
   const [tipo, setTipo] = useState('otro')
@@ -46,11 +47,12 @@ export default function NuevaTarea({ hoy, onCerrar, onGuardada }: { hoy: string;
     return () => window.removeEventListener('keydown', alTecla)
   }, [])
 
-  const valido = cliente !== null && que.trim() !== '' && /^\d{4}-\d{2}-\d{2}$/.test(fecha)
-
   async function guardar(e: React.FormEvent) {
     e.preventDefault()
-    if (!valido || !cliente || enviando) return
+    if (enviando) return
+    // Nunca un botón mudo: si falta algo, se DICE qué.
+    const falta = motivoAltaTarea({ clienteId: cliente?.clienteId, que, fecha })
+    if (falta || !cliente) { setError(falta ?? 'Falta elegir el cliente.'); return }
     setEnviando(true)
     setError(null)
     try {
@@ -60,7 +62,8 @@ export default function NuevaTarea({ hoy, onCerrar, onGuardada }: { hoy: string;
       })
       const j = (await r.json().catch(() => null)) as { estado?: string; motivo?: string } | null
       if (r.ok && j?.estado !== 'error' && j?.estado !== 'invalido') {
-        await onGuardada() // recarga sin desmontar la mesa
+        // La tarea YA está guardada: si la recarga de la mesa falla, no se dice que no se guardó.
+        try { await onGuardada?.() } catch { /* la mesa se refresca sola al volver */ }
         onCerrar()
         return
       }
@@ -75,9 +78,9 @@ export default function NuevaTarea({ hoy, onCerrar, onGuardada }: { hoy: string;
 
   return (
     <div role="presentation" onMouseDown={ev => { if (ev.target === ev.currentTarget) onCerrar() }}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 8 }}>
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 8 }}>
       <div role="dialog" aria-modal="true" aria-label="Nueva tarea"
-        style={{ width: '95vw', maxWidth: 520, maxHeight: '92vh', overflowY: 'auto', boxSizing: 'border-box', background: 'var(--surface)', color: 'var(--text)', borderRadius: 16, border: '1px solid var(--border)', padding: 16, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 12 }}>
+        style={{ width: '95vw', maxWidth: 520, maxHeight: '92dvh', overflowY: 'auto', boxSizing: 'border-box', background: 'var(--surface)', color: 'var(--text)', borderRadius: 16, border: '1px solid var(--border)', padding: 16, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
           <h2 style={{ margin: 0, fontSize: 18 }}>Nueva tarea</h2>
           <button ref={cierre} type="button" onClick={onCerrar} aria-label="Cerrar" style={{ ...btnStyle('sutil'), minWidth: 44, padding: 0 }}><X size={20} aria-hidden /></button>
@@ -123,7 +126,7 @@ export default function NuevaTarea({ hoy, onCerrar, onGuardada }: { hoy: string;
           {error && <p role="alert" style={{ margin: 0, fontSize: 13, color: 'var(--negative)' }}>{error}</p>}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-end' }}>
             <button type="button" onClick={onCerrar} style={btnStyle('secundario')}>Cancelar</button>
-            <button type="submit" disabled={!valido || enviando} style={btnStyle('primario')}>{enviando ? 'Guardando…' : 'Guardar tarea'}</button>
+            <button type="submit" disabled={enviando} style={btnStyle('primario')}>{enviando ? 'Guardando…' : 'Guardar tarea'}</button>
           </div>
         </form>
       </div>

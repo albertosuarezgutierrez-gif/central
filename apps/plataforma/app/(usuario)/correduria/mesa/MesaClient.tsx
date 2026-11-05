@@ -12,13 +12,13 @@ import {
   atajosAparcar, cuandoRelativo, fechaCorta, masDias, origenInsignia, repartirMesaCompleta, SECCIONES_MESA, soloDia, textoAntiguedad,
   textoVencimiento, TITULO_SECCION, VACIO_SECCION, type SeccionMesa,
 } from '@/lib/correduria/mesa'
+import { EVENTO_TAREA_GUARDADA } from '@/lib/correduria/alta-tarea'
 import Secciones from '../Secciones'
 import AccionesContacto from '../AccionesContacto'
 import AccionesCabecera from '../AccionesCabecera'
 import BuscadorCartera from '../BuscadorCartera'
 import CorreosCompania, { type CuentaCorreos } from './CorreosCompania'
 import { PerdidasPorRevisar, TareasSueltas } from './BloquesSueltos'
-import NuevaTarea from './NuevaTarea'
 
 const PAGINA = 50
 const TONO_ORIGEN = { Portal: 'info', Correo: 'aviso', Web: 'info', Presupuesto: 'aviso', Cartera: 'neutral' } as const
@@ -60,7 +60,6 @@ export default function MesaClient() {
   const [datos, setDatos] = useState<Expedientes | null>(null)
   const [recargando, setRecargando] = useState(false)
   const [errorRecarga, setErrorRecarga] = useState<string | null>(null)
-  const [nueva, setNueva] = useState(false)
   const [correos, setCorreos] = useState<CuentaCorreos | null>(null)
   const peticion = useRef(0)
   const router = useRouter()
@@ -90,6 +89,13 @@ export default function MesaClient() {
 
   useEffect(() => { void cargar() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // «Nueva tarea» vive en la cabecera fija (`BotonNuevaTarea`): al guardar avisa por evento y la mesa recarga.
+  useEffect(() => {
+    const alGuardar = () => { void cargar() }
+    window.addEventListener(EVENTO_TAREA_GUARDADA, alGuardar)
+    return () => window.removeEventListener(EVENTO_TAREA_GUARDADA, alGuardar)
+  }, [cargar])
+
   const hoy = datos?.estado === 'ok' && datos.hoy !== '' ? datos.hoy : hoyMadrid()
   const mesa = useMemo(() => (datos?.estado === 'ok' ? repartirMesaCompleta(datos, hoy) : null), [datos, hoy])
 
@@ -98,10 +104,8 @@ export default function MesaClient() {
       <h1 className="solo-lectores">Mi mesa</h1>
       {/* Las mismas acciones que `/correduria` (Subir póliza, Vencimientos, «…»): son enlaces, no montan modales. */}
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center', gap: 8 }}>
-        <button type="button" onClick={() => setNueva(true)} style={btnStyle('primario')}>+ Tarea</button>
         <AccionesCabecera />
       </div>
-      {nueva && <NuevaTarea hoy={hoy} onCerrar={() => setNueva(false)} onGuardada={cargar} />}
       <BuscadorCartera />
       {/* La misma barra que `/correduria`: «Mi mesa» y «Prospección» son pantallas propias, el resto son secciones. */}
       <Secciones activa="mesa" contadores={{}} onCambiar={s => router.push(`/correduria?s=${s}`)} />
