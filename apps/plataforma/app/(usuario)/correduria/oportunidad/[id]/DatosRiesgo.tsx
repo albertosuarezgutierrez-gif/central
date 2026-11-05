@@ -475,6 +475,13 @@ function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: stri
               </span>
             </div>
           )}
+          {/* 05/11/2026: lo que el CLIENTE declaró (solicitud de datos de la renovación por la app), en la clave del bot. Declarado, sin confirmar. */}
+          {(() => {
+            const v = d as unknown as Record<string, unknown>
+            const dec = ([['Uso', 'usoDeclarado'], ['Régimen', 'regimenDeclarado'], ['Tipo', 'tipoViviendaDeclarado']] as const)
+              .flatMap(([rotulo, k]) => (typeof v[k] === 'string' && (v[k] as string).trim() !== '' ? [`${rotulo}: ${(v[k] as string).replace(/_/g, ' ')}`] : []))
+            return dec.length > 0 ? <div style={{ fontSize: 13 }}>🗣️ <strong>Declarado por el cliente</strong> (sin confirmar): {dec.join(' · ')}</div> : null
+          })()}
           <CarteraHogar p={props.propuestaCartera} onUsarCapitales={usarCapitalesDeCartera} />
           <AsesorHogar v={aForm(ESPEC_VIVIENDA, d)} />
           {GRUPOS_VIVIENDA.map((g) => ({ g, campos: camposVisibles(g.campos, aForm(ESPEC_VIVIENDA, d)) })).filter((x) => x.campos.length > 0).map(({ g, campos }) => (

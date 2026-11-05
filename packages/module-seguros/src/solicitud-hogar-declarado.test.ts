@@ -42,3 +42,22 @@ test('misma dirección con huecos: se rellenan los huecos y lo guardado no se to
   assert.deepEqual(otra.escribir, {})
   assert.equal(otra.conflictos.length, 1)
 })
+
+test('precarga real de la póliza (texto + CP, sin nombreVia): solo se rellena si el texto CONTIENE la vía y el número declarados', () => {
+  const precarga = { direccion: 'CL EJEMPLO 1, 2º B', cp: '41003' }
+  const ok = planEscrituraVivienda(precarga, { cp: '41003', nombreVia: 'EJEMPLO', numeroVia: '1', municipio: 'SEVILLA' })
+  assert.deepEqual(ok.escribir, { nombreVia: 'EJEMPLO', numeroVia: '1', municipio: 'SEVILLA' })
+  const otraCalle = planEscrituraVivienda({ direccion: 'CL DISTINTA 7', cp: '41003' }, { cp: '41003', nombreVia: 'EJEMPLO', numeroVia: '1' })
+  assert.deepEqual(otraCalle.escribir, {}, 'otra calle en el texto guardado: nada')
+  assert.equal(otraCalle.conflictos.length, 1)
+})
+
+test('con OTRA referencia catastral no se mezcla la calle nueva con la referencia, m² y año viejos', () => {
+  const guardada = { direccion: 'CL EJEMPLO 1', cp: '41003', referenciaCatastral: '1111111AA1111A0001AA', metrosCuadrados: 90, anioConstruccion: 1970 }
+  const plan = planEscrituraVivienda(guardada, {
+    cp: '41003', nombreVia: 'EJEMPLO', numeroVia: '1',
+    referenciaCatastral: '2222222BB2222B0001BB', catastroReferencia: '2222222BB2222B0001BB', metrosCuadrados: 70, anioConstruccion: 2001,
+  })
+  assert.deepEqual(plan.escribir, {})
+  assert.equal(plan.conflictos.length, 2, 'dirección y referencia, las dos como conflicto')
+})

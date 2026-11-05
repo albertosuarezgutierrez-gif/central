@@ -9,7 +9,7 @@
 // llegan a ESA identidad (`solicitudesDatosParaAutorizado`).
 // 🚨 Sin la migración no puede haber ninguna: `[]` (leído, no hay). Cualquier otro fallo LANZA (la campana lo declara ilegible).
 import { nivelPuedeOperar, type DatosRenovacionParaAviso } from '@central/module-seguros-portal'
-import { ramoSolicitud, type CampoSolicitud, type RamoSolicitud } from '@central/module-seguros'
+import { interpretarDatosRenovacion, type DatosRenovacionLeida } from './datos-renovacion-vista'
 
 import { prisma } from './db'
 import { PORTAL_PUENTE_TIEMPO_MS } from './puente-config'
@@ -47,29 +47,13 @@ export async function datosRenovacionParaAvisoDeIdentidad(identidadId: string): 
 
 // ─── La página (por el puente) ───────────────────────────────────────────────
 
-export type DatosRenovacionLeida =
-  | { estado: 'ok'; ramo: RamoSolicitud; campos: CampoSolicitud[]; papel: 'tomador' | 'autorizado' }
-  | { estado: 'completada' | 'muerta' | 'no_encontrada' | 'sin_sesion' | 'error' }
+export { interpretarDatosRenovacion, type DatosRenovacionLeida } from './datos-renovacion-vista'
 
 function puente(): { base: string; secret: string } | null {
   const base = process.env.ASEGURA_PUENTE_URL
   const secret = process.env.ASEGURA_PORTAL_PUENTE_SECRET
   if (!base || !secret) return null
   return { base: base.replace(/\/+$/, ''), secret }
-}
-
-/** Lo que devuelve el puente → la página. Una forma rara es `error` (no «no encontrada»: no se sabe). PURA. */
-export function interpretarDatosRenovacion(status: number, json: unknown): DatosRenovacionLeida {
-  const o = json !== null && typeof json === 'object' && !Array.isArray(json) ? (json as Record<string, unknown>) : null
-  if (status === 404) return { estado: 'no_encontrada' }
-  if (status !== 200 || !o) return { estado: 'error' }
-  if (o.estado === 'completada' || o.estado === 'muerta') return { estado: o.estado }
-  const ramo = ramoSolicitud(o.ramo)
-  if (o.estado === 'ok' && ramo && Array.isArray(o.campos) && (o.papel === 'tomador' || o.papel === 'autorizado')) {
-    const campos = o.campos.filter((c): c is CampoSolicitud => c !== null && typeof c === 'object' && typeof (c as CampoSolicitud).clave === 'string' && typeof (c as CampoSolicitud).etiqueta === 'string')
-    if (campos.length > 0) return { estado: 'ok', ramo, campos, papel: o.papel }
-  }
-  return { estado: 'error' }
 }
 
 /** La solicitud para la identidad de la SESIÓN. El id de la URL solo dice QUÉ; quién eres lo dice la cookie. */
@@ -113,4 +97,24 @@ export async function enviarDatosRenovacion(solicitudId: string, respuestas: unk
     console.error('[portal/datos-renovacion] el puente no respondió al enviar:', e instanceof Error ? e.message : e)
     return null
   }
+}
+
+// ─── ¿Puede ESTA sesión usar las ayudas de esta solicitud? (Catastro de la tarjeta) ──
+// La ruta del Catastro no es un servicio para cualquier sesión: exige una solicitud PUBLICADA, VIVA y de HOGAR que la identidad
+// de la cookie puede contestar (lo decide asegura). Se recuerda unos minutos por instancia para no llamar al puente en cada tecla.
+const ABIERTA_MS = 10 * 60_000
+const MAX_ABIERTAS = 300
+const abiertas = new Map<string, number>()
+
+export async function solicitudAbiertaParaSesion(solicitudId: string, ahora = Date.now()): Promise<boolean> {
+  const identidad = await getIdentidad()
+  if (!identidad || identidad.corredor || !UUID.test(solicitudId)) return false
+  const clave = `${identidad.id}:${solicitudId}`
+  const hasta = abiertas.get(clave)
+  if (hasta !== undefined && hasta > ahora) return true
+  const s = await leerDatosRenovacion(solicitudId)
+  if (s.estado !== 'ok' || s.ramo !== 'hogar') return false
+  if (abiertas.size >= MAX_ABIERTAS) abiertas.delete(abiertas.keys().next().value as string)
+  abiertas.set(clave, ahora + ABIERTA_MS)
+  return true
 }

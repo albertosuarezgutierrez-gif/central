@@ -144,6 +144,7 @@ export async function crearSolicitud(
   if (!campos) return { ok: false, estado: 'no_encontrado', motivo: 'No se encuentra la ficha de esa persona.', status: 404 }
   const r = await prismaAsegura().$transaction((tx) =>
     insertarSolicitud(tx, { correduriaId, oportunidadId, personaId: persona, ramo, campos, actor, tercero, estadoOportunidad: o.estado, reemitir: opciones.reemitir === true }))
+  if (r.deRenovacion) return { ok: false, estado: 'conflicto', motivo: 'Ya hay una solicitud de datos de la renovación viva (por la app) para este riesgo: espera a que conteste o deja que caduque.', status: 409 }
   // RGPD: la pendiente caducada que `insertarSolicitud` acaba de anular no guarda su borrador. FUERA de la transacción:
   // sin la columna, un error dentro la abortaría entera.
   if (r.nueva) await limpiarBorradoresMuertos(prismaAsegura(), { oportunidadId, clienteId: persona, correduriaId })
@@ -181,13 +182,16 @@ export const ACCION_ENLACE_REEMITIDO = 'datos_enlace_reemitido'
 export async function insertarSolicitud(
   tx: Prisma.TransactionClient,
   p: { correduriaId: string; oportunidadId: string; personaId: string; ramo: RamoSolicitud; campos: CampoSolicitud[]; actor: string; tercero: boolean; estadoOportunidad: string; reemitir?: boolean },
-): Promise<{ id: string; caduca: Date; nueva: boolean; reemitida: boolean; token: string | null }> {
+): Promise<{ id: string; caduca: Date; nueva: boolean; reemitida: boolean; token: string | null; deRenovacion?: true }> {
   const { correduriaId, oportunidadId, personaId: persona, ramo, campos, actor, tercero } = p
   await tx.$executeRaw(Prisma.sql`select pg_advisory_xact_lock(hashtext(${`solicitud:${oportunidadId}:${persona}`}))`)
-  const [viva] = await tx.$queryRaw<{ id: string; caduca: Date }[]>(Prisma.sql`
-    select id::text as id, caduca_at as caduca from solicitud_datos
+  const [viva] = await tx.$queryRaw<{ id: string; caduca: Date; motivo: string | null }[]>(Prisma.sql`
+    select id::text as id, caduca_at as caduca, to_jsonb(solicitud_datos) ->> 'motivo' as motivo from solicitud_datos
     where oportunidad_id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid and cliente_id = ${persona}::uuid
       and estado = 'pendiente' and caduca_at > now()`)
+  // 05/11/2026: la viva es una solicitud de RENOVACIÓN por la app: ni se reemite (daría un enlace público a algo que solo se abre
+  // con sesión tras el ✅) ni se devuelve como «la viva» del enlace. Quien llama lo traduce a 409.
+  if (viva && viva.motivo) return { id: viva.id, caduca: viva.caduca, nueva: false, reemitida: false, token: null, deRenovacion: true }
   if (viva && p.reemitir === true) {
     const token = randomBytes(32).toString('base64url')
     const n = await tx.$executeRaw(Prisma.sql`
@@ -369,7 +373,10 @@ async function porToken(token: string): Promise<FilaToken | null> {
   const [f] = await prismaAsegura().$queryRaw<FilaToken[]>(Prisma.sql`
     select id::text as id, correduria_id::text as "correduriaId", oportunidad_id::text as "oportunidadId",
            cliente_id::text as "clienteId", ramo, estado, caduca_at as caduca, campos, tercero, creada_por as "creadaPor"
-    from solicitud_datos where token_hash = ${hashToken(token)}`)
+    from solicitud_datos where token_hash = ${hashToken(token)}
+      and coalesce(to_jsonb(solicitud_datos) ->> 'motivo', '') = ''`)
+  // 05/11/2026: una solicitud de RENOVACIÓN (`motivo`, migración 2026-11-05d) no existe por token: solo se abre en la app, con
+  // sesión y tras el ✅ de Alberto. `to_jsonb` para que valga con y sin la columna.
   return f ?? null
 }
 

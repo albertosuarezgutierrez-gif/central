@@ -216,6 +216,11 @@ export function planEscrituraVivienda(actual: Record<string, unknown> | null, pr
   const conflictos: string[] = []
   const de = (claves: readonly string[]) => Object.fromEntries(claves.flatMap((k) => (k in propuesta ? [[k, propuesta[k]]] : [])))
 
+  // ¿El Catastro de la propuesta choca con la referencia guardada? Se mira ANTES de la dirección: con otra referencia no se
+  // rellena ningún hueco de dirección (se mezclaría una calle nueva con la referencia, los m² y el año de OTRA vivienda).
+  const refPropuesta = 'referenciaCatastral' in propuesta && !vacio(propuesta.referenciaCatastral) ? refNorm(propuesta.referenciaCatastral) : null
+  const chocaReferencia = refPropuesta !== null && !vacio(a.referenciaCatastral) && refNorm(a.referenciaCatastral) !== refPropuesta
+
   // Dirección.
   const dir = de(CLAVES_BLOQUE_DIRECCION)
   if (Object.keys(dir).length > 0) {
@@ -226,9 +231,20 @@ export function planEscrituraVivienda(actual: Record<string, unknown> | null, pr
         && (!('planta' in dir) || vacio(a.planta) || norm(a.planta) === norm(dir.planta))
         && (!('puertaVivienda' in dir) || vacio(a.puertaVivienda) || norm(a.puertaVivienda) === norm(dir.puertaVivienda))
       if (!misma) conflictos.push('dirección distinta de la guardada: revisar (no se ha tocado la guardada)')
-      // 05/11/2026: la MISMA dirección con huecos (p. ej. la póliza traía CP y municipio pero no la calle): se rellenan SOLO los
-      // huecos; lo guardado no se toca. Sin esto, la calle que el cliente acaba de dar no llegaba nunca al riesgo.
-      else for (const [k, v] of Object.entries(dir)) if (vacio(a[k])) escribir[k] = v
+      else {
+        // 05/11/2026: la MISMA dirección con huecos (p. ej. la póliza traía CP y municipio pero no la calle): se rellenan SOLO los
+        // huecos; lo guardado no se toca. Solo si el texto guardado (`direccion`, el de la precarga de la póliza) está vacío o
+        // CONTIENE la vía y el número declarados, y el Catastro no trae otra referencia. Si no, es conflicto (puede ser otra vivienda).
+        const huecos = Object.entries(dir).filter(([k]) => vacio(a[k]))
+        if (huecos.length > 0) {
+          const via = norm(dir.nombreVia ?? a.nombreVia)
+          const numero = norm(dir.numeroVia ?? a.numeroVia)
+          const texto = norm(a.direccion)
+          const casaTexto = vacio(a.direccion) || (via !== '' && numero !== '' && texto.includes(via) && texto.includes(numero))
+          if (casaTexto && !chocaReferencia) for (const [k, v] of huecos) escribir[k] = v
+          else conflictos.push('dirección guardada incompleta que no casa con la declarada: revisar (no se ha tocado la guardada)')
+        }
+      }
     }
   }
 

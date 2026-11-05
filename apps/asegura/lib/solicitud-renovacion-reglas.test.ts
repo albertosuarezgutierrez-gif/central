@@ -96,3 +96,18 @@ test('el puente del portal decide quién ANTES de enseñar o aceptar nada, y sol
   assert.match(quien, /quienContestaDatosRenovacion\(/)
   assert.match(quien, /identidad_id = \$\{identidadId\}::uuid and cliente_id = \$\{f\.clienteId\}::uuid/)
 })
+
+// Una solicitud de RENOVACIÓN (con `motivo`) no se abre ni se reemite por TOKEN: solo en la app, con sesión, tras el ✅.
+test('el enlace por token excluye las de renovación y la reemisión las rechaza (409)', () => {
+  const src = readFileSync(new URL('./solicitud-datos.ts', import.meta.url), 'utf8')
+  const i = src.indexOf('async function porToken')
+  const porToken = src.slice(i, src.indexOf('\n}\n', i))
+  assert.match(porToken, /coalesce\(to_jsonb\(solicitud_datos\) ->> 'motivo', ''\) = ''/, 'porToken: sin motivo')
+  const j = src.indexOf('export async function insertarSolicitud')
+  const ins = src.slice(j, src.indexOf('\n}\n', j))
+  const corte = ins.indexOf('if (viva && viva.motivo) return')
+  assert.ok(corte > 0 && corte < ins.indexOf('if (viva && p.reemitir === true)'), 'la de renovación se corta ANTES de reemitir')
+  const k = src.indexOf('export async function crearSolicitud')
+  const crear = src.slice(k, src.indexOf('\n}\n', k))
+  assert.match(crear, /if \(r\.deRenovacion\) return \{ ok: false, estado: 'conflicto'[^}]*status: 409 \}/)
+})
