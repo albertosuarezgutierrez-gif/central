@@ -7,6 +7,8 @@ import { claseEstado } from '../../_ui'
 import { Cabecera } from '../../_marca'
 import { cancelarPedidoAccion, marcarEnviadoAccion } from '../acciones'
 import { CopiarImprimir } from './CopiarImprimir'
+import { EnlacePedidoProveedor } from '../../_portal/Compartir'
+import { firmarVarias } from '@/lib/almacen'
 
 export const dynamic = 'force-dynamic'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -27,7 +29,17 @@ export default async function Pagina({ params, searchParams }: { params: Promise
     ])
     const texto = textoPedido({ id: p.id, matricula: p.matricula ?? null, notas: p.notas ?? null }, { nombre: prov?.nombre ?? '—' }, { nombreComercial: taller?.nombreComercial ?? '' },
       lineas.map((l) => ({ descripcion: l.descripcion, referencia: l.referencia ?? null, cantidad: Number(l.cantidad), unidad: l.unidad })), p.creadoEn)
-    return { p, lineas, prov, texto, puedeEnviar: tienePermiso(c.rol, 'pedidos_enviar') }
+    // Portal del proveedor: enlace vivo (sin el token: solo su estado) y albaranes que subió el proveedor (URL firmada corta).
+    const [enlace, docs] = await Promise.all([
+      tx.enlaceProveedor.findFirst({ where: { tallerId: c.tallerId, proposito: 'pedido', pedidoId: id, revocadoEn: null }, orderBy: { creadoEn: 'desc' } }),
+      tx.documentoProveedor.findMany({ where: { tallerId: c.tallerId, pedidoId: id, tipo: 'albaran' }, orderBy: { subidoEn: 'asc' } }),
+    ])
+    const urls = await firmarVarias(c.tallerId, docs.map((d) => d.ruta))
+    return {
+      p, lineas, prov, texto, puedeEnviar: tienePermiso(c.rol, 'pedidos_enviar'),
+      enlace: enlace ? { confirmadoEn: enlace.confirmadoEn as Date | null, caducaEn: enlace.caducaEn as Date, cerradoEn: enlace.cerradoEn as Date | null } : null,
+      docsProveedor: docs.map((d) => ({ id: d.id as string, nombre: d.nombre as string, estado: d.estado as string, url: urls.get(d.ruta) ?? null, subidoEn: d.subidoEn as Date })),
+    }
   })
   if (datos === 'sin_sesion') redirect('/login')
   if (datos === 'sin_permiso') return <main className="contenido"><p className="tenue">Tu perfil no incluye el almacén.</p></main>
@@ -62,6 +74,23 @@ export default async function Pagina({ params, searchParams }: { params: Promise
         <h2>Texto del pedido</h2>
         <pre className="texto-pedido" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{texto}</pre>
         <CopiarImprimir texto={texto} />
+        <h2 className="no-imprimir">Portal del proveedor</h2>
+        {datos.enlace && (
+          <p className="tenue no-imprimir">
+            {datos.enlace.cerradoEn ? 'Enlace cerrado (recepción completa).' : `Enlace vivo hasta el ${dia(datos.enlace.caducaEn)}.`}
+            {datos.enlace.confirmadoEn ? ` El proveedor confirmó el pedido el ${dia(datos.enlace.confirmadoEn)}.` : ' El proveedor aún no lo ha confirmado.'}
+          </p>
+        )}
+        {datos.docsProveedor.length > 0 && (
+          <ul className="no-imprimir">
+            {datos.docsProveedor.map((d) => (
+              <li key={d.id}>Albarán del proveedor: {d.url ? <a href={d.url} target="_blank" rel="noopener noreferrer">{d.nombre}</a> : d.nombre} · {dia(d.subidoEn)}{d.estado === 'verificado' ? ' · verificado' : ''}</li>
+            ))}
+          </ul>
+        )}
+        {['borrador', 'enviado', 'parcial'].includes(p.estado) && datos.puedeEnviar && (
+          <EnlacePedidoProveedor pedidoId={p.id} borrador={p.estado === 'borrador'} proveedor={prov?.nombre ?? ''} />
+        )}
         <div className="fila no-imprimir">
           {p.estado === 'borrador' && datos.puedeEnviar && (
             <form action={marcarEnviadoAccion}><input type="hidden" name="pedidoId" value={p.id} />

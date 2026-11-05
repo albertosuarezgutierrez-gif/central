@@ -83,7 +83,15 @@ El god-panel de plataforma crea empresas vía HTTP:
 `@central/module-horario`, `@central/core-telegram` (aviso de fichajes abiertos, 16/07/2026).
 
 ## Crons (`vercel.json`)
-- `/api/cron/nominas` — mensual (día 25, 08h).
+- `/api/cron/nominas` — mensual (día 25, 08h). Desde N0 (05/11/2026) SOLO empresas con el módulo `nominas` activo en modo
+  `calculo` (`rrhh.empresa_modulos`, migración 0031; sin fila = apagado; tabla ilegible = no procesa ninguna).
+
+## Nóminas (N0, 05/11/2026 — estudio `docs/superpowers/specs/2026-11-05-modulo-nominas.md`)
+- Motor `@central/module-nominas` en CÉNTIMOS y tablas por AÑO (`tablas/2025.ts`, `tablas/2026.ts`; sin tabla del año = error).
+  Cada cifra con fuente y certeza; las `PENDIENTE_VERIFICAR` (reparto MEI, mínimos 2-7, solidaridad) bloquean el modo
+  `calculo` (fail-closed) y en `simulacion` quedan en `datos_calculo.cifrasPendientes`. Confirmar exige esa lista vacía.
+- Interruptor: solo el operador (`PUT /api/operador/empresas/modulos`); el responsable lo VE en /admin/nominas, sin botón.
+- Aislamiento: cepo `lib/aislamiento-nominas.test.ts` (sin allowlist). A la IA de reparto solo va `textoMinimoParaIA`.
 - `/api/cron/recordatorio-fichaje` — L-V 9h (hora ES): push a empleados que aún no han fichado entrada.
 - `/api/cron/alerta-fichajes-abiertos` — diario 22h (hora ES): Telegram si un fichaje activo lleva
   >10h sin fichar salida.

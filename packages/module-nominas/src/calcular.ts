@@ -1,124 +1,102 @@
-import type {
-  ContratoLaboral,
-  IncidenciaMes,
-  TablasCotizacion,
-  NominaDesglose,
-  Devengos,
-  DeduccionesEmpleado,
-  CuotaPatronal,
-} from './tipos'
+/**
+ * ADAPTADOR euros ⇄ céntimos para los llamadores de `apps/rrhh` (la BD guarda NUMERIC en euros y el
+ * `datos_calculo` JSONB histórico va en euros). El cálculo de verdad está en `motor.ts`, en céntimos enteros:
+ * aquí solo se convierte la entrada UNA vez y la salida UNA vez (sin aritmética en float).
+ */
+import { centimosAEuros, eurosACentimos, fraccionAPpm } from './dinero'
+import { calcularNominaCentimos, type ModoCalculo, type NominaCentimos } from './motor'
+import type { TablaAnual } from './tablas'
+import type { ContratoLaboral, IncidenciaMes, NominaDesglose } from './tipos'
 
-function r2(n: number): number {
-  return Math.round(n * 100) / 100
+export interface OpcionesNominaEuros {
+  periodo: string
+  /** `rrhh.empresas.at_ep_tipo` como FRACCIÓN (0.0155); null = sin resolver. */
+  atEp: number | null
+  modo: ModoCalculo
+  diasLaborablesMes?: number
+  tabla?: TablaAnual
 }
 
-export function calcularNomina(
-  contrato: ContratoLaboral,
-  incidencias: IncidenciaMes[],
-  tablas: TablasCotizacion,
-  periodo: string,
-): NominaDesglose {
-  const { tipoContrato, jornadaPct, salarioBase, grupoCotizacion, irpfRetencionPct, conceptosFijos } = contrato
-
-  // 1. Salario base proporcional a jornada
-  const salarioEfectivo = r2(salarioBase * (jornadaPct / 100))
-
-  // 2. Complementos fijos
-  const complementosFijos = conceptosFijos.map(c => ({ concepto: c.nombre, importe: r2(c.importe) }))
-  const totalComplementos = r2(complementosFijos.reduce((s, c) => s + c.importe, 0))
-
-  // 3. Horas extra: €/hora = salarioBase / 160h (jornada completa mensual)
-  const precioHora = r2(salarioBase / 160)
-  const horasExtra = r2(
-    incidencias
-      .filter(i => i.tipo === 'horas_extra')
-      .reduce((s, i) => s + (i.horas ?? 0) * precioHora, 0)
+export function calcularNomina(contrato: ContratoLaboral, incidencias: IncidenciaMes[], o: OpcionesNominaEuros): NominaDesglose {
+  const duracion = contrato.duracion ?? (contrato.tipoContrato === 'parcial' ? null : contrato.tipoContrato)
+  const r = calcularNominaCentimos(
+    {
+      periodo: o.periodo,
+      grupo: contrato.grupoCotizacion,
+      duracion,
+      jornadaPct: contrato.jornadaPct,
+      salarioBase: eurosACentimos(contrato.salarioBase),
+      complementosFijos: contrato.conceptosFijos.map(c => ({ concepto: c.nombre, importe: eurosACentimos(c.importe) })),
+      pagas: contrato.pagas ?? 12,
+      prorrataExtras: contrato.prorrataExtras ?? false,
+      irpfPct: contrato.irpfRetencionPct,
+      atEp: o.atEp === null ? null : fraccionAPpm(o.atEp),
+      incidencias: incidencias.map(i => ({
+        tipo: i.tipo,
+        concepto: i.concepto,
+        importe: i.importe != null ? eurosACentimos(i.importe) : undefined,
+        horas: i.horas,
+        dias: i.dias,
+      })),
+      diasLaborablesMes: o.diasLaborablesMes,
+    },
+    { modo: o.modo, tabla: o.tabla },
   )
+  return desgloseEnEuros(r)
+}
 
-  // 4. Pluses puntuales
-  const pluses = incidencias
-    .filter(i => i.tipo === 'plus_puntual')
-    .map(i => ({ concepto: i.concepto, importe: r2(i.importe ?? 0) }))
-  const totalPluses = r2(pluses.reduce((s, p) => s + p.importe, 0))
-
-  // 5. Descuentos (ausencias injustificadas, baja IT, vacaciones sin retribuir)
-  const diasLaborables = tablas.diasLaborablesMes
-  const importeDia = r2(salarioEfectivo / diasLaborables)
-  const descuentos = r2(
-    incidencias
-      .filter(i => ['ausencia_injustificada', 'baja_it', 'vacaciones'].includes(i.tipo))
-      .reduce((s, i) => {
-        if (i.importe != null) return s + i.importe
-        return s + (i.dias ?? 0) * importeDia
-      }, 0)
-  )
-
-  const totalDevengado = r2(salarioEfectivo + totalComplementos + horasExtra + totalPluses - descuentos)
-
-  const devengos: Devengos = {
-    salarioBase: salarioEfectivo,
-    complementosFijos,
-    horasExtra,
-    pluses,
-    descuentos,
-    total: totalDevengado,
-  }
-
-  // 6. Base de cotización (clamp entre min y max del grupo)
-  const { min, max } = tablas.bases[grupoCotizacion]
-  const baseCotizacion = Math.max(min, Math.min(max, totalDevengado))
-
-  // 7. Deducciones SS trabajador
-  const tipos = tablas.tipos
-  const desempleoTipo =
-    tipoContrato === 'indefinido'
-      ? tipos.desempleo_indefinido.trabajador
-      : tipos.desempleo_temporal.trabajador
-
-  const cc = r2(baseCotizacion * tipos.contingencias_comunes.trabajador)
-  const desemp = r2(baseCotizacion * desempleoTipo)
-  const fpTrab = r2(baseCotizacion * tipos.fp.trabajador)
-  const irpf = r2(totalDevengado * (irpfRetencionPct / 100))
-
-  const deducciones: DeduccionesEmpleado = {
-    contingencias_comunes: cc,
-    desempleo: desemp,
-    fp: fpTrab,
-    irpf,
-    total: r2(cc + desemp + fpTrab + irpf),
-  }
-
-  const netoAPagar = r2(totalDevengado - deducciones.total)
-
-  // 8. Cuota patronal (informativa)
-  const desempleoEmpresa =
-    tipoContrato === 'indefinido'
-      ? tipos.desempleo_indefinido.empresa
-      : tipos.desempleo_temporal.empresa
-
-  const ccEmp = r2(baseCotizacion * tipos.contingencias_comunes.empresa)
-  const desempEmp = r2(baseCotizacion * desempleoEmpresa)
-  const fogasaEmp = r2(baseCotizacion * tipos.fogasa)
-  const fpEmp = r2(baseCotizacion * tipos.fp.empresa)
-  const atEpEmp = r2(baseCotizacion * tipos.at_ep)
-
-  const cuotaPatronal: CuotaPatronal = {
-    contingencias_comunes: ccEmp,
-    desempleo: desempEmp,
-    fogasa: fogasaEmp,
-    fp: fpEmp,
-    at_ep: atEpEmp,
-    total: r2(ccEmp + desempEmp + fogasaEmp + fpEmp + atEpEmp),
-  }
-
+export function desgloseEnEuros(r: NominaCentimos): NominaDesglose {
+  const e = centimosAEuros
   return {
-    periodo,
-    devengos,
-    baseCotizacion,
-    baseIrpf: totalDevengado,
-    deducciones,
-    netoAPagar,
-    cuotaPatronal,
-    costeTotalEmpresa: r2(totalDevengado + cuotaPatronal.total),
+    periodo: r.periodo,
+    devengos: {
+      salarioBase: e(r.devengos.salarioBase),
+      complementosFijos: r.devengos.complementosFijos.map(c => ({ concepto: c.concepto, importe: e(c.importe) })),
+      horasExtra: e(r.devengos.horasExtra),
+      prorrataExtras: e(r.devengos.prorrataExtras),
+      pagaExtra: e(r.devengos.pagaExtra),
+      pluses: r.devengos.pluses.map(p => ({ concepto: p.concepto, importe: e(p.importe) })),
+      descuentos: e(r.devengos.descuentos),
+      total: e(r.devengos.total),
+    },
+    baseCotizacion: e(r.bases.contingenciasComunes),
+    baseContingenciasProfesionales: e(r.bases.contingenciasProfesionales),
+    baseIrpf: e(r.bases.irpf),
+    deducciones: {
+      contingencias_comunes: e(r.trabajador.contingenciasComunes),
+      desempleo: e(r.trabajador.desempleo),
+      fp: e(r.trabajador.fp),
+      mei: e(r.trabajador.mei),
+      solidaridad: e(r.trabajador.solidaridad),
+      irpf: e(r.trabajador.irpf),
+      total: e(r.trabajador.total),
+    },
+    netoAPagar: e(r.neto),
+    cuotaPatronal: {
+      contingencias_comunes: e(r.empresa.contingenciasComunes),
+      desempleo: e(r.empresa.desempleo),
+      fogasa: e(r.empresa.fogasa),
+      fp: e(r.empresa.fp),
+      at_ep: e(r.empresa.atEp),
+      mei: e(r.empresa.mei),
+      solidaridad: e(r.empresa.solidaridad),
+      total: e(r.empresa.total),
+    },
+    costeTotalEmpresa: e(r.costeEmpresa),
+    tablasAño: r.año,
+    modo: r.modo,
+    cifrasPendientes: r.cifrasPendientes,
+    avisos: r.avisos,
   }
+}
+
+/**
+ * ¿Se puede CONFIRMAR (publicar al empleado) este desglose? Solo si se calculó con el motor N0 y sin nada pendiente.
+ * `cifrasPendientes` ausente (borrador anterior al 05/11/2026, tablas de 2025 con nombre de 2026) = «no se sabe» → NO.
+ */
+export function desgloseConfirmable(d: unknown): { ok: true } | { ok: false; motivo: string } {
+  const p = (d as { cifrasPendientes?: unknown } | null)?.cifrasPendientes
+  if (!Array.isArray(p)) return { ok: false, motivo: 'Borrador calculado con las tablas antiguas: recalcúlalo antes de confirmar' }
+  if (p.length) return { ok: false, motivo: `Cifras legales sin verificar: ${p.join(', ')}` }
+  return { ok: true }
 }

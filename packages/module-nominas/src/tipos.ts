@@ -10,7 +10,7 @@ export type TipoIncidencia =
 
 export interface ConceptoSalarial {
   nombre: string
-  importe: number // euros
+  importe: number // euros (adaptador: el motor trabaja en céntimos)
 }
 
 export interface ContratoLaboral {
@@ -20,6 +20,12 @@ export interface ContratoLaboral {
   grupoCotizacion: GrupoCotizacion
   irpfRetencionPct: number    // % acordado (Modelo 145), ej. 15.5
   conceptosFijos: ConceptoSalarial[]
+  /** 12 (por defecto, como antes) o 14 pagas. */
+  pagas?: 12 | 14
+  /** Con 14 pagas: extras prorrateadas en cada nómina. Por defecto false (se cobran en junio y diciembre). */
+  prorrataExtras?: boolean
+  /** Duración real. Con `tipoContrato: 'parcial'` y sin esto, el desempleo queda «no se sabe» (pendiente). */
+  duracion?: 'indefinido' | 'temporal'
 }
 
 export interface IncidenciaMes {
@@ -28,28 +34,6 @@ export interface IncidenciaMes {
   importe?: number   // euros (plus_puntual, descuento)
   horas?: number     // horas extra
   dias?: number      // días de baja/ausencia
-}
-
-export interface TiposCotizacion {
-  contingencias_comunes: { empresa: number; trabajador: number }
-  desempleo_indefinido:  { empresa: number; trabajador: number }
-  desempleo_temporal:    { empresa: number; trabajador: number }
-  fogasa: number
-  fp:     { empresa: number; trabajador: number }
-  at_ep:  number // específico por CNAE de la empresa
-}
-
-export interface BaseCotizacion {
-  min: number // euros/mes (grupos 1-7) o euros/día (grupos 8-11)
-  max: number
-}
-
-export interface TablasCotizacion {
-  año: number
-  bases: Record<GrupoCotizacion, BaseCotizacion>
-  tipos: TiposCotizacion
-  smi: number        // salario mínimo interprofesional mensual
-  diasLaborablesMes: number // días laborables del mes (para proporcionar bajas/ausencias)
 }
 
 export interface DevengoLinea {
@@ -61,6 +45,8 @@ export interface Devengos {
   salarioBase: number
   complementosFijos: DevengoLinea[]
   horasExtra: number
+  prorrataExtras?: number
+  pagaExtra?: number
   pluses: DevengoLinea[]
   descuentos: number    // importe total de deducciones salariales (positivo)
   total: number         // total devengado bruto
@@ -70,6 +56,8 @@ export interface DeduccionesEmpleado {
   contingencias_comunes: number
   desempleo: number
   fp: number
+  mei?: number
+  solidaridad?: number
   irpf: number
   total: number
 }
@@ -80,6 +68,8 @@ export interface CuotaPatronal {
   fogasa: number
   fp: number
   at_ep: number
+  mei?: number
+  solidaridad?: number
   total: number
 }
 
@@ -92,4 +82,10 @@ export interface NominaDesglose {
   netoAPagar: number
   cuotaPatronal: CuotaPatronal
   costeTotalEmpresa: number // devengos.total + cuotaPatronal.total
+  /** N0 (05/11/2026). Ausentes en borradores anteriores = «no se sabe» con qué tablas se calcularon. */
+  baseContingenciasProfesionales?: number
+  tablasAño?: number
+  modo?: 'calculo' | 'simulacion'
+  cifrasPendientes?: string[]
+  avisos?: string[]
 }

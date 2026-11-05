@@ -15,6 +15,7 @@ import { FotosOt } from './FotosOt'
 import { NotaDictado } from './NotaDictado'
 import { Facturar, type Previa } from './Facturar'
 import { anadirRecambioAccion } from '../../articulos/acciones'
+import { RecambiosPendientes } from '../../_portal/RecambiosPendientes'
 
 export const dynamic = 'force-dynamic'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -144,6 +145,13 @@ export default async function Pagina({ params, searchParams }: { params: Promise
               ))}
             </tbody>
           </table></div>
+        )}
+
+        {datos.puedeAmpliar && ESTADOS_ABIERTOS.includes(estado) && (
+          <RecambiosPendientes otId={ot.id} lineas={lineas.filter((l) => l.articuloId != null && l.aceptadaEn == null && l.origen === 'manual').map((l) => ({
+            id: l.id,
+            texto: `${l.descripcion} · ${l.unidad === 'ml' ? `${l.cantidad / 1000} l` : `${l.cantidad} ud`}${datos.verPrecios ? ` · ${formatearEur(Number(l.totalCent))}` : ''}`,
+          }))} />
         )}
 
         {datos.articulos.length > 0 && (

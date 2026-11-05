@@ -1,0 +1,10 @@
+// F4 — Impuestos: libros registro de IVA, 303/390, 111/115/190/180, 347/349 y 130 como BORRADORES revisables, calendario y ciclo de vida.
+export * from './comun.ts'
+export * from './operaciones.ts'
+export * from './libros-iva.ts'
+export * from './modelo303.ts'
+export * from './retenciones.ts'
+export * from './modelo347.ts'
+export * from './declaraciones.ts'
+export * from './liquidacion.ts'
+export * from './borrador.ts'

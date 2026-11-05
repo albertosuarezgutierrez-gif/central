@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-05T07:06:06Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-05T07:49:34Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 15 apps · 48 packages · 23 capacidades · 44 skills · 1937 rutas API.
+**Resumen:** 15 apps · 49 packages · 23 capacidades · 44 skills · 1943 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -35,8 +35,8 @@
 ### contabilidad
 - **Módulos que usa:** core-banca, core-fiscal, core-identity, module-contabilidad
 - **Capacidades:** Informes
-- **Tablas (20):** contabilidad.acceso_otps, contabilidad.apuntes, contabilidad.asientos, contabilidad.auditoria, contabilidad.avisos, contabilidad.conciliaciones, contabilidad.consentimiento_seguros, contabilidad.ejercicios, contabilidad.empresas, contabilidad.facturas_recibidas, contabilidad.hechos_contables, contabilidad.movimientos_banco, contabilidad.origenes_autorizados, contabilidad.plan_cuentas, contabilidad.proveedores, contabilidad.reglas_asiento, contabilidad.reglas_conciliacion, contabilidad.usuario_empresas, contabilidad.usuarios, sin
-- **Rutas API:** 19
+- **Tablas (21):** contabilidad.acceso_otps, contabilidad.apuntes, contabilidad.asientos, contabilidad.auditoria, contabilidad.avisos, contabilidad.conciliaciones, contabilidad.consentimiento_seguros, contabilidad.declaraciones, contabilidad.ejercicios, contabilidad.empresas, contabilidad.facturas_recibidas, contabilidad.hechos_contables, contabilidad.movimientos_banco, contabilidad.origenes_autorizados, contabilidad.plan_cuentas, contabilidad.proveedores, contabilidad.reglas_asiento, contabilidad.reglas_conciliacion, contabilidad.usuario_empresas, contabilidad.usuarios, sin
+- **Rutas API:** 23
 ### housesevillana
 - **Módulos que usa:** core-consent
 - **Capacidades:** —
@@ -65,18 +65,18 @@
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Informes, Notificaciones (push), Asistente / copiloto IA
-- **Tablas (17):** rrhh.acceso_otps, rrhh.avisos, rrhh.avisos_admin, rrhh.contratos_laborales, rrhh.documentos, rrhh.empleados, rrhh.empresas, rrhh.firma_otps, rrhh.firmas, rrhh.incidencias_mes, rrhh.incidencias_ubicacion, rrhh.material_empleado, rrhh.mensajes, rrhh.nominas, rrhh.push_subscriptions, rrhh.solicitudes, rrhh.usuarios_rrhh
-- **Rutas API:** 88
+- **Tablas (18):** rrhh.acceso_otps, rrhh.avisos, rrhh.avisos_admin, rrhh.contratos_laborales, rrhh.documentos, rrhh.empleados, rrhh.empresa_modulos, rrhh.empresas, rrhh.firma_otps, rrhh.firmas, rrhh.incidencias_mes, rrhh.incidencias_ubicacion, rrhh.material_empleado, rrhh.mensajes, rrhh.nominas, rrhh.push_subscriptions, rrhh.solicitudes, rrhh.usuarios_rrhh
+- **Rutas API:** 89
 ### sivra
 - **Módulos que usa:** core-ai, core-email, core-identity, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
 - **Capacidades:** Eventos / catering / BEO, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, Marketing (blog/IG/SEO), Almacén / stock / ASN, Proveedores / compras, Asistente / copiloto IA
 - **Tablas (1):** gastos_fijos
 - **Rutas API:** 91
 ### taller
-- **Módulos que usa:** core-catastro, core-direccion, core-fiscal, core-identity, core-receipts, module-contabilidad, module-taller
+- **Módulos que usa:** core-ai, core-catastro, core-direccion, core-fiscal, core-identity, core-receipts, module-contabilidad, module-portal-proveedor, module-taller
 - **Capacidades:** Contabilidad, Facturación / VeriFactu
-- **Tablas (52):** sin, taller.aceites, taller.albaran_lineas, taller.albaranes, taller.ampliaciones_fotos, taller.articulos, taller.auditoria, taller.avisos, taller.baremos, taller.bloqueos_codigo, taller.bloqueos_pin, taller.cierres_agenda, taller.citas, taller.clientes, taller.cobros, taller.configuracion, taller.consentimientos, taller.contadores_factura, taller.dictados, taller.factura_lineas, taller.facturas, taller.hechos_pendientes, taller.horario_citas, taller.invitaciones_cita, taller.iva_por_defecto, taller.leads_enviados, taller.medios_cobro, taller.movimientos_stock, taller.ordenes_trabajo, taller.ot_fotos…
-- **Rutas API:** 10
+- **Tablas (54):** sin, taller.aceites, taller.albaran_lineas, taller.albaranes, taller.ampliaciones_fotos, taller.articulos, taller.auditoria, taller.avisos, taller.baremos, taller.bloqueos_codigo, taller.bloqueos_pin, taller.cierres_agenda, taller.citas, taller.clientes, taller.cobros, taller.configuracion, taller.consentimientos, taller.contadores_factura, taller.dictados, taller.documentos_proveedor, taller.enlaces_proveedor, taller.factura_lineas, taller.facturas, taller.hechos_pendientes, taller.horario_citas, taller.invitaciones_cita, taller.iva_por_defecto, taller.leads_enviados, taller.medios_cobro, taller.movimientos_stock…
+- **Rutas API:** 11
 ### transporte
 - **Módulos que usa:** core-catastro, core-direccion, core-identity, module-flota, module-geo, module-transporte
 - **Capacidades:** —
@@ -85,7 +85,7 @@
 
 ## Packages compartidos (`@central/*`)
 - **core-ai** (core) → `@central/core-ai`
-  - Lo usan: asegura, asegura-portal, ia-rest, ialimp, plataforma, rrhh, sivra
+  - Lo usan: asegura, asegura-portal, ia-rest, ialimp, plataforma, rrhh, sivra, taller
   - Depende de: —
 - **core-banca** (core) → `@central/core-banca`
   - Lo usan: contabilidad
@@ -149,7 +149,7 @@
   - Depende de: —
 - **module-contabilidad** (module) → `@central/module-contabilidad`
   - Lo usan: contabilidad, ia-rest, ialimp, plataforma, sivra, taller
-  - Depende de: core-fiscal
+  - Depende de: core-fiscal, module-nominas
 - **module-crm** (module) → `@central/module-crm`
   - Lo usan: ia-rest, ialimp
   - Depende de: —
@@ -188,6 +188,9 @@
   - Depende de: module-contabilidad, module-tarificacion
 - **module-pesca** (module) → `@central/module-pesca`
   - Lo usan: mariscos
+  - Depende de: —
+- **module-portal-proveedor** (module) → `@central/module-portal-proveedor`
+  - Lo usan: taller
   - Depende de: —
 - **module-presupuestos** (module) → `@central/module-presupuestos`
   - Lo usan: ia-rest
@@ -300,6 +303,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, contabilidad, housesevillana, mariscos, taller, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (05/11/2026) 05/11/2026) Plataforma · lupa de búsqueda de la correduría en la cabecera
 - (05/11/2026) 05/11/2026) Plataforma · «Nueva tarea» no guardaba + atajo en cabecera fija
 - (04/11/2026) 04/11/2026) Correduría · WhatsApp: recepción real OK + IA que responde (PR #5528, flags apagados)
 - (04/11/2026) 04/11/2026) Portal cliente · hoja QR: logo de compañía + cobalto
@@ -309,5 +313,4 @@
 - (03/11/2026) 03/11/2026) Correduría · regularización RC fase 3 (respuesta a Occident + cierre manual) — ✅ PR #5472 mergeado
 - (03/11/2026) 03/11/2026) Correduría · buscador de cartera tolerante (caso Antonio Villegas)
 - (03/11/2026) 03/11/2026) Correduría · regularización RC de Occident automatizada (fases 1-2)
-- (03/11/2026) 03/11/2026) Sivra · mensajes de huésped de Agoda por correo (PR #5455, mergeado y desplegado)
 

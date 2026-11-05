@@ -1219,6 +1219,9 @@ importers:
       '@central/brand':
         specifier: workspace:*
         version: link:../../packages/brand
+      '@central/core-ai':
+        specifier: workspace:*
+        version: link:../../packages/core-ai
       '@central/core-catastro':
         specifier: workspace:*
         version: link:../../packages/core-catastro
@@ -1237,6 +1240,9 @@ importers:
       '@central/module-contabilidad':
         specifier: workspace:*
         version: link:../../packages/module-contabilidad
+      '@central/module-portal-proveedor':
+        specifier: workspace:*
+        version: link:../../packages/module-portal-proveedor
       '@central/module-taller':
         specifier: workspace:*
         version: link:../../packages/module-taller
@@ -1246,6 +1252,9 @@ importers:
       next:
         specifier: ^15.5.28
         version: 15.5.28(@babel/core@7.29.7)(@types/node@22.19.20)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      pdf-parse:
+        specifier: ^1.1.1
+        version: 1.1.4
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4
@@ -1496,6 +1505,8 @@ importers:
         version: link:../module-tarificacion
 
   packages/module-pesca: {}
+
+  packages/module-portal-proveedor: {}
 
   packages/module-presupuestos: {}
 

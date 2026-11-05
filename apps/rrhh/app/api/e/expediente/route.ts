@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     const doc = await subirDocumento(empresa_id, empleado_id, ACTOR_TITULAR, {
       carpeta, nombre: file.name, tipo: file.type, tamano: file.size, bytes: await file.arrayBuffer(),
     })
-    const nombre = await nombreEmpleado(empleado_id)
+    const nombre = await nombreEmpleado(empresa_id, empleado_id)
     await avisarResponsables(empresa_id, `Nuevo documento de ${nombre}`, `${nombre} ha subido "${doc.nombre}" a su expediente (${doc.carpeta}).`)
     await pushResponsables(empresa_id, `Nuevo documento de ${nombre}`, `${doc.nombre} (${doc.carpeta})`)
     return NextResponse.json({ documento: doc }, { status: 201 })

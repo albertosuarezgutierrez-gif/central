@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-05T07:06:06Z",
-  "sha": "8f3d928251e7cbd693b4ac93d8dcdae1a92d3154",
+  "generadoEn": "2026-11-05T07:49:34Z",
+  "sha": "2618e4d4341b274108fe76edbeec5c733aaa0c1e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -30288,7 +30288,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 567
+          "linea": 574
         },
         {
           "nombre": "respuestaGastoBloqueado",
@@ -30296,7 +30296,7 @@
           "exportada": false,
           "params": "gasto: Extract<GastoEmision<never>, { ok: false }>",
           "retorno": null,
-          "linea": 585,
+          "linea": 592,
           "resumen": "El libro dijo que no. **Sin llamada al vendor**, y por eso se contesta con dos códigos distintos: se arreglan en sitios distintos. - `sin_libro` (503): no se ha podido leer `codeoscopic_consumo`. Es u"
         },
         {
@@ -30305,7 +30305,7 @@
           "exportada": false,
           "params": "v: unknown,",
           "retorno": "",
-          "linea": 612,
+          "linea": 619,
           "resumen": "Solo claves de la lista blanca y valores con la forma que el vendor acepta (mismas reglas que `revisarPersona`): un municipio no numérico o una fecha en formato español llegarían al PATCH y volverían "
         },
         {
@@ -30314,7 +30314,7 @@
           "exportada": false,
           "params": "campo: CampoPersona, s: string",
           "retorno": "string | null",
-          "linea": 631
+          "linea": 638
         },
         {
           "nombre": "respuestaSigueFaltando",
@@ -30322,7 +30322,7 @@
           "exportada": false,
           "params": "campos: CampoPersona[], mensajeVendor: string",
           "retorno": null,
-          "linea": 649
+          "linea": 656
         },
         {
           "nombre": "registrarFaltaProducto",
@@ -30330,7 +30330,7 @@
           "exportada": false,
           "params": "correduriaId: string, tarificacionId: string, campos: CampoProducto[]",
           "retorno": null,
-          "linea": 677,
+          "linea": 684,
           "resumen": "Telemetría de `faltan_producto` por COMPAÑÍA (20/09/2026): saber a qué compañías les falta cobertura del Product Form Library, no solo que «alguna vez pasa». Reutiliza `seguros.operational_events` (ge"
         },
         {
@@ -30339,7 +30339,7 @@
           "exportada": false,
           "params": "c: Extract<ResultadoCompletar, { estado: 'no_aplicado' }>",
           "retorno": null,
-          "linea": 695
+          "linea": 702
         }
       ],
       "tablas": [
@@ -30352,7 +30352,7 @@
         "tarificaciones"
       ],
       "rutaApi": "/api/operador/codeoscopic/oferta",
-      "hash": "aed9741d7207"
+      "hash": "ef581b547b1b"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/precalificar-auto-nuevo/route.ts",
@@ -39072,7 +39072,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string,",
           "retorno": "Promise<ClienteOrigen | null>",
-          "linea": 1390,
+          "linea": 1392,
           "resumen": "La persona de una ficha, SIN pasar por ninguna póliza — para una oportunidad nueva sobre un cliente que hoy no tiene ninguna (hogar desde el Catastro, no desde una póliza de la cartera). Misma discipl"
         },
         {
@@ -39081,7 +39081,7 @@
           "exportada": true,
           "params": "v: string | null",
           "retorno": "string | null",
-          "linea": 1442,
+          "linea": 1444,
           "resumen": "La fecha de nacimiento se guardó como texto cifrado y no siempre en ISO (fue `date` antes). Se aceptan `aaaa-mm-dd` y `dd/mm/aaaa`; cualquier otra cosa es `null` — no se adivina el orden de un `01/02/"
         },
         {
@@ -39090,7 +39090,7 @@
           "exportada": false,
           "params": "rs: Array<{ claseRecibo: string | null; situacion: unknown; primaTotal: string | null; fechaVencimiento: Date | null }> | undefined,",
           "retorno": "ReciboVigencia[]",
-          "linea": 1452
+          "linea": 1454
         }
       ],
       "tablas": [
@@ -39098,7 +39098,7 @@
         "polizas"
       ],
       "rutaApi": null,
-      "hash": "59477f1f17a4"
+      "hash": "e6cc918fdca0"
     },
     {
       "ruta": "apps/asegura/lib/cartera-filtro.ts",
@@ -43530,7 +43530,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 129
+          "linea": 131
         },
         {
           "nombre": "precalificarHogarCartera",
@@ -43538,7 +43538,7 @@
           "exportada": true,
           "params": "cliente: ClienteCartera, poliza: PolizaHogarCartera, resueltos: ResueltosHogar, hoy: string, catastro: CatastroHogar | null = null,",
           "retorno": "PrecalificacionHogar",
-          "linea": 152
+          "linea": 154
         },
         {
           "nombre": "habitacionesPorSuperficie",
@@ -43546,7 +43546,7 @@
           "exportada": true,
           "params": "m2: number",
           "retorno": "number",
-          "linea": 342,
+          "linea": 344,
           "resumen": "Habitaciones (dormitorios) estimadas por superficie construida. Es un supuesto declarado, no un dato: el vendor exige el número y la ficha no lo tiene. Tramos típicos de vivienda española."
         },
         {
@@ -43555,7 +43555,7 @@
           "exportada": false,
           "params": "v: string | null",
           "retorno": "string | null",
-          "linea": 351
+          "linea": 353
         },
         {
           "nombre": "hogarDeDatos",
@@ -43563,7 +43563,7 @@
           "exportada": true,
           "params": "datos: Record<string, unknown> | null, fuente: 'poliza' | 'gemela', direccionDescifrada: string | null = null,",
           "retorno": "HogarCartera | null",
-          "linea": 368,
+          "linea": 370,
           "resumen": "Lee el riesgo de hogar de un `datos_especificos` (póliza o gemela). Los números del volcado vienen como TEXTO («76», «61000»): se convierten, y lo que no es número queda a `null` — nunca a 0."
         },
         {
@@ -43572,7 +43572,7 @@
           "exportada": true,
           "params": "propio: HogarCartera | null, gemela: HogarCartera | null",
           "retorno": "HogarCartera | null",
-          "linea": 390,
+          "linea": 392,
           "resumen": "El riesgo que se usa: el de la póliza si está completa; si no, la gemela; si ninguna, lo que haya."
         },
         {
@@ -43581,7 +43581,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 397
+          "linea": 399
         },
         {
           "nombre": "entero",
@@ -43589,7 +43589,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 401
+          "linea": 403
         },
         {
           "nombre": "cpDe",
@@ -43597,12 +43597,12 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 405
+          "linea": 407
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d9cc4a892a7f"
+      "hash": "6e7041776247"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/desde-cartera-salud.ts",
@@ -43705,7 +43705,7 @@
           "exportada": true,
           "params": "cliente: Pick<ClienteCartera, 'direccion'>, catalogo: ReadonlyArray<{ id: string; nombre: string }>,",
           "retorno": "",
-          "linea": 189,
+          "linea": 192,
           "resumen": "El `roadType` del tomador para `Resueltos.tipoViaId`: la dirección de la ficha se queda DENTRO de esta función (la ruta del puerto no puede nombrarla — guardián `test/regression-retarificar-plataforma"
         },
         {
@@ -43714,7 +43714,7 @@
           "exportada": true,
           "params": "cliente: Pick<ClienteCartera, 'direccion'>",
           "retorno": "string | null",
-          "linea": 197,
+          "linea": 200,
           "resumen": "El tipo de vía tal y como lo trocea la ficha («Calle», «Avenida»…), sin catálogo. Para explicar por qué no casa."
         },
         {
@@ -43723,7 +43723,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 211
+          "linea": 214
         },
         {
           "nombre": "aniosEntre",
@@ -43731,7 +43731,7 @@
           "exportada": true,
           "params": "desde: string | null, hasta: string",
           "retorno": "number | null",
-          "linea": 224,
+          "linea": 227,
           "resumen": "Años completos entre dos fechas aaaa-mm-dd. `null` si alguna no es fecha."
         },
         {
@@ -43740,7 +43740,7 @@
           "exportada": true,
           "params": "f: string",
           "retorno": "string",
-          "linea": 233,
+          "linea": 236,
           "resumen": "El día siguiente a una fecha aaaa-mm-dd."
         },
         {
@@ -43749,7 +43749,7 @@
           "exportada": false,
           "params": "poliza: PolizaCartera, hoy: string, suponer: (campo: 'fechaEfecto' | 'aniosAsegurado' | 'aniosSinSiniestros', valor: unknown, porque: string, optimista?: boolean) => unknown,",
           "retorno": "",
-          "linea": 244,
+          "linea": 247,
           "resumen": "Fecha de efecto e historial de una póliza que se RETARIFICA: común a auto y moto. La póliza actual pasa a ser la anterior (compañía, número, antigüedad), y lo que no consta se supone y se declara con "
         },
         {
@@ -43758,7 +43758,7 @@
           "exportada": true,
           "params": "cliente: ClienteCartera, poliza: PolizaCartera, resueltos: Resueltos, hoy: string,",
           "retorno": "Precalificacion",
-          "linea": 326,
+          "linea": 329,
           "resumen": "Construye la precalificación. `hoy` entra por parámetro para que la función sea pura y los tests no dependan del calendario."
         },
         {
@@ -43767,7 +43767,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 476,
+          "linea": 479,
           "resumen": "Los km supuestos que propone la pantalla, si son un kilometraje plausible; si no, `null` (manda la media)."
         },
         {
@@ -43776,7 +43776,7 @@
           "exportada": true,
           "params": "cliente: ClienteCartera, resueltos: ResueltosAutoNueva, hoy: string,",
           "retorno": "Precalificacion",
-          "linea": 480
+          "linea": 483
         },
         {
           "nombre": "sePuedeCotizar",
@@ -43784,7 +43784,7 @@
           "exportada": true,
           "params": "p: Precalificacion",
           "retorno": "boolean",
-          "linea": 599,
+          "linea": 602,
           "resumen": "¿Se puede cotizar ya? Azúcar para la pantalla y para el puerto, que tienen que decidir lo mismo y no deben hacerlo cada uno a su manera."
         },
         {
@@ -43793,7 +43793,7 @@
           "exportada": true,
           "params": "p: Precalificacion",
           "retorno": "Supuesto[]",
-          "linea": 608,
+          "linea": 611,
           "resumen": "Los supuestos que cambian el precio a mejor. La pantalla los enseña aparte porque son los que pueden decepcionar luego: si el cliente sí tuvo siniestros, la prima real sube respecto a lo que se le ha "
         },
         {
@@ -43802,7 +43802,7 @@
           "exportada": true,
           "params": "carnets: ClienteCartera['carnets'],",
           "retorno": "",
-          "linea": 658,
+          "linea": 661,
           "resumen": "El carné de MOTO que consta en la ficha, con su fecha: el de mayor rango (A > A2 > A1 > AM). `null` = no consta ninguno con fecha legible — y entonces NO se inventa: se cae al carné del conductor y se"
         },
         {
@@ -43811,7 +43811,7 @@
           "exportada": true,
           "params": "carnets: ClienteCartera['carnets']",
           "retorno": "string | null",
-          "linea": 674,
+          "linea": 677,
           "resumen": "La fecha del carné B de la ficha, para declararlo junto al de moto. Solo el B de la tabla de carnés, con su fecha: `cliente.fechaCarnet` es «la del conductor» y no dice de qué carné es, así que no se "
         },
         {
@@ -43820,7 +43820,7 @@
           "exportada": true,
           "params": "cliente: ClienteCartera, resueltos: ResueltosMotoNueva, hoy: string,",
           "retorno": "PrecalificacionMoto",
-          "linea": 679
+          "linea": 682
         },
         {
           "nombre": "precalificarMoto",
@@ -43828,13 +43828,13 @@
           "exportada": true,
           "params": "cliente: ClienteCartera, poliza: PolizaCartera, resueltos: ResueltosMoto, hoy: string,",
           "retorno": "PrecalificacionMoto",
-          "linea": 801,
+          "linea": 804,
           "resumen": "Hermana de `precalificarAuto()` para una póliza de MOTO: persona, vehículo y circulación como `precalificarMotoNueva()` (catálogo `/motorcycle/*`, experiencia de conducción), y encima la fecha de efec"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b6342bf0dfca"
+      "hash": "91732635b15f"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/direccion.ts",
@@ -44007,6 +44007,75 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "30186d854352"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/efecto-renovacion.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Regla de la RENOVACIÓN (Alberto, 05/11/2026), aplicada ANTES de pagar: Fecha de efecto de la renovación (coordinador, 05/11/2026, con datos de BD): si `fecha_efecto_actual` > hoy (la compañía YA emitió la anualidad nueva y aún no empezó) → efecto = fecha_efecto_actual; si no → el vencimiento. La ven",
+      "exporta": [
+        "sumarMeses",
+        "fechaBaseRenovacion",
+        "corteDeVencimiento",
+        "evaluarEfectoRenovacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "sumarMeses",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: string, n: number",
+          "retorno": "string",
+          "linea": 35,
+          "resumen": "`f` (aaaa-mm-dd) más `n` meses en UTC, sin desbordar el día (31/01 + 1 mes = 28/29-02)."
+        },
+        {
+          "nombre": "iso",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 45
+        },
+        {
+          "nombre": "dias",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: string, b: string",
+          "retorno": "number",
+          "linea": 50,
+          "resumen": "Días entre dos fechas ISO (b - a)."
+        },
+        {
+          "nombre": "fechaBaseRenovacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "vencimiento: string | null | undefined, efectoActual: string | null | undefined, hoy: string,",
+          "retorno": "string | null",
+          "linea": 58,
+          "resumen": "La fecha de efecto de la renovación: `fecha_efecto_actual` si es futura (anualidad nueva ya emitida), si no el vencimiento. `null` = no consta ninguna."
+        },
+        {
+          "nombre": "corteDeVencimiento",
+          "kind": "function",
+          "exportada": true,
+          "params": "vencimiento: string | null | undefined, efectoActual: string | null | undefined, hoy: string,",
+          "retorno": "",
+          "linea": 69,
+          "resumen": "El corte (si lo hay) de la renovación, sin tener en cuenta lo que fuerce el operador."
+        },
+        {
+          "nombre": "evaluarEfectoRenovacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: { vencimiento: string | null | undefined /** `fecha_efecto_actual` de la póliza (CIMA). */ efectoActual?: string | null hoy: string explicita?: unknown }",
+          "retorno": "EvaluacionRenovacion",
+          "linea": 121,
+          "resumen": "La decisión entera de una RENOVACIÓN: la fecha de efecto con la que se cotiza, o el corte GRATIS. `explicita` = la fecha de efecto que el operador puso a mano (correcciones): manda, y queda registrada"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "cfa3cd8c0ff8"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/emision-externa.ts",
@@ -63637,16 +63706,16 @@
           "exportada": false,
           "params": "polizaId: string",
           "retorno": "Promise<ProyectoVigente | null>",
-          "linea": 219,
+          "linea": 221,
           "resumen": "¿Ya hay un proyecto de Codeoscopic con una oferta CONFIRMADA (ReRate) para esta póliza, sin emitir todavía y sin caducar? 🚨 Existe por Alberto (12/09/2026): un reintento de emisión de Pilar Franco Ru"
         },
         {
           "nombre": "prepararRetarificacion",
           "kind": "function",
           "exportada": true,
-          "params": "entrada: { polizaId: string solicitadoPor: string cuerpo: CuerpoRetarificacion }",
+          "params": "entrada: { polizaId: string solicitadoPor: string cuerpo: CuerpoRetarificacion /** Solo tests: «hoy» inyectado (aaaa-mm-dd). En producción, hoy en Madrid. */ hoy?: string }",
           "retorno": "Promise<PreparadoRetarificacion>",
-          "linea": 282,
+          "linea": 284,
           "resumen": "Prepara la retarificación de `polizaId`: resuelve la correduría, lee la póliza, mapea el ramo y **revisa el cuerpo GRATIS**. Devuelve o la petición lista para `cotizar()`, o el corte que hay que respo"
         },
         {
@@ -63655,7 +63724,7 @@
           "exportada": true,
           "params": "r: ResultadoCotizacion, preparado: Extract<PreparadoRetarificacion, { estado: 'listo' }>,",
           "retorno": "ResultadoRetarificar",
-          "linea": 411,
+          "linea": 447,
           "resumen": "Redacta la respuesta a partir de lo que devolvió `cotizar()`. Las dos rutas usan esta, así que la forma del JSON es la misma campo por campo: la pantalla de plataforma y la de asegura leen exactamente"
         },
         {
@@ -63664,7 +63733,7 @@
           "exportada": false,
           "params": "cuerpo: Record<string, unknown>, status: number",
           "retorno": "ResultadoRetarificar",
-          "linea": 472,
+          "linea": 509,
           "resumen": "Respuesta que declara, con su cifra, que NO se ha llamado al vendor."
         },
         {
@@ -63673,7 +63742,7 @@
           "exportada": false,
           "params": "cuerpo: Record<string, unknown>, status: number",
           "retorno": "",
-          "linea": 477,
+          "linea": 514,
           "resumen": "La misma, envuelta para cortar la preparación de un ramo."
         },
         {
@@ -63682,7 +63751,7 @@
           "exportada": false,
           "params": "origen: OrigenRetarificacion, cuerpo: CuerpoRetarificacion, polizaId: string,",
           "retorno": "Promise<Preparado>",
-          "linea": 483
+          "linea": 520
         },
         {
           "nombre": "versionMotoElegida",
@@ -63690,7 +63759,7 @@
           "exportada": false,
           "params": "resueltos: Record<string, unknown> | undefined, codigoCrudo: unknown,",
           "retorno": "VersionMotoElegida | null",
-          "linea": 549
+          "linea": 586
         },
         {
           "nombre": "reparoCarnetMoto",
@@ -63698,7 +63767,7 @@
           "exportada": false,
           "params": "config: Parameters<typeof limitesCarnetMoto>[0], tipo: string | null | undefined, version: VersionMotoElegida | null, esSupuesto = false,",
           "retorno": "Promise<",
-          "linea": 574,
+          "linea": 611,
           "resumen": "Dos comprobaciones gratis antes de pagar: 1. El tipo de carné tiene que existir en `/motorcycle/driving-licenses`: un id que no está es un 400. 2. Ese carné tiene que CUBRIR la versión elegida (cc y k"
         },
         {
@@ -63707,7 +63776,7 @@
           "exportada": false,
           "params": "supuestos: T[], aviso: string | null,",
           "retorno": "T[]",
-          "linea": 622,
+          "linea": 659,
           "resumen": "Añade el aviso al supuesto `tipoCarnet` (visible en pantalla junto al supuesto); sin supuesto, lo añade como uno nuevo."
         },
         {
@@ -63716,7 +63785,7 @@
           "exportada": false,
           "params": "origen: OrigenRetarificacion, cuerpo: CuerpoRetarificacion, polizaId: string,",
           "retorno": "Promise<Preparado>",
-          "linea": 636,
+          "linea": 673,
           "resumen": "Como `prepararAuto`, con el catálogo y el `risk` de moto: la póliza da la matrícula y el historial (`precalificarMoto`); la versión, el garaje y la experiencia de conducción los resuelve la pantalla ("
         },
         {
@@ -63725,16 +63794,16 @@
           "exportada": false,
           "params": "origen: OrigenRetarificacion, cuerpo: CuerpoRetarificacion, polizaId: string, modo: 'cotizar' | 'limites' = 'cotizar',",
           "retorno": "Promise<Preparado>",
-          "linea": 721,
+          "linea": 758,
           "resumen": "✅ El contrato del `risk` de hogar está verificado contra el portal del fabricante (02/09/2026; ver la cabecera de `peticion-hogar.ts`). Aun así el 502 devuelve el mensaje ENTERO del vendor: si el cont"
         },
         {
           "nombre": "prepararHogarDesde",
           "kind": "function",
           "exportada": false,
-          "params": "cliente: ClienteCartera, polizaInfo: { numeroPoliza: string | null; fechaVencimiento: string | null; hogar: HogarCartera | null }, cuerpo: CuerpoRetarificacion, externalId: string, catastro: CatastroHogar | null, /** `limites`: el cuerpo de",
+          "params": "cliente: ClienteCartera, polizaInfo: { numeroPoliza: string | null; fechaVencimiento: string | null; fechaEfectoActual?: string | null; hogar: HogarCartera | null }, cuerpo: CuerpoRetarificacion, externalId: string, catastro: CatastroHogar ",
           "retorno": "Promise<Preparado>",
-          "linea": 769,
+          "linea": 806,
           "resumen": "El cuerpo de hogar, ramo-agnóstico de origen: le da igual si el riesgo sale de una póliza (`prepararHogar`) o de un cliente sin ninguna (`prepararRetarificacionNuevaHogar`, oportunidad nueva desde el "
         },
         {
@@ -63743,7 +63812,7 @@
           "exportada": true,
           "params": "entrada: { polizaId: string cuerpo: CuerpoRetarificacion }",
           "retorno": "Promise<PreparadoLimitesHogar>",
-          "linea": 891,
+          "linea": 928,
           "resumen": "El cuerpo para pedir a Codeoscopic los capitales recomendados de la vivienda de una póliza de hogar. Misma precalificación que la retarificación (ficha, gemela o Catastro), pero sin exigir capital: es"
         },
         {
@@ -63752,7 +63821,7 @@
           "exportada": true,
           "params": "entrada: { clienteId: string solicitadoPor: string cuerpo: CuerpoRetarificacion catastro: CatastroHogar | null }",
           "retorno": "Promise<PreparadoRetarificacion>",
-          "linea": 933,
+          "linea": 970,
           "resumen": "Como `prepararRetarificacion`, pero para un cliente que HOY no tiene ninguna póliza de hogar: una oportunidad nueva, presupuestada desde el Catastro (`/correduria/hogar` en plataforma → aquí, con «Ped"
         },
         {
@@ -63761,7 +63830,7 @@
           "exportada": true,
           "params": "entrada: { clienteId: string solicitadoPor: string cuerpo: CuerpoRetarificacion }",
           "retorno": "Promise<PreparadoRetarificacion>",
-          "linea": 1003,
+          "linea": 1040,
           "resumen": "Como `prepararRetarificacionNuevaHogar`, pero para AUTO: un cliente que HOY no tiene ninguna póliza de auto en la cartera. No hay póliza que retarificar y por tanto ninguna «compañía anterior» que dec"
         },
         {
@@ -63770,7 +63839,7 @@
           "exportada": true,
           "params": "entrada: { clienteId: string solicitadoPor: string cuerpo: CuerpoRetarificacion }",
           "retorno": "Promise<PreparadoRetarificacion>",
-          "linea": 1114,
+          "linea": 1151,
           "resumen": "Como `prepararRetarificacionNuevaAuto`, pero para MOTO: la cartera viva tiene 1 sola póliza de moto (03/09/2026), así que «nueva» es prácticamente el único caso real de este ramo. Cotiza DE CALLE (`as"
         },
         {
@@ -63779,7 +63848,7 @@
           "exportada": false,
           "params": "entrada: { clienteId: string solicitadoPor: string ramo: 'vida' | 'salud' | 'decesos' resueltos: D correcciones: Record<string, unknown> | undefined precalificar: (cliente: ClienteCartera, resueltos: D, hoy: string) => { datos: Partial<any>",
           "retorno": "Promise<PreparadoRetarificacion>",
-          "linea": 1242
+          "linea": 1279
         },
         {
           "nombre": "prepararRetarificacionNuevaVida",
@@ -63787,7 +63856,7 @@
           "exportada": true,
           "params": "entrada: { clienteId: string solicitadoPor: string cuerpo: CuerpoRetarificacion /** El asegurado cuando NO es el tomador, armado en el SERVIDOR desde la ficha de la figura (nunca del cuerpo). */ asegurado?: AseguradoAdicional | null }",
           "retorno": "Promise<PreparadoRetarificacion>",
-          "linea": 1364
+          "linea": 1401
         },
         {
           "nombre": "prepararRetarificacionNuevaSalud",
@@ -63795,7 +63864,7 @@
           "exportada": true,
           "params": "entrada: { clienteId: string solicitadoPor: string cuerpo: CuerpoRetarificacion }",
           "retorno": "Promise<PreparadoRetarificacion>",
-          "linea": 1392
+          "linea": 1429
         },
         {
           "nombre": "prepararRetarificacionNuevaDecesos",
@@ -63803,7 +63872,7 @@
           "exportada": true,
           "params": "entrada: { clienteId: string solicitadoPor: string cuerpo: CuerpoRetarificacion }",
           "retorno": "Promise<PreparadoRetarificacion>",
-          "linea": 1416
+          "linea": 1453
         },
         {
           "nombre": "resolverCatalogo",
@@ -63811,7 +63880,7 @@
           "exportada": true,
           "params": "params: URLSearchParams",
           "retorno": "Promise<ResultadoCatalogo>",
-          "linea": 1474,
+          "linea": 1511,
           "resumen": "Resuelve UN catálogo por su `tipo` y los parámetros que ese tipo pida. Firma neutra (`URLSearchParams`) porque las dos rutas son `GET` con query."
         },
         {
@@ -63820,7 +63889,7 @@
           "exportada": true,
           "params": "params: URLSearchParams",
           "retorno": "Promise<ResultadoCrudo>",
-          "linea": 1643,
+          "linea": 1680,
           "resumen": "`tipo=versiones` **sin recortar**: las claves que manda el vendor de verdad y una muestra de entradas enteras. Existe para contestar con una medición, y no de memoria, a «¿trae el catálogo los años de"
         },
         {
@@ -63829,7 +63898,7 @@
           "exportada": false,
           "params": "p: SeguroAnteriorPublico, bonusSupuesto: boolean",
           "retorno": "SeguroAnteriorPublico",
-          "linea": 1690,
+          "linea": 1727,
           "resumen": "El seguro anterior público con la marca de bonus decidida sobre los datos FINALES (tras correcciones)."
         },
         {
@@ -63838,7 +63907,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 1694
+          "linea": 1731
         },
         {
           "nombre": "numero",
@@ -63846,7 +63915,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 1698
+          "linea": 1735
         },
         {
           "nombre": "booleano",
@@ -63854,7 +63923,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean | null",
-          "linea": 1705,
+          "linea": 1742,
           "resumen": "`true`/`false` (boolean o cadena) → boolean. Cualquier otra cosa → `null` (no es una respuesta)."
         },
         {
@@ -63863,7 +63932,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 1712
+          "linea": 1749
         },
         {
           "nombre": "hoyIso",
@@ -63871,7 +63940,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 1716
+          "linea": 1753
         },
         {
           "nombre": "limpiarCorrecciones",
@@ -63879,7 +63948,7 @@
           "exportada": false,
           "params": "c: Record<string, unknown> | undefined",
           "retorno": "Partial<T>",
-          "linea": 1721,
+          "linea": 1758,
           "resumen": "Solo se aceptan correcciones CON valor: un campo vacío no borra lo supuesto."
         }
       ],
@@ -63887,7 +63956,7 @@
         "codeoscopic_projects"
       ],
       "rutaApi": null,
-      "hash": "5d69d8acdc73"
+      "hash": "99c16ae805a1"
     },
     {
       "ruta": "apps/asegura/lib/revision-anual.ts",
@@ -76586,13 +76655,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 20,
+          "linea": 21,
           "resumen": "Menú de secciones: marca la activa con el acento de la empresa. Solo navegación: no decide permisos."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "707fd9ba8bca"
+      "hash": "c23ff9302fca"
     },
     {
       "ruta": "apps/contabilidad/app/_salir.tsx",
@@ -76992,6 +77061,86 @@
       "tablas": [],
       "rutaApi": "/api/hechos",
       "hash": "fa0f9763d113"
+    },
+    {
+      "ruta": "apps/contabilidad/app/api/impuestos/calcular/route.ts",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 15
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/impuestos/calcular",
+      "hash": "3d07d6406511"
+    },
+    {
+      "ruta": "apps/contabilidad/app/api/impuestos/declaraciones/[id]/borrador/route.ts",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, { params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 14
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/impuestos/declaraciones/[id]/borrador",
+      "hash": "3e9f7330cd43"
+    },
+    {
+      "ruta": "apps/contabilidad/app/api/impuestos/declaraciones/[id]/route.ts",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, { params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 15
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/impuestos/declaraciones/[id]",
+      "hash": "859acf5b5c76"
+    },
+    {
+      "ruta": "apps/contabilidad/app/api/impuestos/libros/route.ts",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 16
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/impuestos/libros",
+      "hash": "94645e117577"
     },
     {
       "ruta": "apps/contabilidad/app/api/informes/[clave]/route.ts",
@@ -77504,6 +77653,103 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "891d7d29aeef"
+    },
+    {
+      "ruta": "apps/contabilidad/app/impuestos/[modelo]/[anio]/[periodo]/Acciones.tsx",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "Acciones"
+      ],
+      "funciones": [
+        {
+          "nombre": "llamar",
+          "kind": "function",
+          "exportada": false,
+          "params": "url: string, cuerpo: unknown",
+          "retorno": "Promise<",
+          "linea": 15
+        },
+        {
+          "nombre": "Acciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ id, modelo, anio, periodo, estado, completo, contabiliza }: Props",
+          "retorno": null,
+          "linea": 22,
+          "resumen": "Acciones del ciclo: calcular/recalcular (borrador), revisar, devolver a borrador y registrar la presentación MANUAL. No envía nada a la AEAT."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f22da87ba764"
+    },
+    {
+      "ruta": "apps/contabilidad/app/impuestos/[modelo]/[anio]/[periodo]/page.tsx",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "Modelo"
+      ],
+      "funciones": [
+        {
+          "nombre": "Modelo",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ params }: { params: Promise<{ modelo: string; anio: string; periodo: string }> }",
+          "retorno": null,
+          "linea": 18
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ecceeb8aa6fd"
+    },
+    {
+      "ruta": "apps/contabilidad/app/impuestos/libros/page.tsx",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "Libros"
+      ],
+      "funciones": [
+        {
+          "nombre": "Libros",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }",
+          "retorno": null,
+          "linea": 10
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b27b62954266"
+    },
+    {
+      "ruta": "apps/contabilidad/app/impuestos/page.tsx",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "Impuestos"
+      ],
+      "funciones": [
+        {
+          "nombre": "ultima",
+          "kind": "function",
+          "exportada": false,
+          "params": "ds: readonly FilaDeclaracion[], modelo: ModeloAeat, periodo: PeriodoModelo",
+          "retorno": "FilaDeclaracion | undefined",
+          "linea": 17
+        },
+        {
+          "nombre": "Impuestos",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }",
+          "retorno": null,
+          "linea": 21
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2eec6144b214"
     },
     {
       "ruta": "apps/contabilidad/app/informes/[clave]/page.tsx",
@@ -78421,6 +78667,259 @@
       "hash": "2f64a5a9e005"
     },
     {
+      "ruta": "apps/contabilidad/lib/impuestos-carga.ts",
+      "ambito": "apps/contabilidad",
+      "resumen": "Carga de datos para un modelo desde la BD (cada lectura en su PROPIA transacción RLS y a prueba de tablas que aún no existen). La lógica está en `impuestos.ts` / `impuestos-datos.ts` (probadas sin BD); esto solo junta los repositorios.",
+      "exporta": [
+        "conF4",
+        "cargarDatosFiscales",
+        "cargarEntradaModelo"
+      ],
+      "funciones": [
+        {
+          "nombre": "conF4",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "empresaId: string, fn: (f4: RepoF4) => Promise<R>",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "Ejecuta con el repositorio F4 de la empresa en una transacción propia."
+        },
+        {
+          "nombre": "cargarDatosFiscales",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, desde: string, hasta: string",
+          "retorno": "Promise<",
+          "linea": 19,
+          "resumen": "Hechos fiscales del rango; si `facturas_recibidas` (0003) no existe, reintenta sin ella (en otra transacción: la primera quedó abortada)."
+        },
+        {
+          "nombre": "cargarEntradaModelo",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, modelo: ModeloAeat, anio: number, periodo: PeriodoModelo",
+          "retorno": "Promise<CargaModelo>",
+          "linea": 36,
+          "resumen": "Todo lo que necesita `calcularConDatos` para un modelo y periodo."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "cd0f0a770972"
+    },
+    {
+      "ruta": "apps/contabilidad/lib/impuestos-datos.ts",
+      "ambito": "apps/contabilidad",
+      "resumen": "De los HECHOS asentados (y sus facturas recibidas) a los datos fiscales que consumen los modelos: operaciones de IVA y retenciones. PURO. El hecho de venta/compra no lleva todo lo fiscal (NIF del tercero, clase de operación…): se toma de la factura recibida (0003) y, para lo que no existe aún, de CA",
+      "exporta": [
+        "datosFiscalesDeHechos"
+      ],
+      "funciones": [
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 35
+        },
+        {
+          "nombre": "str",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown, max = 200",
+          "retorno": "string | null",
+          "linea": 36
+        },
+        {
+          "nombre": "ent",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 37
+        },
+        {
+          "nombre": "datosFiscalesDeHechos",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: readonly FilaHechoFiscal[]",
+          "retorno": "DatosFiscales",
+          "linea": 39
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "870106dfc1f9"
+    },
+    {
+      "ruta": "apps/contabilidad/lib/impuestos-tablas.ts",
+      "ambito": "apps/contabilidad",
+      "resumen": "Libros registro de IVA y tablas auxiliares de los borradores como `Tabla` (el formato común de informes: CSV, Excel y HTML imprimible).",
+      "exporta": [
+        "tablaLibroIva",
+        "tablaResumenLibroIva",
+        "extrasDeSnapshot"
+      ],
+      "funciones": [
+        {
+          "nombre": "c",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "clave: string, etiqueta: string, tipo: ColumnaInforme['tipo']",
+          "retorno": "ColumnaInforme",
+          "linea": 6
+        },
+        {
+          "nombre": "tablaLibroIva",
+          "kind": "function",
+          "exportada": true,
+          "params": "l: LibroRegistroIva, titulo: string, refAAsiento: Readonly<Record<string, string>> = {}",
+          "retorno": "Tabla",
+          "linea": 9,
+          "resumen": "Libro registro: una fila por (factura, tipo de IVA), con el asiento de origen en la última columna."
+        },
+        {
+          "nombre": "tablaResumenLibroIva",
+          "kind": "function",
+          "exportada": true,
+          "params": "l: LibroRegistroIva, titulo: string",
+          "retorno": "Tabla",
+          "linea": 28,
+          "resumen": "Resumen por tipo: 21/10/4/0, exentas, inversión del sujeto pasivo, intracomunitarias, importaciones…"
+        },
+        {
+          "nombre": "eur",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 39
+        },
+        {
+          "nombre": "extrasDeSnapshot",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: CalculoModelo & Record<string, unknown>",
+          "retorno": "TablaExtra[]",
+          "linea": 42,
+          "resumen": "Tablas extra del borrador HTML según el modelo (terceros del 347, operadores del 349, perceptores del 190, arrendadores del 180)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d34cb2eca539"
+    },
+    {
+      "ruta": "apps/contabilidad/lib/impuestos.ts",
+      "ambito": "apps/contabilidad",
+      "resumen": "Casos de uso de la FASE 4 (impuestos): calcular un modelo como BORRADOR, revisarlo y marcarlo como presentado (manualmente, por el titular o su gestor con certificado digital). Aquí NO se envía nada a la AEAT: «presentado» es un registro de fecha + referencia del justificante (texto) y, si procede, ",
+      "exporta": [
+        "calcularConDatos",
+        "cuadreDelPeriodo",
+        "compensacionPendiente",
+        "pagos130Anteriores",
+        "rendimiento130",
+        "guardarCalculo",
+        "revisarDeclaracion",
+        "devolverDeclaracion",
+        "presentarDeclaracion"
+      ],
+      "funciones": [
+        {
+          "nombre": "trimestreDePeriodo",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "p: PeriodoModelo",
+          "retorno": "1 | 2 | 3 | 4",
+          "linea": 33
+        },
+        {
+          "nombre": "calcularConDatos",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaCalculo",
+          "retorno": "CalculoModelo",
+          "linea": 36,
+          "resumen": "Cálculo PURO de un modelo con los datos ya cargados. Un modelo no soportado o con datos truncados nunca devuelve resultado."
+        },
+        {
+          "nombre": "cuadreDelPeriodo",
+          "kind": "function",
+          "exportada": true,
+          "params": "modelo: ModeloAeat, anio: number, periodo: PeriodoModelo, datos: DatosFiscales, sumas: readonly SumaCuenta[]",
+          "retorno": "CuadreIva | null",
+          "linea": 64,
+          "resumen": "Cuadre libros ≡ mayor 477/472 del periodo del 303 (guardián de la fase 4). null si no es un 303."
+        },
+        {
+          "nombre": "compensacionPendiente",
+          "kind": "function",
+          "exportada": true,
+          "params": "presentados: readonly FilaDeclaracion[], anio: number, periodo: PeriodoModelo",
+          "retorno": "number",
+          "linea": 79,
+          "resumen": "Cuotas de IVA pendientes de compensar: negativos de los 303 PRESENTADOS anteriores (mismo ejercicio y 4T del anterior) menos lo ya aplicado (casilla 68). Solo mira periodos anteriores al pedido."
+        },
+        {
+          "nombre": "pagos130Anteriores",
+          "kind": "function",
+          "exportada": true,
+          "params": "presentados: readonly FilaDeclaracion[], anio: number, periodo: PeriodoModelo",
+          "retorno": "number",
+          "linea": 93,
+          "resumen": "Pagos fraccionados YA ingresados del 130 en trimestres anteriores del ejercicio."
+        },
+        {
+          "nombre": "rendimiento130",
+          "kind": "function",
+          "exportada": true,
+          "params": "asientos: readonly Asiento[], anio: number, periodo: PeriodoModelo, presentados130: readonly FilaDeclaracion[]",
+          "retorno": "AcumuladoRendimiento",
+          "linea": 97
+        },
+        {
+          "nombre": "guardarCalculo",
+          "kind": "function",
+          "exportada": true,
+          "params": "f4: RepoF4, calc: CalculoModelo, extra: Record<string, unknown>, meta: { usuarioId: string | null; complementaria?: boolean },",
+          "retorno": "Promise<ResultadoGuardar>",
+          "linea": 109,
+          "resumen": "Guarda el cálculo como BORRADOR: nuevo (versión 1), recálculo del borrador existente, o complementaria (versión +1) si la anterior ya está presentada y se pide expresamente. Una declaración revisada n"
+        },
+        {
+          "nombre": "revisarDeclaracion",
+          "kind": "function",
+          "exportada": true,
+          "params": "repo: RepoContable, f4: RepoF4, id: string, meta: Meta",
+          "retorno": "Promise<ResultadoCiclo>",
+          "linea": 130,
+          "resumen": "borrador → revisado. Lo no soportado no se revisa (lo exige también la BD: `completo`)."
+        },
+        {
+          "nombre": "devolverDeclaracion",
+          "kind": "function",
+          "exportada": true,
+          "params": "repo: RepoContable, f4: RepoF4, id: string, meta: Meta",
+          "retorno": "Promise<ResultadoCiclo>",
+          "linea": 142
+        },
+        {
+          "nombre": "presentarDeclaracion",
+          "kind": "function",
+          "exportada": true,
+          "params": "repo: RepoContable, f4: RepoF4, id: string, datos: DatosPresentacion, opciones: { pagar: boolean }, meta: Meta & { hoy: Date },",
+          "retorno": "Promise<ResultadoPresentar>",
+          "linea": 159,
+          "resumen": "revisado → presentado (manual): fecha + justificante como texto, y los asientos de liquidación (IVA 477/472 → 4750/4700) y de pago (4750 → 572; retenciones 4751 → 572) calculados del SNAPSHOT revisado"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "dbd723846bd1"
+    },
+    {
       "ruta": "apps/contabilidad/lib/informes/catalogo.ts",
       "ambito": "apps/contabilidad",
       "resumen": "Catálogo DECLARATIVO de informes estándar (mismo patrón que apps/rrhh/lib/informes/catalogo.ts). PURO. Un informe nuevo = una entrada aquí + su rama en `generar.ts`. Lo que llega del cliente solo elige una CLAVE de esta lista blanca y valores validados (fechas ISO, cuenta numérica): nada se interpol",
@@ -79020,6 +79519,54 @@
       "hash": "591a7e0580ea"
     },
     {
+      "ruta": "apps/contabilidad/lib/repo-f4.ts",
+      "ambito": "apps/contabilidad",
+      "resumen": "Repositorio de la FASE 4 (impuestos) de UNA empresa. Mismas reglas que repo.ts / repo-f3.ts: · se construye SOLO dentro de `conEmpresa` (RLS) y TODA consulta filtra además por `empresa_id` explícito; · SQL parametrizado con plantilla, nunca concatenación; importes en céntimos (bigint); · `declaracio",
+      "exporta": [
+        "repoF4Sql"
+      ],
+      "funciones": [
+        {
+          "nombre": "s",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "iso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": null,
+          "linea": 15
+        },
+        {
+          "nombre": "aDeclaracion",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "f: Fila",
+          "retorno": "FilaDeclaracion",
+          "linea": 49
+        },
+        {
+          "nombre": "repoF4Sql",
+          "kind": "function",
+          "exportada": true,
+          "params": "tx: TxSql, empresaId: string",
+          "retorno": "RepoF4",
+          "linea": 57
+        }
+      ],
+      "tablas": [
+        "contabilidad",
+        "solo"
+      ],
+      "rutaApi": null,
+      "hash": "c47a8d5ede44"
+    },
+    {
       "ruta": "apps/contabilidad/lib/repo.ts",
       "ambito": "apps/contabilidad",
       "resumen": "Repositorio de la contabilidad de UNA empresa. Interfaz + implementación SQL (Postgres, schema `contabilidad`). 🚨 Aislamiento (dos capas, las dos obligatorias): 1. Se construye SOLO dentro de `conEmpresa(empresaId, tx => repoSql(tx, empresaId))`: RLS forzado por empresa. 2. Además, TODA consulta fi",
@@ -79377,6 +79924,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "c45f88f0e233"
+    },
+    {
+      "ruta": "apps/contabilidad/test/_f4-memoria.ts",
+      "ambito": "apps/contabilidad",
+      "resumen": "Fake en memoria de `RepoF4` que imita los triggers de 0004: transiciones permitidas, cálculo inmutable fuera de borrador, presentado definitivo, complementaria solo sobre una versión presentada y nada se borra.",
+      "exporta": [
+        "f4Memoria"
+      ],
+      "funciones": [
+        {
+          "nombre": "f4Memoria",
+          "kind": "function",
+          "exportada": true,
+          "params": "opts: { hechos?: FilaHechoFiscal[]; sumas?: { cuenta: string; debe: number; haber: number; n: number }[]; regimen?: string | null } = {}",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b2dbf399a38a"
     },
     {
       "ruta": "apps/contabilidad/test/_repo-memoria.ts",
@@ -123816,6 +124384,30 @@
       "hash": "5237b6f00960"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/BotonBuscarCorreduria.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "BotonBuscarCorreduria"
+      ],
+      "funciones": [
+        {
+          "nombre": "BotonBuscarCorreduria",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ variante = 'barra' }: { variante?: 'barra' | 'lateral' }",
+          "retorno": null,
+          "linea": 17,
+          "resumen": "Búsqueda de la correduría desde CUALQUIER pestaña (le llama un cliente y se busca al instante). Reutiliza `BuscadorCartera` (misma API, mismos bloques) sin tocar la URL de la página actual. Atajo «/» "
+        }
+      ],
+      "tablas": [
+        "lucide",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "39e3c651d867"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/BotonNuevaTarea.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -124509,7 +125101,7 @@
           "nombre": "BuscadorCartera",
           "kind": "function",
           "exportada": true,
-          "params": "",
+          "params": "{ sincronizarUrl = true, autoFocus = false, onNavegar, }: { /** `false` en el panel global de la barra superior: no debe leer ni tocar el `?q=` de la página en la que esté. */ sincronizarUrl?: boolean /** Abre el teclado al montar (solo el ",
           "retorno": null,
           "linea": 58
         },
@@ -124519,7 +125111,7 @@
           "exportada": false,
           "params": "{ estado, termino }: { estado: Estado; termino: string }",
           "retorno": null,
-          "linea": 177
+          "linea": 196
         },
         {
           "nombre": "TarjetaReferencia",
@@ -124527,7 +125119,7 @@
           "exportada": false,
           "params": "{ b }: { b: BusquedaReferencia }",
           "retorno": null,
-          "linea": 307,
+          "linea": 326,
           "resumen": "El presupuesto buscado por su REFERENCIA (AS-26-0042, 30/09/2026): lo que se le mandó al cliente (solo las opciones que iban en el documento), su estado y el camino a la pantalla EXISTENTE que lo emit"
         },
         {
@@ -124536,7 +125128,7 @@
           "exportada": false,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 380,
+          "linea": 399,
           "resumen": "Los resultados SÍ son un objeto que aparece: aquí la tarjeta está justificada (a diferencia del campo de búsqueda, que no necesita marco)."
         },
         {
@@ -124545,7 +125137,7 @@
           "exportada": false,
           "params": "{ b }: { b: BloqueResultados }",
           "retorno": null,
-          "linea": 384
+          "linea": 403
         },
         {
           "nombre": "hoyMadrid",
@@ -124553,7 +125145,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 475,
+          "linea": 494,
           "resumen": "Hoy en Madrid, `YYYY-MM-DD`: el mismo huso con el que asegura manda las fechas límite."
         },
         {
@@ -124562,7 +125154,7 @@
           "exportada": false,
           "params": "{ h }: { h: Hallazgo }",
           "retorno": null,
-          "linea": 479
+          "linea": 498
         },
         {
           "nombre": "Vitalidad",
@@ -124570,7 +125162,7 @@
           "exportada": false,
           "params": "{ h }: { h: Hallazgo }",
           "retorno": null,
-          "linea": 509
+          "linea": 528
         },
         {
           "nombre": "Nota",
@@ -124578,7 +125170,7 @@
           "exportada": false,
           "params": "{ color, icono, children }: { color?: string icono?: React.ReactNode children: React.ReactNode }",
           "retorno": null,
-          "linea": 527
+          "linea": 546
         },
         {
           "nombre": "Contactar",
@@ -124586,13 +125178,13 @@
           "exportada": false,
           "params": "{ c, nombre }: { c: Contacto | null; nombre: string }",
           "retorno": null,
-          "linea": 560,
+          "linea": 579,
           "resumen": "Llamar, escribir o abrir WhatsApp DESDE EL RESULTADO, sin entrar en la ficha (Alberto, 04/09/2026: «no se ven los iconos de mail, teléfono y WhatsApp»). 🚨 Lo que NO hace, a propósito: decir que algui"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8948e142d063"
+      "hash": "e4acc3653d64"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/BuscadorDireccionCp.tsx",
@@ -139563,12 +140155,12 @@
           "exportada": true,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 9
+          "linea": 10
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b9183d83f848"
+      "hash": "6e966a2d126c"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/LayoutShell.tsx",
@@ -142711,7 +143303,7 @@
           "exportada": false,
           "params": "lista: { href: string }[], path: string",
           "retorno": "boolean",
-          "linea": 132
+          "linea": 133
         },
         {
           "nombre": "seccionDeRuta",
@@ -142719,7 +143311,7 @@
           "exportada": false,
           "params": "path: string",
           "retorno": "ClaveSeccion | null",
-          "linea": 138,
+          "linea": 139,
           "resumen": "Qué sección contiene la ruta activa. Determinista: se calcula igual en el servidor y en el cliente, así que el primer pintado ya trae la sección buena abierta (sin salto al hidratar)."
         },
         {
@@ -142728,22 +143320,22 @@
           "exportada": false,
           "params": "path: string, soloEmpresas: boolean",
           "retorno": "ClaveSeccion | null",
-          "linea": 151,
+          "linea": 152,
           "resumen": "🚨 La cuenta `rol='empresas'` solo ve `/empresas`, y se pinta en el hueco de «Día a día». Sin esta corrección `seccionDeRuta` devolvería 'oportunidades' —una sección que a esa cuenta NO se le renderiz"
         },
         {
           "nombre": "UserSidebar",
           "kind": "function",
           "exportada": true,
-          "params": "{ email, nombre, isOperator, operadorRol, rol }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string; rol?: string | null }",
+          "params": "{ email, nombre, isOperator, operadorRol, rol, accesoCorreduria = false }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string; rol?: string | null; accesoCorreduria?: boolean }",
           "retorno": null,
-          "linea": 164,
+          "linea": 165,
           "resumen": "🚨 El lateral tiene DOS plegados distintos y no pueden pisarse: · `html[data-nav-plegado='1']` = tira de solo iconos (globals.css). Ahí las cabeceras de sección NO se ven (llevan `nav-solo-abierto`), "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2070e8473786"
+      "hash": "20333f0cf6d6"
     },
     {
       "ruta": "apps/plataforma/app/admin/MapaArquitectura.tsx",
@@ -218579,6 +219171,27 @@
       "hash": "b60bfa053a92"
     },
     {
+      "ruta": "apps/rrhh/app/admin/nominas/EstadoModuloNominas.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "EstadoModuloNominas"
+      ],
+      "funciones": [
+        {
+          "nombre": "EstadoModuloNominas",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ estado }: { estado: EstadoModulo }",
+          "retorno": null,
+          "linea": 5,
+          "resumen": "Solo LECTURA: el responsable ve el estado; activarlo lo hace el operador (no hay botón a propósito)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7bef21fefbab"
+    },
+    {
       "ruta": "apps/rrhh/app/admin/nominas/page.tsx",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -218591,12 +219204,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 8
+          "linea": 10
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "45e1ca5e86f5"
+      "hash": "023b51ad7d90"
     },
     {
       "ruta": "apps/rrhh/app/admin/obras/ObrasClient.tsx",
@@ -219772,7 +220385,7 @@
           "exportada": true,
           "params": "_req: Request, { params }: { params: Promise<{ nominaId: string }> }",
           "retorno": null,
-          "linea": 9
+          "linea": 10
         }
       ],
       "tablas": [
@@ -219780,7 +220393,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/admin/nominas/[nominaId]/confirmar",
-      "hash": "31a66f73076a"
+      "hash": "d344ad0a1d12"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/nominas/[nominaId]/incidencias/[incId]/route.ts",
@@ -219820,7 +220433,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/admin/nominas/[nominaId]/incidencias",
-      "hash": "51bafbb73dd2"
+      "hash": "89bc42027b34"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/nominas/distribuir-pdf/route.ts",
@@ -219860,7 +220473,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/admin/nominas/generar",
-      "hash": "13671c01850e"
+      "hash": "6f53e6e2b7c2"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/nominas/route.ts",
@@ -220338,15 +220951,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 9
+          "linea": 10,
+          "resumen": "Solo empresas con el módulo `nominas` ACTIVO en modo 'calculo' (rrhh.empresa_modulos, migración 0031). Antes recorría TODAS. Si la tabla no se puede leer, no se procesa NINGUNA (fail-closed) y se devu"
         }
       ],
-      "tablas": [
-        "next",
-        "rrhh"
-      ],
+      "tablas": [],
       "rutaApi": "/api/cron/nominas",
-      "hash": "2a5a92ceef58"
+      "hash": "50e139270693"
     },
     {
       "ruta": "apps/rrhh/app/api/cron/recordatorio-fichaje/route.ts",
@@ -220544,7 +221155,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/e/chat",
-      "hash": "75ca82f171ff"
+      "hash": "95e62613af89"
     },
     {
       "ruta": "apps/rrhh/app/api/e/expediente/[docId]/firmar/codigo/route.ts",
@@ -220586,7 +221197,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/e/expediente/[docId]/firmar",
-      "hash": "91a84237b4b3"
+      "hash": "a94669ef4c95"
     },
     {
       "ruta": "apps/rrhh/app/api/e/expediente/route.ts",
@@ -220615,7 +221226,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/e/expediente",
-      "hash": "2d754b592296"
+      "hash": "1ce6cf15ba5b"
     },
     {
       "ruta": "apps/rrhh/app/api/e/fichaje/incidencia/route.ts",
@@ -220825,7 +221436,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/e/solicitudes",
-      "hash": "333ddb70a94e"
+      "hash": "26d128b68e7b"
     },
     {
       "ruta": "apps/rrhh/app/api/operador/empresas/fichaje-taller/route.ts",
@@ -220850,6 +221461,27 @@
       ],
       "rutaApi": "/api/operador/empresas/fichaje-taller",
       "hash": "47330905a1e1"
+    },
+    {
+      "ruta": "apps/rrhh/app/api/operador/empresas/modulos/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "PUT"
+      ],
+      "funciones": [
+        {
+          "nombre": "PUT",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "PUT { empresa_id, modulo: 'nominas', activo, modo: 'reparto'|'calculo', activado_por } — SOLO el operador (RRHH_OPERADOR_SECRET) activa o cambia el modo de un módulo (tabla rrhh.empresa_modulos, migra"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/empresas/modulos",
+      "hash": "721dcafca37d"
     },
     {
       "ruta": "apps/rrhh/app/api/operador/empresas/route.ts",
@@ -223623,7 +224255,7 @@
           "exportada": true,
           "params": "bytes: ArrayBuffer",
           "retorno": "Promise<string[]>",
-          "linea": 22,
+          "linea": 23,
           "resumen": "Extrae el texto de cada página del PDF usando pdfjs-dist (build legacy, funciona en Node.js)."
         },
         {
@@ -223632,8 +224264,8 @@
           "exportada": true,
           "params": "textoPagina: string, nombresEmpleados: string[], opts: { documento?: string; estricto?: boolean } = {},",
           "retorno": "Promise<string | null>",
-          "linea": 49,
-          "resumen": "Pregunta a la IA qué empleado aparece en el texto de la página. Compartido con «Distribuir documentos desde PDF» (`opts.documento`: tipo de documento para el prompt; `opts.estricto`: SOLO coincidencia"
+          "linea": 51,
+          "resumen": "Pregunta a la IA qué empleado aparece en el texto de la página. A la IA solo le llega el texto MINIMIZADO (`textoMinimoParaIA`: sin NSS, IBAN, DNI, correos ni cifras) y la lista de nombres. Compartido"
         },
         {
           "nombre": "extraerPaginas",
@@ -223641,7 +224273,7 @@
           "exportada": true,
           "params": "bytesOriginal: ArrayBuffer, desde: number, hasta: number",
           "retorno": "Promise<Uint8Array>",
-          "linea": 79,
+          "linea": 81,
           "resumen": "Extrae el rango de páginas [desde, hasta] (1-based, ambas incluidas) como PDF independiente."
         },
         {
@@ -223650,7 +224282,7 @@
           "exportada": false,
           "params": "bytesOriginal: ArrayBuffer, numeroPagina: number",
           "retorno": "Promise<Uint8Array>",
-          "linea": 88,
+          "linea": 90,
           "resumen": "Extrae una sola página del PDF original como PDF independiente."
         },
         {
@@ -223659,7 +224291,7 @@
           "exportada": true,
           "params": "empresaId: string, bytes: ArrayBuffer, periodo: string, // YYYY-MM subidoPor: string,",
           "retorno": "Promise<ResultadoDistribucion[]>",
-          "linea": 93,
+          "linea": 95,
           "resumen": "Punto de entrada: distribuye el PDF entre los empleados de la empresa."
         }
       ],
@@ -223668,7 +224300,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "b9eb7f5ccf84"
+      "hash": "c0aeb0cade14"
     },
     {
       "ruta": "apps/rrhh/lib/documental.ts",
@@ -225652,6 +226284,112 @@
       "hash": "ea3ef0ca1cdd"
     },
     {
+      "ruta": "apps/rrhh/lib/minimizar-ia.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Minimización de lo que sale a la IA (RGPD art. 5.1.c) al identificar a qué empleado pertenece una página de nómina/documento. Para emparejar con la lista de NOMBRES solo hacen falta los nombres: se quitan IBAN, NSS, DNI/NIE, correos y CUALQUIER cifra (importes, fechas, CCC, teléfonos). La verificaci",
+      "exporta": [
+        "textoMinimoParaIA"
+      ],
+      "funciones": [
+        {
+          "nombre": "textoMinimoParaIA",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string, max = 2000",
+          "retorno": "string",
+          "linea": 12
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6e151edff535"
+    },
+    {
+      "ruta": "apps/rrhh/lib/modulos-empresa-reglas.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Interruptor de módulos por empresa (tabla `rrhh.empresa_modulos`, migración 0031). Reglas PURAS. Tres estados honestos: fila → su valor · sin fila → «apagado» (es el defecto del módulo) · error al leer → «no se sabe». /",
+      "exporta": [
+        "estadoDeFila",
+        "modoMotor",
+        "validarCambioModulo"
+      ],
+      "funciones": [
+        {
+          "nombre": "estadoDeFila",
+          "kind": "function",
+          "exportada": true,
+          "params": "fila: FilaModulo | null | undefined",
+          "retorno": "EstadoModulo",
+          "linea": 21
+        },
+        {
+          "nombre": "modoMotor",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EstadoModulo",
+          "retorno": "'calculo' | 'simulacion'",
+          "linea": 29,
+          "resumen": "Modo del MOTOR para una empresa: solo 'calculo' si el módulo está activo en modo cálculo; si no, simulación (borrador)."
+        },
+        {
+          "nombre": "validarCambioModulo",
+          "kind": "function",
+          "exportada": true,
+          "params": "b: unknown",
+          "retorno": "",
+          "linea": 38,
+          "resumen": "Valida el cuerpo del PUT del operador. Todo explícito: sin modo por defecto, sin «quién» vacío."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3addc66be629"
+    },
+    {
+      "ruta": "apps/rrhh/lib/modulos-empresa.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "leerModulo",
+        "empresasConNominasEnCalculo",
+        "guardarModulo"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerModulo",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, modulo: Modulo",
+          "retorno": "Promise<EstadoModulo>",
+          "linea": 6,
+          "resumen": "Estado del módulo para la empresa de la SESIÓN. Un error de lectura (p. ej. 0031 sin aplicar) = «no se sabe», nunca «apagado»."
+        },
+        {
+          "nombre": "empresasConNominasEnCalculo",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<string[]>",
+          "linea": 18,
+          "resumen": "Empresas cuyo cron de nóminas debe CALCULAR: módulo activo y modo 'calculo'. Lanza si no se puede leer (el cron no hace nada)."
+        },
+        {
+          "nombre": "guardarModulo",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CambioModulo",
+          "retorno": "Promise<boolean>",
+          "linea": 28,
+          "resumen": "Solo el OPERADOR (ruta /api/operador/empresas/modulos). Devuelve false si la empresa no existe."
+        }
+      ],
+      "tablas": [
+        "rrhh",
+        "set"
+      ],
+      "rutaApi": null,
+      "hash": "b1c4516919b9"
+    },
+    {
       "ruta": "apps/rrhh/lib/nomina-pdf.tsx",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -225680,12 +226418,12 @@
           "exportada": true,
           "params": "params: NominaPdfProps",
           "retorno": "Promise<Buffer>",
-          "linea": 81
+          "linea": 87
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "01435c6cb040"
+      "hash": "17990402819e"
     },
     {
       "ruta": "apps/rrhh/lib/nominas.ts",
@@ -225693,6 +226431,7 @@
       "exporta": [
         "parsePeriodo",
         "periodoActual",
+        "modoNominasEmpresa",
         "generarBorradores",
         "listarNominas",
         "obtenerNomina",
@@ -225707,7 +226446,7 @@
           "exportada": true,
           "params": "periodo: string",
           "retorno": "",
-          "linea": 6
+          "linea": 8
         },
         {
           "nombre": "periodoActual",
@@ -225715,15 +226454,25 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 13
+          "linea": 15
         },
         {
           "nombre": "atEpDeEmpresa",
           "kind": "function",
           "exportada": false,
           "params": "empresaId: string",
-          "retorno": "Promise<number>",
-          "linea": 18
+          "retorno": "Promise<number | null>",
+          "linea": 21,
+          "resumen": "AT/EP de la empresa como fracción. NULL = «no se sabe» (sin CNAE resuelto): el motor lo marca pendiente, no inventa 1,5 %."
+        },
+        {
+          "nombre": "modoNominasEmpresa",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string",
+          "retorno": "Promise<ModoCalculo>",
+          "linea": 28,
+          "resumen": "Modo del motor para la empresa: 'calculo' solo con el módulo nóminas activo en modo cálculo (si no, borrador «simulación»)."
         },
         {
           "nombre": "_recalcularDesglose",
@@ -225731,15 +226480,16 @@
           "exportada": false,
           "params": "empresaId: string, nominaId: string",
           "retorno": "Promise<NominaDesglose>",
-          "linea": 24
+          "linea": 32
         },
         {
           "nombre": "generarBorradores",
           "kind": "function",
           "exportada": true,
-          "params": "empresaId: string, periodo: string,",
+          "params": "empresaId: string, periodo: string, modo: ModoCalculo,",
           "retorno": "Promise<",
-          "linea": 59
+          "linea": 71,
+          "resumen": "Borradores del mes. `modo` 'calculo' (cron, empresas con el módulo en cálculo) es fail-closed: una cifra legal PENDIENTE_VERIFICAR hace fallar ESE contrato (se cuenta en `errores`, sin datos personale"
         },
         {
           "nombre": "listarNominas",
@@ -225747,7 +226497,7 @@
           "exportada": true,
           "params": "empresaId: string, periodo: string",
           "retorno": null,
-          "linea": 110
+          "linea": 129
         },
         {
           "nombre": "obtenerNomina",
@@ -225755,7 +226505,7 @@
           "exportada": true,
           "params": "empresaId: string, nominaId: string",
           "retorno": null,
-          "linea": 121
+          "linea": 140
         },
         {
           "nombre": "addIncidencia",
@@ -225763,7 +226513,7 @@
           "exportada": true,
           "params": "empresaId: string, nominaId: string, datos: { tipo: TipoIncidencia; concepto: string; importe?: number; horas?: number; dias?: number },",
           "retorno": null,
-          "linea": 136
+          "linea": 155
         },
         {
           "nombre": "deleteIncidencia",
@@ -225771,7 +226521,7 @@
           "exportada": true,
           "params": "empresaId: string, incId: string",
           "retorno": "Promise<void>",
-          "linea": 167
+          "linea": 193
         },
         {
           "nombre": "listarPeriodosConNominas",
@@ -225779,14 +226529,14 @@
           "exportada": true,
           "params": "empresaId: string",
           "retorno": null,
-          "linea": 187
+          "linea": 213
         }
       ],
       "tablas": [
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "a2f3918e6c61"
+      "hash": "2b5ad02e347d"
     },
     {
       "ruta": "apps/rrhh/lib/notas-empleado.ts",
@@ -225850,7 +226600,7 @@
           "nombre": "nombreEmpleado",
           "kind": "function",
           "exportada": true,
-          "params": "empleadoId: string",
+          "params": "empresaId: string, empleadoId: string",
           "retorno": "Promise<string>",
           "linea": 62,
           "resumen": "Nombre del empleado (para componer los avisos)."
@@ -225860,7 +226610,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "12b95d779604"
+      "hash": "af76ead775b0"
     },
     {
       "ruta": "apps/rrhh/lib/operador.ts",
@@ -232778,6 +233528,214 @@
       "hash": "cb64468b51cf"
     },
     {
+      "ruta": "apps/taller/app/_portal/acciones.ts",
+      "ambito": "apps/taller",
+      "exporta": [
+        "enlacePedidoAccion",
+        "recepcionVerificadaAccion",
+        "confirmarFacturaAccion",
+        "corregirFacturaAccion",
+        "rechazarFacturaAccion",
+        "leerFacturaAccion",
+        "aceptarRecambioAccion"
+      ],
+      "funciones": [
+        {
+          "nombre": "tx",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "t: unknown",
+          "retorno": null,
+          "linea": 19
+        },
+        {
+          "nombre": "fallo",
+          "kind": "function",
+          "exportada": false,
+          "params": "e: unknown, donde: string",
+          "retorno": "",
+          "linea": 20
+        },
+        {
+          "nombre": "origen",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<string | null>",
+          "linea": 26
+        },
+        {
+          "nombre": "enlacePedidoAccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "pedidoId: unknown",
+          "retorno": "Promise<Resp<",
+          "linea": 32,
+          "resumen": "Enlace del PEDIDO para el proveedor (solo el dueño: generarlo es mandarlo). Anula el anterior."
+        },
+        {
+          "nombre": "recepcionVerificadaAccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "albaranId: unknown",
+          "retorno": "Promise<Resp<",
+          "linea": 47,
+          "resumen": "«Recepción verificada» (una persona) → enlace de la FACTURA para el proveedor."
+        },
+        {
+          "nombre": "confirmarFacturaAccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "documentoId: unknown, albaranId: unknown",
+          "retorno": "Promise<Resp<",
+          "linea": 62,
+          "resumen": "Confirmar una factura en «Revisar» = aceptar las diferencias señaladas y contabilizarla. Solo el dueño."
+        },
+        {
+          "nombre": "corregirFacturaAccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "documentoId: unknown, albaranId: unknown, correccion: unknown",
+          "retorno": "Promise<Resp<",
+          "linea": 89,
+          "resumen": "Corregir lo leído de la factura y volver a casar (si ahora cuadra, se contabiliza por case). Solo el dueño."
+        },
+        {
+          "nombre": "rechazarFacturaAccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "documentoId: unknown, albaranId: unknown, nota: unknown",
+          "retorno": "Promise<Resp>",
+          "linea": 101
+        },
+        {
+          "nombre": "leerFacturaAccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "documentoId: unknown, albaranId: unknown",
+          "retorno": "Promise<Resp<",
+          "linea": 114,
+          "resumen": "Volver a leer una factura «ilegible» o aún «recibida» (p. ej. la IA no respondió)."
+        },
+        {
+          "nombre": "aceptarRecambioAccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "otId: unknown, lineaId: unknown",
+          "retorno": "Promise<Resp>",
+          "linea": 131,
+          "resumen": "«Recambios pendientes de aceptar»: el cliente ya dijo que sí → entra en la factura (y saldrá del stock al cerrar)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d03b2193542a"
+    },
+    {
+      "ruta": "apps/taller/app/_portal/Compartir.tsx",
+      "ambito": "apps/taller",
+      "exporta": [
+        "EnlacePedidoProveedor",
+        "RecepcionVerificada"
+      ],
+      "funciones": [
+        {
+          "nombre": "Compartir",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ url, titulo, texto }: { url: string; titulo: string; texto: string }",
+          "retorno": null,
+          "linea": 6,
+          "resumen": "Enseña el enlace UNA vez y lo comparte con la Web Share API del móvil (WhatsApp, correo… del propio taller) o lo copia."
+        },
+        {
+          "nombre": "absoluta",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "u: string",
+          "retorno": null,
+          "linea": 28
+        },
+        {
+          "nombre": "EnlacePedidoProveedor",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ pedidoId, borrador, proveedor }: { pedidoId: string; borrador: boolean; proveedor: string }",
+          "retorno": null,
+          "linea": 30
+        },
+        {
+          "nombre": "RecepcionVerificada",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ albaranId, proveedor, yaVerificada }: { albaranId: string; proveedor: string; yaVerificada: boolean }",
+          "retorno": null,
+          "linea": 49
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e1220ebef339"
+    },
+    {
+      "ruta": "apps/taller/app/_portal/RecambiosPendientes.tsx",
+      "ambito": "apps/taller",
+      "exporta": [
+        "RecambiosPendientes"
+      ],
+      "funciones": [
+        {
+          "nombre": "RecambiosPendientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ otId, lineas }: { otId: string; lineas: { id: string; texto: string }[] }",
+          "retorno": null,
+          "linea": 6,
+          "resumen": "«Recambios pendientes de aceptar» en la OT: aceptar DESPUÉS un recambio añadido sin la aceptación del cliente."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "23b2a1ded659"
+    },
+    {
+      "ruta": "apps/taller/app/_portal/RevisionFactura.tsx",
+      "ambito": "apps/taller",
+      "exporta": [
+        "RevisionFactura"
+      ],
+      "funciones": [
+        {
+          "nombre": "eur",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "c: number | null",
+          "retorno": null,
+          "linea": 19
+        },
+        {
+          "nombre": "aCent",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "number | null",
+          "linea": 24
+        },
+        {
+          "nombre": "RevisionFactura",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ albaranId, f, puedeConfirmar }: { albaranId: string; f: FacturaVista; puedeConfirmar: boolean }",
+          "retorno": null,
+          "linea": 32,
+          "resumen": "Revisión de la factura del proveedor: diferencias señaladas y UN clic para confirmar, corregir o rechazar."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "08f728141f82"
+    },
+    {
       "ruta": "apps/taller/app/_presupuesto.tsx",
       "ambito": "apps/taller",
       "exporta": [
@@ -233016,7 +233974,7 @@
         "zod"
       ],
       "rutaApi": null,
-      "hash": "91813c0e57dd"
+      "hash": "815e30036eeb"
     },
     {
       "ruta": "apps/taller/app/ajustes/AjustesCliente.tsx",
@@ -233262,14 +234220,14 @@
           "exportada": true,
           "params": "{ datos }: { datos: DatosAjustes }",
           "retorno": null,
-          "linea": 801
+          "linea": 803
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "1adf9602c849"
+      "hash": "26b737cd79c8"
     },
     {
       "ruta": "apps/taller/app/ajustes/page.tsx",
@@ -233291,7 +234249,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "e5138dd1c7f8"
+      "hash": "6d8cf85b5647"
     },
     {
       "ruta": "apps/taller/app/albaranes/[id]/page.tsx",
@@ -233306,7 +234264,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 9
+          "linea": 13
         },
         {
           "nombre": "Pagina",
@@ -233314,12 +234272,12 @@
           "exportada": true,
           "params": "{ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ aviso?: string; ok?: string }> }",
           "retorno": null,
-          "linea": 11
+          "linea": 15
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "db73b16f4d19"
+      "hash": "100948f7d372"
     },
     {
       "ruta": "apps/taller/app/albaranes/acciones.ts",
@@ -233589,6 +234547,51 @@
       "tablas": [],
       "rutaApi": "/api/operador/talleres",
       "hash": "d8459cdb70c2"
+    },
+    {
+      "ruta": "apps/taller/app/api/prov/[token]/route.ts",
+      "ambito": "apps/taller",
+      "resumen": "API PÚBLICA del portal del proveedor (sin sesión: autoriza el token). POST multipart: accion=confirmar → el proveedor confirma el PEDIDO (solo enlace de pedido) accion=subir + archivo → albarán (enlace de pedido) o factura (enlace de factura; cierra el enlace y se lee en segundo plano) Token inválid",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "noValido",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 16
+        },
+        {
+          "nombre": "malo",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "mensaje: string, status = 400",
+          "retorno": null,
+          "linea": 17
+        },
+        {
+          "nombre": "tx",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "t: unknown",
+          "retorno": null,
+          "linea": 18
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest, { params }: { params: Promise<{ token: string }> }",
+          "retorno": null,
+          "linea": 20
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/prov/[token]",
+      "hash": "f2f4c0fcc73e"
     },
     {
       "ruta": "apps/taller/app/articulos/acciones.ts",
@@ -234430,7 +235433,7 @@
           "exportada": false,
           "params": "min: number | null",
           "retorno": null,
-          "linea": 21
+          "linea": 22
         },
         {
           "nombre": "hora",
@@ -234438,7 +235441,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 22
+          "linea": 23
         },
         {
           "nombre": "Pagina",
@@ -234446,14 +235449,14 @@
           "exportada": true,
           "params": "{ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ aviso?: string }> }",
           "retorno": null,
-          "linea": 24
+          "linea": 25
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": null,
-      "hash": "0d0622f069e6"
+      "hash": "0ae170474fb2"
     },
     {
       "ruta": "apps/taller/app/ordenes/acciones.ts",
@@ -234784,7 +235787,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 14
+          "linea": 16
         },
         {
           "nombre": "Pagina",
@@ -234792,12 +235795,12 @@
           "exportada": true,
           "params": "{ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ aviso?: string; ok?: string }> }",
           "retorno": null,
-          "linea": 16
+          "linea": 18
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "be46b03c1e50"
+      "hash": "f9ae1f56bee4"
     },
     {
       "ruta": "apps/taller/app/pedidos/acciones.ts",
@@ -235054,6 +236057,48 @@
       ],
       "rutaApi": null,
       "hash": "c5628d32493d"
+    },
+    {
+      "ruta": "apps/taller/app/prov/[token]/page.tsx",
+      "ambito": "apps/taller",
+      "exporta": [
+        "Pagina"
+      ],
+      "funciones": [
+        {
+          "nombre": "Pagina",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ params }: { params: Promise<{ token: string }> }",
+          "retorno": null,
+          "linea": 18,
+          "resumen": "Página PÚBLICA del proveedor (móvil): marca del taller + «con Grupo ASegura». Muestra SOLO el documento del enlace (pedido o albarán) y deja confirmar el pedido y subir el albarán o la factura. Token "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "544ae70987a0"
+    },
+    {
+      "ruta": "apps/taller/app/prov/[token]/PortalProveedorCliente.tsx",
+      "ambito": "apps/taller",
+      "exporta": [
+        "PortalProveedorCliente"
+      ],
+      "funciones": [
+        {
+          "nombre": "PortalProveedorCliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ token, vista }: { token: string; vista: VistaProveedor }",
+          "retorno": null,
+          "linea": 8,
+          "resumen": "Acciones del proveedor: confirmar el pedido y subir el albarán (enlace de pedido) o la factura (enlace de factura)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0015fa1d62c8"
     },
     {
       "ruta": "apps/taller/app/recepcion/[id]/resguardo/page.tsx",
@@ -235361,7 +236406,7 @@
           "exportada": true,
           "params": "bytes: Uint8Array",
           "retorno": "string",
-          "linea": 27
+          "linea": 29
         },
         {
           "nombre": "mimeReal",
@@ -235369,7 +236414,7 @@
           "exportada": true,
           "params": "b: Uint8Array",
           "retorno": "string | null",
-          "linea": 33,
+          "linea": 37,
           "resumen": "Tipo REAL de la imagen por sus primeros bytes (no por lo que diga el navegador). null si no es PNG/JPEG/WebP."
         },
         {
@@ -235378,7 +236423,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 41,
+          "linea": 45,
           "resumen": "Nombre seguro para la ruta: sin separadores ni nada que no sea [a-z0-9-]."
         },
         {
@@ -235387,7 +236432,7 @@
           "exportada": true,
           "params": "a: ArchivoSubido",
           "retorno": "",
-          "linea": 44
+          "linea": 48
         },
         {
           "nombre": "rutaEsDelTaller",
@@ -235395,7 +236440,7 @@
           "exportada": true,
           "params": "tallerId: string, ruta: string",
           "retorno": null,
-          "linea": 53
+          "linea": 57
         },
         {
           "nombre": "codificar",
@@ -235403,7 +236448,7 @@
           "exportada": false,
           "params": "ruta: string",
           "retorno": null,
-          "linea": 56
+          "linea": 60
         },
         {
           "nombre": "almacenSupabase",
@@ -235411,7 +236456,7 @@
           "exportada": true,
           "params": "config: ConfigAlmacen",
           "retorno": "AlmacenArchivos",
-          "linea": 62,
+          "linea": 66,
           "resumen": "Almacén real contra Supabase Storage. `config` inyectable (tests con fetch falso)."
         },
         {
@@ -235420,7 +236465,7 @@
           "exportada": true,
           "params": "",
           "retorno": "AlmacenArchivos",
-          "linea": 115,
+          "linea": 126,
           "resumen": "Implementación activa: Supabase Storage. Falta una variable → lanza con su nombre (no se pierde una foto en silencio)."
         },
         {
@@ -235429,13 +236474,13 @@
           "exportada": true,
           "params": "tallerId: string, rutas: string[]",
           "retorno": "Promise<Map<string, string>>",
-          "linea": 120,
+          "linea": 131,
           "resumen": "Firma varias rutas a la vez. Sin Storage configurado o con fallo → mapa vacío para esas rutas (la pantalla pone «sin imagen»)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c32fbd010ab1"
+      "hash": "98e8aded00fd"
     },
     {
       "ruta": "apps/taller/lib/alta-taller.ts",
@@ -236273,7 +237318,8 @@
         "fijarRrhhEmpresaBd",
         "fijarContabilidadEmpresaBd",
         "tallerPorCodigoLimitado",
-        "tallerPorEnlaceLimitado"
+        "tallerPorEnlaceLimitado",
+        "enlaceProveedorLimitado"
       ],
       "funciones": [
         {
@@ -236282,7 +237328,7 @@
           "exportada": true,
           "params": "d: { razonSocial: string; nombreComercial: string; nif: string | null }",
           "retorno": "Promise<",
-          "linea": 24,
+          "linea": 25,
           "resumen": "Alta de la FILA del taller (solo el operador, 0004): `taller.alta_taller()` es SECURITY DEFINER porque el rol de la app no tiene INSERT en `talleres`. Idempotente por NIF (`creado: false` si ya existí"
         },
         {
@@ -236291,7 +237337,7 @@
           "exportada": true,
           "params": "codigo: string",
           "retorno": "Promise<string | null>",
-          "linea": 35,
+          "linea": 36,
           "resumen": "Código de acceso → id del taller (0006): `taller.taller_por_codigo()` es SECURITY DEFINER porque aún no hay taller (sin RLS) y devuelve SOLO el id. null = código desconocido o taller inactivo."
         },
         {
@@ -236300,7 +237346,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<string[]>",
-          "linea": 44,
+          "linea": 45,
           "resumen": "Ids de los talleres activos (0008) para el cron de purga: `taller.talleres_activos()` es SECURITY DEFINER porque sin taller fijado RLS no deja listar `talleres`. Devuelve SOLO ids; cada taller se trab"
         },
         {
@@ -236309,7 +237355,7 @@
           "exportada": true,
           "params": "tallerId: string, empresaId: string | null",
           "retorno": "Promise<boolean>",
-          "linea": 50,
+          "linea": 51,
           "resumen": "Vínculo con la empresa de rrhh: SOLO el operador (0006). Devuelve false si el taller no existe."
         },
         {
@@ -236318,7 +237364,7 @@
           "exportada": true,
           "params": "tallerId: string, empresaId: string | null",
           "retorno": "Promise<boolean>",
-          "linea": 56,
+          "linea": 57,
           "resumen": "Vínculo con la empresa de contabilidad: SOLO el operador (0010). Devuelve false si el taller no existe."
         },
         {
@@ -236327,7 +237373,7 @@
           "exportada": false,
           "params": "tx: TxRaw",
           "retorno": "StoreCodigo",
-          "linea": 64,
+          "linea": 65,
           "resumen": "Almacén del límite por IP (`taller.bloqueos_codigo`) bajo candado de transacción."
         },
         {
@@ -236336,7 +237382,7 @@
           "exportada": true,
           "params": "codigo: string, ip: string, ahora: Date",
           "retorno": "Promise<string | null>",
-          "linea": 83,
+          "linea": 84,
           "resumen": "Código → taller con límite de intentos por IP (`taller.bloqueos_codigo`, candado de transacción). null = inexistente o IP bloqueada."
         },
         {
@@ -236345,8 +237391,17 @@
           "exportada": true,
           "params": "token: unknown, ip: string | null, ahora: Date",
           "retorno": "Promise<string | null>",
-          "linea": 97,
+          "linea": 98,
           "resumen": "Enlace público de cita `/c/<token>` → taller, con límite de fallos por IP. null = token inexistente, caducado, usado, mal formado O IP bloqueada (indistinguible: 404). El contador va en su propia tran"
+        },
+        {
+          "nombre": "enlaceProveedorLimitado",
+          "kind": "function",
+          "exportada": true,
+          "params": "token: unknown, ip: string | null, ahora: Date",
+          "retorno": "Promise<EnlaceProveedorResuelto | null>",
+          "linea": 119,
+          "resumen": "Portal del proveedor `/prov/<token>` → (taller, enlace, propósito), con límite de fallos por IP. La BD recibe SOLO el HASH (`taller.enlace_proveedor_por_hash`, SECURITY DEFINER de 0012: valida hash, c"
         }
       ],
       "tablas": [
@@ -236354,7 +237409,7 @@
         "taller"
       ],
       "rutaApi": null,
-      "hash": "8d400318b75c"
+      "hash": "64f4005e1a15"
     },
     {
       "ruta": "apps/taller/lib/direccion.ts",
@@ -236613,6 +237668,41 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "17d5ffd1b29b"
+    },
+    {
+      "ruta": "apps/taller/lib/extractor-factura.ts",
+      "ambito": "apps/taller",
+      "resumen": "Extractor REAL de facturas de proveedor (puerto `ExtractorFactura` de lib/portal-proveedor.ts). Minimización de datos: · XML (Facturae/UBL): se lee SIN IA (`leerFacturaXml`). Solo si no se entiende, va a la IA el XML MINIMIZADO (sin firma, adjuntos, direcciones, contactos ni cuentas). · PDF con text",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "parsear",
+          "kind": "function",
+          "exportada": false,
+          "params": "t: string",
+          "retorno": "unknown",
+          "linea": 15
+        },
+        {
+          "nombre": "porTexto",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string",
+          "retorno": "Promise<ExtraccionFactura>",
+          "linea": 19
+        },
+        {
+          "nombre": "textoDePdf",
+          "kind": "function",
+          "exportada": false,
+          "params": "bytes: Uint8Array",
+          "retorno": "Promise<string>",
+          "linea": 25
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0fd81c2a5980"
     },
     {
       "ruta": "apps/taller/lib/factura-hechos.ts",
@@ -237149,7 +238239,9 @@
       "resumen": "Límite de fallos por IP en el enlace público de cita `/c/[token]`. Mismo patrón que el código del taller (limite-codigo.ts) y misma tabla (`taller.bloqueos_codigo`, sin taller_id), con clave `enlace:<ip>`. Un token inexistente, caducado, usado o con formato inválido cuenta como fallo; con la IP bloq",
       "exporta": [
         "claveEnlace",
-        "resolverEnlaceLimitado"
+        "resolverEnlaceLimitado",
+        "claveProveedor",
+        "resolverProveedorLimitado"
       ],
       "funciones": [
         {
@@ -237168,11 +238260,28 @@
           "retorno": "Promise<string | null>",
           "linea": 10,
           "resumen": "`resolver` devuelve el taller de una invitación VIGENTE (o null). IP sin dato → una sola cubeta común: nunca se salta el límite."
+        },
+        {
+          "nombre": "claveProveedor",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "ip: string",
+          "retorno": null,
+          "linea": 17,
+          "resumen": "Portal del proveedor `/prov/<token>`: mismo límite y misma tabla, clave `proveedor:<ip>`. Token malo o IP bloqueada → null (404 igual)."
+        },
+        {
+          "nombre": "resolverProveedorLimitado",
+          "kind": "function",
+          "exportada": true,
+          "params": "store: StoreCodigo, o: { ip: string | null; ahora: Date; resolver(): Promise<T | null> }",
+          "retorno": "Promise<T | null>",
+          "linea": 18
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "983f8a17c785"
+      "hash": "2b3acb74d89d"
     },
     {
       "ruta": "apps/taller/lib/login.ts",
@@ -237745,7 +238854,7 @@
           "exportada": true,
           "params": "aleatorio: () => number = () => crypto.getRandomValues(new Uint32Array(1))[0]",
           "retorno": "string",
-          "linea": 28,
+          "linea": 29,
           "resumen": "4 dígitos aleatorios, no triviales. `aleatorio` inyectable para tests."
         },
         {
@@ -237754,7 +238863,7 @@
           "exportada": true,
           "params": "tx: TxPersonal, tallerId: string, d: { nombre: string; rol: string }, aleatorio?: () => number,",
           "retorno": "Promise<",
-          "linea": 35
+          "linea": 36
         },
         {
           "nombre": "usuario",
@@ -237762,7 +238871,7 @@
           "exportada": false,
           "params": "tx: { usuarioTaller: Delegado }, tallerId: string, id: string",
           "retorno": null,
-          "linea": 47
+          "linea": 48
         },
         {
           "nombre": "bajaUsuario",
@@ -237770,7 +238879,7 @@
           "exportada": true,
           "params": "tx: TxPersonal, tallerId: string, id: string",
           "retorno": "Promise<void>",
-          "linea": 53
+          "linea": 54
         },
         {
           "nombre": "resetPinUsuario",
@@ -237778,23 +238887,23 @@
           "exportada": true,
           "params": "tx: TxPersonal, tallerId: string, id: string, aleatorio?: () => number,",
           "retorno": "Promise<",
-          "linea": 62
+          "linea": 63
         },
         {
           "nombre": "validarProveedor",
           "kind": "function",
           "exportada": true,
-          "params": "d: { nombre: string; correo: string }",
+          "params": "d: { nombre: string; correo: string; nif?: string | null }",
           "retorno": "",
-          "linea": 78
+          "linea": 79
         },
         {
           "nombre": "guardarProveedor",
           "kind": "function",
           "exportada": true,
-          "params": "tx: TxPersonal, tallerId: string, d: { id?: string; nombre: string; correo: string; activo?: boolean },",
+          "params": "tx: TxPersonal, tallerId: string, d: { id?: string; nombre: string; correo: string; nif?: string | null; activo?: boolean },",
           "retorno": "Promise<string>",
-          "linea": 87
+          "linea": 94
         },
         {
           "nombre": "cambiarMiPin",
@@ -237802,13 +238911,13 @@
           "exportada": true,
           "params": "tx: TxCambioPin, o: { tallerId: string; usuarioId: string; pinNuevo: string; pinActual?: unknown; ahora?: Date },",
           "retorno": "Promise<ResultadoCambioPin>",
-          "linea": 114,
+          "linea": 121,
           "resumen": "El PIN nuevo que elige la persona: 4 dígitos, no trivial, distinto del actual. Si NO es el primer acceso (`debeCambiarPin` falso) exige el PIN ACTUAL, y cada fallo cuenta en el bloqueo de ESA persona "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f091b3bfcd18"
+      "hash": "cd2224d58dde"
     },
     {
       "ruta": "apps/taller/lib/pin-store-bd.ts",
@@ -237859,6 +238968,223 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "d75cbc54a0e1"
+    },
+    {
+      "ruta": "apps/taller/lib/portal-proveedor.ts",
+      "ambito": "apps/taller",
+      "resumen": "eslint-disable @typescript-eslint/no-explicit-any -- delegados Prisma tipados de forma estructural (fake en tests)",
+      "exporta": [
+        "politicaPortal",
+        "crearEnlacePedido",
+        "verificarRecepcion",
+        "revocarEnlaces",
+        "enlaceVigente",
+        "vistaProveedor",
+        "confirmarPedidoProveedor",
+        "registrarDocumentoProveedor",
+        "casarFactura",
+        "contabilizarFactura",
+        "procesarFactura",
+        "confirmarFactura",
+        "corregirFactura",
+        "rechazarFactura"
+      ],
+      "funciones": [
+        {
+          "nombre": "ent",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown, def: number",
+          "retorno": null,
+          "linea": 40
+        },
+        {
+          "nombre": "politicaPortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "tx: Pick<TxPortal, 'configuracion'>, tallerId: string",
+          "retorno": "Promise<PoliticaPortal>",
+          "linea": 42
+        },
+        {
+          "nombre": "nuevoEnlace",
+          "kind": "function",
+          "exportada": false,
+          "params": "tx: TxPortal, o: { tallerId: string; usuarioId: string; proveedorId: string; proposito: Proposito; pedidoId: string | null; albaranId: string | null; ahora: Date },",
+          "retorno": "Promise<",
+          "linea": 60,
+          "resumen": "─── Enlaces (lado del taller, con sesión) ───────────────────────────────────"
+        },
+        {
+          "nombre": "crearEnlacePedido",
+          "kind": "function",
+          "exportada": true,
+          "params": "tx: TxPortal, o: { tallerId: string; usuarioId: string; pedidoId: string; ahora: Date },",
+          "retorno": "Promise<Resultado<",
+          "linea": 83,
+          "resumen": "Enlace 1 (pedido). Generarlo ES mandarlo: un borrador pasa a «enviado» con quién y cuándo. Anula el enlace anterior."
+        },
+        {
+          "nombre": "verificarRecepcion",
+          "kind": "function",
+          "exportada": true,
+          "params": "tx: TxPortal, o: { tallerId: string; usuarioId: string; albaranId: string; ahora: Date },",
+          "retorno": "Promise<Resultado<",
+          "linea": 103,
+          "resumen": "«Recepción verificada»: una PERSONA confirma que lo recibido es lo del albarán. Solo entonces se genera el enlace 2 (factura, alcance = este albarán). Marca verificados los albaranes que subió el prov"
+        },
+        {
+          "nombre": "revocarEnlaces",
+          "kind": "function",
+          "exportada": true,
+          "params": "tx: TxPortal, o: { tallerId: string; usuarioId: string; proposito: Proposito; documentoId: string; ahora: Date },",
+          "retorno": "Promise<number>",
+          "linea": 127,
+          "resumen": "Revoca a mano el enlace vivo de un documento."
+        },
+        {
+          "nombre": "enlaceVigente",
+          "kind": "function",
+          "exportada": true,
+          "params": "tx: Pick<TxPortal, 'enlaceProveedor'>, o: { tallerId: string; enlaceId: string; token: string; ahora: Date; proposito?: Proposito },",
+          "retorno": "Promise<EnlaceFila | null>",
+          "linea": 141,
+          "resumen": "Relee la fila bajo RLS y repite la evaluación del módulo (defensa en profundidad). null = no vale (respuesta uniforme)."
+        },
+        {
+          "nombre": "unidad",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "u: string",
+          "retorno": "UnidadStock",
+          "linea": 154
+        },
+        {
+          "nombre": "cant",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "c: unknown, u: string",
+          "retorno": null,
+          "linea": 155
+        },
+        {
+          "nombre": "dia",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: Date | null | undefined",
+          "retorno": null,
+          "linea": 156
+        },
+        {
+          "nombre": "vistaProveedor",
+          "kind": "function",
+          "exportada": true,
+          "params": "tx: TxPortal, e: EnlaceFila, ahora: Date",
+          "retorno": "Promise<VistaProveedor | null>",
+          "linea": 170,
+          "resumen": "SOLO lo necesario del documento del enlace: sin precios, sin cliente final, sin nada más del taller."
+        },
+        {
+          "nombre": "confirmarPedidoProveedor",
+          "kind": "function",
+          "exportada": true,
+          "params": "tx: TxPortal, e: EnlaceFila, ahora: Date",
+          "retorno": "Promise<Resultado<object>>",
+          "linea": 194,
+          "resumen": "El proveedor confirma el pedido (idempotente). Solo con un enlace de PEDIDO."
+        },
+        {
+          "nombre": "registrarDocumentoProveedor",
+          "kind": "function",
+          "exportada": true,
+          "params": "tx: TxPortal, e: EnlaceFila, o: { subida: SubidaGuardada; ip: string | null; ahora: Date },",
+          "retorno": "Promise<Resultado<",
+          "linea": 206,
+          "resumen": "Registra lo que subió el proveedor (el fichero ya está en Storage). Enlace de pedido → ALBARÁN; enlace de factura → FACTURA (y el enlace se cierra: una factura por enlace). El mismo fichero dos veces "
+        },
+        {
+          "nombre": "aMil",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "cantidad: unknown, u: string",
+          "retorno": null,
+          "linea": 231
+        },
+        {
+          "nombre": "n",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 232
+        },
+        {
+          "nombre": "bandas",
+          "kind": "function",
+          "exportada": false,
+          "params": "tx: TxPortal, tallerId: string, albaranId: string",
+          "retorno": null,
+          "linea": 235,
+          "resumen": "Bandas del taller → forma del módulo (cantidades en milésimas: 1 ud = 1000; granel ya va en ml = milésimas de litro)."
+        },
+        {
+          "nombre": "casarFactura",
+          "kind": "function",
+          "exportada": true,
+          "params": "tx: TxPortal, o: { tallerId: string; documentoId: string; ahora: Date }",
+          "retorno": "Promise<Resultado<",
+          "linea": 259,
+          "resumen": "Casa la factura (ya extraída) contra pedido y albarán y deja `lista` (y la contabiliza) o `revisar`."
+        },
+        {
+          "nombre": "contabilizarFactura",
+          "kind": "function",
+          "exportada": true,
+          "params": "tx: TxPortal, o: { tallerId: string; documentoId: string; ahora: Date }",
+          "retorno": "Promise<Resultado<object>>",
+          "linea": 286,
+          "resumen": "Contabiliza (valora el albarán con los precios de la factura → `valorarAlbaran` encola el hecho `compra` en el outbox). SOLO si `puedeContabilizar` lo autoriza: case que cuadra o persona que confirmó."
+        },
+        {
+          "nombre": "procesarFactura",
+          "kind": "function",
+          "exportada": true,
+          "params": "deps: { conTaller: <R>(tallerId: string, fn: (tx: TxPortal) => Promise<R>) => Promise<R> leer(tallerId: string, ruta: string): Promise<Uint8Array | null> extractor: ExtractorFactura }, o: { tallerId: string; documentoId: string; ahora: Date",
+          "retorno": "Promise<Resultado<",
+          "linea": 316,
+          "resumen": "Lee la factura (XML sin IA; PDF/imagen con IA) y la casa. La IA se llama FUERA de una transacción: `conTaller` se abre dos veces (leer el documento / guardar el resultado). `bytes` opcional: si no vie"
+        },
+        {
+          "nombre": "confirmarFactura",
+          "kind": "function",
+          "exportada": true,
+          "params": "tx: TxPortal, o: { tallerId: string; documentoId: string; usuarioId: string; ahora: Date },",
+          "retorno": "Promise<Resultado<",
+          "linea": 354,
+          "resumen": "Una PERSONA confirma una factura en «Revisar» (acepta las diferencias señaladas) → se contabiliza."
+        },
+        {
+          "nombre": "corregirFactura",
+          "kind": "function",
+          "exportada": true,
+          "params": "tx: TxPortal, o: { tallerId: string; documentoId: string; usuarioId: string; ahora: Date; correccion: CorreccionFactura },",
+          "retorno": "Promise<Resultado<",
+          "linea": 378,
+          "resumen": "Una PERSONA corrige lo leído y se vuelve a casar (si ahora cuadra, se contabiliza por case)."
+        },
+        {
+          "nombre": "rechazarFactura",
+          "kind": "function",
+          "exportada": true,
+          "params": "tx: TxPortal, o: { tallerId: string; documentoId: string; usuarioId: string; nota: string; ahora: Date },",
+          "retorno": "Promise<Resultado<object>>",
+          "linea": 408,
+          "resumen": "Rechaza la factura (p. ej. no es de este albarán). Después se puede pedir otra con «Recepción verificada»."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7322c88e3273"
     },
     {
       "ruta": "apps/taller/lib/presupuestos.ts",
@@ -238050,6 +239376,44 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "74737d5380e2"
+    },
+    {
+      "ruta": "apps/taller/lib/recambios-pendientes.ts",
+      "ambito": "apps/taller",
+      "resumen": "eslint-disable @typescript-eslint/no-explicit-any -- delegados Prisma tipados de forma estructural (fake en tests)",
+      "exporta": [
+        "recambiosPendientes",
+        "aceptarRecambio"
+      ],
+      "funciones": [
+        {
+          "nombre": "esPendiente",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "l: any",
+          "retorno": null,
+          "linea": 9
+        },
+        {
+          "nombre": "recambiosPendientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "tx: Pick<TxRecambios, 'otLinea'>, tallerId: string, otId: string",
+          "retorno": null,
+          "linea": 11
+        },
+        {
+          "nombre": "aceptarRecambio",
+          "kind": "function",
+          "exportada": true,
+          "params": "tx: TxRecambios, o: { tallerId: string; otId: string; lineaId: string; usuarioId: string; ahora: Date }",
+          "retorno": "Promise<Resultado>",
+          "linea": 16
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "fa428d7d7966"
     },
     {
       "ruta": "apps/taller/lib/recepcion.ts",
@@ -238591,12 +239955,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 12
+          "linea": 13
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "200ac5c37ab9"
+      "hash": "53944d02a572"
     },
     {
       "ruta": "apps/taller/scripts/alta-dueno.ts",
@@ -249407,6 +250771,655 @@
       "hash": "499d6c0e8a14"
     },
     {
+      "ruta": "packages/module-contabilidad/src/impuestos/borrador.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "Borrador imprimible (HTML) y CSV de un modelo calculado. PURO. Es lo que se entrega MIENTRAS no exista el fichero oficial: «diseño oficial pendiente de contrastar» (el diseño de registro de la AEAT no se ha podido verificar; nunca se inventan posiciones).",
+      "exporta": [
+        "escaparHtml",
+        "neutralizarFormulaCsv",
+        "valorCasilla",
+        "borradorHtml",
+        "borradorCsv"
+      ],
+      "funciones": [
+        {
+          "nombre": "escaparHtml",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "t: string",
+          "retorno": null,
+          "linea": 7
+        },
+        {
+          "nombre": "neutralizarFormulaCsv",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "t: string",
+          "retorno": null,
+          "linea": 10,
+          "resumen": "Neutraliza fórmulas de hoja de cálculo (=, +, -, @, tab, retorno) en texto libre."
+        },
+        {
+          "nombre": "valorCasilla",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Casilla",
+          "retorno": "string",
+          "linea": 12
+        },
+        {
+          "nombre": "borradorHtml",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CalculoModelo, o: OpcionesBorrador",
+          "retorno": "string",
+          "linea": 22
+        },
+        {
+          "nombre": "borradorCsv",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CalculoModelo",
+          "retorno": "string",
+          "linea": 39,
+          "resumen": "CSV (punto y coma, coma decimal: Excel español) con una fila por casilla."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e5d6fd9c48cc"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/impuestos/comun.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "Tipos y utilidades COMUNES de la fase 4 (impuestos). PURO: dinero en céntimos enteros, reloj inyectado, sin BD ni red. ⚠️ TODO lo de esta carpeta es BORRADOR REVISABLE: prepara cifras y su trazabilidad; NO presenta nada ante la AEAT. La presentación la hace el titular o su gestor con certificado dig",
+      "exporta": [
+        "esModeloAeat",
+        "esPeriodoModelo",
+        "esModeloAnual",
+        "rangoDeModelo",
+        "enRango",
+        "trimestreDe",
+        "casilla",
+        "sumar",
+        "casillaDe",
+        "importeDe",
+        "nifNormalizado",
+        "validarEjercicio"
+      ],
+      "funciones": [
+        {
+          "nombre": "esModeloAeat",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "v is ModeloAeat",
+          "linea": 10
+        },
+        {
+          "nombre": "esPeriodoModelo",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "v is PeriodoModelo",
+          "linea": 15
+        },
+        {
+          "nombre": "esModeloAnual",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "m: ModeloAeat",
+          "retorno": null,
+          "linea": 19
+        },
+        {
+          "nombre": "iso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a: number, m: number, d: number",
+          "retorno": null,
+          "linea": 26
+        },
+        {
+          "nombre": "finDeMes",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a: number, m: number",
+          "retorno": null,
+          "linea": 27
+        },
+        {
+          "nombre": "rangoDeModelo",
+          "kind": "function",
+          "exportada": true,
+          "params": "anio: number, periodo: PeriodoModelo",
+          "retorno": "RangoFechas",
+          "linea": 30,
+          "resumen": "Rango de fechas (inclusivo) de un periodo de un modelo."
+        },
+        {
+          "nombre": "enRango",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "fecha: string, r: RangoFechas",
+          "retorno": null,
+          "linea": 38
+        },
+        {
+          "nombre": "trimestreDe",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "fecha: string",
+          "retorno": "1 | 2 | 3 | 4",
+          "linea": 39
+        },
+        {
+          "nombre": "casilla",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "c: string, descripcion: string, importe: number, origen: Iterable<string> = [], certeza: 'alta' | 'media' = 'alta', tipo: Casilla['tipo'] = 'importe'",
+          "retorno": "Casilla",
+          "linea": 55
+        },
+        {
+          "nombre": "sumar",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "xs: Iterable<number>",
+          "retorno": "number",
+          "linea": 75
+        },
+        {
+          "nombre": "casillaDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CalculoModelo, numero: string",
+          "retorno": "Casilla | undefined",
+          "linea": 77
+        },
+        {
+          "nombre": "importeDe",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "c: CalculoModelo, numero: string",
+          "retorno": "number",
+          "linea": 81,
+          "resumen": "Importe de una casilla (0 si el modelo no la incluye)."
+        },
+        {
+          "nombre": "nifNormalizado",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "nif: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 83
+        },
+        {
+          "nombre": "validarEjercicio",
+          "kind": "function",
+          "exportada": true,
+          "params": "anio: number",
+          "retorno": "void",
+          "linea": 88
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d2c4c396353e"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/impuestos/declaraciones.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "Calendario por modelo y periodo + ciclo de vida de una declaración (borrador → revisado por gestor → presentado manualmente). PURO, reloj inyectado. Plazos [Probable: calendario general AEAT para año natural; los que caen en sábado, domingo o festivo se trasladan al siguiente día hábil y aquí NO se ",
+      "exporta": [
+        "vencimientoModelo",
+        "modelosDeForma",
+        "proximosPlazos",
+        "esEstadoDeclaracion",
+        "puedeTransitar",
+        "problemasParaRevisar",
+        "problemasPresentacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "iso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a: number, m: number, d: number",
+          "retorno": null,
+          "linea": 15
+        },
+        {
+          "nombre": "ultimoFeb",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a: number",
+          "retorno": null,
+          "linea": 16
+        },
+        {
+          "nombre": "vencimientoModelo",
+          "kind": "function",
+          "exportada": true,
+          "params": "modelo: ModeloAeat, anio: number, periodo: PeriodoModelo",
+          "retorno": "string",
+          "linea": 19,
+          "resumen": "Fecha límite de presentación (ISO) del modelo para el ejercicio y periodo. Lanza si la combinación no existe (p. ej. 303 anual)."
+        },
+        {
+          "nombre": "modelosDeForma",
+          "kind": "function",
+          "exportada": true,
+          "params": "forma: 'sociedad' | 'autonomo'",
+          "retorno": "ModeloAeat[]",
+          "linea": 36,
+          "resumen": "Modelos que corresponden a la forma de la empresa (el 130 solo a autónomos)."
+        },
+        {
+          "nombre": "proximosPlazos",
+          "kind": "function",
+          "exportada": true,
+          "params": "hoy: Date, forma: 'sociedad' | 'autonomo', horizonteDias = 365",
+          "retorno": "PlazoModelo[]",
+          "linea": 47,
+          "resumen": "Plazos que vencen desde hoy hasta dentro de `horizonteDias` (por defecto un año), ordenados. El reloj viene de fuera (`hoy`). Recorre los ejercicios `hoy-1 … hoy` (un 4T/anual del ejercicio anterior v"
+        },
+        {
+          "nombre": "esEstadoDeclaracion",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "v is EstadoDeclaracion",
+          "linea": 68
+        },
+        {
+          "nombre": "puedeTransitar",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "de: EstadoDeclaracion, a: EstadoDeclaracion",
+          "retorno": null,
+          "linea": 75
+        },
+        {
+          "nombre": "problemasParaRevisar",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Pick<CalculoModelo, 'noSoportado' | 'resultado' | 'modelo'>",
+          "retorno": "string[]",
+          "linea": 78,
+          "resumen": "Problemas por los que un cálculo NO puede pasar a «revisado» (vacía = puede)."
+        },
+        {
+          "nombre": "problemasPresentacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosPresentacion, hoy: Date",
+          "retorno": "string[]",
+          "linea": 89,
+          "resumen": "Valida la presentación manual: fecha ISO real, no futura (reloj inyectado), y justificante como referencia de texto."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b67c26c87ecc"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/impuestos/libros-iva.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "Libros registro de IVA (facturas EMITIDAS y RECIBIDAS) desde operaciones normalizadas. PURO. Una línea por (factura, tipo de IVA) → «desglose por tipo». Numeración correlativa dentro del periodo pedido, orden por fecha y nº. Incluye el resumen por tipo/clase (21/10/4/0, exentas, inversión del sujeto",
+      "exporta": [
+        "libroRegistroIva",
+        "cuadrarLibrosConMayor"
+      ],
+      "funciones": [
+        {
+          "nombre": "libroRegistroIva",
+          "kind": "function",
+          "exportada": true,
+          "params": "ops: readonly OperacionIva[], sentido: SentidoIva, rango: RangoFechas",
+          "retorno": "LibroRegistroIva",
+          "linea": 46
+        },
+        {
+          "nombre": "cuadrarLibrosConMayor",
+          "kind": "function",
+          "exportada": true,
+          "params": "emitidas: LibroRegistroIva, recibidas: LibroRegistroIva, saldo477: Centimos, saldo472: Centimos",
+          "retorno": "CuadreIva",
+          "linea": 95,
+          "resumen": "Cuadre libros de IVA ≡ mayor 477/472 del MISMO periodo (guardián de la fase 4). `saldo477` = haber − debe y `saldo472` = debe − haber de los movimientos del periodo por origen «hecho» (antes de la reg"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a3b28e6cbacd"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/impuestos/liquidacion.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "Asientos de LIQUIDACIÓN que se generan al marcar una declaración como presentada. PURO: devuelve apuntes, quien persiste los asienta. · IVA (303): regularización 477/472 → 4750 (a ingresar) o 4700 (a compensar), compensación de cuotas anteriores (4750/4700) y, si se ingresa, el pago 4750 → 572. · Re",
+      "exporta": [
+        "asientosPresentacion303",
+        "asientosPresentacionRetenciones",
+        "asientosDePresentacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "ap",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "cuenta: string, debe: Centimos, haber: Centimos, documento: string",
+          "retorno": "ApunteAsiento | null",
+          "linea": 13
+        },
+        {
+          "nombre": "limpio",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "xs: (ApunteAsiento | null)[]",
+          "retorno": "ApunteAsiento[]",
+          "linea": 14
+        },
+        {
+          "nombre": "asientosPresentacion303",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CalculoModelo, opts: { pagar: boolean }",
+          "retorno": "AsientoPropuesto[]",
+          "linea": 22,
+          "resumen": "Asientos de la presentación del 303. `pagar` = el titular ingresa el resultado (domiciliación/NRC) con cargo a bancos; si no, queda en 4750. Con resultado a compensar (negativo) deja el saldo en 4700 "
+        },
+        {
+          "nombre": "asientosPresentacionRetenciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CalculoModelo, opts: { pagar: boolean }",
+          "retorno": "AsientoPropuesto[]",
+          "linea": 48,
+          "resumen": "Pago de retenciones (111/115): 4751 → 572 por el resultado a ingresar. Sin asiento si no hay nada que pagar."
+        },
+        {
+          "nombre": "asientosDePresentacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CalculoModelo, opts: { pagar: boolean }",
+          "retorno": "AsientoPropuesto[]",
+          "linea": 57,
+          "resumen": "Asientos de la presentación según el modelo (los que no contabilizan devuelven [])."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2029920da03d"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/impuestos/modelo303.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "Modelo 303 (autoliquidación trimestral de IVA, régimen general) y 390 (resumen anual). PURO, BORRADOR REVISABLE. MAPEO casilla → origen (ejercicio 2024-2026; certeza 'alta' = recordada con seguridad; 'media' = a contrastar con el formulario vigente): DEVENGADO (operaciones EMITIDAS, clase interior, ",
+      "exporta": [
+        "calcularModelo303",
+        "tipoResultado303",
+        "calcularModelo390"
+      ],
+      "funciones": [
+        {
+          "nombre": "nuevo",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": "Acum",
+          "linea": 52
+        },
+        {
+          "nombre": "suma",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a: Acum, o: OperacionIva",
+          "retorno": null,
+          "linea": 53
+        },
+        {
+          "nombre": "calcularModelo303",
+          "kind": "function",
+          "exportada": true,
+          "params": "ops: readonly OperacionIva[], p: ParametrosModelo303",
+          "retorno": "CalculoModelo",
+          "linea": 55
+        },
+        {
+          "nombre": "tipoResultado303",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CalculoModelo",
+          "retorno": "'a_ingresar' | 'a_compensar' | 'cero' | 'no_calculable'",
+          "linea": 178,
+          "resumen": "Qué hacer con el resultado: a ingresar, a compensar (negativo) o sin actividad. En el 4T, el negativo también puede pedirse en devolución."
+        },
+        {
+          "nombre": "calcularModelo390",
+          "kind": "function",
+          "exportada": true,
+          "params": "ops: readonly OperacionIva[], p: { anio: number; regimenIva: string | null; compensarPorTrimestre?: readonly number[] }",
+          "retorno": "Modelo390",
+          "linea": 197,
+          "resumen": "Resumen anual: suma casilla a casilla de los cuatro 303 (las casillas llevan la numeración del 303 de origen; la del 390 se contrastará). [Probable] Hay indicios de que el 390 deja de existir desde el"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ad34a41e7264"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/impuestos/modelo347.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "Modelo 347 (operaciones con terceros > 3.005,06 €), 349 (operaciones intracomunitarias) y 130 (pago fraccionado IRPF, autónomos). PURO, BORRADOR REVISABLE. Diseño de registro oficial (BOE, longitud fija) PENDIENTE de contrastar: no se genera fichero.",
+      "exporta": [
+        "calcularModelo347",
+        "periodicidad349",
+        "calcularModelo349",
+        "calcularModelo130",
+        "exentoDe130",
+        "acumuladoDeAsientos"
+      ],
+      "funciones": [
+        {
+          "nombre": "calcularModelo347",
+          "kind": "function",
+          "exportada": true,
+          "params": "ops: readonly OperacionIva[], anio: number",
+          "retorno": "Modelo347",
+          "linea": 37,
+          "resumen": "347 desde las operaciones de IVA: importe = base + cuota (IVA incluido), por NIF y clave (A/B), neto de rectificativas. Se excluyen (se declaran por otra vía) las intracomunitarias (349), las importac"
+        },
+        {
+          "nombre": "periodicidad349",
+          "kind": "function",
+          "exportada": true,
+          "params": "entregasPorTrimestre: readonly Centimos[]",
+          "retorno": "'T' | 'M'",
+          "linea": 86
+        },
+        {
+          "nombre": "calcularModelo349",
+          "kind": "function",
+          "exportada": true,
+          "params": "ops: readonly OperacionIva[], p: { anio: number; trimestre: 1 | 2 | 3 | 4 }",
+          "retorno": "Modelo349",
+          "linea": 90
+        },
+        {
+          "nombre": "calcularModelo130",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: AcumuladoRendimiento, p: { anio: number; trimestre: 1 | 2 | 3 | 4; estimacion?: 'directa_normal' | 'directa_simplificada' | 'objetiva'; minoracion110?: boolean }",
+          "retorno": "CalculoModelo",
+          "linea": 150,
+          "resumen": "130 (estimación directa NORMAL): 20 % del rendimiento neto ACUMULADO del año (si es positivo) − pagos fraccionados anteriores − retenciones. 01 ingresos · 02 gastos · 03 rendimiento neto = 01 − 02 · 0"
+        },
+        {
+          "nombre": "exentoDe130",
+          "kind": "function",
+          "exportada": true,
+          "params": "ingresosAnioAnterior: Centimos, conRetencionAnioAnterior: Centimos",
+          "retorno": "boolean | null",
+          "linea": 181,
+          "resumen": "¿Está exento de presentar el 130? Si ≥ 70 % de los ingresos del año anterior sufrió retención/ingreso a cuenta [Probable: art. 109.1 RIRPF]. `null` = sin datos."
+        },
+        {
+          "nombre": "acumuladoDeAsientos",
+          "kind": "function",
+          "exportada": true,
+          "params": "asientos: readonly Asiento[], p: { anio: number; trimestre: 1 | 2 | 3 | 4; pagosAnteriores: Centimos }",
+          "retorno": "AcumuladoRendimiento",
+          "linea": 191,
+          "resumen": "Acumulado del 130 desde los ASIENTOS del año: ingresos = haber − debe de los grupos 70-75 (ventas y otros ingresos de explotación), gastos = debe − haber de los grupos 60-62, 64-65, 68 (explotación y "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a2eaf4dd1051"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/impuestos/operaciones.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "Operación de IVA normalizada: el PUERTO de entrada de libros registro y de los modelos 303/390/347/349. PURO. Cada vertical/app la construye desde sus asientos o facturas (la app de contabilidad: desde `hechos_contables` + `facturas_recibidas`); el módulo no consulta ninguna BD. `ref` es la trazabil",
+      "exporta": [
+        "problemasOperacion",
+        "validarOperacion",
+        "claveDesglose",
+        "operacionesDeHecho"
+      ],
+      "funciones": [
+        {
+          "nombre": "problemasOperacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "o: OperacionIva",
+          "retorno": "string[]",
+          "linea": 66,
+          "resumen": "Problemas de forma de una operación (vacía = válida). No lanza."
+        },
+        {
+          "nombre": "validarOperacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "o: OperacionIva",
+          "retorno": "OperacionIva",
+          "linea": 81,
+          "resumen": "Valida y devuelve la operación (lanza si no es válida)."
+        },
+        {
+          "nombre": "claveDesglose",
+          "kind": "function",
+          "exportada": true,
+          "params": "o: Pick<OperacionIva, 'clase' | 'tipoIva'>",
+          "retorno": "ClaveDesglose",
+          "linea": 89
+        },
+        {
+          "nombre": "operacionesDeHecho",
+          "kind": "function",
+          "exportada": true,
+          "params": "h: HechoVenta | HechoCompra, extra: ExtraOperacion = {}",
+          "retorno": "OperacionIva[]",
+          "linea": 117,
+          "resumen": "Hecho de venta/compra → operaciones de IVA, UNA por tipo de IVA (la cuota por línea es `cuota` o `base × tipo`, igual que `asientoDesdeHecho`, para que el libro cuadre con el mayor 477/472 al céntimo)"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7024a47e7010"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/impuestos/retenciones.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "Retenciones e ingresos a cuenta: modelos 111 (trabajo/profesionales/premios…), 115 (alquileres), 190 y 180 (resúmenes anuales con perceptores). PURO, BORRADOR REVISABLE. Entrada GENÉRICA (`RetencionPracticada`): la alimentan hoy las compras con retención (profesionales, alquileres) y, después, NÓMIN",
+      "exporta": [
+        "problemasRetencion",
+        "calcularModelo111",
+        "calcularModelo115",
+        "calcularModelo190",
+        "calcularModelo180"
+      ],
+      "funciones": [
+        {
+          "nombre": "problemasRetencion",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: RetencionPracticada",
+          "retorno": "string[]",
+          "linea": 55
+        },
+        {
+          "nombre": "grupo",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": "Grupo",
+          "linea": 66
+        },
+        {
+          "nombre": "acumular",
+          "kind": "function",
+          "exportada": false,
+          "params": "g: Grupo, r: RetencionPracticada",
+          "retorno": null,
+          "linea": 67
+        },
+        {
+          "nombre": "perceptores",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "g: Grupo",
+          "retorno": null,
+          "linea": 72
+        },
+        {
+          "nombre": "filtrar",
+          "kind": "function",
+          "exportada": false,
+          "params": "rs: readonly RetencionPracticada[], anio: number, periodo: PeriodoModelo, conceptos: readonly ConceptoRetencion[]",
+          "retorno": null,
+          "linea": 74
+        },
+        {
+          "nombre": "calcularModelo111",
+          "kind": "function",
+          "exportada": true,
+          "params": "rs: readonly RetencionPracticada[], p: ParametrosRetenciones",
+          "retorno": "CalculoModelo",
+          "linea": 104
+        },
+        {
+          "nombre": "calcularModelo115",
+          "kind": "function",
+          "exportada": true,
+          "params": "rs: readonly RetencionPracticada[], p: ParametrosRetenciones",
+          "retorno": "CalculoModelo",
+          "linea": 133
+        },
+        {
+          "nombre": "calcularModelo190",
+          "kind": "function",
+          "exportada": true,
+          "params": "rs: readonly RetencionPracticada[], anio: number",
+          "retorno": "Modelo190",
+          "linea": 178
+        },
+        {
+          "nombre": "calcularModelo180",
+          "kind": "function",
+          "exportada": true,
+          "params": "rs: readonly RetencionPracticada[], anio: number",
+          "retorno": "Modelo180",
+          "linea": 219
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c91f2e982b36"
+    },
+    {
       "ruta": "packages/module-contabilidad/src/iva.ts",
       "ambito": "packages/module-contabilidad",
       "exporta": [
@@ -251367,51 +253380,170 @@
     {
       "ruta": "packages/module-nominas/src/calcular.ts",
       "ambito": "packages/module-nominas",
+      "resumen": "ADAPTADOR euros ⇄ céntimos para los llamadores de `apps/rrhh` (la BD guarda NUMERIC en euros y el `datos_calculo` JSONB histórico va en euros). El cálculo de verdad está en `motor.ts`, en céntimos enteros: aquí solo se convierte la entrada UNA vez y la salida UNA vez (sin aritmética en float). /",
       "exporta": [
-        "calcularNomina"
+        "calcularNomina",
+        "desgloseEnEuros",
+        "desgloseConfirmable"
       ],
       "funciones": [
-        {
-          "nombre": "r2",
-          "kind": "function",
-          "exportada": false,
-          "params": "n: number",
-          "retorno": "number",
-          "linea": 11
-        },
         {
           "nombre": "calcularNomina",
           "kind": "function",
           "exportada": true,
-          "params": "contrato: ContratoLaboral, incidencias: IncidenciaMes[], tablas: TablasCotizacion, periodo: string,",
+          "params": "contrato: ContratoLaboral, incidencias: IncidenciaMes[], o: OpcionesNominaEuros",
           "retorno": "NominaDesglose",
-          "linea": 15
+          "linea": 20
+        },
+        {
+          "nombre": "desgloseEnEuros",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: NominaCentimos",
+          "retorno": "NominaDesglose",
+          "linea": 48
+        },
+        {
+          "nombre": "desgloseConfirmable",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: unknown",
+          "retorno": "",
+          "linea": 97,
+          "resumen": "¿Se puede CONFIRMAR (publicar al empleado) este desglose? Solo si se calculó con el motor N0 y sin nada pendiente. `cifrasPendientes` ausente (borrador anterior al 05/11/2026, tablas de 2025 con nombr"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a3b8cba3f3f0"
+      "hash": "8d47f19c05c2"
     },
     {
-      "ruta": "packages/module-nominas/src/tablas-2026.ts",
+      "ruta": "packages/module-nominas/src/cifras.ts",
       "ambito": "packages/module-nominas",
+      "resumen": "Cada cifra legal lleva su FUENTE y su CERTEZA. Una cifra que no se ha podido contrastar con el BOE queda como `PENDIENTE_VERIFICAR`: el motor la puede usar en modo «simulación» (borrador marcado), pero en modo «cálculo» (nómina que se confirma y se publica) LANZA `CifraPendienteError` — fail-closed.",
       "exporta": [
-        "tablas2026"
+        "cifra"
       ],
       "funciones": [
         {
-          "nombre": "tablas2026",
+          "nombre": "cifra",
           "kind": "function",
           "exportada": true,
-          "params": "atEp: number, diasLaborablesMes = 22",
-          "retorno": "TablasCotizacion",
-          "linea": 23,
-          "resumen": "Devuelve las TablasCotizacion para 2026 con el tipo AT/EP específico de la empresa. El parámetro atEp viene de rrhh.empresas.at_ep_tipo (resuelto por CNAE via at-ep-agente)."
+          "params": "clave: string, valor: T | null, certeza: Certeza, fuente: string",
+          "retorno": "Cifra<T>",
+          "linea": 21
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3ee5e1e1a03f"
+      "hash": "4d1d0516d1e9"
+    },
+    {
+      "ruta": "packages/module-nominas/src/dinero.ts",
+      "ambito": "packages/module-nominas",
+      "resumen": "Dinero en CÉNTIMOS ENTEROS y tipos en PARTES POR MILLÓN (ppm) — sin floats en el motor. 4,70 % → 47_000 ppm · 0,15 % → 1_500 ppm · 1.800,00 € → 180_000 céntimos Una cuota = round(base × ppm / 1_000_000): UN redondeo por línea (medio céntimo hacia arriba), como la TGSS. Rango: base máx. 510_120 c × 2",
+      "exporta": [
+        "esCentimos",
+        "eurosACentimos",
+        "centimosAEuros",
+        "pctAPpm",
+        "fraccionAPpm",
+        "aplicarTipo"
+      ],
+      "funciones": [
+        {
+          "nombre": "esCentimos",
+          "kind": "function",
+          "exportada": true,
+          "params": "n: number",
+          "retorno": "boolean",
+          "linea": 10
+        },
+        {
+          "nombre": "eurosACentimos",
+          "kind": "function",
+          "exportada": true,
+          "params": "euros: number",
+          "retorno": "Centimos",
+          "linea": 15,
+          "resumen": "Euros (lo que guarda la BD como NUMERIC) → céntimos. `toPrecision` evita el 1,005 × 100 = 100,4999…."
+        },
+        {
+          "nombre": "centimosAEuros",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Centimos",
+          "retorno": "number",
+          "linea": 20
+        },
+        {
+          "nombre": "pctAPpm",
+          "kind": "function",
+          "exportada": true,
+          "params": "pct: number",
+          "retorno": "Ppm",
+          "linea": 25,
+          "resumen": "Porcentaje humano (4.7 = 4,70 %) → ppm."
+        },
+        {
+          "nombre": "fraccionAPpm",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: number",
+          "retorno": "Ppm",
+          "linea": 31,
+          "resumen": "Fracción (0.0155 = 1,55 %) → ppm. Para `empresas.at_ep_tipo`, que se guarda como fracción."
+        },
+        {
+          "nombre": "aplicarTipo",
+          "kind": "function",
+          "exportada": true,
+          "params": "base: Centimos, tipo: Ppm",
+          "retorno": "Centimos",
+          "linea": 37,
+          "resumen": "Cuota = base × tipo, redondeada al céntimo (medio céntimo hacia arriba; las bases son ≥ 0)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7cbec4b6127e"
+    },
+    {
+      "ruta": "packages/module-nominas/src/motor.ts",
+      "ambito": "packages/module-nominas",
+      "resumen": "Motor de nómina en CÉNTIMOS ENTEROS (N0, 05/11/2026). Puro: sin BD, sin red, sin reloj. Fórmulas (todas las cuotas = round(base × tipo), un redondeo por línea — `aplicarTipo`): salarioEf = round(salarioBase × jornada/100) prorrata = 14 pagas → round(salarioEf × 2 / 12) (paga extra = salario base efe",
+      "exporta": [
+        "calcularNominaCentimos"
+      ],
+      "funciones": [
+        {
+          "nombre": "diasDelMes",
+          "kind": "function",
+          "exportada": false,
+          "params": "año: number, mes: number",
+          "retorno": "number",
+          "linea": 98
+        },
+        {
+          "nombre": "esMensual",
+          "kind": "function",
+          "exportada": false,
+          "params": "g: GrupoCotizacion",
+          "retorno": "g is GrupoMensual",
+          "linea": 102
+        },
+        {
+          "nombre": "calcularNominaCentimos",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaNomina, opts: OpcionesCalculo",
+          "retorno": "NominaCentimos",
+          "linea": 106
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "57a987f7a25a"
     },
     {
       "ruta": "packages/module-organizador-trabajo/src/asignar.ts",
@@ -254158,6 +256290,560 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "633f2223fc73"
+    },
+    {
+      "ruta": "packages/module-portal-proveedor/src/borrador.ts",
+      "ambito": "packages/module-portal-proveedor",
+      "resumen": "BORRADOR de factura recibida (lo que dice la factura del proveedor) y su mapeo desde la extracción (IA o XML). PURO. Unidades: dinero en CÉNTIMOS (enteros), cantidades en MILÉSIMAS (enteros: 1 ud = 1000; 1 litro = 1000), IVA en PUNTOS BÁSICOS (21 % = 2100). Lo que la extracción no trae es `null` («n",
+      "exporta": [
+        "numeroDe",
+        "aCentimos",
+        "aMilesimas",
+        "aPuntosBasicos",
+        "normalizarNif",
+        "fechaDe",
+        "mapearExtraccion",
+        "minimizarTextoFactura"
+      ],
+      "funciones": [
+        {
+          "nombre": "numeroDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 31,
+          "resumen": "Número desde lo que devuelva la IA: 12.5 · \"12,50\" · \"1.234,56\" · \"1,234.56\" · \"12.50 €\". null si no es un número."
+        },
+        {
+          "nombre": "escalar",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number | null, factor: number",
+          "retorno": "number | null",
+          "linea": 44,
+          "resumen": "Escala un decimal a entero (×factor) sin errores de coma flotante del tipo 0.29*100 = 28.999…"
+        },
+        {
+          "nombre": "aCentimos",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": null,
+          "linea": 49
+        },
+        {
+          "nombre": "aMilesimas",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": null,
+          "linea": 50
+        },
+        {
+          "nombre": "aPuntosBasicos",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": null,
+          "linea": 51
+        },
+        {
+          "nombre": "normalizarNif",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 59,
+          "resumen": "NIF/CIF/NIE normalizado para comparar: mayúsculas, sin espacios/puntos/guiones y sin el prefijo de país «ES»."
+        },
+        {
+          "nombre": "texto",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown, max = 200",
+          "retorno": "string | null",
+          "linea": 65
+        },
+        {
+          "nombre": "fechaDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 71,
+          "resumen": "Fecha AAAA-MM-DD desde AAAA-MM-DD, DD/MM/AAAA o DD-MM-AAAA; null si no es una fecha real."
+        },
+        {
+          "nombre": "mapearExtraccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "ResultadoMapeo",
+          "linea": 98
+        },
+        {
+          "nombre": "minimizarTextoFactura",
+          "kind": "function",
+          "exportada": true,
+          "params": "t: string, max = 12_000",
+          "retorno": "string",
+          "linea": 150,
+          "resumen": "Minimiza el texto de un PDF antes de mandarlo a la IA: quita IBAN, correos y teléfonos (no hacen falta para el borrador) y lo recorta. Los NIF se conservan (son parte del case)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c0c48456d455"
+    },
+    {
+      "ruta": "packages/module-portal-proveedor/src/estados.ts",
+      "ambito": "packages/module-portal-proveedor",
+      "resumen": "Estados del documento que sube el proveedor y la GUARDIA de contabilización. PURO. Albarán: recibido → verificado (una persona del cliente pulsa «Recepción verificada»). Factura: recibida → extraida | ilegible → lista | revisar → (persona) confirmada | rechazada → contabilizada. `lista` = el case a ",
+      "exporta": [
+        "puedeTransicionar",
+        "estadoTrasCase",
+        "puedeContabilizar"
+      ],
+      "funciones": [
+        {
+          "nombre": "puedeTransicionar",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipo: TipoDocumento, desde: string, hacia: string",
+          "retorno": "boolean",
+          "linea": 33
+        },
+        {
+          "nombre": "estadoTrasCase",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuadra: boolean | null",
+          "retorno": "'lista' | 'revisar'",
+          "linea": 38,
+          "resumen": "Estado tras el case: `lista` solo si cuadra (true). `null` (no se pudo casar) o false → `revisar`."
+        },
+        {
+          "nombre": "puedeContabilizar",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DocParaContabilizar",
+          "retorno": "DecisionContable",
+          "linea": 59,
+          "resumen": "· cualquier otra cosa → no (con el motivo). Un case `null` (no casado) NUNCA cuenta como que cuadra."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b76a9167d0c7"
+    },
+    {
+      "ruta": "packages/module-portal-proveedor/src/subida.ts",
+      "ambito": "packages/module-portal-proveedor",
+      "resumen": "Validación de lo que sube el proveedor. PURO. · El tipo se decide por los BYTES (firma del fichero), nunca por lo que diga el navegador ni por la extensión. · XML: se rechaza cualquier DOCTYPE/ENTITY (XXE / bomba de entidades) y lo que no sea texto. · Tamaño máximo configurable por el cliente (acota",
+      "exporta": [
+        "tipoReal",
+        "xmlPeligroso",
+        "sanearNombre",
+        "validarSubida"
+      ],
+      "funciones": [
+        {
+          "nombre": "tipoReal",
+          "kind": "function",
+          "exportada": true,
+          "params": "b: Uint8Array",
+          "retorno": "TipoArchivo | null",
+          "linea": 20,
+          "resumen": "Tipo REAL por la firma de los bytes. null = ninguno de los admitidos."
+        },
+        {
+          "nombre": "cabeceraTexto",
+          "kind": "function",
+          "exportada": false,
+          "params": "b: Uint8Array, n = 4096",
+          "retorno": "string | null",
+          "linea": 28
+        },
+        {
+          "nombre": "pareceXml",
+          "kind": "function",
+          "exportada": false,
+          "params": "b: Uint8Array",
+          "retorno": "boolean",
+          "linea": 36
+        },
+        {
+          "nombre": "xmlPeligroso",
+          "kind": "function",
+          "exportada": true,
+          "params": "b: Uint8Array",
+          "retorno": "boolean",
+          "linea": 43,
+          "resumen": "DOCTYPE o ENTITY en CUALQUIER parte del XML → se rechaza (no hay factura legítima que los necesite)."
+        },
+        {
+          "nombre": "sanearNombre",
+          "kind": "function",
+          "exportada": true,
+          "params": "original: string | null | undefined, tipo: TipoArchivo",
+          "retorno": "string",
+          "linea": 49,
+          "resumen": "Nombre seguro para guardar: solo [a-z0-9._-], sin rutas, ≤ 80 caracteres, con la extensión del tipo real."
+        },
+        {
+          "nombre": "validarSubida",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: { nombre: string | null | undefined; bytes: Uint8Array }, politica: PoliticaSubida = POLITICA_POR_DEFECTO,",
+          "retorno": "ResultadoSubida",
+          "linea": 57
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "28d703a195c4"
+    },
+    {
+      "ruta": "packages/module-portal-proveedor/src/token.ts",
+      "ambito": "packages/module-portal-proveedor",
+      "resumen": "Enlaces personalizados del portal del proveedor: TOKEN + ALCANCE + CADUCIDAD + REVOCACIÓN. PURO (solo node:crypto). · El token es 32 bytes aleatorios (256 bits) en base64url con un prefijo fijo (`pp_`). NO lleva el id del cliente ni del documento: quien lo resuelve es la BD por su HASH (función SECU",
+      "exporta": [
+        "esProposito",
+        "generarToken",
+        "formatoTokenValido",
+        "hashToken",
+        "mismoHash",
+        "calcularCaducidad",
+        "evaluarEnlace",
+        "sinToken"
+      ],
+      "funciones": [
+        {
+          "nombre": "esProposito",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "v is Proposito",
+          "linea": 15
+        },
+        {
+          "nombre": "generarToken",
+          "kind": "function",
+          "exportada": true,
+          "params": "aleatorio: (n: number) => Uint8Array = (n) => randomBytes(n)",
+          "retorno": "",
+          "linea": 22,
+          "resumen": "Token nuevo + su hash. `aleatorio` inyectable solo para tests deterministas."
+        },
+        {
+          "nombre": "formatoTokenValido",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "t: unknown",
+          "retorno": "t is string",
+          "linea": 30,
+          "resumen": "Formato válido (no consulta nada). Lo que no lo cumple se rechaza sin tocar la BD."
+        },
+        {
+          "nombre": "hashToken",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "token: string",
+          "retorno": "string",
+          "linea": 33,
+          "resumen": "SHA-256 hex del token. Es lo ÚNICO que se guarda y lo único que viaja a la BD."
+        },
+        {
+          "nombre": "mismoHash",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: string, b: string",
+          "retorno": "boolean",
+          "linea": 36,
+          "resumen": "Comparación en tiempo constante de dos hashes hex (por si una vertical compara en memoria)."
+        },
+        {
+          "nombre": "calcularCaducidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "ahora: Date, dias: number",
+          "retorno": "Date",
+          "linea": 47,
+          "resumen": "Fecha de caducidad a partir de los días configurados por el cliente (acotados a [1, 90]; un valor raro no da un enlace eterno)."
+        },
+        {
+          "nombre": "evaluarEnlace",
+          "kind": "function",
+          "exportada": true,
+          "params": "enlace: EnlaceGuardado | null, p: { token: unknown; proposito: Proposito; ahora: Date; documentoId?: string },",
+          "retorno": "Evaluacion",
+          "linea": 69,
+          "resumen": "¿Sirve este enlace para ESTA petición? Defensa en profundidad: la BD ya filtra por hash/caducidad/alcance, y la app lo repite sobre la fila que lee. `documentoId` esperado opcional (cuando la ruta ya "
+        },
+        {
+          "nombre": "sinToken",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 88,
+          "resumen": "Quita el token de un texto (URL, mensaje de error) antes de registrarlo en un log."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b778d39eeca1"
+    },
+    {
+      "ruta": "packages/module-portal-proveedor/src/tres-bandas.ts",
+      "ambito": "packages/module-portal-proveedor",
+      "resumen": "CASE A TRES BANDAS: pedido – albarán (lo recibido) – factura del proveedor. PURO, en CÉNTIMOS y MILÉSIMAS (enteros). Qué se comprueba (cada problema es una `Diferencia`; `bloquea` decide si impide que la factura quede «lista»): · Cabecera: NIF del emisor = NIF del proveedor (desconocido en cualquier",
+      "exporta": [
+        "tolerancias",
+        "eur",
+        "normalizarClave",
+        "normalizarTexto",
+        "importeLinea",
+        "cuotaIva",
+        "casarTresBandas"
+      ],
+      "funciones": [
+        {
+          "nombre": "tolerancias",
+          "kind": "function",
+          "exportada": true,
+          "params": "o: Partial<Tolerancias> | null | undefined",
+          "retorno": "Tolerancias",
+          "linea": 39,
+          "resumen": "Normaliza las tolerancias que vengan de la config del cliente: enteros ≥ 0 con techo (un valor absurdo no lo deja pasar todo)."
+        },
+        {
+          "nombre": "eur",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "c: number | null | undefined",
+          "retorno": "string",
+          "linea": 85,
+          "resumen": "Dinero en formato español: 2.162,49€ (puntos de miles también con 4 cifras)."
+        },
+        {
+          "nombre": "pct",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "pb: number | null | undefined",
+          "retorno": null,
+          "linea": 90
+        },
+        {
+          "nombre": "cant",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "m: number | null | undefined",
+          "retorno": null,
+          "linea": 91
+        },
+        {
+          "nombre": "normalizarClave",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "s: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 93
+        },
+        {
+          "nombre": "normalizarTexto",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "s: string | null | undefined",
+          "retorno": "string",
+          "linea": 97
+        },
+        {
+          "nombre": "importeLinea",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "cantidadMil: number, precioUnitCent: number",
+          "retorno": "number",
+          "linea": 101,
+          "resumen": "Importe de línea en céntimos: cantidad (milésimas) × precio (céntimos por unidad) / 1000, redondeo comercial."
+        },
+        {
+          "nombre": "cuotaIva",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "baseCent: number, ivaPb: number",
+          "retorno": "number",
+          "linea": 103,
+          "resumen": "Cuota de IVA de una base, en céntimos (redondeo comercial)."
+        },
+        {
+          "nombre": "emparejar",
+          "kind": "function",
+          "exportada": false,
+          "params": "factura: BorradorFacturaRecibida, albaran: readonly LineaAlbaranBanda[]",
+          "retorno": "Map<number, LineaAlbaranBanda>",
+          "linea": 105
+        },
+        {
+          "nombre": "casarTresBandas",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: { nifProveedor: string | null pedido: readonly LineaPedidoBanda[] albaran: readonly LineaAlbaranBanda[] factura: BorradorFacturaRecibida tolerancias?: Partial<Tolerancias> }",
+          "retorno": "ResultadoCase",
+          "linea": 129
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6195ce6f472f"
+    },
+    {
+      "ruta": "packages/module-portal-proveedor/src/xml.ts",
+      "ambito": "packages/module-portal-proveedor",
+      "resumen": "Lectura DETERMINISTA de facturas electrónicas XML (Facturae 3.2.x y UBL 2.x) → `ExtraccionCruda`. PURO. Minimización de datos: una factura XML no se manda a la IA si este lector la entiende. Si no la entiende, `xmlMinimizado` deja solo los elementos útiles (sin firma, adjuntos, direcciones, contacto",
+      "exporta": [
+        "parsearXml",
+        "leerFacturaXml",
+        "xmlMinimizado"
+      ],
+      "funciones": [
+        {
+          "nombre": "decodificar",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 12
+        },
+        {
+          "nombre": "local",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "q: string",
+          "retorno": null,
+          "linea": 15
+        },
+        {
+          "nombre": "parsearXml",
+          "kind": "function",
+          "exportada": true,
+          "params": "xml: string",
+          "retorno": "NodoXml | null",
+          "linea": 18,
+          "resumen": "Árbol de nombres LOCALES (sin prefijo de espacio de nombres) y texto. null si el XML está mal formado o es demasiado grande."
+        },
+        {
+          "nombre": "hijos",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: NodoXml | null | undefined, nombre: string",
+          "retorno": null,
+          "linea": 46,
+          "resumen": "─── Consultas por ruta de nombres locales ───────────────────────────────────"
+        },
+        {
+          "nombre": "en",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: NodoXml | null | undefined, ...ruta: string[]",
+          "retorno": "NodoXml | null",
+          "linea": 47
+        },
+        {
+          "nombre": "val",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: NodoXml | null | undefined, ...ruta: string[]",
+          "retorno": "string | null",
+          "linea": 52
+        },
+        {
+          "nombre": "num",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string | null",
+          "retorno": "number | null",
+          "linea": 57
+        },
+        {
+          "nombre": "facturae",
+          "kind": "function",
+          "exportada": false,
+          "params": "r: NodoXml",
+          "retorno": "ExtraccionCruda | null",
+          "linea": 60,
+          "resumen": "─── Facturae 3.2.x ──────────────────────────────────────────────────────────"
+        },
+        {
+          "nombre": "idFiscal",
+          "kind": "function",
+          "exportada": false,
+          "params": "party: NodoXml | null",
+          "retorno": "string | null",
+          "linea": 96,
+          "resumen": "─── UBL 2.x ─────────────────────────────────────────────────────────────────"
+        },
+        {
+          "nombre": "ubl",
+          "kind": "function",
+          "exportada": false,
+          "params": "r: NodoXml",
+          "retorno": "ExtraccionCruda | null",
+          "linea": 99
+        },
+        {
+          "nombre": "leerFacturaXml",
+          "kind": "function",
+          "exportada": true,
+          "params": "xml: string",
+          "retorno": "ExtraccionCruda | null",
+          "linea": 132,
+          "resumen": "XML → extracción cruda (misma forma que la IA). null si no es Facturae ni UBL Invoice reconocible."
+        },
+        {
+          "nombre": "xmlMinimizado",
+          "kind": "function",
+          "exportada": true,
+          "params": "xml: string, max = 12_000",
+          "retorno": "string | null",
+          "linea": 147,
+          "resumen": "Texto compacto «Ruta: valor» sin los elementos de `FUERA`, para el respaldo por IA. null si el XML no se puede leer."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "65f39ba98b93"
+    },
+    {
+      "ruta": "packages/module-portal-proveedor/test/_util.ts",
+      "ambito": "packages/module-portal-proveedor",
+      "resumen": "Fechas SIEMPRE relativas a hoy (regla del CLAUDE.md raíz): nada de fechas fijas contra validaciones con reloj.",
+      "exporta": [
+        "hoy",
+        "masDias"
+      ],
+      "funciones": [
+        {
+          "nombre": "hoy",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "",
+          "retorno": "Date",
+          "linea": 3
+        },
+        {
+          "nombre": "masDias",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "base: Date, n: number",
+          "retorno": "Date",
+          "linea": 4
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "553280bee403"
     },
     {
       "ruta": "packages/module-presupuestos/src/calculo.ts",
@@ -291637,7 +294323,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5967,
-    "funciones": 23610
+    "archivos": 6016,
+    "funciones": 23839
   }
 }

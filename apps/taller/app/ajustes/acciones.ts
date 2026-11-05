@@ -274,7 +274,7 @@ export async function resetPinPersona(id: unknown): Promise<Respuesta<{ pin: str
   )
 }
 
-const Prov = z.object({ id: Id.optional(), nombre: txt, correo: z.string().max(200), activo: z.boolean().optional() })
+const Prov = z.object({ id: Id.optional(), nombre: txt, correo: z.string().max(200), nif: z.string().max(20).nullable().optional(), activo: z.boolean().optional() })
 
 export async function guardarProveedorAccion(entrada: unknown): Promise<Respuesta> {
   const p = Prov.safeParse(entrada)
@@ -284,7 +284,7 @@ export async function guardarProveedorAccion(entrada: unknown): Promise<Respuest
       const id = await guardarProveedor(tx as unknown as TxPersonal, s.tallerId, p.data)
       await auditar(tx as unknown as TxConfig, {
         tallerId: s.tallerId, usuarioId: s.usuarioId, entidad: 'proveedores', entidadId: id,
-        accion: p.data.id ? 'editar' : 'alta', antes: null, despues: { nombre: p.data.nombre, correo: p.data.correo, activo: p.data.activo },
+        accion: p.data.id ? 'editar' : 'alta', antes: null, despues: { nombre: p.data.nombre, correo: p.data.correo, nif: p.data.nif, activo: p.data.activo },
       })
       return {}
     }),

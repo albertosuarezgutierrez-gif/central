@@ -41,6 +41,8 @@ function NominaPdf({ empresa, empleado, periodo, desglose }: NominaPdfProps) {
         {devengos.complementosFijos.map((c, i) => (
           <View key={i} style={s.row}><Text>{c.concepto}</Text><Text>{fmt(c.importe)}</Text></View>
         ))}
+        {devengos.prorrataExtras ? <View style={s.row}><Text>Prorrata pagas extra</Text><Text>{fmt(devengos.prorrataExtras)}</Text></View> : null}
+        {devengos.pagaExtra ? <View style={s.row}><Text>Paga extraordinaria</Text><Text>{fmt(devengos.pagaExtra)}</Text></View> : null}
         {devengos.horasExtra > 0
           ? <View style={s.row}><Text>Horas extra</Text><Text>{fmt(devengos.horasExtra)}</Text></View>
           : null}
@@ -56,6 +58,8 @@ function NominaPdf({ empresa, empleado, periodo, desglose }: NominaPdfProps) {
         <View style={s.row}><Text>Seg. Social — CC</Text><Text>{fmt(deducciones.contingencias_comunes)}</Text></View>
         <View style={s.row}><Text>Desempleo</Text><Text>{fmt(deducciones.desempleo)}</Text></View>
         <View style={s.row}><Text>Formación Profesional</Text><Text>{fmt(deducciones.fp)}</Text></View>
+        {deducciones.mei ? <View style={s.row}><Text>MEI</Text><Text>{fmt(deducciones.mei)}</Text></View> : null}
+        {deducciones.solidaridad ? <View style={s.row}><Text>Cotización de solidaridad</Text><Text>{fmt(deducciones.solidaridad)}</Text></View> : null}
         <View style={s.row}><Text>IRPF</Text><Text>{fmt(deducciones.irpf)}</Text></View>
         <View style={s.totalRow}><Text>TOTAL DEDUCCIONES</Text><Text>{fmt(deducciones.total)}</Text></View>
 
@@ -70,6 +74,8 @@ function NominaPdf({ empresa, empleado, periodo, desglose }: NominaPdfProps) {
         <View style={s.row}><Text>FOGASA</Text><Text>{fmt(cuotaPatronal.fogasa)}</Text></View>
         <View style={s.row}><Text>Formación Profesional</Text><Text>{fmt(cuotaPatronal.fp)}</Text></View>
         <View style={s.row}><Text>AT / EP</Text><Text>{fmt(cuotaPatronal.at_ep)}</Text></View>
+        {cuotaPatronal.mei ? <View style={s.row}><Text>MEI</Text><Text>{fmt(cuotaPatronal.mei)}</Text></View> : null}
+        {cuotaPatronal.solidaridad ? <View style={s.row}><Text>Cotización de solidaridad</Text><Text>{fmt(cuotaPatronal.solidaridad)}</Text></View> : null}
         <View style={s.totalRow}><Text>TOTAL CUOTA EMPRESA</Text><Text>{fmt(cuotaPatronal.total)}</Text></View>
 
         <Text style={s.footer}>Documento generado automáticamente · iarrhh · {periodo}</Text>

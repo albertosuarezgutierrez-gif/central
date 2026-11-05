@@ -5,6 +5,7 @@ import { Prisma } from '@prisma/client'
 import { obtenerNomina } from '@/lib/nominas'
 import { generarNominaPdf } from '@/lib/nomina-pdf'
 import { subirObjeto } from '@/lib/storage'
+import { desgloseConfirmable } from '@central/module-nominas'
 
 export async function POST(_req: Request, { params }: { params: Promise<{ nominaId: string }> }) {
   try {
@@ -14,6 +15,9 @@ export async function POST(_req: Request, { params }: { params: Promise<{ nomina
     const nomina = await obtenerNomina(empresa_id, nominaId)
     if (!nomina) return NextResponse.json({ error: 'Nómina no encontrada' }, { status: 404 })
     if (nomina.estado !== 'borrador') return NextResponse.json({ error: 'La nómina ya está confirmada' }, { status: 409 })
+    // Fail-closed: no se publica al empleado una nómina calculada con cifras legales sin verificar (o con las tablas antiguas).
+    const confirmable = desgloseConfirmable(nomina.datos_calculo)
+    if (!confirmable.ok) return NextResponse.json({ error: confirmable.motivo }, { status: 409 })
 
     const empRows = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT nombre FROM rrhh.empresas WHERE id = ${empresa_id}::uuid LIMIT 1`)

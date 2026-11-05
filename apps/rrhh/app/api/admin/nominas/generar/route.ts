@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSesion, AuthError } from '@/lib/tenant'
-import { generarBorradores, periodoActual, parsePeriodo } from '@/lib/nominas'
+import { generarBorradores, modoNominasEmpresa, periodoActual, parsePeriodo } from '@/lib/nominas'
 
 export async function POST(req: Request) {
   try {
@@ -12,8 +12,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Período inválido' }, { status: 400 })
     }
 
-    const resultado = await generarBorradores(empresa_id, periodo)
-    return NextResponse.json(resultado, { status: 201 })
+    // Sin el módulo en modo cálculo, los borradores salen en «simulación» (marcados con sus cifras pendientes; no confirmables).
+    const modo = await modoNominasEmpresa(empresa_id)
+    const resultado = await generarBorradores(empresa_id, periodo, modo)
+    return NextResponse.json({ ...resultado, modo }, { status: 201 })
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: 401 })
     throw e

@@ -82,6 +82,14 @@ model Configuracion {
   retiradaFirmaObligatoria       Boolean  @default(true) @map("retirada_firma_obligatoria")
   retiradaTextoConformidad       String   @map("retirada_texto_conformidad")
   retiradaVersionTexto           String   @default("retirada-borrador-1") @map("retirada_version_texto")
+  /// 0012: portal del proveedor (caducidad del enlace, tamaño de subida y tolerancias del case a tres bandas).
+  portalEnlaceCaducaDias         Int      @default(14) @map("portal_enlace_caduca_dias")
+  portalMaxMb                    Int      @default(4) @map("portal_max_mb")
+  portalTolPrecioCent            Int      @default(1) @map("portal_tol_precio_cent")
+  portalTolPrecioPb              Int      @default(0) @map("portal_tol_precio_pb")
+  portalTolImporteLineaCent      Int      @default(1) @map("portal_tol_importe_linea_cent")
+  portalTolTotalCent             Int      @default(2) @map("portal_tol_total_cent")
+  portalTolCantidadMil           Int      @default(0) @map("portal_tol_cantidad_mil")
   creadoEn                       DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
   actualizadoEn                  DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
 
@@ -281,6 +289,8 @@ model Proveedor {
   correoPedidos String?  @map("correo_pedidos")
   contacto      String?
   telefono      String?
+  /// 0012: NIF del proveedor (NULL = no se sabe: el case a tres bandas no casa sin él).
+  nif           String?
   activo        Boolean  @default(true)
   creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
   actualizadoEn DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
@@ -444,6 +454,8 @@ model OtLinea {
   pedidoLineaId    String?   @map("pedido_linea_id") @db.Uuid
   origen           String
   aceptadaEn       DateTime? @map("aceptada_en") @db.Timestamptz(6)
+  /// 0012: quién aceptó un recambio DESPUÉS (pantalla «Recambios pendientes de aceptar»).
+  aceptadaPor      String?   @map("aceptada_por") @db.Uuid
   creadoEn         DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
   actualizadoEn    DateTime  @default(now()) @map("actualizado_en") @db.Timestamptz(6)
 
@@ -927,6 +939,9 @@ model Albaran {
   facturaProveedorNumero String?   @map("factura_proveedor_numero")
   facturaProveedorFecha  DateTime? @map("factura_proveedor_fecha") @db.Date
   valoradoEn             DateTime? @map("valorado_en") @db.Timestamptz(6)
+  /// 0012: «Recepción verificada» (persona y momento); genera el enlace de la factura para el proveedor.
+  recepcionVerificadaEn  DateTime? @map("recepcion_verificada_en") @db.Timestamptz(6)
+  recepcionVerificadaPor String?   @map("recepcion_verificada_por") @db.Uuid
   creadoPor              String?   @map("creado_por") @db.Uuid
   notas                  String?
   creadoEn               DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
@@ -951,5 +966,67 @@ model AlbaranLinea {
   actualizadoEn     DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
 
   @@map("albaran_lineas")
+  @@schema("taller")
+}
+
+// ─── Portal del proveedor (0012) ─────────────────────────────────────────────
+model EnlaceProveedor {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId       String    @map("taller_id") @db.Uuid
+  proveedorId    String    @map("proveedor_id") @db.Uuid
+  /// pedido · factura
+  proposito      String
+  pedidoId       String?   @map("pedido_id") @db.Uuid
+  albaranId      String?   @map("albaran_id") @db.Uuid
+  /// SHA-256 del token: el token en claro no se guarda
+  tokenHash      String    @unique @map("token_hash")
+  creadoPor      String    @map("creado_por") @db.Uuid
+  creadoEn       DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  caducaEn       DateTime  @map("caduca_en") @db.Timestamptz(6)
+  revocadoEn     DateTime? @map("revocado_en") @db.Timestamptz(6)
+  revocadoPor    String?   @map("revocado_por") @db.Uuid
+  cerradoEn      DateTime? @map("cerrado_en") @db.Timestamptz(6)
+  confirmadoEn   DateTime? @map("confirmado_en") @db.Timestamptz(6)
+  accesos        Int       @default(0)
+  ultimoAccesoEn DateTime? @map("ultimo_acceso_en") @db.Timestamptz(6)
+  actualizadoEn  DateTime  @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("enlaces_proveedor")
+  @@schema("taller")
+}
+
+model DocumentoProveedor {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId         String    @map("taller_id") @db.Uuid
+  enlaceId         String    @map("enlace_id") @db.Uuid
+  proveedorId      String    @map("proveedor_id") @db.Uuid
+  pedidoId         String?   @map("pedido_id") @db.Uuid
+  albaranId        String?   @map("albaran_id") @db.Uuid
+  /// albaran · factura
+  tipo             String
+  ruta             String
+  huellaSha256     String    @map("huella_sha256")
+  mime             String
+  bytes            Int
+  nombre           String
+  subidoEn         DateTime  @default(now()) @map("subido_en") @db.Timestamptz(6)
+  subidoIp         String?   @map("subido_ip") @db.Inet
+  estado           String
+  extraccion       Json?
+  extraccionOrigen String?   @map("extraccion_origen")
+  extraccionError  String?   @map("extraccion_error")
+  /// NULL = no casado (≠ false)
+  caseCuadra       Boolean?  @map("case_cuadra")
+  caseResultado    Json?     @map("case_resultado")
+  corregidoPor     String?   @map("corregido_por") @db.Uuid
+  corregidoEn      DateTime? @map("corregido_en") @db.Timestamptz(6)
+  confirmadoPor    String?   @map("confirmado_por") @db.Uuid
+  confirmadoEn     DateTime? @map("confirmado_en") @db.Timestamptz(6)
+  contabilizadoEn  DateTime? @map("contabilizado_en") @db.Timestamptz(6)
+  nota             String?
+  actualizadoEn    DateTime  @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@unique([tallerId, enlaceId, huellaSha256])
+  @@map("documentos_proveedor")
   @@schema("taller")
 }

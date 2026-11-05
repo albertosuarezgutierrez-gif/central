@@ -1,0 +1,17 @@
+{
+  "name": "@central/module-portal-proveedor",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Portal del PROVEEDOR por enlace personalizado (casa de marcas), agnóstico de sector: tokens (solo el hash SHA-256 se guarda; caducidad, alcance documento+propósito, revocable), estados del documento, validación de subidas (pdf/jpg/png/xml por sus bytes reales, tamaño, nombre saneado), CASE A TRES BANDAS pedido–albarán–factura en céntimos con tolerancias y diferencias detalladas, lectura determinista de XML UBL/Facturae y mapeo de la extracción IA a un borrador de factura recibida. Sin BD, sin red, sin secretos, sin LLM.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts"
+  },
+  "sideEffects": false,
+  "license": "UNLICENSED"
+}

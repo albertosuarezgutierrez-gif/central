@@ -27,6 +27,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ nominaI
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: 401 })
     if (e instanceof Error && e.message.includes('confirmada')) return NextResponse.json({ error: e.message }, { status: 409 })
+    if (e instanceof Error && (e.name === 'CifraPendienteError' || e.name === 'CifraDesconocidaError')) {
+      return NextResponse.json({ error: e.message }, { status: 422 })
+    }
     throw e
   }
 }

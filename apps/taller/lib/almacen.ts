@@ -18,6 +18,8 @@ export interface AlmacenArchivos {
    * falla (el llamante no debe marcar nada como borrado en ese caso).
    */
   borrar(tallerId: string, ruta: string): Promise<void>
+  /** Bytes de un archivo del taller (p. ej. la factura del proveedor para extraerla). null si no existe o la ruta no es del taller. */
+  leer?(tallerId: string, ruta: string): Promise<Uint8Array | null>
 }
 
 export const BUCKET_TALLER = 'taller'
@@ -28,6 +30,8 @@ export const huellaSha256 = (bytes: Uint8Array): string => createHash('sha256').
 
 const EXT: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
 export const MIME_ACEPTADOS = Object.keys(EXT)
+/** Documentos del PORTAL DEL PROVEEDOR (albarán/factura): solo para `carpeta` bajo `proveedor/`. Las fotos siguen siendo solo imágenes. */
+const EXT_DOCS: Record<string, string> = { ...EXT, 'application/pdf': 'pdf', 'application/xml': 'xml' }
 
 /** Tipo REAL de la imagen por sus primeros bytes (no por lo que diga el navegador). null si no es PNG/JPEG/WebP. */
 export function mimeReal(b: Uint8Array): string | null {
@@ -42,7 +46,7 @@ const trozo = (s: string) => s.toLowerCase().replace(/\.[a-z0-9]+$/, '').replace
 const CARPETA = /^[A-Za-z0-9][A-Za-z0-9/_-]*$/
 
 export function rutaDe(a: ArchivoSubido): { ruta: string; huella: string } {
-  const ext = EXT[a.mime]
+  const ext = (a.carpeta.startsWith('proveedor/') ? EXT_DOCS : EXT)[a.mime]
   if (!ext) throw new Error(`tipo de archivo no admitido: ${a.mime}`)
   if (!CARPETA.test(a.carpeta) || a.carpeta.includes('..') || a.carpeta.includes('//')) throw new Error('carpeta de almacén inválida')
   const huella = huellaSha256(a.bytes)
@@ -78,6 +82,13 @@ export function almacenSupabase(config: ConfigAlmacen): AlmacenArchivos {
       if (!rutaEsDelTaller(tallerId, ruta)) throw new Error('la ruta no es del taller')
       const r = await f(`${base}/storage/v1/object/${BUCKET_TALLER}/${codificar(ruta)}`, { method: 'DELETE', headers: cab })
       if (!r.ok && r.status !== 404) throw new Error(`Storage delete ${r.status}`)
+    },
+    async leer(tallerId, ruta) {
+      if (!rutaEsDelTaller(tallerId, ruta)) return null
+      const r = await f(`${base}/storage/v1/object/authenticated/${BUCKET_TALLER}/${codificar(ruta)}`, { method: 'GET', headers: cab })
+      if (r.status === 404 || r.status === 400) return null
+      if (!r.ok) throw new Error(`Storage get ${r.status}`)
+      return new Uint8Array(await r.arrayBuffer())
     },
     async urlFirmada(tallerId, ruta, segundos = SEGUNDOS_URL_FIRMADA) {
       if (!rutaEsDelTaller(tallerId, ruta)) return null

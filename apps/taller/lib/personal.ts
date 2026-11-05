@@ -5,6 +5,7 @@
 //     elegida. Por eso no hay «ya está en uso» (era un oráculo: decía qué PIN tenía un compañero) ni búsqueda de PIN libre.
 //   · Cambiar/resetear el PIN o dar de baja sube `sesion_version`: la cookie anterior deja de valer.
 //   · Nunca queda el taller sin un dueño activo (si no, nadie podría volver a entrar en Ajustes).
+import { normalizarNif } from '@central/module-portal-proveedor'
 import { esPinTrivial, hashPin, validarFormatoPin, verificarPin } from '@central/core-identity/pin'
 import {
   anotarFalloUsuario, leerBloqueoUsuario, limpiarBloqueoUsuario, politicaUsuario, usuarioBloqueado,
@@ -75,17 +76,23 @@ export async function resetPinUsuario(
 
 const CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-export function validarProveedor(d: { nombre: string; correo: string }): { nombre: string; correo: string | null } {
+export function validarProveedor(d: { nombre: string; correo: string; nif?: string | null }): { nombre: string; correo: string | null; nif: string | null | undefined } {
   const nombre = d.nombre.trim()
   const correo = d.correo.trim()
   if (!nombre) throw new ErrorPersonal('falta el nombre del proveedor')
   if (correo && !CORREO.test(correo)) throw new ErrorPersonal('correo de pedidos inválido')
+  // NIF (0012): lo usa el case a tres bandas del portal del proveedor. Vacío = no se sabe (el case no casa sin él). undefined = no se toca.
+  let nif: string | null | undefined
+  if (d.nif !== undefined) {
+    nif = normalizarNif(d.nif ?? '')
+    if ((d.nif ?? '').trim() && !nif) throw new ErrorPersonal('NIF del proveedor inválido')
+  }
   // Sin correo = no se sabe todavía (no se le podrá enviar un pedido hasta tenerlo).
-  return { nombre, correo: correo || null }
+  return { nombre, correo: correo || null, nif }
 }
 
 export async function guardarProveedor(
-  tx: TxPersonal, tallerId: string, d: { id?: string; nombre: string; correo: string; activo?: boolean },
+  tx: TxPersonal, tallerId: string, d: { id?: string; nombre: string; correo: string; nif?: string | null; activo?: boolean },
 ): Promise<string> {
   const v = validarProveedor(d)
   if (d.id) {
@@ -93,11 +100,11 @@ export async function guardarProveedor(
     if (!p) throw new ErrorPersonal('proveedor no encontrado')
     await tx.proveedor.update({
       where: { id: d.id },
-      data: { nombre: v.nombre, correoPedidos: v.correo, ...(d.activo === undefined ? {} : { activo: d.activo }) },
+      data: { nombre: v.nombre, correoPedidos: v.correo, ...(v.nif === undefined ? {} : { nif: v.nif }), ...(d.activo === undefined ? {} : { activo: d.activo }) },
     })
     return d.id
   }
-  const p = await tx.proveedor.create({ data: { tallerId, nombre: v.nombre, correoPedidos: v.correo } })
+  const p = await tx.proveedor.create({ data: { tallerId, nombre: v.nombre, correoPedidos: v.correo, ...(v.nif ? { nif: v.nif } : {}) } })
   return p.id
 }
 

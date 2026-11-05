@@ -4,12 +4,14 @@ import { getSesion, AuthError } from '@/lib/tenant'
 import { listarPeriodosConNominas, periodoActual } from '@/lib/nominas'
 import UiPage from '@/components/ui/Page'
 import DistribuirPdfPanel from './DistribuirPdfPanel'
+import EstadoModuloNominas from './EstadoModuloNominas'
+import { leerModulo } from '@/lib/modulos-empresa'
 
 export default async function Page() {
   let empresa_id: string
   try { ({ empresa_id } = await getSesion()) } catch (e) { if (e instanceof AuthError) redirect('/login'); throw e }
 
-  const periodos = await listarPeriodosConNominas(empresa_id)
+  const [periodos, modulo] = await Promise.all([listarPeriodosConNominas(empresa_id), leerModulo(empresa_id, 'nominas')])
   const actual = periodoActual()
 
   return (
@@ -22,6 +24,8 @@ export default async function Page() {
         </Link>
       }
     >
+
+      <EstadoModuloNominas estado={modulo} />
 
       <DistribuirPdfPanel />
 

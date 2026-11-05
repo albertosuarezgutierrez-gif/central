@@ -17,7 +17,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ docId: 
       ip, user_agent, nombre_confirmado: String(nombre_confirmado ?? ''),
       codigo: codigo != null ? String(codigo) : null,
     })
-    const nombre = await nombreEmpleado(empleado_id)
+    const nombre = await nombreEmpleado(empresa_id, empleado_id)
     await pushResponsables(empresa_id, 'Documento firmado', `${nombre} ha firmado un documento.`)
     return NextResponse.json({ ok: true, sello_tiempo: evidencia.sello_tiempo })
   } catch (e) {

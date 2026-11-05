@@ -3,6 +3,10 @@ import { formatearCantidad, formatearEur, importeStockCent, type UnidadStock } f
 import { paraPagina } from '@/lib/contexto'
 import { Cabecera } from '../../_marca'
 import { valorarAlbaranAccion } from '../acciones'
+import { tienePermiso } from '@/lib/permisos'
+import { firmarVarias } from '@/lib/almacen'
+import { RecepcionVerificada } from '../../_portal/Compartir'
+import { RevisionFactura, type FacturaVista } from '../../_portal/RevisionFactura'
 
 export const dynamic = 'force-dynamic'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -19,7 +23,16 @@ export default async function Pagina({ params, searchParams }: { params: Promise
       tx.albaranLinea.findMany({ where: { tallerId: c.tallerId, albaranId: id }, orderBy: { creadoEn: 'asc' } }),
       tx.proveedor.findFirst({ where: { tallerId: c.tallerId, id: a.proveedorId } }),
     ])
-    return { a, lineas, prov }
+    // Portal del proveedor: facturas que subió para ESTE albarán (lo más reciente primero) con su case.
+    const facturas = await tx.documentoProveedor.findMany({ where: { tallerId: c.tallerId, albaranId: id, tipo: 'factura' }, orderBy: { subidoEn: 'desc' } })
+    const urls = await firmarVarias(c.tallerId, facturas.map((f) => f.ruta))
+    const vistas: FacturaVista[] = facturas.map((f) => ({
+      id: f.id, estado: f.estado, nombre: f.nombre, url: urls.get(f.ruta) ?? null, error: f.extraccionError ?? null, nota: f.nota ?? null,
+      origen: f.extraccionOrigen ?? null, borrador: (f.extraccion ?? null) as unknown as FacturaVista['borrador'],
+      diferencias: (((f.caseResultado ?? null) as unknown as { diferencias?: FacturaVista['diferencias'] } | null)?.diferencias ?? []).map((d) => ({ tipo: d.tipo, bloquea: d.bloquea, texto: d.texto })),
+      nifProveedorFalta: !prov?.nif,
+    }))
+    return { a, lineas, prov, facturas: vistas, puedeConfirmar: tienePermiso(c.rol, 'pedidos_enviar') }
   })
   if (datos === 'sin_sesion') redirect('/login')
   if (datos === 'sin_permiso') return <main className="contenido"><p className="tenue">Tu perfil no incluye el almacén.</p></main>
@@ -51,6 +64,11 @@ export default async function Pagina({ params, searchParams }: { params: Promise
             })}
           </tbody>
         </table></div>
+        <h2>Factura del proveedor (portal)</h2>
+        {datos.facturas.map((f) => <RevisionFactura key={f.id} albaranId={a.id} f={f} puedeConfirmar={datos.puedeConfirmar} />)}
+        {a.estado === 'recibido' && !datos.facturas.some((f) => !['rechazada'].includes(f.estado)) && (
+          <RecepcionVerificada albaranId={a.id} proveedor={prov?.nombre ?? ''} yaVerificada={a.recepcionVerificadaEn != null} />
+        )}
         {a.estado === 'recibido' && (
           <>
             <h2>Valorar con la factura del proveedor</h2>
