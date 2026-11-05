@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-11-05T05:52:33Z",
+  "generadoEn": "2026-11-05T06:57:14Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -867,7 +867,7 @@
       },
       "taller": {
         "estado": "usado",
-        "evidencias": 20
+        "evidencias": 24
       },
       "transporte": {
         "estado": "usado",
@@ -1641,7 +1641,7 @@
       },
       "contabilidad": {
         "estado": "usado",
-        "evidencias": 11
+        "evidencias": 27
       },
       "housesevillana": {
         "estado": "no",
@@ -2683,11 +2683,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 352
+        "evidencias": 355
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 218
+        "evidencias": 220
       },
       "asegura-web": {
         "estado": "usado",
@@ -2807,11 +2807,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 55
+        "evidencias": 58
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 169
+        "evidencias": 171
       },
       "asegura-web": {
         "estado": "usado",
@@ -3037,7 +3037,7 @@
       },
       "taller": {
         "estado": "usado",
-        "evidencias": 48
+        "evidencias": 50
       },
       "transporte": {
         "estado": "no",
@@ -4278,8 +4278,8 @@
         "evidencias": 0
       },
       "taller": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 1
       },
       "transporte": {
         "presente": false,
@@ -4494,8 +4494,8 @@
         "evidencias": 0
       },
       "contabilidad": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 8
       },
       "housesevillana": {
         "presente": false,
@@ -5321,8 +5321,12 @@
       "/api/auth/logout",
       "/api/auth/solicitar",
       "/api/auth/verificar",
+      "/api/avisos/leer",
+      "/api/cron/avisos",
       "/api/hechos",
-      "/api/operador/empresas"
+      "/api/informes/[clave]",
+      "/api/operador/empresas",
+      "/api/reglas"
     ],
     "housesevillana": [],
     "ia-rest": [
@@ -6755,10 +6759,12 @@
       "/api/auth/login",
       "/api/auth/logout",
       "/api/auth/taller",
+      "/api/cron/enviar-hechos",
       "/api/cron/purgar-fotos",
       "/api/direccion/cp",
       "/api/direccion/vias",
       "/api/fichar",
+      "/api/operador/contabilidad",
       "/api/operador/talleres"
     ],
     "transporte": [
@@ -7017,6 +7023,7 @@
       "contabilidad.apuntes",
       "contabilidad.asientos",
       "contabilidad.auditoria",
+      "contabilidad.avisos",
       "contabilidad.consentimiento_seguros",
       "contabilidad.ejercicios",
       "contabilidad.empresas",
@@ -7363,6 +7370,7 @@
       "taller.dictados",
       "taller.factura_lineas",
       "taller.facturas",
+      "taller.hechos_pendientes",
       "taller.horario_citas",
       "taller.invitaciones_cita",
       "taller.iva_por_defecto",
@@ -7974,7 +7982,8 @@
         "label": "Contabilidad",
         "tiene": [
           "ia-rest",
-          "ialimp"
+          "ialimp",
+          "taller"
         ],
         "falta": [
           "almacen",
@@ -7987,7 +7996,6 @@
           "mariscos",
           "rrhh",
           "sivra",
-          "taller",
           "transporte"
         ]
       },
@@ -8061,6 +8069,7 @@
         "capacidad": "informes",
         "label": "Informes",
         "tiene": [
+          "contabilidad",
           "ialimp",
           "rrhh"
         ],
@@ -8070,7 +8079,6 @@
           "asegura",
           "asegura-portal",
           "asegura-web",
-          "contabilidad",
           "housesevillana",
           "ia-rest",
           "mariscos",
@@ -8131,7 +8139,7 @@
     "packages": 47,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1924,
+    "apis": 1930,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
