@@ -9,7 +9,7 @@ import { normalizarConfigAcceso, tipoEfectivo, type ConfigAcceso } from '@/lib/d
 import { toPropertyId } from '@/lib/sivra/agente-huesped/contexto'
 import { horarioPiso } from '@/lib/sivra/agente-huesped/horarios'
 import {
-  reconciliar, ventanaPin, madridEpoch, necesitaAvisoOffline, desajustesVentana,
+  reconciliar, bookingsDeRespuesta, ventanaPin, madridEpoch, necesitaAvisoOffline, desajustesVentana,
   type ReservaAcceso, type PinExistente,
 } from '@/lib/domotica/acceso-programador'
 import { tgAvisoAlerta, tgAvisoAlertaBotones } from '@/lib/telegram'
@@ -71,7 +71,9 @@ async function upsertPin(
       tuya_password_id = COALESCE(EXCLUDED.tuya_password_id, domotica_acceso_pin.tuya_password_id),
       modo = COALESCE(EXCLUDED.modo, domotica_acceso_pin.modo),
       valido_desde = EXCLUDED.valido_desde, valido_hasta = EXCLUDED.valido_hasta,
-      estado = EXCLUDED.estado, detalle = EXCLUDED.detalle, updated_at = now()`
+      estado = EXCLUDED.estado, detalle = EXCLUDED.detalle, updated_at = now()
+    WHERE EXCLUDED.estado <> 'error'
+       OR NOT (domotica_acceso_pin.entregado AND domotica_acceso_pin.tuya_password_id IS NOT NULL)`
 }
 
 // Mensaje al huésped con el PIN (canal 'huesped'/'ambos'). Texto sobrio, sin datos de más.
@@ -121,11 +123,13 @@ export async function GET(req: NextRequest) {
       // Reservas de TODOS los apartamentos de esta puerta en el horizonte (1 cerradura ↔ N pisos).
       const reservas: ReservaAcceso[] = []
       for (const aptId of aptIds) {
-        const data = await smoobuFetch(
-          `/api/reservations?apartments[]=${aptId}&from=${desde}&to=${hasta}&showCancellation=false&pageSize=100`,
+        const resp = await smoobuFetch(
+          `/api/reservations?apartmentId=${aptId}&from=${desde}&to=${hasta}&showCancellation=false&pageSize=100`,
           { cache: 'no-store' },
-        ).then(r => r.json()).catch(() => null)
-        for (const b of ((data?.bookings || []) as SmoobuBooking[])) {
+        )
+        // Si Smoobu falla o no trae `bookings`, LANZA: cae al catch general (Telegram crítico + latido ok=false).
+        const bookings = bookingsDeRespuesta<SmoobuBooking>(resp.ok, resp.status, await resp.text())
+        for (const b of bookings) {
           // Smoobu no siempre acota por apartments[] (devuelve reservas de OTROS pisos): nos quedamos
           // SOLO con las de ESTA puerta comparando el apartamento REAL de la reserva contra aptId. Sin
           // esto, el PIN de un huésped del Dúplex/Busto acababa programado en la cerradura de otro piso.
@@ -157,7 +161,7 @@ export async function GET(req: NextRequest) {
         tuyaPasswordId: p.tuya_password_id, entregado: p.entregado,
       }))
 
-      const { crear, borrar } = reconciliar(reservas, cfg, existentes, ahoraEpoch)
+      const { crear, borrar, cerrar } = reconciliar(reservas, cfg, existentes, ahoraEpoch)
 
       // ── Crear PIN nuevos ──
       for (const r of crear) {
@@ -190,6 +194,14 @@ export async function GET(req: NextRequest) {
           UPDATE domotica_acceso_pin SET estado = 'borrado', updated_at = now()
           WHERE dispositivo_id = ${d.id}::uuid AND reserva_ref = ${p.reservaRef}`
         resultados.push({ d: d.nombre, reserva: p.reservaRef, borrado: true })
+      }
+
+      // ── Cerrar filas «error» de PIN ya entregado cuya ventana venció (el PIN caducó solo; no es un fallo) ──
+      for (const p of cerrar) {
+        await prisma.$executeRaw`
+          UPDATE domotica_acceso_pin SET estado = 'caducado', detalle = '{}'::jsonb, updated_at = now()
+          WHERE dispositivo_id = ${d.id}::uuid AND reserva_ref = ${p.reservaRef} AND estado = 'error'`
+        resultados.push({ d: d.nombre, reserva: p.reservaRef, caducado: true })
       }
 
       // ── Ventanas desactualizadas (se DECLARAN, no se tocan) ──

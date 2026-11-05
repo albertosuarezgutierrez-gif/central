@@ -2,13 +2,57 @@
 // Vive aparte de acceso.ts para que los tests no arrastren el import de tuya.ts.
 
 // Códigos DP candidato para "abrir" un control de acceso (orden de preferencia).
-export const DP_ABRIR = ['unlock_request', 'open_door', 'manual_lock', 'remote_no_dp_key'] as const
+// OJO: `remote_no_dp_key` NO va aquí: es un DP raw/de reporte de la apertura remota de los smart lock;
+// mandarle `true` por /commands devuelve success pero NO acciona nada (Socorro, 05/11/2026).
+export const DP_ABRIR = ['unlock_request', 'open_door', 'manual_lock'] as const
 // Códigos DP candidato para batería / nivel.
 export const DP_BATERIA = ['residual_electricity', 'battery_percentage', 'battery_state', 'battery'] as const
 
 export function elegirCodigoAbrir(codes: string[]): string | null {
   for (const c of DP_ABRIR) if (codes.includes(c)) return c
   return null
+}
+
+// Categorías Tuya de cerradura inteligente (mk = NIVIAN NV-ACCESS-PIN-RFID-W): se abren con la
+// "apertura remota sin contraseña" (ticket + open-door), no con un DP booleano.
+export const CATEGORIAS_SMART_LOCK = ['mk', 'ms', 'jtmspro'] as const
+
+export type MetodoAbrir =
+  | { metodo: 'password-free' }
+  | { metodo: 'commands'; code: string }
+
+// Elige CÓMO abrir. Smart lock (categoría mk/ms/jtmspro, o solo expone `remote_no_dp_key`) → apertura
+// remota sin contraseña. DP booleano real (unlock_request/open_door/manual_lock) → /commands. Nada → null.
+export function elegirMetodoAbrir(codes: string[], categoria?: string | null): MetodoAbrir | null {
+  const cat = (categoria || '').toLowerCase()
+  const code = elegirCodigoAbrir(codes)
+  if ((CATEGORIAS_SMART_LOCK as readonly string[]).includes(cat)) return { metodo: 'password-free' }
+  if (code) return { metodo: 'commands', code }
+  if (codes.includes('remote_no_dp_key')) return { metodo: 'password-free' }
+  return null
+}
+
+export type RespuestaTuya = { via: string; success: boolean; code?: number; msg?: string; result?: unknown }
+
+// Recorta la respuesta de Tuya a lo que se puede guardar en el log (sin secretos: nada de tickets/claves).
+export function resumirRespuestaTuya(via: string, env: { success?: boolean; code?: number; msg?: string; result?: unknown }): RespuestaTuya {
+  const r = env.result
+  const result = typeof r === 'boolean' || typeof r === 'number' || r == null ? r
+    : typeof r === 'string' ? r.slice(0, 80) : '[objeto]'
+  return { via, success: !!env.success, code: env.code, msg: env.msg ? String(env.msg).slice(0, 200) : undefined, result }
+}
+
+// ¿Tuya dice que la apertura remota está desactivada en la cerradura? (heurística sobre msg/code).
+export function esAperturaRemotaDesactivada(msg?: string): boolean {
+  const m = (msg || '').toLowerCase()
+  return /remote.{0,30}(unlock|open|door).{0,30}(off|disabled|closed|not (enabled|opened|allowed|support)|turned off)|(disable|not enabled|not opened).{0,30}remote|remote unlock|remote_unlock|apertura remota/.test(m)
+}
+
+export const MSG_APERTURA_REMOTA_OFF = 'Activa la apertura remota en la app Tuya/Smart Life de la cerradura'
+
+// Veredicto de un intento de apertura remota: ok solo si success y result no es false.
+export function aperturaOk(r: RespuestaTuya): boolean {
+  return r.success && r.result !== false
 }
 
 // DP estándar de "desbloqueo" de Tuya (los métodos con los que se abre una cerradura). Se piden como

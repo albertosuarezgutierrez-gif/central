@@ -8,6 +8,7 @@ type LogRow = { accion: string; reserva_ref: string | null; detalle: Record<stri
 type PinRow = {
   reserva_ref: string; property_id: string | null; pin: string | null; modo: string | null;
   valido_desde: string; valido_hasta: string; estado: string; entregado: boolean;
+  detalle?: { error?: string } | null;
 }
 type Disp = {
   id: string; nombre: string; tuya_device_id: string; piso: string | null;
@@ -340,6 +341,11 @@ function TarjetaAcceso({ d, apartamentos, ocupado, setOcupado, setError, cargar 
                 {p.property_id ? `${p.property_id} · ` : ''}reserva {p.reserva_ref}
                 <br />{fmtDT(p.valido_desde)} → {fmtDT(p.valido_hasta)}
               </div>
+              {p.estado === 'error' && p.detalle?.error && (
+                <div style={{ fontSize: 11, color: 'var(--danger, #b91c1c)', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
+                  {String(p.detalle.error).slice(0, 160)}{String(p.detalle.error).length > 160 ? '…' : ''}
+                </div>
+              )}
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
               {p.estado === 'activo' && !String(p.reserva_ref).startsWith('manual:') && (

@@ -15,7 +15,7 @@
 import { prisma } from '@/lib/db'
 import { borrarPin, crearPinTemporal } from './acceso'
 import { normalizarConfigAcceso, type ConfigAcceso } from './tipo'
-import { ventanaPin } from './acceso-programador'
+import { ventanaPin, ventanaVencida } from './acceso-programador'
 import { toPropertyId } from '@/lib/sivra/agente-huesped/contexto'
 import { horarioPiso } from '@/lib/sivra/agente-huesped/horarios'
 import { smoobuFetch } from '@/lib/smoobu'
@@ -77,6 +77,12 @@ export async function reponerVentanaPin(
     if (!Number.isFinite(hastaMs)) hastaMs = v.hastaEpoch * 1000
   }
   if (hastaMs <= desdeMs) return { ok: false, status: 400, error: 'Ventana inválida (desde < hasta)' }
+
+  // La ventana nueva ya venció: no hay nada que reponer (Tuya lo rechazaría con 2334 y, tras borrar el
+  // PIN viejo, dejaría la fila en error). No se toca.
+  if (ventanaVencida(Math.floor(hastaMs / 1000), Math.floor(Date.now() / 1000))) {
+    return { ok: false, status: 409, error: 'La ventana de esta reserva ya venció: no se puede reponer.' }
+  }
 
   // Si ya cuadra, no se toca: borrar y recrear un PIN sano solo añade riesgo.
   const iguales = Math.abs(desdeMs - new Date(fila.valido_desde).getTime()) < 60_000
