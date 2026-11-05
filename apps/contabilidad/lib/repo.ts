@@ -10,6 +10,10 @@ import { DIMENSION_RE, type Asiento, type Aviso, type Centimos, type FilaDimensi
 import type { TxSql } from './rls.ts'
 import type { TipoHecho } from './hecho-entrada.ts'
 import { centimosDeBd, enteroDeBd, fechaDeBd } from './importes.ts'
+import { repoF3Sql, type RepoF3 } from './repo-f3.ts'
+export type {
+  RepoF3, FilaFacturaRecibida, NuevaFacturaRecibida, MovimientoBancoLeido, NuevoMovimientoBanco, NuevaConciliacion, ReglaConciliacionLeida, FiltroMovimientos, OrigenFactura, OrigenMovimiento,
+} from './repo-f3.ts'
 
 export type FilaCuenta = { codigo: string; nombre: string; grupo: number; naturaleza: 'deudora' | 'acreedora'; admiteApuntes: boolean; activa: boolean }
 export type EstadoEjercicio = 'abierto' | 'en_cierre' | 'cerrado'
@@ -40,7 +44,7 @@ export type EntradaAuditoria = { actor: Actor; usuarioId?: string | null; accion
 
 export type FilaEmpresa = { razonSocial: string; nif: string; forma: string; sector: string; logoUrl: string | null; colorPrimario: string | null }
 
-export interface RepoContable {
+export interface RepoContable extends RepoF3 {
   readonly empresaId: string
   empresa(): Promise<FilaEmpresa | null>
   planCuentas(): Promise<FilaCuenta[]>
@@ -129,6 +133,7 @@ export function repoSql(tx: TxSql, empresaId: string): RepoContable {
   }
 
   return {
+    ...repoF3Sql(tx, e),
     empresaId: e,
 
     async empresa() {

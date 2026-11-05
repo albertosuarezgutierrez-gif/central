@@ -2,6 +2,7 @@
 // OUTBOX hacia contabilidad. El hecho se inserta en la MISMA transacción que la factura/cobro (si la factura falla, no queda hecho;
 // si la transacción confirma, el hecho existe aunque contabilidad esté caída). Aquí NUNCA hay HTTP: lo envía el cron (enviar-hechos).
 // Idempotente por (taller, tipo, ref): encolar dos veces lo mismo no duplica (misma clave que el puerto de contabilidad).
+import { hechoCompra, type AlbaranParaHecho } from './compra-hechos.ts'
 import { hechoCobro, hechoVenta, type CobroParaHecho, type FacturaParaHecho } from './factura-hechos.ts'
 
 type Delegado = { findFirst(a?: any): Promise<any>; create(a: any): Promise<any> }
@@ -11,7 +12,7 @@ export const ESTADOS_HECHO = ['pendiente', 'enviado', 'rechazado', 'error', 'no_
 export type EstadoHecho = (typeof ESTADOS_HECHO)[number]
 
 async function insertar(
-  tx: TxOutbox, o: { tallerId: string; facturaId: string | null; tipo: 'venta' | 'cobro' | 'no_soportado'; ref: string; hecho: unknown },
+  tx: TxOutbox, o: { tallerId: string; facturaId: string | null; tipo: 'venta' | 'cobro' | 'compra' | 'no_soportado'; ref: string; hecho: unknown },
 ): Promise<void> {
   const ya = await tx.hechoPendiente.findFirst({ where: { tallerId: o.tallerId, tipo: o.tipo, ref: o.ref } })
   if (ya) return
@@ -24,7 +25,7 @@ async function insertar(
 }
 
 /** Anota algo que el puerto contable aún no representa (abonos, sustituciones, anulaciones): visible, NO se envía. */
-export function encolarNoSoportado(tx: TxOutbox, o: { tallerId: string; facturaId: string; ref: string; motivo: string }): Promise<void> {
+export function encolarNoSoportado(tx: TxOutbox, o: { tallerId: string; facturaId: string | null; ref: string; motivo: string }): Promise<void> {
   return insertar(tx, { tallerId: o.tallerId, facturaId: o.facturaId, tipo: 'no_soportado', ref: o.ref, hecho: { motivo: o.motivo } })
 }
 
@@ -48,4 +49,11 @@ export function encolarAnulacion(tx: TxOutbox, o: { tallerId: string; facturaId:
     tallerId: o.tallerId, facturaId: o.facturaId, ref: `anulacion:${o.numSerie}`,
     motivo: `anulación de ${o.numSerie}: el puerto contable aún no admite contraasientos (se anotará a mano en contabilidad)`,
   })
+}
+
+/** Albarán valorado con la factura del proveedor → hecho de compra (sin factura de venta asociada). Idempotente por `albaran:<id>`. */
+export async function encolarCompra(tx: TxOutbox, o: { tallerId: string; albaran: AlbaranParaHecho }): Promise<void> {
+  const h = hechoCompra(o.albaran)
+  if (!h.ok) return encolarNoSoportado(tx, { tallerId: o.tallerId, facturaId: null, ref: `compra:albaran:${o.albaran.albaranId}`, motivo: h.motivo })
+  return insertar(tx, { tallerId: o.tallerId, facturaId: null, tipo: 'compra', ref: h.hecho.ref, hecho: h.hecho })
 }

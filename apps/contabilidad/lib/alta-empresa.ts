@@ -7,7 +7,7 @@
 //   · Siembra: ejercicio natural ABIERTO (año de `ejercicio` o el de hoy, reloj inyectado) y plan de cuentas PGC pymes
 //     (`SEMILLA_PGC_PYMES` de @central/module-contabilidad, copia por empresa, editable después).
 //   · Sin envío de nada a nadie: el dueño entra con su correo y un código (que hoy queda «no enviado»: ver lib/acceso.ts).
-import { filasPlanDeSector } from '@central/module-contabilidad'
+import { filasPlanDeSector, normalizarCnae, plantillaSugeridaPorCnae } from '@central/module-contabilidad'
 import type { FilaCuenta, RepoContable } from './repo.ts'
 import { APPS_ORIGEN } from './secretos.ts'
 
@@ -43,7 +43,7 @@ export const filasSemillaPgc = (sector?: string): FilaCuenta[] =>
 
 type Persona = { email: string; nombre: string }
 export type EntradaAltaValida = {
-  nif: string; razonSocial: string; forma: Forma; sector: Sector; anio: number
+  nif: string; razonSocial: string; forma: Forma; sector: Sector; anio: number; cnae: string | null
   dueno: Persona; gestor: Persona | null; logoUrl: string | null; colorPrimario: string | null; origenes: string[]
 }
 
@@ -73,7 +73,11 @@ export function validarEntradaAlta(b: unknown, hoy: Date): { ok: true; valor: En
     if (!forma) errores.push('forma: no se deduce del NIF; indícala (sociedad | autonomo)')
   }
   // El sector es la plantilla de reglas; sin sector, la genérica (es el último eslabón de la precedencia, no un valor de cajón).
-  const sector = (o.sector ?? 'generico') as Sector
+  // Con CNAE y sin sector, la plantilla es la SUGERIDA por la actividad (el dueño/gestor puede cambiarla luego en Ajustes → Actividad).
+  const cnaeVacio = o.cnae === undefined || o.cnae === null || (typeof o.cnae === 'string' && o.cnae.trim() === '')
+  const cnae = cnaeVacio ? null : normalizarCnae(o.cnae)
+  if (!cnaeVacio && !cnae) errores.push('cnae: 4 dígitos (CNAE-2009), p. ej. 4520 o 45.20')
+  const sector = (o.sector ?? (cnae ? plantillaSugeridaPorCnae(cnae) : 'generico')) as Sector
   if (!SECTORES.includes(sector)) errores.push(`sector: ${SECTORES.join(' | ')}`)
   const anio = o.ejercicio === undefined ? hoy.getUTCFullYear() : o.ejercicio
   if (typeof anio !== 'number' || !Number.isInteger(anio) || anio < 2000 || anio > 2100) errores.push('ejercicio: año entre 2000 y 2100')
@@ -92,7 +96,7 @@ export function validarEntradaAlta(b: unknown, hoy: Date): { ok: true; valor: En
   return {
     ok: true,
     valor: {
-      nif: nif!, razonSocial, forma: forma!, sector, anio: anio as number, dueno: dueno!, gestor, logoUrl, colorPrimario,
+      nif: nif!, razonSocial, forma: forma!, sector, anio: anio as number, cnae, dueno: dueno!, gestor, logoUrl, colorPrimario,
       origenes: [...new Set(origenes as string[])],
     },
   }
@@ -125,6 +129,11 @@ export async function altaEmpresa(deps: DepsAlta, cuerpo: unknown): Promise<Resu
     if ((await repo.contarCuentas()) === 0) {
       await repo.sembrarPlan(filasSemillaPgc(d.sector))
       completado.push('plan de cuentas PGC pymes')
+    }
+    // CNAE: solo si se indicó y la empresa aún no tiene uno (repetir el alta no pisa lo que el dueño/gestor haya confirmado). Requiere 0003.
+    if (d.cnae !== null && (await repo.cnaeEmpresa()) === null) {
+      await repo.fijarActividad(d.cnae, null)
+      completado.push(`CNAE ${d.cnae}`)
     }
     const vinculos = await repo.vinculos()
     let duenoUsuarioId: string | null = null

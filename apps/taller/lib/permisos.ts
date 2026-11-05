@@ -3,7 +3,7 @@
 // La UI solo esconde botones; esto es lo que protege.
 //
 //   dueno      todo (Ajustes, personal, márgenes).
-//   admin      recepción, ver OT, presupuestos, facturación (+ proveedores en F2). Sin personal/PIN ni márgenes.
+//   admin      recepción, ver OT, presupuestos, facturación, almacén y albaranes (costes de compra). Sin personal/PIN ni márgenes.
 //   recepcion  recepción, clientes/vehículos, presupuestos; OT solo ver estado.
 //   mecanico   «mis OT», su parte de horas, notas, fotos y propuestas de ampliación (sin precios). SIN precios de venta ni
 //              datos de contacto del cliente (solo el nombre).
@@ -27,6 +27,8 @@ export const CAPACIDADES = [
   'citas', // agenda: invitar a pedir cita, aceptar/rechazar/mover, convertir en recepción
   'facturar', // emitir la factura de una OT terminada, ver facturas y registrar cobros
   'facturas_rectificar', // anular o rectificar una factura emitida (solo el dueño)
+  'almacen', // artículos, inventario, pedidos en borrador y albaranes de entrada (con costes)
+  'pedidos_enviar', // marcar un pedido como enviado al proveedor (solo el dueño: nada sale sin su botón)
 ] as const
 export type Capacidad = (typeof CAPACIDADES)[number]
 
@@ -45,6 +47,8 @@ const MATRIZ: Readonly<Record<Capacidad, readonly string[]>> = {
   citas: ['dueno', 'admin', 'recepcion'],
   facturar: ['dueno', 'admin', 'recepcion'],
   facturas_rectificar: ['dueno'],
+  almacen: ['dueno', 'admin'],
+  pedidos_enviar: ['dueno'],
 }
 
 export function tienePermiso(rol: string | null | undefined, cap: Capacidad): boolean {

@@ -6,7 +6,7 @@
 //   · Rollback: si la función de la transacción lanza, las tablas vuelven al estado anterior.
 // No es Postgres: lo comprobado aquí es la lógica de la app; el SQL real se probó en un Postgres desechable.
 
-const CON_ACTIVO = new Set(['taller', 'tipoIva', 'tipoVehiculo', 'aceite', 'paquete', 'medioCobro', 'usuarioTaller', 'proveedor'])
+const CON_ACTIVO = new Set(['taller', 'articulo', 'tipoIva', 'tipoVehiculo', 'aceite', 'paquete', 'medioCobro', 'usuarioTaller', 'proveedor'])
 
 export type BdFake = ReturnType<typeof crearBdFake>
 

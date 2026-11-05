@@ -4,7 +4,7 @@ import type { NextConfig } from 'next'
 const monorepoRoot = path.join(__dirname, '..', '..')
 
 const nextConfig: NextConfig = {
-  transpilePackages: ['@central/brand', '@central/core-identity', '@central/module-contabilidad'],
+  transpilePackages: ['@central/brand', '@central/core-banca', '@central/core-fiscal', '@central/core-identity', '@central/module-contabilidad'],
   outputFileTracingRoot: monorepoRoot,
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: true },

@@ -21,6 +21,9 @@ function txGrabadora(): { tx: TxSql; llamadas: Llamada[] } {
     razon_social: 'X', nif: 'B1', forma: 'sociedad', sector: 'generico', logo_url: null, color_primario: null, usuario_id: E, rol: 'dueno',
     asiento_id_: null, ok: 1,
     mes: '2026-01', valor: null, desde: new Date('2026-01-01'), medio: null, importe: 1, ref: 'R-1', pendientes: 0, rechazados: 0, version: 1,
+    proveedor_nif: 'B12345674', proveedor_nombre: 'P', fecha_contable: new Date('2026-01-02'), fecha_valor: new Date('2026-01-02'),
+    base_cent: 100, cuota_cent: 21, retencion_cent: 0, total_cent: 121, adjunto_ref: null, importe_cent: -100, cuenta_ref: 'c', contraparte: 'x', referencia: '',
+    retencion_pct: null, patron: 'banco', sentido: 'cargo', cnae: '4520',
     clave: 'k', tipo: 'fiscal', severidad: 'info', titulo: 't', detalle: 'd', fecha_ref: null, enlace: null, creado_en: new Date('2026-01-01'), leido_en: null,
   }
   const tx: TxSql = {
@@ -76,6 +79,23 @@ const LLAMADAS: [string, (r: RepoContable) => Promise<unknown>][] = [
   ['vinculos', (r) => r.vinculos()],
   ['vincular', (r) => r.vincular(E, 'gestor')],
   ['autorizarOrigen', (r) => r.autorizarOrigen('taller')],
+  // ── F3 ──
+  ['cnaeEmpresa', (r) => r.cnaeEmpresa()],
+  ['fijarActividad', (r) => r.fijarActividad('4520', 'taller')],
+  ['proveedor', (r) => r.proveedor('B12345674')],
+  ['proveedoresRecientes', (r) => r.proveedoresRecientes(20)],
+  ['guardarProveedor', (r) => r.guardarProveedor({ nif: 'B12345674', nombre: 'P', tipo: 'proveedor', categoria: 'mercaderias', retencionPct: null })],
+  ['facturaRecibidaPorClave', (r) => r.facturaRecibidaPorClave('B12345674', 'F-1')],
+  ['insertarFacturaRecibida', (r) => r.insertarFacturaRecibida({ proveedorNif: 'B12345674', proveedorNombre: 'P', numero: 'F-1', numeroNorm: 'F-1', fecha: '2026-01-02', fechaContable: '2026-01-02', base: 100, cuota: 21, retencion: 0, total: 121, lineas: [], origen: 'manual', hechoId: E, asientoId: E, creadaPor: E })],
+  ['facturasRecibidas', (r) => r.facturasRecibidas({ limite: 10 })],
+  ['insertarMovimientosBanco', (r) => r.insertarMovimientosBanco([{ cuentaRef: 'c', fecha: '2026-01-02', fechaValor: '2026-01-02', importe: -100, concepto: 'x', contraparte: 'x', referencia: '', saldo: null, origen: 'csv', huella: 'a'.repeat(64) }], E)],
+  ['movimientosBanco pendientes', (r) => r.movimientosBanco({ filtro: 'pendientes', limite: 10 })],
+  ['movimientosBanco conciliados', (r) => r.movimientosBanco({ filtro: 'conciliados', limite: 10 })],
+  ['movimientoBanco', (r) => r.movimientoBanco(E)],
+  ['insertarConciliacion', (r) => r.insertarConciliacion({ movimientoId: E, tipo: 'pago', documento: 'D', cuenta: '400', metodo: 'importe_exacto', hechoId: E, asientoId: E, confirmadaPor: E })],
+  ['reglasConciliacion', (r) => r.reglasConciliacion()],
+  ['insertarReglaConciliacion', (r) => r.insertarReglaConciliacion({ patron: 'banco', cuenta: '626', sentido: 'cargo' }, E)],
+  ['desactivarReglaConciliacion', (r) => r.desactivarReglaConciliacion(E)],
 ]
 
 for (const [nombre, llamar] of LLAMADAS) {
@@ -88,6 +108,7 @@ for (const [nombre, llamar] of LLAMADAS) {
       const filtro = /^INSERT INTO contabilidad\.\w+ \(\s*(usuario_id, )?empresa_id\b/.test(sql)
         ? true // INSERT: la empresa es una columna (y RLS WITH CHECK la exige igual a la de la sesión)
         : /WHERE (\w+\.)?empresa_id = \?::uuid/.test(sql) || /^SELECT [\s\S]* FROM contabilidad\.empresas WHERE id = \?::uuid/.test(sql)
+        || /^SELECT contabilidad\.fijar_actividad\(\?::uuid, /.test(sql) // función SECURITY DEFINER: ella misma exige que la empresa sea la de la sesión
       assert.ok(filtro, `consulta sin filtro de empresa:\n${l.sql}`)
       assert.ok(l.valores.includes(E), `la empresa no va como parámetro:\n${l.sql}`)
       // En un JOIN, AMBAS tablas se filtran (no basta con la condición del JOIN).
