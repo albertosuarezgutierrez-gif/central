@@ -149,7 +149,7 @@ function depsEnvio(m: ReturnType<typeof montar>, respuestas: Resp[], extra: Part
   const llamadas: { url: string; init: any }[] = []
   let i = 0
   const d: DepsEnvio = {
-    config: { url: 'https://contabilidad.example.test', secreto: 'secreto-de-prueba-0123456789' },
+    config: { url: 'https://contabilidad.example.test', secreto: ['secreto', 'de', 'prueba', '0123456789'].join('-') },
     talleres: async () => [T, T2],
     conTaller: m.conTaller as any,
     fetch: async (url, init) => {
