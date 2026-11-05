@@ -3,7 +3,7 @@
 import { ErrorContable, esCentimos, type Centimos } from './dinero.ts'
 import type { PlanDeCuentas } from './plan.ts'
 
-export type TipoOrigen = 'venta' | 'cobro' | 'compra' | 'pago' | 'nomina' | 'banco' | 'manual' | 'amortizacion' | 'cierre'
+export type TipoOrigen = 'venta' | 'cobro' | 'compra' | 'pago' | 'nomina' | 'banco' | 'manual' | 'amortizacion' | 'periodificacion' | 'cierre' | 'apertura'
 
 export interface OrigenAsiento {
   tipo: TipoOrigen

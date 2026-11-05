@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-05T07:59:47Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-05T09:23:05Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 15 apps · 49 packages · 23 capacidades · 44 skills · 1950 rutas API.
+**Resumen:** 15 apps · 49 packages · 23 capacidades · 44 skills · 1954 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -35,8 +35,8 @@
 ### contabilidad
 - **Módulos que usa:** core-banca, core-fiscal, core-identity, module-contabilidad
 - **Capacidades:** Informes
-- **Tablas (21):** contabilidad.acceso_otps, contabilidad.apuntes, contabilidad.asientos, contabilidad.auditoria, contabilidad.avisos, contabilidad.conciliaciones, contabilidad.consentimiento_seguros, contabilidad.declaraciones, contabilidad.ejercicios, contabilidad.empresas, contabilidad.facturas_recibidas, contabilidad.hechos_contables, contabilidad.movimientos_banco, contabilidad.origenes_autorizados, contabilidad.plan_cuentas, contabilidad.proveedores, contabilidad.reglas_asiento, contabilidad.reglas_conciliacion, contabilidad.usuario_empresas, contabilidad.usuarios, sin
-- **Rutas API:** 23
+- **Tablas (25):** contabilidad.acceso_otps, contabilidad.activos_fijos, contabilidad.amortizacion_tabla, contabilidad.apuntes, contabilidad.asientos, contabilidad.auditoria, contabilidad.avisos, contabilidad.cierres_ejercicio, contabilidad.conciliaciones, contabilidad.consentimiento_seguros, contabilidad.declaraciones, contabilidad.ejercicios, contabilidad.empresas, contabilidad.facturas_recibidas, contabilidad.hechos_contables, contabilidad.movimientos_banco, contabilidad.origenes_autorizados, contabilidad.periodificaciones, contabilidad.plan_cuentas, contabilidad.proveedores, contabilidad.reglas_asiento, contabilidad.reglas_conciliacion, contabilidad.usuario_empresas, contabilidad.usuarios, sin
+- **Rutas API:** 27
 ### housesevillana
 - **Módulos que usa:** core-consent
 - **Capacidades:** —
@@ -65,7 +65,7 @@
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Informes, Notificaciones (push), Asistente / copiloto IA
-- **Tablas (18):** rrhh.acceso_otps, rrhh.avisos, rrhh.avisos_admin, rrhh.contratos_laborales, rrhh.documentos, rrhh.empleados, rrhh.empresa_modulos, rrhh.empresas, rrhh.firma_otps, rrhh.firmas, rrhh.incidencias_mes, rrhh.incidencias_ubicacion, rrhh.material_empleado, rrhh.mensajes, rrhh.nominas, rrhh.push_subscriptions, rrhh.solicitudes, rrhh.usuarios_rrhh
+- **Tablas (19):** rrhh.acceso_otps, rrhh.avisos, rrhh.avisos_admin, rrhh.contratos_laborales, rrhh.documentos, rrhh.empleados, rrhh.empresa_modulos, rrhh.empresas, rrhh.firma_otps, rrhh.firmas, rrhh.incidencias_mes, rrhh.incidencias_ubicacion, rrhh.material_empleado, rrhh.mensajes, rrhh.nominas, rrhh.push_subscriptions, rrhh.situacion_familiar, rrhh.solicitudes, rrhh.usuarios_rrhh
 - **Rutas API:** 89
 ### sivra
 - **Módulos que usa:** core-ai, core-email, core-identity, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
@@ -303,6 +303,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, contabilidad, housesevillana, mariscos, taller, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (05/11/2026) 05/11/2026) Correduría · Avant2 sin gasto en balde + renovación por la app (PR #5555, #5557, #5562, #5569)
 - (05/11/2026) 05/11/2026) Plataforma · lupa de búsqueda de la correduría en la cabecera
 - (05/11/2026) 05/11/2026) Plataforma · «Nueva tarea» no guardaba + atajo en cabecera fija
 - (04/11/2026) 04/11/2026) Correduría · WhatsApp: recepción real OK + IA que responde (PR #5528, flags apagados)
@@ -312,5 +313,4 @@
 - (04/11/2026) 04/11/2026) Correduría · WhatsApp: respuestas del cliente → propuestas CRM — PR #5486
 - (03/11/2026) 03/11/2026) Correduría · regularización RC fase 3 (respuesta a Occident + cierre manual) — ✅ PR #5472 mergeado
 - (03/11/2026) 03/11/2026) Correduría · buscador de cartera tolerante (caso Antonio Villegas)
-- (03/11/2026) 03/11/2026) Correduría · regularización RC de Occident automatizada (fases 1-2)
 

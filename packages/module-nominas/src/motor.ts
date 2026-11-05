@@ -11,7 +11,7 @@
  *   base CP        = clamp(remuneración CC + horas extra, mín., máx.)      (AT/EP, desempleo, FOGASA, FP)
  *   exceso solid.  = max(0, remuneración CC + horas extra − máx.)          → tramos de solidaridad
  *   MEI            = sobre base CC
- *   IRPF           = devengado × % del contrato (plano; el algoritmo AEAT llega en N1)
+ *   IRPF           = devengado × % del contrato (plano) o, con `irpfAlgoritmo`, × tipo del algoritmo AEAT (irpf.ts)
  *   neto           = devengado − deducciones trabajador ; coste = devengado + cuota empresa
  * Grupos 8-11: bases diarias × días naturales del mes.
  *
@@ -20,7 +20,10 @@
  */
 import { CifraDesconocidaError, CifraPendienteError, PENDIENTE_VERIFICAR, type Cifra } from './cifras'
 import { aplicarTipo, esCentimos, type Centimos, type Ppm } from './dinero'
-import { tablaDelAño, type GrupoDiario, type GrupoMensual, type TablaAnual } from './tablas'
+import { calcularTipoIrpf, type DetalleIrpf } from './irpf'
+import { retribucionAnualPrevisible } from './pagas'
+import type { SituacionFamiliar } from './situacion-familiar'
+import { tablaDelAño, type GrupoDiario, type GrupoMensual, type TablaAnual, type TablaIrpf } from './tablas'
 import type { GrupoCotizacion, TipoIncidencia } from './tipos'
 
 export type ModoCalculo = 'calculo' | 'simulacion'
@@ -46,7 +49,10 @@ export interface EntradaNomina {
   /** Solo con 14 pagas: true = las extras se pagan prorrateadas cada mes. */
   prorrataExtras: boolean
   mesesPagaExtra?: number[] // por defecto [6, 12]
+  /** % plano heredado. Se IGNORA si hay `irpfAlgoritmo`. */
   irpfPct: number
+  /** N1: retención por el algoritmo AEAT (tipo anual sobre la retribución previsible). null en `situacion` = sin modelo 145. */
+  irpfAlgoritmo?: { situacion: SituacionFamiliar | null; duracionInferiorAño?: boolean }
   /** Tipo AT/EP de la empresa en ppm; null = «no se sabe» (sin CNAE resuelto). */
   atEp: Ppm | null
   incidencias: IncidenciaCentimos[]
@@ -57,6 +63,8 @@ export interface OpcionesCalculo {
   modo: ModoCalculo
   /** Para tests: tabla explícita. Por defecto, la del año del periodo (o error). */
   tabla?: TablaAnual
+  /** Para tests: tabla IRPF explícita. Por defecto, la del año (o error). */
+  tablaIrpf?: TablaIrpf
 }
 
 export interface NominaCentimos {
@@ -76,6 +84,8 @@ export interface NominaCentimos {
   bases: { contingenciasComunes: Centimos; contingenciasProfesionales: Centimos; irpf: Centimos; excesoSolidaridad: Centimos }
   trabajador: { contingenciasComunes: Centimos; desempleo: Centimos; fp: Centimos; mei: Centimos; solidaridad: Centimos; irpf: Centimos; total: Centimos }
   empresa: { contingenciasComunes: Centimos; desempleo: Centimos; fogasa: Centimos; fp: Centimos; atEp: Centimos; mei: Centimos; solidaridad: Centimos; total: Centimos }
+  /** N1: detalle del algoritmo IRPF (null = % plano heredado). */
+  irpf: DetalleIrpf | null
   neto: Centimos
   costeEmpresa: Centimos
   /** Claves de cifras/reglas PENDIENTE_VERIFICAR que intervinieron (vacío = todo verificado o probable). */
@@ -218,7 +228,25 @@ export function calcularNominaCentimos(e: EntradaNomina, opts: OpcionesCalculo):
     mei: aplicarTipo(baseCC, usar(t.mei.trabajador)),
     solidaridad: solTrab,
   }
-  const irpf = aplicarTipo(total, Math.round(Number((e.irpfPct * 10_000).toPrecision(15))))
+  let irpfDetalle: DetalleIrpf | null = null
+  let irpf: Centimos
+  if (e.irpfAlgoritmo) {
+    const cotMensual = trabajadorSinIrpf.contingenciasComunes + trabajadorSinIrpf.desempleo + trabajadorSinIrpf.fp + trabajadorSinIrpf.mei
+    irpfDetalle = calcularTipoIrpf(
+      {
+        retribucionAnual: retribucionAnualPrevisible({ salarioEf, complementosMensuales: totalCompl, pagas: e.pagas }),
+        cotizacionesAnual: cotMensual * 12,
+        situacion: e.irpfAlgoritmo.situacion,
+        duracionInferiorAño: e.irpfAlgoritmo.duracionInferiorAño,
+      },
+      { año, modo: 'simulacion', tabla: opts.tablaIrpf },
+    )
+    for (const c of irpfDetalle.cifrasPendientes) pendientes.add(c)
+    avisos.push(...irpfDetalle.avisos.map(a => `irpf:${a}`))
+    irpf = aplicarTipo(Math.max(0, total), irpfDetalle.tipoPpm)
+  } else {
+    irpf = aplicarTipo(total, Math.round(Number((e.irpfPct * 10_000).toPrecision(15))))
+  }
   const trabajador = {
     ...trabajadorSinIrpf,
     irpf,
@@ -257,6 +285,7 @@ export function calcularNominaCentimos(e: EntradaNomina, opts: OpcionesCalculo):
     bases: { contingenciasComunes: baseCC, contingenciasProfesionales: baseCP, irpf: total, excesoSolidaridad: exceso },
     trabajador,
     empresa,
+    irpf: irpfDetalle,
     neto: total - trabajador.total,
     costeEmpresa: total + empresa.total,
     cifrasPendientes,

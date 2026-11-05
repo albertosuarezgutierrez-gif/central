@@ -61,3 +61,6 @@ export * from './compras/compras.ts'
 
 // ── F4: impuestos (libros de IVA, 303/390/111/115/190/180/347/349/130 como borradores, calendario, liquidación) ──
 export * from './impuestos/index.ts'
+
+// ── F5: inmovilizado y amortizaciones, periodificaciones, cierre/apertura, cuentas anuales abreviadas, borradores 200/202, libros para legalizar ──
+export * from './cierre/index.ts'

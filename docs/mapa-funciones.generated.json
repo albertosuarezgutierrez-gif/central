@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-05T07:59:47Z",
-  "sha": "e07e2ff95d41618a9096b736bbd0130279125e8e",
+  "generadoEn": "2026-11-05T09:23:35Z",
+  "sha": "c8b1017448cdb33519402d56274f76d4b5034f9d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -77074,6 +77074,28 @@
       "hash": "800f465ceb2a"
     },
     {
+      "ruta": "apps/contabilidad/app/_enviar.ts",
+      "ambito": "apps/contabilidad",
+      "resumen": "POST JSON a una ruta interna y devuelve `{ ok, errores }` (los formularios de cierre e inmovilizado lo comparten).",
+      "exporta": [
+        "enviar"
+      ],
+      "funciones": [
+        {
+          "nombre": "enviar",
+          "kind": "function",
+          "exportada": true,
+          "params": "url: string, cuerpo: unknown",
+          "retorno": "Promise<",
+          "linea": 2,
+          "resumen": "POST JSON a una ruta interna y devuelve `{ ok, errores }` (los formularios de cierre e inmovilizado lo comparten)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "daff59f18a44"
+    },
+    {
       "ruta": "apps/contabilidad/app/_nav.tsx",
       "ambito": "apps/contabilidad",
       "exporta": [
@@ -77086,13 +77108,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 21,
+          "linea": 24,
           "resumen": "Menú de secciones: marca la activa con el acento de la empresa. Solo navegación: no decide permisos."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c23ff9302fca"
+      "hash": "a8ed5ed839ba"
     },
     {
       "ruta": "apps/contabilidad/app/_salir.tsx",
@@ -77428,6 +77450,42 @@
       "hash": "21a621dad5b1"
     },
     {
+      "ruta": "apps/contabilidad/app/api/cierre/route.ts",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "num",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": null,
+          "linea": 13
+        },
+        {
+          "nombre": "txt",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown, max = 200",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 16
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cierre",
+      "hash": "0eb314dd2506"
+    },
+    {
       "ruta": "apps/contabilidad/app/api/compras/proveedor/route.ts",
       "ambito": "apps/contabilidad",
       "exporta": [
@@ -77483,6 +77541,26 @@
       "tablas": [],
       "rutaApi": "/api/cron/avisos",
       "hash": "989c90cbb5bf"
+    },
+    {
+      "ruta": "apps/contabilidad/app/api/cuentas-anuales/route.ts",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 15
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cuentas-anuales",
+      "hash": "f28298ea71c8"
     },
     {
       "ruta": "apps/contabilidad/app/api/hechos/route.ts",
@@ -77574,6 +77652,26 @@
       "hash": "94645e117577"
     },
     {
+      "ruta": "apps/contabilidad/app/api/impuestos/sociedades/route.ts",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 13
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/impuestos/sociedades",
+      "hash": "4de3e43f7d24"
+    },
+    {
       "ruta": "apps/contabilidad/app/api/informes/[clave]/route.ts",
       "ambito": "apps/contabilidad",
       "exporta": [
@@ -77592,6 +77690,42 @@
       "tablas": [],
       "rutaApi": "/api/informes/[clave]",
       "hash": "7a3939feb470"
+    },
+    {
+      "ruta": "apps/contabilidad/app/api/inmovilizado/route.ts",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "num",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "txt",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown, max = 200",
+          "retorno": null,
+          "linea": 15
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 17
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/inmovilizado",
+      "hash": "d8dfe6b86da7"
     },
     {
       "ruta": "apps/contabilidad/app/api/operador/empresas/route.ts",
@@ -77821,6 +77955,65 @@
       "hash": "cc6c5baa99cd"
     },
     {
+      "ruta": "apps/contabilidad/app/cierre/Formularios.tsx",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "FormPeriodificacion",
+        "AccionesCierre"
+      ],
+      "funciones": [
+        {
+          "nombre": "Mensaje",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "{ m }: { m: Msg }",
+          "retorno": null,
+          "linea": 7
+        },
+        {
+          "nombre": "FormPeriodificacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 9
+        },
+        {
+          "nombre": "AccionesCierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ anio, puedeCerrar, esDueno }: { anio: number; puedeCerrar: boolean; esDueno: boolean }",
+          "retorno": null,
+          "linea": 53
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "95fc376d0dd9"
+    },
+    {
+      "ruta": "apps/contabilidad/app/cierre/page.tsx",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "Cierre"
+      ],
+      "funciones": [
+        {
+          "nombre": "Cierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }",
+          "retorno": null,
+          "linea": 11
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5fa06fb58e25"
+    },
+    {
       "ruta": "apps/contabilidad/app/compras/FormCompra.tsx",
       "ambito": "apps/contabilidad",
       "exporta": [
@@ -77893,6 +78086,50 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "f38f5ad4c7ec"
+    },
+    {
+      "ruta": "apps/contabilidad/app/cuentas-anuales/page.tsx",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "CuentasAnualesPagina"
+      ],
+      "funciones": [
+        {
+          "nombre": "uno",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "sp: SP, k: string",
+          "retorno": null,
+          "linea": 12
+        },
+        {
+          "nombre": "Lineas",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ lineas, total }: { lineas: readonly LineaCuentaAnual[]; total?: { etiqueta: string; importe: number; anterior: number | null } }",
+          "retorno": null,
+          "linea": 18
+        },
+        {
+          "nombre": "Borrador",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ c, errores, enlace }: { c: CalculoIs; errores: string[]; enlace: string }",
+          "retorno": null,
+          "linea": 38
+        },
+        {
+          "nombre": "CuentasAnualesPagina",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ searchParams }: { searchParams: Promise<SP> }",
+          "retorno": null,
+          "linea": 65
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "32b4f8b83755"
     },
     {
       "ruta": "apps/contabilidad/app/diario/page.tsx",
@@ -78229,6 +78466,106 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "7704324713d0"
+    },
+    {
+      "ruta": "apps/contabilidad/app/inmovilizado/[ref]/page.tsx",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "Cuadro"
+      ],
+      "funciones": [
+        {
+          "nombre": "Cuadro",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ params, searchParams }: { params: Promise<{ ref: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }",
+          "retorno": null,
+          "linea": 11,
+          "resumen": "Cuadro de amortización de un bien: resumen por ejercicio y detalle mensual del ejercicio elegido (nunca cientos de filas de golpe)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "055de549dfd6"
+    },
+    {
+      "ruta": "apps/contabilidad/app/inmovilizado/Formularios.tsx",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "FormAlta",
+        "FormAmortizar",
+        "BajaActivo",
+        "EditarTabla"
+      ],
+      "funciones": [
+        {
+          "nombre": "Mensaje",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ m }: { m: Msg }",
+          "retorno": null,
+          "linea": 10
+        },
+        {
+          "nombre": "FormAlta",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ categorias }: { categorias: readonly CategoriaOpcion[] }",
+          "retorno": null,
+          "linea": 15,
+          "resumen": "Alta manual de un bien (otras verticales usan POST /api/inmovilizado con su propio origen)."
+        },
+        {
+          "nombre": "FormAmortizar",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ anioPorDefecto }: { anioPorDefecto: number }",
+          "retorno": null,
+          "linea": 67
+        },
+        {
+          "nombre": "BajaActivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ refActivo }: { refActivo: string }",
+          "retorno": null,
+          "linea": 91
+        },
+        {
+          "nombre": "EditarTabla",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ filas }: { filas: FilaTablaEditable[] }",
+          "retorno": null,
+          "linea": 125,
+          "resumen": "Nueva versión de la tabla de amortización (solo el dueño). Las fichas ya dadas de alta conservan su porcentaje."
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "e92890f4128b"
+    },
+    {
+      "ruta": "apps/contabilidad/app/inmovilizado/page.tsx",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "Inmovilizado"
+      ],
+      "funciones": [
+        {
+          "nombre": "Inmovilizado",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 11
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "367dd44a0e76"
     },
     {
       "ruta": "apps/contabilidad/app/layout.tsx",
@@ -78732,6 +79069,234 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "73aa0f4cb716"
+    },
+    {
+      "ruta": "apps/contabilidad/lib/cierre-carga.ts",
+      "ambito": "apps/contabilidad",
+      "resumen": "Ejecución de la fase 5 contra la BD: cada operación en SU PROPIA transacción RLS de la empresa, y \"todo o nada\" (si el caso de uso devuelve `ok: false` se revierte lo que hubiera hecho). La lógica está en `cierre.ts` (probada sin BD); esto solo junta los repositorios.",
+      "exporta": [
+        "conF5",
+        "ejecutarF5"
+      ],
+      "funciones": [
+        {
+          "nombre": "conF5",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "empresaId: string, fn: (repo: RepoContable, f5: RepoF5) => Promise<R>",
+          "retorno": null,
+          "linea": 11,
+          "resumen": "Lectura (o escritura) con ambos repositorios en una transacción propia. Si 0005 no está aplicada, las consultas a sus tablas lanzan: el llamador lo tolera."
+        },
+        {
+          "nombre": "ejecutarF5",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, fn: (repo: RepoContable, f5: RepoF5) => Promise<R>",
+          "retorno": "Promise<R>",
+          "linea": 15,
+          "resumen": "Escritura todo-o-nada: `ok: false` revierte la transacción y se devuelve el resultado tal cual."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3255159e3598"
+    },
+    {
+      "ruta": "apps/contabilidad/lib/cierre.ts",
+      "ambito": "apps/contabilidad",
+      "resumen": "Casos de uso de la FASE 5 sobre los repositorios de UNA empresa (inyectados; tests con fakes): inmovilizado y amortizaciones, periodificaciones, cierre/apertura del ejercicio y cuentas anuales. Sin BD directa. · Todo asiento pasa por el núcleo (`crearAsiento`: cuadre, cuentas hoja del plan, ejercici",
+      "exporta": [
+        "tablaVigente",
+        "fichasDe",
+        "altaActivo",
+        "amortizarPeriodo",
+        "bajaDeActivo",
+        "guardarTabla",
+        "altaPeriodificacion",
+        "periodificarCierre",
+        "diagnosticoCierre",
+        "cerrarEjercicio",
+        "movimientosInmovilizado",
+        "cuentasAnuales"
+      ],
+      "funciones": [
+        {
+          "nombre": "fallo",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "...errores: string[]",
+          "retorno": "",
+          "linea": 23
+        },
+        {
+          "nombre": "iso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: Date",
+          "retorno": null,
+          "linea": 24
+        },
+        {
+          "nombre": "mesStr",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "anio: number, mes: number",
+          "retorno": null,
+          "linea": 25
+        },
+        {
+          "nombre": "tablaVigente",
+          "kind": "function",
+          "exportada": true,
+          "params": "f5: RepoF5",
+          "retorno": "Promise<",
+          "linea": 28,
+          "resumen": "Tabla de amortización vigente de la empresa (la última versión guardada) o la de defecto."
+        },
+        {
+          "nombre": "aFicha",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a: FilaActivo",
+          "retorno": "FichaActivo",
+          "linea": 33
+        },
+        {
+          "nombre": "fichasDe",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "xs: readonly FilaActivo[]",
+          "retorno": "FichaActivo[]",
+          "linea": 38
+        },
+        {
+          "nombre": "contexto",
+          "kind": "function",
+          "exportada": false,
+          "params": "repo: RepoContable, anio: number",
+          "retorno": null,
+          "linea": 40
+        },
+        {
+          "nombre": "persistir",
+          "kind": "function",
+          "exportada": false,
+          "params": "repo: RepoContable, a: Asiento, p: OrigenPersistido, meta: MetaCierre",
+          "retorno": "Promise<",
+          "linea": 49,
+          "resumen": "Valida con el núcleo y guarda (número correlativo bajo el bloqueo del ejercicio). Lanza `ErrorContable` si no es válido."
+        },
+        {
+          "nombre": "mensajes",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "e: unknown",
+          "retorno": "string[] | null",
+          "linea": 63
+        },
+        {
+          "nombre": "altaActivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "repo: RepoContable, f5: RepoF5, entrada: EntradaInmovilizado, o: { cuentaContrapartida?: string }, meta: MetaCierre",
+          "retorno": "Promise<ResultadoAlta>",
+          "linea": 72,
+          "resumen": "Alta de un bien (a mano o desde otra vertical, p. ej. RRHH). IDEMPOTENTE por (origen, refExterna): repetirla devuelve la ficha existente. Si NO pasó por una factura asentada (`yaContabilizado: false`)"
+        },
+        {
+          "nombre": "amortizarPeriodo",
+          "kind": "function",
+          "exportada": true,
+          "params": "repo: RepoContable, f5: RepoF5, p: { anio: number; mes?: number }, meta: MetaCierre",
+          "retorno": "Promise<ResultadoAmortizacion>",
+          "linea": 107,
+          "resumen": "Asienta la amortización del mes (o del año completo). Idempotente por periodo; el anual y los mensuales de un mismo año no conviven."
+        },
+        {
+          "nombre": "bajaDeActivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "repo: RepoContable, f5: RepoF5, entrada: { ref: string; fecha: string; precioVenta?: number; cuentaContrapartida?: string }, meta: MetaCierre,",
+          "retorno": "Promise<ResultadoBaja>",
+          "linea": 132,
+          "resumen": "Baja o venta de un bien: exige la amortización asentada hasta el mes de la baja y deja el resultado en 671/771."
+        },
+        {
+          "nombre": "guardarTabla",
+          "kind": "function",
+          "exportada": true,
+          "params": "f5: RepoF5, filas: readonly FilaTablaAmortizacion[], meta: MetaCierre",
+          "retorno": "Promise<ResultadoTabla>",
+          "linea": 167,
+          "resumen": "Guarda una NUEVA versión de la tabla de amortización (las fichas ya dadas de alta conservan su %)."
+        },
+        {
+          "nombre": "altaPeriodificacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "f5: RepoF5, p: Periodificacion, meta: MetaCierre",
+          "retorno": "Promise<Res<",
+          "linea": 185,
+          "resumen": "── Periodificaciones ─────────────────────────────────────────────────────────────────────────────────────────"
+        },
+        {
+          "nombre": "periodificarCierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "repo: RepoContable, f5: RepoF5, anio: number, meta: MetaCierre",
+          "retorno": "Promise<ResultadoPeriodificar>",
+          "linea": 195,
+          "resumen": "Asiento de periodificación al 31/12 (480/485) y su reversa el 1/1 del ejercicio siguiente. Idempotente."
+        },
+        {
+          "nombre": "asegurarEjercicio",
+          "kind": "function",
+          "exportada": false,
+          "params": "repo: RepoContable, anio: number",
+          "retorno": null,
+          "linea": 213,
+          "resumen": "El ejercicio natural `anio`: existente o recién creado (abierto)."
+        },
+        {
+          "nombre": "diagnosticoCierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "repo: RepoContable, f5: RepoF5, anio: number, hoy: Date",
+          "retorno": "Promise<",
+          "linea": 225,
+          "resumen": "Lista de comprobaciones previas al cierre. `puedeCerrar` = ninguna que bloquee está en rojo."
+        },
+        {
+          "nombre": "cerrarEjercicio",
+          "kind": "function",
+          "exportada": true,
+          "params": "repo: RepoContable, f5: RepoF5, anio: number, meta: MetaCierre",
+          "retorno": "Promise<ResultadoCierre>",
+          "linea": 263,
+          "resumen": "Cierra el ejercicio: regularización (6/7 → 129), cierre y apertura del siguiente; después marca el ejercicio como cerrado (definitivo). Todo o nada."
+        },
+        {
+          "nombre": "movimientosInmovilizado",
+          "kind": "function",
+          "exportada": true,
+          "params": "activos: readonly FilaActivo[], anio: number",
+          "retorno": null,
+          "linea": 304,
+          "resumen": "Movimientos del inmovilizado por categoría en el ejercicio (valor de adquisición; amortización acumulada al 31/12)."
+        },
+        {
+          "nombre": "cuentasAnuales",
+          "kind": "function",
+          "exportada": true,
+          "params": "repo: RepoContable, f5: RepoF5, anio: number",
+          "retorno": "Promise<CuentasAnuales | null>",
+          "linea": 321
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a8f568374cff"
     },
     {
       "ruta": "apps/contabilidad/lib/compras.ts",
@@ -79590,6 +80155,36 @@
       "hash": "c5c2cde05651"
     },
     {
+      "ruta": "apps/contabilidad/lib/libros-legales-carga.ts",
+      "ambito": "apps/contabilidad",
+      "resumen": "Libros para legalizar y cuentas anuales exportables: lee del ejercicio y devuelve la `TablaLibro` pedida (a CSV / HTML imprimible → PDF). SOLO EXPORTACIÓN: no se legaliza ni se deposita nada. Un libro con más asientos de los que caben se RECHAZA (un libro incompleto no sirve para legalizar).",
+      "exporta": [
+        "esClaveLibro",
+        "tablaDeLibro"
+      ],
+      "funciones": [
+        {
+          "nombre": "esClaveLibro",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "v is ClaveLibro",
+          "linea": 10
+        },
+        {
+          "nombre": "tablaDeLibro",
+          "kind": "function",
+          "exportada": true,
+          "params": "repo: RepoContable, f5: RepoF5, anio: number, clave: ClaveLibro",
+          "retorno": "Promise<",
+          "linea": 12
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9db585dbe0d4"
+    },
+    {
       "ruta": "apps/contabilidad/lib/marca-servidor.ts",
       "ambito": "apps/contabilidad",
       "resumen": "Marca de la empresa de la sesión (servidor). Sin sesión vigente → cara Grupo ASegura (cobalto), sin datos de nadie.",
@@ -79998,6 +80593,54 @@
       "hash": "c47a8d5ede44"
     },
     {
+      "ruta": "apps/contabilidad/lib/repo-f5.ts",
+      "ambito": "apps/contabilidad",
+      "resumen": "Repositorio de la FASE 5 (cierre, inmovilizado, periodificaciones) de UNA empresa. Mismas reglas que repo.ts / repo-f3.ts / repo-f4.ts: · se construye SOLO dentro de `conEmpresa` (RLS) y TODA consulta filtra además por `empresa_id` explícito; · SQL parametrizado con plantilla, nunca concatenación; i",
+      "exporta": [
+        "repoF5Sql"
+      ],
+      "funciones": [
+        {
+          "nombre": "s",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "aActivo",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "f: Fila",
+          "retorno": "FilaActivo",
+          "linea": 62
+        },
+        {
+          "nombre": "aCierre",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "f: Fila",
+          "retorno": "FilaCierre",
+          "linea": 73
+        },
+        {
+          "nombre": "repoF5Sql",
+          "kind": "function",
+          "exportada": true,
+          "params": "tx: TxSql, empresaId: string",
+          "retorno": "RepoF5",
+          "linea": 79
+        }
+      ],
+      "tablas": [
+        "contabilidad",
+        "estado"
+      ],
+      "rutaApi": null,
+      "hash": "38f32f1b179e"
+    },
+    {
       "ruta": "apps/contabilidad/lib/repo.ts",
       "ambito": "apps/contabilidad",
       "resumen": "Repositorio de la contabilidad de UNA empresa. Interfaz + implementación SQL (Postgres, schema `contabilidad`). 🚨 Aislamiento (dos capas, las dos obligatorias): 1. Se construye SOLO dentro de `conEmpresa(empresaId, tx => repoSql(tx, empresaId))`: RLS forzado por empresa. 2. Además, TODA consulta fi",
@@ -80307,6 +80950,63 @@
       "hash": "90efe7f21f70"
     },
     {
+      "ruta": "apps/contabilidad/lib/sociedades-form.ts",
+      "ambito": "apps/contabilidad",
+      "resumen": "Entradas de los borradores 200/202 desde el formulario (query string). PURO. Regla del repo «dato que NO hay ≠ 0»: un campo vacío o ausente es `null` (no informado); solo un «0» escrito es un cero. Importes en formato español («1.234,56»); el porcentaje admite coma («25» o «25,5»).",
+      "exporta": [
+        "parsearPorcentajePb",
+        "entrada200",
+        "entrada202"
+      ],
+      "funciones": [
+        {
+          "nombre": "uno",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "q: Q, k: string",
+          "retorno": "string",
+          "linea": 8
+        },
+        {
+          "nombre": "importe",
+          "kind": "function",
+          "exportada": false,
+          "params": "q: Q, k: string, errores: string[], etiqueta: string",
+          "retorno": "number | null",
+          "linea": 11,
+          "resumen": "Importe del campo: vacío → null; inválido → null (y el campo se marca en `errores`)."
+        },
+        {
+          "nombre": "parsearPorcentajePb",
+          "kind": "function",
+          "exportada": true,
+          "params": "t: string",
+          "retorno": "number | null",
+          "linea": 20,
+          "resumen": "«25» / «25,5» → 2500 / 2550 puntos básicos. Vacío o fuera de 0–100 → null."
+        },
+        {
+          "nombre": "entrada200",
+          "kind": "function",
+          "exportada": true,
+          "params": "q: Q, anio: number, resultadoAntesImpuestos: number",
+          "retorno": "",
+          "linea": 27
+        },
+        {
+          "nombre": "entrada202",
+          "kind": "function",
+          "exportada": true,
+          "params": "q: Q, anio: number",
+          "retorno": "",
+          "linea": 43
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "716da02ac340"
+    },
+    {
       "ruta": "apps/contabilidad/middleware.ts",
       "ambito": "apps/contabilidad",
       "exporta": [
@@ -80378,6 +81078,27 @@
       "hash": "b2dbf399a38a"
     },
     {
+      "ruta": "apps/contabilidad/test/_f5-memoria.ts",
+      "ambito": "apps/contabilidad",
+      "resumen": "Fake en memoria de `RepoF5` que imita 0005 sobre el almacén de `_repo-memoria.ts`: ficha inmutable salvo la baja (una vez), tabla y periodificaciones solo se añaden, cierre inmutable, y el trigger de ejercicios (cerrado definitivo; para cerrar: registro de cierre + cuentas 6/7 a cero).",
+      "exporta": [
+        "f5Memoria"
+      ],
+      "funciones": [
+        {
+          "nombre": "f5Memoria",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosEmpresa",
+          "retorno": "RepoF5 &",
+          "linea": 17
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d85b4980caa1"
+    },
+    {
       "ruta": "apps/contabilidad/test/_repo-memoria.ts",
       "ambito": "apps/contabilidad",
       "resumen": "Fake en memoria de `RepoContable` para probar los casos de uso sin BD. Imita las garantías de 0001 que importan aquí: datos separados por empresa, clave única de hechos (ON CONFLICT DO NOTHING → null), número correlativo por ejercicio y solo-añadir (no expone ningún UPDATE/DELETE de asientos; los gu",
@@ -80396,7 +81117,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "262a67366591"
+      "hash": "577e04fff0c3"
     },
     {
       "ruta": "apps/contabilidad/test/_resolver.mjs",
@@ -186300,7 +187021,7 @@
           "exportada": true,
           "params": "app: string",
           "retorno": "",
-          "linea": 168,
+          "linea": 170,
           "resumen": "Enlaces profundos por nodo: dónde vive cada cosa (código / Vercel / Supabase)."
         },
         {
@@ -186309,7 +187030,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "",
-          "linea": 177
+          "linea": 179
         },
         {
           "nombre": "enlacesSkill",
@@ -186317,12 +187038,12 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "",
-          "linea": 180
+          "linea": 182
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "20afe053f3f6"
+      "hash": "5b83c20615bc"
     },
     {
       "ruta": "apps/plataforma/lib/eval-asistente-casos.ts",
@@ -251228,6 +251949,700 @@
       "hash": "c84cd9119c0e"
     },
     {
+      "ruta": "packages/module-contabilidad/src/cierre/cierre.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "F5 — Regularización, cierre y apertura del ejercicio. PURO, céntimos enteros. Los asientos son INMUTABLES: un ejercicio cerrado no admite más asientos (lo impone `validarAsiento`/la BD); un error posterior se corrige con un contraasiento en un ejercicio ABIERTO. 1. Regularización: salda las cuentas ",
+      "exporta": [
+        "refRegularizacion",
+        "refCierre",
+        "refApertura",
+        "saldosDeAsientos",
+        "esAsientoDeCierre",
+        "resultadoDeAsientos",
+        "asientoRegularizacion",
+        "asientoCierre",
+        "asientoApertura",
+        "diferenciasAperturaCierre",
+        "transicionEjercicioValida",
+        "exigirEjercicioAbierto",
+        "prepararCierre"
+      ],
+      "funciones": [
+        {
+          "nombre": "refRegularizacion",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "anio: number",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "refCierre",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "anio: number",
+          "retorno": null,
+          "linea": 15
+        },
+        {
+          "nombre": "refApertura",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "anio: number",
+          "retorno": null,
+          "linea": 16
+        },
+        {
+          "nombre": "esGestion",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "c: string",
+          "retorno": null,
+          "linea": 18
+        },
+        {
+          "nombre": "saldosDeAsientos",
+          "kind": "function",
+          "exportada": true,
+          "params": "asientos: readonly Pick<Asiento, 'apuntes'>[]",
+          "retorno": "SaldoCuenta[]",
+          "linea": 21,
+          "resumen": "Σ debe / Σ haber por cuenta de los asientos dados (orden por cuenta)."
+        },
+        {
+          "nombre": "esAsientoDeCierre",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "a: Pick<Asiento, 'origen'>",
+          "retorno": "boolean",
+          "linea": 32,
+          "resumen": "¿Es un asiento de regularización o de cierre (los que NO cuentan para PyG ni balance del ejercicio)?"
+        },
+        {
+          "nombre": "resultadoDeAsientos",
+          "kind": "function",
+          "exportada": true,
+          "params": "asientos: readonly Pick<Asiento, 'apuntes'>[]",
+          "retorno": "Centimos",
+          "linea": 39,
+          "resumen": "Resultado del ejercicio = Σ (haber − debe) de las cuentas 6 y 7 (beneficio > 0, pérdida < 0)."
+        },
+        {
+          "nombre": "asientoRegularizacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "asientos: readonly Pick<Asiento, 'apuntes'>[], anio: number",
+          "retorno": "Asiento | null",
+          "linea": 46,
+          "resumen": "Regularización a 31/12: salda cada cuenta 6/7 con saldo y lleva el neto a la 129. `null` si las cuentas 6/7 ya están a cero."
+        },
+        {
+          "nombre": "asientoCierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "asientos: readonly Pick<Asiento, 'apuntes'>[], anio: number",
+          "retorno": "Asiento | null",
+          "linea": 66,
+          "resumen": "Cierre a 31/12: salda todas las cuentas con saldo. Exige las cuentas 6/7 ya regularizadas. `null` si no queda ningún saldo."
+        },
+        {
+          "nombre": "asientoApertura",
+          "kind": "function",
+          "exportada": true,
+          "params": "cierre: Asiento",
+          "retorno": "Asiento",
+          "linea": 79,
+          "resumen": "Apertura del ejercicio siguiente: el cierre con debe/haber intercambiados, fechado el 1 de enero."
+        },
+        {
+          "nombre": "diferenciasAperturaCierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "cierre: Pick<Asiento, 'apuntes'>, apertura: Pick<Asiento, 'apuntes'>",
+          "retorno": "string[]",
+          "linea": 89,
+          "resumen": "Comprobación «apertura ≡ cierre»: cada cuenta con el mismo saldo (deudor/acreedor) a 31/12 y a 1/1. Lista de diferencias (vacía = ok)."
+        },
+        {
+          "nombre": "transicionEjercicioValida",
+          "kind": "function",
+          "exportada": true,
+          "params": "de: EstadoEjercicioCierre, a: EstadoEjercicioCierre",
+          "retorno": "boolean",
+          "linea": 107,
+          "resumen": "Transiciones permitidas del estado del ejercicio. `cerrado` es DEFINITIVO."
+        },
+        {
+          "nombre": "exigirEjercicioAbierto",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EjercicioContable",
+          "retorno": "void",
+          "linea": 115,
+          "resumen": "Lanza si el ejercicio no admite asientos (cerrado o en cierre)."
+        },
+        {
+          "nombre": "prepararCierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaCierre",
+          "retorno": "",
+          "linea": 141,
+          "resumen": "Prepara (sin persistir) regularización, cierre y apertura, YA validados contra el plan y el ejercicio. `errores` no vacío = no se puede cerrar. Condiciones: ejercicio abierto, sin cierre previo, exist"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "099e2c57bd14"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/cierre/cuentas-anuales.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "F5 — Cuentas anuales ABREVIADAS (modelo PGC pymes): balance y cuenta de pérdidas y ganancias desde SALDOS, y memoria como BORRADOR de texto. PURO, céntimos enteros. Convención de saldo: debe − haber. ⚠️ La numeración y composición de las rúbricas es la del modelo abreviado recordada, PENDIENTE DE CO",
+      "exporta": [
+        "balanceAbreviado",
+        "pygAbreviada",
+        "memoriaBorrador",
+        "nombreDeCuenta",
+        "memoriaATexto",
+        "exigirAnioValido"
+      ],
+      "funciones": [
+        {
+          "nombre": "claveDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuenta: string, tabla: readonly (readonly [string, string])[]",
+          "retorno": "",
+          "linea": 58
+        },
+        {
+          "nombre": "acumularBalance",
+          "kind": "function",
+          "exportada": false,
+          "params": "saldos: readonly SaldoCuenta[]",
+          "retorno": "AcumBalance",
+          "linea": 67
+        },
+        {
+          "nombre": "sec",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "clave: string, etiqueta: string, importe: Centimos, anterior: Centimos | null, nivel: 0 | 1 = 1",
+          "retorno": "LineaCuentaAnual",
+          "linea": 107
+        },
+        {
+          "nombre": "seccion",
+          "kind": "function",
+          "exportada": false,
+          "params": "orden: readonly string[], etiq: Record<string, string>, m: Map<string, Centimos>, ma: Map<string, Centimos> | null, grupos: readonly (readonly [string, string, (k: string) => boolean])[]",
+          "retorno": "LineaCuentaAnual[]",
+          "linea": 109
+        },
+        {
+          "nombre": "balanceAbreviado",
+          "kind": "function",
+          "exportada": true,
+          "params": "saldos: readonly SaldoCuenta[], fecha: string, saldosAnterior?: readonly SaldoCuenta[]",
+          "retorno": "BalanceAbreviado",
+          "linea": 127,
+          "resumen": "Balance abreviado a `fecha` desde saldos de las cuentas. `saldosAnterior` (opcional) rellena la columna del ejercicio anterior; sin él, `anterior` = null. El resultado del ejercicio es el saldo de los"
+        },
+        {
+          "nombre": "acumularPyG",
+          "kind": "function",
+          "exportada": false,
+          "params": "saldos: readonly SaldoCuenta[]",
+          "retorno": "Map<string, Centimos>",
+          "linea": 172
+        },
+        {
+          "nombre": "pygAbreviada",
+          "kind": "function",
+          "exportada": true,
+          "params": "saldos: readonly SaldoCuenta[], periodo: { desde: string; hasta: string }, saldosAnterior?: readonly SaldoCuenta[]",
+          "retorno": "PyGAbreviada",
+          "linea": 197,
+          "resumen": "Cuenta de pérdidas y ganancias abreviada (ingresos +, gastos −). Pasa saldos SIN regularizar (`asientosParaCuentasAnuales`)."
+        },
+        {
+          "nombre": "memoriaBorrador",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosMemoria",
+          "retorno": "MemoriaBorrador",
+          "linea": 255,
+          "resumen": "Borrador de la memoria abreviada: texto con los datos que hay y marcas explícitas donde falta un dato. NO sustituye a la memoria firmada."
+        },
+        {
+          "nombre": "nombreDeCuenta",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "c: string",
+          "retorno": "string",
+          "linea": 292
+        },
+        {
+          "nombre": "memoriaATexto",
+          "kind": "function",
+          "exportada": true,
+          "params": "m: MemoriaBorrador",
+          "retorno": "string",
+          "linea": 295,
+          "resumen": "Texto plano de la memoria."
+        },
+        {
+          "nombre": "exigirAnioValido",
+          "kind": "function",
+          "exportada": true,
+          "params": "anio: number",
+          "retorno": "void",
+          "linea": 299
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e07eb86037f0"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/cierre/impuesto-sociedades.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "F5 — BORRADORES del modelo 200 (Impuesto sobre Sociedades) y 202 (pagos fraccionados). PURO, céntimos enteros, sin BD ni red. ⚠️ SOLO BORRADOR REVISABLE, sin validez ante la AEAT: NO genera fichero oficial (el diseño de registro no se ha podido contrastar y nunca se inventan posiciones). Las «casill",
+      "exporta": [
+        "porPuntosBasicos",
+        "borrador200",
+        "ejercicioBase202",
+        "borrador202",
+        "plazoModelo200",
+        "borradorIsHtml",
+        "borradorIsCsv"
+      ],
+      "funciones": [
+        {
+          "nombre": "cas",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "codigo: string, descripcion: string, importe: Centimos | null, origen: string[] = []",
+          "retorno": "CasillaIs",
+          "linea": 45
+        },
+        {
+          "nombre": "enteroOpcional",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown, etiqueta: string",
+          "retorno": "Centimos | null",
+          "linea": 49
+        },
+        {
+          "nombre": "porPuntosBasicos",
+          "kind": "function",
+          "exportada": true,
+          "params": "importe: Centimos, pb: number",
+          "retorno": "Centimos",
+          "linea": 52,
+          "resumen": "round(importe × pb / 10000), mitades hacia fuera, sin pasar por floats (BigInt)."
+        },
+        {
+          "nombre": "borrador200",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaModelo200",
+          "retorno": "CalculoIs",
+          "linea": 80
+        },
+        {
+          "nombre": "ejercicioBase202",
+          "kind": "function",
+          "exportada": true,
+          "params": "anio: number, periodo: Periodo202",
+          "retorno": "number",
+          "linea": 145,
+          "resumen": "Ejercicio cuya cuota sirve de base en la modalidad art. 40.2: el último con plazo de declaración YA vencido el primer día del periodo (ejercicio natural)."
+        },
+        {
+          "nombre": "borrador202",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaModelo202",
+          "retorno": "CalculoIs",
+          "linea": 168
+        },
+        {
+          "nombre": "plazoModelo200",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "anio: number",
+          "retorno": "",
+          "linea": 213,
+          "resumen": "Plazo orientativo del modelo 200 de un ejercicio natural: 25 días naturales siguientes a los 6 meses posteriores al cierre (25/07). Sin trasladar festivos."
+        },
+        {
+          "nombre": "valor",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "c: CasillaIs",
+          "retorno": null,
+          "linea": 216,
+          "resumen": "── Salidas (borrador HTML imprimible y CSV) ─────────────────────────────────────────────────────────────────"
+        },
+        {
+          "nombre": "borradorIsHtml",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CalculoIs, o: { empresa: string; nif?: string; generado: string }",
+          "retorno": "string",
+          "linea": 218
+        },
+        {
+          "nombre": "borradorIsCsv",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CalculoIs",
+          "retorno": "string",
+          "linea": 233,
+          "resumen": "CSV (; y coma decimal). Una casilla sin dato sale con la celda VACÍA y certeza «pendiente de contrastar», nunca 0."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2d7b214fb13a"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/cierre/inmovilizado.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "F5 — Inmovilizado y amortizaciones. PURO: céntimos enteros, sin BD ni reloj. Método LINEAL. ⚠️ La tabla de coeficientes es DATO editable (cada empresa puede sustituirla), NO lógica, y es una versión SIMPLIFICADA de la tabla de amortización fiscal: sus porcentajes están marcados `certeza: 'media'` (r",
+      "exporta": [
+        "filaDeTabla",
+        "fichaDesdeEntrada",
+        "amortizable",
+        "acumuladaTrasMeses",
+        "cuadroAmortizacion",
+        "amortizacionAcumuladaHasta",
+        "cuotasDelPeriodo",
+        "refAmortizacion",
+        "asientoAmortizacion",
+        "asientoAltaInmovilizado",
+        "bajaActivo",
+        "rectificarBaja",
+        "resumenActivo"
+      ],
+      "funciones": [
+        {
+          "nombre": "filaDeTabla",
+          "kind": "function",
+          "exportada": true,
+          "params": "tabla: readonly FilaTablaAmortizacion[], categoria: string",
+          "retorno": "FilaTablaAmortizacion | undefined",
+          "linea": 46
+        },
+        {
+          "nombre": "fichaDesdeEntrada",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaInmovilizado, ref: string, tabla: readonly FilaTablaAmortizacion[] = TABLA_AMORTIZACION_DEFECTO",
+          "retorno": "FichaActivo",
+          "linea": 90,
+          "resumen": "Valida una entrada y construye la ficha (lanza `ErrorContable` con todos los problemas). `ref` la asigna quien persiste."
+        },
+        {
+          "nombre": "amortizable",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "f: Pick<FichaActivo, 'valorAdquisicion' | 'valorResidual'>",
+          "retorno": "Centimos",
+          "linea": 115
+        },
+        {
+          "nombre": "mesIndice",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": null,
+          "linea": 117
+        },
+        {
+          "nombre": "mesDeIndice",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "i: number",
+          "retorno": null,
+          "linea": 118
+        },
+        {
+          "nombre": "acumuladaTrasMeses",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: Pick<FichaActivo, 'valorAdquisicion' | 'valorResidual' | 'porcentajePb'>, k: number",
+          "retorno": "Centimos",
+          "linea": 121,
+          "resumen": "Amortización ACUMULADA tras `k` meses completos (k ≥ 0), topada al valor amortizable. Redondeo al céntimo (mitades hacia arriba)."
+        },
+        {
+          "nombre": "cuadroAmortizacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FichaActivo, hastaMes?: string",
+          "retorno": "FilaCuadro[]",
+          "linea": 143,
+          "resumen": "Cuadro de amortización mensual. El mes de alta cuenta COMPLETO (convención simplificada). Si hay baja, la amortización termina en el mes de la baja (inclusive). `hastaMes` (`AAAA-MM`) limita las filas"
+        },
+        {
+          "nombre": "amortizacionAcumuladaHasta",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FichaActivo, mes: string",
+          "retorno": "Centimos",
+          "linea": 163,
+          "resumen": "Amortización acumulada de la ficha hasta el final del mes `AAAA-MM` (0 si aún no ha empezado)."
+        },
+        {
+          "nombre": "cuotasDelPeriodo",
+          "kind": "function",
+          "exportada": true,
+          "params": "fichas: readonly FichaActivo[], p: PeriodoAmortizacion",
+          "retorno": "",
+          "linea": 171,
+          "resumen": "Cuotas de las fichas en el periodo (solo las > 0), por ficha."
+        },
+        {
+          "nombre": "refPeriodo",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "p: PeriodoAmortizacion",
+          "retorno": null,
+          "linea": 182
+        },
+        {
+          "nombre": "finDeMes",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a: number, m: number",
+          "retorno": null,
+          "linea": 183
+        },
+        {
+          "nombre": "refAmortizacion",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "p: PeriodoAmortizacion",
+          "retorno": null,
+          "linea": 186,
+          "resumen": "Referencia de origen del asiento de amortización de un periodo (idempotencia: `amortizacion:2026-03` o `amortizacion:2026`)."
+        },
+        {
+          "nombre": "asientoAmortizacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "fichas: readonly FichaActivo[], p: PeriodoAmortizacion",
+          "retorno": "Asiento | null",
+          "linea": 192,
+          "resumen": "Asiento de amortización del periodo (mensual o anual): Debe 681/680 (gasto) · Haber 281/280 (acumulada), agrupado por cuenta. `null` si no hay cuota que asentar (nada que amortizar NO es un asiento a "
+        },
+        {
+          "nombre": "asientoAltaInmovilizado",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FichaActivo, cuentaContrapartida: string",
+          "retorno": "Asiento",
+          "linea": 216,
+          "resumen": "Asiento de alta SOLO para bienes que no pasaron por una factura asentada (`yaContabilizado = false`): Debe 21x · Haber contrapartida."
+        },
+        {
+          "nombre": "bajaActivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FichaActivo, o: { fecha: string; amortizacionAcumulada: Centimos; precioVenta?: Centimos; cuentaContrapartida?: string }",
+          "retorno": "ResultadoBaja",
+          "linea": 239,
+          "resumen": "Baja o venta de un activo. `amortizacionAcumulada` es la que consta en CONTABILIDAD (281/280 de esa ficha): hay que asentar antes la amortización hasta el mes de la baja. Venta: `precioVenta` (base, s"
+        },
+        {
+          "nombre": "rectificarBaja",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "baja: Asiento, fecha: string",
+          "retorno": "Asiento",
+          "linea": 268,
+          "resumen": "Contraasiento de una baja registrada por error (el original no se toca)."
+        },
+        {
+          "nombre": "resumenActivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FichaActivo, hastaMes: string",
+          "retorno": "",
+          "linea": 271,
+          "resumen": "Resumen por ficha a una fecha (para la pantalla y la memoria): amortizado, neto y si está totalmente amortizado."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "87e9f4e4cd3a"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/cierre/libros-legales.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "F5 — Libros para legalizar y depósito de cuentas: SOLO EXPORTACIÓN (tablas para CSV / HTML imprimible → PDF). PURO. No se legaliza ni se deposita nada desde aquí: el titular o su gestor lo hace en el Registro Mercantil con certificado digital. El fichero de depósito (XBRL) NO está implementado: `DEP",
+      "exporta": [
+        "plazosCierreMercantil",
+        "libroDiarioLegal",
+        "libroInventarios",
+        "libroCuentasAnuales"
+      ],
+      "funciones": [
+        {
+          "nombre": "col",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "clave: string, etiqueta: string, tipo: TipoColumnaLibro",
+          "retorno": "ColumnaLibro",
+          "linea": 24
+        },
+        {
+          "nombre": "plazosCierreMercantil",
+          "kind": "function",
+          "exportada": true,
+          "params": "anio: number",
+          "retorno": "",
+          "linea": 28,
+          "resumen": "Plazos de referencia (ejercicio natural). Informativos y marcados a contrastar: la fuente es la normativa mercantil recordada."
+        },
+        {
+          "nombre": "nombreDe",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "nombres: Readonly<Record<string, string>>, c: string",
+          "retorno": null,
+          "linea": 38
+        },
+        {
+          "nombre": "libroDiarioLegal",
+          "kind": "function",
+          "exportada": true,
+          "params": "asientos: readonly Asiento[], nombres: Readonly<Record<string, string>>, o: { anio: number; empresa: string }",
+          "retorno": "TablaLibro",
+          "linea": 41,
+          "resumen": "Libro diario para legalizar: una fila por apunte, con nº de asiento, fecha, concepto y cuenta. Totales debe = haber."
+        },
+        {
+          "nombre": "filasSaldos",
+          "kind": "function",
+          "exportada": false,
+          "params": "saldos: readonly SaldoCuenta[], nombres: Readonly<Record<string, string>>",
+          "retorno": null,
+          "linea": 60
+        },
+        {
+          "nombre": "libroInventarios",
+          "kind": "function",
+          "exportada": true,
+          "params": "asientos: readonly Asiento[], nombres: Readonly<Record<string, string>>, o: { anio: number; empresa: string }",
+          "retorno": "TablaLibro[]",
+          "linea": 73,
+          "resumen": "Libro de inventarios y cuentas anuales, por partes (cada una exportable)."
+        },
+        {
+          "nombre": "lineasATabla",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "clave: string, titulo: string, sub: string, lineas: readonly { etiqueta: string; importe: number; anterior: number | null; nivel: number }[], avisos: string[]",
+          "retorno": "TablaLibro",
+          "linea": 102
+        },
+        {
+          "nombre": "libroCuentasAnuales",
+          "kind": "function",
+          "exportada": true,
+          "params": "b: BalanceAbreviado, p: PyGAbreviada, o: { anio: number; empresa: string }",
+          "retorno": "TablaLibro[]",
+          "linea": 109,
+          "resumen": "Cuentas anuales exportables (balance y PyG abreviados). La columna anterior vacía significa «no aportada», no cero."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "497610969e85"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/cierre/periodificacion.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "F5 — Periodificaciones al cierre (480 gastos anticipados · 485 ingresos anticipados). PURO, céntimos enteros. Un gasto pagado por adelantado (seguro anual, alquiler…) o un ingreso cobrado por adelantado se reparte por DÍAS entre el ejercicio que cierra y los siguientes. Al cierre se difiere lo que c",
+      "exporta": [
+        "validarPeriodificacion",
+        "repartirPeriodificacion",
+        "refPeriodificacion",
+        "refReversaPeriodificacion",
+        "asientoPeriodificacion",
+        "asientoReversaPeriodificacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "dias",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a: string, b: string",
+          "retorno": null,
+          "linea": 22
+        },
+        {
+          "nombre": "validarPeriodificacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: Periodificacion",
+          "retorno": "string[]",
+          "linea": 24
+        },
+        {
+          "nombre": "repartirPeriodificacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: Periodificacion, cierre: string",
+          "retorno": "ReparticionPeriodo",
+          "linea": 40,
+          "resumen": "Reparto lineal por días entre «hasta el cierre» (inclusive) y lo posterior. Redondeo al céntimo sobre lo imputado; el diferido es el resto."
+        },
+        {
+          "nombre": "refPeriodificacion",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "anio: number",
+          "retorno": null,
+          "linea": 50
+        },
+        {
+          "nombre": "refReversaPeriodificacion",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "anio: number",
+          "retorno": null,
+          "linea": 51
+        },
+        {
+          "nombre": "asientoPeriodificacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "lista: readonly Periodificacion[], anio: number",
+          "retorno": "Asiento | null",
+          "linea": 57,
+          "resumen": "Asiento de periodificación al cierre del ejercicio `anio` (31/12): gasto → Debe 480 / Haber 6xx; ingreso → Debe 7xx / Haber 485. `null` si nada queda por diferir."
+        },
+        {
+          "nombre": "asientoReversaPeriodificacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "cierre: Asiento",
+          "retorno": "Asiento",
+          "linea": 85,
+          "resumen": "Reversa del 1 de enero del ejercicio siguiente: mismos apuntes con debe/haber intercambiados. El de cierre no se toca."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5723873a1dac"
+    },
+    {
       "ruta": "packages/module-contabilidad/src/compras/compras.ts",
       "ambito": "packages/module-contabilidad",
       "resumen": "Facturas RECIBIDAS (compras): validación de forma, totales, clave de duplicado y traducción a `HechoCompra`. PURO. La validación del NIF (algoritmo oficial) la hace la app con `@central/core-fiscal`: este núcleo no depende de ningún país. Convenciones (con test): · duplicado = mismo (NIF del proveed",
@@ -252118,7 +253533,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9645f47fa0a2"
+      "hash": "be93e0c95ad2"
     },
     {
       "ruta": "packages/module-contabilidad/src/partida/dinero.ts",
@@ -252414,7 +253829,7 @@
           "exportada": false,
           "params": "f: FilaSemilla",
           "retorno": "Cuenta",
-          "linea": 131
+          "linea": 133
         },
         {
           "nombre": "crearPlan",
@@ -252422,7 +253837,7 @@
           "exportada": true,
           "params": "semilla: readonly FilaSemilla[] = SEMILLA_PGC_PYMES, extra: readonly FilaSemilla[] = []",
           "retorno": "PlanDeCuentas",
-          "linea": 138,
+          "linea": 140,
           "resumen": "Crea un plan a partir de la semilla (+ filas extra de plantillas sectoriales). Un código repetido es error."
         },
         {
@@ -252431,7 +253846,7 @@
           "exportada": true,
           "params": "plan: PlanDeCuentas, codigo: string",
           "retorno": "Cuenta | undefined",
-          "linea": 148
+          "linea": 150
         },
         {
           "nombre": "buscarPadre",
@@ -252439,7 +253854,7 @@
           "exportada": false,
           "params": "plan: PlanDeCuentas, codigo: string",
           "retorno": "Cuenta | undefined",
-          "linea": 153,
+          "linea": 155,
           "resumen": "Cuenta existente más larga que sea prefijo estricto de `codigo`."
         },
         {
@@ -252448,13 +253863,13 @@
           "exportada": true,
           "params": "plan: PlanDeCuentas, codigo: string, nombre: string",
           "retorno": "PlanDeCuentas",
-          "linea": 166,
+          "linea": 168,
           "resumen": "hereda grupo y naturaleza. La cuenta padre directa pasa a NO admitir apuntes (queda como agrupadora). Devuelve un plan nuevo; no muta el original."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b8da68c904a0"
+      "hash": "9321112270d8"
     },
     {
       "ruta": "packages/module-contabilidad/src/plantillas/cnae.ts",
@@ -253951,6 +255366,27 @@
       "hash": "ef3405bfde68"
     },
     {
+      "ruta": "packages/module-nominas/src/atrasos.ts",
+      "ambito": "packages/module-nominas",
+      "resumen": "Atrasos (N1): concepto SEPARADO del devengo ordinario, con su año de devengo. No entran en `devengos.total` ni en las bases de cotización del mes (las cotizaciones de los atrasos se liquidan en el mes de devengo —no calculado aquí→ regla `cotizacion_atrasos`—). Retención: tipo del pagador sobre el i",
+      "exporta": [
+        "procesarAtrasos"
+      ],
+      "funciones": [
+        {
+          "nombre": "procesarAtrasos",
+          "kind": "function",
+          "exportada": true,
+          "params": "atrasos: Atraso[], periodo: string, tipoIrpf: Ppm, modo: 'calculo' | 'simulacion'",
+          "retorno": "ResultadoAtrasos",
+          "linea": 31
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ed85606d4219"
+    },
+    {
       "ruta": "packages/module-nominas/src/calcular.ts",
       "ambito": "packages/module-nominas",
       "resumen": "ADAPTADOR euros ⇄ céntimos para los llamadores de `apps/rrhh` (la BD guarda NUMERIC en euros y el `datos_calculo` JSONB histórico va en euros). El cálculo de verdad está en `motor.ts`, en céntimos enteros: aquí solo se convierte la entrada UNA vez y la salida UNA vez (sin aritmética en float). /",
@@ -254021,7 +255457,8 @@
         "centimosAEuros",
         "pctAPpm",
         "fraccionAPpm",
-        "aplicarTipo"
+        "aplicarTipo",
+        "cocienteATipo"
       ],
       "funciones": [
         {
@@ -254075,11 +255512,146 @@
           "retorno": "Centimos",
           "linea": 37,
           "resumen": "Cuota = base × tipo, redondeada al céntimo (medio céntimo hacia arriba; las bases son ≥ 0)."
+        },
+        {
+          "nombre": "cocienteATipo",
+          "kind": "function",
+          "exportada": true,
+          "params": "num: number, den: number, redondeo: 'cercano' | 'abajo' = 'cercano'",
+          "retorno": "Ppm",
+          "linea": 46,
+          "resumen": "Tipo = num / den en % con 2 decimales (redondeo al más próximo, o `abajo`), devuelto en ppm. num, den enteros; den > 0."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7cbec4b6127e"
+      "hash": "87f0653da6b6"
+    },
+    {
+      "ruta": "packages/module-nominas/src/embargo.ts",
+      "ambito": "packages/module-nominas",
+      "resumen": "Embargo de salario (art. 607 LEC), en céntimos. La parte hasta 1 SMI es inembargable; el resto, por tramos de múltiplos del SMI: (1,2] 30 % · (2,3] 50 % · (3,4] 60 % · (4,5] 75 % · >5 90 %. Se aplica al LÍQUIDO percibido (tras SS e IRPF). SMI: el del año (tabla N0). Pagas 12 o 14 prorrateadas → SMI ",
+      "exporta": [
+        "calcularEmbargo",
+        "embargoDeNomina"
+      ],
+      "funciones": [
+        {
+          "nombre": "calcularEmbargo",
+          "kind": "function",
+          "exportada": true,
+          "params": "percibido: Centimos, smi: Centimos",
+          "retorno": "ResultadoEmbargo",
+          "linea": 29,
+          "resumen": "Embargo de UNA percepción con el SMI de referencia dado (céntimos)."
+        },
+        {
+          "nombre": "embargoDeNomina",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaEmbargo",
+          "retorno": "",
+          "linea": 57
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2cb590faf3aa"
+    },
+    {
+      "ruta": "packages/module-nominas/src/irpf-prueba.ts",
+      "ambito": "packages/module-nominas",
+      "resumen": "SOLO PARA TESTS (no se exporta en index.ts). Tabla IRPF 2026 con las cifras `PENDIENTE_VERIFICAR` convertidas a `probable` para poder ejercitar el modo «calculo» y la mecánica del algoritmo. 🚨 Los límites del mínimo exento son ILUSTRATIVOS (no oficiales): sirven para probar el mecanismo del art. 81",
+      "exporta": [
+        "tablaIrpfDePrueba"
+      ],
+      "funciones": [
+        {
+          "nombre": "tablaIrpfDePrueba",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "TablaIrpf",
+          "linea": 13
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f0e96e33da33"
+    },
+    {
+      "ruta": "packages/module-nominas/src/irpf.ts",
+      "ambito": "packages/module-nominas",
+      "resumen": "IRPF — retención por el algoritmo de la AEAT (Reglamento IRPF arts. 80-89). Puro, en CÉNTIMOS y ppm, por año. Pasos (UNA retención anual → un TIPO que se aplica a cada pago del año; la regularización lo recalcula): 1. RA = retribución anual previsible (dineraria + especie). 2. RN = max(0, RA − cotiz",
+      "exporta": [
+        "minimoPersonalYFamiliar",
+        "calcularTipoIrpf",
+        "regularizarTipo"
+      ],
+      "funciones": [
+        {
+          "nombre": "aplicarEscala",
+          "kind": "function",
+          "exportada": false,
+          "params": "base: Centimos, tramos: { hasta: Centimos | null; tipo: Ppm }[]",
+          "retorno": "Centimos",
+          "linea": 81
+        },
+        {
+          "nombre": "reduccionArt20",
+          "kind": "function",
+          "exportada": false,
+          "params": "rn: Centimos, tabla: TablaIrpf, usar: Usar",
+          "retorno": "Centimos",
+          "linea": 93
+        },
+        {
+          "nombre": "minimoDiscapacidad",
+          "kind": "function",
+          "exportada": false,
+          "params": "grado: SituacionFamiliar['discapacidad'], asistencia: boolean | undefined, m: TablaIrpf['minimos'], usar: Usar",
+          "retorno": "Centimos",
+          "linea": 101
+        },
+        {
+          "nombre": "minimoPersonalYFamiliar",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: SituacionFamiliar, año: number, tabla: TablaIrpf, usar: Usar",
+          "retorno": "Centimos",
+          "linea": 110,
+          "resumen": "Mínimo personal y familiar a efectos del tipo (art. 84 RIRPF) con los datos del modelo 145."
+        },
+        {
+          "nombre": "hijosParaExento",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: SituacionFamiliar, año: number",
+          "retorno": "0 | 1 | 2",
+          "linea": 140,
+          "resumen": "Hijos y otros descendientes que cuentan para la tabla del mínimo exento: 0, 1 ó 2 («2 o más»)."
+        },
+        {
+          "nombre": "calcularTipoIrpf",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaIrpf, opts: OpcionesIrpf",
+          "retorno": "DetalleIrpf",
+          "linea": 145
+        },
+        {
+          "nombre": "regularizarTipo",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { cuotaAnual: Centimos; retribucionAnual: Centimos; retribucionPercibida: Centimos; retenidoPracticado: Centimos }",
+          "retorno": "",
+          "linea": 233,
+          "resumen": "Regularización (arts. 87-88 RIRPF): al cambiar las circunstancias se recalcula la cuota anual y el tipo del resto del año = (cuota anual nueva − retenido ya) / (retribución anual − ya percibida), 2 de"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8994b3d83d37"
     },
     {
       "ruta": "packages/module-nominas/src/motor.ts",
@@ -254095,7 +255667,7 @@
           "exportada": false,
           "params": "año: number, mes: number",
           "retorno": "number",
-          "linea": 98
+          "linea": 108
         },
         {
           "nombre": "esMensual",
@@ -254103,7 +255675,7 @@
           "exportada": false,
           "params": "g: GrupoCotizacion",
           "retorno": "g is GrupoMensual",
-          "linea": 102
+          "linea": 112
         },
         {
           "nombre": "calcularNominaCentimos",
@@ -254111,12 +255683,102 @@
           "exportada": true,
           "params": "e: EntradaNomina, opts: OpcionesCalculo",
           "retorno": "NominaCentimos",
-          "linea": 106
+          "linea": 116
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "57a987f7a25a"
+      "hash": "9247945d2f20"
+    },
+    {
+      "ruta": "packages/module-nominas/src/pagas.ts",
+      "ambito": "packages/module-nominas",
+      "resumen": "Pagas extra (N1): calendario anual y retribución anual previsible. Mismas fórmulas que `motor.ts` (prorrata mensual = round(salario efectivo × 2 / 12); paga extra = una mensualidad del salario efectivo en su mes). Con 14 pagas prorrateadas el año suma 12 × round(2s/12), que puede diferir de 2s en ≤ ",
+      "exporta": [
+        "calendarioPagas",
+        "retribucionAnualPrevisible"
+      ],
+      "funciones": [
+        {
+          "nombre": "calendarioPagas",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { salarioEf: Centimos; pagas: 12 | 14; prorrataExtras: boolean; mesesPagaExtra?: number[] }",
+          "retorno": "",
+          "linea": 17
+        },
+        {
+          "nombre": "retribucionAnualPrevisible",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { salarioEf: Centimos; complementosMensuales: Centimos; pagas: 12 | 14 }",
+          "retorno": "Centimos",
+          "linea": 40,
+          "resumen": "Retribución anual previsible (base del tipo de IRPF): 12 mensualidades + complementos + 2 extras si 14 pagas."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9a5a10c15839"
+    },
+    {
+      "ruta": "packages/module-nominas/src/situacion-familiar.ts",
+      "ambito": "packages/module-nominas",
+      "resumen": "Modelo 145 (comunicación de datos al pagador) como tipo de datos CON VIGENCIA (histórico). Una fila = una comunicación del trabajador, válida desde `vigenteDesde` hasta `vigenteHasta` (null = abierta). Sin comunicación vigente en la fecha → `situacionVigente` devuelve null («no se sabe» ≠ «sin hijos",
+      "exporta": [
+        "edadA31Dic",
+        "validarSituacionFamiliar",
+        "validarHistorial",
+        "situacionVigente"
+      ],
+      "funciones": [
+        {
+          "nombre": "esFecha",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 53
+        },
+        {
+          "nombre": "edadA31Dic",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechaNacimiento: string, año: number",
+          "retorno": "number",
+          "linea": 61,
+          "resumen": "Edad cumplida a 31-12 del año de devengo (criterio del art. 57 y ss. LIRPF)."
+        },
+        {
+          "nombre": "validarSituacionFamiliar",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: SituacionFamiliar",
+          "retorno": "string[]",
+          "linea": 65
+        },
+        {
+          "nombre": "validarHistorial",
+          "kind": "function",
+          "exportada": true,
+          "params": "historial: SituacionFamiliar[]",
+          "retorno": "string[]",
+          "linea": 81,
+          "resumen": "Solapes entre comunicaciones de un mismo empleado (el histórico no puede tener dos vigentes a la vez)."
+        },
+        {
+          "nombre": "situacionVigente",
+          "kind": "function",
+          "exportada": true,
+          "params": "historial: SituacionFamiliar[], fecha: string",
+          "retorno": "SituacionFamiliar | null",
+          "linea": 94,
+          "resumen": "Comunicación vigente en `fecha`; si el histórico solapa, gana la más reciente. Ninguna → null."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f3807ccc1809"
     },
     {
       "ruta": "packages/module-organizador-trabajo/src/asignar.ts",
@@ -294976,7 +296638,7 @@
     }
   ],
   "resumen": {
-    "archivos": 6032,
-    "funciones": 23887
+    "archivos": 6061,
+    "funciones": 24031
   }
 }

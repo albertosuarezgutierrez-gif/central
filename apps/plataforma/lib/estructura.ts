@@ -64,6 +64,8 @@ export const VERTICALES: VerticalInfo[] = [
   { app: 'asegura-web', nombre: 'Web pública (Asegura)', sector: 'Seguros', url: 'grupoasegura.es', desc: 'Web de marketing de Grupo ASegura, sirve el apex grupoasegura.es + www desde el 05/09/2026 (el .com es un dominio ajeno, del CRM de Manuel). Sin base de datos: el formulario reenvía al canal de leads de plataforma. La ve quien todavía NO es cliente.' },
   { app: 'housesevillana', nombre: 'House Sevillana', sector: 'Inmobiliario', url: 'housesevillana.es', desc: 'Landing pública del apartamento turístico (Calle Socorro 24, San Julián, Sevilla). Canal directo: motor de reservas, WhatsApp, teléfono.' },
   { app: 'mariscos', nombre: 'Mariscos González', sector: 'Pesca/mayorista', desc: 'Trazabilidad pesquera + etiquetado por peso (mayorista/pescadería de marisco). Recepción de partidas, envasado, etiqueta por canal.' },
+  { app: 'taller', nombre: 'Taller', sector: 'Automoción', desc: 'Gestión de taller mecánico (piloto: Talleres de Automoción G2). Órdenes de trabajo, presupuestos, facturas VeriFactu, stock, pedidos y portal de proveedores.' },
+  { app: 'contabilidad', nombre: 'Contabilidad', sector: 'Transversal', desc: 'Contabilidad multi-empresa agnóstica de sector (se regala a clientes de Grupo ASegura). Recibe hechos de las verticales por POST /api/hechos; impuestos, banco, cierre y cuentas anuales.' },
 ]
 
 /** Módulos compartidos (packages/*): núcleos (core-*) + módulos de dominio (module-*). */
