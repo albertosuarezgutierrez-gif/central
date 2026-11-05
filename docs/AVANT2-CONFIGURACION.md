@@ -22,7 +22,7 @@ Fuente: OpenAPI del portal INT (`docs/avant2/`). Detalle y matices en `docs/CODE
   (en central: `/api/operador/codeoscopic/lineas` y `/companias`; plataforma `/correduria/hogar` ya pinta hogar).
 - Instantánea GRATIS del catálogo por compañía (04/11/2026): Actions «Tarificador RPA · relanzar» → `accion=catalogo_avant2`
   → `POST /api/operador/codeoscopic/catalogo/instantanea` (lista cerrada de GET en `lib/codeoscopic/catalogo-companias.ts`, ≤60
-  llamadas) → `seguros.codeoscopic_catalogo` (SQL `2026-11-04f`, YA APLICADO el 04/11/2026 con 1 instantánea; sin la tabla daría 503). La leen la ruta GET y la guarda previa a cotizar (`guarda-catalogo.ts`: ramo sin producto vivo, ni PILOTO ni DESCATALOGADO, corta con 422 sin pagar). Lectura: `GET …/codeoscopic/catalogo`.
+  llamadas) → `seguros.codeoscopic_catalogo` (SQL `2026-11-04f`, YA APLICADO el 04/11/2026 con 1 instantánea; sin la tabla daría 503). La leen la ruta GET y la guarda previa a cotizar (`guarda-catalogo.ts`: ramo cuyos productos son todos PILOTO (DESCATALOGADO sí tarifica), corta con 422 sin pagar). Lectura: `GET …/codeoscopic/catalogo`.
   `brokerFee` NO viene en `/products` según la spec: queda NULL («no se sabe») salvo que el vendor lo mande.
 - Auditar la config de cada compañía comparando `configs[].favorite` y `name` con lo que Alberto espera.
 - Pisar opciones por petición con la `config.id` correcta, y mostrar `formattedOptions` de la oferta.

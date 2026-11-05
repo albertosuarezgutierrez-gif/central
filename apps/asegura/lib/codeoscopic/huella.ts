@@ -115,10 +115,12 @@ export function huellaEmision(e: {
   precioId?: string | number | null
   productId?: string | number | null
   fechaEfecto?: string | null
+  /** Opciones/descuentos/correcciones que viajan: otro cuerpo = otra operación (no es un doble clic). */
+  extra?: unknown
 }): string {
   return createHash('sha256')
     .update(
-      `${e.operacion}\n${e.correduriaId}\n${e.projectId}\n${e.precioId ?? ''}\n${e.productId ?? ''}\n${e.fechaEfecto ?? ''}`,
+      `${e.operacion}\n${e.correduriaId}\n${e.projectId}\n${e.precioId ?? ''}\n${e.productId ?? ''}\n${e.fechaEfecto ?? ''}\n${jsonCanonico(e.extra)}`,
     )
     .digest('hex')
 }

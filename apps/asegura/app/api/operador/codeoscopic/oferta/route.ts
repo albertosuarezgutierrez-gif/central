@@ -396,6 +396,7 @@ export const POST = auditado(async (req: Request) => {
               precioId: precio.id,
               productId: typeof precio.productId === 'string' || typeof precio.productId === 'number' ? precio.productId : null,
               fechaEfecto: fechaEfectoCorregida,
+              extra: { opciones: opcionesRerate, correcciones },
             }),
           },
           () =>

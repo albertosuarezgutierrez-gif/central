@@ -11,18 +11,20 @@ test('ramoDeCuerpo lee insuranceLine.id o null', () => {
   assert.equal(ramoDeCuerpo(null), null)
 })
 
-test('PILOTO y DESCATALOGADO no son vivos', () => {
+test('PILOTO no es vivo; DESCATALOGADO sí (sigue dando precios)', () => {
   assert.equal(esProductoVivo('PILOTO - Generali Autos 2025'), false)
-  assert.equal(esProductoVivo('DESCATALOGADO - Mapfre Autos'), false)
+  assert.equal(esProductoVivo('DESCATALOGADO - Mapfre Autos'), true)
   assert.equal(esProductoVivo('Mapfre Autos 2026'), true)
   assert.equal(esProductoVivo(null), true)
 })
 
 test('corta solo si todos los productos del ramo están muertos', () => {
-  const muertos = [prod('Car', 'PILOTO - X'), prod('Car', 'DESCATALOGADO - Y'), prod('Home', 'Hogar A')]
+  const muertos = [prod('Car', 'PILOTO - X'), prod('Car', 'PILOTO - Y'), prod('Home', 'Hogar A')]
   assert.equal(evaluarRamoVivo(muertos, 'Car', AHORA).accion, 'cortar')
   assert.equal(evaluarRamoVivo(muertos, 'Home', AHORA).accion, 'seguir')
   assert.equal(evaluarRamoVivo([...muertos, prod('Car', 'Auto vivo')], 'Car', AHORA).accion, 'seguir')
+  // PILOTO + DESCATALOGADO: el descatalogado aún tarifica, no se corta
+  assert.equal(evaluarRamoVivo([prod('Car', 'PILOTO - X'), prod('Car', 'DESCATALOGADO - Mapfre Autos')], 'Car', AHORA).accion, 'seguir')
 })
 
 test('corta con prueba de ramo vacío (llamada de productos ok con 0 elementos)', () => {

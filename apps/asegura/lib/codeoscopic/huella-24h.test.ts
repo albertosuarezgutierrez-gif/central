@@ -48,4 +48,10 @@ test('huellaEmision: estable, distingue proyecto/precio/efecto y no lleva datos'
   assert.notEqual(h, huellaEmision({ ...b, precioId: 'p2' }))
   assert.notEqual(h, huellaEmision({ ...b, fechaEfecto: '2026-11-11' }))
   assert.notEqual(h, huellaEmision({ ...b, correduriaId: 'c2' }))
+  // opciones/descuentos distintos = otra operación; el orden de claves no cuenta
+  const e1 = huellaEmision({ ...b, extra: { opciones: [{ a: 1, b: 2 }], correcciones: {} } })
+  assert.notEqual(e1, h)
+  assert.equal(e1, huellaEmision({ ...b, extra: { correcciones: {}, opciones: [{ b: 2, a: 1 }] } }))
+  assert.notEqual(e1, huellaEmision({ ...b, extra: { opciones: [{ a: 1, b: 3 }], correcciones: {} } }))
+  assert.notEqual(e1, huellaEmision({ ...b, extra: { opciones: [{ a: 1, b: 2 }], correcciones: { x: 'y' } } }))
 })

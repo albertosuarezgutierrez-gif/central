@@ -1,8 +1,9 @@
 // Guarda ANTES de pagar (05/11/2026): ¿el ramo que se va a cotizar tiene algún producto VIVO en la última
 // instantánea (gratis) del catálogo? PURO, sin BD ni alias `@/`.
 //
-// Avant2 cotiza todos los productos activos del ramo. Si todos llevan marca «PILOTO» o «DESCATALOGADO», el POST
-// (0,50 €) sale sin precios útiles. Regla de oro: «no hay instantánea» o «no se pudo mirar» NO es «no hay productos»;
+// Avant2 cotiza todos los productos activos del ramo. Si todos llevan marca «PILOTO», el POST
+// (0,50 €) sale sin precios útiles. OJO: «DESCATALOGADO» NO cuenta como muerto (el «DESCATALOGADO - Mapfre Autos»
+// da precios: de él salen todos los de Mapfre). Regla de oro: «no hay instantánea» o «no se pudo mirar» NO es «no hay productos»;
 // solo se corta con PRUEBA (productos del ramo listados y ninguno vivo, o la llamada de productos ok con 0 elementos).
 
 export type FilaCatalogoMin = {
@@ -17,7 +18,7 @@ export type VeredictoCatalogo =
   | { accion: 'seguir'; aviso?: string }
   | { accion: 'cortar'; mensaje: string }
 
-const MUERTO = /^\s*(PILOTO|DESCATALOGADO)\b/i
+const MUERTO = /^\s*PILOTO\b/i
 /** Edad a partir de la cual se avisa (sin bloquear) de que la instantánea puede estar vieja. */
 export const DIAS_INSTANTANEA_VIEJA = 7
 
@@ -54,7 +55,7 @@ export function evaluarRamoVivo(
       accion: 'cortar',
       mensaje:
         `El ramo ${ramo} no tiene ningún producto vivo en el catálogo de Avant2 (${
-          vacioProbado ? 'sin productos' : 'todos PILOTO o DESCATALOGADO'
+          vacioProbado ? 'sin productos' : 'todos PILOTO'
         }), así que cotizar no daría precios. No se ha llamado ni cobrado nada. Revisa el panel de Avant2 o refresca ` +
         'el catálogo si crees que ha cambiado.',
     }
