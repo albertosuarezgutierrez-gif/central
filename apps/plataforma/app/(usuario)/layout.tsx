@@ -5,6 +5,7 @@ import { getAdmin } from '@/lib/superadmin'
 import UserSidebar from './UserSidebar'
 import CommandPalette from './CommandPalette'
 import LayoutShell from './LayoutShell'
+import { resolverAccesoCorreduria } from '@/lib/correduria-acceso'
 
 export default async function UsuarioLayout({ children }: { children: React.ReactNode }) {
   const [session, admin] = await Promise.all([getSession(), getAdmin()])
@@ -19,9 +20,15 @@ export default async function UsuarioLayout({ children }: { children: React.Reac
 
   const isOperator = !!admin
 
+  // Botón de búsqueda de la correduría: solo con acceso COMPROBADO. `sin-comprobar` y cualquier fallo
+  // = false (conservador; la API devuelve 403 de todos modos).
+  const accesoCorreduria = await resolverAccesoCorreduria(session)
+    .then((a) => a.estado === 'autorizado')
+    .catch(() => false)
+
   return (
     <div className="app-shell" style={{ display: 'flex', minHeight: '100vh' }}>
-      <UserSidebar email={session.email} nombre={session.nombre} isOperator={isOperator} operadorRol={admin?.rol} rol={session.rol} />
+      <UserSidebar email={session.email} nombre={session.nombre} isOperator={isOperator} operadorRol={admin?.rol} rol={session.rol} accesoCorreduria={accesoCorreduria} />
       <LayoutShell>{children}</LayoutShell>
       <CommandPalette isOperator={isOperator} />
     </div>

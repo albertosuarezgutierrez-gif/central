@@ -104,6 +104,12 @@ Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; ti
 original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados revisado/falta_roto/devuelto + bloque en ficha. `rrhh.material_empleado`
 (0028, aplicada). Pendiente fase 2: revisión periódica mensual.
 
+## (05/11/2026) Plataforma · lupa de búsqueda de la correduría en la cabecera
+- `BotonBuscarCorreduria` (lupa 44 px) en la barra móvil junto a Nueva tarea/Subir factura, y «Buscar cliente» en el lateral de escritorio; atajo «/» (Ctrl+K es de CommandPalette).
+- Reutiliza `BuscadorCartera` con props `sincronizarUrl=false`, `autoFocus`, `onNavegar` (cierra al pulsar un enlace interno). Por defecto /correduria igual.
+- Solo con acceso COMPROBADO: `resolverAccesoCorreduria` en `(usuario)/layout.tsx` (fallo = false). Import estático para que iOS abra el teclado en el gesto.
+- Guardián `lib/correduria/boton-buscar.test.ts`. <360 px se oculta el rótulo «Mi grupo». Pendiente: probarlo en móvil real.
+
 ## (05/11/2026) Plataforma · «Nueva tarea» no guardaba + atajo en cabecera fija
 - Causa probable (no 100% probada): «Guardar tarea» iba `disabled` sin decir por qué si el cliente estaba solo tecleado y no se había tocado en la lista (el cliente quedaba null). Ningún POST a /api/operador/tareas en la auditoría ni ninguna gestión `central:cliente` en BD: el alta nunca había funcionado en prod.
 - Arreglo: el botón se pulsa siempre y el motivo se MUESTRA (`motivoAltaTarea`, lib/correduria/alta-tarea.ts + test). Si la recarga de la mesa falla, ya no dice «no se guardó».
