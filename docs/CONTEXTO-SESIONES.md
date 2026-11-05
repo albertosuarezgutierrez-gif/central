@@ -104,6 +104,11 @@ Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; ti
 original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados revisado/falta_roto/devuelto + bloque en ficha. `rrhh.material_empleado`
 (0028, aplicada). Pendiente fase 2: revisión periódica mensual.
 
+## (05/11/2026) Plataforma · «Nueva tarea» no guarda + atajo en cabecera (EN CURSO)
+- Rama `ccr-717e672c-x2o177`. Un agente investiga por qué el modal «Nueva tarea» de /correduria no guarda (caso: Maria Alcala Maguilla, tipo Otro, prioridad Alta).
+- Además: botón «Nueva tarea» en la cabecera fija junto a «escanear factura» y quitar el «+ Tarea» suelto de /correduria (pantalla más limpia).
+- Pendiente: revisar lo que entregue el agente, tsc/tests, PR draft. Actualizar esta entrada con la causa raíz y el PR.
+
 ## (04/11/2026) Correduría · WhatsApp: recepción real OK + IA que responde (PR #5528, flags apagados)
 - Recepción end-to-end OK (#5517/#5521): APP_SECRET mal pegado (10 chars) y app no suscrita a la WABA de prueba (`subscribed_apps`). Ficha PRUEBA META (6bca46c1…) enlazada a mano: el móvil de Alberto está en 5 fichas → `clientes_candidatos>1` = sin ficha (por diseño). Borrarla tras aprobar Meta.
 - La IA ya crea oportunidades (Auto en PRUEBA META). Propuestas de recibo exigen póliza en vigor + ficha única.
