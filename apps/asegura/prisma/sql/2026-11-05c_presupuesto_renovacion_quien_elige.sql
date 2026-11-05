@@ -17,7 +17,7 @@
 -- 🚨 Fail-closed: sin estas columnas la elección del portal da 503 `sin_migracion` (no escribe nada) y el portal no ofrece
 --    elegir ni aceptar/firmar en una renovación (no puede saber quién eligió). Nunca «se finge».
 --
--- ⚠️ NO APLICADA. En transacción. Se deshace con el bloque ROLLBACK del final.
+-- ✅ APLICADA en producción el 05/11/2026 (en transacción; comprobación OK). Se deshace con el bloque ROLLBACK del final.
 
 BEGIN;
 
