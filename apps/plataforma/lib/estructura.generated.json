@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-11-05T07:06:06Z",
+  "generadoEn": "2026-11-05T07:54:04Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1262,7 +1262,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 32
+        "evidencias": 34
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2750,11 +2750,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 355
+        "evidencias": 359
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 220
+        "evidencias": 222
       },
       "asegura-web": {
         "estado": "usado",
@@ -2874,11 +2874,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 58
+        "evidencias": 60
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 171
+        "evidencias": 172
       },
       "asegura-web": {
         "estado": "usado",
@@ -3122,7 +3122,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 86
+        "evidencias": 89
       },
       "asegura-portal": {
         "estado": "usado",
@@ -3620,7 +3620,7 @@
       },
       "asegura": {
         "presente": true,
-        "evidencias": 25
+        "evidencias": 26
       },
       "asegura-portal": {
         "presente": true,
@@ -5142,6 +5142,8 @@
       "/api/operador/siniestros/esperando",
       "/api/operador/solicitud-datos",
       "/api/operador/solicitud-datos/lead-web",
+      "/api/operador/solicitud-renovacion/preparar",
+      "/api/operador/solicitud-renovacion/publicar",
       "/api/operador/supresiones",
       "/api/operador/sustituciones",
       "/api/operador/tareas",
@@ -5215,6 +5217,7 @@
       "/api/portal/solicitud-datos/borrador",
       "/api/portal/solicitud-datos/documento",
       "/api/portal/solicitud-datos/vehiculo",
+      "/api/portal/solicitud-renovacion",
       "/api/publico/campana/baja",
       "/api/publico/recaptacion/baja",
       "/api/tarificador/codigo-sms",
@@ -5259,6 +5262,8 @@
       "/api/cron/avisos-push",
       "/api/cron/patrimonio-gastos",
       "/api/datos",
+      "/api/datos-renovacion",
+      "/api/datos-renovacion/vivienda",
       "/api/datos/borrador",
       "/api/datos/codigo-postal",
       "/api/datos/documento",
@@ -6334,6 +6339,8 @@
       "/api/correduria/siniestro/volcado",
       "/api/correduria/siniestros-esperando",
       "/api/correduria/solicitud-datos",
+      "/api/correduria/solicitud-renovacion/preparar",
+      "/api/correduria/solicitud-renovacion/publicar",
       "/api/correduria/solicitudes-portal",
       "/api/correduria/supresiones",
       "/api/correduria/sustituciones",
@@ -8223,7 +8230,7 @@
     "packages": 48,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1937,
+    "apis": 1944,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
