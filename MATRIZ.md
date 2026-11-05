@@ -18,6 +18,7 @@
 │   ├── core-email     ← transporter de nodemailer (multi-proveedor; dep npm propia)
 │   ├── core-identity  ← contrato de sesión/inquilino (puertos & adaptadores)
 │   ├── core-telegram  ← bot único del monorepo (tgSend/tgSendButtons/tgEditMessage/parseCallback/verifyWebhook; envs: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, TELEGRAM_WEBHOOK_SECRET)
+│   ├── core-banca     ← núcleo bancario: parser Norma 43/CSV, huella de deduplicación y propuesta de conciliación (PURO, céntimos; PSD2 solo interfaz; consumido por `apps/contabilidad`)
 │   ├── module-contabilidad ← dominio: IVA/PyG/tesorería/rentabilidad (puro, agnóstico de BD)
 │   ├── module-concursos    ← dominio: agente de concursos públicos/LCSP (lee pliego→ficha+checklist+Go-No-Go; LLM por puerto AiRunner)
 │   ├── module-flota        ← dominio: vehículos, portes, asignación por capacidad/tipo, rentabilidad, documental ITV/seguro, intercompany (extraído 25/06/2026; consumido por `apps/transporte`; pendiente adaptador en ia-rest)

@@ -277,3 +277,11 @@ div.error:empty { display: none; }
 .barra-margen { height: 10px; border-radius: 5px; background: var(--bg2); overflow: hidden; min-width: 80px; }
 .barra-margen > span { display: block; height: 100%; background: var(--ok); }
 .barra-margen > span.neg { background: var(--danger); }
+
+/* ───────── F3: compras, banco y actividad ───────── */
+.linea-compra { display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr); padding: 10px 0; border-bottom: 1px solid var(--border-soft); }
+@media (min-width: 720px) { .linea-compra { grid-template-columns: minmax(0, 1fr) 110px minmax(0, 2fr) auto; align-items: end; } }
+.pago-form { display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr); min-width: 0; }
+@media (min-width: 768px) { .pago-form { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; } .pago-form .error, .pago-form .ok { grid-column: 1 / -1; } }
+.conciliar { display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr); min-width: 0; text-align: left; }
+.conciliar .fila { margin: 0; }

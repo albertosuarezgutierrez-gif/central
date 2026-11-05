@@ -17,7 +17,9 @@ export default async function Rentabilidad({ searchParams }: { searchParams: Pro
   const r = rangoPeriodo(tipo, new Date())
   const limite = limiteDe(sp.n)
   const sector = empresa?.sector ?? 'generico'
-  const { dimension, filas } = await conRepo(ctx.empresaId, (repo) => datosRentabilidad(repo, sector, sp.dim, r), { timeout: 20_000 })
+  // El CNAE (0003) acota los ejes que se ofrecen; sin 0003 o sin CNAE se ofrecen todos los de la plantilla.
+  const cnae = await conRepo(ctx.empresaId, (repo) => repo.cnaeEmpresa()).catch(() => null)
+  const { dimension, filas } = await conRepo(ctx.empresaId, (repo) => datosRentabilidad(repo, sector, sp.dim, r, cnae), { timeout: 20_000 })
   const visibles = filas.slice(0, limite)
   const maxAbs = Math.max(1, ...filas.map((f) => Math.abs(f.margen)))
   const enlace = (extra: Record<string, string | number>) => `/rentabilidad?${new URLSearchParams({ periodo: tipo, dim: dimension.clave, ...Object.fromEntries(Object.entries(extra).map(([k, v]) => [k, String(v)])) })}`
@@ -27,7 +29,7 @@ export default async function Rentabilidad({ searchParams }: { searchParams: Pro
       <main className="contenido">
         <h1>Rentabilidad</h1>
         <nav className="periodos" aria-label="Eje de análisis">
-          {dimensionesDe(sector).map((d) => (
+          {dimensionesDe(sector, cnae).map((d) => (
             <a key={d.clave} href={`/rentabilidad?periodo=${tipo}&dim=${d.clave}`} className={d.clave === dimension.clave ? 'activo' : undefined} aria-current={d.clave === dimension.clave ? 'true' : undefined}>{d.etiqueta}</a>
           ))}
         </nav>

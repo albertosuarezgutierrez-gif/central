@@ -14,6 +14,7 @@ import { EntregaCliente } from './EntregaCliente'
 import { FotosOt } from './FotosOt'
 import { NotaDictado } from './NotaDictado'
 import { Facturar, type Previa } from './Facturar'
+import { anadirRecambioAccion } from '../../articulos/acciones'
 
 export const dynamic = 'force-dynamic'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -72,7 +73,13 @@ export default async function Pagina({ params, searchParams }: { params: Promise
       medios = (await tx.medioCobro.findMany({ where: { tallerId: c.tallerId, activo: true }, orderBy: { nombre: 'asc' } }))
         .map((m) => ({ codigo: m.codigo, nombre: m.nombre, esEfectivo: m.esEfectivo }))
     }
+    // Catálogo para «añadir recambio» (solo quien puede poner precios; sin costes: solo descripción y unidad).
+    const articulos = tienePermiso(c.rol, 'ampliaciones') && ESTADOS_ABIERTOS.includes(ot.estado as EstadoOt)
+      ? (await tx.articulo.findMany({ where: { tallerId: c.tallerId, activo: true }, orderBy: { descripcion: 'asc' }, take: 1000 }))
+          .map((a) => ({ id: a.id as string, texto: `${a.descripcion}${a.referencia ? ` · ${a.referencia}` : ''} (${a.unidad === 'ml' ? 'litros' : 'ud'})` }))
+      : []
     return {
+      articulos,
       puedeFacturar, previa, medios,
       facturaViva: viva ? { id: viva.id as string, numSerie: viva.numSerie as string } : null,
       notas: notas.map((n) => ({ id: n.id as string, texto: n.texto as string, quien: nombres.get(n.autorId) ?? '—', cuando: n.creadoEn as Date })),
@@ -137,6 +144,22 @@ export default async function Pagina({ params, searchParams }: { params: Promise
               ))}
             </tbody>
           </table></div>
+        )}
+
+        {datos.articulos.length > 0 && (
+          <details>
+            <summary className="btn btn-sec">Añadir recambio del catálogo</summary>
+            <form action={anadirRecambioAccion} className="formulario">
+              <input type="hidden" name="otId" value={ot.id} />
+              <div className="dos-col">
+                <label className="campo">Artículo<select name="articuloId" required defaultValue=""><option value="" disabled>Elige…</option>{datos.articulos.map((a) => <option key={a.id} value={a.id}>{a.texto}</option>)}</select></label>
+                <label className="campo">Cantidad (ud o litros)<input name="cantidad" inputMode="decimal" required /></label>
+              </div>
+              <label className="check"><input type="checkbox" name="aceptado" /> El cliente ya lo ha aceptado (entra en la factura)</label>
+              <button className="btn">Añadir a la orden</button>
+              <p className="tenue">El precio sale del artículo y el coste medio de hoy queda guardado para el margen. El stock se descuenta al cerrar la orden.</p>
+            </form>
+          </details>
         )}
 
         <h2>Partes de horas</h2>

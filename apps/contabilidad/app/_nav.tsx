@@ -5,12 +5,15 @@ const ENLACES = [
   { href: '/', texto: 'Inicio' },
   { href: '/evolucion', texto: 'Evolución' },
   { href: '/rentabilidad', texto: 'Rentabilidad' },
+  { href: '/compras', texto: 'Compras' },
+  { href: '/banco', texto: 'Banco' },
   { href: '/informes', texto: 'Informes' },
   { href: '/plan', texto: 'Plan de cuentas' },
   { href: '/diario', texto: 'Libro diario' },
   { href: '/mayor', texto: 'Mayor' },
   { href: '/asientos/nuevo', texto: 'Nuevo asiento' },
   { href: '/ajustes/reglas', texto: 'Ajustes' },
+  { href: '/ajustes/actividad', texto: 'Actividad' },
 ]
 
 /** Menú de secciones: marca la activa con el acento de la empresa. Solo navegación: no decide permisos. */

@@ -4,6 +4,7 @@ import {
   abrirParte, cerrarParte, esEstadoOt, margenHoras, minutosRealesOt, transicionarOt, type EstadoOt, type MargenHoras, type ParteHoras,
 } from '@central/module-taller'
 import { contarAmpliacionesPendientes } from './presupuestos.ts'
+import { salirStockOt, type AvisoSalida, type TxStock } from './stock.ts'
 
 type Delegado = {
   findMany(a?: any): Promise<any[]>
@@ -20,7 +21,8 @@ export type TxOrdenes = {
   otLinea: Delegado
 }
 
-export type ResultadoOrden = { ok: true; estado: EstadoOt } | { ok: false; motivo: string }
+/** `avisosStock`: artículos que quedaron en NEGATIVO al cerrar la OT (nunca en silencio: la pantalla los enseña). */
+export type ResultadoOrden = { ok: true; estado: EstadoOt; avisosStock?: AvisoSalida[] } | { ok: false; motivo: string }
 
 /** Estados en los que se puede trabajar en el coche (parte de horas). */
 export const ESTADOS_TRABAJABLES: readonly EstadoOt[] = ['aceptado', 'en_curso']
@@ -28,7 +30,7 @@ export const ESTADOS_TRABAJABLES: readonly EstadoOt[] = ['aceptado', 'en_curso']
 const aParte = (p: any): ParteHoras => ({ id: p.id, otId: p.otId, mecanicoId: p.mecanicoId, inicio: p.inicio, fin: p.fin ?? null })
 
 export async function cambiarEstadoOt(
-  tx: TxOrdenes, o: { tallerId: string; otId: string; hacia: string; ahora: Date },
+  tx: TxOrdenes, o: { tallerId: string; otId: string; hacia: string; ahora: Date; usuarioId?: string | null },
 ): Promise<ResultadoOrden> {
   if (!esEstadoOt(o.hacia)) return { ok: false, motivo: 'estado desconocido' }
   const ot = await tx.ordenTrabajo.findFirst({ where: { tallerId: o.tallerId, id: o.otId } })
@@ -52,6 +54,11 @@ export async function cambiarEstadoOt(
       ...(r.estado === 'entregado' ? { entregadoEn: o.ahora } : {}),
     },
   })
+  // El material sale del almacén AL CERRAR la OT (ver lib/stock.ts). Idempotente: reabrir y cerrar solo apunta la diferencia.
+  if (r.estado === 'terminado') {
+    const s = await salirStockOt(tx as unknown as TxStock, { tallerId: o.tallerId, otId: ot.id, usuarioId: o.usuarioId ?? null })
+    return s.avisos.length ? { ...r, avisosStock: s.avisos } : r
+  }
   return r
 }
 

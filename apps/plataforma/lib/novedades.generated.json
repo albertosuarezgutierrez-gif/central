@@ -1,44 +1,64 @@
 {
   "novedades": [
     {
-      "titulo": "02/11/2026) Auditoría lote 2 (rama `claude/auditoria-lote2`, PR por abrir)",
-      "fecha": "02/11/2026"
+      "titulo": "05/11/2026) Plataforma · «Nueva tarea» no guardaba + atajo en cabecera fija",
+      "fecha": "05/11/2026"
     },
     {
-      "titulo": "02/11/2026) PR #5396 MERGEADO · `@central/module-cima` fase 2 (lógica pura)",
-      "fecha": "02/11/2026"
+      "titulo": "04/11/2026) Correduría · WhatsApp: recepción real OK + IA que responde (PR #5528, flags apagados)",
+      "fecha": "04/11/2026"
     },
     {
-      "titulo": "02/11/2026) #5385 MERGEADO · arranca la unificación de la ingesta CIMA en central",
-      "fecha": "02/11/2026"
+      "titulo": "04/11/2026) Portal cliente · hoja QR: logo de compañía + cobalto",
+      "fecha": "04/11/2026"
     },
     {
-      "titulo": "02/11/2026) Auditoría completa (12 agentes) + arreglos — docs/AUDITORIA-2026-11.md",
-      "fecha": "02/11/2026"
+      "titulo": "04/11/2026) Correduría · WhatsApp: SQL APLICADOS en prod + remates",
+      "fecha": "04/11/2026"
     },
     {
-      "titulo": "02/11/2026) Ingresos 2026 pisos: neto real fijado · PENDIENTE cuadre Smoobu",
-      "fecha": "02/11/2026"
+      "titulo": "04/11/2026) Correduría · WhatsApp: aprendizaje + autonomía gradual",
+      "fecha": "04/11/2026"
     },
     {
-      "titulo": "02/11/2026) Control 2026 pisos: expenses retirada · métrica «Gastos mes» sivra",
-      "fecha": "02/11/2026"
+      "titulo": "04/11/2026) Correduría · WhatsApp: respuestas del cliente → propuestas CRM — PR #5486",
+      "fecha": "04/11/2026"
     },
     {
-      "titulo": "01/11/2026) Factura Sique Brilla octubre · cuadre por correo: lavandería redondeada",
-      "fecha": "01/11/2026"
+      "titulo": "03/11/2026) Correduría · regularización RC fase 3 (respuesta a Occident + cierre manual) — ✅ PR #5472 mergeado",
+      "fecha": "03/11/2026"
     },
     {
-      "titulo": "01/11/2026) Tarificador RPA · vehículo de referencia y presupuestos (#5321, #5326, #5332, #5337)",
-      "fecha": "01/11/2026"
+      "titulo": "03/11/2026) Correduría · buscador de cartera tolerante (caso Antonio Villegas)",
+      "fecha": "03/11/2026"
     },
     {
-      "titulo": "01/11/2026) Agente huésped: «ready before 15?» → compuerta de horarios · PR #5334 MERGEADO (`7d7c971`)",
-      "fecha": "01/11/2026"
+      "titulo": "03/11/2026) Correduría · regularización RC de Occident automatizada (fases 1-2)",
+      "fecha": "03/11/2026"
     },
     {
-      "titulo": "01/11/2026) Blog asegura-web · PR #5328 MERGEADO (mora art. 20 LCS)",
-      "fecha": "01/11/2026"
+      "titulo": "03/11/2026) Sivra · mensajes de huésped de Agoda por correo (PR #5455, mergeado y desplegado)",
+      "fecha": "03/11/2026"
+    },
+    {
+      "titulo": "03/11/2026) Correduría · cuadre de comisiones por compañía + Drive reorganizado",
+      "fecha": "03/11/2026"
+    },
+    {
+      "titulo": "03/11/2026) Facturas · auditoría del lector: tipo de documento obligatorio y documento completo - Causa raíz de los errores básicos: `tipo_documento` salía null en 28/51 y `procesar.ts` no lo miraba; el texto se cortaba a 4.000 car. (la IA solo veía el encabezado). Ahora: prompt con vocabulario cerrado (presupuesto/solicitud/liquidación/resumen/aviso → omitido; null/otro → bandeja con aviso), emisor≠cliente≠dirección del piso, `numero_albaran` aparte, hasta 12.000 car. (inicio+final). Helpers `tipo-documento.ts`, `revision-lectura.ts`, `recorte-texto.ts`; dedupe por nº de factura sin separadores. - Bandeja revisada con Alberto: Netflix → pisos compartidos; PEPEMOBILE → correduría; Anthropic 170 € = bonos reales; TotalEnergies 310,01 € = Monte Carmelo (personal); Vercel B2DRQ0QS-0007 duplicado descartado. - EMASESA 2026 completo",
+      "fecha": "03/11/2026"
+    },
+    {
+      "titulo": "03/11/2026) Captación · parado el mailing en frío de ia-rest/ialimp; foco 100% correduría",
+      "fecha": "03/11/2026"
+    },
+    {
+      "titulo": "03/11/2026) Facturas · pólizas de clientes y comisiones de portal NO son gasto + bandeja de pendientes",
+      "fecha": "03/11/2026"
+    },
+    {
+      "titulo": "03/11/2026) Facturas · el agente de correo duplicaba adjuntos sin proveedor",
+      "fecha": "03/11/2026"
     }
   ]
 }

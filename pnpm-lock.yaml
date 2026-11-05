@@ -392,6 +392,12 @@ importers:
       '@central/brand':
         specifier: workspace:*
         version: link:../../packages/brand
+      '@central/core-banca':
+        specifier: workspace:*
+        version: link:../../packages/core-banca
+      '@central/core-fiscal':
+        specifier: workspace:*
+        version: link:../../packages/core-fiscal
       '@central/core-identity':
         specifier: workspace:*
         version: link:../../packages/core-identity
@@ -1348,6 +1354,8 @@ importers:
   packages/brand: {}
 
   packages/core-ai: {}
+
+  packages/core-banca: {}
 
   packages/core-catastro: {}
 

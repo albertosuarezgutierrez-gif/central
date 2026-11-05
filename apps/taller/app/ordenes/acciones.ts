@@ -30,6 +30,11 @@ async function ejecutar<T extends { ok: boolean } & ({ ok: true } | { ok: false;
   try {
     const r = await fn()
     if (!r.ok) msg = (r as { motivo: string }).motivo
+    else {
+      // Stock que quedó en negativo al cerrar la OT: se dice (nunca en silencio); la OT SÍ queda cerrada.
+      const av = (r as { avisosStock?: { descripcion: string; stockNuevo: number }[] }).avisosStock
+      if (av?.length) msg = `Orden cerrada. Ojo, el stock de ${av.map((a) => `«${a.descripcion}»`).join(', ')} queda en negativo: revisa el inventario en Artículos`
+    }
   } catch (e) {
     msg = mensajeDeAcceso(e)
     if (!msg) { console.error('[ordenes]', e); msg = 'No se pudo completar. Inténtalo de nuevo' }
@@ -53,7 +58,7 @@ export async function cambiarEstadoAccion(fd: FormData): Promise<void> {
       if (!ot) return { ok: false as const, motivo: 'orden no encontrada' }
       const cap = capacidadParaTransicion(ot.estado, hacia.data)
       if (cap !== 'ordenes_avanzar') await exigir(tx as never, c, cap)
-      return cambiarEstadoOt(tx as unknown as TxOrdenes, { tallerId: c.tallerId, otId: id.data, hacia: hacia.data, ahora: new Date() })
+      return cambiarEstadoOt(tx as unknown as TxOrdenes, { tallerId: c.tallerId, otId: id.data, hacia: hacia.data, ahora: new Date(), usuarioId: c.usuarioId })
     }),
   )
 }

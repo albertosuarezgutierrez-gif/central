@@ -7,6 +7,7 @@ import type {
 } from '../lib/repo.ts'
 import type { TipoHecho } from '../lib/hecho-entrada.ts'
 import { filasSemillaPgc } from '../lib/alta-empresa.ts'
+import { f3Memoria, f3Vacio, type DatosF3 } from './_f3-memoria.ts'
 
 type Datos = {
   empresa: FilaEmpresa | null
@@ -19,6 +20,7 @@ type Datos = {
   vinculos: { usuarioId: string; rol: 'dueno' | 'gestor'; activo: boolean }[]
   auditoria: EntradaAuditoria[]
   avisos: (AvisoLeido & { leidoPor?: string | null })[]
+  f3: DatosF3
 }
 
 export function crearAlmacen() {
@@ -27,7 +29,7 @@ export function crearAlmacen() {
   const nuevoId = () => `00000000-0000-4000-8000-${String(++seq).padStart(12, '0')}`
   const datos = (e: string): Datos => {
     if (!porEmpresa.has(e)) {
-      porEmpresa.set(e, { empresa: null, plan: [], ejercicios: [], asientos: [], hechos: [], reglas: [], origenes: new Set(), vinculos: [], auditoria: [], avisos: [] })
+      porEmpresa.set(e, { empresa: null, plan: [], ejercicios: [], asientos: [], hechos: [], reglas: [], origenes: new Set(), vinculos: [], auditoria: [], avisos: [], f3: f3Vacio() })
     }
     return porEmpresa.get(e)!
   }
@@ -35,6 +37,7 @@ export function crearAlmacen() {
   function repo(empresaId: string): RepoContable {
     const d = datos(empresaId)
     return {
+      ...f3Memoria(d, nuevoId),
       empresaId,
       async empresa() { return d.empresa },
       async planCuentas() { return d.plan.map((c) => ({ ...c })) },

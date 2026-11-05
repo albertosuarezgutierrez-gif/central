@@ -3,6 +3,8 @@ import { conTaller } from '@/lib/db'
 import { getSession } from '@/lib/session'
 import { usuarioDeSesion } from '@/lib/acceso'
 import { urlPortalEmpleado } from '@/lib/enlaces'
+import { formatearCantidad } from '@central/module-taller'
+import { cargarAvisosStock } from '@/lib/stock'
 import { Cabecera } from './_marca'
 
 export const dynamic = 'force-dynamic'
@@ -18,6 +20,9 @@ const ICONO = {
   pin: 'M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4',
   nominas: 'M3 6h18v12H3zM3 10h18M7 15h4',
   panel: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
+  almacen: 'M3 8l9-5 9 5v11H3zM9 19v-6h6v6',
+  pedidos: 'M6 4h12v16H6zM9 9h6M9 13h6M9 17h3',
+  albaranes: 'M3 7h11v9H3zM14 10h4l3 3v3h-7zM7 19a1.5 1.5 0 1 0 0-.01M17 19a1.5 1.5 0 1 0 0-.01',
 } as const
 
 const SECCIONES = [
@@ -45,17 +50,32 @@ export default async function Inicio() {
   if (!u) redirect('/login') // baja, o PIN cambiado/reseteado desde otro sitio: la cookie vieja ya no vale
   if (u.debeCambiarPin === true) redirect('/cambiar-pin')
   const nominas = urlPortalEmpleado()
+  // Almacén: dueño y administración. Los avisos de stock (negativo, agotado, bajo mínimo) salen en el inicio del dueño.
+  const verAlmacen = u.rol === 'dueno' || u.rol === 'admin'
+  const avisosStock = u.rol === 'dueno' ? await conTaller(s.tallerId, (tx) => cargarAvisosStock(tx as never, s.tallerId)) : []
   // El panel (márgenes) es solo del dueño; el servidor lo vuelve a comprobar en /panel.
   const secciones = u.rol === 'dueno'
     ? [...SECCIONES.slice(0, 5), { href: '/panel', titulo: 'Panel', desc: 'Márgenes, horas y facturación', icono: ICONO.panel }, ...SECCIONES.slice(5)]
     : SECCIONES
+  const todas = verAlmacen
+    ? [...secciones, { href: '/articulos', titulo: 'Artículos', desc: 'Catálogo e inventario', icono: ICONO.almacen }, { href: '/pedidos', titulo: 'Pedidos', desc: 'Pedidos a proveedor', icono: ICONO.pedidos }, { href: '/albaranes', titulo: 'Albaranes', desc: 'Entradas de mercancía', icono: ICONO.albaranes }]
+    : secciones
   return (
     <>
       <Cabecera conSalir />
       <main className="contenido">
         <h1>Taller</h1>
+        {avisosStock.length > 0 && (
+          <section aria-label="Avisos de stock">
+            <p className="aviso-error" role="alert">
+              <strong>Stock:</strong>{' '}
+              {avisosStock.slice(0, 5).map((a) => `${a.descripcion} (${a.tipo === 'negativo' ? 'negativo' : a.tipo === 'agotado' ? 'agotado' : 'bajo mínimo'}: ${formatearCantidad(a.stock, a.unidad)})`).join(' · ')}
+              {avisosStock.length > 5 ? ` · y ${avisosStock.length - 5} más` : ''} <a href="/articulos">Ver artículos</a>
+            </p>
+          </section>
+        )}
         <nav className="rejilla" aria-label="Secciones">
-          {secciones.map(s => (
+          {todas.map(s => (
             <a key={s.href} href={s.href} className="tarjeta">
               <Icono d={s.icono} />
               <span className="tarjeta-texto"><strong>{s.titulo}</strong><span className="desc">{s.desc}</span></span>

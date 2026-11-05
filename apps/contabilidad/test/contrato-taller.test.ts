@@ -3,6 +3,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { hechoCobro, hechoVenta } from '../../taller/lib/factura-hechos.ts'
+import { hechoCompra } from '../../taller/lib/compra-hechos.ts'
 import { parsearEntradaHecho } from '../lib/hecho-entrada.ts'
 import { recibirHecho } from '../lib/servicio.ts'
 import { crearAlmacen } from './_repo-memoria.ts'
@@ -43,4 +44,23 @@ test('venta del taller: el puerto la acepta y el asiento cuadra (430 / 705 / 477
   const asiento = al.datos(A).asientos.at(-1)!
   assert.ok(cuadra(asiento.apuntes))
   assert.equal(asiento.apuntes.reduce((s, x) => s + x.debe, 0), 12100)
+})
+
+test('compra del taller (albarán valorado): el puerto la acepta y el asiento cuadra (600 + 472 / 400)', async () => {
+  const h = hechoCompra({
+    albaranId: 'alb-1', proveedorNombre: 'Recambios SL', numeroAlbaran: 'A-7', facturaNumero: 'F-100', facturaFecha: '2026-11-04', matricula: '1234ABC',
+    lineas: [{ cantidad: 2, unidad: 'ud', costeUnitarioCent: 5000, ivaPuntosBasicos: 2100 }],
+  })
+  assert.ok(h.ok, h.ok ? '' : h.motivo)
+  const p = parsearEntradaHecho({ empresaId: A, hecho: viaJson(h.ok ? h.hecho : null) })
+  assert.ok(p.ok, p.ok ? '' : p.errores.join())
+  const al = crearAlmacen(); al.empresaLista(A).origenes.add('taller')
+  const r = await recibirHecho(al.repo(A), 'taller', p.ok ? p.valor.hecho : (null as never))
+  assert.equal(r.resultado, 'asentado')
+  const ap = al.datos(A).asientos.at(-1)!.apuntes
+  assert.ok(cuadra(ap))
+  const sumaCuenta = (pref: string, lado: 'debe' | 'haber') => ap.filter(x => x.cuenta.startsWith(pref)).reduce((s, x) => s + x[lado], 0)
+  assert.equal(sumaCuenta('600', 'debe'), 10000)
+  assert.equal(sumaCuenta('472', 'debe'), 2100)
+  assert.equal(sumaCuenta('400', 'haber'), 12100)
 })

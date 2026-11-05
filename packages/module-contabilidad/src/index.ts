@@ -54,3 +54,7 @@ export * from './plantillas/reglas.ts'
 export * from './avisos/fiscal.ts'
 export * from './avisos/motor.ts'
 export * from './analisis/medios.ts'
+
+// ── F3: CNAE → plantilla, facturas recibidas (compras) ──
+export * from './plantillas/cnae.ts'
+export * from './compras/compras.ts'

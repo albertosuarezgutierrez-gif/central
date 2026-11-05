@@ -3,6 +3,7 @@ import { MarcarLeidos } from './MarcarLeidos'
 import { datosPagina } from '@/lib/pagina'
 import { conRepo } from '@/lib/db'
 import { limiteDe, PASO, MAXIMO } from '@/lib/paginas'
+import { ordenarAvisosPorRelevancia } from '@central/module-contabilidad'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,7 +11,10 @@ export default async function Avisos({ searchParams }: { searchParams: Promise<R
   const { ctx, empresa, variasEmpresas, avisos: sinLeer } = await datosPagina()
   const limite = limiteDe((await searchParams).n)
   // Si 0002 aún no está aplicada la tabla no existe: la pantalla lo dice en vez de romper.
-  const lista = await conRepo(ctx.empresaId, (r) => r.avisos({ limite: limite + 1 })).catch(() => null)
+  const cruda = await conRepo(ctx.empresaId, (r) => r.avisos({ limite: limite + 1 })).catch(() => null)
+  // El CNAE (0003) prioriza los tipos de aviso de la actividad (sin descartar ninguno); sin CNAE manda la plantilla.
+  const cnae = await conRepo(ctx.empresaId, (r) => r.cnaeEmpresa()).catch(() => null)
+  const lista = cruda === null ? null : ordenarAvisosPorRelevancia(cruda, empresa?.sector ?? 'generico', cnae)
   return (
     <>
       <Cabecera empresa={empresa} variasEmpresas={variasEmpresas} avisos={sinLeer} />

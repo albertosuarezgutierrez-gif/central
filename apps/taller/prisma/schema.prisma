@@ -830,3 +830,126 @@ model HechoPendiente {
   @@map("hechos_pendientes")
   @@schema("taller")
 }
+
+// ─── Stock, pedidos y albaranes (0011) ───────────────────────────────────────
+/// Cantidades en unidad base: `ud` o `ml` (granel: milésimas de litro). Coste y precio: céntimos por ud o por LITRO. stock null = no se lleva.
+model Articulo {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId             String   @map("taller_id") @db.Uuid
+  referencia           String?
+  referenciaFabricante String?  @map("referencia_fabricante")
+  descripcion          String
+  marca                String?
+  unidad               String
+  minimo               Int?
+  costeMedioCent       BigInt?  @map("coste_medio_cent")
+  mlPorEnvase          Int?     @map("ml_por_envase")
+  stock                Int?
+  pvpCent              BigInt?  @map("pvp_cent")
+  margenPuntosBasicos  Int?     @map("margen_puntos_basicos")
+  ivaCodigo            String?  @map("iva_codigo")
+  activo               Boolean  @default(true)
+  creadoEn             DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn        DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("articulos")
+  @@schema("taller")
+}
+
+/// SOLO-AÑADIR (trigger y sin UPDATE/DELETE en BD). Una corrección es otro movimiento.
+model MovimientoStock {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId          String   @map("taller_id") @db.Uuid
+  articuloId        String   @map("articulo_id") @db.Uuid
+  otId              String?  @map("ot_id") @db.Uuid
+  cantidad          Int
+  motivo            String
+  nota              String?
+  costeUnitarioCent BigInt?  @map("coste_unitario_cent")
+  stockResultante   Int?     @map("stock_resultante")
+  usuarioId         String?  @map("usuario_id") @db.Uuid
+  albaranLineaId    String?  @map("albaran_linea_id") @db.Uuid
+  creadoEn          DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn     DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("movimientos_stock")
+  @@schema("taller")
+}
+
+model Pedido {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId       String    @map("taller_id") @db.Uuid
+  otId           String?   @map("ot_id") @db.Uuid
+  proveedorId    String    @map("proveedor_id") @db.Uuid
+  matricula      String?
+  /// borrador · enviado (marcado a mano) · parcial · recibido · facturado · cancelado
+  estado         String    @default("borrador")
+  enviadoPor     String?   @map("enviado_por") @db.Uuid
+  enviadoEn      DateTime? @map("enviado_en") @db.Timestamptz(6)
+  recibidoEn     DateTime? @map("recibido_en") @db.Timestamptz(6)
+  notas          String?
+  canceladoEn    DateTime? @map("cancelado_en") @db.Timestamptz(6)
+  creadoEn       DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn  DateTime  @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("pedidos")
+  @@schema("taller")
+}
+
+model PedidoLinea {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId          String   @map("taller_id") @db.Uuid
+  pedidoId          String   @map("pedido_id") @db.Uuid
+  otLineaId         String?  @map("ot_linea_id") @db.Uuid
+  articuloId        String?  @map("articulo_id") @db.Uuid
+  descripcion       String
+  referencia        String?
+  cantidad          Int
+  unidad            String   @default("ud")
+  cantidadRecibida  Int      @default(0) @map("cantidad_recibida")
+  costeUnitarioCent BigInt?  @map("coste_unitario_cent")
+  creadoEn          DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn     DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("pedido_lineas")
+  @@schema("taller")
+}
+
+model Albaran {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId               String    @map("taller_id") @db.Uuid
+  proveedorId            String    @map("proveedor_id") @db.Uuid
+  pedidoId               String?   @map("pedido_id") @db.Uuid
+  numeroProveedor        String    @map("numero_proveedor")
+  fecha                  DateTime  @db.Date
+  /// recibido · valorado (con la factura del proveedor)
+  estado                 String    @default("recibido")
+  facturaProveedorNumero String?   @map("factura_proveedor_numero")
+  facturaProveedorFecha  DateTime? @map("factura_proveedor_fecha") @db.Date
+  valoradoEn             DateTime? @map("valorado_en") @db.Timestamptz(6)
+  creadoPor              String?   @map("creado_por") @db.Uuid
+  notas                  String?
+  creadoEn               DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn          DateTime  @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("albaranes")
+  @@schema("taller")
+}
+
+model AlbaranLinea {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tallerId          String   @map("taller_id") @db.Uuid
+  albaranId         String   @map("albaran_id") @db.Uuid
+  pedidoLineaId     String?  @map("pedido_linea_id") @db.Uuid
+  articuloId        String?  @map("articulo_id") @db.Uuid
+  descripcion       String
+  cantidad          Int
+  unidad            String   @default("ud")
+  costeUnitarioCent BigInt?  @map("coste_unitario_cent")
+  ivaPuntosBasicos  Int?     @map("iva_puntos_basicos")
+  creadoEn          DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn     DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("albaran_lineas")
+  @@schema("taller")
+}
