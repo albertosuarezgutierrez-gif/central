@@ -85,9 +85,10 @@ test('🪤 quien entró por WhatsApp solo ve SU presupuesto: la ficha sale del p
   assert.match(acc, /return fichaDeToken\(/)
 })
 
-test('🪤 el puente solo admite el token del WhatsApp en datos, aviso de dato, preparar, código y firmar', () => {
+test('🪤 el puente solo admite el token del WhatsApp en datos, aviso de dato, preparar, código, firmar y elegir la renovación', () => {
   const admite = puente.slice(puente.indexOf('const admiteWhatsapp'), puente.indexOf('const acceso: AccesoPortal'))
   const acciones = [...admite.matchAll(/b\?\.accion === '([a-z_]+)'/g)].map((m) => m[1]).sort()
-  assert.deepEqual(acciones, ['codigo', 'datos', 'datos_incorrectos', 'firmar', 'preparar'])
+  // `elegir_renovacion` (Alberto, 05/11/2026): el cliente que no usa la app elige desde el enlace del WhatsApp (sin firma).
+  assert.deepEqual(acciones, ['codigo', 'datos', 'datos_incorrectos', 'elegir_renovacion', 'firmar', 'preparar'])
   assert.match(puente, /via: b\.via === 'whatsapp' \? 'whatsapp' : 'correo',/)
 })

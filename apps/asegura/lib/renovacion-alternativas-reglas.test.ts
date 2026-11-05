@@ -104,7 +104,12 @@ test('botón ✅: solo el titular exacto y con un uuid', () => {
   assert.equal(decidirBotonRenovacion({ from: { id: 6 } }, 'pub', [P], '5').ok, false)
   assert.equal(decidirBotonRenovacion({ from: { id: 5 } }, 'pub', ['x'], '5').ok, false)
   assert.equal(decidirBotonRenovacion({ from: { id: 5 } }, 'otra', [P], '5').ok, false)
-  assert.deepEqual(decidirBotonRenovacion({ from: { id: 5 } }, 'pub', [P], '5'), { ok: true, presupuestoId: P, quien: '5' })
+  assert.deepEqual(decidirBotonRenovacion({ from: { id: 5 } }, 'pub', [P], '5'), { ok: true, presupuestoId: P, quien: '5', canal: 'app' })
+  // 05/11/2026: ✅ por correo y ✅ WhatsApp, con la MISMA puerta del titular.
+  assert.deepEqual(decidirBotonRenovacion({ from: { id: 5 } }, 'cor', [P], '5'), { ok: true, presupuestoId: P, quien: '5', canal: 'email' })
+  assert.deepEqual(decidirBotonRenovacion({ from: { id: 5 } }, 'wa', [P], '5'), { ok: true, presupuestoId: P, quien: '5', canal: 'whatsapp_enlace' })
+  assert.equal(decidirBotonRenovacion({ from: { id: 6 } }, 'cor', [P], '5').ok, false)
+  assert.equal(decidirBotonRenovacion({ from: { id: 5 } }, 'constructor', [P], '5').ok, false, 'nada del prototipo cuela como canal')
 })
 
 test('texto de revisión: importes en formato español, escapado y aviso de que elegir no emite', () => {
@@ -256,4 +261,143 @@ test('🪤 la cabecera de la migración 2026-11-05b solo cita rutas y ficheros q
   for (const m of cabecera.matchAll(/\/api\/operador\/renovacion\/\{([^}]+)\}/g)) {
     for (const r of m[1]!.split(',')) assert.ok(existsSync(new URL(`asegura/app/api/operador/renovacion/${r.trim()}/route.ts`, raiz)), `ruta ${r} no existe`)
   }
+})
+
+// ─── Quién elige y por dónde (Alberto, 05/11/2026) ────────────────────────────
+
+test('canal: con alguien que elige en la app SOLO la app; sin nadie, correo y WhatsApp; sin poder mirarlo, ningún ✅', async () => {
+  const { CALLBACK_CORREO, CALLBACK_WHATSAPP, LINEA_PREFERIDA_APP } = await import('./renovacion-alternativas-reglas.ts')
+  const urls = { vista: 'https://x/vista', modificar: 'https://x/poliza' }
+  const app = botonesRevision(P, urls, decidirDestinatarios({ vinculadasTomador: 1, otrosVenPoliza: [] })).flat().map((b) => b.callback).filter(Boolean)
+  assert.deepEqual(app, [`${CALLBACK_PUBLICAR}:${P}`])
+  const sinApp = decidirDestinatarios({ vinculadasTomador: 0, autorizadosEligen: [], otrosVenPoliza: [] })
+  assert.match(sinApp.lineas.join('\n'), new RegExp(LINEA_PREFERIDA_APP.slice(3, 30)), 'recuerda que lo preferido es la app')
+  const canales = botonesRevision(P, urls, sinApp).flat().map((b) => b.callback).filter(Boolean)
+  assert.deepEqual(canales, [`${CALLBACK_CORREO}:${P}`, `${CALLBACK_WHATSAPP}:${P}`])
+  for (const c of canales) assert.ok(Buffer.byteLength(c ?? '') <= 64)
+  assert.equal(botonesRevision(P, urls, decidirDestinatarios(null)).flat().some((b) => b.callback), false)
+})
+
+test('destinatarios: un AUTORIZADO que elige basta para publicar en la app (la tomadora no la usa, él sí)', () => {
+  const d = decidirDestinatarios({ vinculadasTomador: 0, autorizadosEligen: [{ nombre: 'Juan' }], otrosVenPoliza: [{ nombre: 'Pepe', via: 'autorizacion' }] })
+  assert.equal(d.publicable, true)
+  assert.match(d.lineas.join('\n'), /Juan \(autorizado/)
+  assert.match(d.lineas.join('\n'), /Vale la primera elección/)
+  assert.match(d.lineas.join('\n'), /Pepe \(autorizado solo para consultar\)/)
+})
+
+test('quién elige: tomador por su cuenta; autorizado-operador sí; autorizado sin nivel o sin relación NO (404 neutro)', async () => {
+  const { decidirElector } = await import('./renovacion-alternativas-reglas.ts')
+  assert.deepEqual(decidirElector({ via: 'identidad', ficha: { estado: 'ok', clienteId: P }, autorizadoElige: false }), { ok: true, papel: 'tomador' })
+  assert.deepEqual(decidirElector({ via: 'identidad', ficha: { estado: 'ajena' }, autorizadoElige: true }), { ok: true, papel: 'autorizado' })
+  assert.deepEqual(decidirElector({ via: 'identidad', ficha: { estado: 'sin_ficha' }, autorizadoElige: true }), { ok: true, papel: 'autorizado' }, 'autorizado por identidad, sin ficha propia')
+  assert.deepEqual(decidirElector({ via: 'identidad', ficha: { estado: 'ajena' }, autorizadoElige: false }), { ok: false, estado: 'no_encontrado' }, 'sin nivel o sin relación')
+  assert.deepEqual(decidirElector({ via: 'identidad', ficha: { estado: 'sin_permiso' }, autorizadoElige: false }), { ok: false, estado: 'no_encontrado' }, 'vínculo de solo consulta')
+  assert.deepEqual(decidirElector({ via: 'identidad', ficha: { estado: 'error' }, autorizadoElige: true }), { ok: false, estado: 'error' }, 'un fallo no se arregla por la vía del autorizado')
+  assert.deepEqual(decidirElector({ via: 'identidad', ficha: { estado: 'ajena' }, autorizadoElige: null }), { ok: false, estado: 'error' }, 'autorizaciones ilegibles ≠ «no hay»')
+})
+
+test('elección por ENLACE: válido = el tomador; caducado o de otro presupuesto = 404; de una persona de contacto = 403', async () => {
+  const { decidirElector } = await import('./renovacion-alternativas-reglas.ts')
+  const { fichaDeToken } = await import('./presupuesto-acceso-tercero.ts')
+  const fila = { clienteId: P, canalAviso: 'whatsapp_enlace', whatsappCodigoHash: 'h'.repeat(64), marcaTercero: false }
+  const como = (f: Parameters<typeof fichaDeToken>[0]) => {
+    const t = fichaDeToken(f)
+    return decidirElector({ via: 'enlace', ficha: t.estado === 'ok' ? t : { estado: t.estado }, autorizadoElige: true })
+  }
+  assert.deepEqual(como(fila), { ok: true, papel: 'tomador' })
+  // `fichaDeTokenWhatsapp` devuelve null si el token no es el vigente de ESE presupuesto, si caducó o se retiró.
+  assert.deepEqual(como(null), { ok: false, estado: 'no_encontrado' }, 'caducado / de otro presupuesto / regenerado')
+  assert.deepEqual(como({ ...fila, marcaTercero: true }), { ok: false, estado: 'sin_permiso' }, 'el código de una persona de contacto ve, no elige')
+  // Por el enlace NUNCA se elige como autorizado (el token resuelve la ficha del tomador o nada).
+  assert.deepEqual(decidirElector({ via: 'enlace', ficha: { estado: 'ajena' }, autorizadoElige: true }), { ok: false, estado: 'no_encontrado' })
+})
+
+test('🪤 el token del enlace se comprueba contra ESTE presupuesto, vigente y sin retirar (fichaDeTokenWhatsapp)', () => {
+  const sinC = (x: string) => x.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  const w = sinC(readFileSync(new URL('./presupuesto-codigo-whatsapp.ts', import.meta.url), 'utf8'))
+  const f = w.slice(w.indexOf('export async function fichaDeTokenWhatsapp'))
+  assert.match(f, /id: presupuestoId, correduriaId, tokenHash,/)
+  assert.match(f, /retiradoAt: null, whatsappCodigoHash: \{ not: null \}, venceEl: \{ gt: ahora \}/)
+  const src = sinC(readFileSync(new URL('./renovacion-alternativas.ts', import.meta.url), 'utf8'))
+  const el = src.slice(src.indexOf('export async function elegirRenovacion'), src.indexOf('export async function avisarEleccion'))
+  assert.match(el, /fichaDeToken\(await fichaDeTokenWhatsapp\(correduriaId, acceso\.tokenWhatsapp, presupuestoId, ahora\)\)/)
+})
+
+test('doble elección (dos personas): la segunda recibe «ya elegida» con el nombre de pila; quien eligió puede cambiar', () => {
+  const op = { tipo: 'opcion', opcionId: O } as const
+  const porElla = { papel: 'tomador', identidadId: 'id-ella', nombre: 'Laura' } as const
+  assert.deepEqual(decidirEleccion(base({ eleccionActual: op, dueno: porElla }), { tipo: 'renovacion' }, true, HOY, { papel: 'autorizado', identidadId: 'id-el' }), { ok: false, estado: 'ya_elegida', por: 'Laura' })
+  assert.deepEqual(decidirEleccion(base({ eleccionActual: op, dueno: porElla }), op, true, HOY, { papel: 'autorizado', identidadId: 'id-el' }), { ok: false, estado: 'ya_elegida', por: 'Laura' }, 'ni repitiendo la misma')
+  assert.deepEqual(decidirEleccion(base({ eleccionActual: op, dueno: porElla }), { tipo: 'renovacion' }, true, HOY, { papel: 'tomador', identidadId: null }), { ok: true, cambio: true }, 'la tomadora, también por su enlace')
+  const porEl = { papel: 'autorizado', identidadId: 'id-el', nombre: 'Juan' } as const
+  assert.deepEqual(decidirEleccion(base({ eleccionActual: op, dueno: porEl }), { tipo: 'renovacion' }, true, HOY, { papel: 'tomador', identidadId: 'id-ella' }), { ok: false, estado: 'ya_elegida', por: 'Juan' })
+  assert.deepEqual(decidirEleccion(base({ eleccionActual: op, dueno: porEl }), { tipo: 'renovacion' }, true, HOY, { papel: 'autorizado', identidadId: 'id-el' }), { ok: true, cambio: true })
+  // Sin elección previa, cualquiera de los dos puede ser el primero.
+  assert.deepEqual(decidirEleccion(base({ dueno: null }), op, true, HOY, { papel: 'autorizado', identidadId: 'id-el' }), { ok: true, cambio: true })
+})
+
+test('elegir desde el WhatsApp: vale con el enlace generado aunque Alberto no haya confirmado el envío', () => {
+  assert.deepEqual(decidirEleccion(base({ enviadoAt: null, enlaceGeneradoAt: new Date('2026-11-03') }), { tipo: 'renovacion' }, true, HOY), { ok: true, cambio: true })
+  assert.deepEqual(decidirEleccion(base({ enviadoAt: null, enlaceGeneradoAt: null }), { tipo: 'renovacion' }, true, HOY), { ok: false, estado: 'no_encontrado' }, 'un borrador sin ✅ no se elige')
+})
+
+test('historial y Telegram dicen QUIÉN eligió y por dónde, sin DNI/IBAN/dirección', async () => {
+  const { lineaHistorialEleccion, EVENTO_ELECCION } = await import('./renovacion-alternativas-reglas.ts')
+  const { EVENTO_ELECCION_RENOVACION } = await import('@central/module-seguros-portal')
+  assert.equal(EVENTO_ELECCION, EVENTO_ELECCION_RENOVACION, 'el mismo evento en asegura y en la regla compartida')
+  const el = { papel: 'autorizado', via: 'app', identidadId: '33333333-3333-4333-8333-333333333333', nombre: 'Juan' } as const
+  const h = lineaHistorialEleccion({ tipo: 'renovacion' }, null, 'hogar', el)
+  assert.match(h, /Juan \(autorizado por el tomador\) en la app \[cuenta del portal 33333333\]/)
+  const w = lineaHistorialEleccion({ tipo: 'renovacion' }, null, 'hogar', { papel: 'tomador', via: 'enlace_whatsapp', identidadId: null, nombre: 'Laura' })
+  assert.match(w, /El cliente \(Laura\) desde el enlace del WhatsApp/)
+  const t = textoEleccion({ tomador: 'Laura', ramo: 'hogar', eleccion: { tipo: 'renovacion' }, opcion: null, primaRenovacion: 400, enlace: 'https://x/c', cambio: true, elector: el })
+  assert.match(t, /Juan \(autorizado por el tomador con Gestión o Total\) en la app/)
+  for (const x of [h, w, t]) assert.doesNotMatch(x, /IBAN|DNI|calle|direcci/i)
+})
+
+test('🪤 elegir: la ficha NUNCA sale de la petición; sin 2026-11-05c no se elige; quién eligió se sella solo con la primera', () => {
+  const sinC = (x: string) => x.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  const src = sinC(readFileSync(new URL('./renovacion-alternativas.ts', import.meta.url), 'utf8'))
+  const el = src.slice(src.indexOf('export async function elegirRenovacion'), src.indexOf('export async function avisarEleccion'))
+  assert.match(el, /!\(await migracionQuienElige\(\)\)\) return \{ estado: 'sin_migracion' \}/)
+  assert.match(el, /fichaPropiaDeRecurso\(correduriaId, acceso\.identidadId, 'presupuesto', presupuestoId\)/)
+  assert.match(el, /identidadesQueEligenRenovacion\(await filasAutorizacionRenovacion\(correduriaId, pr\.cliente_id, identidadId\)/)
+  assert.match(el, /and p\.cliente_id = \$\{clienteId\}::uuid\s+for update of p/)
+  assert.match(el, /eleccion_por_papel = case when eleccion_cliente is null then \$\{elector\.papel\} else eleccion_por_papel end/)
+  assert.match(el, /insert into historial_interno/)
+  const puente = sinC(readFileSync(new URL('../app/api/portal/presupuesto/route.ts', import.meta.url), 'utf8'))
+  const bloque = puente.slice(puente.indexOf("if (b?.accion === 'elegir_renovacion')"), puente.indexOf("if (b?.accion === 'actividad')"))
+  assert.match(bloque, /elegirRenovacion\(correduria\.id, acceso, presupuestoId, eleccion\)/)
+  assert.doesNotMatch(puente, /clienteId/, 'el puente del portal no acepta clienteId')
+  assert.match(puente, /export const POST = auditado\(/)
+})
+
+test('🪤 correo/WhatsApp: el ✅ reutiliza el aviso de siempre (token + código), marca revisadas ANTES y deja rastro', () => {
+  const src = readFileSync(new URL('./renovacion-alternativas.ts', import.meta.url), 'utf8')
+  const f = src.slice(src.indexOf('async function enviarRenovacionPorEnlace'), src.indexOf('// ─── La elección del cliente'))
+  const rev = f.indexOf('marcarRevisadas(tx,'), av = f.indexOf('avisarPresupuesto(correduriaId, { id: p.id, canal, actor }')
+  assert.ok(rev > 0 && av > rev, 'revisadas antes del aviso')
+  assert.doesNotMatch(f, /destinatarioClienteId/, 'nunca a una persona de contacto (esa ve, no elige)')
+  assert.match(f, /insert into historial_interno/)
+  assert.match(f, /anotarCambio\(/)
+  const pub = src.slice(src.indexOf('export async function publicarRenovacion'), src.indexOf('/** Las ofertas de las opciones VISIBLES'))
+  // El ✅ (mensaje vigente, necesidades, caducidad) va ANTES de elegir canal: correo/WhatsApp pasan por las mismas guardas.
+  assert.ok(pub.indexOf('decidirMensajeVigente(') < pub.indexOf('enviarRenovacionPorEnlace('))
+  assert.ok(pub.indexOf("estado: 'sin_necesidades'") < pub.indexOf('enviarRenovacionPorEnlace('))
+  const ruta = readFileSync(new URL('../app/api/operador/renovacion/publicar/route.ts', import.meta.url), 'utf8')
+  assert.match(ruta, /if \(canal === null\) return NextResponse\.json\(\{ estado: 'invalido'/, 'un canal raro no se convierte en otro')
+})
+
+test('🪤 la cabecera de la migración 2026-11-05c cita ficheros que existen y es transaccional', async () => {
+  const { existsSync } = await import('node:fs')
+  const sql = readFileSync(new URL('../prisma/sql/2026-11-05c_presupuesto_renovacion_quien_elige.sql', import.meta.url), 'utf8')
+  const cabecera = sql.slice(0, sql.indexOf('BEGIN;'))
+  assert.match(cabecera, /NO APLICADA/)
+  assert.match(sql, /BEGIN;[\s\S]*COMMIT;/)
+  assert.match(sql, /GRANT SELECT \(eleccion_por_papel, eleccion_por_identidad_id, eleccion_por_nombre, eleccion_via\) ON seguros\.presupuesto TO prisma_asegura_portal/)
+  const raiz = new URL('../../../', import.meta.url)
+  const ficheros = [...cabecera.matchAll(/(?:apps|packages)\/[\w./-]+\.ts/g)].map((m) => m[0])
+  assert.ok(ficheros.length >= 2)
+  for (const f of ficheros) assert.ok(existsSync(new URL(f, raiz)), `${f} no existe`)
 })

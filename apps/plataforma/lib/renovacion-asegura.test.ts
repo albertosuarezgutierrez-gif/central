@@ -11,7 +11,24 @@ test('✅ de la renovación: solo el titular exacto, la acción `pub` y un uuid'
   assert.equal(decidirBotonCrv({ from: { id: 6 } }, 'pub', [P], '5').ok, false)
   assert.equal(decidirBotonCrv({ from: { id: 5 } }, 'pub', ['no-uuid'], '5').ok, false)
   assert.equal(decidirBotonCrv({ from: { id: 5 } }, 'emitir', [P], '5').ok, false, 'el botón no emite')
-  assert.deepEqual(decidirBotonCrv({ from: { id: 5 } }, 'pub', [P.toUpperCase()], '5'), { ok: true, presupuestoId: P })
+  assert.deepEqual(decidirBotonCrv({ from: { id: 5 } }, 'pub', [P.toUpperCase()], '5'), { ok: true, presupuestoId: P, canal: 'app' })
+  // 05/11/2026: ✅ por correo / WhatsApp cuando nadie elige en la app (misma puerta del titular).
+  assert.deepEqual(decidirBotonCrv({ from: { id: 5 } }, 'cor', [P], '5'), { ok: true, presupuestoId: P, canal: 'email' })
+  assert.deepEqual(decidirBotonCrv({ from: { id: 5 } }, 'wa', [P], '5'), { ok: true, presupuestoId: P, canal: 'whatsapp_enlace' })
+  assert.equal(decidirBotonCrv({ from: { id: 6 } }, 'wa', [P], '5').ok, false)
+  assert.equal(decidirBotonCrv({ from: { id: 5 } }, 'toString', [P], '5').ok, false)
+})
+
+test('los callbacks de correo y WhatsApp son los MISMOS que emite asegura; el wa.me solo si lo es', async () => {
+  const { whatsappDe } = await import('./renovacion-asegura.ts')
+  const asegura = readFileSync(new URL('../../asegura/lib/renovacion-alternativas-reglas.ts', import.meta.url), 'utf8')
+  assert.match(asegura, /CALLBACK_CORREO = `\$\{PREFIJO_RENOVACION_TG\}_cor`/)
+  assert.match(asegura, /CALLBACK_WHATSAPP = `\$\{PREFIJO_RENOVACION_TG\}_wa`/)
+  assert.equal(whatsappDe({ status: 200, json: { estado: 'enlace', whatsapp: 'https://wa.me/34600000000?text=x' } }), 'https://wa.me/34600000000?text=x')
+  assert.equal(whatsappDe({ status: 200, json: { estado: 'enlace', whatsapp: 'javascript:alert(1)' } }), null)
+  const ruta = readFileSync(new URL('../app/api/sivra/mensajes/telegram-webhook/route.ts', import.meta.url), 'utf8')
+  const i = ruta.indexOf('if (prefix === PREFIJO_CRV)')
+  assert.match(ruta.slice(i, i + 3000), /canal: d\.canal/)
 })
 
 test('el prefijo y la acción son los MISMOS que emite asegura (callback_data ≤ 64 bytes)', () => {
@@ -22,7 +39,7 @@ test('el prefijo y la acción son los MISMOS que emite asegura (callback_data �
 })
 
 test('503 canal_no_disponible ≠ fallo; un estado desconocido NO se pinta como publicado', () => {
-  assert.match(lineaTrasPublicarCrv('canal_no_disponible'), /no usa la app/)
+  assert.match(lineaTrasPublicarCrv('canal_no_disponible'), /Nadie que pueda elegir usa la app/)
   assert.match(lineaTrasPublicarCrv('http_502'), /No sé si se ha publicado/)
   assert.doesNotMatch(lineaTrasPublicarCrv('http_502'), /✅/)
 })

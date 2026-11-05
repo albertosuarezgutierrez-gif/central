@@ -11,7 +11,10 @@
 // 🚨 Fail-closed: sin la migración, `sin_migracion` (503) ANTES de escribir nada.
 
 import { calcularVencimiento, compararOfertas, esCarteraEnVigor, ofertaDeAvant2, primaConRecibos, seleccionarAvant2, vencimientoConRecibos, type ResultadoComparacion } from '@central/module-seguros'
-import { generarTokenVista, hashTokenVista } from '@central/module-seguros-portal'
+import {
+  detalleElector, duenoDeEleccion, generarTokenVista, hashTokenVista, identidadesQueEligenRenovacion,
+  type ElectorRenovacion,
+} from '@central/module-seguros-portal'
 import { inmuebleUnicoCatastro } from '@central/module-tarificacion'
 import { inmueblesPorDireccion } from '@central/core-catastro/http'
 import { tgSend, tgSendButtons } from '@central/core-telegram'
@@ -31,14 +34,21 @@ import { cargarPrecios } from './codeoscopic/tarificacion-guardada'
 import { catastroPorReferencia } from './codeoscopic/catastro-referencia'
 import { siglaViaOportunidad } from './tarificador-explorador-catastro'
 import { URL_PLATAFORMA_DEFECTO, enlaceFichaCliente } from './datos-cotizados'
-import { propio } from './comparativa-ia-servicio'
 import { nombreDePila } from './presupuesto-rpa-reglas'
+import { fichaPropiaDeRecurso } from './contacto-portal'
+import { fichaDeTokenWhatsapp } from './presupuesto-codigo-whatsapp'
+import { fichaDeToken } from './presupuesto-acceso-tercero'
+import { avisarPresupuesto } from './envio-presupuesto'
+import { puedeOperar } from './ficha-de-poliza'
+import { filasAutorizacionRenovacion } from './renovacion-autorizados'
+import type { AccesoPortal } from './presupuesto-aceptacion'
 import {
-  ACTOR_RENOVACION, CLAVE_CATASTRO_RENOVACION, EVENTO_AVISO_FALLIDO, EVENTO_ELECCION, EVENTO_PUBLICADO, EVENTO_REVISION_TG, MAX_AVANT2_RENOVACION, MODO_RENOVACION,
-  botonesRevision, compararConRenovacion, completarViviendaConCatastro, contarVinculadasQueOperan, decidirDestinatarios, decidirEleccion, decidirMensajeVigente,
+  ACTOR_RENOVACION, CLAVE_CATASTRO_RENOVACION, EVENTO_AVISO_FALLIDO, EVENTO_ELECCION, EVENTO_ENVIO_CANAL, EVENTO_PUBLICADO, EVENTO_REVISION_TG, MAX_AVANT2_RENOVACION, MODO_RENOVACION,
+  botonesRevision, compararConRenovacion, completarViviendaConCatastro, contarVinculadasQueOperan, decidirDestinatarios, decidirEleccion, decidirElector, decidirMensajeVigente,
   decidirPreparacion, filaOfertaActual, filaOfertaAvant2, fusionarViviendaCatastro, lineaHistorialAvisoFallido, lineaHistorialEleccion, lineaHistorialPreparada,
   textoEleccion, textoRevision,
-  type DecisionDestinatarios, type Eleccion, type EstadoCatastroRenovacion, type OpcionComparada, type QuienVeEnApp, type RenovacionActual, type ViaPublicar,
+  type CanalRenovacion, type DecisionDestinatarios, type Eleccion, type EstadoCatastroRenovacion, type FichaParaElegir, type OpcionComparada, type QuienVeEnApp,
+  type RenovacionActual, type ViaPublicar,
 } from './renovacion-alternativas-reglas'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -53,6 +63,20 @@ export const urlModificar = (polizaId: string) => `${plataforma()}/correduria/po
 export async function migracionRenovacion(): Promise<boolean> {
   try {
     await db().$queryRaw`select modo, eleccion_cliente, eleccion_opcion_id, eleccion_at from presupuesto limit 0`
+    return true
+  } catch (e) {
+    if (/42703|column .* does not exist|no existe la columna/i.test(e instanceof Error ? e.message : String(e))) return false
+    throw e
+  }
+}
+
+/**
+ * ¿Está la migración 2026-11-05c (quién eligió: `eleccion_por_*`, `eleccion_via`)? Sin ella NO se elige (503): el portal no
+ * podría decir «ya elegida por…» y la primera elección no quedaría atada a nadie. Otro fallo se propaga.
+ */
+export async function migracionQuienElige(): Promise<boolean> {
+  try {
+    await db().$queryRaw`select eleccion_por_papel, eleccion_por_identidad_id, eleccion_por_nombre, eleccion_via from presupuesto limit 0`
     return true
   } catch (e) {
     if (/42703|column .* does not exist|no existe la columna/i.test(e instanceof Error ? e.message : String(e))) return false
@@ -93,20 +117,27 @@ async function leerPoliza(correduriaId: string, polizaId: string) {
 
 /**
  * Quién verá el presupuesto en la app: las identidades vinculadas a la ficha del TOMADOR con nivel de OPERAR (sin vistas de
- * corredor; quien solo ve no puede elegir, así que no cuenta para un ✅ publicable), y quién
- * ve ESTA póliza por otra vía (autorización vigente del tomador o figurar en ella) y NO lo verá. `null` = no se pudo mirar.
+ * corredor; quien solo ve no puede elegir, así que no cuenta para un ✅ publicable), los AUTORIZADOS por el tomador con
+ * Gestión o Total sobre esta póliza (05/11/2026: lo ven y eligen), y quién ve ESTA póliza por otra vía (solo consulta o
+ * figurar en ella) y NO lo verá. `null` = no se pudo mirar.
  */
 export async function quienVeEnApp(correduriaId: string, clienteId: string, polizaId: string): Promise<QuienVeEnApp | null> {
   try {
     const vinculos = await db().$queryRaw<{ identidadId: string; nivel: string }[]>`
       select identidad_id::text as "identidadId", nivel::text as nivel from portal_vinculo
       where correduria_id = ${correduriaId}::uuid and cliente_id = ${clienteId}::uuid and origen <> 'corredor'`
-    const aut = await db().$queryRaw<{ nombre: string | null }[]>`
-      select c.nombre from portal_autorizacion a
+    // Autorizados que ELIGEN (regla única con el portal). Quien ya entra con la ficha del tomador no se cuenta dos veces.
+    const filasAut = await filasAutorizacionRenovacion(correduriaId, clienteId, null)
+    const eligen = identidadesQueEligenRenovacion(filasAut, polizaId, new Date())
+    for (const v of vinculos) if (puedeOperar(v.nivel)) eligen.delete(v.identidadId)
+    const autConEleccion = new Set(filasAut.filter((f) => eligen.has(f.identidadId)).map((f) => f.autorizacionId))
+    const aut = (await db().$queryRaw<{ id: string; nombre: string | null }[]>`
+      select a.id::text as id, c.nombre from portal_autorizacion a
       left join clientes c on c.id = a.autorizado_cliente_id and c.correduria_id = a.correduria_id
       where a.correduria_id = ${correduriaId}::uuid and a.otorgante_cliente_id = ${clienteId}::uuid
         and (a.poliza_id is null or a.poliza_id = ${polizaId}::uuid)
-        and a.revocado_en is null and a.aceptado_en is not null and (a.caduca_en is null or a.caduca_en > now())`
+        and a.revocado_en is null and a.aceptado_en is not null and (a.caduca_en is null or a.caduca_en > now())`)
+      .filter((a) => !autConEleccion.has(a.id))
     const inter = await db().$queryRaw<{ nombre: string | null }[]>`
       select distinct c.nombre from poliza_intervinientes i
       join clientes c on c.id = i.cliente_id and c.correduria_id = i.correduria_id
@@ -114,6 +145,7 @@ export async function quienVeEnApp(correduriaId: string, clienteId: string, poli
         and exists (select 1 from portal_vinculo pv where pv.correduria_id = i.correduria_id and pv.cliente_id = i.cliente_id and pv.origen <> 'corredor')`
     return {
       vinculadasTomador: contarVinculadasQueOperan(vinculos),
+      autorizadosEligen: [...eligen.values()].map((a) => ({ nombre: nombreDePila(a.nombre) })),
       otrosVenPoliza: [
         ...aut.map((a) => ({ nombre: nombreDePila(a.nombre), via: 'autorizacion' as const })),
         ...inter.map((a) => ({ nombre: nombreDePila(a.nombre), via: 'interviniente' as const })),
@@ -371,7 +403,7 @@ export async function prepararRenovacion(correduriaId: string, e: { polizaId: st
   if (e.avisar !== false) {
     try {
       const texto = textoRevision({ cliente: nombreDePila(cab?.nombre), referencia: cab?.referencia ?? null, ramo: op.ramo ?? 'otros', actual: pol.actual, opciones, niveles: lineasNiveles, catastro, destinatarios, sinRevisar })
-      const id = await tgSendButtons(texto, botonesRevision(hecho.id, { vista: urlVistaPrevia(hecho.id), modificar: urlModificar(e.polizaId) }, destinatarios.publicable))
+      const id = await tgSendButtons(texto, botonesRevision(hecho.id, { vista: urlVistaPrevia(hecho.id), modificar: urlModificar(e.polizaId) }, destinatarios))
       if (id !== null) {
         telegram = true
         await db().presupuestoEvento.create({ data: { presupuestoId: hecho.id, tipo: EVENTO_REVISION_TG, origen: 'sistema', detalle: { messageId: id } } })
@@ -390,21 +422,31 @@ export async function prepararRenovacion(correduriaId: string, e: { polizaId: st
 
 export type ResultadoPublicar =
   | { estado: 'publicado' | 'ya_publicado'; presupuestoId: string }
-  | { estado: 'sin_migracion' | 'canal_no_disponible' | 'no_vigente' | 'caducado' | 'retirado' | 'no_encontrado' | 'invalido' | 'sin_necesidades' | 'error'; status: number; motivo: string }
+  /** Por correo: salió (el enlace de siempre; elige desde ahí). */
+  | { estado: 'enviado'; presupuestoId: string }
+  /** Por WhatsApp: el `wa.me` que abre Alberto en SU móvil (aquí no sale nada). Lleva el móvil del tomador y el código: solo para él. */
+  | { estado: 'enlace'; presupuestoId: string; whatsapp: string }
+  | { estado: 'sin_migracion' | 'canal_no_disponible' | 'no_vigente' | 'caducado' | 'retirado' | 'no_encontrado' | 'invalido' | 'sin_necesidades' | 'error' | 'envio_fallido'; status: number; motivo: string }
 
 /**
- * Publica el borrador de renovación en la app del tomador. Desde Telegram (`via` ≠ 'pantalla') es OBLIGATORIO el
- * `telegramMessageId` del botón y tiene que ser el del ÚLTIMO mensaje de revisión de ese borrador. Al publicar, Alberto da por REVISADAS las ofertas de las opciones visibles
- * (el trigger de la BD lo vuelve a exigir). Un solo uso: dos pulsaciones = una publicación (CAS sobre `enviado_at`).
+ * Publica el borrador de renovación (el ✅ de Alberto). `canal` (05/11/2026): `app` (lo preferido: la app del tomador o de
+ * su autorizado con Gestión/Total) o, si nadie puede elegir allí, `email` / `whatsapp_enlace` con el ENLACE de siempre
+ * (`avisarPresupuesto`: token + código, carátula del portal) desde el que el cliente elige sin firma.
+ * Desde Telegram (`via` ≠ 'pantalla') es OBLIGATORIO el `telegramMessageId` del botón y tiene que ser el del ÚLTIMO
+ * mensaje de revisión de ese borrador. Al publicar, Alberto da por REVISADAS las ofertas de las opciones visibles (el
+ * trigger de la BD lo vuelve a exigir). Un solo uso: dos pulsaciones = una publicación (CAS sobre `enviado_at`; por
+ * correo/WhatsApp, lo ya salido o enlazado no se repite desde aquí).
  */
-export async function publicarRenovacion(correduriaId: string, e: { presupuestoId: string; actor: string; via: ViaPublicar; telegramMessageId?: number | null }, ahora: Date = new Date()): Promise<ResultadoPublicar> {
+export async function publicarRenovacion(correduriaId: string, e: { presupuestoId: string; actor: string; via: ViaPublicar; telegramMessageId?: number | null; canal?: CanalRenovacion }, ahora: Date = new Date()): Promise<ResultadoPublicar> {
+  const canal: CanalRenovacion = e.canal ?? 'app'
   if (!UUID.test(e.presupuestoId)) return { estado: 'invalido', status: 422, motivo: 'presupuestoId no válido' }
+  if (canal !== 'app' && canal !== 'email' && canal !== 'whatsapp_enlace') return { estado: 'invalido', status: 422, motivo: 'canal no válido' }
   if (!(await migracionRenovacion())) return { estado: 'sin_migracion', status: 503, motivo: 'Falta aplicar la migración 2026-11-05b.' }
-  const [p] = await db().$queryRaw<{ id: string; cliente_id: string; poliza_id: string | null; oportunidad_id: string | null; ramo: string; modo: string | null; enviado_at: Date | null; retirado_at: Date | null; vence_el: Date; necesidades: string | null }[]>`
-    select id::text as id, cliente_id::text as cliente_id, poliza_id::text as poliza_id, oportunidad_id::text as oportunidad_id, ramo, modo, enviado_at, retirado_at, vence_el, necesidades
+  const [p] = await db().$queryRaw<{ id: string; cliente_id: string; poliza_id: string | null; oportunidad_id: string | null; ramo: string; modo: string | null; enviado_at: Date | null; enlace_generado_at: Date | null; retirado_at: Date | null; vence_el: Date; necesidades: string | null }[]>`
+    select id::text as id, cliente_id::text as cliente_id, poliza_id::text as poliza_id, oportunidad_id::text as oportunidad_id, ramo, modo, enviado_at, enlace_generado_at, retirado_at, vence_el, necesidades
     from presupuesto where id = ${e.presupuestoId}::uuid and correduria_id = ${correduriaId}::uuid`
   if (!p || p.modo !== MODO_RENOVACION || !p.poliza_id || !p.oportunidad_id) return { estado: 'no_encontrado', status: 404, motivo: 'No es un borrador de renovación de esta correduría.' }
-  if (p.enviado_at !== null) return { estado: 'ya_publicado', presupuestoId: p.id }
+  if (p.enviado_at !== null || (canal !== 'app' && p.enlace_generado_at !== null)) return { estado: 'ya_publicado', presupuestoId: p.id }
   if (p.retirado_at !== null) return { estado: 'retirado', status: 409, motivo: 'Ese borrador se retiró.' }
   if (p.vence_el.getTime() < ahora.getTime()) return { estado: 'caducado', status: 409, motivo: 'Los precios han caducado.' }
   // Exigencias y necesidades (art. 175.1 RDL 3/2020): la misma puerta que el envío por correo/WhatsApp (`envio-presupuesto`).
@@ -416,6 +458,7 @@ export async function publicarRenovacion(correduriaId: string, e: { presupuestoI
     const vig = decidirMensajeVigente({ via: 'telegram', pedido: e.telegramMessageId ?? null, ultimo: typeof idUltimo === 'number' ? idUltimo : null })
     if (!vig.ok) return { estado: 'no_vigente', status: 409, motivo: vig.motivo }
   }
+  if (canal !== 'app') return enviarRenovacionPorEnlace(correduriaId, { id: p.id, clienteId: p.cliente_id, oportunidadId: p.oportunidad_id, ramo: p.ramo }, e.actor, canal, ahora)
   const dest = decidirDestinatarios(await quienVeEnApp(correduriaId, p.cliente_id, p.poliza_id))
   // 503 `canal_no_disponible`: no hay a quién publicarlo. NO es «el envío falló» (502).
   if (!dest.publicable) return { estado: 'canal_no_disponible', status: 503, motivo: dest.lineas[0] ?? 'El tomador no usa la app.' }
@@ -423,11 +466,7 @@ export async function publicarRenovacion(correduriaId: string, e: { presupuestoI
   const r = await db().$transaction(async (tx) => {
     await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${`presupuesto-ofertas:${correduriaId}:${p.oportunidad_id}`}))`
     // Las ofertas de las opciones VISIBLES pasan a revisadas por quien pulsa (nunca las de otro presupuesto).
-    await tx.$executeRaw`
-      update oportunidad_oferta f set estado = 'revisada', revisada_at = ${ahora}, revisada_por = ${e.actor}
-      from presupuesto_opcion o
-      where o.presupuesto_id = ${p.id}::uuid and o.oculta_at is null and f.id = o.oferta_id
-        and f.correduria_id = ${correduriaId}::uuid and f.oportunidad_id = ${p.oportunidad_id}::uuid and f.estado = 'extraida'`
+    await marcarRevisadas(tx, correduriaId, p.id, p.oportunidad_id!, e.actor, ahora)
     const n = await tx.$executeRaw`
       update presupuesto set enviado_at = ${ahora}, canal_aviso = 'app'
       where id = ${p.id}::uuid and correduria_id = ${correduriaId}::uuid and enviado_at is null and retirado_at is null and modo = ${MODO_RENOVACION}`
@@ -445,51 +484,164 @@ export async function publicarRenovacion(correduriaId: string, e: { presupuestoI
   return { estado: 'publicado', presupuestoId: p.id }
 }
 
+/** Las ofertas de las opciones VISIBLES pasan a revisadas por quien pulsa ✅ (nunca las de otro presupuesto). */
+async function marcarRevisadas(tx: Prisma.TransactionClient, correduriaId: string, presupuestoId: string, oportunidadId: string, actor: string, ahora: Date): Promise<void> {
+  await tx.$executeRaw`
+    update oportunidad_oferta f set estado = 'revisada', revisada_at = ${ahora}, revisada_por = ${actor}
+    from presupuesto_opcion o
+    where o.presupuesto_id = ${presupuestoId}::uuid and o.oculta_at is null and f.id = o.oferta_id
+      and f.correduria_id = ${correduriaId}::uuid and f.oportunidad_id = ${oportunidadId}::uuid and f.estado = 'extraida'`
+}
+
+/**
+ * ✅ por CORREO o WHATSAPP (05/11/2026): cuando nadie puede elegir en la app. Reutiliza el aviso de SIEMPRE
+ * (`avisarPresupuesto`: token nuevo con compare-and-swap, código del WhatsApp atado a él, carátula del portal, nunca a una
+ * persona de contacto: esa ve pero no elige). Lo único propio: el ✅ da por revisadas las ofertas ANTES (la puerta de
+ * `decidirSalida` y el trigger lo exigen) y queda el rastro (evento + historial + auditoría). Elegir desde el enlace NO
+ * emite ni firma (el puente admite el token del WhatsApp en `elegir_renovacion`; el correo abre su sesión de cliente).
+ */
+async function enviarRenovacionPorEnlace(
+  correduriaId: string, p: { id: string; clienteId: string; oportunidadId: string; ramo: string }, actor: string, canal: Exclude<CanalRenovacion, 'app'>, ahora: Date,
+): Promise<ResultadoPublicar> {
+  await db().$transaction(async (tx) => {
+    await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${`presupuesto-ofertas:${correduriaId}:${p.oportunidadId}`}))`
+    await marcarRevisadas(tx, correduriaId, p.id, p.oportunidadId, actor, ahora)
+    await tx.presupuestoEvento.create({ data: { presupuestoId: p.id, tipo: EVENTO_ENVIO_CANAL, origen: 'corredor', detalle: { actor, canal } } })
+  })
+  const r = await avisarPresupuesto(correduriaId, { id: p.id, canal, actor }, ahora)
+  const ok = r.estado === 'enviado' || r.estado === 'enlace'
+  const texto = canal === 'email'
+    ? (ok ? `Renovación con alternativas de ${p.ramo} enviada por correo al tomador (✅ de ${actor}): elige desde el enlace, sin firma; no emite nada.` : `Renovación con alternativas de ${p.ramo}: el correo NO salió (${r.estado === 'error' ? r.motivo : r.estado}).`)
+    : (ok ? `Renovación con alternativas de ${p.ramo}: enlace del WhatsApp preparado para el tomador (✅ de ${actor}); lo manda Alberto desde su móvil. Elige desde el enlace, sin firma; no emite nada.` : `Renovación con alternativas de ${p.ramo}: el enlace del WhatsApp NO se pudo preparar (${r.estado === 'error' ? r.motivo : r.estado}).`)
+  try {
+    await db().$executeRaw`
+      insert into historial_interno (correduria_id, cliente_id, tipo, texto)
+      values (${correduriaId}::uuid, ${p.clienteId}::uuid, cast('gestion' as tipo_historial_interno), ${texto})`
+  } catch (x) {
+    registrarErrorCartera('renovacion/historial-envio', x)
+  }
+  anotarCambio({ entidad: 'presupuesto', id: p.id, campo: 'renovacion_canal', antes: null, despues: ok ? canal : `${canal}:fallido` })
+  if (r.estado === 'enviado') return { estado: 'enviado', presupuestoId: p.id }
+  if (r.estado === 'enlace') return { estado: 'enlace', presupuestoId: p.id, whatsapp: r.whatsapp }
+  if (r.estado === 'error') {
+    // Lo que se arregla en la ficha (sin correo, sin móvil, sin acceso) es 409; el proveedor caído, 502 (≠ «no hay canal»).
+    const status = r.motivo === 'sin_proveedor' || r.motivo === 'rechazado' || r.motivo === 'incierto' || r.motivo === 'remitente_no_verificado' ? 502 : 409
+    return { estado: 'envio_fallido', status, motivo: r.detalle }
+  }
+  return { estado: 'error', status: 500, motivo: 'Respuesta inesperada del aviso: mira la ficha antes de repetir.' }
+}
+
 // ─── La elección del cliente (puente del portal) ─────────────────────────────
 
 export type ResultadoEleccion =
   | { estado: 'ok'; cambio: boolean; aviso: string | null }
-  | { estado: 'no_encontrado' | 'no_admite' | 'caducado' | 'limite' | 'sin_migracion' | 'sin_ficha' | 'varias_fichas' }
+  /** Ya eligió OTRA persona (vale la primera): su nombre de pila, nada más. */
+  | { estado: 'ya_elegida'; por: string | null }
+  | { estado: 'no_encontrado' | 'no_admite' | 'caducado' | 'limite' | 'sin_migracion' | 'sin_permiso' | 'error' }
 
 /**
- * El cliente elige en la app. La ficha la resuelve `portal_vinculo` (`propio` → `fichaPropiaDeRecurso`), nunca un clienteId
- * de la petición. NO emite ni firma: anota la elección, deja el presupuesto «elegido», historial + Telegram (texto devuelto).
+ * Elige el cliente (05/11/2026): con su IDENTIDAD del portal o con el ENLACE del WhatsApp (token del cookie del portal,
+ * nunca un clienteId de la petición). Quién puede: el lado del TOMADOR (vínculo con nivel de operar → `fichaPropiaDeRecurso`;
+ * o su token vigente de ESTE presupuesto → `fichaDeTokenWhatsapp`, que ya exige id, token, vigencia y no retirado) o un
+ * AUTORIZADO con Gestión/Total (`identidadesQueEligenRenovacion`, solo con identidad). Vale la PRIMERA elección: otra
+ * persona recibe `ya_elegida` con el nombre de pila de quien eligió. NO emite ni firma: anota la elección (con quién y por
+ * dónde en el evento y en el historial), deja el presupuesto «elegido» y devuelve el texto del Telegram.
  */
-export async function elegirRenovacion(correduriaId: string, identidadId: string, presupuestoId: string, eleccion: Eleccion, ahora: Date = new Date()): Promise<ResultadoEleccion> {
-  if (!(await migracionRenovacion())) return { estado: 'sin_migracion' }
-  const pr = await propio(correduriaId, identidadId, presupuestoId)
-  // Ajena, sin vínculo o un tercero que solo VE: no elige (404 / 409, nunca «es de otro»).
-  if ('estado' in pr) return pr.estado === 'varias_fichas' ? { estado: 'varias_fichas' } : pr.estado === 'sin_ficha' ? { estado: 'sin_ficha' } : { estado: 'no_encontrado' }
+export async function elegirRenovacion(correduriaId: string, acceso: AccesoPortal, presupuestoId: string, eleccion: Eleccion, ahora: Date = new Date()): Promise<ResultadoEleccion> {
+  if (!UUID.test(presupuestoId)) return { estado: 'no_encontrado' }
+  if (!(await migracionRenovacion()) || !(await migracionQuienElige())) return { estado: 'sin_migracion' }
+  const porEnlace = 'tokenWhatsapp' in acceso
+  const identidadId = porEnlace ? null : acceso.identidadId
+
+  // 1. ¿Es el lado del tomador?
+  let ficha: FichaParaElegir
+  if (porEnlace) {
+    const t = fichaDeToken(await fichaDeTokenWhatsapp(correduriaId, acceso.tokenWhatsapp, presupuestoId, ahora))
+    ficha = t.estado === 'ok' ? t : { estado: t.estado }
+  } else {
+    const f = await fichaPropiaDeRecurso(correduriaId, acceso.identidadId, 'presupuesto', presupuestoId)
+    ficha = f.estado === 'ok' ? f : { estado: f.estado === 'ajena' ? 'ajena' : f.estado }
+  }
+
+  // 2. Si no, ¿un autorizado con Gestión/Total sobre ESTA póliza del tomador? (solo con identidad: el enlace es del tomador)
+  let autorizado: { tomadorId: string; nombre: string | null } | null = null
+  let autorizadoElige: boolean | null = false
+  if (!porEnlace && identidadId && ficha.estado !== 'ok' && ficha.estado !== 'error') {
+    try {
+      const [pr] = await db().$queryRaw<{ cliente_id: string; poliza_id: string | null }[]>`
+        select cliente_id::text as cliente_id, poliza_id::text as poliza_id from presupuesto
+        where id = ${presupuestoId}::uuid and correduria_id = ${correduriaId}::uuid`
+      if (pr) {
+        const eligen = identidadesQueEligenRenovacion(await filasAutorizacionRenovacion(correduriaId, pr.cliente_id, identidadId), pr.poliza_id, ahora)
+        const yo = eligen.get(identidadId)
+        if (yo) autorizado = { tomadorId: pr.cliente_id, nombre: nombreDePila(yo.nombre) }
+      }
+      autorizadoElige = autorizado !== null
+    } catch (x) {
+      registrarErrorCartera('renovacion/elegir-autorizado', x)
+      autorizadoElige = null
+    }
+  }
+  const quien = decidirElector({ via: porEnlace ? 'enlace' : 'identidad', ficha, autorizadoElige })
+  if (!quien.ok) return { estado: quien.estado }
+  const clienteId = quien.papel === 'tomador' && ficha.estado === 'ok' ? ficha.clienteId : autorizado?.tomadorId
+  if (!clienteId) return { estado: 'no_encontrado' }
+
   return db().$transaction(async (tx) => {
-    const [p] = await tx.$queryRaw<{ id: string; cliente_id: string; ramo: string; modo: string | null; enviado_at: Date | null; vence_el: Date; retirado_at: Date | null; aceptado_at: Date | null; emitido_at: Date | null; eleccion_cliente: string | null; eleccion_opcion_id: string | null; estudio: unknown }[]>`
-      select id::text as id, cliente_id::text as cliente_id, ramo, modo, enviado_at, vence_el, retirado_at, aceptado_at, emitido_at,
-             eleccion_cliente, eleccion_opcion_id::text as eleccion_opcion_id, estudio
-      from presupuesto where id = ${presupuestoId}::uuid and correduria_id = ${correduriaId}::uuid and cliente_id = ${pr.clienteId}::uuid
-      for update`
+    const [p] = await tx.$queryRaw<{
+      id: string; cliente_id: string; tomador: string | null; ramo: string; modo: string | null; enviado_at: Date | null; enlace_generado_at: Date | null; vence_el: Date
+      retirado_at: Date | null; aceptado_at: Date | null; emitido_at: Date | null; eleccion_cliente: string | null; eleccion_opcion_id: string | null; estudio: unknown
+      eleccion_por_papel: string | null; eleccion_por_identidad_id: string | null; eleccion_por_nombre: string | null
+    }[]>`
+      select p.id::text as id, p.cliente_id::text as cliente_id, c.nombre as tomador, p.ramo, p.modo, p.enviado_at, p.enlace_generado_at, p.vence_el,
+             p.retirado_at, p.aceptado_at, p.emitido_at, p.eleccion_cliente, p.eleccion_opcion_id::text as eleccion_opcion_id, p.estudio,
+             p.eleccion_por_papel, p.eleccion_por_identidad_id::text as eleccion_por_identidad_id, p.eleccion_por_nombre
+      from presupuesto p left join clientes c on c.id = p.cliente_id and c.correduria_id = p.correduria_id
+      where p.id = ${presupuestoId}::uuid and p.correduria_id = ${correduriaId}::uuid and p.cliente_id = ${clienteId}::uuid
+      for update of p`
     if (!p) return { estado: 'no_encontrado' as const }
+    const elector: ElectorRenovacion = quien.papel === 'tomador'
+      ? { papel: 'tomador', via: porEnlace ? 'enlace_whatsapp' : 'app', identidadId, nombre: nombreDePila(p.tomador) }
+      : { papel: 'autorizado', via: 'app', identidadId: identidadId!, nombre: autorizado?.nombre ?? null }
     const opcion = eleccion.tipo === 'opcion'
       ? await tx.presupuestoOpcion.findFirst({ where: { id: eleccion.opcionId, presupuestoId: p.id, ocultaAt: null }, select: { id: true, compania: true, producto: true, primaEur: true } })
       : null
     const dia = await tx.presupuestoEvento.count({ where: { presupuestoId: p.id, tipo: EVENTO_ELECCION, ocurridoAt: { gte: new Date(ahora.getTime() - 24 * 3_600_000) } } })
+    // De quién es la elección: lo que selló la PRIMERA (bajo el `for update`, dos personas a la vez no pueden ser «la primera»).
+    // Sin `papel` y con elección hecha = anterior a 2026-11-05c: del tomador (solo él podía elegir).
+    const dueno = duenoDeEleccion(
+      { papel: p.eleccion_por_papel ?? undefined, identidadId: p.eleccion_por_identidad_id, porNombre: p.eleccion_por_nombre },
+      p.eleccion_cliente !== null,
+    )
     const actual: Eleccion | null = p.eleccion_cliente === 'renovacion' ? { tipo: 'renovacion' } : p.eleccion_cliente === 'opcion' && p.eleccion_opcion_id ? { tipo: 'opcion', opcionId: p.eleccion_opcion_id } : null
-    const d = decidirEleccion({ modo: p.modo, enviadoAt: p.enviado_at, venceEl: p.vence_el, retiradoAt: p.retirado_at, aceptadoAt: p.aceptado_at, emitidoAt: p.emitido_at, eleccionActual: actual, eleccionesDia: dia }, eleccion, opcion !== null, ahora)
-    if (!d.ok) return { estado: d.estado }
+    const d = decidirEleccion(
+      { modo: p.modo, enviadoAt: p.enviado_at, enlaceGeneradoAt: p.enlace_generado_at, dueno, venceEl: p.vence_el, retiradoAt: p.retirado_at, aceptadoAt: p.aceptado_at, emitidoAt: p.emitido_at, eleccionActual: actual, eleccionesDia: dia },
+      eleccion, opcion !== null, ahora, { papel: elector.papel, identidadId: elector.identidadId },
+    )
+    if (!d.ok) return d.estado === 'ya_elegida' ? { estado: 'ya_elegida' as const, por: d.por } : { estado: d.estado }
     if (!d.cambio) return { estado: 'ok' as const, cambio: false, aviso: null }
+    // Quién eligió se sella SOLO con la primera elección (en el SET, `eleccion_cliente` es el valor ANTERIOR).
+    const porNombre = elector.nombre ? elector.nombre.slice(0, 60) : null
     await tx.$executeRaw`
-      update presupuesto set eleccion_cliente = ${eleccion.tipo}, eleccion_opcion_id = ${opcion?.id ?? null}::uuid, eleccion_at = ${ahora}, elegido_at = ${ahora}
+      update presupuesto set eleccion_cliente = ${eleccion.tipo}, eleccion_opcion_id = ${opcion?.id ?? null}::uuid, eleccion_at = ${ahora}, elegido_at = ${ahora},
+             eleccion_por_papel = case when eleccion_cliente is null then ${elector.papel} else eleccion_por_papel end,
+             eleccion_por_identidad_id = case when eleccion_cliente is null then ${elector.identidadId}::uuid else eleccion_por_identidad_id end,
+             eleccion_por_nombre = case when eleccion_cliente is null then ${porNombre} else eleccion_por_nombre end,
+             eleccion_via = case when eleccion_cliente is null then ${elector.via} else eleccion_via end
       where id = ${p.id}::uuid and correduria_id = ${correduriaId}::uuid`
     await tx.presupuestoOpcion.updateMany({ where: { presupuestoId: p.id }, data: { elegidaAt: null } })
     if (opcion) await tx.presupuestoOpcion.update({ where: { id: opcion.id }, data: { elegidaAt: ahora } })
-    await tx.presupuestoEvento.create({ data: { presupuestoId: p.id, tipo: EVENTO_ELECCION, origen: 'cliente', detalle: { eleccion: eleccion.tipo, opcionId: opcion?.id ?? null } } })
+    // Quién y por dónde (identidad del portal completa aquí; en el historial, abreviada). Sin DNI/IBAN/dirección.
+    await tx.presupuestoEvento.create({ data: { presupuestoId: p.id, tipo: EVENTO_ELECCION, origen: 'cliente', detalle: { eleccion: eleccion.tipo, opcionId: opcion?.id ?? null, ...detalleElector(elector) } } })
     const op = opcion ? { compania: opcion.compania, producto: opcion.producto, primaEur: Number(opcion.primaEur.toString()) } : null
     await tx.$executeRaw`
       insert into historial_interno (correduria_id, cliente_id, tipo, texto)
-      values (${correduriaId}::uuid, ${p.cliente_id}::uuid, cast('gestion' as tipo_historial_interno), ${lineaHistorialEleccion(eleccion, op, p.ramo)})`
+      values (${correduriaId}::uuid, ${p.cliente_id}::uuid, cast('gestion' as tipo_historial_interno), ${lineaHistorialEleccion(eleccion, op, p.ramo, elector)})`
     const ren = (p.estudio as { renovacion?: { actual?: { prima?: unknown } } } | null)?.renovacion?.actual?.prima
-    anotarCambio({ entidad: 'presupuesto', id: p.id, campo: 'eleccion_cliente', antes: p.eleccion_cliente, despues: eleccion.tipo })
+    anotarCambio({ entidad: 'presupuesto', id: p.id, campo: 'eleccion_cliente', antes: p.eleccion_cliente, despues: `${eleccion.tipo}:${elector.papel}:${elector.via}` })
     return {
       estado: 'ok' as const, cambio: true,
-      aviso: textoEleccion({ tomador: nombreDePila(pr.tomador), ramo: p.ramo, eleccion, opcion: op, primaRenovacion: typeof ren === 'number' ? ren : null, enlace: enlaceFichaCliente(p.cliente_id, plataforma()), cambio: true }),
+      aviso: textoEleccion({ tomador: nombreDePila(p.tomador), ramo: p.ramo, eleccion, opcion: op, primaRenovacion: typeof ren === 'number' ? ren : null, enlace: enlaceFichaCliente(p.cliente_id, plataforma()), cambio: true, elector }),
     }
   }, { timeout: 15_000, maxWait: 8_000 })
 }

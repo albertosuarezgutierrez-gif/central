@@ -43,7 +43,7 @@
 // (`lib/session`) y del vínculo (`portal_vinculo`). Ningún `clienteId` entra
 // desde fuera de este fichero.
 
-import { formatoTokenVistaValido, hashTokenVista } from '@central/module-seguros-portal'
+import { duenoDeEleccion, eleccionDeOtraPersona, formatoTokenVistaValido, hashTokenVista, nivelPuedeOperar } from '@central/module-seguros-portal'
 import { WHERE_CARTERA_VIVA, claveProducto, primaConRecibos, vencimientoConRecibos, type GarantiasClasificadas } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
 
@@ -57,6 +57,7 @@ import { origenVista, type OrigenVista } from './presupuesto-ofertas-vista'
 import { abiertoAlCliente } from './presupuesto-publicado'
 import { coberturasDeJson, leerFirmeza, leerSinEquivalente, esPapel, type Firmeza, type PapelPortada, type SinEquivalente } from './presupuesto-vista'
 import { RENOVACION_NO_DISPONIBLE, renovacionTrasFallo } from './renovacion-vista'
+import { autorizadoEligeRenovacion, tomadorParaAutorizado } from './renovacion-autorizado'
 
 // ─── Lo que la pantalla necesita ─────────────────────────────────────────────
 
@@ -119,6 +120,11 @@ export type RenovacionCliente = {
   /** Lo que ya eligió (sin firmar). `null` = no consta que haya elegido. */
   eleccion: { tipo: 'renovacion' } | { tipo: 'opcion'; opcionId: string } | null
   eleccionAt: Date | null
+  /**
+   * (05/11/2026) La eligió OTRA persona (vale la primera): quien mira ve «ya elegida por <nombre de pila>» y no la cambia.
+   * `null` = nadie ha elegido, o fue quien mira.
+   */
+  elegidaPorOtro: { nombre: string | null } | null
 }
 
 export type PresupuestoCliente = {
@@ -153,6 +159,12 @@ export type PresupuestoCliente = {
    * pudo leer); `juridica` = el tomador es empresa explícita (cambia cómo se le dice).
    */
   accesoTercero: { tomador: string | null; juridica: boolean } | null
+  /**
+   * (05/11/2026) Lo ve como AUTORIZADO del tomador con Gestión o Total (solo una RENOVACIÓN): puede elegir, no ve los datos
+   * personales del tomador (ni la dirección del riesgo ni «Revisa tus datos»), ni acepta ni firma. `tomador` = su nombre de
+   * pila (`null` = no se pudo leer). `null` = no es ese caso.
+   */
+  accesoAutorizado: { tomador: string | null } | null
 }
 
 export type LecturaPresupuesto =
@@ -331,7 +343,10 @@ export async function presupuestoDeSesion(id: string): Promise<LecturaPresupuest
     if (!abiertoAlCliente({ enviadoAt: p.enviadoAt, enlaceGenerado, porWhatsapp, vistaDeCorredor })) return { estado: 'no_encontrado' }
 
     // Por el código del WhatsApp ya está autorizado (cookie de ESTE id + token vigente). Si no,
-    // las dos ramas de siempre, que parten de la identidad de la cookie de sesión.
+    // las dos ramas de siempre, que parten de la identidad de la cookie de sesión (y la del autorizado, en renovación).
+    let porAutorizado = false
+    // ¿Mira el lado del TOMADOR? Su enlace (no el de una persona de contacto), el canal avisado o su ficha con nivel de operar.
+    let visorTomador = porWhatsapp && !porTercero
     if (!porWhatsapp) {
       // Inalcanzable (se cortó arriba), pero escrito para fallar CERRADO si alguien mueve ese corte.
       if (identidad === null) return { estado: 'sin_sesion' }
@@ -343,7 +358,7 @@ export async function presupuestoDeSesion(id: string): Promise<LecturaPresupuest
       // línea siguiente.
       const vinculo = await prisma.portalVinculo.findFirst({
         where: { identidadId, clienteId: p.clienteId },
-        select: { id: true, correduriaId: true },
+        select: { id: true, correduriaId: true, nivel: true },
       })
 
       // Rama (a): el canal por el que entró es el mismo al que se avisó.
@@ -378,7 +393,16 @@ export async function presupuestoDeSesion(id: string): Promise<LecturaPresupuest
         if (otraCorreduria !== null) porCanal = false
       }
 
-      if (vinculo === null && !porCanal) {
+      // Rama (c), 05/11/2026: una RENOVACIÓN la ve también el AUTORIZADO del tomador con Gestión o Total (regla única
+      // `identidadesQueEligenRenovacion`, la misma que aplica asegura al escribir). Solo si no entra ya con la ficha del
+      // tomador con nivel de operar. Un fallo de lectura LANZA → `error` (nunca «no es tuyo» ni abrir por defecto).
+      if (!vistaDeCorredor && !(vinculo !== null && nivelPuedeOperar(vinculo.nivel)) && (await esRenovacion(p.id, p.correduriaId))) {
+        porAutorizado = await autorizadoEligeRenovacion(identidadId, { correduriaId: p.correduriaId, clienteId: p.clienteId, polizaId: p.polizaId })
+      }
+
+      visorTomador = porCanal || (vinculo !== null && nivelPuedeOperar(vinculo.nivel))
+
+      if (vinculo === null && !porCanal && !porAutorizado) {
         // ¿Es que su correo está en dos fichas? Entonces no es «esto no es tuyo»:
         // es «no lo hemos podido decidir», y se dice con la misma frase que ya
         // usa la bóveda. Un «no eres tú» sobre un empate es una acusación falsa.
@@ -400,11 +424,17 @@ export async function presupuestoDeSesion(id: string): Promise<LecturaPresupuest
     const hoy = new Date()
     const caducado = p.venceEl.getTime() < hoy.getTime()
 
-    const [opciones, actual, renovacion] = await Promise.all([
+    // Quién mira, para «ya elegida por…»: el lado del tomador (su cuenta o su enlace) o el autorizado (su identidad).
+    // Quien no es ni el tomador ni un autorizado que elige (solo consulta, contacto) se trata como «otra persona»: nunca
+    // se le dice «Elegiste…» por una elección del tomador.
+    const visor = { papel: visorTomador ? 'tomador' as const : 'autorizado' as const, identidadId: visorTomador ? null : identidad?.id ?? null }
+    const [opciones, actualLeido, renovacion] = await Promise.all([
       leerOpciones(p.id, p.correduriaId),
       p.polizaId === null ? Promise.resolve(null) : leerActual(p.polizaId, p.clienteId, p.correduriaId),
-      leerRenovacion(p.id, p.correduriaId),
+      leerRenovacion(p.id, p.correduriaId, visor),
     ])
+    // 🚨 Al autorizado no se le enseña la dirección del riesgo: es un dato de la PERSONA del tomador (NUNCA_A_UN_TERCERO).
+    const actual = porAutorizado && actualLeido ? { ...actualLeido, ubicacion: null } : actualLeido
 
     // ── El sello ──────────────────────────────────────────────────────────
     //
@@ -416,6 +446,7 @@ export async function presupuestoDeSesion(id: string): Promise<LecturaPresupuest
 
     // Persona de contacto: a quién representa, para decírselo (el nombre ya iba en su correo). Si no se lee, sin nombre.
     const accesoTercero = porTercero ? await tomadorParaTercero(p.clienteId, p.correduriaId) : null
+    const accesoAutorizado = porAutorizado ? { tomador: await tomadorParaAutorizado(p.clienteId, p.correduriaId) } : null
 
     return {
       estado: 'ok',
@@ -439,6 +470,7 @@ export async function presupuestoDeSesion(id: string): Promise<LecturaPresupuest
         necesidades: p.necesidades?.trim() || null,
         accesoWhatsapp: porWhatsapp,
         accesoTercero,
+        accesoAutorizado,
       },
     }
   } catch (e) {
@@ -558,19 +590,51 @@ async function leerOpciones(presupuestoId: string, correduriaId: string): Promis
  * Sin la migración (falta la columna) → `null`: el presupuesto de siempre. Cualquier OTRO fallo (sin GRANT, red) →
  * `'no_disponible'`: la página no ofrece ni elegir ni Aceptar/Firmar (`renovacionTrasFallo`).
  */
-async function leerRenovacion(presupuestoId: string, correduriaId: string): Promise<RenovacionCliente | null | typeof RENOVACION_NO_DISPONIBLE> {
+async function leerRenovacion(
+  presupuestoId: string, correduriaId: string, visor: { papel: 'tomador' | 'autorizado'; identidadId: string | null },
+): Promise<RenovacionCliente | null | typeof RENOVACION_NO_DISPONIBLE> {
+  let f: { modo: string | null; eleccion_cliente: string | null; eleccion_opcion_id: string | null; eleccion_at: Date | null } | undefined
   try {
-    const [f] = await prisma.$queryRaw<{ modo: string | null; eleccion_cliente: string | null; eleccion_opcion_id: string | null; eleccion_at: Date | null }[]>`
+    ;[f] = await prisma.$queryRaw<{ modo: string | null; eleccion_cliente: string | null; eleccion_opcion_id: string | null; eleccion_at: Date | null }[]>`
       select modo, eleccion_cliente, eleccion_opcion_id::text as eleccion_opcion_id, eleccion_at
       from seguros.presupuesto where id = ${presupuestoId}::uuid and correduria_id = ${correduriaId}::uuid`
-    if (!f || f.modo !== 'renovacion') return null
-    const eleccion = f.eleccion_cliente === 'renovacion'
-      ? { tipo: 'renovacion' as const }
-      : f.eleccion_cliente === 'opcion' && f.eleccion_opcion_id ? { tipo: 'opcion' as const, opcionId: f.eleccion_opcion_id } : null
-    return { eleccion, eleccionAt: eleccion ? f.eleccion_at : null }
   } catch (e) {
     registrar('leerRenovacion', e)
     return renovacionTrasFallo(e)
+  }
+  if (!f || f.modo !== 'renovacion') return null
+  // Quién eligió (2026-11-05c). 🚨 En una RENOVACIÓN, cualquier fallo aquí —también «falta la columna»— es NO DISPONIBLE:
+  // sin saber quién eligió no se ofrece elegir (ni, por ser renovación, aceptar/firmar). Nunca se pinta como presupuesto normal.
+  try {
+    const [q] = await prisma.$queryRaw<{ eleccion_por_papel: string | null; eleccion_por_identidad_id: string | null; eleccion_por_nombre: string | null }[]>`
+      select eleccion_por_papel, eleccion_por_identidad_id::text as eleccion_por_identidad_id, eleccion_por_nombre
+      from seguros.presupuesto where id = ${presupuestoId}::uuid and correduria_id = ${correduriaId}::uuid`
+    const eleccion = f.eleccion_cliente === 'renovacion'
+      ? { tipo: 'renovacion' as const }
+      : f.eleccion_cliente === 'opcion' && f.eleccion_opcion_id ? { tipo: 'opcion' as const, opcionId: f.eleccion_opcion_id } : null
+    const dueno = duenoDeEleccion(
+      { papel: q?.eleccion_por_papel ?? undefined, identidadId: q?.eleccion_por_identidad_id ?? null, porNombre: q?.eleccion_por_nombre ?? null },
+      f.eleccion_cliente !== null,
+    )
+    return { eleccion, eleccionAt: eleccion ? f.eleccion_at : null, elegidaPorOtro: eleccionDeOtraPersona(dueno, visor) }
+  } catch (e) {
+    registrar('leerRenovacion/quien', e)
+    return RENOVACION_NO_DISPONIBLE
+  }
+}
+
+/**
+ * ¿Es una RENOVACIÓN? Para la rama del autorizado, ANTES de enseñar nada. Sin la migración 2026-11-05b no puede serlo
+ * (`false`); cualquier otro fallo LANZA (lo recoge `presupuestoDeSesion` como `error`).
+ */
+async function esRenovacion(presupuestoId: string, correduriaId: string): Promise<boolean> {
+  try {
+    const [f] = await prisma.$queryRaw<{ modo: string | null }[]>`
+      select modo from seguros.presupuesto where id = ${presupuestoId}::uuid and correduria_id = ${correduriaId}::uuid`
+    return f?.modo === 'renovacion'
+  } catch (e) {
+    if (renovacionTrasFallo(e) === null) return false
+    throw e
   }
 }
 

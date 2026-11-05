@@ -10,8 +10,10 @@ import { eur } from '@/lib/dinero'
  * prima de los RECIBOS y las alternativas (bots + Avant2 ya guardados) y deja un BORRADOR. Te llega el Telegram con
  * ✅ / 👁 / ✏️; aquí tienes lo mismo.
  *
- * 🚨 Nada sale al cliente sin pulsar «Enviar al cliente por la app» (o el ✅ del Telegram). Si el tomador no usa la app,
- * no se ofrece (503 `canal_no_disponible`): se dice y se manda por correo/WhatsApp desde la ficha.
+ * 🚨 Nada sale al cliente sin pulsar «Enviar al cliente por la app» (o el ✅ del Telegram). Lo preferido es la app (la del
+ * tomador o la de quien él autoriza con Gestión/Total). Si nadie que pueda elegir la usa (`sin_app`), se ofrecen «Enviar
+ * por correo» y «Preparar WhatsApp» (05/11/2026): el cliente elige desde el ENLACE de siempre, sin firma. El WhatsApp no
+ * sale solo: se abre el wa.me y lo mandas tú desde tu móvil.
  * 🚨 Elegir en la app NO emite nada: te avisa y tú confirmas con la compañía.
  */
 type Opcion = { id: string; compania: string; producto: string; primaEur: number; franquiciaEur: number | null; nivel: string | null; diferenciaEur: number | null; sentido: 'mas_barata' | 'mas_cara' | 'igual' | null }
@@ -23,13 +25,13 @@ type Preparada = {
   opciones: Opcion[]
   niveles: string[]
   catastro: { estado: string; anadidos?: string[]; distintos?: string[] }
-  destinatarios: { publicable: boolean; lineas: string[] }
+  destinatarios: { publicable: boolean; motivo?: 'sin_app' | 'no_consta'; lineas: string[] }
   sinRevisar: number
   telegram: boolean
 }
 type Fase =
   | { f: 'reposo' } | { f: 'preparando' } | { f: 'lista'; d: Preparada } | { f: 'publicando'; d: Preparada }
-  | { f: 'publicada'; d: Preparada; ya: boolean } | { f: 'error'; texto: string; d?: Preparada }
+  | { f: 'publicada'; d: Preparada; ya: boolean; texto?: string; whatsapp?: string } | { f: 'error'; texto: string; d?: Preparada }
 
 const ETIQUETA_CAMPO: Record<string, string> = { referenciaCatastral: 'referencia catastral', cp: 'código postal', metrosCuadrados: 'superficie', anioConstruccion: 'año de construcción' }
 
@@ -84,13 +86,20 @@ export default function PrepararRenovacion({ polizaId }: { polizaId: string }) {
     }
   }
 
-  async function publicar(d: Preparada) {
-    if (!confirm('Se publica en la app del cliente y le llega el aviso. Das por revisados los precios y coberturas. ¿Seguro?')) return
+  async function publicar(d: Preparada, canal: 'app' | 'email' | 'whatsapp_enlace' = 'app') {
+    const pregunta = canal === 'app'
+      ? 'Se publica en la app del cliente y le llega el aviso. Das por revisados los precios y coberturas. ¿Seguro?'
+      : canal === 'email'
+        ? 'Se le manda por correo el enlace (elige desde ahí, sin firma). Das por revisados los precios y coberturas. ¿Seguro?'
+        : 'Se prepara el WhatsApp con el enlace y su código; lo mandas tú desde tu móvil. Das por revisados los precios y coberturas. ¿Seguro?'
+    if (!confirm(pregunta)) return
     setFase({ f: 'publicando', d })
     try {
-      const r = await fetch('/api/correduria/renovacion/publicar', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ presupuestoId: d.presupuestoId }) })
-      const j = (await r.json().catch(() => null)) as { estado?: string; motivo?: string } | null
+      const r = await fetch('/api/correduria/renovacion/publicar', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ presupuestoId: d.presupuestoId, canal }) })
+      const j = (await r.json().catch(() => null)) as { estado?: string; motivo?: string; whatsapp?: string } | null
       if (r.ok && (j?.estado === 'publicado' || j?.estado === 'ya_publicado')) setFase({ f: 'publicada', d, ya: j.estado === 'ya_publicado' })
+      else if (r.ok && j?.estado === 'enviado') setFase({ f: 'publicada', d, ya: false, texto: 'Enviado por correo con el enlace: puede elegir desde ahí.' })
+      else if (r.ok && j?.estado === 'enlace' && typeof j.whatsapp === 'string') setFase({ f: 'publicada', d, ya: false, texto: 'WhatsApp preparado: ábrelo y mándalo tú desde tu móvil.', whatsapp: j.whatsapp })
       else if (r.status === 503 && j?.estado === 'canal_no_disponible') setFase({ f: 'error', d, texto: j.motivo ?? 'El tomador no usa la app: no se ha publicado.' })
       else setFase({ f: 'error', d, texto: j?.motivo ?? 'No sé si se ha publicado (fallo). Recarga y mira los presupuestos antes de repetir.' })
     } catch {
@@ -144,9 +153,22 @@ export default function PrepararRenovacion({ polizaId }: { polizaId: string }) {
                 {fase.f === 'publicando' ? 'Publicando…' : 'Enviar al cliente por la app'}
               </button>
             )}
+            {fase.f !== 'publicada' && !d.destinatarios.publicable && d.destinatarios.motivo === 'sin_app' && (
+              <>
+                <button type="button" style={btnStyle('primario')} disabled={fase.f === 'publicando'} onClick={() => void publicar(d, 'email')}>
+                  {fase.f === 'publicando' ? 'Enviando…' : 'Enviar por correo'}
+                </button>
+                <button type="button" style={btnStyle('secundario')} disabled={fase.f === 'publicando'} onClick={() => void publicar(d, 'whatsapp_enlace')}>
+                  Preparar WhatsApp
+                </button>
+              </>
+            )}
             {fase.f !== 'publicando' && fase.f !== 'publicada' && <button type="button" style={btnStyle('sutil')} onClick={() => void preparar()}>Rehacer</button>}
           </div>
-          {fase.f === 'publicada' && <p style={{ margin: 0, color: 'var(--positive)' }}>{fase.ya ? 'Ya estaba publicado.' : 'Publicado en su app: le llega el aviso.'}</p>}
+          {fase.f === 'publicada' && <p style={{ margin: 0, color: 'var(--positive)' }}>{fase.ya ? 'Ya estaba publicado.' : fase.texto ?? 'Publicado en su app: le llega el aviso.'}</p>}
+          {fase.f === 'publicada' && fase.whatsapp && (
+            <a href={fase.whatsapp} target="_blank" rel="noopener noreferrer" style={{ ...btnStyle('primario'), display: 'inline-flex', alignItems: 'center', minHeight: 44, width: 'fit-content' }}>📲 Abrir el WhatsApp</a>
+          )}
         </div>
       )}
       {fase.f === 'error' && <p style={{ margin: 0, color: 'var(--negative)' }}>{fase.texto}</p>}

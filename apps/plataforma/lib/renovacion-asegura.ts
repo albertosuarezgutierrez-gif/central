@@ -5,6 +5,8 @@
 //     Alberto el Telegram de revisión con ✅ / 👁 / ✏️.
 //   · ✅ (`crv_pub:<presupuestoId>`, webhook de Telegram) o «Enviar al cliente por la app» (pantalla) →
 //     `POST /api/operador/renovacion/publicar`. SOLO la persona autorizada (from.id = TELEGRAM_CHAT_ID) y sin reintentar.
+//   · 05/11/2026: si nadie puede elegir en la app, ✅ por CORREO (`crv_cor:`) o ✅ WHATSAPP (`crv_wa:`, prepara el wa.me
+//     que Alberto abre en su móvil): el cliente elige desde el ENLACE de siempre. Lo preferido es la app.
 //
 // 🚨 Sale a un TERCERO (el cliente): nada se publica sin ese botón. Elegir en la app NO emite nada.
 // 🚨 503 `canal_no_disponible` (el tomador no usa la app: no hay a quién publicarlo) ≠ «el envío falló» (502).
@@ -15,24 +17,31 @@ import { cabecerasPuerto } from './puerto-actor.ts'
 export const PREFIJO_CRV = 'crv'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-export type DecisionBotonCrv = { ok: true; presupuestoId: string } | { ok: false; toast: string }
+export type CanalCrv = 'app' | 'email' | 'whatsapp_enlace'
+const CANAL_DE_ACCION: Readonly<Record<string, CanalCrv>> = { pub: 'app', cor: 'email', wa: 'whatsapp_enlace' }
+
+export type DecisionBotonCrv = { ok: true; presupuestoId: string; canal: CanalCrv } | { ok: false; toast: string }
 
 /** ¿Vale esta pulsación? Solo el titular (from.id EXACTO); sin chat configurado, nadie. PURO. */
 export function decidirBotonCrv(cb: { from?: { id?: unknown } | null } | null | undefined, accion: string, args: readonly string[], chatAutorizado: string | undefined): DecisionBotonCrv {
   const esperado = String(chatAutorizado ?? '').trim()
   const quien = String(cb?.from?.id ?? '').trim()
   if (!esperado || !quien || quien !== esperado) return { ok: false, toast: 'Solo el titular puede hacerlo' }
-  if (accion !== 'pub' || args.length !== 1 || !UUID.test(args[0] ?? '')) return { ok: false, toast: 'Botón no válido' }
-  return { ok: true, presupuestoId: args[0].toLowerCase() }
+  const canal = Object.hasOwn(CANAL_DE_ACCION, accion) ? CANAL_DE_ACCION[accion] : undefined
+  if (!canal || args.length !== 1 || !UUID.test(args[0] ?? '')) return { ok: false, toast: 'Botón no válido' }
+  return { ok: true, presupuestoId: args[0].toLowerCase(), canal }
 }
 
 /** Línea que sustituye a los botones tras pulsar ✅. PURO. */
 export function lineaTrasPublicarCrv(estado: string): string {
   switch (estado) {
     case 'publicado': return '✅ <i>Publicado en su app: le llega el aviso en la campana (y el correo de aviso de acceso, sin detalles).</i>'
+    case 'enviado': return '✅ <i>Enviado por correo con el enlace: puede elegir desde ahí, sin firma.</i>'
+    case 'enlace': return '📲 <i>WhatsApp preparado (lleva el enlace y su código): ábrelo en tu móvil y mándalo tú. Puede elegir desde el enlace, sin firma.</i>'
+    case 'envio_fallido': return '⚠️ <i>No ha salido: mira el motivo en la ficha (correo, móvil o acceso). Lo preferido es la app.</i>'
     case 'ya_publicado': return '<i>Ya estaba publicado: no se hace nada más.</i>'
     case 'no_vigente': return '⌛ <i>Este mensaje no es el último de este borrador (se rehízo): usa el más reciente.</i>'
-    case 'canal_no_disponible': return '⛔ <i>El tomador no usa la app: no se ha publicado. Mándaselo por correo o WhatsApp desde la ficha.</i>'
+    case 'canal_no_disponible': return '⛔ <i>Nadie que pueda elegir usa la app: no se ha publicado. Mándaselo por correo o WhatsApp.</i>'
     case 'sin_migracion': return '🔒 <i>Falta aplicar la migración 2026-11-05b: no se ha publicado nada.</i>'
     case 'caducado': return '⌛ <i>Los precios han caducado: prepara la renovación de nuevo.</i>'
     case 'retirado': return '<i>Ese borrador se retiró: no se publica.</i>'
@@ -72,8 +81,17 @@ export function prepararRenovacionAsegura(e: { polizaId: string; actor: string }
  * Publica en la app (el ✅). `via: 'telegram'`: asegura EXIGE `telegramMessageId` y que sea el último mensaje de revisión
  * (sin él, 409). `via: 'pantalla'`: el botón de la ficha, con sesión de la correduría.
  */
-export function publicarRenovacionAsegura(e: { presupuestoId: string; actor: string; via: 'telegram' | 'pantalla'; telegramMessageId?: number | null }, actorPuerto?: string): Promise<Reenvio> {
-  return llamar('/api/operador/renovacion/publicar', { presupuestoId: e.presupuestoId, actor: e.actor, via: e.via, ...(typeof e.telegramMessageId === 'number' ? { telegramMessageId: e.telegramMessageId } : {}) }, actorPuerto, 25_000)
+export function publicarRenovacionAsegura(e: { presupuestoId: string; actor: string; via: 'telegram' | 'pantalla'; telegramMessageId?: number | null; canal?: CanalCrv }, actorPuerto?: string): Promise<Reenvio> {
+  return llamar('/api/operador/renovacion/publicar', {
+    presupuestoId: e.presupuestoId, actor: e.actor, via: e.via, canal: e.canal ?? 'app',
+    ...(typeof e.telegramMessageId === 'number' ? { telegramMessageId: e.telegramMessageId } : {}),
+  }, actorPuerto, 25_000)
+}
+
+/** El `wa.me` que devuelve asegura tras el ✅ WhatsApp (solo para Alberto). `null` = no vino o no es un wa.me. PURO. */
+export function whatsappDe(r: Reenvio): string | null {
+  const w = (r.json as { whatsapp?: unknown } | null)?.whatsapp
+  return typeof w === 'string' && /^https:\/\/wa\.me\//.test(w) ? w : null
 }
 
 /** El `estado` de la respuesta (para la línea de Telegram). Nunca lanza. */
