@@ -45,6 +45,11 @@ import { emailAvisable } from './avisos-vencimiento-reglas.ts'
 export type EtiquetaCorreo = { uno: string; varios: string }
 
 export const ETIQUETA_POR_TIPO: Record<TipoAviso, EtiquetaCorreo> = {
+  // Renovación con alternativas (04/11/2026). 🚨 Ni compañía, ni importe, ni «renovación de hogar»: solo la clase.
+  presupuesto_disponible: {
+    uno: 'una propuesta de tu corredor esperando tu respuesta',
+    varios: 'propuestas de tu corredor esperando tu respuesta',
+  },
   peticion_recibida: {
     uno: 'una solicitud de acceso a tus seguros',
     varios: 'solicitudes de acceso a tus seguros',
@@ -219,6 +224,7 @@ export const ASUNTO_POR_TIPO: Record<TipoAviso, string> = {
   poliza_emitida: 'póliza nueva',
   parte_actualizado: 'novedades de un parte de siniestro',
   poliza_modificada: 'cambios en una de tus pólizas',
+  presupuesto_disponible: 'propuesta pendiente de tu respuesta',
 }
 
 /**
@@ -243,6 +249,7 @@ export const ICONO_POR_TIPO: Record<TipoAviso, string> = {
   poliza_emitida: '✅',
   parte_actualizado: '📋',
   poliza_modificada: '🔄',
+  presupuesto_disponible: '💬',
 }
 
 export const ICONO_VARIOS = '🔔'

@@ -27,8 +27,8 @@ const MATRICULA = '0000BBB'
 const ID = '00000000-0000-4000-8000-000000000001'
 
 test('versión: el modo vehículo va con el explorador 0.3.48 y la imagen lo declara', () => {
-  assert.equal(EXPLORADOR_VERSION, '0.3.49')
-  assert.equal(VEHICULO_VERSION, '0.3.49')
+  assert.equal(EXPLORADOR_VERSION, '0.3.50')
+  assert.equal(VEHICULO_VERSION, '0.3.50')
   assert.ok((MODOS_SOPORTADOS as readonly string[]).includes('vehiculo'))
   const runner = readFileSync(join(import.meta.dirname, '..', 'src', 'runner.ts'), 'utf8')
   assert.match(runner, /if \(trabajo\.modo === 'vehiculo'\) return ejecutarVehiculo\(/)

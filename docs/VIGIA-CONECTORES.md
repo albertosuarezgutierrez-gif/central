@@ -9,7 +9,7 @@
 
 ## Última pasada
 
-**05/10/2026** — segunda pasada (canario NO ejecutable otra vez; ver bitácora). Anterior: 05/09/2026.
+**05/11/2026** — tercera pasada (canario NO ejecutable por tercer mes; ver bitácora). Anterior: 05/10/2026.
 
 ## Veredictos
 
@@ -95,3 +95,14 @@
   repo: **Graphify** (`connected`, y CLAUDE.md dice que NO se usa → candidato a desconectar), Context7, META MCP,
   OpenSEO, posthog, Google Calendar, idealista (este SÍ lo usa `idealista-radar`), Docusign/Firecrawl/OpenRush
   (`connect_incomplete`), Google People API (`needs_reconnect`). Ninguna acción sin OK de Alberto.
+- **05/11/2026 — canario imposible por TERCER mes.** `ListConnectors` devuelve `enabledInChat: false` en los 44
+  conectores de la cuenta; ninguna llamada real a Booking/IBKR/Alpha Vantage/Datos financieros → sin veredictos de
+  endpoints (sin evidencia, sin fila). Pasos 0-bis, 1 y 2 no ejecutados (dependen de llamadas reales). Decisión pendiente
+  de Alberto (desde 05/09): adjuntar Booking + IBKR de solo lectura a esta rutina, o aceptar que el canario no existe.
+- **05/11/2026 — higiene de cuenta (solo `installState`; no se ve lo adjunto a cada rutina).** Cambios respecto a 05/10:
+  **openrouter** `connected` → `needs_reconnect` y **PDF Viewer** `connected` → `needs_reconnect` (sin uso encontrado en el
+  repo como conector MCP; core-ai habla con OpenRouter por API propia). **Google Cloud BigQuery** y **Linear** pasan de
+  `needs_reconnect` a `connect_incomplete`. **Expedia** sigue `needs_reconnect` (2 meses): `pricing-agente` triangula con una
+  fuente menos y sin señal de vuelos. Nuevo: **Whassap** `connected` (sin uso encontrado aquí). Siguen conectados sin uso
+  claro: Graphify (CLAUDE.md dice que NO se usa), Context7, META MCP, OpenSEO, posthog, HubSpot, Resend, Wyndham, DirectBooker.
+  Ninguna acción sin OK de Alberto.

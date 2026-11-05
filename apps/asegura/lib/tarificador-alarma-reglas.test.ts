@@ -9,7 +9,7 @@ const hace = (h: number) => new Date(AHORA.getTime() - h * 3600_000)
 const fila = (o: Partial<FilaEstado> = {}): FilaEstado => ({
   compania: 'allianz', ramo: 'auto', estadoBot: 'activo',
   ultimoPrecio: { fecha: hace(2).toISOString(), canal: 'rpa', primaEur: 300 },
-  d7: { ok: 5, error: 0 }, d30: { ok: 5, error: 0 }, ultimoError: null, ...o,
+  d7: { ok: 5, error: 0 }, d30: { ok: 5, error: 0 }, ultimoError: null, causas7d: [], ...o,
 })
 const tr = (estado: string, h: number, c = 'allianz', r = 'auto'): TrabajoReciente => ({ compania: c, ramo: r, estado, creadoAt: hace(h) })
 
@@ -77,7 +77,7 @@ test('trabajos de otra pareja no se mezclan', () => {
 })
 
 test('texto: agrupado, motivo redactado, sin mensaje crudo ni querystring', () => {
-  const f = fila({ ultimoPrecio: null, ultimoError: { tipo: 'portal', clave: 'hueco_mapa', origen: 'https://www.e-pacallianz.com', ruta: '/epac/cotizar/:dato', fecha: hace(1).toISOString(), modo: 'tarificar' } })
+  const f = fila({ ultimoPrecio: null, ultimoError: { tipo: 'portal', codigo: null, clave: 'hueco_mapa', origen: 'https://www.e-pacallianz.com', ruta: '/epac/cotizar/:dato', fecha: hace(1).toISOString(), modo: 'tarificar' } })
   const a = calcularAlertas([f, fila({ compania: 'mapfre', ultimoPrecio: null })], [tr('ok', 1), tr('ok', 1, 'mapfre')], AHORA)
   const t = textoAlarma(a)!
   assert.match(t, /2 compañías han dejado de dar precio/)
@@ -92,4 +92,16 @@ test('texto: escapa HTML y recorta a 15 líneas', () => {
   assert.match(t, /… y 5 más/)
   assert.ok(!t.includes('<x>'))
   assert.equal(t.split('\n').length, 1 + 15 + 1)
+})
+
+test('la alarma dice la causa más repetida en 7 días (código de lista cerrada)', () => {
+  const f = fila({ d7: { ok: 0, error: 3 }, causas7d: [{ codigo: 'timeout', n: 3 }], ultimoError: { tipo: 'portal', codigo: 'timeout', clave: null, origen: null, ruta: null, fecha: hace(1).toISOString(), modo: 'tarificar' } })
+  const a = calcularAlertas([f], [tr('error_definitivo', 1), tr('error_definitivo', 2), tr('error_definitivo', 3)], AHORA)
+  assert.deepEqual(a[0]!.causaDominante, { codigo: 'timeout', n: 3 })
+  assert.match(textoAlarma(a)!, /causa más repetida en 7 días: timeout \(3\)/)
+  assert.match(textoAlarma(a)!, /\(timeout · portal\)/)
+  // Sin causas leídas: sin la coletilla (no se inventa).
+  const b = calcularAlertas([fila({ causas7d: null })], [tr('error_definitivo', 1), tr('error_definitivo', 2), tr('error_definitivo', 3)], AHORA)
+  assert.equal(b[0]!.causaDominante, null)
+  assert.ok(!/causa más repetida/.test(textoAlarma(b)!))
 })

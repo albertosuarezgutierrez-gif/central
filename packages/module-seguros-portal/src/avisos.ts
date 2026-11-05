@@ -44,6 +44,8 @@ export const TIPOS_AVISO = [
   'poliza_modificada',
   // Vencimiento del calendario del patrimonio (ITE, certificado energético, fin de contrato…), 24/10/2026.
   'patrimonio_en_ventana',
+  // Renovación con alternativas publicada en la app por el corredor (04/11/2026): se va sola al elegir (no se descarta).
+  'presupuesto_disponible',
 ] as const
 export type TipoAviso = (typeof TIPOS_AVISO)[number]
 
@@ -160,7 +162,7 @@ function hrefPoliza(polizaId: string | null | undefined, porDefecto: string): st
   return polizaId ? `/boveda/poliza/${encodeURIComponent(polizaId)}` : porDefecto
 }
 
-export const FUENTES_AVISO = ['autorizaciones', 'obligaciones', 'peticiones', 'datos', 'carnets', 'firmas', 'felicitaciones', 'polizas_nuevas', 'partes', 'polizas_modificadas', 'vehiculos', 'patrimonio'] as const
+export const FUENTES_AVISO = ['autorizaciones', 'obligaciones', 'peticiones', 'datos', 'carnets', 'firmas', 'felicitaciones', 'polizas_nuevas', 'partes', 'polizas_modificadas', 'vehiculos', 'patrimonio', 'presupuestos'] as const
 export type FuenteAviso = (typeof FUENTES_AVISO)[number]
 
 /** Lo mínimo que la campana necesita de una autorización; el resto de `AutorizacionVista` no se mira. */
@@ -311,6 +313,11 @@ export type EntradaAvisos = {
    */
   patrimonio?: PatrimonioParaAviso[] | null
   /**
+   * Renovaciones con alternativas PUBLICADAS en la app y pendientes de que elija (`PresupuestoParaAviso`, 04/11/2026).
+   * `null` = no se han podido leer. Ausente = esta superficie no lo consulta (no cuenta para el «!»).
+   */
+  presupuestos?: PresupuestoParaAviso[] | null
+  /**
    * Claves (`claveAviso`) de los avisos que la persona ya pulsó. Solo quitan DESCARTABLES.
    * `null`/ausente = no se sabe (o esta superficie no lo mira): se enseñan todos, que repetir un
    * aviso ya leído es mejor que esconder uno que no lo está.
@@ -326,6 +333,13 @@ export type EntradaAvisos = {
 }
 
 export type FirmaParaAviso = { id: string; compania: string | null }
+
+/**
+ * Una renovación con alternativas que el corredor PUBLICÓ en la app (`modo = 'renovacion'`, `enviado_at`), sin retirar,
+ * sin caducar, sin firmar ni emitir y SIN elección del cliente. Quien la lee ya filtró por la ficha del tomador
+ * (`portal_vinculo`): un autorizado no recibe este aviso. Sin importes ni compañías: el detalle está en la página.
+ */
+export type PresupuestoParaAviso = { id: string; ramo: string | null }
 
 export type Avisos = {
   avisos: Aviso[]
@@ -372,6 +386,8 @@ export const HREF_POR_TIPO: Record<TipoAviso, string> = {
   poliza_modificada: '/boveda',
   // El calendario (único, 26/10/2026) trae las fechas del patrimonio; la ficha del inmueble es donde se actualiza.
   patrimonio_en_ventana: RUTA_CALENDARIO,
+  // La página del presupuesto (el id va en el aviso): es donde se elige.
+  presupuesto_disponible: '/boveda',
 }
 
 const FECHA = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', timeZone: 'UTC' })
@@ -747,6 +763,20 @@ export function avisosDe(x: EntradaAvisos): Avisos {
     }
   }
 
+  if (x.presupuestos === null) {
+    fuentesIlegibles.push('presupuestos')
+  } else {
+    for (const p of x.presupuestos ?? []) {
+      avisos.push({
+        tipo: 'presupuesto_disponible',
+        id: p.id,
+        titulo: `Tienes el precio de tu renovación${p.ramo ? ` de ${p.ramo}` : ''} y alternativas`,
+        detalle: 'Te lo ha preparado tu corredor. Compara y dinos con cuál te quedas: elegir no contrata nada.',
+        href: `/boveda/presupuesto/${encodeURIComponent(p.id)}`,
+      })
+    }
+  }
+
   // Las fuentes que ESTA superficie consulta: una ausente (`undefined`) no cuenta para el «!».
   const ausentes =
     (x.felicitaciones === undefined ? 1 : 0) +
@@ -754,7 +784,8 @@ export function avisosDe(x: EntradaAvisos): Avisos {
     (x.partes === undefined ? 1 : 0) +
     (x.polizasModificadas === undefined ? 1 : 0) +
     (x.vehiculos === undefined ? 1 : 0) +
-    (x.patrimonio === undefined ? 1 : 0)
+    (x.patrimonio === undefined ? 1 : 0) +
+    (x.presupuestos === undefined ? 1 : 0)
   const descartables = new Set<string>(TIPOS_AVISO_DESCARTABLES)
   const visibles = avisos
     .map(({ ciclo, ...a }) => ({ ...a, descartable: descartables.has(a.tipo), clave: claveAviso(a, ciclo) }))

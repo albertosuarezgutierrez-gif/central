@@ -290,8 +290,28 @@ export function motivoCopiadoCima(accion: DiferenciaCima['accion']): 'hueco' | '
  * Para teléfono/email se compara el PRIMERO que manda CIMA contra TODOS los de
  * la ficha: si ya lo tiene en cualquier posición, no hay diferencia.
  */
-/** Categorías/clases de vehículo de CIMA que son moto o ciclomotor. */
-const CLASES_MOTO = new Set(['MO', 'MT', 'CI'])
+/**
+ * Moto según la norma EIAC V07.1 (04/11/2026). Son DOS tablas con códigos que se pisan:
+ * `categoriaVehiculo` (§13.3.4: CA/MO/TU, MO = MOTOCICLETAS) y `claseVehiculo`
+ * (§13.3.16: MT motocicleta, CI ciclomotor, MO = MONOVOLUMEN, que es un coche).
+ * Manda la categoría; solo si falta (Reale no la manda) decide la clase. Mismas reglas
+ * que `classifyTipoSeguro` de module-cima (`eiac-pol-mapper.ts`).
+ */
+const CATEGORIAS_MOTO = new Set(['MO'])
+const CLASES_MOTO = new Set(['MT', 'CI'])
+
+function codigo(v: unknown): string | null {
+  if (typeof v !== 'string') return null
+  const c = v.trim().toUpperCase()
+  return c === '' ? null : c
+}
+
+function esVehiculoMoto(o: Record<string, unknown>): boolean {
+  const categoria = codigo(o.categoriaVehiculo)
+  if (categoria) return CATEGORIAS_MOTO.has(categoria)
+  const clase = codigo(o.claseVehiculo)
+  return clase !== null && CLASES_MOTO.has(clase)
+}
 
 /**
  * ¿La fecha de carné de esta póliza es la del carné B? Solo si es un COCHE.
@@ -307,11 +327,7 @@ export function esPolizaDeCoche(tipo: string | null | undefined, datosEspecifico
   const riesgos = Array.isArray(d.riesgos) ? d.riesgos : []
   for (const r of [d, ...riesgos]) {
     if (!r || typeof r !== 'object') continue
-    const o = r as Record<string, unknown>
-    for (const k of ['categoriaVehiculo', 'claseVehiculo']) {
-      const v = o[k]
-      if (typeof v === 'string' && CLASES_MOTO.has(v.trim().toUpperCase())) return false
-    }
+    if (esVehiculoMoto(r as Record<string, unknown>)) return false
   }
   return true
 }

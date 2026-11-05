@@ -114,17 +114,37 @@ test("toIsoDate: basura/vacío/no-string → null (nunca throw)", () => {
 });
 
 // --- classifyTipoSeguro: producto por bloque, NO por ramo ---
-test("classifyTipoSeguro: RiesgoAutos AU → auto; MO → moto", () => {
+test("classifyTipoSeguro: RiesgoAutos AU → auto; sin ClaseVehiculo → auto", () => {
   assert.equal(
     classifyTipoSeguro({ RiesgoAutos: { Vehiculo: { ClaseVehiculo: "AU" } } }),
     "auto",
   );
-  assert.equal(
-    classifyTipoSeguro({ RiesgoAutos: { Vehiculo: { ClaseVehiculo: "MO" } } }),
-    "moto",
-  );
   // sin ClaseVehiculo → auto por defecto
   assert.equal(classifyTipoSeguro({ RiesgoAutos: {} }), "auto");
+});
+// 04/11/2026 — EIAC V07.1: la CATEGORÍA (§13.3.4: CA/MO/TU) y la CLASE (§13.3.16) son
+// tablas distintas. En la categoría MO = Motocicletas; en la clase MO = MONOVOLUMEN y la
+// moto es MT. Hubo un monovolumen Occident de 8 plazas guardado como moto.
+const veh = (Vehiculo: Record<string, string>) => classifyTipoSeguro({ RiesgoAutos: { Vehiculo } });
+test("classifyTipoSeguro: monovolumen (clase MO, categoría TU) → auto", () => {
+  assert.equal(veh({ ClaseVehiculo: "MO", CategoriaVehiculo: "TU" }), "auto");
+});
+test("classifyTipoSeguro: moto (categoría MO, clase MT) → moto", () => {
+  assert.equal(veh({ ClaseVehiculo: "MT", CategoriaVehiculo: "MO" }), "moto");
+  assert.equal(veh({ CategoriaVehiculo: " mo " }), "moto");
+});
+test("classifyTipoSeguro: la categoría manda sobre la clase (TU/CA → auto aunque la clase diga MT)", () => {
+  assert.equal(veh({ ClaseVehiculo: "MT", CategoriaVehiculo: "TU" }), "auto");
+  assert.equal(veh({ ClaseVehiculo: "CI", CategoriaVehiculo: "CA" }), "auto");
+});
+test("classifyTipoSeguro: sin categoría (Reale) → decide la clase: MT/CI moto, MO monovolumen = auto", () => {
+  assert.equal(veh({ ClaseVehiculo: "MT" }), "moto");
+  assert.equal(veh({ ClaseVehiculo: "mt" }), "moto");
+  assert.equal(veh({ ClaseVehiculo: "CI" }), "moto");
+  assert.equal(veh({ ClaseVehiculo: "MO" }), "auto");
+  assert.equal(veh({ ClaseVehiculo: " MO " }), "auto");
+  assert.equal(veh({ ClaseVehiculo: "TU" }), "auto");
+  assert.equal(veh({ ClaseVehiculo: "XX" }), "auto");
 });
 test("classifyTipoSeguro: Hogar → hogar; RC → responsabilidad_civil; Salud → salud", () => {
   assert.equal(classifyTipoSeguro({ RiesgoHogar: {} }), "hogar");
@@ -504,12 +524,12 @@ test("mapEiacPol: moto solo con ClaseVehiculo → datosEspecificos guarda solo l
   const r = mapEiacPol(
     baseAutoPol({
       DatosRiesgos: {
-        Riesgo: { RiesgoAutos: { Vehiculo: { ClaseVehiculo: "MO" } } },
+        Riesgo: { RiesgoAutos: { Vehiculo: { ClaseVehiculo: "MT" } } },
       },
     }),
   );
   assert.equal(r.tipoSeguro, "moto");
-  assert.deepEqual(planas(r.datosEspecificos), { claseVehiculo: "MO", anulacion: null });
+  assert.deepEqual(planas(r.datosEspecificos), { claseVehiculo: "MT", anulacion: null });
 });
 
 // --- RamoDGS 241 NO es salud (regresión del doc antiguo) ---
@@ -520,11 +540,11 @@ test("mapEiacPol: ramo 241 + RiesgoAutos NO va a review_salud", () => {
 });
 
 // --- moto por ClaseVehiculo ---
-test("mapEiacPol: RiesgoAutos ClaseVehiculo MO → tipoSeguro moto", () => {
+test("mapEiacPol: RiesgoAutos CategoriaVehiculo MO + ClaseVehiculo MT → tipoSeguro moto", () => {
   const r = mapEiacPol(
     baseAutoPol({
       DatosRiesgos: {
-        Riesgo: { RiesgoAutos: { Vehiculo: { ClaseVehiculo: "MO" } } },
+        Riesgo: { RiesgoAutos: { Vehiculo: { CategoriaVehiculo: "MO", ClaseVehiculo: "MT" } } },
       },
     }),
   );

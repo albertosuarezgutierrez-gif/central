@@ -13,7 +13,8 @@
  *     6.0 NO tiene `FechaEfectoFinal` (era un nombre supuesto en el playbook); el
  *     fallback real de vencimiento es `FechaFinSeguro`.
  *   - `DatosRiesgos/Riesgo[]` con choice `RiesgoAutos|RiesgoHogar|RiesgoVida|...`;
- *     `RiesgoAutos/Vehiculo/ClaseVehiculo` (AU/MO/CA) distingue auto vs moto.
+ *     `RiesgoAutos/Vehiculo/CategoriaVehiculo` (§13.3.4: CA/MO/TU) distingue auto vs
+ *     moto y, si falta, `ClaseVehiculo` (§13.3.16: MT/CI moto; MO = MONOVOLUMEN).
  *   - `Tomador`/`Asegurado` → `PersonaFisica|PersonaJuridica`.
  * GATE pre-flag (decisión operador s197): validar contra ≥1 EIAC POL prod real
  * (Allianz) antes de habilitar `CIMA_INGESTA_ENABLED`. El routing defensivo a
@@ -739,8 +740,21 @@ const TIPO_POR_RAMO_DGS: Readonly<Record<string, EiacTipoSeguro>> = {
 };
 
 /**
+ * Moto o coche, según la norma EIAC V07.1 (04/11/2026). OJO: son DOS tablas con
+ * códigos que se pisan:
+ *  - `CategoriaVehiculo` (§13.3.4): CA camiones · MO MOTOCICLETAS · TU turismos.
+ *  - `ClaseVehiculo` (§13.3.16): MT motocicleta · CI ciclomotor · MO MONOVOLUMEN (¡coche!).
+ * Manda la categoría; solo si falta (Reale no la manda) decide la clase. `MT` lo
+ * mandan Allianz, Mapfre, Occident y Reale (medido 04/11/2026). Mismas reglas que
+ * `esPolizaDeCoche` de module-seguros (`sincro-cima.ts`).
+ */
+const CATEGORIAS_VEHICULO_MOTO: ReadonlySet<string> = new Set(["MO"]);
+const CLASES_VEHICULO_MOTO: ReadonlySet<string> = new Set(["MT", "CI"]);
+
+/**
  * Producto por presencia de bloque `<RiesgoXxx>`, NO por RamoDGS. Distingue moto
- * de auto por `RiesgoAutos/Vehiculo/ClaseVehiculo` ('MO'=moto; resto=auto).
+ * de auto por `RiesgoAutos/Vehiculo/CategoriaVehiculo` (MO=moto) y, sin categoría,
+ * por `ClaseVehiculo` (MT/CI=moto; MO=monovolumen=auto; resto=auto).
  * LOO-807: comercio acepta `RiesgoComercio` Y `RiesgoComercios` (el plural que
  * emite Occident C0468, medido en prod).
  */
@@ -756,9 +770,12 @@ export function classifyTipoSeguro(
   if (riesgo.RiesgoAsistenciaSanitaria != null) return "salud";
   if (riesgo.RiesgoAutos != null) {
     const autos = riesgo.RiesgoAutos as {
-      Vehiculo?: { ClaseVehiculo?: unknown };
+      Vehiculo?: { ClaseVehiculo?: unknown; CategoriaVehiculo?: unknown };
     };
-    return str(autos?.Vehiculo?.ClaseVehiculo) === "MO" ? "moto" : "auto";
+    const categoria = str(autos?.Vehiculo?.CategoriaVehiculo)?.trim().toUpperCase();
+    if (categoria) return CATEGORIAS_VEHICULO_MOTO.has(categoria) ? "moto" : "auto";
+    const clase = str(autos?.Vehiculo?.ClaseVehiculo)?.trim().toUpperCase();
+    return clase && CLASES_VEHICULO_MOTO.has(clase) ? "moto" : "auto";
   }
   if (riesgo.RiesgoHogar != null) return "hogar";
   if (riesgo.RiesgoVida != null) return "vida";

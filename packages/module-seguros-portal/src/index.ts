@@ -94,6 +94,7 @@ export type {
   ReparoParaAviso,
   CarnetParaAviso,
   FirmaParaAviso,
+  PresupuestoParaAviso,
   EntradaAvisos,
   Avisos,
 } from './avisos.ts'

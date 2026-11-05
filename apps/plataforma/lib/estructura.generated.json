@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-11-04T20:57:30Z",
+  "generadoEn": "2026-11-04T21:52:55Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -446,7 +446,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 16
+        "evidencias": 17
       },
       "asegura-portal": {
         "estado": "usado",
@@ -752,7 +752,7 @@
       },
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "ialimp": {
         "estado": "usado",
@@ -794,7 +794,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 9
+        "evidencias": 10
       },
       "asegura-portal": {
         "estado": "usado",
@@ -1142,7 +1142,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 30
+        "evidencias": 32
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2534,11 +2534,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 351
+        "evidencias": 352
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 217
+        "evidencias": 218
       },
       "asegura-web": {
         "estado": "usado",
@@ -2650,11 +2650,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 54
+        "evidencias": 55
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 168
+        "evidencias": 169
       },
       "asegura-web": {
         "estado": "usado",
@@ -2882,7 +2882,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 84
+        "evidencias": 86
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4772,6 +4772,8 @@
       "/api/operador/recibos/devolucion",
       "/api/operador/red-diaria",
       "/api/operador/regularizacion-rc",
+      "/api/operador/renovacion/preparar",
+      "/api/operador/renovacion/publicar",
       "/api/operador/renovaciones/contacto",
       "/api/operador/resumen",
       "/api/operador/retencion/descartar",
@@ -4998,6 +5000,7 @@
       "/api/presupuesto/actividad",
       "/api/presupuesto/carta",
       "/api/presupuesto/datos",
+      "/api/presupuesto/elegir",
       "/api/presupuesto/firma",
       "/api/presupuesto/ia",
       "/api/presupuesto/pdf",
@@ -5939,9 +5942,12 @@
       "/api/correduria/presupuesto/propuesta",
       "/api/correduria/presupuesto/propuesta/pdf",
       "/api/correduria/presupuesto/vista-cliente",
+      "/api/correduria/presupuesto/vista-cliente/abrir",
       "/api/correduria/quejas",
       "/api/correduria/radar-recibos",
       "/api/correduria/recibo-devolucion",
+      "/api/correduria/renovacion/preparar",
+      "/api/correduria/renovacion/publicar",
       "/api/correduria/renovaciones/contacto",
       "/api/correduria/retencion/descartar",
       "/api/correduria/revision",
@@ -7791,7 +7797,7 @@
     "packages": 47,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1910,
+    "apis": 1916,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

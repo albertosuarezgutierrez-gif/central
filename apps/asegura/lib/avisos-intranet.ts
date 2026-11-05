@@ -481,6 +481,24 @@ export async function reunirPendientes(
     if (lista.length > 0) dame(clienteId).polizasNuevas = lista
   }
 
+  // Renovaciones con alternativas PUBLICADAS en la app y sin elegir (04/11/2026, `2026-11-05b`). Solo la ficha del TOMADOR
+  // (la del presupuesto): un autorizado no recibe este correo. Sin la migración no puede haber ninguna publicada: se omite.
+  try {
+    const pres = await db.$queryRaw<{ id: string; clienteId: string; ramo: string | null }[]>`
+      select p.id::text as id, p.cliente_id::text as "clienteId", p.ramo
+      from presupuesto p
+      where p.correduria_id = ${correduriaId}::uuid and p.modo = 'renovacion' and p.enviado_at is not null
+        and p.retirado_at is null and p.aceptado_at is null and p.emitido_at is null and p.eleccion_cliente is null
+        and p.vence_el > now()`
+    for (const f of pres) {
+      if (!fichaPorId.has(f.clienteId)) continue
+      const d = dame(f.clienteId)
+      d.presupuestos = [...(d.presupuestos ?? []), { id: f.id, ramo: f.ramo }]
+    }
+  } catch (e) {
+    if (!/42703|does not exist|no existe/i.test(e instanceof Error ? e.message : String(e))) throw e
+  }
+
   // Vencimientos de quien NO tiene obligación en el portal (27/09/2026). Las obligaciones nacen al
   // abrir la bóveda, así que el cliente que nunca ha entrado —la mayoría— no recibía NINGÚN aviso de
   // renovación. Se derivan aquí de la póliza EN VIGOR con la misma fecha accionable (art. 22 LCS) y

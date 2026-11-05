@@ -38,3 +38,5 @@ export const hayAnulacionConfirmada = () => esquema.existeColumna('polizas', 'an
 // como antes y `probar` con `imagen` responde 403.
 export const hayImagenBot = () => esquema.existeTabla('tarificador_imagen')
 export const hayImagenTrabajo = () => esquema.existeColumna('tarificacion_trabajos', 'imagen_prueba')
+// Huella del riesgo de tarificar (2026-11-05a_tarificador_huella.sql, NO aplicada): sin la columna no hay índice ni caché 24 h.
+export const hayRiesgoHuella = () => esquema.existeColumna('tarificacion_trabajos', 'riesgo_huella')

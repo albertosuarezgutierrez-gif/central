@@ -4,9 +4,12 @@
 // (Codeoscopic) del mes, por ramo: una cotización de Avant2 pide precio a TODAS las compañías a la vez, así que su coste
 // no se puede repartir por compañía sin inventarlo.
 //
-// 🔒 Del jsonb `error` solo sale: el TIPO (lista cerrada), la CLAVE de atasco si es un identificador (`hueco_mapa`) y el
+// 🔒 Del jsonb `error` solo sale: el TIPO (lista cerrada), el CÓDIGO de causa (lista cerrada, 05/11/2026), la CLAVE de atasco si es un identificador (`hueco_mapa`) y el
 // ORIGEN + RUTA de la URL (sin query, sin fragmento, con los tramos que parecen datos cambiados por `:dato`). Nunca el
 // `mensaje` (puede llevar matrícula, DNI o nombre), ni el HTML, ni la captura. `null` = «sin datos», nunca 0.
+// El mensaje SOLO entra (recortado) en los trabajos anteriores al código, para DERIVARLO aquí (`codigoDeErrorJson`), y no sale.
+
+import { CODIGOS_ERROR, codigoDeErrorJson, type CodigoError } from './tarificador-error-codigo.ts'
 
 export const ESTADOS_BOT = ['activo', 'pilotaje', 'exploracion', 'sin_bot'] as const
 export type EstadoBot = (typeof ESTADOS_BOT)[number]
@@ -17,6 +20,8 @@ export type TipoError = (typeof TIPOS_ERROR)[number] | 'otro' | 'desconocido'
 
 export type ErrorRedactado = {
   tipo: TipoError
+  /** Causa (lista cerrada). `null` = el jsonb no permite saberla (nunca se inventa «otro»). */
+  codigo: CodigoError | null
   /** Clave de atasco (`hueco_mapa`, `compania_anterior`…) solo si es un identificador; nunca un valor. */
   clave: string | null
   /** `https://www.e-pacallianz.com` — protocolo + host, nada más. */
@@ -59,7 +64,7 @@ export function redactarError(e: unknown): ErrorRedactado | null {
   const tipo: TipoError = typeof t !== 'string' || t.trim() === '' ? 'desconocido' : (TIPOS_ERROR as readonly string[]).includes(t) ? (t as TipoError) : 'otro'
   const c = o.atascoClave
   const clave = typeof c === 'string' && RE_CLAVE.test(c) ? c : null
-  return { tipo, clave, ...redactarUrl(o.url) }
+  return { tipo, codigo: codigoDeErrorJson(o), clave, ...redactarUrl(o.url) }
 }
 
 /** `Allianz`, ` MAPFRE ` → `allianz`, `mapfre`: la clave con la que se cruzan RPA y Avant2. */
@@ -80,9 +85,12 @@ export type FilaUltimoError = { compania: string; ramo: string; modo: string | n
 /** Exploración o pilotaje agrupado: `abiertas` sin cerrar y `recientes` de los últimos 30 días. */
 export type FilaActividad = { compania: string | null; ramo: string | null; abiertas: unknown; recientes: unknown; ultima_at: Date | string | null }
 export type FilaAvant2 = { ramo: string | null; cents: unknown; n: unknown }
+/** Un error de TARIFICAR de los últimos 7 días: solo para contar su causa (el `error` trae tipo, código y, si no hay código, el mensaje). */
+export type FilaCausa = { compania: string; ramo: string; error: unknown }
 
 // ── Salida ──────────────────────────────────────────────────────────────────────────────────────────────────────
 export type Ventana = { ok: number; error: number }
+export type CausaCuenta = { codigo: CodigoError; n: number }
 export type FilaEstado = {
   compania: string
   ramo: string
@@ -91,6 +99,8 @@ export type FilaEstado = {
   d7: Ventana
   d30: Ventana
   ultimoError: (ErrorRedactado & { fecha: string; modo: string | null }) | null
+  /** Errores de tarificar de 7 días por causa, de más a menos. `null` = no se pudo leer (≠ «ninguno», que es `[]`). */
+  causas7d: CausaCuenta[] | null
 }
 export type Avant2Mes = { mes: string; totalEur: number; facturables: number; porRamo: { ramo: string; eur: number; n: number }[] }
 export type Indicadores = {
@@ -136,6 +146,8 @@ export type Entrada = {
   errores: FilaUltimoError[]
   /** `null` = la tabla no existe o no se pudo leer (no «ninguna exploración»). */
   exploraciones: FilaActividad[] | null
+  /** Errores de tarificar de 7 días (para agrupar por causa). Ausente/`null` = no se leyeron: `causas7d` queda `null`. */
+  causas?: FilaCausa[] | null
   pilotajes: FilaActividad[] | null
 }
 
@@ -149,7 +161,7 @@ export function proyectarEstado(e: Entrada): FilaEstado[] {
     const k = k2(c, r)
     let f = filas.get(k)
     if (!f) {
-      f = { compania: c, ramo: r, estadoBot: 'sin_bot', ultimoPrecio: null, d7: { ok: 0, error: 0 }, d30: { ok: 0, error: 0 }, ultimoError: null, _tarificar: 0, _pil: false, _exp: false }
+      f = { compania: c, ramo: r, estadoBot: 'sin_bot', ultimoPrecio: null, d7: { ok: 0, error: 0 }, d30: { ok: 0, error: 0 }, ultimoError: null, causas7d: e.causas ? [] : null, _tarificar: 0, _pil: false, _exp: false }
       filas.set(k, f)
     }
     return f
@@ -178,6 +190,18 @@ export function proyectarEstado(e: Entrada): FilaEstado[] {
     const fecha = iso(x.created_at)
     if (!f.ultimoError || fecha > f.ultimoError.fecha) f.ultimoError = { ...red, fecha, modo: typeof x.modo === 'string' ? x.modo : null }
   }
+  if (e.causas) {
+    const cuentas = new Map<FilaEstado, Map<CodigoError, number>>()
+    for (const x of e.causas) {
+      const f = fila(x.compania, x.ramo)
+      const codigo = f ? codigoDeErrorJson(x.error) : null
+      if (!f || !codigo) continue
+      const m = cuentas.get(f) ?? new Map<CodigoError, number>()
+      m.set(codigo, (m.get(codigo) ?? 0) + 1)
+      cuentas.set(f, m)
+    }
+    for (const [f, m] of cuentas) f.causas7d = ordenarCausas(m)
+  }
   const actividad = (lista: FilaActividad[] | null, marca: '_pil' | '_exp') => {
     for (const a of lista ?? []) {
       if (num(a.abiertas) + num(a.recientes) === 0) continue
@@ -191,6 +215,19 @@ export function proyectarEstado(e: Entrada): FilaEstado[] {
   return [...filas.values()]
     .map(({ _tarificar, _pil, _exp, ...f }) => ({ ...f, estadoBot: estadoBot({ tarificarTotal: _tarificar, pilotaje: _pil, exploracion: _exp }) }))
     .sort((a, b) => ORDEN[a.estadoBot] - ORDEN[b.estadoBot] || a.compania.localeCompare(b.compania) || a.ramo.localeCompare(b.ramo))
+}
+
+/** De más a menos; empate por el orden de la lista cerrada (estable). */
+export function ordenarCausas(m: Map<CodigoError, number>): CausaCuenta[] {
+  return [...m.entries()]
+    .filter(([, n]) => n > 0)
+    .map(([codigo, n]) => ({ codigo, n }))
+    .sort((a, b) => b.n - a.n || CODIGOS_ERROR.indexOf(a.codigo) - CODIGOS_ERROR.indexOf(b.codigo))
+}
+
+/** La causa que más se repite (`null` = sin errores o sin leer). */
+export function causaDominante(c: CausaCuenta[] | null): CausaCuenta | null {
+  return c && c.length > 0 ? c[0]! : null
 }
 
 export function proyectarAvant2(mes: string, filas: FilaAvant2[]): Avant2Mes {
