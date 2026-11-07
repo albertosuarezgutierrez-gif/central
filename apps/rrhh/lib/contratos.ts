@@ -1,6 +1,8 @@
 import { prisma } from './prisma'
 import type { GrupoCotizacion, TipoContrato } from '@central/module-nominas'
 
+export type DuracionContrato = 'indefinido' | 'temporal'
+
 export interface DatosContrato {
   salarioBase: number
   grupoCotizacion: GrupoCotizacion
@@ -10,6 +12,10 @@ export interface DatosContrato {
   categoriaConvenio?: string | null
   conceptosFijos: { nombre: string; importe: number }[]
   vigenteDesde: Date
+  /** Migración 0033. null = «no se sabe» (contratos anteriores). Un indefinido NO lleva fecha de fin. */
+  fechaInicio: Date | null
+  fechaFin: Date | null
+  duracion: DuracionContrato | null
 }
 
 export interface ContratoRow extends DatosContrato {
@@ -33,6 +39,9 @@ function mapRow(r: Record<string, unknown>): ContratoRow {
     categoriaConvenio: r.categoria_convenio as string | null,
     conceptosFijos: r.conceptos_fijos as { nombre: string; importe: number }[],
     vigenteDesde: new Date(r.vigente_desde as string),
+    fechaInicio: r.fecha_inicio ? new Date(r.fecha_inicio as string) : null,
+    fechaFin: r.fecha_fin ? new Date(r.fecha_fin as string) : null,
+    duracion: r.duracion === 'indefinido' || r.duracion === 'temporal' ? r.duracion : null,
     activo: r.activo as boolean,
     creadaAt: new Date(r.creada_at as string),
   }
@@ -70,6 +79,9 @@ export async function crearContrato(
       categoria_convenio: datos.categoriaConvenio ?? null,
       conceptos_fijos: datos.conceptosFijos,
       vigente_desde: datos.vigenteDesde,
+      fecha_inicio: datos.fechaInicio,
+      fecha_fin: datos.fechaFin,
+      duracion: datos.duracion,
     },
   })
 }
@@ -103,6 +115,11 @@ export function parsearDatosContrato(body: unknown): DatosContrato {
   if (!isFinite(irpfRetencionPct) || irpfRetencionPct < 0 || irpfRetencionPct > 45) throw new Error('irpfRetencionPct debe ser 0-45')
   const vigenteDesde = new Date(b.vigenteDesde as string)
   if (isNaN(vigenteDesde.getTime())) throw new Error('vigenteDesde es una fecha inválida')
+  const fechaInicio = fechaOpcional(b.fechaInicio, 'fechaInicio')
+  const fechaFin = fechaOpcional(b.fechaFin, 'fechaFin')
+  const duracion = duracionDe(b.duracion, tipoContrato)
+  if (duracion === 'indefinido' && fechaFin) throw new Error('fechaFin: un contrato indefinido no lleva fecha de fin')
+  if (fechaInicio && fechaFin && fechaFin < fechaInicio) throw new Error('fechaFin debe ser posterior a fechaInicio (fecha)')
   const conceptosFijos = Array.isArray(b.conceptosFijos)
     ? (b.conceptosFijos as Array<{ nombre: string; importe: number }>)
     : []
@@ -115,5 +132,43 @@ export function parsearDatosContrato(body: unknown): DatosContrato {
     categoriaConvenio: typeof b.categoriaConvenio === 'string' ? b.categoriaConvenio || null : null,
     conceptosFijos,
     vigenteDesde,
+    fechaInicio,
+    fechaFin,
+    duracion,
   }
+}
+
+function fechaOpcional(v: unknown, campo: string): Date | null {
+  if (v == null || v === '') return null
+  if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) throw new Error(`${campo} es una fecha inválida`)
+  const d = new Date(`${v}T00:00:00Z`)
+  if (isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== v) throw new Error(`${campo} es una fecha inválida`)
+  return d
+}
+
+/**
+ * Duración del contrato. Explícita en el cuerpo, o la que dice el tipo cuando el tipo ES la duración (indefinido/temporal).
+ * «parcial» sin duración explícita → null («no se sabe»: el motor deja el desempleo pendiente). Nunca se supone «indefinido».
+ */
+export function duracionDe(v: unknown, tipo: TipoContrato): DuracionContrato | null {
+  if (v === 'indefinido' || v === 'temporal') {
+    if (tipo !== 'parcial' && v !== tipo) throw new Error(`duracion «${v}» inválida para un contrato ${tipo}`)
+    return v
+  }
+  if (v != null && v !== '') throw new Error('duracion inválida')
+  return tipo === 'parcial' ? null : tipo
+}
+
+/**
+ * ¿Duración inferior al año? (art. 86.2 RIRPF: tipo mínimo del 2 % en contratos de menos de un año).
+ * true/false solo con datos; undefined = «no se sabe» (temporal sin alguna de las dos fechas).
+ */
+export function duracionInferiorAnio(c: { duracion: DuracionContrato | null; fechaInicio: Date | null; fechaFin: Date | null }): boolean | undefined {
+  if (c.duracion === 'indefinido') return false
+  if (c.duracion !== 'temporal' || !c.fechaInicio || !c.fechaFin) return undefined
+  // El último día cuenta (inclusive): del 01/01 al 31/12 es un año completo, no «inferior».
+  const unAño = new Date(c.fechaInicio)
+  unAño.setUTCFullYear(unAño.getUTCFullYear() + 1)
+  const trasFin = new Date(c.fechaFin.getTime() + 86_400_000)
+  return trasFin < unAño
 }

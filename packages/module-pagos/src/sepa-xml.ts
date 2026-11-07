@@ -10,6 +10,14 @@ export interface SepaTransferencia {
   endToEndId?: string    // referencia única interna
 }
 
+/**
+ * Códigos ExternalCategoryPurpose1Code / ExternalPurpose1Code admitidos. `SALA` = nómina (salary payment): el banco la
+ * trata como pago de salarios (prioridad de abono, confidencialidad del concepto). `SUPP` = pago a proveedor.
+ * Sin indicar (por defecto) el XML sale idéntico al de siempre: no hay `CtgyPurp` ni `Purp`.
+ */
+export type SepaProposito = 'SALA' | 'SUPP'
+export const SEPA_PROPOSITOS: readonly SepaProposito[] = ['SALA', 'SUPP']
+
 export interface SepaDocumentoParams {
   debtorName: string
   debtorIban: string
@@ -17,6 +25,12 @@ export interface SepaDocumentoParams {
   fechaEjecucion: string   // YYYY-MM-DD
   idMensaje?: string
   transferencias: SepaTransferencia[]
+  /** Categoría del lote (PmtInf/PmtTpInf/CtgyPurp) y propósito de cada transferencia (CdtTrfTxInf/Purp). */
+  proposito?: SepaProposito
+  /** Identificador del ordenante (InitgPty/Id/OrgId/Othr/Id): en España, NIF + sufijo AEB (p. ej. `B12345678000`). */
+  iniciadorId?: string
+  /** Fecha/hora de creación (CreDtTm). Inyectable para tests; por defecto, ahora. */
+  creadoEn?: Date
 }
 
 function esc(s: string): string {
@@ -37,16 +51,33 @@ function genId(): string {
   return `PLAT${now.getFullYear()}${pad2(now.getMonth() + 1)}${pad2(now.getDate())}${pad2(now.getHours())}${pad2(now.getMinutes())}${pad2(now.getSeconds())}`
 }
 
+// Importe en euros → céntimos enteros. La suma de control (CtrlSum) se hace en enteros: sumar floats en euros puede
+// descuadrar el céntimo en remesas largas y el banco rechaza el fichero entero si CtrlSum ≠ Σ InstdAmt.
+function aCentimos(importe: number): number {
+  if (!Number.isFinite(importe)) throw new Error('Importe SEPA no numérico')
+  return Math.round(importe * 100)
+}
+
+function fmtCentimos(c: number): string {
+  const neg = c < 0
+  const a = Math.abs(c)
+  return `${neg ? '-' : ''}${Math.floor(a / 100)}.${String(a % 100).padStart(2, '0')}`
+}
+
 export function generarSepaXml(params: SepaDocumentoParams): string {
   const msgId = params.idMensaje ?? genId()
-  const total = params.transferencias.reduce((s, t) => s + t.importe, 0)
-  const totalStr = total.toFixed(2)
+  if (params.proposito !== undefined && !SEPA_PROPOSITOS.includes(params.proposito)) {
+    throw new Error(`Propósito SEPA no admitido: ${String(params.proposito)}`)
+  }
+  const centimos = params.transferencias.map(t => aCentimos(t.importe))
+  const totalStr = fmtCentimos(centimos.reduce((s, c) => s + c, 0))
   const numTx = params.transferencias.length
-  const creationDateTime = new Date().toISOString().slice(0, 19)
+  const creationDateTime = (params.creadoEn ?? new Date()).toISOString().slice(0, 19)
+  const proposito = params.proposito
 
   const txBlocks = params.transferencias.map((t, i) => {
     const e2eId = t.endToEndId ?? `${msgId}-${String(i + 1).padStart(3, '0')}`
-    const importeStr = t.importe.toFixed(2)
+    const importeStr = fmtCentimos(centimos[i])
     const concepto = esc(t.concepto.slice(0, 140))
     return `      <CdtTrfTxInf>
         <PmtId>
@@ -62,7 +93,10 @@ export function generarSepaXml(params: SepaDocumentoParams): string {
           <Id>
             <IBAN>${esc(t.creditorIban.replace(/\s/g, ''))}</IBAN>
           </Id>
-        </CdtrAcct>
+        </CdtrAcct>${proposito ? `
+        <Purp>
+          <Cd>${proposito}</Cd>
+        </Purp>` : ''}
         <RmtInf>
           <Ustrd>${concepto}</Ustrd>
         </RmtInf>
@@ -80,7 +114,14 @@ export function generarSepaXml(params: SepaDocumentoParams): string {
       <NbOfTxs>${numTx}</NbOfTxs>
       <CtrlSum>${totalStr}</CtrlSum>
       <InitgPty>
-        <Nm>${esc(params.debtorName.slice(0, 70))}</Nm>
+        <Nm>${esc(params.debtorName.slice(0, 70))}</Nm>${params.iniciadorId ? `
+        <Id>
+          <OrgId>
+            <Othr>
+              <Id>${esc(params.iniciadorId.slice(0, 35))}</Id>
+            </Othr>
+          </OrgId>
+        </Id>` : ''}
       </InitgPty>
     </GrpHdr>
     <PmtInf>
@@ -91,7 +132,10 @@ export function generarSepaXml(params: SepaDocumentoParams): string {
       <PmtTpInf>
         <SvcLvl>
           <Cd>SEPA</Cd>
-        </SvcLvl>
+        </SvcLvl>${proposito ? `
+        <CtgyPurp>
+          <Cd>${proposito}</Cd>
+        </CtgyPurp>` : ''}
       </PmtTpInf>
       <ReqdExctnDt>${params.fechaEjecucion}</ReqdExctnDt>
       <Dbtr>

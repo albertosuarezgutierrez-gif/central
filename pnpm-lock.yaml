@@ -998,6 +998,9 @@ importers:
       '@central/module-chat':
         specifier: file:../../packages/module-chat
         version: link:../../packages/module-chat
+      '@central/module-contabilidad':
+        specifier: file:../../packages/module-contabilidad
+        version: link:../../packages/module-contabilidad
       '@central/module-documental':
         specifier: file:../../packages/module-documental
         version: link:../../packages/module-documental
@@ -1010,6 +1013,9 @@ importers:
       '@central/module-nominas':
         specifier: file:../../packages/module-nominas
         version: link:../../packages/module-nominas
+      '@central/module-pagos':
+        specifier: file:../../packages/module-pagos
+        version: link:../../packages/module-pagos
       '@central/module-rrhh':
         specifier: file:../../packages/module-rrhh
         version: file:packages/module-rrhh

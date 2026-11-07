@@ -5,7 +5,8 @@
  */
 import { centimosAEuros, eurosACentimos, fraccionAPpm } from './dinero'
 import { calcularNominaCentimos, type ModoCalculo, type NominaCentimos } from './motor'
-import type { TablaAnual } from './tablas'
+import type { SituacionFamiliar } from './situacion-familiar'
+import type { TablaAnual, TablaIrpf } from './tablas'
 import type { ContratoLaboral, IncidenciaMes, NominaDesglose } from './tipos'
 
 export interface OpcionesNominaEuros {
@@ -14,7 +15,23 @@ export interface OpcionesNominaEuros {
   atEp: number | null
   modo: ModoCalculo
   diasLaborablesMes?: number
+  /** Tiempo parcial: horas realmente trabajadas en el mes (mínimos por hora). Sin dato → aproximación pendiente. */
+  horasTrabajadasMes?: number
+  /**
+   * Retención por el ALGORITMO AEAT (RIRPF arts. 82-86) en vez del % plano del contrato. rrhh lo rellena desde
+   * `situacion_familiar` (modelo 145 vigente en la fecha del periodo: `situacionVigente`). `situacion: null` = sin
+   * modelo 145 → art. 88.2 RIRPF (sin circunstancias personales/familiares). Ausente (undefined) = % plano, como antes.
+   */
+  irpfAlgoritmo?: EntradaIrpfAlgoritmo
   tabla?: TablaAnual
+  tablaIrpf?: TablaIrpf
+}
+
+/** Datos del modelo 145 que necesita el algoritmo de retenciones (forma que rellena `apps/rrhh`). */
+export interface EntradaIrpfAlgoritmo {
+  situacion: SituacionFamiliar | null
+  /** Contrato o relación de duración inferior al año (art. 86.2 RIRPF: tipo mínimo 2 %). */
+  duracionInferiorAño?: boolean
 }
 
 export function calcularNomina(contrato: ContratoLaboral, incidencias: IncidenciaMes[], o: OpcionesNominaEuros): NominaDesglose {
@@ -39,8 +56,10 @@ export function calcularNomina(contrato: ContratoLaboral, incidencias: Incidenci
         dias: i.dias,
       })),
       diasLaborablesMes: o.diasLaborablesMes,
+      horasTrabajadasMes: o.horasTrabajadasMes,
+      irpfAlgoritmo: o.irpfAlgoritmo,
     },
-    { modo: o.modo, tabla: o.tabla },
+    { modo: o.modo, tabla: o.tabla, tablaIrpf: o.tablaIrpf },
   )
   return desgloseEnEuros(r)
 }
@@ -87,6 +106,7 @@ export function desgloseEnEuros(r: NominaCentimos): NominaDesglose {
     modo: r.modo,
     cifrasPendientes: r.cifrasPendientes,
     avisos: r.avisos,
+    irpfAlgoritmo: r.irpf === null ? null : { tipoPct: r.irpf.tipoPpm / 10_000, motivo: r.irpf.motivo },
   }
 }
 

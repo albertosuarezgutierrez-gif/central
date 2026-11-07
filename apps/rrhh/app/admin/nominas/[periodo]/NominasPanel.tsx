@@ -1,8 +1,11 @@
 'use client'
 import { useState } from 'react'
 import Page from '@/components/ui/Page'
+import Boton from '@/components/ui/Boton'
+import { eur } from '../formato'
+import RemesaBoton from '../RemesaBoton'
 
-type Incidencia = { id: string; tipo: string; concepto: string; importe: number | null; horas: number | null; dias: number | null }
+type Incidencia = { id: string; tipo: string; concepto: string; importe: number | null; horas: number | null; dias: number | null; periodicidad?: string | null; copiada_de?: string | null }
 type Nomina = {
   id: string
   empleado_id: string
@@ -25,7 +28,9 @@ const TIPOS_INCIDENCIA = [
   { id: 'vacaciones', label: 'Vacaciones' },
 ]
 
-const fmt = (n: number) => n?.toFixed(2) + ' €'
+const fmt = (n: number) => eur(n)
+
+const PERIODICIDAD: Record<string, string> = { mensual: 'cada mes', trimestral: 'cada trimestre', anual: 'cada año' }
 
 export default function NominasPanel({ periodo, inicial }: { periodo: string; inicial: Nomina[] }) {
   const [nominas, setNominas] = useState<Nomina[]>(inicial)
@@ -40,6 +45,35 @@ export default function NominasPanel({ periodo, inicial }: { periodo: string; in
   const [incImporte, setIncImporte] = useState('')
   const [incHoras, setIncHoras] = useState('')
   const [incDias, setIncDias] = useState('')
+  const [incPeriodicidad, setIncPeriodicidad] = useState('')
+  const [incHasta, setIncHasta] = useState('')
+
+  // «Aprobar lote»: confirma las seleccionadas con la misma lógica que «Confirmar» (POST /api/admin/nominas).
+  const [seleccion, setSeleccion] = useState<Set<string>>(new Set())
+  const [aprobando, setAprobando] = useState(false)
+  const [resumenLote, setResumenLote] = useState('')
+  function alternar(id: string) {
+    setSeleccion(s => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n })
+  }
+  async function aprobarLote() {
+    if (!seleccion.size) return
+    setAprobando(true); setError(''); setResumenLote('')
+    const r = await fetch('/api/admin/nominas', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ids: [...seleccion] }),
+    })
+    const j = await r.json().catch(() => ({}))
+    if (r.ok) {
+      const malas = (j.resultados ?? []).filter((x: { ok: boolean }) => !x.ok) as { id: string; error?: string }[]
+      const nombre = (id: string) => nominas.find(n => n.id === id)?.empleado_nombre ?? id
+      const pendientes: string[] = Array.isArray(j.pendientes) ? j.pendientes : []
+      setResumenLote(`${j.confirmadas} confirmada(s)` + (malas.length ? ` · sin confirmar: ${malas.map(m => `${nombre(m.id)} (${m.error ?? 'error'})`).join('; ')}` : '')
+        + (pendientes.length ? ` · quedan ${pendientes.length} sin procesar (siguen seleccionadas): pulsa «Aprobar» otra vez` : ''))
+      // Las que no cupieron en esta llamada siguen marcadas para la siguiente.
+      setSeleccion(new Set(pendientes))
+      await recargar()
+    } else setError(j.error ?? 'Error al aprobar el lote')
+    setAprobando(false)
+  }
 
   async function recargar() {
     const r = await fetch(`/api/admin/nominas?periodo=${periodo}`)
@@ -69,10 +103,11 @@ export default function NominasPanel({ periodo, inicial }: { periodo: string; in
     if (incImporte) body.importe = parseFloat(incImporte)
     if (incHoras) body.horas = parseFloat(incHoras)
     if (incDias) body.dias = parseInt(incDias)
+    if (incPeriodicidad) { body.periodicidad = incPeriodicidad; if (incHasta) body.recurrenteHasta = incHasta }
     const r = await fetch(`/api/admin/nominas/${nominaId}/incidencias`, {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
     })
-    if (r.ok) { setIncConcepto(''); setIncImporte(''); setIncHoras(''); setIncDias(''); await recargar() }
+    if (r.ok) { setIncConcepto(''); setIncImporte(''); setIncHoras(''); setIncDias(''); setIncPeriodicidad(''); setIncHasta(''); await recargar() }
     else setError((await r.json()).error ?? 'Error')
   }
 
@@ -100,13 +135,27 @@ export default function NominasPanel({ periodo, inicial }: { periodo: string; in
 
       {borradores.length > 0 && (
         <section className="mt-6">
-          <h2 className="text-lg mb-2">Borradores ({borradores.length})</h2>
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg">Borradores ({borradores.length})</h2>
+            <div className="flex flex-wrap gap-2">
+              <Boton variante="secundario" onClick={() => setSeleccion(seleccion.size === borradores.length ? new Set() : new Set(borradores.map(b => b.id)))}>
+                {seleccion.size === borradores.length ? 'Quitar selección' : 'Seleccionar todas'}
+              </Boton>
+              <Boton onClick={aprobarLote} disabled={!seleccion.size || aprobando}>
+                {aprobando ? 'Aprobando…' : `Aprobar lote (${seleccion.size})`}
+              </Boton>
+            </div>
+          </div>
+          {resumenLote && <p className="mb-2 text-sm">{resumenLote}</p>}
           <ul className="grid gap-3 list-none p-0">
             {borradores.map(n => (
               <li key={n.id} className="rounded-card border border-line bg-card p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <strong>{n.empleado_nombre}</strong>
+                    <label className="inline-flex min-h-[44px] min-w-[44px] items-center gap-2 align-middle">
+                      <input type="checkbox" checked={seleccion.has(n.id)} onChange={() => alternar(n.id)} aria-label={`Seleccionar ${n.empleado_nombre}`} />
+                      <strong>{n.empleado_nombre}</strong>
+                    </label>
                     <span className="ml-3 text-ink-3 text-sm">
                       Devengado: {fmt(n.datos_calculo?.devengos?.total ?? 0)} ·
                       Neto: {fmt(n.datos_calculo?.netoAPagar ?? 0)}
@@ -132,7 +181,11 @@ export default function NominasPanel({ periodo, inicial }: { periodo: string; in
                       <ul className="list-none p-0 mb-3">
                         {(n.incidencias ?? []).map(i => (
                           <li key={i.id} className="flex justify-between text-sm py-1">
-                            <span>{i.concepto} ({TIPOS_INCIDENCIA.find(t => t.id === i.tipo)?.label ?? i.tipo})</span>
+                            <span>
+                              {i.concepto} ({TIPOS_INCIDENCIA.find(t => t.id === i.tipo)?.label ?? i.tipo})
+                              {i.periodicidad && <span className="ml-2 text-ink-3">· se repite {PERIODICIDAD[i.periodicidad] ?? i.periodicidad}</span>}
+                              {i.copiada_de && <span className="ml-2 text-ink-3">· recurrente</span>}
+                            </span>
                             <button className="text-alert text-xs" onClick={() => delInc(n.id, i.id)}>✕</button>
                           </li>
                         ))}
@@ -146,6 +199,15 @@ export default function NominasPanel({ periodo, inicial }: { periodo: string; in
                       <input placeholder="€ importe" type="number" value={incImporte} onChange={e => setIncImporte(e.target.value)} className="border border-line rounded px-2 py-1 w-24" />
                       <input placeholder="h horas" type="number" value={incHoras} onChange={e => setIncHoras(e.target.value)} className="border border-line rounded px-2 py-1 w-20" />
                       <input placeholder="días" type="number" value={incDias} onChange={e => setIncDias(e.target.value)} className="border border-line rounded px-2 py-1 w-16" />
+                      <select value={incPeriodicidad} onChange={e => setIncPeriodicidad(e.target.value)} className="border border-line rounded px-2 py-1" aria-label="Repetición">
+                        <option value="">Solo este mes</option>
+                        <option value="mensual">Repetir cada mes</option>
+                        <option value="trimestral">Repetir cada trimestre</option>
+                        <option value="anual">Repetir cada año</option>
+                      </select>
+                      {incPeriodicidad && (
+                        <input type="month" value={incHasta} onChange={e => setIncHasta(e.target.value)} className="border border-line rounded px-2 py-1" aria-label="Repetir hasta (vacío = sin fin)" title="Repetir hasta (vacío = sin fin)" />
+                      )}
                       <button onClick={() => addInc(n.id)} disabled={!incConcepto}>+ Añadir</button>
                     </div>
                   </div>
@@ -155,6 +217,8 @@ export default function NominasPanel({ periodo, inicial }: { periodo: string; in
           </ul>
         </section>
       )}
+
+      <RemesaBoton periodo={periodo} confirmadas={confirmadas.length} />
 
       {confirmadas.length > 0 && (
         <section className="mt-6">

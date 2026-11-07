@@ -3,8 +3,10 @@ import Link from 'next/link'
 import { getSesion, AuthError } from '@/lib/tenant'
 import { listarPeriodosConNominas, periodoActual } from '@/lib/nominas'
 import UiPage from '@/components/ui/Page'
+import Boton from '@/components/ui/Boton'
 import DistribuirPdfPanel from './DistribuirPdfPanel'
 import EstadoModuloNominas from './EstadoModuloNominas'
+import ReenviarContabilidadBoton from './ReenviarContabilidadBoton'
 import { leerModulo } from '@/lib/modulos-empresa'
 
 export default async function Page() {
@@ -26,6 +28,13 @@ export default async function Page() {
     >
 
       <EstadoModuloNominas estado={modulo} />
+
+      <nav className="mt-4 flex flex-wrap gap-2" aria-label="Herramientas de nóminas">
+        <Boton variante="secundario" href="/admin/nominas/convenio">Tablas del convenio</Boton>
+        <Boton variante="secundario" href="/admin/nominas/finiquito">Calcular finiquito</Boton>
+      </nav>
+
+      <ReenviarContabilidadBoton />
 
       <DistribuirPdfPanel />
 

@@ -1,11 +1,16 @@
 /**
  * Atrasos (N1): concepto SEPARADO del devengo ordinario, con su año de devengo. No entran en `devengos.total` ni en las
  * bases de cotización del mes (las cotizaciones de los atrasos se liquidan en el mes de devengo —no calculado aquí→ regla
- * `cotizacion_atrasos`—). Retención: tipo del pagador sobre el importe; si el atraso es de un ejercicio anterior el tipo
- * correcto no está contrastado → regla `irpf_atrasos`. Bloquean en modo «calculo».
+ * `cotizacion_atrasos`, que bloquea en modo «calculo»—).
+ * Retención (RIRPF art. 80.1.5.º, BOE-A-2007-6820 consolidado 07/10/2026): los atrasos que corresponda imputar a
+ * EJERCICIOS ANTERIORES se retienen al 15 % fijo; los del año en curso, al tipo del pagador (forman parte de la
+ * retribución anual del art. 83.2, que excluye expresamente los de ejercicios anteriores).
  */
 import { CifraPendienteError } from './cifras'
 import { aplicarTipo, esCentimos, type Centimos, type Ppm } from './dinero'
+
+/** RIRPF art. 80.1.5.º: 15 % para los atrasos imputables a ejercicios anteriores. */
+export const TIPO_ATRASOS_EJERCICIOS_ANTERIORES: Ppm = 150_000
 
 export interface Atraso {
   concepto: string
@@ -38,9 +43,8 @@ export function procesarAtrasos(atrasos: Atraso[], periodo: string, tipoIrpf: Pp
     if (!esCentimos(a.importe) || a.importe <= 0) throw new Error(`Atraso «${a.concepto}»: importe debe ser céntimos enteros > 0`)
     if (!Number.isInteger(a.añoDevengo) || a.añoDevengo > año) throw new Error(`Atraso «${a.concepto}»: año de devengo inválido (${a.añoDevengo})`)
     const ejercicioAnterior = a.añoDevengo < año
-    if (ejercicioAnterior) pend.add('regla:irpf_atrasos')
     if (a.añoDevengo < año - 4) avisos.push(`atraso_posible_prescripcion:${a.concepto}`)
-    return { ...a, ejercicioAnterior, retencion: aplicarTipo(a.importe, tipoIrpf) }
+    return { ...a, ejercicioAnterior, retencion: aplicarTipo(a.importe, ejercicioAnterior ? TIPO_ATRASOS_EJERCICIOS_ANTERIORES : tipoIrpf) }
   })
   if (lineas.length) pend.add('regla:cotizacion_atrasos')
   const total = lineas.reduce((s, l) => s + l.importe, 0)

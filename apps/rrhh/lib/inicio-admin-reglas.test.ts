@@ -3,13 +3,13 @@ import { tarjetasInicio, type DatosInicio } from './inicio-admin-reglas'
 
 const base: DatosInicio = {
   solicitudes: { total: 0, recientes: [] }, firmas: { pendientes: 0, esperandoEmpresa: 0, sinAbrir: 0, masAntiguaDias: null },
-  avisosFallidos: 0, correosFallidos: 0, fichajesAbiertos: undefined,
+  avisosFallidos: 0, correosFallidos: 0, fichajesAbiertos: undefined, contratosVencen: { lineas: [], total: 0, sinFecha: 0 },
 }
 
 describe('Inicio de pendientes del responsable', () => {
   it('todo a cero → tarjetas «ok» y ninguna urgente', () => {
     const t = tarjetasInicio(base)
-    expect(t.map(x => x.id)).toEqual(['solicitudes', 'firmas', 'correos'])
+    expect(t.map(x => x.id)).toEqual(['solicitudes', 'firmas', 'correos', 'contratos'])
     expect(t.every(x => x.tono === 'ok' && !x.urgente)).toBe(true)
   })
   it('lo que pide acción va primero y con el singular/plural correcto', () => {
@@ -27,8 +27,8 @@ describe('Inicio de pendientes del responsable', () => {
     expect(t.find(x => x.id === 'correos')!.tono).toBe('alerta')
   })
   it('null = «no se ha podido comprobar», NUNCA «sin pendientes»', () => {
-    const t = tarjetasInicio({ ...base, solicitudes: null, firmas: null, avisosFallidos: null, correosFallidos: null, fichajesAbiertos: null })
-    expect(t).toHaveLength(4)
+    const t = tarjetasInicio({ ...base, solicitudes: null, firmas: null, avisosFallidos: null, correosFallidos: null, fichajesAbiertos: null, contratosVencen: null })
+    expect(t).toHaveLength(5)
     for (const x of t) { expect(x.tono).toBe('neutro'); expect(x.texto).toContain('No se ha podido comprobar'); expect(x.texto).not.toMatch(/No hay|Nadie|bien/) }
   })
   it('fichajes solo si la empresa los usa', () => {
@@ -42,5 +42,15 @@ describe('Inicio de pendientes del responsable', () => {
       expect(c.texto).toContain('No se ha podido comprobar')
       expect(c.texto).not.toContain('han salido bien')
     }
+  })
+  it('contratos que vencen: al RESPONSABLE, con la lista, y «no se sabe» de los que no tienen fecha', () => {
+    const c = tarjetasInicio({ ...base, contratosVencen: { lineas: ['Ana — 01/12/2026 (dentro de 24 días)'], total: 1, sinFecha: 2 } }).find(x => x.id === 'contratos')!
+    expect(c.urgente).toBe(true)
+    expect(c.lista).toEqual(['Ana — 01/12/2026 (dentro de 24 días)'])
+    expect(c.texto).toContain('1 contrato termina en los próximos 30 días')
+    expect(c.texto).toContain('2 contratos sin fecha de fin')
+    // Sin fecha de fin no se afirma «ninguno vence»: solo los que TIENEN fecha registrada.
+    const cero = tarjetasInicio(base).find(x => x.id === 'contratos')!
+    expect(cero.texto).toBe('Ningún contrato con fecha de fin registrada termina en los próximos 30 días.')
   })
 })
