@@ -63,10 +63,10 @@ Actualizado: 07/11/2026
 
 ## Ideas añadidas al plan (04/11/2026, Alberto: «añade todas»)
 1. **Plantilla de alta de compañía** — tras el primer precio de Pelayo: recorrido común + ficha por compañía (dominios, pasos, pantalla de precio, inicio de emisión) + permisos en BD. Objetivo: compañía nueva en 1–2 pilotajes.
-2. **Comparativa por nivel de cobertura** — agrupar ofertas (bot y Avant2) en terceros / terceros ampliado / todo riesgo con las coberturas guardadas y dar la más barata de cada nivel (hoy «la más barata» compara coberturas distintas).
+2. **Comparativa por nivel de cobertura** — HECHO (07/11: niveles + bot vs Avant2 en el aviso). agrupar ofertas (bot y Avant2) en terceros / terceros ampliado / todo riesgo con las coberturas guardadas y dar la más barata de cada nivel (hoy «la más barata» compara coberturas distintas).
 3. **Corregir datos que hacen fallar** — póliza anterior (Occident exige 5 caracteres; Allianz rechaza `previousInsurancePolicy`) y equivalencia de vehículo en Mapfre.
 4. **Matrícula por bot como primer paso de todo lead de coche** — modo `vehiculo` (0.3.48) rellena la ficha gratis antes de tarificar (activar tras probar con una matrícula real).
-5. **Alarma de compañía sin precio** — Telegram si una compañía lleva 3 días sin precio o encadena errores (datos del panel de estado).
+5. **Alarma de compañía sin precio** — HECHO (PR #5538; apagada con `TARIFICADOR_ALARMA_ACTIVA`, encender en Vercel central-asegura). Telegram si una compañía lleva 3 días sin precio o encadena errores (datos del panel de estado).
 6. **Re-tarificación de cartera en vigor a 45 días del vencimiento** — bot primero; Avant2 solo con el botón 💶.
 Pendiente de Alberto: capturas del panel de Avant2 (prompt de Claude en Chrome), URLs de los pasos de Pelayo, compañías principales por volumen, consulta del código 2115 de Generali a Codeoscopic.
 
