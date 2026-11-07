@@ -171,26 +171,26 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 433 | 83.881 | 73.347.760 | 0 | 0 |
-| `otro` | 427 | 19.188 | 38.706.136 | 21.502.739 | 0 |
-| `lectura-directa` | 366 | 12.362 | 35.096.835 | 0 | 0 |
-| `sql` | 280 | 9.429 | 5.355.597 | 3.040.710 | 37 |
-| `mcp:github` | 363 | 9.159 | 6.642.925 | 58.305.836 | 126 |
-| `escritura` | 261 | 7.220 | 112.525.542 | 0 | 0 |
+| `bash` | 433 | 84.132 | 73.644.116 | 0 | 0 |
+| `otro` | 427 | 19.230 | 38.790.692 | 21.502.739 | 0 |
+| `lectura-directa` | 366 | 12.390 | 35.127.076 | 0 | 0 |
+| `sql` | 280 | 9.462 | 5.364.826 | 3.040.710 | 37 |
+| `mcp:github` | 363 | 9.170 | 6.646.344 | 58.305.836 | 126 |
+| `escritura` | 261 | 7.231 | 112.553.216 | 0 | 0 |
 | `mcp:Vercel` | 95 | 1.605 | 1.379.970 | 237.328 | 52 |
-| `agente:general-purpose` | 164 | 1.565 | 928.968 | 28.796.025 | 0 |
-| `mcp:claude-code-remote` | 96 | 1.550 | 211.480 | 2.985.432 | 0 |
+| `agente:general-purpose` | 164 | 1.567 | 930.074 | 28.798.022 | 0 |
+| `mcp:claude-code-remote` | 96 | 1.558 | 212.401 | 2.985.432 | 0 |
 | `mcp:Gmail` | 75 | 1.540 | 1.677.422 | 0 | 101 |
 | `mcp:Booking-com` | 53 | 1.505 | 6.179.360 | 0 | 0 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
 | `mcp:Google_Drive` | 29 | 998 | 1.137.366 | 0 | 77 |
 | `mcp:Interactive-Brokers--IBKR-` | 18 | 716 | 834.704 | 0 | 0 |
-| `mcp:Supabase` | 164 | 573 | 216.409 | 33.495 | 10 |
-| `agente:agente-architect` | 95 | 571 | 400.373 | 13.564.450 | 0 |
+| `mcp:Supabase` | 165 | 582 | 216.632 | 33.495 | 10 |
+| `agente:agente-architect` | 95 | 577 | 404.454 | 13.602.561 | 0 |
 | `mcp:Google-Drive` | 37 | 178 | 185.960 | 0 | 2 |
 | `agente:agente-mecanico` | 68 | 172 | 89.691 | 8.202.670 | 0 |
 | `mcp:Booking_com` | 5 | 166 | 443.032 | 0 | 0 |
-| `agente:rastreador-codigo` | 73 | 135 | 41.979 | 2.100.141 | 0 |
+| `agente:rastreador-codigo` | 73 | 136 | 42.328 | 2.100.141 | 0 |
 | `mcp:Resend` | 11 | 98 | 86.009 | 0 | 0 |
 | `mcp:idealista` | 3 | 94 | 255.209 | 0 | 34 |
 | `mcp:OpenSEO` | 6 | 94 | 77.612 | 0 | 2 |

@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-07T09:17:39Z",
-  "sha": "b2228ae85ee7fbaf787fc7b23668a72360626f15",
+  "generadoEn": "2026-11-07T10:00:27Z",
+  "sha": "fb48b3e849567d4fd83dac529c4c45e83f54df5d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -28895,6 +28895,27 @@
       "hash": "a7433316d334"
     },
     {
+      "ruta": "apps/asegura/app/api/cron/retencion-cartera/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 20,
+          "resumen": "GET /api/cron/retencion-cartera — calendario automático de RENOVACIÓN de auto y hogar en vigor (F1, 07/11/2026). Diario a las 19:17 UTC (`vercel.json`, fuera de la franja 13-16 UTC). Cerrojos: `CRON_S"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/retencion-cartera",
+      "hash": "8cd6f231222c"
+    },
+    {
       "ruta": "apps/asegura/app/api/cron/revision-anual/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -48137,6 +48158,7 @@
       "resumen": "La COMPARATIVA de una oportunidad con TODAS sus fuentes (20/10/2026, comparativa única) — lo que plataforma pide al abrir la oportunidad. GRATIS: solo lee lo que ya está guardado (ni Codeoscopic ni IA). · Ofertas de la oportunidad (`oportunidad_oferta`: PDF de compañía/competencia y bots) — no desca",
       "exporta": [
         "comparativaDeOportunidad",
+        "ultimaAvant2DeOportunidad",
         "polizaParaComparar"
       ],
       "funciones": [
@@ -48151,7 +48173,7 @@
         {
           "nombre": "ultimaAvant2DeOportunidad",
           "kind": "function",
-          "exportada": false,
+          "exportada": true,
           "params": "correduriaId: string, oportunidadId: string",
           "retorno": null,
           "linea": 126,
@@ -48171,7 +48193,7 @@
         "tarificaciones"
       ],
       "rutaApi": null,
-      "hash": "3769430e5d3f"
+      "hash": "fa88dffa4b05"
     },
     {
       "ruta": "apps/asegura/lib/contacto-portal.ts",
@@ -60592,7 +60614,7 @@
           "exportada": true,
           "params": "e: EntradaCorteRpa",
           "retorno": "string",
-          "linea": 552,
+          "linea": 553,
           "resumen": "Telegram a Alberto cuando el proceso se CORTA (no hay borrador): que no crea que está hecho."
         },
         {
@@ -60601,13 +60623,13 @@
           "exportada": true,
           "params": "riesgos: readonly unknown[]",
           "retorno": "'propietario' | 'inquilino' | null",
-          "linea": 572,
+          "linea": 573,
           "resumen": "Régimen de la vivienda con el que SE TARIFICÓ (hogar), para las necesidades deducidas. Sale del riesgo del trabajo: `hogar.regimen` si consta; si no, `propietario` cuando se tarificó continente (un in"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b0ad62404ede"
+      "hash": "01a881393fc0"
     },
     {
       "ruta": "apps/asegura/lib/presupuesto-rpa.ts",
@@ -60624,7 +60646,7 @@
           "exportada": true,
           "params": "trabajoId: string",
           "retorno": "Promise<ResultadoPresupuestoRpa>",
-          "linea": 72,
+          "linea": 73,
           "resumen": "Lo que llama la ruta del resultado del worker (en `after`) con el trabajo recién cerrado. NUNCA lanza. Trabajos de tarificar CERRADOS (con o sin precio) con oportunidad: el borrador sale cuando no que"
         },
         {
@@ -60633,7 +60655,7 @@
           "exportada": true,
           "params": "correduriaId: string, oportunidadId: string, opts: Opciones = {}",
           "retorno": "Promise<ResultadoPresupuestoRpa>",
-          "linea": 94,
+          "linea": 95,
           "resumen": "El presupuesto en borrador de las ofertas RPA de una oportunidad. Idempotente: si ya hay un borrador del bot (vivo) con EXACTAMENTE las mismas ofertas, devuelve ése y no avisa. Un borrador anterior DE"
         },
         {
@@ -60642,15 +60664,15 @@
           "exportada": false,
           "params": "correduriaId: string, oportunidadId: string, opts: Opciones",
           "retorno": "Promise<ResultadoPresupuestoRpa>",
-          "linea": 102
+          "linea": 103
         },
         {
           "nombre": "nivelesDeOpciones",
           "kind": "function",
           "exportada": false,
-          "params": "ramo: string | null, opciones: readonly { ofertaId: string; compania: string; producto: string; primaEur: number; franquiciaEur: number | null }[], leidaDeOferta: (ofertaId: string) => OfertaRpaLeida | undefined,",
-          "retorno": "ResultadoNiveles | null",
-          "linea": 330,
+          "params": "correduriaId: string, oportunidadId: string, ramo: string | null, opciones: readonly { ofertaId: string; compania: string; producto: string; primaEur: number; franquiciaEur: number | null }[], leidaDeOferta: (ofertaId: string) => OfertaRpaL",
+          "retorno": "Promise<ResultadoNiveles | null>",
+          "linea": 331,
           "resumen": "«La más barata» por nivel de las opciones del borrador. `null` = no se pudo calcular (no se afirma nada). Nunca lanza."
         },
         {
@@ -60659,7 +60681,7 @@
           "exportada": false,
           "params": "vivas: readonly { datosExtra: unknown }[], leidaDe: ReadonlyMap<string, OfertaRpaLeida>, ramo: string | null, filas: readonly { id: string; riesgo: unknown }[], ahora: Date,",
           "retorno": "AvisoCoherencia[] | null",
-          "linea": 350,
+          "linea": 368,
           "resumen": "Los avisos de coherencia de las ofertas vivas leídas. `null` = no se pudo comprobar (no se afirma «sin avisos»). Nunca lanza. La fecha de efecto sale del riesgo de los trabajos de estas ofertas (la má"
         },
         {
@@ -60668,7 +60690,7 @@
           "exportada": false,
           "params": "correduriaId: string, op: { id: string; ramo: string | null }, texto: (base: BaseAviso) => string",
           "retorno": "Promise<boolean>",
-          "linea": 377,
+          "linea": 395,
           "resumen": "Telegram INTERNO a Alberto. Del cliente solo `clientes.nombre` → nombre de pila. Best effort: `false` si no salió."
         },
         {
@@ -60677,7 +60699,7 @@
           "exportada": false,
           "params": "correduriaId: string, oportunidadId: string, ofertaIds: string[], db: Db | Tx = prismaAsegura()",
           "retorno": "Promise<string | null>",
-          "linea": 399,
+          "linea": 417,
           "resumen": "Un borrador del bot, vivo y sin salir, con EXACTAMENTE estas ofertas (`null` = no hay)."
         },
         {
@@ -60686,7 +60708,7 @@
           "exportada": false,
           "params": "correduriaId: string, oportunidadId: string, ahora: Date",
           "retorno": "Promise<Record<string, unknown> | null>",
-          "linea": 412,
+          "linea": 430,
           "resumen": "El análisis del recomendador (control de calidad + ranking) para el estudio. `null` = no se pudo (se dice, no se inventa)."
         }
       ],
@@ -60697,7 +60719,7 @@
         "tarificaciones"
       ],
       "rutaApi": null,
-      "hash": "25e79023449d"
+      "hash": "1ffe02f012ca"
     },
     {
       "ruta": "apps/asegura/lib/presupuesto-seguimiento-llamada.ts",
@@ -64279,6 +64301,282 @@
       "hash": "9b1c4eb1719e"
     },
     {
+      "ruta": "apps/asegura/lib/retencion-cartera-reglas.ts",
+      "ambito": "apps/asegura",
+      "resumen": "RETENCIÓN DE CARTERA F1 (Alberto, 07/11/2026: «automatizar la cartera para retenerla y yo dedicarme a vender»). Lo PURO (sin BD ni red), con test. Diseño: docs/superpowers/specs/2026-11-07-retencion-cartera.md. Calendario de RENOVACIÓN para pólizas EN VIGOR (`esCarteraEnVigor`, lo calcula quien lee)",
+      "exporta": [
+        "preferenciasEfectivas",
+        "diasHasta",
+        "etapaRenovacion",
+        "accionesPendientes",
+        "cicloDeAnualidad",
+        "subidaPrimaRenovacion",
+        "modoRetencion",
+        "lineaPoliza",
+        "contarPorEtapa",
+        "textoEnsayo",
+        "textoResumenDiario",
+        "botonesResumenDiario"
+      ],
+      "funciones": [
+        {
+          "nombre": "preferenciasEfectivas",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PreferenciasRenovacion | null | undefined",
+          "retorno": "PreferenciasEfectivas",
+          "linea": 36,
+          "resumen": "Preferencia del cliente → la que se aplica. `null`/ausente = defecto global (nunca 0). Un valor fuera de rango (la BD lo impide con CHECK; esto es la red) NO se recorta a un valor que el cliente no el"
+        },
+        {
+          "nombre": "diasHasta",
+          "kind": "function",
+          "exportada": true,
+          "params": "vencimiento: string, hoy: string",
+          "retorno": "number | null",
+          "linea": 72,
+          "resumen": "Días naturales de `hoy` (fecha de Madrid, `YYYY-MM-DD`) a `vencimiento` (`YYYY-MM-DD`). `null` si alguna fecha no se lee."
+        },
+        {
+          "nombre": "etapaRenovacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PolizaCalendario, hoy: string, pref?: PreferenciasRenovacion | null",
+          "retorno": "EtapaRenovacion",
+          "linea": 80,
+          "resumen": "¿En qué paso del calendario está la póliza HOY? `hoy` = fecha de Madrid `YYYY-MM-DD`. PURA."
+        },
+        {
+          "nombre": "accionesPendientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "etapa: EtapaRenovacion, ramo: string | null, ciclo: CicloHecho | null",
+          "retorno": "Accion[]",
+          "linea": 108,
+          "resumen": "Las acciones pendientes de la etapa, en orden. Se recupera lo saltado (un día sin cron) mientras quede ventana: en «t45» aún se comprueban los datos; en «t40» aún se lanzan los bots. Solo HOGAR tiene "
+        },
+        {
+          "nombre": "cicloDeAnualidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "ciclos: readonly C[], vencimiento: string",
+          "retorno": "C | null",
+          "linea": 123,
+          "resumen": "De los ciclos de la póliza, el de esta anualidad (vencimiento a ±45 días). PURA."
+        },
+        {
+          "nombre": "importe",
+          "kind": "function",
+          "exportada": false,
+          "params": "t: string | null",
+          "retorno": "number | null",
+          "linea": 139
+        },
+        {
+          "nombre": "subidaPrimaRenovacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: { recibos: readonly ReciboVigencia[]; vencimiento: string; fraccionamiento: string | null; umbralPct: number }",
+          "retorno": "Subida",
+          "linea": 151,
+          "resumen": "¿Sube la prima de la renovación más del umbral? Solo pago ANUAL (un recibo fraccionado es un trozo de la prima, igual que `primaConRecibos`). «Nueva» = recibo de anualidad (CA/NP no anulado) que acaba"
+        },
+        {
+          "nombre": "modoRetencion",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: Record<string, string | undefined>, contar: boolean",
+          "retorno": "'ensayo' | 'activo'",
+          "linea": 168,
+          "resumen": "`RENOVACION_AUTO_ACTIVA=1` y solo «1»: cualquier otra cosa (vacío, «true», «0») = ensayo. `?contar=1` fuerza ensayo. PURA."
+        },
+        {
+          "nombre": "esc",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 187
+        },
+        {
+          "nombre": "fecha",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string | null",
+          "retorno": null,
+          "linea": 188
+        },
+        {
+          "nombre": "lineaPoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "l: LineaPoliza",
+          "retorno": "string",
+          "linea": 195,
+          "resumen": "Una línea por póliza. PURA."
+        },
+        {
+          "nombre": "contarPorEtapa",
+          "kind": "function",
+          "exportada": true,
+          "params": "ls: readonly Pick<LineaPoliza, 'etapa'>[]",
+          "retorno": "Record<EtapaRenovacion, number>",
+          "linea": 200
+        },
+        {
+          "nombre": "textoEnsayo",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: { lineas: readonly LineaPoliza[]; motivo: 'interruptor' | 'sin_migracion' | 'contar'; preferenciasLeidas: boolean }",
+          "retorno": "string",
+          "linea": 210,
+          "resumen": "Telegram de ENSAYO (sin interruptor o sin migración): cuántas hay en cada etapa y qué HARÍA. No se ha creado nada. PURA."
+        },
+        {
+          "nombre": "textoResumenDiario",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: { lineas: readonly LineaPoliza[]; preferenciasLeidas: boolean }",
+          "retorno": "string",
+          "linea": 239,
+          "resumen": "Resumen DIARIO en modo activo. Lista explícitamente cada póliza con lo hecho hoy. Las propuestas llegan además cada una en su propio Telegram de revisión (con su ✅ por póliza, el de siempre): este res"
+        },
+        {
+          "nombre": "botonesResumenDiario",
+          "kind": "function",
+          "exportada": true,
+          "params": "lineas: readonly LineaPoliza[], urlPoliza: (polizaId: string) => string",
+          "retorno": "",
+          "linea": 267,
+          "resumen": "Botones del resumen: SOLO enlaces a la póliza en plataforma (con sesión). Ninguno envía nada. Uno por propuesta, máx. 10. PURA."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3429ac0bfa15"
+    },
+    {
+      "ruta": "apps/asegura/lib/retencion-cartera.ts",
+      "ambito": "apps/asegura",
+      "resumen": "RETENCIÓN DE CARTERA F1 (07/11/2026): la parte con BD y Telegram del calendario de renovación. Reglas PURAS (con test) en `retencion-cartera-reglas.ts`; diseño en docs/superpowers/specs/2026-11-07-retencion-cartera.md. Migración `prisma/sql/2026-11-07a_retencion_cartera.sql` (NO APLICADA a la fecha)",
+      "exporta": [
+        "migracionRetencion",
+        "ejecutarRetencionCartera"
+      ],
+      "funciones": [
+        {
+          "nombre": "db",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 28
+        },
+        {
+          "nombre": "ausente",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "e: unknown",
+          "retorno": null,
+          "linea": 33
+        },
+        {
+          "nombre": "migracionRetencion",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<boolean>",
+          "linea": 36,
+          "resumen": "¿Está la migración 2026-11-07a? Un fallo que NO es «falta la tabla/columna» se propaga."
+        },
+        {
+          "nombre": "leerPreferencias",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, clienteIds: readonly string[]",
+          "retorno": "Promise<Map<string, PreferenciasRenovacion> | null>",
+          "linea": 47,
+          "resumen": "Preferencias por cliente. `null` = no se pudieron leer (sin tabla): se aplican los DEFECTOS y se dice."
+        },
+        {
+          "nombre": "leerCandidatas",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, hoy: string",
+          "retorno": "Promise<Candidata[]>",
+          "linea": 69,
+          "resumen": "Auto y hogar EN VIGOR cuyo vencimiento CON RECIBOS cae dentro del horizonte. La consulta trae también las de fecha pasada (Allianz renueva solo en el recibo): el vencimiento real lo decide `vencimient"
+        },
+        {
+          "nombre": "leerCiclos",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, polizaIds: readonly string[]",
+          "retorno": "Promise<Map<string, FilaCiclo[]>>",
+          "linea": 101
+        },
+        {
+          "nombre": "reservarCiclo",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, c: Candidata, existente: FilaCiclo | null",
+          "retorno": "Promise<string | null>",
+          "linea": 113,
+          "resumen": "Crea (si no hay) el ciclo de la anualidad y lo RESERVA 15 min. `null` = otra pasada lo tiene: no se toca."
+        },
+        {
+          "nombre": "soltarCiclo",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, id: string",
+          "retorno": "Promise<void>",
+          "linea": 131
+        },
+        {
+          "nombre": "sellar",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, id: string, a: Accion, resultado: string, presupuestoId: string | null = null",
+          "retorno": "Promise<void>",
+          "linea": 136,
+          "resumen": "Sella un paso como HECHO (CAS: si ya estaba, no se pisa). El resultado es un estado corto, nunca un valor."
+        },
+        {
+          "nombre": "anotarIntento",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, id: string, a: Accion, resultado: string",
+          "retorno": "Promise<void>",
+          "linea": 144,
+          "resumen": "Anota (sin sellar) el último resultado de un intento que se repetirá mañana."
+        },
+        {
+          "nombre": "ejecutar",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, c: Candidata, a: Accion",
+          "retorno": "Promise<",
+          "linea": 155,
+          "resumen": "Ejecuta UNA acción. Devuelve el estado corto y si queda HECHA (se sella) o se reintenta mañana. Cada función reutilizada ya manda su propio Telegram de revisión a Alberto con su ✅; aquí no se manda na"
+        },
+        {
+          "nombre": "ejecutarRetencionCartera",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: { contar: boolean }, env: Record<string, string | undefined> = process.env, ahora = new Date()",
+          "retorno": "Promise<ResumenRetencion>",
+          "linea": 189
+        }
+      ],
+      "tablas": [
+        "renovacion_ciclo",
+        "renovacion_preferencias",
+        "set"
+      ],
+      "rutaApi": null,
+      "hash": "c3d20a7a03f5"
+    },
+    {
       "ruta": "apps/asegura/lib/revision-anual.ts",
       "ambito": "apps/asegura",
       "resumen": "La revisión anual del portal — el ENVÍO (20/09/2026). Una vez al año, a quien marcó la casilla comercial del portal, un correo con los seguros suyos que vencen en los próximos meses. QUIÉN lo recibe lo decide `tocaRevisionAnual()` de `@central/module-seguros-portal` (puro y probado); aquí solo se le",
@@ -67295,7 +67593,9 @@
         "nivelHogar",
         "nivelDeOferta",
         "masBarataPorNivel",
-        "lineasMasBarataPorNivel"
+        "lineasMasBarataPorNivel",
+        "parejasBotAvant2",
+        "lineasBotVsAvant2"
       ],
       "funciones": [
         {
@@ -67304,7 +67604,7 @@
           "exportada": false,
           "params": "ramo: string | null | undefined",
           "retorno": "ramo is 'auto' | 'moto'",
-          "linea": 73
+          "linea": 76
         },
         {
           "nombre": "texto",
@@ -67312,7 +67612,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string",
-          "linea": 74
+          "linea": 77
         },
         {
           "nombre": "garantiasDe",
@@ -67320,7 +67620,7 @@
           "exportada": false,
           "params": "ramo: 'auto' | 'moto' | 'hogar', o: OfertaParaNivel",
           "retorno": "Record<string, EstadoGarantia> | null",
-          "linea": 76
+          "linea": 79
         },
         {
           "nombre": "primaValida",
@@ -67328,7 +67628,7 @@
           "exportada": false,
           "params": "p: number | null | undefined",
           "retorno": "p is number",
-          "linea": 82
+          "linea": 85
         },
         {
           "nombre": "nivelVehiculo",
@@ -67336,7 +67636,7 @@
           "exportada": true,
           "params": "ramo: 'auto' | 'moto', o: OfertaParaNivel",
           "retorno": "ClasificacionNivel",
-          "linea": 87,
+          "linea": 90,
           "resumen": "El nivel de UNA oferta de coche o moto. PURO."
         },
         {
@@ -67345,7 +67645,7 @@
           "exportada": true,
           "params": "o: OfertaParaNivel",
           "retorno": "ClasificacionNivel",
-          "linea": 135,
+          "linea": 138,
           "resumen": "El nivel de UNA oferta de hogar: continente/contenido + RC + daños eléctricos. Cualquiera sin afirmar → sin clasificar. PURO."
         },
         {
@@ -67354,7 +67654,7 @@
           "exportada": true,
           "params": "ramo: string | null | undefined, o: OfertaParaNivel",
           "retorno": "ClasificacionNivel",
-          "linea": 156,
+          "linea": 159,
           "resumen": "El nivel de una oferta en su ramo. Ramo sin reglas (vida, decesos…) → sin clasificar. PURO."
         },
         {
@@ -67363,7 +67663,7 @@
           "exportada": false,
           "params": "ramo: 'auto' | 'moto' | 'hogar', clave: string",
           "retorno": "string",
-          "linea": 164
+          "linea": 167
         },
         {
           "nombre": "masBarataPorNivel",
@@ -67371,7 +67671,7 @@
           "exportada": true,
           "params": "ramo: string | null | undefined, ofertas: readonly OfertaParaNivel[]",
           "retorno": "ResultadoNiveles",
-          "linea": 172,
+          "linea": 175,
           "resumen": "Agrupa las ofertas por nivel y da la más barata de cada uno. PURO. Orden de los niveles: coche/moto de menos a más cobertura; hogar, por la prima de su más barata."
         },
         {
@@ -67380,13 +67680,47 @@
           "exportada": true,
           "params": "r: ResultadoNiveles | null | undefined, max = MAX_LINEAS_NIVELES",
           "retorno": "string[]",
-          "linea": 233,
+          "linea": 236,
           "resumen": "Las líneas «💶 Más barata por nivel …» del Telegram (texto PLANO: el que las pinta en HTML las escapa). Como mucho `MAX_LINEAS_NIVELES`. Sin ninguna oferta → `[]` (no se dice nada). Sin ningún nivel →"
+        },
+        {
+          "nombre": "claveCompania",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "c: string",
+          "retorno": "string",
+          "linea": 273
+        },
+        {
+          "nombre": "redondea",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number, d: number",
+          "retorno": "number",
+          "linea": 274
+        },
+        {
+          "nombre": "parejasBotAvant2",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ResultadoNiveles | null | undefined",
+          "retorno": "ParejaBotAvant2[]",
+          "linea": 280,
+          "resumen": "Por nivel y compañía con precio de AMBOS orígenes: la más barata del bot frente a la más barata de Avant2. PURO. Sin origen declarado, o con un solo origen, no hay pareja (nunca se inventa la otra mit"
+        },
+        {
+          "nombre": "lineasBotVsAvant2",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ResultadoNiveles | null | undefined, max = MAX_LINEAS_BOT_AVANT2",
+          "retorno": "string[]",
+          "linea": 307,
+          "resumen": "Líneas «🔁 Bot vs Avant2 …» del Telegram (texto plano), como mucho `max`. Sin parejas → `[]`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4ad14fd0e51a"
+      "hash": "a36a91c5b8f9"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-alarma-reglas.ts",
@@ -77569,12 +77903,12 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 10
+          "linea": 9
         }
       ],
       "tablas": [],
       "rutaApi": "/api/auth/solicitar",
-      "hash": "09ff0c41e8f1"
+      "hash": "f31d36ccd9df"
     },
     {
       "ruta": "apps/contabilidad/app/api/auth/verificar/route.ts",
@@ -79049,13 +79383,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 17,
+          "linea": 19,
           "resumen": "Correo → código de 6 dígitos (mismo modelo que el Portal del Empleado)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b49ce2f61514"
+      "hash": "1e73dda21d55"
     },
     {
       "ruta": "apps/contabilidad/app/login/page.tsx",
@@ -79322,7 +79656,7 @@
           "exportada": true,
           "params": "repo: RepoAcceso, canal: CanalCodigo, entrada: { email: unknown; ip: string }, ahora = new Date(),",
           "retorno": "Promise<ResultadoSolicitar>",
-          "linea": 62
+          "linea": 60
         },
         {
           "nombre": "verificarCodigo",
@@ -79330,7 +79664,7 @@
           "exportada": true,
           "params": "repo: RepoAcceso, entrada: { email: unknown; codigo: unknown }, ahora = new Date(),",
           "retorno": "Promise<ResultadoVerificar>",
-          "linea": 89,
+          "linea": 88,
           "resumen": "Reserva intento → compara → gasta → usuario activo con al menos una empresa."
         },
         {
@@ -79339,13 +79673,13 @@
           "exportada": true,
           "params": "empresas: readonly EmpresaDeUsuario[]",
           "retorno": "string | null",
-          "linea": 111,
+          "linea": 110,
           "resumen": "Con UNA empresa se entra directo; con varias (gestor) se elige. La elección se revalida siempre en BD (`sesion_vigente`)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e2b380e9c9b2"
+      "hash": "49e4faf8881e"
     },
     {
       "ruta": "apps/contabilidad/lib/actividad.ts",
@@ -79607,6 +79941,46 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "73aa0f4cb716"
+    },
+    {
+      "ruta": "apps/contabilidad/lib/canal-correo.ts",
+      "ambito": "apps/contabilidad",
+      "resumen": "Canal de correo del código de acceso: mismo proveedor que rrhh y asegura-portal (`createMailTransporter` de core-email: RESEND_API_KEY → SMTP_* → GMAIL_*) y misma marca de correo (`conMarcaCorreo`/`remitenteCorreo` de module-seguros).",
+      "exporta": [
+        "correoCodigoAcceso",
+        "obtenerCanalCorreo"
+      ],
+      "funciones": [
+        {
+          "nombre": "esc",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 8
+        },
+        {
+          "nombre": "correoCodigoAcceso",
+          "kind": "function",
+          "exportada": true,
+          "params": "codigo: string",
+          "retorno": "",
+          "linea": 11,
+          "resumen": "Asunto, texto y HTML del correo del código. Puro para testearlo."
+        },
+        {
+          "nombre": "obtenerCanalCorreo",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "CanalCodigo | null",
+          "linea": 26,
+          "resumen": "`null` = no hay proveedor de correo configurado (la ruta responde 503). `enviar` no lanza: 'fallido' si el proveedor falla."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0a081a9f3bde"
     },
     {
       "ruta": "apps/contabilidad/lib/cierre-carga.ts",
@@ -81795,6 +82169,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "716da02ac340"
+    },
+    {
+      "ruta": "apps/contabilidad/lib/solicitar-acceso.ts",
+      "ambito": "apps/contabilidad",
+      "resumen": "Lógica de `POST /api/auth/solicitar` sin Next (se prueba con node:test). 503 `canal_no_disponible` (sin proveedor de correo; depende del entorno, no del correo pedido) ≠ 502 `envio_fallido` (el proveedor falló con un usuario real). Respuesta idéntica exista o no el correo.",
+      "exporta": [
+        "resolverSolicitud"
+      ],
+      "funciones": [
+        {
+          "nombre": "resolverSolicitud",
+          "kind": "function",
+          "exportada": true,
+          "params": "repo: RepoAcceso, entrada: { email: unknown; ip: string }, canalDe: () => CanalCodigo | null = obtenerCanalCorreo,",
+          "retorno": "Promise<RespuestaSolicitud>",
+          "linea": 8
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f385572a2194"
     },
     {
       "ruta": "apps/contabilidad/middleware.ts",
@@ -299866,7 +300261,7 @@
     }
   ],
   "resumen": {
-    "archivos": 6132,
-    "funciones": 24290
+    "archivos": 6137,
+    "funciones": 24326
   }
 }
