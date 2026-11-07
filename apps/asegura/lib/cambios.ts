@@ -57,6 +57,8 @@ export const CAMPOS_CON_VALOR: ReadonlySet<string> = new Set([
   'trabajo_tarificador.imagen_prueba',
   // Presupuesto enviado a una PERSONA DE CONTACTO (21/10/2026): el valor es el uuid de SU ficha, no un dato personal.
   'presupuesto.destinatario_tercero',
+  // Descuento comercial finalmente aceptado en el ReRate (07/11/2026): `dtoCap=30;dtoVentaCruzada=30`, porcentajes, sin datos de nadie.
+  'oferta.descuento_aplicado',
 ])
 
 /** Tope por fila: una escritura masiva no convierte la auditoría en un volcado. */

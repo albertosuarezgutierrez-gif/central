@@ -15,7 +15,8 @@ import {
   completarPersonas,
   type ResultadoCompletar,
 } from '@/lib/codeoscopic/emitir'
-import { conDescuentos, descuentosDelCuerpo, opcionesParaReRate, opcionesPorDefecto } from '@/lib/codeoscopic/opciones-producto'
+import { conDescuentos, descuentosDelCuerpo, idsDescuentoPorDefecto, opcionesParaReRate, opcionesPorDefecto } from '@/lib/codeoscopic/opciones-producto'
+import { descuentosEnOpciones, rebajarDescuento } from '@/lib/codeoscopic/descuento-adaptativo'
 import {
   interpretarError400,
   interpretarCamposProducto,
@@ -30,7 +31,7 @@ import { conLibroDeEmision, type GastoEmision } from '@/lib/codeoscopic/libro-em
 import { huellaEmision } from '@/lib/codeoscopic/huella'
 import { RE_FECHA, RE_TELEFONO } from '@/lib/codeoscopic/persona'
 import { fechaEfectoCaducada, reparoFechaCaducada, mensajeFechaCaducada, motivoFechaEfectoInvalida } from '@/lib/codeoscopic/fecha-efecto'
-import { auditado } from '@/lib/auditoria'
+import { anotarCambio, auditado } from '@/lib/auditoria'
 import { tipoDeRamo } from '@/lib/codeoscopic/contexto-emision'
 
 export const runtime = 'nodejs'
@@ -337,6 +338,12 @@ export const POST = auditado(async (req: Request) => {
     // 30/09/2026: lo que no cuadra de la opción elegida viaja con la oferta, delante de los avisos
     // de la compañía: el panel de emisión es el último sitio donde se puede ver antes de emitir.
     let reparosElegido: string[] = []
+    // 07/11/2026: descuento adaptativo. Se pide el máximo y, si la compañía rechaza el ReRate por el descuento, se baja
+    // (`descuento-adaptativo.ts`). Solo ids que puso el código; NUNCA con las opciones del formulario del corredor.
+    const idsNuestros = [...new Set([...idsDescuentoPorDefecto(compania, producto), ...Object.keys(descuentosPedidos ?? {})])]
+    const rebajesDto: Record<string, number> = {}
+    let intentosDto: Record<string, number> = {}
+    let opcionesEnviadas: unknown = null
     while (oferta === null) {
       const modalidad = cadena(cuerpo.modalidad)
       const precio = encontrarPrecio(cotizacion, compania, categoria, {
@@ -389,6 +396,12 @@ export const POST = auditado(async (req: Request) => {
           }
           opcionesRerate = conDto.opciones as typeof opcionesBase
         }
+        // Rebajas ya acordadas con la compañía en reintentos anteriores de ESTA petición (otro cuerpo = otra huella: no es doble clic).
+        if (!productOptionsCorredor && Object.keys(rebajesDto).length > 0) {
+          const reb = conDescuentos(opcionesRerate, rebajesDto)
+          if (reb.ok) opcionesRerate = reb.opciones as typeof opcionesBase
+        }
+        opcionesEnviadas = opcionesRerate
         const gasto = await conLibroDeEmision(
           {
             correduriaId: t.correduria_id,
@@ -421,6 +434,16 @@ export const POST = auditado(async (req: Request) => {
       } catch (e) {
         if (!(e instanceof ErrorCodeoscopic) || e.clase !== 'validacion') throw e
         const interp = interpretarError400(e.detalle)
+        // Descuento rechazado: se baja y se repite (cada intento pasa por el libro, con su huella propia). Solo si el 400 no
+        // pide campos de persona; si mezcla, manda la cascada y el descuento se reintenta en la vuelta siguiente.
+        if (!productOptionsCorredor && interp.campos.length === 0) {
+          const reb = rebajarDescuento(e.detalle, opcionesEnviadas, idsNuestros, intentosDto)
+          if (reb) {
+            Object.assign(rebajesDto, reb.rebajados)
+            intentosDto = reb.intentos
+            continue
+          }
+        }
         // Nada que reparar como campo de PERSONA. Antes de rendirse, ¿es un
         // hueco de `product.options` (formulario de la compañía, no de la
         // persona)? Si el corredor YA mandó unas opciones y el vendor las
@@ -534,9 +557,23 @@ export const POST = auditado(async (req: Request) => {
     // ANTES del Submit: el Submit es el contrato, y con qué cuenta se domicilia
     // no puede ser una sorpresa del mensaje de «emitida». Gratis (BD).
     const cuenta = await cuentaDeFicha(t.correduria_id, t.poliza_id, t.cliente_id)
+    // El descuento que la compañía ha aceptado de verdad (solo los campos que puso el código), a la vista de Alberto.
+    const descuentoAplicado = productOptionsCorredor ? {} : descuentosEnOpciones(opcionesEnviadas, idsNuestros)
+    const hayDescuento = Object.keys(descuentoAplicado).length > 0
+    if (hayDescuento) {
+      anotarCambio({
+        entidad: 'oferta',
+        id: projectId,
+        campo: 'descuento_aplicado',
+        despues: Object.entries(descuentoAplicado).map(([k, v]) => `${k}=${v}`).join(';'),
+      })
+    }
     return NextResponse.json({
       estado: 'ok',
       projectId: projectId,
+      ...(hayDescuento
+        ? { descuentoAplicado, descuentoReintentos: Object.values(intentosDto).reduce((a, b) => a + b, 0) }
+        : {}),
       oferta: reparosElegido.length > 0 ? { ...oferta, avisos: [...reparosElegido.map((m) => `⚠️ ${m}`), ...oferta.avisos] } : oferta,
       // TRES formas, no dos: la cuenta (enmascarada) · un aviso de por qué no
       // hay una utilizable (`ilegible` / `invalida` / `no_comprobada`) · null =
