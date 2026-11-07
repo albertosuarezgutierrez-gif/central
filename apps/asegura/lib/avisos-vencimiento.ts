@@ -130,6 +130,7 @@ function diaUtc(d: Date): Date {
 }
 
 import { descifrar, pareceEmail, emailAvisable, destinatarioDeCliente, type ClienteConEmails } from './avisos-vencimiento-reglas.ts'
+import { emailBloqueado } from './email-estado.ts'
 export { destinatarioDeCliente, type ClienteConEmails }
 
 // ── Persona de referencia (19/09/2026) ───────────────────────────────────────
@@ -163,7 +164,7 @@ async function leerIntervinientesDePoliza(
       select: {
         id: true, polizaId: true, rol: true, clienteId: true, origen: true,
         nombre: true, apellidos: true, email: true,
-        cliente: { select: { nombre: true, apellidos: true, email: true, emailOptOutAt: true } },
+        cliente: { select: { nombre: true, apellidos: true, email: true, emailOptOutAt: true, emailRebotadoAt: true } },
       },
     })
     return filas.map((f) => {
@@ -181,7 +182,8 @@ async function leerIntervinientesDePoliza(
       // con un email propio con formato roto (dato sucio, no ausente) y nunca
       // habría probado el de la ficha, que puede ser el bueno.
       const emailPropio = descifrar(f.email)
-      const emailDeFicha = f.cliente && !f.cliente.emailOptOutAt ? descifrar(f.cliente.email) : null
+      // Email rebotado de esa ficha (07/11/2026): tampoco cuenta, la dirección no vale.
+      const emailDeFicha = f.cliente && !emailBloqueado(f.cliente) ? descifrar(f.cliente.email) : null
       const email = emailAvisable(emailPropio) ? emailPropio : emailAvisable(emailDeFicha) ? emailDeFicha : null
       return {
         id: f.id, polizaId: f.polizaId, rol: String(f.rol),
@@ -234,7 +236,7 @@ async function leerAllegadosDeTomador(
         activo: true,
       },
       select: {
-        id: true, nombre: true, apellidos: true, emailOptOutAt: true, email: true,
+        id: true, nombre: true, apellidos: true, emailOptOutAt: true, emailRebotadoAt: true, email: true,
         emails: { select: { email: true, esPrincipal: true, createdAt: true } },
       },
     })
@@ -388,6 +390,7 @@ export async function ejecutarAvisosVencimiento(opts: {
               nombre: true,
               apellidos: true,
               emailOptOutAt: true,
+              emailRebotadoAt: true,
               email: true,
               emails: { select: { email: true, esPrincipal: true, createdAt: true } },
             },
@@ -492,6 +495,7 @@ export async function ejecutarAvisosVencimiento(opts: {
     // 🚨 PERO si el tomador se dio de BAJA de correo, no se le rodea escribiendo
     // a un tercero sobre su póliza: la baja es una decisión suya, no «no tengo
     // dirección». `sinCanal` ya documenta este caso («...o baja de correo»).
+    // Un email REBOTADO sí es «no tengo dirección» (07/11/2026): ahí se prueba la alternativa.
     if (!destino && poliza && o.polizaId && !poliza.cliente.emailOptOutAt) {
       const [intervinientes, allegados] = await Promise.all([
         leerIntervinientesDePoliza(db, poliza.correduriaId, poliza.cliente.id, o.polizaId),

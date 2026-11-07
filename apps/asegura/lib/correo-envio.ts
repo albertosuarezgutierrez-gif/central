@@ -57,6 +57,8 @@ export type EnvioDetallado = {
   resultado: ResultadoCorreoCliente; motivo?: string; codigo?: string
   /** `true` = Resend devolvió un id que YA estaba en `correo_envio`: reintento deduplicado por la clave de idempotencia. */
   repetido?: boolean
+  /** Id de Resend del correo (solo si salió por la API): ata sus eventos a quien lo pidió (p. ej. la felicitación). */
+  resendId?: string
 }
 
 export async function enviarCorreoCliente(c: CorreoCliente, fetchImpl: typeof fetch = fetch): Promise<ResultadoCorreoCliente> {
@@ -117,7 +119,7 @@ export async function enviarCorreoSeguido(c: CorreoCliente, fetchImpl: typeof fe
         return { resultado: 'rechazado', motivo, codigo: String(res.status) }
       }
       const registro = await registrarEnvioCorreo({ ...base, resendId: json.id, proveedor: 'resend_api', estado: 'enviado' })
-      return { resultado: 'enviado', ...(registro === 'repetido' ? { repetido: true } : {}) }
+      return { resultado: 'enviado', resendId: json.id, ...(registro === 'repetido' ? { repetido: true } : {}) }
     } catch (e) {
       const motivo = e instanceof Error ? e.message : String(e)
       console.error(`[correo-envio] fallo de red con Resend («${c.tipo}»):`, motivo)

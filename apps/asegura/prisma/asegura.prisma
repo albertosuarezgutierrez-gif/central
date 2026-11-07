@@ -264,6 +264,14 @@ model Cliente {
   waOptOutSource      String?            @map("wa_opt_out_source") @db.VarChar(30)
   emailOptOutAt       DateTime?          @map("email_opt_out_at") @db.Timestamp(6)
   emailOptOutSource   String?            @map("email_opt_out_source") @db.VarChar(30)
+  /// Email MALO (rebote duro o supresión de Resend), 07/11/2026. ≠ baja: la baja es «no quiere» y no se limpia
+  /// nunca; esta se limpia sola si cambia la dirección (trigger de `prisma/sql/2026-11-07_email_rebotado.sql`).
+  /// Ningún envío automático escribe a una ficha marcada. NULL = no consta rebote (no prueba que el email valga).
+  emailRebotadoAt     DateTime?          @map("email_rebotado_at") @db.Timestamptz(6)
+  /// 'rebote' | 'rebote:<subtipo>' | 'suprimido'. Nunca el texto del servidor remoto (puede llevar la dirección).
+  emailRebotadoMotivo String?            @map("email_rebotado_motivo") @db.VarChar(60)
+  /// Índice ciego de la dirección que rebotó (NULL = no se pudo calcular).
+  emailRebotadoHash   String?            @map("email_rebotado_hash")
   emailLookupHash     String?            @map("email_lookup_hash")
   emailDominioHash    String?            @map("email_dominio_hash")
   emailUsuarioHash    String?            @map("email_usuario_hash")
@@ -1466,6 +1474,8 @@ model Felicitacion {
   dia          DateTime @db.Date
   canal        String
   creadoEn     DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  /// Id de Resend del correo de felicitación (07/11/2026): ata sus eventos al embudo. NULL = sin correo, por SMTP o anterior.
+  resendMessageId String? @map("resend_message_id")
 
   @@unique([clienteId, anio], map: "felicitacion_una_por_anio")
   @@index([dia], map: "idx_felicitacion_dia")

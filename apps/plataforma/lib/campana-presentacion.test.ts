@@ -65,7 +65,7 @@ test('estadoPersona: rebote y baja pesan más que la etapa', () => {
 const per = (id: string, etapa: PersonaCampana['etapa'], o: Partial<PersonaCampana> = {}): PersonaCampana => ({
   clienteId: id, nombre: id, email: `${id}@x.es`, lote: 1, loteFecha: '2026-10-15', variante: 'A', etapa,
   enviadoEn: '2026-10-15T08:00:00Z', entregadoEn: null, abiertoEn: null, clicEn: null, visitaEn: null,
-  registradoEn: null, bajaEn: null, rebotadoEn: null, ...o,
+  registradoEn: null, bajaEn: null, rebotadoEn: null, estadoEmail: null, contactabilidad: null, ...o,
 })
 
 test('personasDelPaso: cada lista tiene tantas filas como la cifra del embudo (cumulativo, sin fallidos)', () => {
@@ -97,5 +97,41 @@ test('campanaDeParametro: por defecto la de leads; la del aviso de vencimiento s
   assert.equal(campanaDeParametro('aviso_venc_app'), 'aviso_venc_app')
   assert.equal(campanaDeParametro('presentacion_app'), 'presentacion_app')
   assert.equal(campanaDeParametro('otra; drop'), null)
-  assert.deepEqual(CAMPANAS_CORREO.map((c) => c.id), ['presentacion_app', 'aviso_venc_app'])
+  assert.deepEqual(CAMPANAS_CORREO.map((c) => c.id), ['presentacion_app', 'aviso_venc_app', 'felicitacion'])
+})
+
+// ─── Felicitaciones (07/11/2026) ─────────────────────────────────────────────
+test('felicitaciones: «entró al portal» es independiente (su % sobre los felicitados) y no hay «Registrados»', () => {
+  const def = CAMPANAS_CORREO.find((c) => c.id === 'felicitacion')
+  assert.ok(def && 'forma' in def)
+  const p = pasosEmbudo(emb({ enviados: 100, entregados: 90, abiertos: 40, clics: 5, visitas: 20, registrados: 0 }), def.forma)
+  assert.deepEqual(p.map((x) => x.etiqueta), ['Felicitados', 'Entregados', 'Abiertos', 'Clics', 'Entró al portal (≤7 días)'])
+  assert.deepEqual(p.map((x) => x.pctPrevio), [null, 90, 44, 13, 20])
+  assert.equal(p[4].base, 'enviados')
+  assert.equal(campanaDeParametro('felicitacion'), 'felicitacion')
+})
+
+test('felicitaciones: la lista de «entró al portal» es solo quien entró, no quien hizo clic', () => {
+  const pers = (o: Partial<PersonaCampana>): PersonaCampana => ({
+    clienteId: 'c', nombre: 'X', email: null, lote: 2026, loteFecha: '', variante: '', etapa: 'clic', enviadoEn: '2026-01-01T00:00:00Z',
+    entregadoEn: null, abiertoEn: null, clicEn: '2026-01-01T01:00:00Z', visitaEn: null, registradoEn: null, bajaEn: null, rebotadoEn: null,
+    estadoEmail: null, contactabilidad: null, ...o,
+  })
+  const ps = [pers({ clienteId: 'a' }), pers({ clienteId: 'b', etapa: 'entregado', clicEn: null, visitaEn: '2026-01-02T00:00:00Z' })]
+  assert.deepEqual(personasDelPaso(ps, 'visitas', true).map((p) => p.clienteId), ['b'])
+  assert.equal(fechaDelPaso(ps[0], 'visitas', true), null)
+})
+
+test('ilocalizables: ausente = la campaña no lo calcula; null = no se sabe; número = cifra', () => {
+  const r = (total: object) => interpretarCampana(200, { estado: 'ok', embudo: { estado: 'ok', total, personas: [{ clienteId: 'c1', etapa: 'entregado', estadoEmail: 'rebotado', contactabilidad: 'ilocalizable' }] } })
+  const a = r(emb())
+  const b = r({ ...emb(), ilocalizables: null })
+  const c = r({ ...emb(), ilocalizables: 3 })
+  assert.ok(a.estado === 'ok' && b.estado === 'ok' && c.estado === 'ok')
+  if (a.estado !== 'ok' || b.estado !== 'ok' || c.estado !== 'ok') return
+  assert.equal('ilocalizables' in a.total, false)
+  assert.equal(b.total.ilocalizables, null)
+  assert.equal(c.total.ilocalizables, 3)
+  assert.equal(c.personas[0].estadoEmail, 'rebotado')
+  assert.equal(c.personas[0].contactabilidad, 'ilocalizable')
 })

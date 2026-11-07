@@ -6,9 +6,10 @@ import { correduriaUnica } from '@/lib/cartera'
 import { embudoPresentacionApp, pasadaPresentacionApp } from '@/lib/presentacion-app'
 import { CAMPANA_PRESENTACION_APP } from '@central/module-seguros'
 import { CAMPANA_AVISO_VENC_APP } from '@/lib/correo-avisos-intranet'
+import { CAMPANA_FELICITACION, embudoFelicitaciones } from '@/lib/campana-felicitacion'
 
 /** Las campañas que este embudo sabe leer. Otra cosa en `?campana=` es un 400, no «campaña vacía». */
-const CAMPANAS = [CAMPANA_PRESENTACION_APP, CAMPANA_AVISO_VENC_APP] as const
+const CAMPANAS = [CAMPANA_PRESENTACION_APP, CAMPANA_AVISO_VENC_APP, CAMPANA_FELICITACION] as const
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -16,7 +17,7 @@ export const maxDuration = 60
 /**
  * GET /api/operador/campana/presentacion-app — el embudo de la campaña (enviado → entregado → abierto →
  * clic → visita con `?r=` → registrado en el portal) de `?campana=` (`presentacion_app` por defecto, o
- * `aviso_venc_app`) y, con `?seleccion=1`, el ENSAYO de la selección
+ * `aviso_venc_app`, o `felicitacion`: cumpleaños, con «entró al portal ≤7 días» en vez de visita/registro) y, con `?seleccion=1`, el ENSAYO de la selección
  * de hoy (nunca envía: el envío solo lo hace el cron, con sus cerrojos). Solo lectura.
  */
 export async function GET(req: Request) {
@@ -28,7 +29,10 @@ export async function GET(req: Request) {
     const params = new URL(req.url).searchParams
     const campana = params.get('campana') ?? CAMPANA_PRESENTACION_APP
     if (!(CAMPANAS as readonly string[]).includes(campana)) return NextResponse.json({ estado: 'error', motivo: 'campana_desconocida' }, { status: 400 })
-    const embudo = await embudoPresentacionApp(correduria.id, campana)
+    // Las felicitaciones de cumpleaños no viven en `campana_envio`: su embudo se lee de `felicitacion` (07/11/2026).
+    const embudo = campana === CAMPANA_FELICITACION
+      ? await embudoFelicitaciones(correduria.id)
+      : await embudoPresentacionApp(correduria.id, campana)
     if (embudo.estado === 'sin_migracion') return NextResponse.json(embudo, { status: 503 })
     // El ensayo de selección es solo de la campaña a leads (la del aviso no tiene cron propio).
     const conSeleccion = params.get('seleccion') === '1' && campana === CAMPANA_PRESENTACION_APP

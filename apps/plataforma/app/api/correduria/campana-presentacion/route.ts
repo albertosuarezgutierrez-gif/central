@@ -7,7 +7,7 @@ export const maxDuration = 60
 
 /**
  * /api/correduria/campana-presentacion — el embudo de una campaña de correo (`?campana=`,
- * `presentacion_app` por defecto o `aviso_venc_app`).
+ * `presentacion_app` por defecto, `aviso_venc_app` o `felicitacion`).
  * Solo lectura. Reenvía al puerto de asegura con el secreto de operador y devuelve el MISMO status y
  * json; la pantalla lo interpreta con `interpretarCampana`. Sesión de plataforma obligatoria.
  */

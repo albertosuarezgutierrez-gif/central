@@ -1,6 +1,7 @@
 // Destinatario de un aviso: regla pura (sin BD).
 import { decryptField } from '@central/module-seguros-pii'
 import { esCanalCorreduria } from '@central/module-seguros'
+import { emailBloqueado } from './email-estado.ts'
 
 /**
  * Descifra sin convertir un fallo en una ausencia silenciosa: `null` significa
@@ -32,6 +33,8 @@ export function emailAvisable(v: string | null): v is string {
 
 export type ClienteConEmails = {
   emailOptOutAt: Date | null
+  /** Email MALO (rebote duro/supresión). Obligatorio: un `select` que lo olvide no compila. */
+  emailRebotadoAt: Date | null
   email: string | null
   emails: { email: string; esPrincipal: boolean; createdAt: Date }[]
 }
@@ -41,8 +44,8 @@ export type ClienteConEmails = {
  * columna suelta de la ficha. `null` = no hay a quién escribir (o está de baja).
  */
 export function destinatarioDeCliente(c: ClienteConEmails): string | null {
-  // Baja de correo: no se le escribe, y no es un fallo. Es un «no».
-  if (c.emailOptOutAt) return null
+  // Baja de correo («no quiere») o email rebotado («no vale»): no se le escribe, y no es un fallo.
+  if (emailBloqueado(c)) return null
   const orden = [...c.emails].sort((a, b) => {
     if (a.esPrincipal !== b.esPrincipal) return a.esPrincipal ? -1 : 1
     return a.createdAt.getTime() - b.createdAt.getTime()

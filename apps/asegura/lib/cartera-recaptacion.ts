@@ -159,7 +159,7 @@ type FilaCruda = {
   prima: unknown
   /** `null` si no hay teléfono O si el cliente dio de baja WhatsApp (`wa_opt_out_at`). */
   telefono: string | null
-  /** `null` si no hay email O si el cliente dio de baja el correo (`email_opt_out_at`). */
+  /** `null` si no hay email, si el cliente dio de baja el correo (`email_opt_out_at`) o si el email rebotó (`email_rebotado_at`). */
   email: string | null
   ultimoEnvioAt: Date | null
   origen: string
@@ -193,7 +193,8 @@ export async function colaRecaptacion(correduriaId: string): Promise<ColaRecapta
       -- Opt-out POR CANAL, no de la ficha entera: si dio de baja WhatsApp pero
       -- no el email (o al revés), sigue siendo contactable por el otro.
       case when c.wa_opt_out_at is null then c.telefono else null end as telefono,
-      case when c.email_opt_out_at is null then c.email else null end as email,
+      -- Email rebotado (07/11/2026) = no vale: se oculta igual que una baja.
+      case when c.email_opt_out_at is null and c.email_rebotado_at is null then c.email else null end as email,
       (
         select max(r.created_at) from recaptacion_envios r
         where r.cliente_id = c.id
@@ -224,7 +225,7 @@ export async function colaRecaptacion(correduriaId: string): Promise<ColaRecapta
       -- este lead no entra en la cola).
       and (
         (c.telefono is not null and c.wa_opt_out_at is null)
-        or (c.email is not null and c.email_opt_out_at is null)
+        or (c.email is not null and c.email_opt_out_at is null and c.email_rebotado_at is null)
       )
       and not exists (
         -- cartera_viva: si el cliente tiene OTRA póliza que sea cartera viva
@@ -345,44 +346,8 @@ export type ResultadoBaja =
   | { estado: 'no_encontrado' }
   | { estado: 'error'; motivo: string }
 
-/**
- * Opt-out AUTOMÁTICO cuando Resend confirma que el correo rebotó o el
- * destinatario se quejó de spam (14/09/2026). A diferencia de
- * `aplicarBajaEmail` (que resuelve por el id del envío, del enlace de baja),
- * este resuelve por `resend_message_id`: es el webhook quien lo dispara, no
- * un clic del destinatario — no hay enlace de por medio.
- *
- * Idempotente por la misma razón que `aplicarBajaEmail`: el webhook puede
- * reintentar la entrega del evento.
- */
-export async function aplicarBajaPorRebote(resendMessageId: string, motivo: 'rebotado' | 'queja'): Promise<ResultadoBaja> {
-  if (!aseguraConfigurada()) return { estado: 'error', motivo: 'sin_configurar' }
-  try {
-    const db = prismaAsegura()
-    const envio = await db.$queryRaw<{ clienteId: string; correduriaId: string; emailOptOutAt: Date | null }[]>(Prisma.sql`
-      select c.id as "clienteId", c.correduria_id as "correduriaId", c.email_opt_out_at as "emailOptOutAt"
-      from recaptacion_envios r
-      join clientes c on c.id = r.cliente_id
-      where r.resend_message_id = ${resendMessageId} and r.canal = 'email'
-      limit 1
-    `)
-    const fila = envio[0]
-    if (!fila) return { estado: 'no_encontrado' }
-    if (fila.emailOptOutAt) return { estado: 'ok', yaEstaba: true }
-
-    await db.$executeRaw(Prisma.sql`
-      update clientes set email_opt_out_at = now() where id = ${fila.clienteId}::uuid and email_opt_out_at is null
-    `)
-    const texto = motivo === 'rebotado'
-      ? 'Recaptación: email RECHAZADO por el proveedor (dirección muerta) — baja automática de correo'
-      : 'Recaptación: destinatario marcó el email como spam — baja automática de correo'
-    await anotar(fila.correduriaId, fila.clienteId, texto)
-    return { estado: 'ok', yaEstaba: false }
-  } catch (e) {
-    console.error('[cartera-recaptacion] fallo aplicando la baja por rebote:', e instanceof Error ? e.message : e)
-    return { estado: 'error', motivo: 'fallo_bd' }
-  }
-}
+// El rebote y la queja de spam ya NO se tratan aquí (07/11/2026, rebote ≠ baja): los resuelve
+// `aplicarReboteOQueja` de `email-rebote.ts` para CUALQUIER correo, desde el webhook de Resend.
 
 /**
  * Resuelve el token de baja (el `id` de un `recaptacion_envios`) contra la

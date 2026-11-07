@@ -28,6 +28,7 @@ import { descifrarCampo } from './cartera-edicion'
 import { enviarEmailResend } from './recaptacion-email'
 import { urlPublicaAsegura } from './recaptacion-baja'
 import { registrarEnvioCorreo } from './correo-seguimiento'
+import type { Contactabilidad, EstadoEmail } from './email-estado.ts'
 import {
   presentacionAppActiva, seleccionarDestinatariosPresentacion, topeDiarioPresentacion, type MotivoDescarte,
 } from './presentacion-app-seleccion'
@@ -65,6 +66,8 @@ async function candidatosBD(correduriaId: string): Promise<FilaCandidata[]> {
       and c.activo
       and c.email is not null and c.email <> ''
       and c.email_opt_out_at is null
+      -- Email rebotado (07/11/2026): la dirección no vale, aunque no sea una baja.
+      and c.email_rebotado_at is null
       -- Cliente HOY (esCarteraEnVigor): no es un lead, se le atiende desde su ficha.
       and not exists (
         select 1 from polizas v where v.cliente_id = c.id and v.merged_into_poliza_id is null and ${enVigor('v')})
@@ -80,6 +83,7 @@ async function candidatosBD(correduriaId: string): Promise<FilaCandidata[]> {
           and o.correduria_id = c.correduria_id
           and (
             o.email_opt_out_at is not null
+            or o.email_rebotado_at is not null
             or exists (select 1 from polizas v2 where v2.cliente_id = o.id and v2.merged_into_poliza_id is null and ${enVigor('v2')})
             or exists (select 1 from portal_vinculo pv2 where pv2.cliente_id = o.id and pv2.origen <> 'corredor')
           ))
@@ -270,30 +274,8 @@ export async function aplicarBajaCampana(envioId: string): Promise<ResultadoBaja
   }
 }
 
-/**
- * Rebote o queja de spam de un correo de la campaña (webhook de Resend): baja automática, igual que
- * `aplicarBajaPorRebote` de la recaptación. `no_encontrado` también si la tabla aún no existe: el
- * webhook no puede romperse por esta campaña.
- */
-export async function aplicarBajaCampanaPorRebote(resendMessageId: string, motivo: 'rebotado' | 'queja'): Promise<ResultadoBajaCampana> {
-  if (!aseguraConfigurada()) return { estado: 'error', motivo: 'sin_configurar' }
-  try {
-    if (!(await campanaMigrada())) return { estado: 'no_encontrado' }
-    const filas = await prismaAsegura().$queryRaw<{ clienteId: string; correduriaId: string }[]>(Prisma.sql`
-      select cliente_id as "clienteId", correduria_id as "correduriaId" from campana_envio
-      where resend_message_id = ${resendMessageId} limit 1`)
-    const f = filas[0]
-    if (!f) return { estado: 'no_encontrado' }
-    const texto = motivo === 'rebotado'
-      ? 'Campaña «presentación de la app»: correo RECHAZADO (dirección muerta) — baja automática de correo'
-      : 'Campaña «presentación de la app»: el destinatario lo marcó como spam — baja automática de correo'
-    const yaEstaba = await bajaDeFicha(f.correduriaId, f.clienteId, texto)
-    return { estado: 'ok', yaEstaba }
-  } catch (e) {
-    console.error('[presentacion-app] fallo aplicando la baja por rebote:', e instanceof Error ? e.message : e)
-    return { estado: 'error', motivo: 'fallo_bd' }
-  }
-}
+// Rebote o queja de un correo de la campaña: `aplicarReboteOQueja` (`email-rebote.ts`) desde el webhook. Desde el
+// 07/11/2026 el rebote marca el EMAIL como malo (`email_rebotado_at`) y ya no da de baja; la queja sí es baja.
 
 /** Una persona de la campaña con su recorrido. Fechas ISO; `null` = no ha pasado (o no hay prueba). */
 export type PersonaCampana = {
@@ -313,6 +295,9 @@ export type PersonaCampana = {
   registradoEn: string | null
   bajaEn: string | null
   rebotadoEn: string | null
+  /** Solo en campañas que sondean el email (felicitaciones). `null` = no se pudo mirar. */
+  estadoEmail?: EstadoEmail | null
+  contactabilidad?: Contactabilidad | null
 }
 
 export type EmbudoPresentacion =
@@ -320,7 +305,8 @@ export type EmbudoPresentacion =
   | {
       estado: 'ok'
       campana: string
-      total: EmbudoCampana
+      /** `ilocalizables` solo en campañas que sondean el email; `null` = no se puede afirmar la cifra. */
+      total: EmbudoCampana & { ilocalizables?: number | null }
       /** Grupo = «<n.º de lote> · <fecha>». */
       porLote: { grupo: string; embudo: EmbudoCampana }[]
       porVariante: { grupo: string; embudo: EmbudoCampana }[]

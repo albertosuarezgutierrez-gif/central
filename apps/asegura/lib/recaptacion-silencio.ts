@@ -26,7 +26,7 @@ export const UMBRAL_SILENCIO = 3
 /**
  * `true` si el lead lleva `UMBRAL_SILENCIO` o más envíos de email y ninguno
  * llegó a `abierto`/`pinchado`. No mira rebotes/quejas: esos ya se resuelven
- * aparte (opt-out inmediato, `aplicarBajaPorRebote`) y no deberían llegar
+ * aparte (email malo o baja, `aplicarReboteOQueja`) y no deberían llegar
  * hasta aquí — pero si llegan (rebote sin webhook, p. ej.), cuentan igual como
  * "sin apertura": la conclusión es la misma, el email no sirve.
  */
