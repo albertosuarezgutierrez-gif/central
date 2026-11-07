@@ -37,6 +37,22 @@ export async function leerColaHechosNominas(ahora: Date, limite: number): Promis
     LIMIT ${limite}`)
 }
 
+/**
+ * Botón del responsable: la cola de SU empresa (la de la sesión), sin esperar al `proximo_intento` (lo pide una persona).
+ * Solo 'pendiente' y 'error'; lo 'rechazado' no se reintenta solo (hay que mirarlo). Mismo requisito de módulo activo que el cron.
+ */
+export async function leerColaHechosNominasEmpresa(empresaId: string, limite: number): Promise<FilaHechoNomina[]> {
+  return prisma.$queryRaw<FilaHechoNomina[]>(Prisma.sql`
+    SELECT h.id::text AS id, h.empresa_id::text AS empresa_id, h.nomina_id::text AS nomina_id, h.tipo, h.hecho, h.intentos,
+           h.contabilidad_empresa_id::text AS contabilidad_empresa_id
+    FROM rrhh.hechos_nominas h
+    JOIN rrhh.empresa_modulos m ON m.empresa_id = h.empresa_id AND m.empresa_id = ${empresaId}::uuid
+         AND m.modulo = 'contabilidad_nominas' AND m.activo = true
+    WHERE h.empresa_id = ${empresaId}::uuid AND h.estado IN ('pendiente', 'error') AND h.contabilidad_empresa_id IS NOT NULL
+    ORDER BY h.creado_en ASC
+    LIMIT ${limite}`)
+}
+
 export async function marcarHechoNomina(
   id: string, empresaId: string, v: { estado: 'enviado' | 'rechazado' | 'error'; detalle: string | null; intentos: number; proximoIntento: Date | null; ahora: Date },
 ): Promise<void> {

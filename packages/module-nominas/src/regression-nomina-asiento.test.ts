@@ -39,7 +39,8 @@ describe('nominaAHecho', () => {
     expect(nominaAHecho(base(d, 'nom-00000002')).ref).toBe('nomina:nom-00000002')
   })
   it('un desglose con cifras pendientes (o antiguo) no se asienta', () => {
-    const pendiente = calcularNomina(C, [], { periodo: '2026-04', atEp: 0.015, modo: 'simulacion' })
+    // Con las tablas de #5588 el cálculo real de 2026 ya puede salir sin pendientes: la cifra pendiente se fuerza aquí.
+    const pendiente = { ...desglose(), cifrasPendientes: ['reparto MEI'] }
     expect(() => nominaAHecho(base(pendiente))).toThrow(ErrorNominaHecho)
     expect(() => nominaAHecho(base({ devengos: { total: 1 } }))).toThrow(/tablas antiguas/)
   })

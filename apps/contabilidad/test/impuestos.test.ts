@@ -4,7 +4,7 @@
 // snapshot → rojo en «snapshot»; (3) `datosFiscalesDeHechos` sin filtrar `irpf === 0` → rojo en «nóminas».
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { importeDe, type HechoContable } from '@central/module-contabilidad'
+import { calcularModelo190, importeDe, type HechoContable } from '@central/module-contabilidad'
 import { calcularConDatos, compensacionPendiente, cuadreDelPeriodo, guardarCalculo, pagos130Anteriores, presentarDeclaracion, revisarDeclaracion, devolverDeclaracion } from '../lib/impuestos.ts'
 import { datosFiscalesDeHechos, type FilaHechoFiscal } from '../lib/impuestos-datos.ts'
 import { recibirHecho } from '../lib/servicio.ts'
@@ -46,7 +46,7 @@ test('hechos → datos fiscales: operaciones por tipo con NIF de la factura, ret
   assert.ok(d.avisos.some((a) => /periodo de la factura/.test(a)))
 })
 
-test('hechos → datos fiscales: alquiler con retención va al 115 y se excluye del 347; nómina con IRPF 0 no genera retención; payload ilegible se avisa', () => {
+test('hechos → datos fiscales: alquiler con retención va al 115 y se excluye del 347; nómina con IRPF 0 genera retención 0; payload ilegible se avisa', () => {
   const alq: HechoContable = { tipo: 'compra', fecha: '2026-03-05', ref: 'ALQ-3', desglose: [{ base: 80000, tipoIva: 21, categoria: 'alquiler' }], retencion: 15200 }
   const d = datosFiscalesDeHechos([
     { hechoId: 'a', tipo: 'compra', ref: 'ALQ-3', fecha: '2026-03-05', payload: { ...alq, refCatastral: '1234567VK1234N0001AB' }, asientoRef: '3/2026', proveedorNif: 'A58818501', proveedorNombre: 'Inmo', facturaNumero: 'R-3' },
@@ -55,11 +55,22 @@ test('hechos → datos fiscales: alquiler con retención va al 115 y se excluye 
     { hechoId: 'd', tipo: 'venta', ref: 'MAL', fecha: '2026-03-31', payload: { desglose: 'x' }, asientoRef: null, proveedorNif: null, proveedorNombre: null, facturaNumero: null },
   ])
   assert.equal(d.ops[0].alquilerConRetencion, true)
-  assert.deepEqual(d.retenciones.map((r) => [r.ref, r.concepto, r.origen]), [['ALQ-3', 'alquiler', 'compras'], ['NOM-2', 'trabajo', 'nominas']])
+  assert.deepEqual(d.retenciones.map((r) => [r.ref, r.concepto, r.origen, r.retencion]), [['ALQ-3', 'alquiler', 'compras', 15200], ['NOM-1', 'trabajo', 'nominas', 0], ['NOM-2', 'trabajo', 'nominas', 30000]])
   assert.equal(d.retenciones[0].refCatastral, '1234567VK1234N0001AB')
   assert.ok(d.avisos.some((a) => /MAL/.test(a)))
-  const c115 = calcularConDatos(entrada('111', '1T', d, { modelo: '111' }))
-  assert.equal(importeDe(c115, '03'), 30000, 'solo la nómina con IRPF entra en el 111; el alquiler no')
+  const c111 = calcularConDatos(entrada('111', '1T', d, { modelo: '111' }))
+  assert.equal(importeDe(c111, '03'), 30000, 'la retención 0 no suma; el alquiler no entra en el 111')
+  assert.deepEqual([importeDe(c111, '01'), importeDe(c111, '02')], [2, 400000], 'el trabajador sin retención cuenta como perceptor y su íntegro suma')
+})
+
+test('190 desde los hechos: el trabajador con IRPF 0 (con perceptor y clave) está en la relación anual con retención 0', () => {
+  const fila = (ref: string, nif: string, irpf: number): FilaHechoFiscal => ({
+    hechoId: ref, tipo: 'nomina', ref, fecha: '2026-01-31', asientoRef: null, proveedorNif: null, proveedorNombre: null, facturaNumero: null,
+    payload: { tipo: 'nomina', bruto: 100000, irpf, ssEmpresa: 30000, ssTrabajador: 6350, liquido: 100000 - irpf - 6350, perceptor: { nif, nombre: nif, provincia: '41' }, clave: 'A' },
+  })
+  const d = datosFiscalesDeHechos([fila('nomina:1', '12345678Z', 0), fila('nomina:2', '87654321X', 15000)])
+  const c190 = calcularModelo190(d.retenciones, 2026)
+  assert.deepEqual(c190.perceptores.map((p) => [p.nif, p.clave, p.percepcionDineraria, p.retencionDineraria]), [['12345678Z', 'A', 100000, 0], ['87654321X', 'A', 100000, 15000]])
 })
 
 test('303 desde los hechos ≡ mayor: cuadre libros/mayor OK y se rompe con 1 céntimo de diferencia', async () => {

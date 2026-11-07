@@ -5,7 +5,7 @@
 // RETENCIONES: se atribuyen al periodo del hecho (fecha de la factura/nómina). La norma las imputa al PAGO; si se paga en otro trimestre hay
 // que ajustarlo a mano. Se avisa siempre que hay retenciones. [Probable: contrastar con el asesor.]
 import {
-  CLASES_OPERACION, operacionesDeHecho, type ClaseOperacion, type ExtraOperacion, type HechoCompra, type HechoVenta, type OperacionIva,
+  CLASES_OPERACION, operacionesDeHecho, retencionDeNomina, type ClaseOperacion, type ExtraOperacion, type HechoCompra, type HechoVenta, type OperacionIva,
   type RegimenEspecial, type RetencionPracticada,
 } from '@central/module-contabilidad'
 
@@ -49,17 +49,13 @@ export function datosFiscalesDeHechos(filas: readonly FilaHechoFiscal[]): DatosF
     const marca = (ref: string) => { if (f.asientoRef) refAAsiento[ref] = f.asientoRef }
 
     if (f.tipo === 'nomina') {
-      const bruto = ent(p.bruto)
-      const irpf = ent(p.irpf)
-      if (bruto === null || irpf === null) { avisos.push(`${f.ref}: nómina sin bruto/IRPF legibles`); continue }
-      if (irpf === 0) continue
-      const per = obj(p.perceptor)
-      retenciones.push({
-        ref: f.ref, fecha: f.fecha, concepto: 'trabajo', percepcion: bruto, retencion: irpf, origen: 'nominas',
-        perceptor: { nif: str(per?.nif, 20), nombre: str(per?.nombre) ?? '', ...(str(per?.provincia, 2) ? { provincia: str(per?.provincia, 2)! } : {}) },
-        ...(str(p.clave, 3) ? { clave: str(p.clave, 3)! } : {}),
-      })
-      marca(f.ref); hayRetenciones = true
+      // Lectura ÚNICA del hecho de nómina (la misma que usa el certificado del empleado en rrhh). IRPF 0 TAMBIÉN entra: el 190 declara
+      // a todos los perceptores de rendimientos del trabajo y en el 111 cuentan como perceptor con retención 0.
+      const l = retencionDeNomina({ ref: f.ref, fecha: f.fecha, payload: p })
+      if (!l.ok) { avisos.push(`${f.ref}: ${l.motivo}`); continue }
+      retenciones.push(l.retencion)
+      marca(f.ref)
+      hayRetenciones = true
       continue
     }
 

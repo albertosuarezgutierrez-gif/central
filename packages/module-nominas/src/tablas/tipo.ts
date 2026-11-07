@@ -14,6 +14,8 @@ export interface TramoSolidaridad {
   hastaPctSobreMax: number | null
   /** Tipo TOTAL (empresa + trabajador) del tramo. */
   tipo: Cifra<Ppm>
+  /** Reparto que fija la Orden de cotización para el tramo (2026: art. 17.1). Sin él se usa `repartoComoCC`. */
+  reparto?: ParTipos
 }
 
 /** Tabla de un AÑO. Todo en céntimos (bases) y ppm (tipos). */
@@ -24,6 +26,10 @@ export interface TablaAnual {
   /** Bases diarias (céntimos/día), grupos 8-11: se multiplican por los días naturales del mes. */
   basesDiarias: Record<GrupoDiario, { min: Cifra<Centimos>; max: Cifra<Centimos> }>
   smi: { mensual: Cifra<Centimos>; anual: Cifra<Centimos> }
+  /** Tope mínimo de la base de AT/EP (y de desempleo, FOGASA y FP), mensual, jornada completa, grupos 1-7. */
+  topeMinimoCP: Cifra<Centimos>
+  /** Tiempo parcial: base mínima POR HORA trabajada (CC por grupo; AT/EP-desempleo-FOGASA-FP única). */
+  parcial: { minimoHoraCC: Record<GrupoMensual | GrupoDiario, Cifra<Centimos>>; minimoHoraCP: Cifra<Centimos> }
   tipos: {
     contingenciasComunes: ParTipos
     desempleoIndefinido: ParTipos
@@ -36,7 +42,7 @@ export interface TablaAnual {
   /** Cotización adicional de solidaridad: sobre la retribución que excede la base máxima. */
   solidaridad: {
     tramos: TramoSolidaridad[]
-    /** Reparto empresa/trabajador del tipo de cada tramo (se aplica la proporción de contingencias comunes). */
-    repartoComoCC: Cifra<boolean>
+    /** Reparto empresa/trabajador por la proporción de contingencias comunes, para tramos sin `reparto` propio. */
+    repartoComoCC?: Cifra<boolean>
   }
 }

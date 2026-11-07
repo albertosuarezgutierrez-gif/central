@@ -27,7 +27,11 @@ export async function POST(_req: Request, { params }: { params: Promise<{ nomina
     const destinoContabilidad = await contabilidadDeNominas(empresa_id)
     if (destinoContabilidad) {
       try {
-        hecho = nominaAHecho({ nominaId, empleadoId: nomina.empleado_id, periodo: nomina.periodo, desglose: nomina.datos_calculo })
+        hecho = nominaAHecho({
+          nominaId, empleadoId: nomina.empleado_id, periodo: nomina.periodo, desglose: nomina.datos_calculo,
+          // Perceptor del 190 (NIF solo si es válido; nunca se inventa). Viaja en el hecho del outbox, no a los logs.
+          perceptor: { nombre: nomina.empleado_nombre, apellidos: nomina.empleado_apellidos, dni: nomina.empleado_dni, provincia: nomina.empleado_provincia },
+        })
       } catch (e) {
         if (e instanceof ErrorNominaHecho) return NextResponse.json({ error: `No se puede asentar en contabilidad: ${e.message}`, codigo: e.codigo }, { status: 422 })
         throw e
@@ -65,7 +69,8 @@ export async function POST(_req: Request, { params }: { params: Promise<{ nomina
     if (hecho) await prisma.$transaction([confirmar, encolarHechoNomina(empresa_id, nominaId, hecho, destinoContabilidad!)])
     else await confirmar
 
-    return NextResponse.json({ ok: true, pdf_path: pdfPath })
+    // El envío lo hace el cron `/api/cron/enviar-hechos-nominas` (o el botón «Reintentar envío»): aquí nunca hay HTTP a contabilidad.
+    return NextResponse.json({ ok: true, pdf_path: pdfPath, contabilidad: hecho ? 'encolado' : null })
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: 401 })
     throw e

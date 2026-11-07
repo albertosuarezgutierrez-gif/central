@@ -60,9 +60,9 @@ póliza 05139; API `C0109` Allianz póliza 8846622.
 | Generali | Hogar | Descuento comercial % + Código Flota | `commercialDiscountNumber` (03/10) | ✅ Se manda 50 (Código Flota no se toca) |
 | Generali | Autos | Descuento comercial % (visible 0,00 en el proyecto) | `commercialDiscountNumber` (05/10, SUPUESTO por moto/hogar; sin captura de auto ni rastro en BD) | ⚠️ Se manda 50 solo si las `productOptions` que devolvió el vendor traen ese id (`opcionesParaReRate`); si no lo traen, no se manda. Sin opciones del vendor se manda el catálogo sin poder comprobar. Pendiente: confirmar el id y el precio resultante en el primer ReRate real |
 | Occident | Autos | Descuento comercial + Colectivo | no consta | 30 por defecto (estimado, sin confirmar) |
-| Occident | Motos | Descuento comercial + Colectivo | `commercialDiscount` (03/10) | NO se manda: trae 30 de serie, máximo sin medir |
-| Occident | Hogar | Descuento comercial + Colectivo | `discount` (03/10) | NO se manda: trae 30 de serie, máximo sin medir |
-| Fidelidade | Hogar | Descuento (vacío) | `discount` (03/10) | NO se manda: máximo sin medir |
+| Occident | Motos | Descuento comercial + Colectivo | `commercialDiscount` (03/10) | Se manda 50 SOLO si el vendor devolvió el id (07/11); si la compañía lo rechaza, baja 50→30→20→10→0 (`descuento-adaptativo.ts`) |
+| Occident | Hogar | Descuento comercial + Colectivo | `discount` (03/10) | Se manda 50 SOLO si el vendor devolvió el id (07/11); si lo rechaza, baja 50→30→20→10→0 |
+| Fidelidade | Hogar | Descuento (vacío) | `discount` (03/10) | Se manda 50 SOLO si el vendor devolvió el id (07/11); si lo rechaza, baja 50→30→20→10→0 |
 | Mapfre | Autos | sin campo de descuento | — | no disponible |
 | Mapfre | Motos | sin campo de descuento | — | no disponible |
 | Reale | Autos | sin descuento manual; solo Campaña comercial (no disponibles) | — | no disponible |
@@ -125,6 +125,6 @@ exacto de Allianz (prueba con 10 % para ver si baja el precio) y confirmar el pr
 
 ## Pendiente en código
 
-- Descuento por defecto en el ReRate = **50 %**. ✅ Ya lo llevan Allianz auto/moto/hogar y Generali moto/hogar (ids leídos el 03/10/2026). Pendiente: Occident y Fidelidade (máximos sin medir). `comissionType` no se manda nunca.
+- Descuento por defecto en el ReRate = **50 %**. ✅ Ya lo llevan Allianz auto/moto/hogar y Generali moto/hogar (ids leídos el 03/10/2026). Occident y Fidelidade desde el 07/11 (solo si el vendor devuelve el id). Si una compañía rechaza el descuento, el ReRate lo baja solo (máx. 4 reintentos por campo, cada uno por el libro) y la respuesta trae `descuentoAplicado`. `comissionType` no se manda nunca.
 - Aviso «bonificación NO verificada» a partir de `messages[]`.
 - ✅ **Descubrimiento autónomo:** cron `correduria-descubrir-emisiones` implementado (plataforma, `10,40 5-21 * * *` UTC); cola de revisión `seguros.codeoscopic_emisiones_revision` activa; rotación en anillo 40 llamadas/pasada. Acuñado atómico vía `registrarPolizaEmitida` (PR #4158, mergeado). URL del webhook cambiada a `api.grupoasegura.es` (PENDIENTE que Codeoscopic actualice de su lado).

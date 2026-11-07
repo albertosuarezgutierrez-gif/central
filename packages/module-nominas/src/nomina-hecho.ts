@@ -9,6 +9,11 @@
  * Tipo del hecho: estructuralmente idéntico a `HechoNomina` / `HechoPago` de `@central/module-contabilidad` (no se importa:
  * rrhh no depende de ese paquete). El cepo `regression-nomina-asiento` lo compara con el real.
  * Idempotencia: `ref = nomina:<id>` (el puerto deduplica por empresa + tipo + ref).
+ *
+ * Perceptor y clave (07/11/2026, unificación con #5588): si se pasa `perceptor`, el hecho lleva `perceptor { nif?, nombre, provincia? }` y
+ * `clave: 'A'` (rendimientos del trabajo), que el puerto admite y contabilidad lee para el 111/190 (`retencionDeNomina`). Sin NIF válido
+ * NO se inventa: viaja solo el nombre y el 190 lo lista como incompleto. Es la ÚNICA construcción del hecho de nómina en rrhh: la usan el
+ * envío (outbox `rrhh.hechos_nominas`) y el certificado de retenciones del portal /e, así las cifras del certificado son las del 190.
  */
 import { eurosACentimos, type Centimos } from './dinero'
 import { desgloseConfirmable } from './calcular'
@@ -26,7 +31,14 @@ export interface HechoNominaPuerto {
   irpf: Centimos
   ssTrabajador: Centimos
   liquido: Centimos
+  /** Datos del perceptor para el 190. Ausente = no se pasaron (el 190 no puede atribuir la retención). */
+  perceptor?: { nif?: string; nombre: string; provincia?: string }
+  /** Clave de percepción del 190 (A = trabajo por cuenta ajena). Solo con `perceptor`. */
+  clave?: string
 }
+
+/** Clave de percepción del 190 para rendimientos del trabajo (trabajadores por cuenta ajena). */
+export const CLAVE_190_TRABAJO = 'A'
 
 export interface HechoPagoNominaPuerto {
   tipo: 'pago'
@@ -40,7 +52,7 @@ export interface HechoPagoNominaPuerto {
 }
 
 export class ErrorNominaHecho extends Error {
-  readonly codigo: 'desglose_no_confirmable' | 'importe_invalido' | 'descuadre' | 'coste_no_cuadra' | 'periodo_invalido' | 'dimension_invalida'
+  readonly codigo: 'desglose_no_confirmable' | 'importe_invalido' | 'descuadre' | 'coste_no_cuadra' | 'periodo_invalido' | 'dimension_invalida' | 'perceptor_invalido'
   constructor(codigo: ErrorNominaHecho['codigo'], mensaje: string) { super(mensaje); this.name = 'ErrorNominaHecho'; this.codigo = codigo }
 }
 
@@ -52,6 +64,18 @@ export interface NominaParaHecho {
   /** AAAA-MM */
   periodo: string
   desglose: unknown
+  /** Empleado como perceptor del 190 (nombre obligatorio si se pasa; DNI y provincia opcionales). */
+  perceptor?: { nombre: string | null; apellidos?: string | null; dni?: string | null; provincia?: string | null }
+}
+
+const NIF_RE = /^[A-Z0-9]{8,10}$/
+
+function perceptorDe(p: NonNullable<NominaParaHecho['perceptor']>): NonNullable<HechoNominaPuerto['perceptor']> {
+  const nombre = [p.nombre, p.apellidos].map((x) => (x ?? '').trim()).filter(Boolean).join(' ').slice(0, 200)
+  if (!nombre) throw new ErrorNominaHecho('perceptor_invalido', 'empleado sin nombre')
+  const nif = (p.dni ?? '').toUpperCase().replace(/[\s.-]/g, '')
+  const provincia = (p.provincia ?? '').trim()
+  return { ...(NIF_RE.test(nif) ? { nif } : {}), nombre, ...(/^\d{2}$/.test(provincia) ? { provincia } : {}) }
 }
 
 const ID = /^[0-9a-zA-Z-]{8,64}$/
@@ -98,6 +122,7 @@ export function nominaAHecho(n: NominaParaHecho): HechoNominaPuerto {
     tipo: 'nomina', fecha, ref: `nomina:${n.nominaId}`, concepto: `Nómina ${n.periodo}`, documento: `nomina:${n.nominaId}`,
     dimensiones: { empleado: n.empleadoId, ...(n.centroCosteId ? { centro_coste: n.centroCosteId } : {}) },
     bruto, ssEmpresa, irpf, ssTrabajador, liquido,
+    ...(n.perceptor ? { perceptor: perceptorDe(n.perceptor), clave: CLAVE_190_TRABAJO } : {}),
   }
 }
 

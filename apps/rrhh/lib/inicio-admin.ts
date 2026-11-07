@@ -3,13 +3,15 @@
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import type { DatosInicio } from '@/lib/inicio-admin-reglas'
+import { DIAS_VENCIMIENTO, contratosQueVencen, hoyMadrid, lineaVencimiento } from '@/lib/vencimientos'
 
 async function seguro<T>(etiqueta: string, f: () => Promise<T>): Promise<T | null> {
   try { return await f() } catch (e) { console.error(`[inicio-admin] ${etiqueta}`, e instanceof Error ? e.message : e); return null }
 }
 
 export async function datosInicio(empresaId: string, tieneFichaje: boolean): Promise<DatosInicio> {
-  const [solicitudes, firmas, avisosFallidos, correosFallidos, fichajesAbiertos] = await Promise.all([
+  const hoy = hoyMadrid()
+  const [solicitudes, firmas, avisosFallidos, correosFallidos, fichajesAbiertos, contratosVencen] = await Promise.all([
     seguro('solicitudes', async () => {
       const [cnt, recientes] = await Promise.all([
         prisma.$queryRaw<{ n: number }[]>(Prisma.sql`SELECT count(*)::int AS n FROM rrhh.solicitudes WHERE empresa_id = ${empresaId}::uuid AND estado = 'solicitada'`),
@@ -38,6 +40,25 @@ export async function datosInicio(empresaId: string, tieneFichaje: boolean): Pro
       ? seguro('fichajes', async () => (await prisma.$queryRaw<{ n: number }[]>(Prisma.sql`
           SELECT count(*)::int AS n FROM rrhh.fichajes WHERE empresa_id = ${empresaId}::uuid AND salida_at IS NULL AND entrada_at >= now() - interval '24 hours'`))[0]?.n ?? 0)
       : Promise.resolve(undefined),
+    // Contratos que vencen en ≤ 30 días: SOLO para el responsable (nunca un aviso al empleado; ver lib/vencimientos.ts).
+    // Columnas de 0033: sin migración la consulta falla y la tarjeta dice «no se ha podido comprobar», no «ninguno».
+    seguro('contratos', async () => {
+      const [filas, sinFecha] = await Promise.all([
+        prisma.$queryRaw<{ id: string; empleado_id: string; empleado: string; fecha_fin: string }[]>(Prisma.sql`
+          SELECT c.id::text AS id, c.empleado_id::text AS empleado_id,
+                 TRIM(CONCAT(e.nombre, ' ', COALESCE(e.apellidos, ''))) AS empleado, c.fecha_fin::text AS fecha_fin
+          FROM rrhh.contratos_laborales c
+          JOIN rrhh.empleados e ON e.id = c.empleado_id AND e.empresa_id = c.empresa_id
+          WHERE c.empresa_id = ${empresaId}::uuid AND c.activo AND e.estado = 'activo' AND c.fecha_fin IS NOT NULL
+            AND c.fecha_fin BETWEEN ${hoy}::date AND (${hoy}::date + ${DIAS_VENCIMIENTO}::int)
+          ORDER BY c.fecha_fin LIMIT 50`),
+        prisma.$queryRaw<{ n: number }[]>(Prisma.sql`
+          SELECT count(*)::int AS n FROM rrhh.contratos_laborales c
+          WHERE c.empresa_id = ${empresaId}::uuid AND c.activo AND c.fecha_fin IS NULL AND c.duracion IS DISTINCT FROM 'indefinido'`),
+      ])
+      const vencen = contratosQueVencen(filas.map(f => ({ contratoId: f.id, empleadoId: f.empleado_id, empleado: f.empleado, fechaFin: f.fecha_fin })), hoy)
+      return { lineas: vencen.map(lineaVencimiento), total: vencen.length, sinFecha: sinFecha[0]?.n ?? 0 }
+    }),
   ])
-  return { solicitudes, firmas, avisosFallidos, correosFallidos, fichajesAbiertos }
+  return { solicitudes, firmas, avisosFallidos, correosFallidos, fichajesAbiertos, contratosVencen }
 }

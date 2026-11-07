@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-11-07T08:05:35Z",
+  "generadoEn": "2026-11-07T08:56:51Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1736,8 +1736,8 @@
         "evidencias": 2
       },
       "rrhh": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 4
       },
       "sivra": {
         "estado": "usado",
@@ -2295,7 +2295,7 @@
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 10
+        "evidencias": 16
       },
       "sivra": {
         "estado": "no",
@@ -2418,8 +2418,8 @@
         "evidencias": 2
       },
       "rrhh": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 2
       },
       "sivra": {
         "estado": "no",
@@ -6789,7 +6789,10 @@
       "/api/admin/nominas/[nominaId]/incidencias/[incId]",
       "/api/admin/nominas/[nominaId]/propuestas-fichajes",
       "/api/admin/nominas/distribuir-pdf",
+      "/api/admin/nominas/finiquito",
       "/api/admin/nominas/generar",
+      "/api/admin/nominas/reenviar-contabilidad",
+      "/api/admin/nominas/remesa",
       "/api/admin/obras",
       "/api/admin/obras/[id]",
       "/api/admin/prl/generar",
@@ -6815,6 +6818,7 @@
       "/api/e/asistente",
       "/api/e/avisos",
       "/api/e/avisos/visto",
+      "/api/e/certificado-retenciones",
       "/api/e/chat",
       "/api/e/expediente",
       "/api/e/expediente/[docId]/firmar",
@@ -7519,6 +7523,7 @@
       "rrhh.avisos",
       "rrhh.avisos_admin",
       "rrhh.contratos_laborales",
+      "rrhh.convenio_tablas_salariales",
       "rrhh.documentos",
       "rrhh.empleados",
       "rrhh.empresa_modulos",
@@ -8332,7 +8337,7 @@
     "packages": 49,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1962,
+    "apis": 1966,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

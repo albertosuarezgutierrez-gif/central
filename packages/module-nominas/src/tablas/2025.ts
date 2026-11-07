@@ -38,6 +38,15 @@ export const TABLA_2025: TablaAnual = {
     mensual: cifra('smi_mensual', 118_400, 'probable', 'RD 87/2025: 1.184 €/mes en 14 pagas [Probable]'),
     anual: cifra('smi_anual', 1_657_600, 'probable', 'RD 87/2025: 16.576 €/año [Probable]'),
   },
+  // Tope mínimo AT/EP: candidato = mínimo heredado de grupos 4-7 (misma regla que en 2026: SMI + 1/6). PENDIENTE.
+  topeMinimoCP: cifra('tope_min_cp', 118_410, PENDIENTE_VERIFICAR, `${ORDEN}: tope mínimo AT/EP — ${HEREDADO}`),
+  // Mínimos por hora del tiempo parcial 2025: sin cifra (no se ha descargado la Orden 2025). null = «no se sabe».
+  parcial: {
+    minimoHoraCC: Object.fromEntries(
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(g => [g, cifra<number>(`base_min_hora_grupo_${g}`, null, PENDIENTE_VERIFICAR, `${ORDEN}: base mínima por hora — sin cifra, verificar`)]),
+    ) as TablaAnual['parcial']['minimoHoraCC'],
+    minimoHoraCP: cifra<number>('base_min_hora_cp', null, PENDIENTE_VERIFICAR, `${ORDEN}: base mínima por hora AT/EP — sin cifra, verificar`),
+  },
   tipos: {
     contingenciasComunes: {
       empresa: cifra('cc_empresa', 236_000, 'seguro', `${ORDEN}: 23,60 % [Seguro]`),

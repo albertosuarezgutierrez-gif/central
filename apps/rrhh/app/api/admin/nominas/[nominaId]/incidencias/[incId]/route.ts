@@ -11,6 +11,10 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ incI
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: 401 })
     if (e instanceof Error && e.message.includes('confirmada')) return NextResponse.json({ error: e.message }, { status: 409 })
+    // El recálculo sin la incidencia falló (modo cálculo + cifra pendiente): NO se ha borrado nada.
+    if (e instanceof Error && (e.name === 'CifraPendienteError' || e.name === 'CifraDesconocidaError')) {
+      return NextResponse.json({ error: e.message }, { status: 422 })
+    }
     if (e instanceof Error && e.message.includes('no encontrada')) return NextResponse.json({ error: e.message }, { status: 404 })
     throw e
   }

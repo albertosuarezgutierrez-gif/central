@@ -61,7 +61,26 @@ const ALLIANZ_DESCUENTOS: OpcionProducto[] = [
 ]
 // Generali: la compañía recorta sola (~12 % en moto, 29/09) y no da error.
 const GENERALI_DESCUENTO: OpcionProducto[] = [{ id: 'commercialDiscountNumber', type: 'number', value: DESCUENTO_POR_DEFECTO }]
-// PENDIENTE: Occident (`commercialDiscount` moto, `discount` hogar; ya traen 30) y Fidelidade (`discount` hogar): máximos sin medir.
+// Occident (`commercialDiscount` moto, `discount` hogar) y Fidelidade (`discount` hogar), 07/11/2026: ids leídos el 03/10
+// del formulario real, pero SIN captura de valores completos, así que NO hay catálogo (`opcionesPorDefecto` → null) y el 50 solo
+// se pone si el vendor devolvió ese id en `productOptions` del precio. Si la compañía lo rechaza, `descuento-adaptativo.ts` lo baja.
+const DESCUENTO_SOLO_SI_VENDOR: ReadonlyArray<{ compania: string; ramo: string; id: string }> = [
+  { compania: 'generali', ramo: 'auto', id: 'commercialDiscountNumber' },
+  { compania: 'occident', ramo: 'moto', id: 'commercialDiscount' },
+  { compania: 'occident', ramo: 'hogar', id: 'discount' },
+  { compania: 'fidelidade', ramo: 'hogar', id: 'discount' },
+]
+
+/** Ids de descuento que ESTE código pone por defecto (catálogo o vendor-con-id) para compañía+ramo. Base de lo rebajable. */
+export function idsDescuentoPorDefecto(compania: string, ramo: string | null = 'auto'): string[] {
+  const r = ramo ?? 'auto'
+  const c = compania.trim().toLowerCase()
+  const ids = new Set<string>()
+  if (c.includes('allianz')) ['dtoCap', 'dtoVentaCruzada'].forEach((i) => ids.add(i))
+  if (c.includes('generali')) ids.add('commercialDiscountNumber')
+  for (const x of DESCUENTO_SOLO_SI_VENDOR) if (c.includes(x.compania) && r === x.ramo) ids.add(x.id)
+  return [...ids]
+}
 
 /**
  * Opciones por defecto para una compañía, por nombre (contains normalizado,
@@ -102,12 +121,16 @@ export function opcionesPorDefecto(compania: string, ramo: string | null = 'auto
  */
 export function opcionesParaReRate(delVendor: unknown, compania: string, ramo: string | null = 'auto'): unknown {
   if (delVendor == null) return opcionesPorDefecto(compania, ramo)
-  const esGeneraliAuto = (ramo ?? 'auto') === 'auto' && compania.trim().toLowerCase().includes('generali')
-  if (!esGeneraliAuto || !Array.isArray(delVendor)) return delVendor
-  const id = GENERALI_DESCUENTO[0].id
-  if (!delVendor.some((o) => o && typeof o === 'object' && (o as { id?: unknown }).id === id)) return delVendor
-  const r = conDescuentos(delVendor, { commercialDiscountNumber: DESCUENTO_POR_DEFECTO })
-  return r.ok ? r.opciones : delVendor
+  if (!Array.isArray(delVendor)) return delVendor
+  const r = ramo ?? 'auto'
+  const c = compania.trim().toLowerCase()
+  // Solo ids que el vendor YA devolvió (nunca se inventa uno: un id inexistente = 400). Generali auto, Occident y Fidelidade.
+  const ids = DESCUENTO_SOLO_SI_VENDOR.filter((x) => c.includes(x.compania) && r === x.ramo)
+    .map((x) => x.id)
+    .filter((id) => delVendor.some((o) => o && typeof o === 'object' && (o as { id?: unknown }).id === id))
+  if (ids.length === 0) return delVendor
+  const r2 = conDescuentos(delVendor, Object.fromEntries(ids.map((id) => [id, DESCUENTO_POR_DEFECTO])))
+  return r2.ok ? r2.opciones : delVendor
 }
 
 // ── Descuento comercial en preemisión (29/09/2026) ──
@@ -125,6 +148,8 @@ export const LIMITES_DESCUENTO: Readonly<Record<'dtoCap' | 'dtoVentaCruzada' | '
 }
 
 export type DescuentosPedidos = Partial<Record<keyof typeof LIMITES_DESCUENTO, number>>
+/** Descuentos por id libre (los que pone el código: incluye Occident/Fidelidade, sin límites medidos). */
+export type DescuentosPorId = Readonly<Record<string, number>>
 
 /** Lee `{ dtoCap?, dtoVentaCruzada? }` del cuerpo. `null` si no viene nada; lanza nada: lo raro es reparo. */
 export function descuentosDelCuerpo(v: unknown): { pedidos: DescuentosPedidos | null } | { reparo: string } {
@@ -151,7 +176,7 @@ export function descuentosDelCuerpo(v: unknown): { pedidos: DescuentosPedidos | 
  */
 export function conDescuentos(
   base: unknown,
-  pedidos: DescuentosPedidos,
+  pedidos: DescuentosPedidos | DescuentosPorId,
   origen: 'catalogo' | 'formulario' = 'catalogo',
 ): { ok: true; opciones: unknown[] } | { ok: false; motivo: string } {
   const lista = (Array.isArray(base) ? base : []).map((o) => (o && typeof o === 'object' ? { ...(o as Record<string, unknown>) } : o))
