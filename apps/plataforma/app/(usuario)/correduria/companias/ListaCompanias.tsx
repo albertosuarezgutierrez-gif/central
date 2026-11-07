@@ -8,6 +8,7 @@ import { eur } from '@/lib/dinero'
 import { construirPanelControl, type RespuestaAcuerdos, type RespuestaProductividad } from '@/lib/acuerdos-asegura'
 import type { Compania } from '@/lib/companias-asegura'
 import { Chip, ChipsAcuerdos, TarjetaAcuerdo } from './AcuerdosVista'
+import CuadroCompanias from './CuadroCompanias'
 import PanelControl from './PanelControl'
 import TelefonoContacto from './TelefonoContacto'
 
@@ -24,7 +25,9 @@ import TelefonoContacto from './TelefonoContacto'
 const gris = { color: 'var(--muted)' } as const
 const POR_PAGINA = 50
 
-export default function ListaCompanias({ companias, acuerdos, productividad }: {
+export default function ListaCompanias({ companias, acuerdos, productividad, conCuadro = false }: {
+  /** Cuadro de mando por compañía y año (07/11/2026): solo en `/correduria/companias`, no en la pestaña Datos. */
+  conCuadro?: boolean
   companias: Compania[]
   /** `null` = aún cargando. */
   acuerdos: RespuestaAcuerdos | null
@@ -56,6 +59,7 @@ export default function ListaCompanias({ companias, acuerdos, productividad }: {
 
   return (
     <div style={{ display: 'grid', gap: 18, gridTemplateColumns: 'minmax(0, 1fr)' }}>
+      {conCuadro && <CuadroCompanias nombres={nombres} acuerdos={acuerdos} productividad={productividad} />}
       <PanelControl
         panel={panel}
         nombres={nombres}
