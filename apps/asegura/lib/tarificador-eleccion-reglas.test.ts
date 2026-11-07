@@ -256,3 +256,46 @@ test('cableado (fuente): IA capaz (categoría redaccion), privada, ≤30 s; la p
   assert.match(tar, /estadoTrabajo === 'ok' && interno\.res\.tarificacionId[^\n]*\n\s*const aprender = memoriaTrasExito/)
   assert.equal((tar.match(/guardarMemoriaVersion\(/g) ?? []).length, 1, 'la IA se aprende en UN solo sitio (tras el ok)')
 })
+
+// ─── Mapfre (v0.8.61, 07/11/2026): opciones SIN código → memoria e IA por código sintético ─────────────────
+const MAPFRE_OPCIONES = [
+  { codigo: null, etiqueta: 'BMW F 800 ST · 85 CV · 798 cc · 01/01/2006' },
+  { codigo: null, etiqueta: 'BMW F 800 GS · 85 CV · 798 cc · 01/01/2008' },
+]
+const filaMapfre = (extra: Partial<FilaEleccion> = {}) => fila({ compania: 'mapfre', error: { tipo: 'eleccion', mensaje: 'requiere_eleccion_version: x', url: null, opcionesVersion: MAPFRE_OPCIONES, en: EN }, ...extra })
+
+test('Mapfre (sin código): ahora SÍ se intenta (antes «opciones sin código») y la IA elige por el código sintético, con la etiqueta de la LISTA', async () => {
+  const plan = planEleccionVersion(filaMapfre())
+  assert.ok(plan.intentar, 'antes: opciones sin código = no se intenta')
+  const codigoST = plan.intentar ? plan.opciones[0].codigo : null
+  assert.match(codigoST ?? '', /^et:[0-9a-f]{8}$/)
+  const { d, log } = deps(filaMapfre(), JSON.stringify({ codigo: codigoST, confianza: 'alta', motivo: 'ST en la descripción' }))
+  assert.deepEqual(await procesarEleccionVersion(JOB, d), { estado: 'aplicado', codigo: codigoST!, origen: 'ia' })
+  assert.deepEqual(log.aplicar, [{ codigo: codigoST, etiqueta: MAPFRE_OPCIONES[0].etiqueta, en: EN }])
+})
+
+test('Mapfre: una IA que inventa un código es «baja»; nada se aplica', async () => {
+  const { d, log } = deps(filaMapfre(), '{"codigo":"et:00000000","confianza":"alta","motivo":"x"}')
+  assert.equal((await procesarEleccionVersion(JOB, d)).estado, 'baja')
+  assert.equal(log.aplicar.length, 0)
+})
+
+test('Mapfre: la memoria con el código sintético de la etiqueta acierta sin llamar a la IA; lo aprendido sale de la elección {codigo:null, etiqueta}', async () => {
+  const plan = planEleccionVersion(filaMapfre())
+  const cod = plan.intentar ? plan.opciones[1].codigo ?? '' : ''
+  const { d, log } = deps(filaMapfre(), NO_LLAMAR_IA, undefined, { codigo: cod })
+  assert.deepEqual(await procesarEleccionVersion(JOB, d), { estado: 'aplicado', codigo: cod, origen: 'memoria' })
+  assert.equal(log.ia.length, 0)
+  // Lo que `aplicar` deja en el riesgo (codigo null + etiqueta + marca) se aprende con el MISMO código sintético.
+  const riesgo = { ...RIESGO, eleccionVersion: { codigo: null, etiqueta: MAPFRE_OPCIONES[1].etiqueta }, eleccionVersionIa: { origen: 'ia', clave: CLAVE, en: EN } }
+  assert.deepEqual(memoriaTrasExito({ correduria_id: 'c', compania: 'mapfre', ramo: 'auto', riesgo }), { k: { correduriaId: 'c', compania: 'mapfre', ramo: 'auto', clave: CLAVE }, codigo: cod, etiqueta: MAPFRE_OPCIONES[1].etiqueta })
+  // Una elección HUMANA sin marca de IA no entra por aquí.
+  assert.equal(memoriaTrasExito({ correduria_id: 'c', compania: 'mapfre', ramo: 'auto', riesgo: { ...RIESGO, eleccionVersion: { codigo: null, etiqueta: 'x' } } }), null)
+})
+
+test('Mapfre: dos filas con la MISMA etiqueta, o mezcla con y sin código, siguen para una persona', () => {
+  const rep = filaMapfre({ error: { tipo: 'eleccion', mensaje: 'x', url: null, opcionesVersion: [MAPFRE_OPCIONES[0], { codigo: null, etiqueta: MAPFRE_OPCIONES[0].etiqueta.toLowerCase() }], en: EN } })
+  assert.equal(planEleccionVersion(rep).intentar, false)
+  const mezcla = filaMapfre({ error: { tipo: 'eleccion', mensaje: 'x', url: null, opcionesVersion: [{ codigo: 'V1', etiqueta: 'A' }, MAPFRE_OPCIONES[1]], en: EN } })
+  assert.equal(planEleccionVersion(mezcla).intentar, false)
+})

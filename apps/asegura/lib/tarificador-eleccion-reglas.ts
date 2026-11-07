@@ -18,6 +18,8 @@
 
 import {
   claveMemoriaVersion,
+  codigoSinteticoDeEtiqueta,
+  conCodigosSinteticos,
   contextoEleccionVersion,
   eleccionDeMemoria,
   elegirDeLista,
@@ -62,8 +64,10 @@ export function planEleccionVersion(f: FilaEleccion, hoy: Date = new Date()): Pl
   if (f.ramo !== 'moto' && f.ramo !== 'auto') return { intentar: false, motivo: `ramo ${f.ramo}` }
   const err = obj(f.error)
   if (err?.tipo !== 'eleccion' && err?.tipo !== 'captcha') return { intentar: false, motivo: 'no es una elección de versión' }
-  const opciones = validarOpcionesVersion(err.opcionesVersion)
-  if (!opciones) return { intentar: false, motivo: 'sin lista de versiones' }
+  const validas = validarOpcionesVersion(err.opcionesVersion)
+  if (!validas) return { intentar: false, motivo: 'sin lista de versiones' }
+  // v0.8.61: portales sin código de catálogo (Mapfre) → código sintético por etiqueta, para que la memoria y la IA puedan elegir.
+  const opciones = conCodigosSinteticos(validas)
   const rg = obj(f.riesgo)
   // Tope: UN intento automático. Con una elección ya hecha (IA o persona) el siguiente «elige versión» es para una persona.
   if (rg && ((rg.eleccionVersion !== undefined && rg.eleccionVersion !== null) || rg.eleccionVersionIa !== undefined)) {
@@ -120,7 +124,9 @@ function eleccionAutomatica(riesgo: unknown): { codigo: string; etiqueta: string
   const rg = obj(riesgo)
   const ev = obj(rg?.eleccionVersion)
   const marca = obj(rg?.eleccionVersionIa)
-  const codigo = texto(ev?.codigo)
+  const etiquetaEv = texto(ev?.etiqueta)
+  // v0.8.61: la elección sin código (Mapfre: se escribe `{codigo: null, etiqueta}`) se aprende con el código sintético de su etiqueta.
+  const codigo = texto(ev?.codigo) ?? (etiquetaEv ? codigoSinteticoDeEtiqueta(etiquetaEv) : null)
   const clave = texto(marca?.clave)
   // Marcas de antes de la memoria (sin `origen`/`clave`): no se aprende de ellas (no se sabe de qué clave salieron).
   if (!codigo || !clave || (marca?.origen !== 'ia' && marca?.origen !== 'memoria')) return null

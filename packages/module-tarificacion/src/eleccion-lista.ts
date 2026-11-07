@@ -111,6 +111,33 @@ export function contextoEleccionVersion(riesgo: Pick<FormularioAuto, 'ramo' | 's
 }
 
 /**
+ * v0.8.61 (07/11/2026) · CÓDIGO SINTÉTICO para portales sin código de catálogo (Mapfre: «Selección de vehículo» solo trae
+ * la fila con su denominación · CV · cc · fecha). La IA y la memoria trabajan por código; si TODAS las opciones vienen sin
+ * código, cada una recibe `et:` + hash FNV-1a (32 bits) de su etiqueta normalizada (mayúsculas, sin tildes ni espacios
+ * repetidos): estable entre ejecuciones y ≤60 caracteres. NUNCA se mezclan opciones con y sin código (lista rara → una
+ * persona). Dos etiquetas iguales dan el mismo código y `peticionEleccionVersion` las rechaza (decide una persona).
+ */
+export const PREFIJO_CODIGO_SINTETICO = 'et:'
+
+export function codigoSinteticoDeEtiqueta(etiqueta: string): string {
+  const t = etiqueta.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toUpperCase()
+  let h = 0x811c9dc5
+  for (let i = 0; i < t.length; i++) {
+    h ^= t.charCodeAt(i)
+    h = Math.imul(h, 0x01000193) >>> 0
+  }
+  return `${PREFIJO_CODIGO_SINTETICO}${h.toString(16).padStart(8, '0')}`
+}
+
+export const esCodigoSintetico = (codigo: string | null | undefined): boolean => typeof codigo === 'string' && /^et:[0-9a-f]{8}$/.test(codigo)
+
+/** Opciones con código sintético si NINGUNA trae código; si todas lo traen, tal cual; mezcla → tal cual (la petición dirá que no). Pura. */
+export function conCodigosSinteticos(opciones: readonly CandidatoVersion[]): CandidatoVersion[] {
+  if (opciones.length === 0 || opciones.some((o) => o.codigo)) return opciones.map((o) => ({ ...o }))
+  return opciones.map((o) => ({ etiqueta: o.etiqueta, codigo: codigoSinteticoDeEtiqueta(o.etiqueta) }))
+}
+
+/**
  * Petición para la versión, o `null` si no se puede pedir: menos de 2 opciones, alguna SIN código (la elección
  * automática se aplica por código; sin él decide una persona) o códigos repetidos.
  */
