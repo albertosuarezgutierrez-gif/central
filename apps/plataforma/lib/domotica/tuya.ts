@@ -33,7 +33,11 @@ export function esErrorSuscripcion(code?: number): boolean {
 
 type TuyaEnvelope<T> = { success?: boolean; result?: T; code?: number; msg?: string }
 
-async function request<T>(method: string, path: string, body?: unknown, accessToken?: string): Promise<T> {
+export type TuyaEnvelopeRaw<T = unknown> = { success: boolean; code?: number; msg?: string; result?: T; httpStatus: number }
+
+// Igual que `request` pero SIN lanzar si Tuya responde success:false: devuelve el sobre entero
+// (success, code, msg, result) para poder registrarlo tal cual (p. ej. el log de «abrir»).
+async function requestRaw<T>(method: string, path: string, body?: unknown, accessToken?: string): Promise<TuyaEnvelopeRaw<T>> {
   if (!CLIENT_ID() || !CLIENT_SECRET()) throw new Error('TUYA_CLIENT_ID/TUYA_CLIENT_SECRET no configuradas')
   const t = String(Date.now())
   const nonce = randomUUID()
@@ -49,9 +53,14 @@ async function request<T>(method: string, path: string, body?: unknown, accessTo
     method, headers, body: bodyStr || undefined, signal: AbortSignal.timeout(15_000), cache: 'no-store',
   })
   const data = (await res.json().catch(() => null)) as TuyaEnvelope<T> | null
-  if (!data?.success) {
-    const extra = esErrorSuscripcion(data?.code) ? ' — renueva el trial de IoT Core en platform.tuya.com' : ''
-    throw new Error(`Tuya ${data?.code ?? `HTTP ${res.status}`}: ${data?.msg || 'sin detalle'}${extra}`)
+  return { success: !!data?.success, code: data?.code, msg: data?.msg, result: data?.result, httpStatus: res.status }
+}
+
+async function request<T>(method: string, path: string, body?: unknown, accessToken?: string): Promise<T> {
+  const data = await requestRaw<T>(method, path, body, accessToken)
+  if (!data.success) {
+    const extra = esErrorSuscripcion(data.code) ? ' — renueva el trial de IoT Core en platform.tuya.com' : ''
+    throw new Error(`Tuya ${data.code ?? `HTTP ${data.httpStatus}`}: ${data.msg || 'sin detalle'}${extra}`)
   }
   return data.result as T
 }
@@ -168,4 +177,4 @@ export async function codigoVentilador(deviceId: string): Promise<{ code: string
 }
 
 // Acceso genérico a la OpenAPI + al token para módulos hermanos (p.ej. lib/domotica/acceso.ts).
-export { request as tuyaRequest, getToken as tuyaGetToken }
+export { request as tuyaRequest, requestRaw as tuyaRequestRaw, getToken as tuyaGetToken }

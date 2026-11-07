@@ -8,6 +8,7 @@ type LogRow = { accion: string; reserva_ref: string | null; detalle: Record<stri
 type PinRow = {
   reserva_ref: string; property_id: string | null; pin: string | null; modo: string | null;
   valido_desde: string; valido_hasta: string; estado: string; entregado: boolean;
+  detalle?: { error?: string } | null;
 }
 type Disp = {
   id: string; nombre: string; tuya_device_id: string; piso: string | null;
@@ -192,7 +193,7 @@ export default function DomoticaClient() {
 type BloqueSonda = { clave: string; ok: boolean; datos: unknown; error: string | null }
 type SondaAcceso = {
   spec: BloqueSonda; status: BloqueSonda; pins: BloqueSonda;
-  tarjetas: BloqueSonda; accesos: BloqueSonda; codigoAbrir: string | null;
+  tarjetas: BloqueSonda; accesos: BloqueSonda; codigoAbrir: string | null; metodoAbrir?: string | null;
 }
 
 const inp: React.CSSProperties = {
@@ -340,6 +341,11 @@ function TarjetaAcceso({ d, apartamentos, ocupado, setOcupado, setError, cargar 
                 {p.property_id ? `${p.property_id} · ` : ''}reserva {p.reserva_ref}
                 <br />{fmtDT(p.valido_desde)} → {fmtDT(p.valido_hasta)}
               </div>
+              {p.estado === 'error' && p.detalle?.error && (
+                <div style={{ fontSize: 11, color: 'var(--negative)', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
+                  {String(p.detalle.error).slice(0, 160)}{String(p.detalle.error).length > 160 ? '…' : ''}
+                </div>
+              )}
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
               {p.estado === 'activo' && !String(p.reserva_ref).startsWith('manual:') && (
@@ -432,7 +438,7 @@ function TarjetaAcceso({ d, apartamentos, ocupado, setOcupado, setError, cargar 
           <BloqueSondaView titulo="📋 Accesos" b={sonda.accesos} />
           <BloqueSondaView titulo="⚙️ Funciones (spec)" b={sonda.spec} />
           <BloqueSondaView titulo="📟 Estado (DPs)" b={sonda.status} />
-          <p style={{ margin: 0, color: 'var(--muted)' }}>DP de apertura detectado: <code>{sonda.codigoAbrir || '—'}</code></p>
+          <p style={{ margin: 0, color: 'var(--muted)' }}>DP de apertura detectado: <code>{sonda.metodoAbrir || sonda.codigoAbrir || '—'}</code></p>
         </div>
       )}
     </div>

@@ -9,7 +9,7 @@ test('elegirCodigoAbrir prefiere el primer candidato presente', () => {
 })
 
 test('DP_ABRIR incluye los candidatos habituales de control de acceso', () => {
-  for (const c of ['unlock_request', 'open_door', 'manual_lock', 'remote_no_dp_key']) {
+  for (const c of ['unlock_request', 'open_door', 'manual_lock']) {
     assert.ok(DP_ABRIR.includes(c as (typeof DP_ABRIR)[number]), `${c} debería estar en DP_ABRIR`)
   }
 })
@@ -19,4 +19,9 @@ test('normalizarAcceso resume un resultado ok y uno con error', () => {
     { clave: 'pins', ok: true, datos: [1, 2], error: null })
   assert.deepEqual(normalizarAcceso('pins', { ok: false, msg: 'permission deny' }),
     { clave: 'pins', ok: false, datos: null, error: 'permission deny' })
+})
+
+test('DP_ABRIR NO incluye remote_no_dp_key (DP raw: por /commands no acciona nada)', () => {
+  assert.ok(!(DP_ABRIR as readonly string[]).includes('remote_no_dp_key'))
+  assert.equal(elegirCodigoAbrir(['remote_no_dp_key']), null)
 })

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { prisma } from '@/lib/db'
+import { bookingsDeRespuesta } from '@/lib/domotica/acceso-programador'
 import { smoobuFetch } from '@/lib/smoobu'
 import { tuyaSendCommands, codigoVentilador } from '@/lib/domotica/tuya'
 import { temperaturaSevilla } from '@/lib/domotica/meteo'
@@ -37,11 +38,12 @@ export async function GET(req: NextRequest) {
     try {
       const cfg: ConfigAuto = { ...CONFIG_DEFAULT, ...(d.config || {}) }
 
-      const data = await smoobuFetch(
-        `/api/reservations?apartments[]=${d.smoobu_apartment_id}&from=${fecha}&to=${fecha}&showCancellation=false&pageSize=100`,
+      const resp = await smoobuFetch(
+        `/api/reservations?apartmentId=${d.smoobu_apartment_id}&from=${fecha}&to=${fecha}&showCancellation=false&pageSize=100`,
         { cache: 'no-store' },
-      ).then(r => r.json())
-      const reservas: ReservaVentana[] = (data?.bookings || []).map((b: { id: number; arrival: string; departure: string }) => ({
+      )
+      const bookings = bookingsDeRespuesta<{ id: number; arrival: string; departure: string }>(resp.ok, resp.status, await resp.text())
+      const reservas: ReservaVentana[] = bookings.map((b: { id: number; arrival: string; departure: string }) => ({
         id: String(b.id), arrival: String(b.arrival), departure: String(b.departure),
       }))
       if (!reservas.length) { resultados.push({ d: d.nombre, nada: true }); continue }

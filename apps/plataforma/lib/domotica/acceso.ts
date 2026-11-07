@@ -2,11 +2,14 @@
 // Cada función va aislada con su try/catch: si el aparato no expone algo por cloud, devuelve
 // { ok:false, error } en vez de romper. Los DP/endpoints exactos se descubren con la sonda (Fase 0).
 import { randomInt } from 'crypto'
-import { tuyaRequest, tuyaGetToken, tuyaGetSpec, tuyaGetStatus, tuyaSendCommands } from './tuya'
-import { DP_ABRIR, elegirCodigoAbrir, normalizarAcceso, variantesAperturas, type BloqueSonda } from './acceso-puro'
+import { tuyaRequest, tuyaRequestRaw, tuyaGetToken, tuyaGetSpec, tuyaGetStatus, tuyaSendCommands } from './tuya'
+import {
+  elegirCodigoAbrir, elegirMetodoAbrir, normalizarAcceso, variantesAperturas, resumirRespuestaTuya, aperturaOk,
+  esAperturaRemotaDesactivada, MSG_APERTURA_REMOTA_OFF, type BloqueSonda, type RespuestaTuya,
+} from './acceso-puro'
 import { descifrarTicketKey, cifrarPin } from './tuya-cifrado'
 
-export { DP_ABRIR, DP_BATERIA, elegirCodigoAbrir, normalizarAcceso, type BloqueSonda } from './acceso-puro'
+export { DP_ABRIR, DP_BATERIA, elegirCodigoAbrir, elegirMetodoAbrir, normalizarAcceso, type BloqueSonda } from './acceso-puro'
 
 const CLIENT_SECRET = () => process.env.TUYA_CLIENT_SECRET || ''
 
@@ -42,9 +45,9 @@ async function sondearAperturas(deviceId: string): Promise<{ ok: boolean; result
 }
 
 // Sonda read-only: reúne spec + status (garantizados) + intentos door-lock (best effort).
-export async function sondearAcceso(deviceId: string): Promise<{
+export async function sondearAcceso(deviceId: string, categoria?: string | null): Promise<{
   spec: BloqueSonda; status: BloqueSonda; pins: BloqueSonda; tarjetas: BloqueSonda;
-  accesos: BloqueSonda; codigoAbrir: string | null;
+  accesos: BloqueSonda; codigoAbrir: string | null; metodoAbrir: string | null;
 }> {
   let specR: BloqueSonda, statusR: BloqueSonda
   try { specR = normalizarAcceso('spec', { ok: true, result: await tuyaGetSpec(deviceId) }) }
@@ -62,20 +65,74 @@ export async function sondearAcceso(deviceId: string): Promise<{
   const tarjetas = normalizarAcceso('tarjetas', await intentar('GET', `/v1.0/devices/${deviceId}/door-lock/cards`))
   const accesos = normalizarAcceso('accesos', await sondearAperturas(deviceId))
 
-  return { spec: specR, status: statusR, pins, tarjetas, accesos, codigoAbrir: elegirCodigoAbrir(codes) }
+  const m = elegirMetodoAbrir(codes, categoria)
+  const metodoAbrir = !m ? null : m.metodo === 'password-free' ? 'apertura remota (password-free)' : m.code
+  return { spec: specR, status: statusR, pins, tarjetas, accesos, codigoAbrir: elegirCodigoAbrir(codes), metodoAbrir }
 }
 
-// Apertura momentánea: manda el DP de abrir (pulso). El relé del NIVIAN cierra solo.
-// Devuelve { ok } o { ok:false, error } — nunca deja "mantener abierta".
-export async function abrirMomentaneo(deviceId: string): Promise<{ ok: boolean; error?: string }> {
+// Ticket de contraseña de Tuya (lo piden el PIN online y la apertura remota sin contraseña).
+async function pedirTicketPassword(deviceId: string, token: string): Promise<{ ticket_id: string; ticket_key: string }> {
+  return tuyaRequest<{ ticket_id: string; ticket_key: string }>(
+    'POST', `/v1.0/devices/${deviceId}/door-lock/password-ticket`, {}, token,
+  )
+}
+
+export type ResultadoAbrir = {
+  ok: boolean
+  error?: string
+  metodo?: 'password-free' | 'commands'
+  respuestas?: RespuestaTuya[]   // sobres de Tuya recortados (sin secretos) para domotica_log.detalle
+}
+
+// Apertura remota SIN contraseña (smart lock): ticket → open-door; si falla, door-operate (ticket nuevo).
+async function abrirSinPassword(deviceId: string): Promise<ResultadoAbrir> {
+  const respuestas: RespuestaTuya[] = []
+  const token = await tuyaGetToken()
+  const vias: Array<{ via: string; path: string; body: (t: string) => unknown }> = [
+    { via: 'door-lock/password-free/open-door', path: `/v1.0/devices/${deviceId}/door-lock/password-free/open-door`, body: t => ({ ticket_id: t }) },
+    { via: 'smart-lock/password-free/door-operate', path: `/v1.0/smart-lock/devices/${deviceId}/password-free/door-operate`, body: t => ({ ticket_id: t, open: true }) },
+  ]
+  for (const v of vias) {
+    try {
+      let ticketId: string
+      try { ticketId = (await pedirTicketPassword(deviceId, token)).ticket_id }
+      catch (e) {
+        const msg = e instanceof Error ? e.message : String(e)
+        respuestas.push({ via: `${v.via} (ticket)`, success: false, msg: msg.slice(0, 200) })
+        continue
+      }
+      const env = await tuyaRequestRaw<unknown>('POST', v.path, v.body(ticketId), token)
+      const r = resumirRespuestaTuya(v.via, env)
+      respuestas.push(r)
+      if (aperturaOk(r)) return { ok: true, metodo: 'password-free', respuestas }
+    } catch (e) {
+      // Timeout/red en esta vía: se registra (resumido, sin secretos) y se prueba la siguiente.
+      const msg = e instanceof Error ? e.message : String(e)
+      respuestas.push({ via: v.via, success: false, msg: msg.slice(0, 200) })
+    }
+  }
+  const ultimo = respuestas[respuestas.length - 1]
+  const detalle = respuestas.map(x => `${x.via}: ${x.code ?? ''} ${x.msg ?? (x.result === false ? 'result=false' : '')}`.trim()).join(' · ')
+  const remotaOff = respuestas.some(x => esAperturaRemotaDesactivada(x.msg))
+  return {
+    ok: false, metodo: 'password-free', respuestas,
+    error: remotaOff ? MSG_APERTURA_REMOTA_OFF : `Tuya no abrió la puerta (${detalle || ultimo?.msg || 'sin detalle'})`,
+  }
+}
+
+// Apertura momentánea. Smart lock (mk/ms/jtmspro o `remote_no_dp_key`) → apertura remota sin contraseña;
+// DP booleano real → /commands. Devuelve el método usado y la respuesta de Tuya para registrarlos.
+export async function abrirMomentaneo(deviceId: string, categoria?: string | null): Promise<ResultadoAbrir> {
   try {
     const st = await tuyaGetStatus(deviceId)
-    const code = elegirCodigoAbrir(st.map(s => s.code))
-    if (!code) return { ok: false, error: 'El aparato no expone un DP de apertura (revisar la sonda)' }
-    await tuyaSendCommands(deviceId, [{ code, value: true }])
-    return { ok: true }
+    const m = elegirMetodoAbrir(st.map(s => s.code), categoria)
+    if (!m) return { ok: false, error: 'El aparato no expone un DP de apertura (revisar la sonda)' }
+    if (m.metodo === 'password-free') return await abrirSinPassword(deviceId)
+    await tuyaSendCommands(deviceId, [{ code: m.code, value: true }])
+    return { ok: true, metodo: 'commands', respuestas: [{ via: `commands:${m.code}`, success: true, result: true }] }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+    const msg = e instanceof Error ? e.message : String(e)
+    return { ok: false, error: esAperturaRemotaDesactivada(msg) ? MSG_APERTURA_REMOTA_OFF : msg }
   }
 }
 
@@ -96,9 +153,7 @@ export type ResultadoPin = {
 // Contraseña ONLINE: ticket + AES. `effectiveEpoch`/`invalidEpoch` en segundos.
 async function crearPinOnline(deviceId: string, pin: string, nombre: string, effectiveEpoch: number, invalidEpoch: number): Promise<ResultadoPin> {
   const token = await tuyaGetToken()
-  const ticket = await tuyaRequest<{ ticket_id: string; ticket_key: string }>(
-    'POST', `/v1.0/devices/${deviceId}/door-lock/password-ticket`, {}, token,
-  )
+  const ticket = await pedirTicketPassword(deviceId, token)
   let cifrado: string
   try {
     const claveAes = descifrarTicketKey(ticket.ticket_key, CLIENT_SECRET())

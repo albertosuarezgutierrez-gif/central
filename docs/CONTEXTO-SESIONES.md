@@ -114,6 +114,12 @@ Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; ti
 original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados revisado/falta_roto/devuelto + bloque en ficha. `rrhh.material_empleado`
 (0028, aplicada). Pendiente fase 2: revisión periódica mensual.
 
+## (05/11/2026) Domótica · Socorro: «Abrir» no abría + PIN automático muerto desde 11/09 (PR #5576, mergeado 07/11)
+- Cron PIN leía 0 reservas de Smoobu en silencio (`apartments[]` + `.catch(()=>null)`): desde 27/09 los huéspedes reciben el código MAESTRO. Ahora `apartmentId=` + `bookingsDeRespuesta` lanza → Telegram crítico.
+- «Abrir» mandaba `remote_no_dp_key=true` (Tuya acepta, la NIVIAN `mk` no abre). Ahora ticket + `door-lock/password-free/open-door` (fallback `smart-lock/.../door-operate`); respuesta Tuya en `domotica_log.detalle`. Endpoints NO probados contra la cerradura real.
+- Falso «error» en PIN ya entregados de reservas vencidas → `caducado`; no se recrea con ventana vencida. UI muestra `detalle.error`.
+- Pendiente: Alberto prueba «Abrir»; verificar PIN de la reserva del 06/11 tras el barrido; cambiar código maestro de Socorro; BustoTavera offline en Tuya (2001).
+
 ## (05/11/2026) Correduría · Avant2 sin gasto en balde + renovación por la app (PR #5555, #5557, #5562, #5569)
 - #5555: auditoría de gasto (`docs/avant2/AUDITORIA-GASTO-DATOS-2026-11-05.md`): reutiliza cotización idéntica 24 h, cobro ilegible no se repite, corte si solo hay PILOTO, dedupe ReRate, `confirmado` en cartera.
 - #5562: renovación Avant2 con efecto = `fecha_efecto_actual` futura (anualidad ya emitida) o vencimiento; corte gratis fuera de 90 días o fecha sospechosa (>400 d). Vencimientos de cartera OK (4/103 raros).

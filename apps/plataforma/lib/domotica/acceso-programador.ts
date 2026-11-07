@@ -63,22 +63,53 @@ export function ventanaPin(r: ReservaAcceso, cfg: CfgProgramador): { desdeEpoch:
   return { desdeEpoch: desde, hastaEpoch: hasta }
 }
 
-// Decide qué crear y qué borrar. Idempotente por reserva_ref:
-//  - crear: reservas con autoPin activo que NO tengan ya un PIN vivo (activo).
+/** ¿La ventana ya venció? Nunca se crea ni se recrea un PIN en ese caso (Tuya responde 2334 expiry < now). */
+export function ventanaVencida(hastaEpoch: number, ahoraEpoch: number): boolean {
+  return hastaEpoch <= ahoraEpoch
+}
+
+/** Fila de un PIN YA ENTREGADO y con id en Tuya: un fallo de recreación no puede pisarla con `error`. */
+export function pinEntregadoVigente(p: Pick<PinExistente, 'entregado' | 'tuyaPasswordId'>): boolean {
+  return !!p.entregado && !!p.tuyaPasswordId
+}
+
+/** Espejo en TS de la guarda del ON CONFLICT de `upsertPin`: solo se protege la fila viva (activo/error) ya
+ *  entregada con id en Tuya; sobre una fila `borrado`/`caducado` un error real de recreación SÍ se escribe. */
+export function protegeFilaDeError(p: { estado: string; entregado: boolean; tuyaPasswordId: string | null }, nuevoEstado: string): boolean {
+  if (nuevoEstado !== 'error') return false
+  return (p.estado === 'activo' || p.estado === 'error') && !!p.entregado && !!p.tuyaPasswordId
+}
+
+// Decide qué crear, qué borrar y qué cerrar. Idempotente por reserva_ref:
+//  - crear: reservas con autoPin activo, sin PIN vivo (activo), con la ventana AÚN por venir y sin un PIN
+//    entregado en la fila (un PIN entregado con error de otra cosa no se recrea a ciegas).
 //  - borrar: PIN activos cuya ventana ya venció (si autoBorrarTrasCheckout) — además de caducar solo.
+//  - cerrar: filas en `error` cuya ventana venció y que ya tenían PIN entregado/con id en Tuya: el PIN
+//    caducó solo, no es un fallo → estado de cierre `caducado` (repara el falso «error» de 4 reservas).
 export function reconciliar(
   reservas: ReservaAcceso[],
   cfg: CfgProgramador,
   existentes: PinExistente[],
   ahoraEpoch: number,
-): { crear: ReservaAcceso[]; borrar: PinExistente[] } {
+): { crear: ReservaAcceso[]; borrar: PinExistente[]; cerrar: PinExistente[] } {
   const vivos = new Set(existentes.filter(p => p.estado === 'activo').map(p => p.reservaRef))
-  const crear = cfg.autoPin ? reservas.filter(r => !vivos.has(r.id)) : []
+  const porRef = new Map(existentes.map(p => [p.reservaRef, p]))
+  const crear = cfg.autoPin
+    ? reservas.filter(r => {
+        if (vivos.has(r.id)) return false
+        if (ventanaVencida(ventanaPin(r, cfg).hastaEpoch, ahoraEpoch)) return false
+        const ex = porRef.get(r.id)
+        if (ex && ex.estado === 'error' && pinEntregadoVigente(ex)) return false
+        return true
+      })
+    : []
 
   const borrar = cfg.autoBorrarTrasCheckout
     ? existentes.filter(p => p.estado === 'activo' && p.validoHastaEpoch < ahoraEpoch)
     : []
-  return { crear, borrar }
+  const cerrar = existentes.filter(p =>
+    p.estado === 'error' && ventanaVencida(p.validoHastaEpoch, ahoraEpoch) && (p.entregado || !!p.tuyaPasswordId))
+  return { crear, borrar, cerrar }
 }
 
 // ¿Hay que avisar de cerradura offline antes de un check-in? True si la cerradura está offline y falta
@@ -163,4 +194,21 @@ export function desajustesVentana(
     })
   }
   return out
+}
+
+/**
+ * Extrae `bookings` de la respuesta de Smoobu o LANZA (status + cuerpo corto). Antes se hacía
+ * `.json().catch(() => null)` y `data?.bookings || []`: un 4xx/5xx o un cuerpo sin `bookings` se leía
+ * como «0 reservas» y el cron dejó de crear PIN en silencio (desde el 11/09/2026).
+ */
+export function bookingsDeRespuesta<T = Record<string, unknown>>(
+  ok: boolean, status: number, cuerpo: string,
+): T[] {
+  const corto = (cuerpo || '').replace(/\s+/g, ' ').slice(0, 200)
+  if (!ok) throw new Error(`Smoobu respondió ${status}: ${corto || 'sin cuerpo'}`)
+  let json: unknown = null
+  try { json = JSON.parse(cuerpo) } catch { /* se trata abajo */ }
+  const b = (json as { bookings?: unknown } | null)?.bookings
+  if (!Array.isArray(b)) throw new Error(`Smoobu ${status} sin «bookings» en la respuesta: ${corto || 'cuerpo vacío'}`)
+  return b as T[]
 }
