@@ -12,6 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(07/11/2026, 4) Mi empresa F1 + roles del taller editables — PR #5616 (mergeado).** `apps/empresa` (empresa.grupoasegura.es, schema `herramientas`, roles `prisma_herramientas`/`_op` NOBYPASSRLS), `core-herramientas` (roles generales dueño/admin/consulta/empleado + mapeo por app), `legal-templates` (MEDIADOR), operador en plataforma `/operador/empresas`, salto entre apps por token de un uso. Taller: varios roles por persona + capacidades por rol editables (SQL 0014 APLICADA).
+Opción A: sin firma NO se bloquean apps (bloqueo por app = F2); firma Manuel ambas empresas; Pilar admin; Javier consulta (ve panel, no abre apps).
+🚨 SIN APLICAR en BD (la confirmación del MCP Supabase caduca sin Alberto delante): empresa 0001→0002→0003→0004, contabilidad 0009, rrhh 0037; después contraseñas de los 2 roles + DATABASE_URL/DIRECT_URL/HERRAMIENTAS_OP_DATABASE_URL en Vercel `empresa` (pooler `aws-0-eu-west-1`). Hasta entonces empresa no funciona (no rompe nada más). Falta CNAME IONOS `empresa` → `73e50523d3f9bef4.vercel-dns-016.com.`
+Semilla 0003: solo UNA empresa rrhh casa con los dos CIF (la otra queda sin vincular, NOTICE). Pendientes: domicilio/cargo y emitir contrato desde el operador; revisión del contrato por abogado; envs Telegram de empresa.
+
 **(07/11/2026) Herramientas de captación de nóminas — PR #5604.** Simulador de coste + salud flexible (`module-nominas/simulador.ts`) y calculadora pública `/calculadora-coste-trabajador` en asegura-web.
 rrhh: alta asistente 3 pasos `/admin/empleados/nuevo` + importación Excel/CSV `/admin/empleados/importar`; `POST /api/admin/empleados` ya escribe por `darDeAltaLote` (duplicados bajo cerrojo; 409 si choca; DNI opcional = null).
 Nómina explicable: anexo en el PDF al confirmar. Seguro obligatorio por convenio + lead a plataforma con consentimiento: **migración rrhh 0036 SIN APLICAR** (aplicar antes de desplegar).
