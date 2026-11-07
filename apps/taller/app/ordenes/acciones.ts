@@ -12,7 +12,7 @@ import {
   anadirFotos, anadirNota, descartarPropuesta, enviarPropuesta, ErrorTrabajo, proponerAmpliacion, type FotoSubida, type TxTrabajo,
 } from '@/lib/trabajo-ot'
 import { abrirParteMecanico, cambiarEstadoOt, cerrarParteMecanico, type TxOrdenes } from '@/lib/ordenes'
-import { entregarOt, MAX_FIRMA_BYTES } from '@/lib/entrega'
+import { entregarOt, MAX_FIRMA_BYTES, type TxEntrega } from '@/lib/entrega'
 
 const Id = z.string().uuid()
 
@@ -71,7 +71,8 @@ export async function entregarOtAccion(fd: FormData): Promise<RespuestaTrabajo |
   const id = Id.safeParse(fd.get('otId'))
   const nombre = z.string().max(200).safeParse(fd.get('nombre') ?? '')
   const version = z.string().max(100).safeParse(fd.get('versionTexto') ?? '')
-  if (!id.success || !nombre.success || !version.success) return { ok: false, errores: ['Datos inválidos'] }
+  const vence = z.string().max(10).safeParse(fd.get('vencimientoSeguro') ?? '')
+  if (!id.success || !nombre.success || !version.success || !vence.success) return { ok: false, errores: ['Datos inválidos'] }
   let firma: { mime: string; bytes: Uint8Array } | null = null
   const f = fd.get('firma')
   if (f instanceof File && f.size > 0) {
@@ -89,8 +90,9 @@ export async function entregarOtAccion(fd: FormData): Promise<RespuestaTrabajo |
       if (cap !== 'ordenes_avanzar') await exigir(tx as never, c, cap)
       const config = await configDe(tx, c.tallerId)
       if (!config) return 'El taller no tiene configuración de alta'
-      const r = await entregarOt(tx as unknown as TxOrdenes, almacenActivo(), config, {
+      const r = await entregarOt(tx as unknown as TxEntrega, almacenActivo(), config, {
         tallerId: c.tallerId, otId: id.data, ahora: new Date(), retira: { nombre: nombre.data, firma }, versionTextoVista: version.data || null,
+        usuarioId: c.usuarioId, vencimientoSeguro: vence.data || null,
       })
       return r.ok ? null : r.motivo
     }, { timeout: 40_000 })

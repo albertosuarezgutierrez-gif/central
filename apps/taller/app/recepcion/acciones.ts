@@ -2,6 +2,7 @@
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import { fechaInputDe } from '@central/module-taller'
 import { almacenActivo, MIME_ACEPTADOS } from '@/lib/almacen'
 import { conPermiso, configDe, mensajeDeAcceso } from '@/lib/contexto'
 import { direccionOpcional } from '@/lib/direccion'
@@ -13,7 +14,7 @@ import { buscarPorMatricula, crearRecepcion, ErrorRecepcion, type FotoEntrada, t
 export type Respuesta<T = object> = ({ ok: true } & T) | { ok: false; errores: string[] }
 
 export type FichaMatricula = {
-  vehiculo: { marca: string | null; modelo: string | null; kmActuales: number | null }
+  vehiculo: { marca: string | null; modelo: string | null; kmActuales: number | null; seguroHasta: string }
   cliente: { id: string; nombre: string; movil: string | null; correo: string | null; direccion: { cp: string; provincia: string; municipio: string; via: string; numero: string } } | null
   historial: { fecha: string; km: number | null; motivo: string | null }[]
 }
@@ -27,7 +28,7 @@ export async function buscarMatriculaAccion(matricula: unknown): Promise<Respues
       return {
         ok: true as const,
         ficha: {
-          vehiculo: { marca: r.vehiculo.marca, modelo: r.vehiculo.modelo, kmActuales: r.vehiculo.kmActuales },
+          vehiculo: { marca: r.vehiculo.marca, modelo: r.vehiculo.modelo, kmActuales: r.vehiculo.kmActuales, seguroHasta: fechaInputDe(r.vehiculo.seguroHasta) },
           cliente: r.cliente ? {
             id: r.cliente.id, nombre: r.cliente.nombre, movil: r.cliente.movil, correo: r.cliente.correo,
             direccion: { cp: r.cliente.cp ?? '', provincia: r.cliente.provincia ?? '', municipio: r.cliente.municipio ?? '', via: r.cliente.via ?? '', numero: r.cliente.numero ?? '' },
@@ -81,8 +82,8 @@ export async function guardarRecepcion(fd: FormData): Promise<Respuesta<{ recepc
   const d = p.data
   const km = d.km.trim() === '' ? null : /^\d{1,7}$/.test(d.km.trim()) ? Number(d.km.trim()) : NaN
   if (Number.isNaN(km)) return { ok: false, errores: ['Los kilómetros son un número entero'] }
+  // La fecha (rango y formato) y el móvil obligatorio los valida crearRecepcion con los helpers de module-taller.
   const vence = d.seguro.vence.trim()
-  if (vence && !/^\d{4}-\d{2}-\d{2}$/.test(vence)) return { ok: false, errores: ['Fecha de vencimiento del seguro inválida'] }
   // Dirección del cliente (opcional): si se empieza, debe quedar COMPLETA y coherente con su código postal.
   const dir = direccionOpcional(d.direccion)
   if (!dir.ok) return { ok: false, errores: dir.errores }

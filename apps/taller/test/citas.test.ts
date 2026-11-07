@@ -225,7 +225,7 @@ test('datos inválidos: matrícula, contacto, servicio; nada se escribe ni se ga
   const m = montar()
   const c = config(m)
   const { token } = await invitar(m, c)
-  for (const o of [{ matricula: '12' }, { movil: '', correo: '' }, { movil: '123' }, { nombre: '' }, { servicio: 'inventado' }]) {
+  for (const o of [{ matricula: '12' }, { movil: '', correo: '' }, { movil: '', correo: 'ana@correo.es' }, { movil: '123' }, { nombre: '' }, { servicio: 'inventado' }]) {
     const r = await reservar(m, c, token, o)
     assert.equal(r.ok, false, JSON.stringify(o))
   }

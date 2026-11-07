@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- delegados Prisma tipados de forma estructural (fake en tests) */
 // Servicio de RECEPCIÓN (spec 4.1): matrícula → vehículo/cliente → recepción con fotos, firma y casillas → OT.
 // Siempre dentro de `conTaller`. El servicio NO depende de las casillas de consentimiento (RGPD art. 7.4).
-import { normalizarMatricula, type ConfigTaller } from '@central/module-taller'
+import { cambioVencimientoSeguro, normalizarMatricula, validarMovilCliente, validarVencimientoSeguro, type ConfigTaller } from '@central/module-taller'
 import type { AlmacenArchivos } from './almacen.ts'
 import { evaluarLeadSeguros, registrarConsentimientos, type CasillasMarcadas, type TxConsent } from './consentimientos.ts'
 import type { Notificador } from './notificador.ts'
@@ -37,6 +37,7 @@ export type EntradaRecepcion = {
   objetos: string
   motivo: string
   danos: { nota: string } | null
+  /** `vence` (AAAA-MM-DD) es también el VENCIMIENTO DEL SEGURO del vehículo (`vehiculos.seguro_hasta`, con traza). Vacío = no se toca. */
   seguro: { vigente: boolean | null; aseguradora: string; vence: string | null } | null
   fotos: FotoEntrada[]
   /** PNG de la firma. Sin firma, la recepción se guarda igual pero NO queda firmada (la OT no se factura). */
@@ -67,11 +68,16 @@ export async function crearRecepcion(
   if (!nombre) throw new ErrorRecepcion('falta el nombre del cliente')
   const correo = e.cliente.correo.trim()
   if (correo && !CORREO.test(correo)) throw new ErrorRecepcion('correo inválido')
+  // Móvil OBLIGATORIO también para un cliente antiguo que no lo tenía: al tocar su ficha se pide (el correo sigue opcional).
+  const movil = validarMovilCliente(e.cliente.movil)
+  if (!movil.ok) throw new ErrorRecepcion(movil.motivo)
+  const vence = validarVencimientoSeguro(e.seguro?.vence ?? null, e.ahora)
+  if (!vence.ok) throw new ErrorRecepcion(vence.motivo)
   if (e.km !== null && (!Number.isSafeInteger(e.km) || e.km < 0)) throw new ErrorRecepcion('kilómetros inválidos')
   const t = e.tallerId
 
   // Cliente: el que cargó la matrícula (se actualizan sus datos de contacto) o uno nuevo. Vacío = null (no «sin dato»).
-  const datosCliente = { nombre, movil: e.cliente.movil.trim() || null, correo: correo || null, ...(e.direccion ?? {}) }
+  const datosCliente = { nombre, movil: movil.movil, correo: correo || null, ...(e.direccion ?? {}) }
   let clienteId: string
   if (e.clienteId) {
     const c = await tx.cliente.findFirst({ where: { tallerId: t, id: e.clienteId } })
@@ -83,15 +89,17 @@ export async function crearRecepcion(
   }
 
   // Vehículo: la matrícula normalizada es la clave del taller.
+  // Vencimiento del seguro: solo si se tecleó y cambia (queda quién, cuándo y «recepcion»); nunca se borra uno conocido.
   let veh = await tx.vehiculo.findFirst({ where: { tallerId: t, matriculaNormalizada: norm } })
+  const seguro = cambioVencimientoSeguro(veh?.seguroHasta ?? null, vence.fecha, { usuarioId: e.usuarioId, origen: 'recepcion', ahora: e.ahora })
   if (veh) {
     await tx.vehiculo.update({
       where: { id: veh.id },
-      data: { clienteId, ...(e.km !== null ? { kmActuales: e.km } : {}) },
+      data: { clienteId, ...(e.km !== null ? { kmActuales: e.km } : {}), ...(seguro ?? {}) },
     })
   } else {
     veh = await tx.vehiculo.create({
-      data: { tallerId: t, matricula: e.matricula.trim().toUpperCase(), clienteId, kmActuales: e.km },
+      data: { tallerId: t, matricula: e.matricula.trim().toUpperCase(), clienteId, kmActuales: e.km, ...(seguro ?? {}) },
     })
   }
 
@@ -135,7 +143,8 @@ export async function crearRecepcion(
     })
   }
 
-  // Puente a `seguros` (F3): aquí SOLO se decide; no hay transporte. Sin consentimiento → permitido:false.
+  // Puente a `seguros` (F3): aquí SOLO se decide; no hay transporte. Sin consentimiento → permitido:false. El vencimiento del
+  // seguro y el contacto se quedan en el taller: no se adjuntan a nada que salga (no existe envío de leads todavía).
   const lead = await evaluarLeadSeguros(tx, { tallerId: t, clienteId, hoy: e.ahora })
 
   return { recepcionId: rec.id as string, otId: ot.id as string, otNumero: numero, clienteId, vehiculoId: veh.id as string, firmada: firmaRuta !== null, consentimientos: consent, lead }

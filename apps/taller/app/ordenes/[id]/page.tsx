@@ -1,5 +1,5 @@
 import { notFound, redirect } from 'next/navigation'
-import { formatearEur, textoFotoPurgada, TRANSICIONES_OT, type EstadoOt } from '@central/module-taller'
+import { fechaInputDe, formatearEur, textoFotoPurgada, TRANSICIONES_OT, type EstadoOt } from '@central/module-taller'
 import { configDe, paraPagina } from '@/lib/contexto'
 import { firmarVarias } from '@/lib/almacen'
 import { capacidadParaTransicion, tienePermiso } from '@/lib/permisos'
@@ -244,7 +244,7 @@ export default async function Pagina({ params, searchParams }: { params: Promise
             <h2>Cambiar estado</h2>
             <div className="fila">
               {TRANSICIONES_OT[estado].filter((h) => h !== 'facturado' && (datos.puedeGestionar || capacidadParaTransicion(estado, h) === 'ordenes_avanzar')).map((h) => h === 'entregado' && datos.retirada ? (
-                <EntregaCliente key={h} otId={ot.id} texto={datos.retirada.textoConformidad} version={datos.retirada.versionTextoConformidad} obligatoria={datos.retirada.firmaObligatoria} />
+                <EntregaCliente key={h} otId={ot.id} texto={datos.retirada.textoConformidad} version={datos.retirada.versionTextoConformidad} obligatoria={datos.retirada.firmaObligatoria} vencimientoSeguro={fechaInputDe(veh?.seguroHasta ?? null)} />
               ) : (
                 <form key={h} action={cambiarEstadoAccion}>
                   <input type="hidden" name="otId" value={ot.id} /><input type="hidden" name="hacia" value={h} />

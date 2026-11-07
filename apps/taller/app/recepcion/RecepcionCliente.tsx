@@ -66,6 +66,8 @@ export function RecepcionCliente({ textoAsegura, textoTaller, inicial }: { texto
         setCorreo(r.ficha.cliente.correo ?? '')
         setDireccion(r.ficha.cliente.direccion)
       } else setClienteId(null)
+      // El vencimiento del seguro que ya constaba se muestra y se puede corregir; si no consta, el campo queda vacío.
+      setSegVence(r.ficha?.vehiculo.seguroHasta ?? '')
     })
   }
 
@@ -165,9 +167,10 @@ export function RecepcionCliente({ textoAsegura, textoTaller, inicial }: { texto
         <legend>Cliente</legend>
         <label className="campo">Nombre<input value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={200} required /></label>
         <div className="dos-col">
-          <label className="campo">Teléfono<input type="tel" value={movil} onChange={(e) => setMovil(e.target.value)} maxLength={30} /></label>
+          <label className="campo">Móvil (obligatorio)<input type="tel" inputMode="tel" autoComplete="tel" value={movil} onChange={(e) => setMovil(e.target.value)} maxLength={30} required /></label>
           <label className="campo">Correo<input type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} maxLength={200} /></label>
         </div>
+        {clienteId && !movil.trim() && <p className="aviso-error" role="alert">Este cliente no tiene móvil: pídeselo. El móvil es obligatorio para poder localizar al propietario.</p>}
         <p className="tenue">Dirección (opcional; si la rellenas, completa los cinco campos):</p>
         <DireccionCp valor={direccion} onChange={setDireccion} />
       </fieldset>
@@ -201,6 +204,7 @@ export function RecepcionCliente({ textoAsegura, textoTaller, inicial }: { texto
 
       <fieldset>
         <legend>Seguro del vehículo (opcional)</legend>
+        <p className="tenue">El vencimiento queda en la ficha del vehículo para los avisos del taller. Solo llega a Grupo ASegura si el cliente marca su casilla.</p>
         <div className="dos-col">
           <label className="campo">¿Tiene seguro vigente?
             <select value={segVigente} onChange={(e) => setSegVigente(e.target.value as '' | 'si' | 'no')}>
@@ -208,7 +212,7 @@ export function RecepcionCliente({ textoAsegura, textoTaller, inicial }: { texto
             </select>
           </label>
           <label className="campo">Aseguradora<input value={segAseg} onChange={(e) => setSegAseg(e.target.value)} maxLength={100} /></label>
-          <label className="campo">Vence<input type="date" value={segVence} onChange={(e) => setSegVence(e.target.value)} /></label>
+          <label className="campo">Vencimiento del seguro<input type="date" value={segVence} onChange={(e) => setSegVence(e.target.value)} /></label>
         </div>
       </fieldset>
 
@@ -228,7 +232,7 @@ export function RecepcionCliente({ textoAsegura, textoTaller, inicial }: { texto
       </fieldset>
 
       {errores.map((m) => <p key={m} className="aviso-error" role="alert">{m}</p>)}
-      <button type="submit" className="btn" disabled={pend || !matricula.trim() || !nombre.trim()}>{pend ? 'Guardando…' : 'Guardar recepción'}</button>
+      <button type="submit" className="btn" disabled={pend || !matricula.trim() || !nombre.trim() || !movil.trim()}>{pend ? 'Guardando…' : 'Guardar recepción'}</button>
     </form>
   )
 }
