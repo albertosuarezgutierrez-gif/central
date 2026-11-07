@@ -1090,20 +1090,9 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
             id: x.id,
             estado: x.estado,
             // Abierto sin movimiento desde hace meses: la ficha NO dice «abierto» (regla de lectura, no escribe).
-            sinConfirmar:
-              vigenciaSiniestro(
-                {
-                  estado: String(x.estado),
-                  tipo: x.tipo,
-                  origen: String(x.origen),
-                  fechaHora: x.fechaHora,
-                  fechaDeclaracion: x.fechaDeclaracion,
-                  situacionesCima: x.situacionesCima,
-                  accionesCima: x.accionesCima,
-                  pagosCima: x.pagosCima,
-                },
-                hoy,
-              ) === 'sin_confirmar',
+            // Se pasa la FILA entera a `vigenciaSiniestro` (función pura que devuelve solo un booleano): las
+            // columnas crudas de la compañía no se leen aquí, solo salen traducidas por `tramitacionSiniestro`.
+            sinConfirmar: vigenciaSiniestro(x, hoy) === 'sin_confirmar',
             referencia: x.referencia,
             fechaHora: x.fechaHora,
             // Las dos normalizaciones viven en el módulo puro: la provincia es

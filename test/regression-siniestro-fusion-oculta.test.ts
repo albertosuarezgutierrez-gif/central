@@ -23,7 +23,7 @@ const LECTORES: { fichero: string; patron: RegExp }[] = [
   // Ficha de póliza.
   { fichero: 'apps/asegura/lib/cartera-poliza.ts', patron: /siniestros: \{ where: \{ fusionadoEnSiniestroId: null \}, select: SELECT_SINIESTRO/ },
   // Resumen: «siniestros abiertos».
-  { fichero: 'apps/asegura/lib/cartera.ts', patron: /siniestro\.count\(\{ where: \{ correduriaId, fusionadoEnSiniestroId: null, estado:/ },
+  { fichero: 'apps/asegura/lib/cartera.ts', patron: /siniestro\.findMany\(\{\s*where: \{ correduriaId, fusionadoEnSiniestroId: null, estado:/ },
   // Eventos y conteos crudos.
   { fichero: 'apps/asegura/lib/eventos-cartera.ts', patron: /from siniestros s where s\.correduria_id = \$\{correduriaId\}::uuid and s\.fusionado_en_siniestro_id is null/ },
   { fichero: 'apps/asegura/lib/seguro-anterior-candidatas.ts', patron: /from siniestros s where [^)]*s\.fusionado_en_siniestro_id is null\)/ },
