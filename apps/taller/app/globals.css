@@ -107,6 +107,9 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand-soft)
 .check input, .casilla input { width: 22px; height: 22px; min-height: 0; accent-color: var(--brand-ink); flex: none; }
 .casilla { display: flex; gap: 10px; align-items: flex-start; min-height: 44px; padding: 8px 0; font-size: 14px; }
 .casilla input { margin-top: 2px; }
+/* Grupos de casillas (roles y permisos en Ajustes): una columna, cabe a 320 px; cada casilla ≥44 px de alto. */
+.casillas { border: 1px solid var(--border); border-radius: var(--radio); padding: 8px 12px 10px; margin: 0 0 12px; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); }
+.casillas legend { font-weight: 600; padding: 0 4px; }
 .formulario { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; max-width: 720px; }
 .formulario fieldset {
   border: 1px solid var(--border); border-radius: var(--radio); padding: 14px 16px 16px; margin: 0; min-width: 0;

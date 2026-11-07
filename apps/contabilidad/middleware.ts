@@ -3,7 +3,8 @@ import { COOKIE_NAME, leerCookie } from './lib/sesion-cookie'
 
 // Gate de sesión (solo FIRMA; la vigencia real se revalida en BD en cada página/API con `lib/contexto.ts`).
 // Públicas: el login y su API; `/api/hechos` (Bearer por vertical, comprobado en la ruta); `/api/operador/` (Bearer del operador); `/api/cron/` (Bearer CRON_SECRET, comprobado en la ruta).
-const PUBLICAS = ['/login', '/api/auth/solicitar', '/api/auth/verificar', '/api/hechos', '/api/operador/', '/api/cron/']
+// `/api/auth/traspaso`: entrada desde «Mi empresa» (token de un solo uso, comprobado en la ruta).
+const PUBLICAS = ['/login', '/api/auth/solicitar', '/api/auth/verificar', '/api/auth/traspaso', '/api/hechos', '/api/operador/', '/api/cron/']
 // Con sesión pero SIN empresa elegida todavía (gestor con varias): solo el selector, elegir y salir.
 // `/gestoria` (portal) lista varias empresas del gestor: no exige elegir una; sus datos salen de BD por usuario y cada empresa va en su propia transacción RLS.
 const SIN_EMPRESA = ['/empresas', '/gestoria', '/api/auth/elegir', '/api/auth/logout']

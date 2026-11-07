@@ -4,16 +4,21 @@
 //   · El PIN YA NO es único en el taller: el login es taller → usuario → PIN y el PIN solo se verifica contra el hash de la persona
 //     elegida. Por eso no hay «ya está en uso» (era un oráculo: decía qué PIN tenía un compañero) ni búsqueda de PIN libre.
 //   · Cambiar/resetear el PIN o dar de baja sube `sesion_version`: la cookie anterior deja de valer.
-//   · Nunca queda el taller sin un dueño activo (si no, nadie podría volver a entrar en Ajustes).
+//   · Nunca queda el taller sin un dueño activo (si no, nadie podría volver a entrar en Ajustes): `errorUltimoDueno` del módulo,
+//     comprobado bajo el candado `alta_dueno:<taller>` (el mismo del alta por operador) para que dos cambios a la vez no lo esquiven.
+//   · 0014: una persona tiene VARIOS roles (`roles`) + capacidades extra; `rol` se escribe = rol principal (compatibilidad).
 import { normalizarNif } from '@central/module-portal-proveedor'
 import { esPinTrivial, hashPin, validarFormatoPin, verificarPin } from '@central/core-identity/pin'
+import {
+  errorUltimoDueno, rolesDeFila, rolPrincipal, ROLES_TALLER, validarCapacidadesExtra, validarRoles, type Capacidad, type RolTaller,
+} from '@central/module-taller'
 import {
   anotarFalloUsuario, leerBloqueoUsuario, limpiarBloqueoUsuario, politicaUsuario, usuarioBloqueado,
   type TxBloqueoUsuario, type TxConfigUsuario,
 } from './bloqueo-usuario.ts'
 
-export const ROLES = ['recepcion', 'mecanico', 'dueno', 'admin'] as const
-export type Rol = (typeof ROLES)[number]
+export const ROLES = ROLES_TALLER
+export type Rol = RolTaller
 
 type Delegado = {
   findMany(a?: any): Promise<any[]>
@@ -21,7 +26,10 @@ type Delegado = {
   update(a: any): Promise<any>
   create(a: any): Promise<any>
 }
-export type TxPersonal = { usuarioTaller: Delegado; proveedor: Delegado; bloqueoPin: { deleteMany(a: any): Promise<any> } }
+export type TxPersonal = {
+  usuarioTaller: Delegado; proveedor: Delegado; bloqueoPin: { deleteMany(a: any): Promise<any> }
+  $executeRaw?: (s: TemplateStringsArray, ...v: unknown[]) => Promise<unknown>
+}
 
 export class ErrorPersonal extends Error {}
 
@@ -34,15 +42,52 @@ export function pinAleatorio(aleatorio: () => number = () => crypto.getRandomVal
 }
 
 export async function altaUsuario(
-  tx: TxPersonal, tallerId: string, d: { nombre: string; rol: string }, aleatorio?: () => number,
+  tx: TxPersonal, tallerId: string, d: { nombre: string; rol?: string; roles?: readonly string[]; capacidadesExtra?: readonly string[] },
+  aleatorio?: () => number,
 ): Promise<{ id: string; pin: string }> {
   const nombre = d.nombre.trim()
   if (!nombre) throw new ErrorPersonal('falta el nombre')
-  if (!(ROLES as readonly string[]).includes(d.rol)) throw new ErrorPersonal('rol inválido')
+  const r = validarRoles(d.roles ?? (d.rol === undefined ? [] : [d.rol]))
+  if (!r.ok) throw new ErrorPersonal(r.errores[0] === 'Cada persona necesita al menos un rol' ? r.errores[0] : 'rol inválido')
+  const e = validarCapacidadesExtra(d.capacidadesExtra ?? [])
+  if (!e.ok) throw new ErrorPersonal(e.errores[0])
   const pin = pinAleatorio(aleatorio)
   const hash = await hashPin(pin)
-  const u = await tx.usuarioTaller.create({ data: { tallerId, nombre, rol: d.rol, pinHash: hash, debeCambiarPin: true } })
+  const u = await tx.usuarioTaller.create({
+    data: { tallerId, nombre, rol: rolPrincipal(r.valor) ?? r.valor[0], roles: r.valor, capacidadesExtra: e.valor, pinHash: hash, debeCambiarPin: true },
+  })
   return { id: u.id, pin }
+}
+
+/** Ids de los dueños ACTIVOS del taller (leídos bajo el candado de dueños). */
+async function duenosActivos(tx: TxPersonal, tallerId: string): Promise<string[]> {
+  if (tx.$executeRaw) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'alta_dueno:' + tallerId}))`
+  const activos = await tx.usuarioTaller.findMany({ where: { tallerId, activo: true } })
+  return activos.filter((u: any) => rolesDeFila(u).includes('dueno')).map((u: any) => u.id as string)
+}
+
+/**
+ * El dueño cambia los roles y capacidades extra de una persona. Valida con el módulo y nunca deja el taller sin dueño activo.
+ * Devuelve el antes/después para la auditoría. No toca la versión de sesión: los permisos se re-leen en BD en cada petición.
+ */
+export async function guardarRolesUsuario(
+  tx: TxPersonal, tallerId: string, id: string, d: { roles: unknown; capacidadesExtra: unknown },
+): Promise<{ antes: { roles: RolTaller[]; capacidadesExtra: string[] }; despues: { roles: RolTaller[]; capacidadesExtra: Capacidad[] } }> {
+  const r = validarRoles(d.roles)
+  if (!r.ok) throw new ErrorPersonal(r.errores[0])
+  const e = validarCapacidadesExtra(d.capacidadesExtra)
+  if (!e.ok) throw new ErrorPersonal(e.errores[0])
+  const duenos = await duenosActivos(tx, tallerId)
+  const u = await usuario(tx, tallerId, id)
+  if (u.activo) {
+    const err = errorUltimoDueno({ duenosActivos: duenos, usuarioId: id, rolesNuevos: r.valor, activoNuevo: true })
+    if (err) throw new ErrorPersonal(err)
+  }
+  await tx.usuarioTaller.update({ where: { id }, data: { rol: rolPrincipal(r.valor) ?? r.valor[0], roles: r.valor, capacidadesExtra: e.valor } })
+  return {
+    antes: { roles: rolesDeFila(u), capacidadesExtra: Array.isArray(u.capacidadesExtra) ? u.capacidadesExtra : [] },
+    despues: { roles: r.valor, capacidadesExtra: e.valor },
+  }
 }
 
 async function usuario(tx: { usuarioTaller: Delegado }, tallerId: string, id: string) {
@@ -52,10 +97,10 @@ async function usuario(tx: { usuarioTaller: Delegado }, tallerId: string, id: st
 }
 
 export async function bajaUsuario(tx: TxPersonal, tallerId: string, id: string): Promise<void> {
+  const duenos = await duenosActivos(tx, tallerId)
   const u = await usuario(tx, tallerId, id)
-  if (u.rol === 'dueno' && u.activo) {
-    const duenos = await tx.usuarioTaller.findMany({ where: { tallerId, rol: 'dueno', activo: true } })
-    if (duenos.length <= 1) throw new ErrorPersonal('no se puede dar de baja al único dueño')
+  if (u.activo && errorUltimoDueno({ duenosActivos: duenos, usuarioId: id, rolesNuevos: rolesDeFila(u), activoNuevo: false })) {
+    throw new ErrorPersonal('no se puede dar de baja al único dueño')
   }
   await tx.usuarioTaller.update({ where: { id }, data: { activo: false, sesionVersion: (u.sesionVersion ?? 0) + 1 } })
 }

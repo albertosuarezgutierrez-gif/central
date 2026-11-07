@@ -125,7 +125,7 @@ El god-panel de plataforma crea empresas vía HTTP:
   Cepo: `lib/regression-nominas-contabilidad-unificada.test.ts`.
 - 🔢 **Doble 0033 (a sabiendas):** `0033_fichajes_nomina_hechos.sql` (#5590) y `0033_nominas_contratos_convenio.sql` (#5588) se numeraron a la
   vez y AMBAS están aplicadas en producción con ese nombre en `supabase_migrations.schema_migrations`: NO se renombran (se rompería la
-  trazabilidad). La siguiente libre es la 0037 (0034 = `hechos_nominas_destino`, 0035 = `permisos_rrhh_app`, 0036 = seguro de convenio). El guardián de `lib/convenio-tablas-migracion.test.ts`
+  trazabilidad). La siguiente libre es la 0038 (0034 = `hechos_nominas_destino`, 0035 = `permisos_rrhh_app`, 0036 = `convenio_seguro_obligatorio` (main), 0037 = `traspasos_usados`). El guardián de `lib/convenio-tablas-migracion.test.ts`
   tolera SOLO ese par exacto. Aplicadas en BD (07/11/2026): 0032, las dos 0033, 0034 y 0035 (permisos mínimos de rrhh_app).
 - `/api/cron/enviar-hechos-nominas` — cada hora (:10): envía a contabilidad el outbox de nóminas (ver N3).
 - `/api/cron/recordatorio-fichaje` — L-V 9h (hora ES): push a empleados que aún no han fichado entrada.
@@ -230,6 +230,6 @@ Subir logo (Cuenta o `logo_base64`+`logo_mime` en `POST /api/operador/empresas`)
 ## Alta de trabajadores, seguro de convenio y nómina explicable (07/11/2026)
 - Alta: `/admin/empleados/nuevo` e `importar`; escritura ÚNICA `darDeAltaLote` (`lib/alta-empleado-repo.ts`), reglas puras en `lib/alta-empleado.ts`. `POST /api/admin/empleados` la reutiliza.
 - Importación SOLO CSV: no se lee ningún .xlsx subido (`xlsx@0.18.5`, CVE-2023-30533; solo escribe informes). Volverá con xlsx ≥0.20.3.
-- Seguro de convenio: `lib/seguro-convenio.ts` (NULL ≠ `no_cubierto` ≠ `cubierto`); lead a la correduría solo con botón + consentimiento; timeout/5xx = `incierto` (no se reenvía; reintento manual tras 24 h). ✅ 0036 aplicada en BD (07/11/2026); la siguiente libre es la 0037.
+- Seguro de convenio: `lib/seguro-convenio.ts` (NULL ≠ `no_cubierto` ≠ `cubierto`); lead a la correduría solo con botón + consentimiento; timeout/5xx = `incierto` (no se reenvía; reintento manual tras 24 h). ✅ 0036 aplicada en BD (07/11/2026); la siguiente libre es la 0038 (0037 = `traspasos_usados`).
 - Nómina explicable: `lib/nomina-explicacion.ts`; el PDF lleva anexo al confirmar.
 - Detalle íntegro: `docs/claude-md/RRHH-alta-convenio-nomina-2026-11-07.md`.

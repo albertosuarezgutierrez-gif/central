@@ -28,6 +28,7 @@
   "sideEffects": false,
   "license": "UNLICENSED",
   "dependencies": {
+    "@central/legal-templates": "workspace:*",
     "libphonenumber-js": "^1.12.0"
   }
 }

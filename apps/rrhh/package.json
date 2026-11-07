@@ -26,6 +26,7 @@
     "@central/module-geo": "file:../../packages/module-geo",
     "@central/module-horario": "file:../../packages/module-horario",
     "@central/core-telegram": "file:../../packages/core-telegram",
+    "@central/core-herramientas": "file:../../packages/core-herramientas",
     "@prisma/client": "^5.22.0",
     "@supabase/supabase-js": "^2.46.2",
     "bcryptjs": "^2.4.3",

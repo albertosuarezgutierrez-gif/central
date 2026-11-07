@@ -13,6 +13,7 @@
     "@central/core-banca": "workspace:*",
     "@central/core-email": "workspace:*",
     "@central/core-fiscal": "workspace:*",
+    "@central/core-herramientas": "workspace:*",
     "@central/core-identity": "workspace:*",
     "@central/module-contabilidad": "workspace:*",
     "@central/module-seguros": "workspace:*",

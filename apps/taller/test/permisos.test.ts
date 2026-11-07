@@ -9,9 +9,11 @@ import { join } from 'node:path'
 import { capacidadParaTransicion, CAPACIDADES, DebeCambiarPinError, exigir, SinPermisoError, tienePermiso, TRANSICIONES_RECEPCION, type Capacidad } from '../lib/permisos.ts'
 import { TRANSICIONES_OT } from '@central/module-taller'
 import { montar, T, T2 } from './_escenario.ts'
+import { exigirAcceso } from '../lib/permisos.ts'
+import { bajaUsuario, ErrorPersonal, guardarRolesUsuario } from '../lib/personal.ts'
 
 const roles = ['dueno', 'admin', 'recepcion', 'mecanico'] as const
-const esperado: Record<Capacidad, string[]> = {
+const esperado: Partial<Record<Capacidad, string[]>> = {
   recepcion: ['dueno', 'admin', 'recepcion'],
   ordenes_ver: ['dueno', 'admin', 'recepcion', 'mecanico'],
   ordenes_gestionar: ['dueno'],
@@ -31,7 +33,7 @@ const esperado: Record<Capacidad, string[]> = {
 }
 
 test('matriz de permisos = la decisión de Alberto', () => {
-  for (const cap of CAPACIDADES) {
+  for (const cap of Object.keys(esperado) as Capacidad[]) {
     assert.deepEqual(roles.filter((r) => tienePermiso(r, cap)), esperado[cap], cap)
   }
   assert.equal(tienePermiso('invitado', 'ordenes_ver'), false)
@@ -89,7 +91,17 @@ test('toda acción de servidor exige permiso (salvo Ajustes, que exige dueño, y
       continue
     }
     if (f.includes('cambiar-pin')) { assert.ok(src.includes('getSession()') && src.includes('s.usuarioId'), `${f}: solo el usuario de la sesión`); continue }
-    if (f.includes('ajustes')) { assert.ok(src.includes("usuarioConRol(tx as never, s, ['dueno'])"), f); continue }
+    if (f.includes('ajustes')) {
+      // Ajustes: TODA acción exportada pasa por comoDueno («ajustes») o comoGestorPersonas («usuarios»), y estos por `exigir`.
+      assert.ok(src.includes('await exigir(tx as never, s, cap)'), `${f}: comoCon exige la capacidad en BD`)
+      assert.ok(!src.includes('usuarioConRol'), `${f}: ya no se mira el rol, sino la capacidad`)
+      const usos = [...src.matchAll(/\b(comoDueno|comoGestorPersonas)\(async/g)].length
+      assert.ok(usos >= exportadas, `${f}: ${exportadas} acciones y solo ${usos} con capacidad`)
+      for (const n of ['altaPersona', 'bajaPersona', 'resetPinPersona', 'guardarRolesPersona', 'guardarCapacidadesPorRol']) {
+        assert.match(src, new RegExp(`export async function ${n}[\\s\\S]*?comoGestorPersonas\\(`), `${n} exige «usuarios»`)
+      }
+      continue
+    }
     const llamadas = [...src.matchAll(/conPermiso\('(\w+)'/g)].map((x) => x[1] as Capacidad)
     assert.ok(llamadas.length >= exportadas, `${f}: ${exportadas} acciones y solo ${llamadas.length} conPermiso`)
     for (const c of llamadas) assert.ok(CAPACIDADES.includes(c), c)
@@ -115,9 +127,10 @@ test('páginas: presupuestos y recepción piden su capacidad; la ficha de OT no 
   assert.match(lee('presupuestos/nuevo/page.tsx'), /paraPagina\('presupuestos'/)
   assert.match(lee('recepcion/page.tsx'), /paraPagina\('recepcion'/)
   const ot = lee('ordenes/[id]/page.tsx')
-  assert.match(ot, /verContacto: tienePermiso\(c\.rol, 'contacto_cliente_ver'\)/)
+  assert.match(ot, /verContacto: c\.capacidades\.has\('contacto_cliente_ver'\)/)
   assert.match(ot, /verPrecios && <th/)
-  assert.match(ot, /tienePermiso\(c\.rol, 'margenes_ver'\)/)
+  assert.match(ot, /c\.capacidades\.has\('margenes_ver'\)/)
+  assert.match(ot, /soloMecanico = !c\.capacidades\.has\('ordenes_todas'\)/)
 })
 
 test('la página pública devuelve 404 con token inválido o desconocido', () => {
@@ -165,4 +178,65 @@ test('guardián: la acción de cambio de PIN solo toca al usuario de la sesión 
   const src = readFileSync(join(APP, 'cambiar-pin/acciones.ts'), 'utf8')
   assert.match(src, /usuarioId: s\.usuarioId/)
   assert.ok(!/usuarioId: p\.data|fd\.get\('usuarioId/.test(src))
+})
+
+// ── 0014: varios roles, capacidades por rol del taller y último dueño, EN SERVIDOR ─────────────────────────────────
+// Cepos vistos fallar (07/11/2026), restaurados: (1) en lib/permisos.ts `vigente` usar `[f.rol]` en vez de `rolesDeFila(f)` →
+// rojo «mecánico-recepcionista recepciona»; (2) ignorar `capacidadesPorRolDe` (pasar null) → rojo «mecánico puro no factura
+// si el taller…»; (3) en lib/personal.ts quitar la comprobación de `errorUltimoDueno` en guardarRolesUsuario → rojo «último dueño».
+test('mecánico-recepcionista (roles en BD) recepciona y entrega; el mecánico puro no', async () => {
+  const m = montar()
+  m.bd.sembrar('usuarioTaller', { tallerId: T, nombre: 'Único', rol: 'recepcion', roles: ['recepcion', 'mecanico'], pinHash: 'x' })
+  const unico = m.bd.filas('usuarioTaller').find((u) => u.nombre === 'Único')
+  await m.conTaller(T, async (tx: any) => {
+    const s = { tallerId: T, usuarioId: unico.id, rol: 'mecanico' }
+    for (const cap of ['recepcion', 'ordenes_avanzar', 'partes', 'ot_trabajo'] as const) assert.ok((await exigirAcceso(tx, s, cap)).capacidades.has(cap), cap)
+    await assert.rejects(exigir(tx, { tallerId: T, usuarioId: m.mec.id, rol: 'recepcion' }, 'recepcion'), SinPermisoError)
+    await assert.rejects(exigir(tx, s, 'ajustes'), SinPermisoError, '«ajustes» es solo del dueño')
+  })
+})
+
+test('mecánico puro no factura si el taller así lo configura; el dueño puede dárselo (config re-leída en BD)', async () => {
+  const m = montar()
+  const conf = m.bd.sembrar('configuracion', { tallerId: T, capacidadesPorRol: { mecanico: ['ordenes_ver', 'partes'] } })
+  await m.conTaller(T, async (tx: any) => {
+    const s = { tallerId: T, usuarioId: m.mec.id, rol: 'mecanico' }
+    await assert.rejects(exigir(tx, s, 'facturar'), SinPermisoError)
+    await assert.rejects(exigir(tx, s, 'ot_trabajo'), SinPermisoError, 'el taller le quitó notas/fotos')
+    assert.ok(await exigir(tx, s, 'partes'))
+  })
+  conf.capacidadesPorRol = { mecanico: ['ordenes_ver', 'partes', 'facturar'] }
+  await m.conTaller(T, async (tx: any) => {
+    assert.equal(await exigir(tx, { tallerId: T, usuarioId: m.mec.id, rol: 'mecanico' }, 'facturar'), 'mecanico')
+  })
+})
+
+test('capacidad extra suelta en BD suma; una reservada al dueño guardada a mano no da permiso', async () => {
+  const m = montar()
+  m.mec.capacidadesExtra = ['recepcion', 'usuarios'] // la fila sembrada (filas() devuelve copias)
+  await m.conTaller(T, async (tx: any) => {
+    const s = { tallerId: T, usuarioId: m.mec.id, rol: 'mecanico' }
+    assert.ok(await exigir(tx, s, 'recepcion'))
+    await assert.rejects(exigir(tx, s, 'usuarios'), SinPermisoError)
+  })
+})
+
+test('último dueño: no se le quita el rol ni se le da de baja; con un segundo dueño, sí', async () => {
+  const m = montar()
+  await m.conTaller(T, async (tx: any) => {
+    await assert.rejects(guardarRolesUsuario(tx, T, m.dueno.id, { roles: ['mecanico'], capacidadesExtra: [] }), ErrorPersonal)
+    await assert.rejects(bajaUsuario(tx, T, m.dueno.id), ErrorPersonal)
+    // Ser también mecánico sin dejar de ser dueño: sí.
+    await guardarRolesUsuario(tx, T, m.dueno.id, { roles: ['dueno', 'mecanico'], capacidadesExtra: [] })
+  })
+  const d = m.bd.filas('usuarioTaller').find((u) => u.id === m.dueno.id)
+  assert.deepEqual(d.roles, ['dueno', 'mecanico'])
+  assert.equal(d.rol, 'dueno', 'rol principal = el de más alcance')
+  await m.conTaller(T, async (tx: any) => {
+    await guardarRolesUsuario(tx, T, m.mec.id, { roles: ['dueno'], capacidadesExtra: [] })
+    await guardarRolesUsuario(tx, T, m.dueno.id, { roles: ['mecanico', 'recepcion'], capacidadesExtra: ['facturar'] })
+    await assert.rejects(guardarRolesUsuario(tx, T, m.mec.id, { roles: ['admin'], capacidadesExtra: [] }), ErrorPersonal, 'ahora el último es él')
+    await assert.rejects(guardarRolesUsuario(tx, T, m.mec2.id, { roles: ['mecanico'], capacidadesExtra: ['ajustes'] }), ErrorPersonal, 'reservada')
+  })
+  assert.equal(m.bd.filas('usuarioTaller').find((u) => u.id === m.dueno.id).rol, 'recepcion')
 })

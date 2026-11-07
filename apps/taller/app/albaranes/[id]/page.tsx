@@ -3,7 +3,6 @@ import { formatearCantidad, formatearEur, importeStockCent, type UnidadStock } f
 import { paraPagina } from '@/lib/contexto'
 import { Cabecera } from '../../_marca'
 import { valorarAlbaranAccion } from '../acciones'
-import { tienePermiso } from '@/lib/permisos'
 import { firmarVarias } from '@/lib/almacen'
 import { RecepcionVerificada } from '../../_portal/Compartir'
 import { RevisionFactura, type FacturaVista } from '../../_portal/RevisionFactura'
@@ -32,7 +31,7 @@ export default async function Pagina({ params, searchParams }: { params: Promise
       diferencias: (((f.caseResultado ?? null) as unknown as { diferencias?: FacturaVista['diferencias'] } | null)?.diferencias ?? []).map((d) => ({ tipo: d.tipo, bloquea: d.bloquea, texto: d.texto })),
       nifProveedorFalta: !prov?.nif,
     }))
-    return { a, lineas, prov, facturas: vistas, puedeConfirmar: tienePermiso(c.rol, 'pedidos_enviar') }
+    return { a, lineas, prov, facturas: vistas, puedeConfirmar: c.capacidades.has('pedidos_enviar') }
   })
   if (datos === 'sin_sesion') redirect('/login')
   if (datos === 'sin_permiso') return <main className="contenido"><p className="tenue">Tu perfil no incluye el almacén.</p></main>

@@ -99,3 +99,9 @@ export const repoAccesoBd: RepoAcceso = {
   },
   empresasDeUsuario: empresasDeUsuarioBd,
 }
+
+/** Traspaso desde «Mi empresa»: true SOLO la primera vez que se ve el jti (0009_traspasos_usados.sql). */
+export async function consumirTraspasoBd(jti: string, exp: Date): Promise<boolean> {
+  const f = await sql.$queryRaw<Fila[]>`SELECT contabilidad.consumir_traspaso(${jti}::uuid, ${exp}::timestamptz) AS ok`
+  return f[0]?.ok === true
+}

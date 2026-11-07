@@ -75,6 +75,25 @@ seguros), propuesta de arquitectura y diseño UX del 07/11. [Seguro] = leído en
 3. Taller (F2): `usuarios_taller` no tiene email → `persona_email_verificado` que fija el operador, solo `dueno|admin`.
 4. «Salir» del panel no cierra las sesiones de las apps: se dice en pantalla.
 
+## 5 bis. Contrato «rol general ↔ rol de cada app» (implementado en F1, 07/11/2026)
+- **Rol GENERAL** por empresa en `herramientas.cuenta_miembro.rol` (vale para TODAS las herramientas): `dueno` (firma y reparte) ·
+  `admin` (opera lo concedido por herramienta; Pilar) · `consulta` (ve todo lo contratado; no firma ni reparte; el socio) ·
+  `empleado` (ve lo concedido; NUNCA salta con traspaso: entra en cada app con su acceso de empleado).
+- **Rol ESPECÍFICO** opcional por herramienta en `miembro_herramienta.rol_app` (NULL = el de por defecto).
+- **Tabla de mapeo** (única copia, editable): `packages/core-herramientas/src/roles.ts` → `ROLES_APP` (roles que entiende cada app) +
+  `MAPEO_POR_DEFECTO` (rol general → rol de la app; `null` = no entra por defecto) + `rolEnHerramienta()` (específico válido manda;
+  nadie sube a `dueno` en la app sin serlo aquí). Test: `roles.test.ts` (también compara los del taller con `ROLES_TALLER`).
+  Hoy: contabilidad dueno/gestor · rrhh responsable/empleado · taller dueno/admin/recepcion/mecanico. Consulta no tiene rol de solo
+  lectura en ninguna app → `null` (hueco: hasta que una app lo tenga, el socio ve el panel y no entra en la app).
+- **Herramienta nueva** = una entrada en `catalogo.ts` + su fila en `ROLES_APP`/`APP_DE_ROLES`/`MAPEO_POR_DEFECTO` + el CHECK de 0001.
+- **Una sola alta:** dar acceso en Mi empresa crea la persona y su concesión UNA vez; cada app debe recibir su rol por SU puerto de
+  operador (`miembro_herramienta.propagacion`: `pendiente|hecha|fallida`; sin respuesta = `fallida`, nunca `hecha`).
+  ⚠️ **F1 deja la propagación en `pendiente`** (no llama todavía a los puertos de contabilidad/rrhh/taller): el alta en cada app se
+  sigue haciendo por su flujo actual. Es lo primero de F1.1.
+- **Roles sugeridos desde la correduría** (plataforma, `lib/herramientas-relaciones.ts`): Dueño o título administrador/apoderado →
+  dueno · Socio/a, Accionista → consulta · Administración → admin · Empleado/a → empleado · parentescos → sin rol. Se copia SOLO con el
+  clic del operador y se guarda `cuenta_miembro.origen`; si la relación cambia, plataforma avisa («¿actualizar rol?») sin tocar nada.
+
 ## 6. Circuito del contrato (paso a paso)
 | # | Quién / dónde | Qué pasa | Estado |
 |---|---|---|---|
