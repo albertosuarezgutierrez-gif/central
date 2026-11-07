@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-07T07:46:27Z",
-  "sha": "960eb5b0df4fce6d6ef5b9692a47b8c53862d191",
+  "generadoEn": "2026-11-07T08:26:08Z",
+  "sha": "cbe8eced9b797a72731d5d967e7722a01aed1f85",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -30444,7 +30444,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 574
+          "linea": 611
         },
         {
           "nombre": "respuestaGastoBloqueado",
@@ -30452,7 +30452,7 @@
           "exportada": false,
           "params": "gasto: Extract<GastoEmision<never>, { ok: false }>",
           "retorno": null,
-          "linea": 592,
+          "linea": 629,
           "resumen": "El libro dijo que no. **Sin llamada al vendor**, y por eso se contesta con dos códigos distintos: se arreglan en sitios distintos. - `sin_libro` (503): no se ha podido leer `codeoscopic_consumo`. Es u"
         },
         {
@@ -30461,7 +30461,7 @@
           "exportada": false,
           "params": "v: unknown,",
           "retorno": "",
-          "linea": 619,
+          "linea": 656,
           "resumen": "Solo claves de la lista blanca y valores con la forma que el vendor acepta (mismas reglas que `revisarPersona`): un municipio no numérico o una fecha en formato español llegarían al PATCH y volverían "
         },
         {
@@ -30470,7 +30470,7 @@
           "exportada": false,
           "params": "campo: CampoPersona, s: string",
           "retorno": "string | null",
-          "linea": 638
+          "linea": 675
         },
         {
           "nombre": "respuestaSigueFaltando",
@@ -30478,7 +30478,7 @@
           "exportada": false,
           "params": "campos: CampoPersona[], mensajeVendor: string",
           "retorno": null,
-          "linea": 656
+          "linea": 693
         },
         {
           "nombre": "registrarFaltaProducto",
@@ -30486,7 +30486,7 @@
           "exportada": false,
           "params": "correduriaId: string, tarificacionId: string, campos: CampoProducto[]",
           "retorno": null,
-          "linea": 684,
+          "linea": 721,
           "resumen": "Telemetría de `faltan_producto` por COMPAÑÍA (20/09/2026): saber a qué compañías les falta cobertura del Product Form Library, no solo que «alguna vez pasa». Reutiliza `seguros.operational_events` (ge"
         },
         {
@@ -30495,7 +30495,7 @@
           "exportada": false,
           "params": "c: Extract<ResultadoCompletar, { estado: 'no_aplicado' }>",
           "retorno": null,
-          "linea": 702
+          "linea": 739
         }
       ],
       "tablas": [
@@ -30508,7 +30508,7 @@
         "tarificaciones"
       ],
       "rutaApi": "/api/operador/codeoscopic/oferta",
-      "hash": "ef581b547b1b"
+      "hash": "889b86e61b07"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/precalificar-auto-nuevo/route.ts",
@@ -37907,7 +37907,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Primitivo | undefined",
-          "linea": 66
+          "linea": 68
         },
         {
           "nombre": "sanearCambio",
@@ -37915,7 +37915,7 @@
           "exportada": true,
           "params": "c: Cambio",
           "retorno": "CambioGuardado",
-          "linea": 75
+          "linea": 77
         },
         {
           "nombre": "cambiosParaGuardar",
@@ -37923,13 +37923,13 @@
           "exportada": true,
           "params": "cambios: Cambio[]",
           "retorno": "CambioGuardado[]",
-          "linea": 85,
+          "linea": 87,
           "resumen": "Saneados, sin los que no cambian (antes === después) y con el tope aplicado."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ab9ec0924fae"
+      "hash": "c1a9dfebabea"
     },
     {
       "ruta": "apps/asegura/lib/canal-baja.ts",
@@ -43680,6 +43680,72 @@
       "hash": "0904a988094d"
     },
     {
+      "ruta": "apps/asegura/lib/codeoscopic/descuento-adaptativo.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Descuento adaptativo del ReRate (decisión de Alberto, 07/11/2026): se pide SIEMPRE el máximo (50) y, si la compañía rechaza el ReRate por el descuento, se baja hasta que lo acepte. PURO: entra el 400 del vendor y las opciones enviadas, salen las opciones con el descuento rebajado (o `null` si el 400",
+      "exporta": [
+        "maximoDeLinea",
+        "rebajarDescuento",
+        "descuentosEnOpciones"
+      ],
+      "funciones": [
+        {
+          "nombre": "esObj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "o: unknown",
+          "retorno": "o is Record<string, unknown>",
+          "linea": 33
+        },
+        {
+          "nombre": "numero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 35
+        },
+        {
+          "nombre": "maximoDeLinea",
+          "kind": "function",
+          "exportada": true,
+          "params": "linea: string",
+          "retorno": "number | null",
+          "linea": 41,
+          "resumen": "Máximo numérico que nombra una línea del vendor, entero ≥ 0, o `null`."
+        },
+        {
+          "nombre": "siguienteEscalon",
+          "kind": "function",
+          "exportada": false,
+          "params": "actual: number",
+          "retorno": "number | null",
+          "linea": 52
+        },
+        {
+          "nombre": "rebajarDescuento",
+          "kind": "function",
+          "exportada": true,
+          "params": "detalle: string, opciones: unknown, permitidos: readonly string[], intentos: Readonly<Record<string, number>> = {},",
+          "retorno": "Rebaja | null",
+          "linea": 60,
+          "resumen": "`detalle`: el `e.detalle` del `ErrorCodeoscopic`. `opciones`: las ENVIADAS. `permitidos`: ids que puso el código. `intentos`: reintentos ya gastados por id. `null` = no es un 400 de descuento (la casc"
+        },
+        {
+          "nombre": "descuentosEnOpciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "opciones: unknown, ids: readonly string[]",
+          "retorno": "Record<string, number>",
+          "linea": 109,
+          "resumen": "Valores finales de los ids de descuento (para dejar constancia en la respuesta y el historial)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "05a536f34c02"
+    },
+    {
       "ruta": "apps/asegura/lib/codeoscopic/desde-cartera-decesos.ts",
       "ambito": "apps/asegura",
       "resumen": "Precalificación de DECESOS sin póliza («oportunidad nueva»): la cartera viva tiene 0 pólizas de este ramo (03/09/2026). Mismo patrón que `desde-cartera-vida.ts` — ver su cabecera para el porqué del fichero aparte. 🚧 Ver la cabecera de `peticion-decesos.ts`: el `risk` que se manda al vendor es una s",
@@ -45669,6 +45735,7 @@
       "ambito": "apps/asegura",
       "resumen": "Catálogo ESTÁTICO de `product.options` por defecto para el ReRate, para las compañías que exigen campos que la cotización NUNCA devuelve (ver `Precio.productOptions` en `respuesta.ts` — el vendor no los manda al cotizar, así que aquí casi siempre es `null`). Sin sandbox y sin catálogo REST para esto",
       "exporta": [
+        "idsDescuentoPorDefecto",
         "opcionesPorDefecto",
         "opcionesParaReRate",
         "descuentosDelCuerpo",
@@ -45678,12 +45745,21 @@
       ],
       "funciones": [
         {
+          "nombre": "idsDescuentoPorDefecto",
+          "kind": "function",
+          "exportada": true,
+          "params": "compania: string, ramo: string | null = 'auto'",
+          "retorno": "string[]",
+          "linea": 75,
+          "resumen": "Ids de descuento que ESTE código pone por defecto (catálogo o vendor-con-id) para compañía+ramo. Base de lo rebajable."
+        },
+        {
           "nombre": "opcionesPorDefecto",
           "kind": "function",
           "exportada": true,
           "params": "compania: string, ramo: string | null = 'auto'",
           "retorno": "OpcionProducto[] | null",
-          "linea": 73,
+          "linea": 92,
           "resumen": "Opciones por defecto para una compañía, por nombre (contains normalizado, como `encontrarPrecio`). `null` si no hay catálogo para ella — hoy es TODO salvo Allianz auto: ni el resto de compañías ni mot"
         },
         {
@@ -45692,7 +45768,7 @@
           "exportada": true,
           "params": "delVendor: unknown, compania: string, ramo: string | null = 'auto'",
           "retorno": "unknown",
-          "linea": 103,
+          "linea": 122,
           "resumen": "PURO. Las opciones de producto del ReRate: las que el vendor devolvió para ESE precio (`delVendor`) y, si no hay, el catálogo por defecto. Generali auto: si el vendor devolvió opciones, el descuento p"
         },
         {
@@ -45701,16 +45777,16 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "",
-          "linea": 130,
+          "linea": 155,
           "resumen": "Lee `{ dtoCap?, dtoVentaCruzada? }` del cuerpo. `null` si no viene nada; lanza nada: lo raro es reparo."
         },
         {
           "nombre": "conDescuentos",
           "kind": "function",
           "exportada": true,
-          "params": "base: unknown, pedidos: DescuentosPedidos, origen: 'catalogo' | 'formulario' = 'catalogo',",
+          "params": "base: unknown, pedidos: DescuentosPedidos | DescuentosPorId, origen: 'catalogo' | 'formulario' = 'catalogo',",
           "retorno": "",
-          "linea": 152,
+          "linea": 177,
           "resumen": "PURO. Aplica los descuentos pedidos a las opciones que irán en el ReRate. Solo si esas opciones YA traen el campo (hoy, el catálogo de Allianz auto): meter un `dtoCap` en otra compañía sería declarar "
         },
         {
@@ -45719,7 +45795,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string | null = 'auto'",
           "retorno": "OpcionProducto[] | null",
-          "linea": 209,
+          "linea": 234,
           "resumen": "Opciones por defecto para `product.options` en el SUBMIT (no en el ReRate: ver `opcionesPorDefecto` de arriba). `null` si no hay catálogo — hoy solo Allianz AUTO tiene esta captura (los 4 consentimien"
         },
         {
@@ -45728,13 +45804,13 @@
           "exportada": true,
           "params": "campos: Record<string, unknown>, compania: string, opts?: { familiaAllianz?: boolean; ramo?: string | null },",
           "retorno": "Record<string, unknown>",
-          "linea": 229,
+          "linea": 254,
           "resumen": "Añade `product.options` por defecto a `campos` (el cuerpo del Submit) SOLO si nadie ya puso un `product` — el JSON avanzado del corredor manda sobre cualquier default. Puro y testeable aparte de la ru"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "030633a7d815"
+      "hash": "57ed743e5241"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/opciones.ts",
@@ -296822,7 +296898,7 @@
     }
   ],
   "resumen": {
-    "archivos": 6062,
-    "funciones": 24049
+    "archivos": 6063,
+    "funciones": 24056
   }
 }
