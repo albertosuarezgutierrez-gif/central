@@ -1,0 +1,30 @@
+{
+ "sesion": "23073cc0-b9dd-5f65-bf6d-0e21aa0649eb",
+ "inicio": "2026-11-07T07:05:55.347Z",
+ "fin": "2026-11-07T07:05:59.494Z",
+ "llamadas": 4,
+ "categorias": {
+  "agente:rastreador-codigo": {
+   "llamadas": 1,
+   "chars_in": 1151,
+   "chars_out": 1386,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 3,
+   "chars_in": 500,
+   "chars_out": 5497,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 3
+   }
+  }
+ }
+}
