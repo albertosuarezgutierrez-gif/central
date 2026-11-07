@@ -42,6 +42,7 @@ export default function FichaCompania({ codigo, compania, acuerdos, productivida
         sub="Para la reunión con la compañía: cartera, producción, siniestralidad (informativa) y comisión, con el año anterior.">
         <CuadroFicha
           codigo={codigo}
+          nombre={compania?.nombreComun ?? codigo}
           acuerdos={acuerdos}
           productividad={productividad}
           pactado={comisionReal.estado === 'ok'

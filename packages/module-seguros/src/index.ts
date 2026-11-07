@@ -1851,3 +1851,20 @@ export type {
   CuadroCompaniaAnio,
   SemaforoSiniestralidad,
 } from './cuadro-compania.ts'
+
+export {
+  calcularCompetitividad,
+  frasesCompetitividad,
+  pctEs,
+  MUESTRA_MINIMA_COMPETITIVIDAD,
+  VENTANA_DIAS_DEFECTO,
+} from './competitividad-precio.ts'
+export type {
+  ObservacionPrecio,
+  FuenteObservacion,
+  OpcionesCompetitividad,
+  ResultadoCompetitividad,
+  FilaPareja,
+  FilaSegmento,
+  PierdeContra,
+} from './competitividad-precio.ts'

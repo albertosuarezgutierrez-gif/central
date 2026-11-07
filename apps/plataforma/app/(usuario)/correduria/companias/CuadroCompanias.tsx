@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import Link from 'next/link'
-import { BarChart3, ChevronRight } from 'lucide-react'
+import { BarChart3, ChevronRight, ClipboardList, Copy, Printer } from 'lucide-react'
 import { etiquetaRamo, semaforoSiniestralidad, variacionPct, type CuadroCompaniaAnio, type FilaRamoCuadro, type SemaforoSiniestralidad } from '@central/module-seguros'
 import { Badge, TablaScroll, btnStyle, type Tono } from '@/components/ui'
 import type { RespuestaAcuerdos, RespuestaProductividad } from '@/lib/acuerdos-asegura'
@@ -11,6 +11,8 @@ import {
   aniosSelector, enteroONada, eurONada, filasResumen, ordenarResumen, pctONada, siniestralidadMaxima,
   textoSiniestralidad, textoVariacion, type ColumnaResumen, type FilaResumen, type LibroCompania, type RespuestaCuadro,
 } from '@/lib/cuadro-companias'
+import { textoCompetitividad, type RespuestaCompetitividad } from '@/lib/competitividad-companias'
+import { textoReunion } from '@/lib/preparar-reunion'
 
 /**
  * Cuadro de mando por compañía y AÑO NATURAL (07/11/2026): lo que Alberto lleva a las reuniones con las
@@ -47,6 +49,29 @@ function useCuadro(anio: number | null): Carga {
       .catch((e: unknown) => {
         if (ac.signal.aborted) return
         setEstado((s) => ({ ...s, cargando: false, error: e instanceof Error ? e.message : 'red' }))
+      })
+    return () => ac.abort()
+  }, [anio])
+  return estado
+}
+
+type CargaCompetitividad = { respuesta: RespuestaCompetitividad | null; cargando: boolean }
+
+/** Competitividad de precio del año. Va APARTE del cuadro: si falla, el cuadro se pinta igual y el bloque lo dice. */
+function useCompetitividad(anio: number | null): CargaCompetitividad {
+  const [estado, setEstado] = useState<CargaCompetitividad>({ respuesta: null, cargando: true })
+  useEffect(() => {
+    const ac = new AbortController()
+    setEstado((s) => ({ ...s, cargando: true }))
+    fetch(`/api/correduria/companias/competitividad${anio === null ? '' : `?anio=${anio}`}`, { cache: 'no-store', signal: ac.signal })
+      .then(async (r) => {
+        if (!r.ok) throw new Error(r.status === 401 || r.status === 403 ? 'sin_permiso' : `HTTP ${r.status}`)
+        const j = (await r.json()) as { competitividad: RespuestaCompetitividad }
+        setEstado({ respuesta: j.competitividad, cargando: false })
+      })
+      .catch((e: unknown) => {
+        if (ac.signal.aborted) return
+        setEstado({ respuesta: { estado: 'error', motivo: e instanceof Error ? e.message : 'red' }, cargando: false })
       })
     return () => ac.abort()
   }, [anio])
@@ -113,9 +138,11 @@ const TONO_SEMAFORO: Record<SemaforoSiniestralidad, { tono: Tono; texto: string 
 
 // ─── Detalle de UNA compañía ─────────────────────────────────────────────────
 
-export function DetalleCuadro({ codigo, datos, acuerdos, productividad, pactado }: {
+export function DetalleCuadro({ codigo, datos, acuerdos, productividad, pactado, competitividad }: {
   codigo: string
   datos: Datos
+  /** Competitividad de precio del año (`null` = aún no cargada). */
+  competitividad?: RespuestaCompetitividad | null
   acuerdos: RespuestaAcuerdos | null
   productividad: RespuestaProductividad | null
   /** % firmado frente al real (el `ComisionReal` de la ficha). Sin él, enlaza a la ficha. */
@@ -195,6 +222,15 @@ export function DetalleCuadro({ codigo, datos, acuerdos, productividad, pactado 
         {sin.aviso && <p style={{ margin: 0, fontSize: 12, color: 'var(--warning)', gridColumn: '1 / -1' }}>{sin.aviso}</p>}
       </Seccion>
 
+      <Seccion
+        titulo="Competitividad de precio"
+        nota="Tarificaciones guardadas (Avant2 y bots): solo se compara el mismo riesgo, el mismo nivel de cobertura y en pocos días. Sin precios incoherentes ni «no contratable»."
+      >
+        <div style={{ gridColumn: '1 / -1', display: 'grid', gap: 6, minWidth: 0 }}>
+          <BloqueCompetitividad r={competitividad ?? null} codigo={codigo} />
+        </div>
+      </Seccion>
+
       <Seccion titulo="Comisión (tu rentabilidad)" nota="Devengada = comisión de los recibos cobrados con efecto en el año (CIMA). Liquidada y cobrada vienen del libro de comisiones.">
         <Dato
           etiqueta="Devengada"
@@ -265,6 +301,110 @@ export function DetalleCuadro({ codigo, datos, acuerdos, productividad, pactado 
   )
 }
 
+// ─── Competitividad de precio ────────────────────────────────────────────────
+
+function BloqueCompetitividad({ r, codigo }: { r: RespuestaCompetitividad | null; codigo: string }) {
+  if (r === null) return <span style={{ fontSize: 12, ...gris }}>Cargando…</span>
+  if (r.estado === 'sin_configurar') return <span style={{ fontSize: 12, ...gris }}>Falta <code>ASEGURA_OPERADOR_SECRET</code> en este proyecto.</span>
+  if (r.estado === 'error') return <span style={{ fontSize: 12, ...gris }}>No se ha podido calcular ({r.motivo}). No significa que no haya datos.</span>
+  const c = r.competitividad
+  const t = textoCompetitividad(c, codigo)
+  const base = `${c.tarificaciones.avant2} de Avant2 y ${c.tarificaciones.bot} de bots leídas`
+  const descartes = [
+    c.excluidas.incoherentes > 0 ? `${c.excluidas.incoherentes} precios incoherentes` : null,
+    c.excluidas.fueraDeRango > 0 ? `${c.excluidas.fueraDeRango} fuera de rango` : null,
+    c.excluidas.sinPrima > 0 ? `${c.excluidas.sinPrima} sin prima` : null,
+    c.descartadas.sinNivel > 0 ? `${c.descartadas.sinNivel} sin nivel de cobertura` : null,
+  ].filter(Boolean).join(', ')
+  return (
+    <>
+      {t.tipo === 'sin_datos' ? (
+        <span style={{ fontSize: 13 }}>Sin datos: {t.texto}</span>
+      ) : (
+        <>
+          {t.frases.length > 0 && (
+            <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 6, fontSize: 13, overflowWrap: 'anywhere' }}>
+              {t.frases.map((f) => <li key={f}>{f}</li>)}
+            </ul>
+          )}
+          {t.sinPrecio.length > 0 && (
+            <div style={{ display: 'grid', gap: 2 }}>
+              <span style={{ fontSize: 11, textTransform: 'uppercase', fontWeight: 600, ...gris }}>Sin precio / rechazos del riesgo (Avant2)</span>
+              {t.sinPrecio.map((f) => <span key={f} style={{ fontSize: 13, overflowWrap: 'anywhere' }}>{f}</span>)}
+            </div>
+          )}
+        </>
+      )}
+      <span style={{ fontSize: 11, ...gris }}>
+        Fuente: {base}{descartes ? ` · descartados: ${descartes}` : ''}. Los bots solo cubren algunas compañías y los rechazos solo constan en Avant2.
+        {c.truncado ? ' La lectura llegó a su techo: son un mínimo.' : ''}
+      </span>
+    </>
+  )
+}
+
+const escapaHtml = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+/** Botón «Preparar reunión»: el resumen de una pantalla, en texto plano, para copiar o imprimir. */
+function PrepararReunion({ codigo, nombre, datos, acuerdos, competitividad }: {
+  codigo: string
+  nombre: string
+  datos: Datos
+  acuerdos: RespuestaAcuerdos | null
+  competitividad: RespuestaCompetitividad | null
+}) {
+  const [abierto, setAbierto] = useState(false)
+  const [copiado, setCopiado] = useState<'si' | 'no' | null>(null)
+  const texto = useMemo(() => {
+    if (datos.cuadro.estado !== 'ok') return null
+    const { cuadro } = datos.cuadro
+    return textoReunion({
+      codigo, nombre, anio: cuadro.anio,
+      actual: cuadro.companias.find((x) => x.companiaCodigoDgs === codigo),
+      anterior: cuadro.anterior.find((x) => x.companiaCodigoDgs === codigo),
+      libro: datos.libro === null ? null : datos.libro[codigo] ?? undefined,
+      competitividad,
+      topeSiniestralidad: siniestralidadMaxima(acuerdos, codigo, cuadro.anio),
+    })
+  }, [codigo, nombre, datos, acuerdos, competitividad])
+  if (texto === null) return null
+
+  const copiar = async () => {
+    try {
+      await navigator.clipboard.writeText(texto)
+      setCopiado('si')
+    } catch {
+      setCopiado('no')
+    }
+  }
+  const imprimir = () => {
+    const w = window.open('', '_blank')
+    if (!w) return
+    w.document.write(`<!doctype html><meta charset="utf-8"><title>Reunión con ${escapaHtml(nombre)}</title><body style="margin:24px;font:13px/1.45 system-ui,sans-serif"><pre style="white-space:pre-wrap;font:inherit">${escapaHtml(texto)}</pre></body>`)
+    w.document.close()
+    w.focus()
+    w.print()
+  }
+  return (
+    <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'minmax(0, 1fr)' }}>
+      <button type="button" onClick={() => { setAbierto((a) => !a); setCopiado(null) }} aria-expanded={abierto} style={{ ...btnStyle(abierto ? 'secundario' : 'primario', 'md'), justifySelf: 'start' }}>
+        <ClipboardList size={15} aria-hidden /> {abierto ? 'Cerrar el resumen' : 'Preparar reunión'}
+      </button>
+      {abierto && (
+        <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'minmax(0, 1fr)', border: '1px solid var(--border)', borderRadius: 8, padding: 12, background: 'var(--surface)' }}>
+          <pre style={{ margin: 0, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', font: 'inherit', fontSize: 12, lineHeight: 1.5 }}>{texto}</pre>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+            <button type="button" onClick={copiar} style={btnStyle('secundario', 'md')}><Copy size={15} aria-hidden /> Copiar texto</button>
+            <button type="button" onClick={imprimir} style={btnStyle('secundario', 'md')}><Printer size={15} aria-hidden /> Imprimir</button>
+            {copiado === 'si' && <span role="status" style={{ fontSize: 12, color: 'var(--positive)' }}>Copiado</span>}
+            {copiado === 'no' && <span role="status" style={{ fontSize: 12, color: 'var(--warning)' }}>No se ha podido copiar: selecciona el texto a mano</span>}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Tabla resumen de todas las compañías ────────────────────────────────────
 
 const COLUMNAS: Array<{ clave: ColumnaResumen; titulo: string; derecha: boolean }> = [
@@ -295,6 +435,7 @@ export default function CuadroCompanias({ nombres, acuerdos, productividad }: {
 }) {
   const [anio, setAnio] = useState<number | null>(null)
   const { datos, cargando, error } = useCuadro(anio)
+  const { respuesta: competitividad } = useCompetitividad(anio)
   const [orden, setOrden] = useState<{ col: ColumnaResumen; desc: boolean }>({ col: 'polizas', desc: true })
   const [abierta, setAbierta] = useState<string | null>(null)
 
@@ -347,7 +488,7 @@ export default function CuadroCompanias({ nombres, acuerdos, productividad }: {
                 <tbody>
                   {filas.map((f) => (
                     <FilaTabla key={f.codigo} f={f} anio={anioMostrado} abierta={abierta === f.codigo} alternar={() => setAbierta((x) => (x === f.codigo ? null : f.codigo))}>
-                      {abierta === f.codigo && <DetalleCuadro codigo={f.codigo} datos={datos} acuerdos={acuerdos} productividad={productividad} />}
+                      {abierta === f.codigo && <DetalleCuadro codigo={f.codigo} datos={datos} acuerdos={acuerdos} productividad={productividad} competitividad={competitividad} />}
                     </FilaTabla>
                   ))}
                 </tbody>
@@ -400,24 +541,27 @@ function FilaTabla({ f, anio, abierta, alternar, children }: { f: FilaResumen; a
 
 // ─── Para la ficha de UNA compañía ───────────────────────────────────────────
 
-export function CuadroFicha({ codigo, acuerdos, productividad, pactado }: {
+export function CuadroFicha({ codigo, nombre, acuerdos, productividad, pactado }: {
   codigo: string
+  nombre: string
   acuerdos: RespuestaAcuerdos
   productividad: RespuestaProductividad
   pactado: ReactNode
 }) {
   const [anio, setAnio] = useState<number | null>(null)
   const { datos, cargando, error } = useCuadro(anio)
+  const { respuesta: competitividad } = useCompetitividad(anio)
   const mostrado = datos?.cuadro.estado === 'ok' ? datos.cuadro.cuadro.anio : datos?.anio ?? anio ?? Number(hoyLocal().slice(0, 4))
   return (
     <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr)' }}>
       <SelectorAnio anio={mostrado} cambiar={setAnio} cargando={cargando} />
+      {datos?.cuadro.estado === 'ok' && <PrepararReunion codigo={codigo} nombre={nombre} datos={datos} acuerdos={acuerdos} competitividad={competitividad} />}
       {error && <p style={{ margin: 0, fontSize: 12, ...gris }}>No se ha podido cargar el cuadro ({error}). No significa que esté vacío.</p>}
       {datos?.cuadro.estado === 'sin_configurar' && <p style={{ margin: 0, fontSize: 12, ...gris }}>Falta <code>ASEGURA_OPERADOR_SECRET</code> en este proyecto.</p>}
       {datos?.cuadro.estado === 'error' && <p style={{ margin: 0, fontSize: 12, ...gris }}>No se ha podido calcular el cuadro ({datos.cuadro.motivo}). No significa que no haya datos.</p>}
       {datos?.cuadro.estado === 'ok' && (
         <div style={{ opacity: cargando ? 0.6 : 1 }}>
-          <DetalleCuadro codigo={codigo} datos={datos} acuerdos={acuerdos} productividad={productividad} pactado={pactado} />
+          <DetalleCuadro codigo={codigo} datos={datos} acuerdos={acuerdos} productividad={productividad} pactado={pactado} competitividad={competitividad} />
         </div>
       )}
     </div>
