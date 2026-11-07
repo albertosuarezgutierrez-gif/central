@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(07/11/2026) Herramientas de captación de nóminas (sin commitear al cerrar el agente).** Simulador de coste + salud flexible (`module-nominas/simulador.ts`) y calculadora pública `/calculadora-coste-trabajador` en asegura-web.
+rrhh: alta asistente 3 pasos `/admin/empleados/nuevo` + importación Excel/CSV `/admin/empleados/importar`; `POST /api/admin/empleados` ya escribe por `darDeAltaLote` (duplicados bajo cerrojo; 409 si choca; DNI opcional = null).
+Nómina explicable: anexo en el PDF al confirmar. Seguro obligatorio por convenio + lead a plataforma con consentimiento: **migración rrhh 0036 SIN APLICAR** (aplicar antes de desplegar).
+XLSX: no hay librería segura en el monorepo → solo LECTURA con `xlsx@0.18.5` (CVE-2023-30533) y mitigaciones; plantilla en CSV. Pendiente actualizar.
+Pendiente: SILTRA e IT/bajas; anotar lo anterior en `apps/rrhh/CLAUDE.md` y crear `apps/asegura-web/CLAUDE.md` (el agente no toca CLAUDE.md).
+
 **(07/11/2026) Contabilidad F0-F5 + portal de proveedores + nóminas N0/N1 mergeados.** PRs #5545 F0, #5553 F1, #5558 F2, #5565 F3, #5570 (F4 impuestos + portal proveedores + N0), #5575 (F5 cierre + N1 IRPF).
 Specs: `docs/superpowers/specs/2026-11-04-modulo-contabilidad.md` y `2026-11-05-modulo-nominas.md`. Modelos AEAT y 200/202 solo BORRADOR (casillas sin contrastar, sin fichero oficial). Factura de proveedor leída por IA exige confirmación humana (solo XML Facturae/UBL contabiliza solo).
 Nóminas: cifras 2026 (MEI, mínimos, solidaridad, límites IRPF art. 81/85.3) `PENDIENTE_VERIFICAR` → modo cálculo bloqueado hasta que un asesor las contraste; «sin 145» marcado pendiente (art. 88 RIRPF ≠ tipo máximo del spec).

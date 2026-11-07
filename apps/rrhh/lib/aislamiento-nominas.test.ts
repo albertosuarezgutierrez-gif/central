@@ -13,7 +13,9 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 
 const APP = join(__dirname, '..')
-const TABLAS = ['nominas', 'incidencias_mes', 'empleados', 'contratos_laborales', 'empresa_modulos', 'hechos_nominas']
+const TABLAS = ['nominas', 'incidencias_mes', 'empleados', 'contratos_laborales', 'empresa_modulos', 'hechos_nominas',
+  // 0036 (seguro obligatorio por convenio y peticiones a la correduría)
+  'convenio_seguros_obligatorios', 'leads_correduria']
 
 function listar(dir: string): string[] {
   const out: string[] = []

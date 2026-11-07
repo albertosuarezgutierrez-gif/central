@@ -5,6 +5,7 @@ import PropuestasFichajes from './PropuestasFichajes'
 import Boton from '@/components/ui/Boton'
 import { eur, etiquetaContabilidad } from '../formato'
 import RemesaBoton from '../RemesaBoton'
+import NominaExplicada from './NominaExplicada'
 
 type Incidencia = { id: string; tipo: string; concepto: string; importe: number | null; horas: number | null; dias: number | null; periodicidad?: string | null; copiada_de?: string | null }
 type Nomina = {
@@ -179,6 +180,8 @@ export default function NominasPanel({ periodo, inicial }: { periodo: string; in
                   </div>
                 </div>
 
+                <NominaExplicada datos={n.datos_calculo} />
+
                 {expanded === n.id && (
                   <div className="mt-3 border-t border-line pt-3">
                     {(n.incidencias ?? []).length > 0 && (
@@ -236,6 +239,7 @@ export default function NominasPanel({ periodo, inicial }: { periodo: string; in
                   <span className="ml-3 text-ink-3 text-sm">
                     Neto: {fmt(n.datos_calculo?.netoAPagar ?? 0)}
                   </span>
+                  <NominaExplicada datos={n.datos_calculo} />
                 </div>
                 <span className="flex flex-wrap items-center gap-2 text-sm">
                   <span className="text-ok">✔ Confirmada</span>

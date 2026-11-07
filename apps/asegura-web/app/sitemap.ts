@@ -53,6 +53,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: url('/carta-baja-seguro'), changeFrequency: 'yearly', priority: 0.8 },
     // Calculadora del seguro que vende el banco con la hipoteca (29/09/2026).
     { url: url('/calculadora-bonificacion-hipoteca'), changeFrequency: 'yearly', priority: 0.8 },
+    // Calculadora del coste de contratar un trabajador + seguro de salud flexible (07/11/2026).
+    { url: url('/calculadora-coste-trabajador'), changeFrequency: 'yearly', priority: 0.8 },
     // «¿Me obliga el banco a contratar su seguro?» (30/09/2026): intención de búsqueda de quien firma hipoteca.
     { url: url('/seguro-hipoteca-banco-obligatorio'), changeFrequency: 'yearly', priority: 0.8 },
     // 📌 El blog SÍ sabe sus fechas, y por eso es la única familia de URL además

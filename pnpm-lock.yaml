@@ -352,6 +352,9 @@ importers:
       '@central/core-consent':
         specifier: workspace:*
         version: link:../../packages/core-consent
+      '@central/module-nominas':
+        specifier: workspace:*
+        version: link:../../packages/module-nominas
       '@central/module-seguros':
         specifier: workspace:*
         version: link:../../packages/module-seguros

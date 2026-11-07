@@ -1,5 +1,6 @@
 import { Document, Page, Text, View, StyleSheet, renderToBuffer } from '@react-pdf/renderer'
 import type { NominaDesglose } from '@central/module-nominas'
+import { explicarNomina } from './nomina-explicacion'
 
 const s = StyleSheet.create({
   page: { padding: 40, fontSize: 10, fontFamily: 'Helvetica', color: '#111' },
@@ -10,6 +11,8 @@ const s = StyleSheet.create({
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', fontFamily: 'Helvetica-Bold', paddingTop: 4, borderTopWidth: 1, borderTopColor: '#333', marginTop: 4 },
   netBox: { backgroundColor: '#f0f0f0', padding: 8, marginTop: 12 },
   netRow: { flexDirection: 'row', justifyContent: 'space-between', fontFamily: 'Helvetica-Bold', fontSize: 12 },
+  anexo: { fontSize: 9, marginBottom: 4 },
+  anexoAviso: { fontSize: 8, color: '#a00', marginBottom: 4 },
   footer: { marginTop: 28, fontSize: 8, color: '#aaa' },
 })
 
@@ -20,9 +23,30 @@ interface NominaPdfProps {
   empleado: { nombre: string; dni?: string | null; nss?: string | null }
   periodo: string
   desglose: NominaDesglose
+  /** Añade la página «Cómo se ha calculado tu nómina» (opcional; por defecto no). */
+  anexoExplicativo?: boolean
 }
 
-function NominaPdf({ empresa, empleado, periodo, desglose }: NominaPdfProps) {
+function AnexoExplicativo({ desglose, periodo }: { desglose: NominaDesglose; periodo: string }) {
+  const e = explicarNomina(desglose)
+  return (
+    <Page size="A4" style={s.page}>
+      <Text style={s.h1}>Cómo se ha calculado tu nómina</Text>
+      <Text style={s.sub}>Periodo {periodo}</Text>
+      {e.avisos.map((a, i) => <Text key={`g${i}`} style={s.anexoAviso}>Atención: {a}</Text>)}
+      {e.lineas.map(l => (
+        <View key={l.id} wrap={false} style={{ marginTop: 6 }}>
+          <View style={s.row}><Text style={{ fontFamily: 'Helvetica-Bold' }}>{l.titulo}</Text><Text>{l.importe}</Text></View>
+          <Text style={s.anexo}>{l.explicacion}</Text>
+          {l.avisos.map((a, i) => <Text key={i} style={s.anexoAviso}>Atención: {a}</Text>)}
+        </View>
+      ))}
+      <Text style={s.footer}>Explicación generada automáticamente a partir del cálculo guardado · {periodo}</Text>
+    </Page>
+  )
+}
+
+function NominaPdf({ empresa, empleado, periodo, desglose, anexoExplicativo }: NominaPdfProps) {
   const { devengos, deducciones, netoAPagar, baseCotizacion, cuotaPatronal } = desglose
 
   return (
@@ -80,6 +104,7 @@ function NominaPdf({ empresa, empleado, periodo, desglose }: NominaPdfProps) {
 
         <Text style={s.footer}>Documento generado automáticamente · iarrhh · {periodo}</Text>
       </Page>
+      {anexoExplicativo ? <AnexoExplicativo desglose={desglose} periodo={periodo} /> : null}
     </Document>
   )
 }

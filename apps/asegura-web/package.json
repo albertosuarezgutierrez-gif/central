@@ -12,6 +12,7 @@
   "dependencies": {
     "@central/brand": "workspace:*",
     "@central/core-consent": "workspace:*",
+    "@central/module-nominas": "workspace:*",
     "@central/module-seguros": "workspace:*",
     "next": "^15.5.28",
     "react": "^19.0.0",

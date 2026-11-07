@@ -49,6 +49,8 @@ export async function POST(_req: Request, { params }: { params: Promise<{ nomina
       empleado: { nombre: nomina.empleado_nombre, dni: nomina.empleado_dni, nss: nomina.empleado_nss },
       periodo: nomina.periodo,
       desglose,
+      // Es el PDF que recibe el trabajador: va con la página «Cómo se ha calculado tu nómina».
+      anexoExplicativo: true,
     })
 
     const pdfPath = `nominas/${empresa_id}/${nomina.periodo}/${nominaId}.pdf`

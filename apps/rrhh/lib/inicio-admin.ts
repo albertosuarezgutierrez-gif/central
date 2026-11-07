@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import type { DatosInicio } from '@/lib/inicio-admin-reglas'
 import { DIAS_VENCIMIENTO, contratosQueVencen, hoyMadrid, lineaVencimiento } from '@/lib/vencimientos'
+import { leerSinObligacion, listarObligaciones } from '@/lib/seguro-convenio-repo'
 
 async function seguro<T>(etiqueta: string, f: () => Promise<T>): Promise<T | null> {
   try { return await f() } catch (e) { console.error(`[inicio-admin] ${etiqueta}`, e instanceof Error ? e.message : e); return null }
@@ -11,7 +12,7 @@ async function seguro<T>(etiqueta: string, f: () => Promise<T>): Promise<T | nul
 
 export async function datosInicio(empresaId: string, tieneFichaje: boolean): Promise<DatosInicio> {
   const hoy = hoyMadrid()
-  const [solicitudes, firmas, avisosFallidos, correosFallidos, fichajesAbiertos, contratosVencen] = await Promise.all([
+  const [solicitudes, firmas, avisosFallidos, correosFallidos, fichajesAbiertos, contratosVencen, seguroConvenio] = await Promise.all([
     seguro('solicitudes', async () => {
       const [cnt, recientes] = await Promise.all([
         prisma.$queryRaw<{ n: number }[]>(Prisma.sql`SELECT count(*)::int AS n FROM rrhh.solicitudes WHERE empresa_id = ${empresaId}::uuid AND estado = 'solicitada'`),
@@ -59,6 +60,11 @@ export async function datosInicio(empresaId: string, tieneFichaje: boolean): Pro
       const vencen = contratosQueVencen(filas.map(f => ({ contratoId: f.id, empleadoId: f.empleado_id, empleado: f.empleado, fechaFin: f.fecha_fin })), hoy)
       return { lineas: vencen.map(lineaVencimiento), total: vencen.length, sinFecha: sinFecha[0]?.n ?? 0 }
     }),
+    // Seguro obligatorio por convenio (migración 0036): sin las tablas, null → «no se ha podido comprobar», nunca «no obliga».
+    seguro('seguro-convenio', async () => {
+      const [obligaciones, sinObligacionAt] = await Promise.all([listarObligaciones(empresaId), leerSinObligacion(empresaId)])
+      return { obligaciones, sinObligacionAt, hoy }
+    }),
   ])
-  return { solicitudes, firmas, avisosFallidos, correosFallidos, fichajesAbiertos, contratosVencen }
+  return { solicitudes, firmas, avisosFallidos, correosFallidos, fichajesAbiertos, contratosVencen, seguroConvenio }
 }

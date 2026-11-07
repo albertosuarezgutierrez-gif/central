@@ -1,6 +1,7 @@
 // Reglas PURAS del Inicio del responsable (`/admin`, 26/10/2026): de los contadores de pendientes a las tarjetas que se
 // pintan. 🚨 `null` = «no se ha podido comprobar» (la consulta falló), NUNCA «0 pendientes»: una pantalla que dice
 // «todo al día» porque una consulta falló es peor que no decir nada.
+import { fraseObligacion, situacionCobertura, vigenteEn, type ObligacionConCobertura, type Situacion } from './seguro-convenio'
 
 export type DatosInicio = {
   solicitudes: { total: number; recientes: { id: string; empleado: string; tipo: string }[] } | null
@@ -13,6 +14,9 @@ export type DatosInicio = {
   fichajesAbiertos: number | null | undefined
   /** Contratos activos que terminan en ≤ 30 días (solo para el responsable) y temporales sin fecha de fin conocida. */
   contratosVencen: { lineas: string[]; total: number; sinFecha: number } | null
+  /** Seguro obligatorio por convenio (0036). `sinObligacionAt` = la empresa revisó y su convenio no obliga (null = no se sabe).
+   *  `undefined` = no se ha leído (no se pinta). */
+  seguroConvenio?: { obligaciones: ObligacionConCobertura[]; sinObligacionAt: string | null; hoy: string } | null
 }
 
 export type TonoTarjeta = 'alerta' | 'aviso' | 'ok' | 'neutro'
@@ -88,6 +92,52 @@ export function tarjetasInicio(d: DatosInicio): Tarjeta[] {
     })
   }
 
+  if (d.seguroConvenio !== undefined) {
+    const t2 = tarjetaSeguroConvenio(d.seguroConvenio)
+    if (t2) t.push(t2)
+  }
+
   // Lo que pide acción, primero.
   return t.sort((a, b) => Number(b.urgente) - Number(a.urgente))
+}
+
+const RUTA_SEGURO = '/admin/nominas/convenio/seguro'
+const TEXTO_SITUACION: Record<Situacion, string> = {
+  no_se_sabe: 'sin contestar', no_cubierto: 'no lo tenéis', cubierto: 'cubierto', cubierto_vencido: 'póliza vencida',
+}
+
+/**
+ * Tarjeta «Tu convenio obliga a tener un seguro de X por Y€ — ¿lo tienes?». Tres estados: sin respuesta = aviso (urgente),
+ * «no» o póliza vencida = alerta (urgente), todo «sí» vigente = ok. Sin obligaciones vigentes: si nadie ha revisado el
+ * convenio, tarjeta neutra que lo pide (que no haya filas NO es «no obliga»); si se revisó y no obliga, nada.
+ */
+export function tarjetaSeguroConvenio(s: NonNullable<DatosInicio['seguroConvenio']> | null): Tarjeta | null {
+  const base = { id: 'seguro_convenio', titulo: 'Seguro obligatorio del convenio', href: RUTA_SEGURO }
+  if (s === null) return { ...base, tono: 'neutro', urgente: false, texto: 'No se ha podido comprobar ahora mismo. Inténtalo de nuevo en un momento.', enlace: 'Abrir' }
+  const vigentes = s.obligaciones.filter(o => vigenteEn(o, s.hoy))
+  if (vigentes.length === 0) {
+    if (s.sinObligacionAt !== null && s.obligaciones.length === 0) return null
+    return {
+      ...base, tono: 'neutro', urgente: false, enlace: 'Revisarlo',
+      texto: s.obligaciones.length > 0
+        ? 'Ninguna obligación registrada está vigente hoy. Comprueba si el convenio nuevo sigue exigiendo el seguro.'
+        : '¿Tu convenio obliga a tener un seguro de accidentes o vida para la plantilla? Muchos lo exigen: compruébalo y anótalo.',
+    }
+  }
+  const sit = vigentes.map(o => ({ o, s: situacionCobertura(o.cobertura, s.hoy) }))
+  const mal = sit.find(x => x.s === 'no_cubierto' || x.s === 'cubierto_vencido')
+  const sinContestar = sit.find(x => x.s === 'no_se_sabe')
+  const lista = sit.length > 1 ? sit.map(x => `${fraseObligacion(x.o)}: ${TEXTO_SITUACION[x.s]}`) : undefined
+  if (mal) return {
+    ...base, tono: 'alerta', urgente: true, enlace: 'Revisar el seguro', lista,
+    texto: `Tu convenio obliga a tener ${fraseObligacion(mal.o)} y no consta una póliza vigente que lo cubra. Grupo ASegura puede revisarlo si se lo pides.`,
+  }
+  if (sinContestar) return {
+    ...base, tono: 'aviso', urgente: true, enlace: 'Contestar', lista,
+    texto: `Tu convenio obliga a tener ${fraseObligacion(sinContestar.o)} — ¿lo tienes?`,
+  }
+  return {
+    ...base, tono: 'ok', urgente: false, enlace: 'Ver el seguro', lista,
+    texto: sit.length === 1 ? `Cubierto: ${fraseObligacion(sit[0].o)}.` : 'Todas las obligaciones de seguro del convenio constan cubiertas.',
+  }
 }
