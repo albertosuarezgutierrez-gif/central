@@ -142,33 +142,40 @@ export async function datosParaLead(empresaId: string, usuarioId: string): Promi
   return r[0] ?? null
 }
 
-export type ReservaLead = { id: string } | { ya: 'enviado' | 'enviando'; at: string }
+export type ReservaLead = { id: string } | { ya: 'enviado' | 'enviando' | 'incierto'; at: string }
 
 /**
  * Reserva la petición ANTES de llamar a plataforma (contra el doble clic / dos pestañas): índice único parcial de un solo
- * 'enviando'/'enviado' por obligación. Un 'enviando' de > 2 min (proceso muerto a medias) pasa a 'error' y deja reintentar.
+ * 'enviando'/'enviado'/'incierto' por obligación. Un 'enviando' de > 2 min (proceso muerto a medias, o `cerrarLead` que
+ * falló) pasa a 'incierto': NO se sabe si el lead llegó, así que no se libera. Solo se llama desde el botón (reintento
+ * MANUAL): un 'incierto' de ≥ 24 h pasa a 'error' («caducado») y deja pedirlo otra vez. El operador lo libera antes
+ * poniendo la fila en 'error'.
  */
 export async function reservarLead(
   empresaId: string, obligacionId: string, usuarioId: string, version: string, resumen: string,
 ): Promise<ReservaLead> {
   await prisma.$executeRaw(Prisma.sql`
-    UPDATE rrhh.leads_correduria SET estado = 'error', detalle = 'interrumpido', actualizada_at = now()
+    UPDATE rrhh.leads_correduria SET estado = 'incierto', detalle = 'interrumpido', actualizada_at = now()
     WHERE empresa_id = ${empresaId}::uuid AND obligacion_id = ${obligacionId}::uuid AND estado = 'enviando'
       AND creada_at < now() - interval '2 minutes'`)
+  await prisma.$executeRaw(Prisma.sql`
+    UPDATE rrhh.leads_correduria SET estado = 'error', detalle = 'incierto caducado: reintento manual', actualizada_at = now()
+    WHERE empresa_id = ${empresaId}::uuid AND obligacion_id = ${obligacionId}::uuid AND estado = 'incierto'
+      AND creada_at < now() - interval '24 hours'`)
   const ins = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
     INSERT INTO rrhh.leads_correduria (empresa_id, obligacion_id, usuario_id, consentimiento_version, consentimiento_at, resumen, estado)
     VALUES (${empresaId}::uuid, ${obligacionId}::uuid, ${usuarioId}::uuid, ${version}, now(), ${resumen}, 'enviando')
     ON CONFLICT DO NOTHING
     RETURNING id::text AS id`)
   if (ins[0]) return { id: ins[0].id }
-  const ya = await prisma.$queryRaw<{ estado: 'enviado' | 'enviando'; at: string }[]>(Prisma.sql`
+  const ya = await prisma.$queryRaw<{ estado: 'enviado' | 'enviando' | 'incierto'; at: string }[]>(Prisma.sql`
     SELECT estado, creada_at::text AS at FROM rrhh.leads_correduria
-    WHERE empresa_id = ${empresaId}::uuid AND obligacion_id = ${obligacionId}::uuid AND estado IN ('enviando', 'enviado')
+    WHERE empresa_id = ${empresaId}::uuid AND obligacion_id = ${obligacionId}::uuid AND estado IN ('enviando', 'enviado', 'incierto')
     ORDER BY creada_at DESC LIMIT 1`)
   return ya[0] ? { ya: ya[0].estado, at: ya[0].at } : { ya: 'enviando', at: new Date().toISOString() }
 }
 
-export async function cerrarLead(empresaId: string, id: string, estado: 'enviado' | 'error' | 'rechazado', detalle: string): Promise<void> {
+export async function cerrarLead(empresaId: string, id: string, estado: 'enviado' | 'error' | 'rechazado' | 'incierto', detalle: string): Promise<void> {
   await prisma.$executeRaw(Prisma.sql`
     UPDATE rrhh.leads_correduria SET estado = ${estado}, detalle = ${detalle.slice(0, 300)}, actualizada_at = now()
     WHERE id = ${id}::uuid AND empresa_id = ${empresaId}::uuid`)
@@ -179,7 +186,7 @@ export async function leadsVivos(empresaId: string): Promise<Record<string, { es
   const r = await prisma.$queryRaw<{ obligacion_id: string; estado: string; at: string }[]>(Prisma.sql`
     SELECT DISTINCT ON (l.obligacion_id) l.obligacion_id::text AS obligacion_id, l.estado, l.creada_at::text AS at
     FROM rrhh.leads_correduria l
-    WHERE l.empresa_id = ${empresaId}::uuid AND l.obligacion_id IS NOT NULL AND l.estado IN ('enviando', 'enviado')
+    WHERE l.empresa_id = ${empresaId}::uuid AND l.obligacion_id IS NOT NULL AND l.estado IN ('enviando', 'enviado', 'incierto')
     ORDER BY l.obligacion_id, l.creada_at DESC`)
   return Object.fromEntries(r.map(x => [x.obligacion_id, { estado: x.estado, at: x.at }]))
 }

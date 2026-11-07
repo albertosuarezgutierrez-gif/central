@@ -24,6 +24,10 @@ export function añosConTabla(): number[] {
 
 const IRPF_POR_AÑO: Record<number, TablaIrpf> = { 2026: TABLA_IRPF_2026 }
 
+export function añosConTablaIrpf(): number[] {
+  return Object.keys(IRPF_POR_AÑO).map(Number).sort()
+}
+
 /** Tabla IRPF del año. Sin tabla → error (NUNCA la de otro año en silencio; 2025 no se vendoriza: no hay fuente). */
 export function tablaIrpfDelAño(año: number): TablaIrpf {
   const t = IRPF_POR_AÑO[año]

@@ -228,17 +228,8 @@ real es el job `typecheck` de `.github/workflows/tests.yml`.
 Subir logo (Cuenta o `logo_base64`+`logo_mime` en `POST /api/operador/empresas`) → `lib/logo-empresa.ts` recorta márgenes, limita a 600 px, guarda PNG en el bucket (`branding/<empresa>/…`) y, si no hay `color_primario`, lo deriva del logo (`lib/logo-pixeles.ts`; gris/blanco → null = look ASegura). `public/logos/*` es solo legado. Revisar el contraste en la vista previa de Cuenta (`paletaEmpresa` oscurece lo claro). El operador escribe `color_primario` (la columna `marca_color` es heredada).
 
 ## Alta de trabajadores, seguro de convenio y nómina explicable (07/11/2026)
-- Alta: asistente de 3 pasos `/admin/empleados/nuevo` e importación Excel/CSV `/admin/empleados/importar` (enlazados desde el listado).
-  Reglas PURAS en `lib/alta-empleado.ts` (+ validadores DNI/NIE, NAF, IBAN en `lib/alta-empleado-validadores.ts`; los mensajes nunca repiten el dato).
-  Escritura ÚNICA `darDeAltaLote` (`lib/alta-empleado-repo.ts`): una transacción, cerrojo por empresa, duplicados por DNI/NAF/email
-  mirados otra vez dentro. También la usa `POST /api/admin/empleados` (alta rápida: `validarAltaRapida`; DNI opcional = null,
-  «no se sabe», no se compara por DNI; si choca → 409).
-- XLSX: `xlsx@0.18.5` (CVE-2023-30533) SOLO para LEER (`lib/importar-empleados-xlsx.ts`: tope de tamaño, firma ZIP, sin fórmulas,
-  1.ª hoja). La plantilla se descarga en CSV. No hay otra librería XLSX en el monorepo. PENDIENTE: pasar a una versión corregida
-  o a otra librería (0.19.3+ solo se publica en cdn.sheetjs.com).
-- Seguro obligatorio por convenio: `/admin/nominas/convenio/seguro`, reglas `lib/seguro-convenio.ts` (tres estados: NULL no se sabe ≠
-  `no_cubierto` ≠ `cubierto`). El lead a la correduría (`lib/lead-correduria.ts` → `POST /api/publico/correduria/lead` de plataforma)
-  sale SOLO con botón + casilla de consentimiento. 🚨 Migración `0036_convenio_seguro_obligatorio.sql` PENDIENTE de aplicar
-  (antes de desplegar). La siguiente libre es la 0037.
-- Nómina explicable: `lib/nomina-explicacion.ts` (`explicarNomina`, avisos si falta desglose/tablas) en la pantalla y en el PDF:
-  al confirmar (`/api/admin/nominas/[nominaId]/confirmar`) el PDF lleva el anexo «Cómo se ha calculado tu nómina».
+- Alta: `/admin/empleados/nuevo` e `importar`; escritura ÚNICA `darDeAltaLote` (`lib/alta-empleado-repo.ts`), reglas puras en `lib/alta-empleado.ts`. `POST /api/admin/empleados` la reutiliza.
+- Importación SOLO CSV: no se lee ningún .xlsx subido (`xlsx@0.18.5`, CVE-2023-30533; solo escribe informes). Volverá con xlsx ≥0.20.3.
+- Seguro de convenio: `lib/seguro-convenio.ts` (NULL ≠ `no_cubierto` ≠ `cubierto`); lead a la correduría solo con botón + consentimiento; timeout/5xx = `incierto` (no se reenvía; reintento manual tras 24 h). 🚨 Migración `0036` PENDIENTE de aplicar; la siguiente libre es la 0037.
+- Nómina explicable: `lib/nomina-explicacion.ts`; el PDF lleva anexo al confirmar.
+- Detalle íntegro: `docs/claude-md/RRHH-alta-convenio-nomina-2026-11-07.md`.

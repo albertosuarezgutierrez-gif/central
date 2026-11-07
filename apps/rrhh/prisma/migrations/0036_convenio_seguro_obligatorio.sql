@@ -60,8 +60,9 @@ ALTER TABLE rrhh.empresas
 
 -- 2) Peticiones de revisión a la correduría (Grupo ASegura). Registro de QUIÉN lo pidió, CUÁNDO y con QUÉ texto de
 --    consentimiento (RGPD: prueba del consentimiento) y del resultado del alta del lead en plataforma. Sin datos de contacto
---    (nombre/teléfono/correo viajan al lead y no se copian aquí). Contra el doble lead: un solo 'enviando'/'enviado' por
---    obligación (índice único parcial); un 'error'/'rechazado' permite reintentar.
+--    (nombre/teléfono/correo viajan al lead y no se copian aquí). Contra el doble lead: un solo 'enviando'/'enviado'/
+--    'incierto' por obligación (índice único parcial); un 'error'/'rechazado' permite reintentar. 'incierto' = timeout/5xx:
+--    no se sabe si llegó; solo se libera a mano tras 24 h (o el operador la pone en 'error').
 CREATE TABLE IF NOT EXISTS rrhh.leads_correduria (
   id                       uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   empresa_id               uuid        NOT NULL REFERENCES rrhh.empresas(id) ON DELETE CASCADE,
@@ -71,13 +72,13 @@ CREATE TABLE IF NOT EXISTS rrhh.leads_correduria (
   consentimiento_at        timestamptz NOT NULL,
   -- Lo que se pidió revisar (convenio, capital, afectados), sin datos personales.
   resumen                  text        NOT NULL CHECK (length(resumen) <= 1000),
-  estado                   text        NOT NULL CHECK (estado IN ('enviando', 'enviado', 'error', 'rechazado')),
+  estado                   text        NOT NULL CHECK (estado IN ('enviando', 'enviado', 'incierto', 'error', 'rechazado')),
   detalle                  text        CHECK (detalle IS NULL OR length(detalle) <= 300),
   creada_at                timestamptz NOT NULL DEFAULT now(),
   actualizada_at           timestamptz NOT NULL DEFAULT now()
 );
 CREATE UNIQUE INDEX IF NOT EXISTS uq_leads_correduria_vivo
-  ON rrhh.leads_correduria (empresa_id, obligacion_id) WHERE estado IN ('enviando', 'enviado');
+  ON rrhh.leads_correduria (empresa_id, obligacion_id) WHERE estado IN ('enviando', 'enviado', 'incierto');
 CREATE INDEX IF NOT EXISTS leads_correduria_empresa_idx ON rrhh.leads_correduria (empresa_id);
 ALTER TABLE rrhh.leads_correduria ENABLE ROW LEVEL SECURITY;
 

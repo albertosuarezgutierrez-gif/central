@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import {
   CONSENTIMIENTO_LEAD_VERSION, ErrorSeguroConvenio, cuerpoLead, eurCentimos, fraseObligacion, interpretarRespuestaLead,
-  parsearCobertura, parsearObligacion, resumenLead, situacionCobertura, textoAfectados, vigenteEn, type ObligacionConCobertura,
+  MENSAJE_LEAD_INCIERTO, inciertoReintentable, codigoError, parsearCobertura, parsearObligacion, resumenLead, situacionCobertura, textoAfectados, vigenteEn, type ObligacionConCobertura,
 } from './seguro-convenio'
 import { tarjetaSeguroConvenio } from './inicio-admin-reglas'
 import { enviarLeadCorreduria, urlLeadPlataforma, PLATAFORMA_URL_DEFECTO } from './lead-correduria'
@@ -81,9 +81,12 @@ describe('textos', () => {
 })
 
 describe('lead a la correduría', () => {
-  const resumen = resumenLead({ empresa: 'Bar Pepe SL', nif: 'B12345678', o: ob(), afectados: { afectados: 7, sinCategoria: 0 } })
-  it('resumen sin datos personales: empresa, convenio, capital, afectados y fuente', () => {
-    expect(resumen).toContain('Bar Pepe SL (NIF B12345678)')
+  const resumen = resumenLead({ empresa: 'Bar Pepe SL', o: ob(), afectados: { afectados: 7, sinCategoria: 0 } })
+  it('resumen sin datos personales: empresa, convenio, capital, afectados y fuente; SIN NIF (en un autónomo es su DNI)', () => {
+    expect(resumen).toContain('Empresa: Bar Pepe SL.')
+    expect(resumen).not.toMatch(/NIF|B12345678/)
+    // Aunque alguien le pase el NIF por error, no sale (el tipo ya no lo admite).
+    expect(resumenLead({ empresa: 'Pepe', nif: '12345678Z', o: ob(), afectados: null } as never)).not.toContain('12345678Z')
     expect(resumen).toContain('Hostelería de Sevilla, Art. 42')
     expect(resumen).toContain('30.000,00€')
     expect(resumen).toContain('7 trabajadores afectados')
@@ -98,12 +101,16 @@ describe('lead a la correduría', () => {
     expect(String(c.comentario).length).toBeLessThanOrEqual(1000)
     expect(cuerpoLead({ nombre: 'P', email: 'p@e.es', telefono: null }, 'vida', 'x').tipoSeguro).toBe('vida')
   })
-  it('respuesta: solo 2xx con ok:true es «enviado»; 422 rechazado; el resto, error', () => {
+  it('respuesta: 2xx ok:true «enviado»; 422 rechazado; timeout/5xx/2xx sin ok «incierto» (no reintentable); 4xx error', () => {
     expect(interpretarRespuestaLead(200, { ok: true }).estado).toBe('enviado')
-    expect(interpretarRespuestaLead(200, { ok: false }).estado).toBe('error')
+    expect(interpretarRespuestaLead(200, { ok: false }).estado).toBe('incierto')
     expect(interpretarRespuestaLead(422, { ok: false, motivo: 'Email no válido' })).toMatchObject({ estado: 'rechazado', mensaje: 'Email no válido' })
-    expect(interpretarRespuestaLead(502, null).estado).toBe('error')
-    expect(interpretarRespuestaLead(0, null).estado).toBe('error')
+    expect(interpretarRespuestaLead(502, null).estado).toBe('incierto')
+    expect(interpretarRespuestaLead(500, null).estado).toBe('incierto')
+    expect(interpretarRespuestaLead(0, null)).toMatchObject({ estado: 'incierto', mensaje: MENSAJE_LEAD_INCIERTO })
+    expect(MENSAJE_LEAD_INCIERTO).toMatch(/Puede que ya se enviara.*Grupo ASegura te contactará/)
+    expect(interpretarRespuestaLead(429, null).estado).toBe('error')
+    expect(interpretarRespuestaLead(400, null).estado).toBe('error')
   })
   it('envía al puerto de leads de plataforma reenviando la IP del responsable; nunca lanza', async () => {
     const f = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }))
@@ -113,7 +120,20 @@ describe('lead a la correduría', () => {
     expect(url).toBe('https://p.example/api/publico/correduria/lead')
     expect((init.headers as Record<string, string>)['x-forwarded-for']).toBe('203.0.113.9')
     const caida = vi.fn(async () => { throw new Error('red') })
-    expect((await enviarLeadCorreduria({}, null, caida as unknown as typeof fetch)).estado).toBe('error')
+    expect((await enviarLeadCorreduria({}, null, caida as unknown as typeof fetch)).estado).toBe('incierto')
+    const lento = vi.fn(async () => { throw new DOMException('The operation was aborted due to timeout', 'TimeoutError') })
+    expect((await enviarLeadCorreduria({}, null, lento as unknown as typeof fetch)).estado).toBe('incierto')
+  })
+  it('incierto: reintento manual solo pasadas 24 h; fecha ilegible → no', () => {
+    const at = '2026-11-06T10:00:00Z'
+    expect(inciertoReintentable(at, new Date('2026-11-07T09:59:00Z'))).toBe(false)
+    expect(inciertoReintentable(at, new Date('2026-11-07T10:00:00Z'))).toBe(true)
+    expect(inciertoReintentable('no-fecha', new Date('2030-01-01'))).toBe(false)
+  })
+  it('codigoError: solo el código, nunca el mensaje', () => {
+    expect(codigoError(Object.assign(new Error('Bar Pepe 12345678Z'), { code: 'P2002' }))).toBe('P2002')
+    expect(codigoError(new Error('Bar Pepe 12345678Z'))).toBe('sin_codigo')
+    expect(codigoError({ code: 'x y 12345678Z con espacios' })).toBe('sin_codigo')
   })
   it('URL: PLATAFORMA_URL opcional con defecto al origen real', () => {
     expect(urlLeadPlataforma(undefined)).toBe(`${PLATAFORMA_URL_DEFECTO}/api/publico/correduria/lead`)

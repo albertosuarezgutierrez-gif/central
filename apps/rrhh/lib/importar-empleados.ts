@@ -1,11 +1,11 @@
-// Importación de empleados desde Excel/CSV: reglas PURAS (sin BD, sin red, sin reloj). Plantilla, lectura de CSV, cabeceras
+// Importación de empleados desde CSV: reglas PURAS (sin BD, sin red, sin reloj). Plantilla, lectura de CSV, cabeceras
 // → campos, celdas → texto y VISTA PREVIA por fila con las MISMAS validaciones del asistente (`validarAlta`).
-// El XLSX lo abre `importar-empleados-xlsx.ts` (servidor) y entrega aquí una matriz de celdas.
+// 🚨 Solo CSV: un .xlsx subido NO se abre (xlsx@0.18.5, CVE-2023-30533). Volverá con xlsx ≥0.20.3.
 //
 // 🚨 Datos personales: nada de este módulo escribe en consola. La vista previa enmascara DNI/NAF/IBAN.
 import {
   CAMPOS_ALTA, existentesVacios, motivoDuplicado, registrarClaves, validarAlta,
-  type AltaNormalizada, type CampoAlta, type ContextoAlta, type EntradaAlta, type ErrorCampo, type Existentes,
+  porcentaje, type AltaNormalizada, type CampoAlta, type ContextoAlta, type EntradaAlta, type ErrorCampo, type Existentes,
 } from './alta-empleado'
 import { enmascarar } from './alta-empleado-validadores'
 
@@ -109,7 +109,34 @@ export function celdaATexto(v: unknown, esFecha: boolean): string {
   return String(v).trim()
 }
 
-export interface Tabla { filas: { numero: number; entrada: EntradaAlta }[]; ignoradas: string[]; faltan: string[] }
+export interface FilaTabla {
+  numero: number
+  entrada: EntradaAlta
+  /** Errores detectados al LEER la celda (antes de validar), p. ej. un porcentaje ambiguo. Ausente = ninguno. */
+  erroresLectura?: ErrorCampo[]
+}
+export interface Tabla { filas: FilaTabla[]; ignoradas: string[]; faltan: string[] }
+
+/**
+ * Celda de porcentaje (jornada, IRPF) leída de la hoja. Excel guarda en CSV lo que MUESTRA: una celda con formato %
+ * sale como «15%» o «100 %» (ya en porcentaje: se respeta). Pero una fracción escrita a mano o copiada de una fórmula
+ * (1 = 100 %, 0,15 = 15 %) llega SIN «%» y no se puede saber si es 1 % o 100 %: se RECHAZA con error de fila, nunca se
+ * adivina (adivinar mal = una jornada del 1 % o un IRPF del 0,15 % en la nómina).
+ *  - Jornada sin «%» en (0, 1] → ambigua (1 % de jornada no existe en la práctica; 1 puede ser 100 %).
+ *  - IRPF sin «%» en (0, 1)   → ambiguo («1» sí es 1 %: como fracción sería 100 %, imposible).
+ * Devuelve el texto a validar o el error; lo que no es número lo deja pasar para que `validarAlta` diga lo de siempre.
+ */
+export function porcentajeDeHoja(campo: 'jornada_pct' | 'irpf_pct', txt: string): { texto: string } | { error: ErrorCampo } {
+  const n = porcentaje(txt)
+  if (n === null || /%/.test(txt)) return { texto: txt }
+  if (campo === 'jornada_pct' && n > 0 && n <= 1) {
+    return { error: { campo, mensaje: 'Jornada ambigua (¿1 = 100 %?): escríbela en porcentaje, p. ej. 100 (completa) o 50 (media)' } }
+  }
+  if (campo === 'irpf_pct' && n > 0 && n < 1) {
+    return { error: { campo, mensaje: 'IRPF ambiguo (¿0,15 = 15 %?): escríbelo en porcentaje, p. ej. 15 o 15 %' } }
+  }
+  return { texto: txt }
+}
 
 /**
  * Matriz de celdas (1.ª fila = cabeceras) → entradas por fila. Se salta las filas vacías. `numero` = fila de la hoja
@@ -126,13 +153,21 @@ export function tablaDesdeMatriz(m: unknown[][]): Tabla {
   for (let r = 1; r < m.length; r++) {
     const celdas = m[r] ?? []
     const entrada: EntradaAlta = {}
+    const erroresLectura: ErrorCampo[] = []
     let algo = false
     campos.forEach((campo, i) => {
       if (!campo) return
       const txt = celdaATexto(celdas[i], esFecha.has(campo))
-      if (txt) { algo = true; if (!entrada[campo]) entrada[campo] = txt }
+      if (!txt) return
+      algo = true
+      if (entrada[campo] || erroresLectura.some(e => e.campo === campo)) return
+      if (campo === 'jornada_pct' || campo === 'irpf_pct') {
+        const p = porcentajeDeHoja(campo, txt)
+        if ('error' in p) { erroresLectura.push(p.error); return }
+      }
+      entrada[campo] = txt
     })
-    if (algo) filas.push({ numero: r + 1, entrada })
+    if (algo) filas.push(erroresLectura.length ? { numero: r + 1, entrada, erroresLectura } : { numero: r + 1, entrada })
   }
   return { filas, ignoradas, faltan }
 }
@@ -164,10 +199,16 @@ export function prepararImportacion(t: Tabla, ctx: ContextoAlta, ya: Existentes)
   if (t.faltan.length || excedeLimite) {
     return { previa: { filas: [], validas: 0, conError: 0, ignoradas: t.ignoradas, faltan: t.faltan, excedeLimite }, altas: [] }
   }
-  for (const { numero, entrada } of t.filas) {
+  for (const { numero, entrada, erroresLectura } of t.filas) {
     const r = validarAlta(entrada, ctx)
     const nombre = [entrada.nombre, entrada.apellidos].map(x => (x ?? '').trim()).filter(Boolean).join(' ').slice(0, 80)
     const base = { numero, nombre, dni: enmascarar(entrada.dni), conContrato: !!(entrada.tipo_contrato ?? '').trim() }
+    if (erroresLectura?.length) {
+      // El campo ilegible no llegó a `validarAlta`: se quita su «falta el campo» para no dar dos errores por la misma celda.
+      const leidos = new Set(erroresLectura.map(e => e.campo))
+      const resto = r.ok ? [] : r.errores.filter(e => !leidos.has(e.campo))
+      filas.push({ ...base, estado: 'error', errores: [...erroresLectura, ...resto], duplicado: null, avisos: [] }); continue
+    }
     if (!r.ok) { filas.push({ ...base, estado: 'error', errores: r.errores, duplicado: null, avisos: [] }); continue }
     const dup = motivoDuplicado(r.alta, ya, previos)
     registrarClaves(previos, r.alta)
@@ -179,12 +220,33 @@ export function prepararImportacion(t: Tabla, ctx: ContextoAlta, ya: Existentes)
   return { previa: { filas, validas, conError: filas.length - validas, ignoradas: t.ignoradas, faltan: [], excedeLimite: false }, altas }
 }
 
-/** Plantilla CSV: solo cabeceras (con «*» las obligatorias); la ayuda va en la hoja «Instrucciones» del XLSX. */
+/** Plantilla CSV: solo cabeceras (con «*» las obligatorias); la ayuda está en la pantalla de importación. */
 export function plantillaCsv(): string {
   return '﻿' + COLUMNAS.map(c => (c.obligatoria ? `${c.cabecera} *` : c.cabecera)).join(';') + '\r\n'
 }
 
-/** ¿El fichero es un XLSX (ZIP) por su firma, sin fiarse de la extensión ni del tipo MIME? */
+/** ¿El fichero es un ZIP (XLSX/ODS) por su firma, sin fiarse de la extensión ni del tipo MIME? */
 export function esZip(bytes: Uint8Array): boolean {
   return bytes.length > 4 && bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 0x03 && bytes[3] === 0x04
+}
+
+/** ¿Excel binario antiguo (.xls, OLE2) por su firma? */
+function esOle2(bytes: Uint8Array): boolean {
+  return bytes.length > 8 && bytes[0] === 0xd0 && bytes[1] === 0xcf && bytes[2] === 0x11 && bytes[3] === 0xe0
+}
+
+export const MENSAJE_SOLO_CSV = 'Formato no admitido: guarda tu Excel como CSV (Archivo › Guardar como › «CSV UTF-8») y súbelo de nuevo'
+
+/**
+ * Fichero subido → matriz de texto. SOLO CSV en UTF-8: un Excel (.xlsx/.xls/.ods), por firma o por extensión, se rechaza
+ * con un mensaje que dice cómo guardarlo como CSV. Un texto que no es UTF-8 válido también se rechaza (las tildes se
+ * romperían en silencio y el nombre o la dirección quedarían mal escritos).
+ */
+export function leerCsvSubido(bytes: Uint8Array, nombre: string): string[][] {
+  if (esZip(bytes) || esOle2(bytes) || /\.(xlsx|xlsm|xls|ods|numbers)$/i.test(nombre)) throw new Error(MENSAJE_SOLO_CSV)
+  let texto: string
+  try { texto = new TextDecoder('utf-8', { fatal: true }).decode(bytes) }
+  catch { throw new Error('El CSV no está en UTF-8: guárdalo como «CSV UTF-8 (delimitado por comas)»') }
+  if (texto.includes('\u0000')) throw new Error('El fichero no es un CSV de texto')
+  return parsearCsv(texto)
 }

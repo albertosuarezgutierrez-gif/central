@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client'
 import { getSesion, AuthError } from '@/lib/tenant'
 import { validarAltaRapida } from '@/lib/alta-empleado'
 import { darDeAltaLote } from '@/lib/alta-empleado-repo'
+import { codigoError } from '@/lib/codigo-error'
 import { saldoVacacionesEmpleados } from '@/lib/solicitudes'
 import { SQL_COLUMNAS_LISTADO_EMPLEADOS } from '@/lib/empleados-columnas'
 
@@ -36,6 +37,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ empleado: { id: r.creados[0].id, nombre: v.alta.nombre, apellidos: v.alta.apellidos } }, { status: 201 })
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: 401 })
-    throw e
+    // 🚨 No se relanza: el error de Prisma lleva valores de la fila (DNI, NAF, IBAN) y Next lo volcaría al log.
+    console.error('[empleados] alta fallida', codigoError(e))
+    return NextResponse.json({ error: 'No se ha podido dar de alta al empleado. Vuelve a intentarlo.' }, { status: 500 })
   }
 }

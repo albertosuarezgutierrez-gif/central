@@ -3,7 +3,7 @@ import { getSesion, AuthError } from '@/lib/tenant'
 import { convenioDeEmpresa } from '@/lib/convenio-tablas-repo'
 import { contarAfectados, datosParaLead, leadsVivos, leerSinObligacion, listarObligaciones } from '@/lib/seguro-convenio-repo'
 import { hoyMadrid } from '@/lib/vencimientos'
-import type { Afectados } from '@/lib/seguro-convenio'
+import { codigoError, inciertoReintentable, type Afectados } from '@/lib/seguro-convenio'
 import UiPage from '@/components/ui/Page'
 import Aviso from '@/components/ui/Aviso'
 import SeguroConvenioClient from './SeguroConvenioClient'
@@ -29,7 +29,7 @@ export default async function Page() {
   try {
     ;[obligaciones, vivos, sinObligacionAt] = await Promise.all([listarObligaciones(empresa_id), leadsVivos(empresa_id), leerSinObligacion(empresa_id)])
   } catch (e) {
-    console.error('[seguro-convenio] lectura', e instanceof Error ? e.message : e)
+    console.error('[seguro-convenio] lectura', codigoError(e))
     return pagina(<Aviso tono="aviso" titulo="No se ha podido leer">No se ha podido comprobar ahora mismo. Inténtalo de nuevo en un momento.</Aviso>)
   }
   const [convenio, contacto] = await Promise.all([convenioDeEmpresa(empresa_id), datosParaLead(empresa_id, usuario_id).catch(() => null)])
@@ -41,7 +41,7 @@ export default async function Page() {
     <SeguroConvenioClient
       obligaciones={obligaciones}
       afectados={afectados}
-      leads={vivos}
+      leads={Object.fromEntries(Object.entries(vivos).map(([k, v]) => [k, { ...v, reintentable: v.estado === 'incierto' && inciertoReintentable(v.at, new Date()) }]))}
       convenioEmpresa={convenio}
       contacto={contacto ? { nombre: contacto.nombre, email: contacto.email } : null}
       hoy={hoyMadrid()}

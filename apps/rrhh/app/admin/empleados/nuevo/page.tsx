@@ -18,7 +18,7 @@ export default async function Page() {
     <UiPage titulo="Nuevo trabajador" subtitulo="Datos personales, contrato y salario en tres pasos"
       volver={{ href: '/admin/empleados', texto: 'Empleados' }} ancho="formulario">
       <Card><AltaWizard tablas={tablas} convenio={convenio} hoy={hoyMadrid()} /></Card>
-      <p className="text-ink-3 mt-3 text-sm">¿Muchos a la vez? <a href="/admin/empleados/importar" className="text-accent">Importar desde Excel o CSV</a>.</p>
+      <p className="text-ink-3 mt-3 text-sm">¿Muchos a la vez? <a href="/admin/empleados/importar" className="text-accent">Importar desde CSV (Excel guardado como CSV)</a>.</p>
     </UiPage>
   )
 }

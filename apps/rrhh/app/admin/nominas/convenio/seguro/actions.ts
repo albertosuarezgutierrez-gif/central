@@ -1,10 +1,12 @@
 'use server'
 // Acciones del seguro obligatorio por convenio. La empresa sale SIEMPRE de `getSesion()` (nunca del formulario).
+// 🚨 Logs: solo el código del error (`codigoError`), nunca `e.message` (el de Prisma puede llevar valores de la fila).
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
 import { getSesion, AuthError } from '@/lib/tenant'
 import {
-  CONSENTIMIENTO_LEAD_VERSION, ErrorSeguroConvenio, cuerpoLead, parsearCobertura, parsearObligacion, resumenLead, type Afectados,
+  CONSENTIMIENTO_LEAD_VERSION, ErrorSeguroConvenio, MENSAJE_LEAD_INCIERTO, codigoError, cuerpoLead, parsearCobertura, parsearObligacion, resumenLead,
+  type Afectados,
 } from '@/lib/seguro-convenio'
 import {
   borrarObligacion, cerrarLead, contarAfectados, datosParaLead, guardarCobertura, guardarObligacion, marcarSinObligacion, obligacionDe, reservarLead,
@@ -19,7 +21,7 @@ const esId = (id: unknown): id is string => typeof id === 'string' && /^[0-9a-f-
 function fallo(e: unknown, que: string, generico: string): ResultadoAccion {
   if (e instanceof AuthError) return { ok: false, error: 'Sesión caducada: vuelve a entrar' }
   if (e instanceof ErrorSeguroConvenio) return { ok: false, error: e.message }
-  console.error(`[seguro-convenio] ${que}`, e instanceof Error ? e.message : e)
+  console.error(`[seguro-convenio] ${que}`, codigoError(e))
   return { ok: false, error: generico }
 }
 
@@ -71,6 +73,11 @@ export async function guardarCoberturaAccion(id: string, datos: Record<string, u
   } catch (e) { return fallo(e, 'cobertura', 'No se pudo guardar la respuesta') }
 }
 
+/** Resultado del envío → respuesta de la acción. `incierto` NO es un error para reintentar: el formulario se cierra. */
+function resultadoDelEnvio(r: { estado: string; mensaje: string }): ResultadoAccion {
+  return r.estado === 'enviado' || r.estado === 'incierto' ? { ok: true, mensaje: r.mensaje } : { ok: false, error: r.mensaje }
+}
+
 /**
  * «Quiero que Grupo ASegura me lo revise». Crea UN lead en plataforma con el consentimiento EXPLÍCITO del responsable
  * (`consentimiento === true`, booleano exacto: la casilla no viene marcada). No envía correo ni mensaje a nadie.
@@ -91,18 +98,21 @@ export async function pedirRevisionAccion(id: string, datos: Record<string, unkn
     if (!o || !emp) return { ok: false, error: 'Obligación no encontrada' }
     let afectados: Afectados = null
     try { afectados = await contarAfectados(empresa_id, o) } catch { afectados = null }
-    const resumen = resumenLead({ empresa: emp.empresa, nif: emp.nif, o, afectados })
+    const resumen = resumenLead({ empresa: emp.empresa, o, afectados })
 
     const reserva = await reservarLead(empresa_id, id, usuario_id, CONSENTIMIENTO_LEAD_VERSION, resumen)
     if ('ya' in reserva) {
-      return reserva.ya === 'enviado'
-        ? { ok: true, mensaje: 'Ya se lo pediste a Grupo ASegura: te contactarán.' }
-        : { ok: false, error: 'La petición se está enviando: espera un momento.' }
+      if (reserva.ya === 'enviado') return { ok: true, mensaje: 'Ya se lo pediste a Grupo ASegura: te contactarán.' }
+      if (reserva.ya === 'incierto') return { ok: true, mensaje: MENSAJE_LEAD_INCIERTO }
+      return { ok: false, error: 'La petición se está enviando: espera un momento.' }
     }
     const ip = (await headers()).get('x-forwarded-for')?.split(',')[0]?.trim() || null
     const r = await enviarLeadCorreduria(cuerpoLead({ nombre, email: email || null, telefono: telefono || null }, o.tipo, resumen), ip)
-    await cerrarLead(empresa_id, reserva.id, r.estado, r.detalle)
+    // Si no se puede apuntar el resultado, la fila se queda en 'enviando' y `reservarLead` la pasa a 'incierto': NUNCA se
+    // reenvía un lead que plataforma ya aceptó. El usuario recibe el resultado real del envío.
+    try { await cerrarLead(empresa_id, reserva.id, r.estado, r.detalle) }
+    catch (e) { console.error('[seguro-convenio] lead enviado pero sin apuntar el resultado', r.estado, codigoError(e)) }
     refrescar()
-    return r.estado === 'enviado' ? { ok: true, mensaje: r.mensaje } : { ok: false, error: r.mensaje }
+    return resultadoDelEnvio(r)
   } catch (e) { return fallo(e, 'lead', 'No se ha podido enviar ahora mismo. Inténtalo de nuevo en unos minutos.') }
 }

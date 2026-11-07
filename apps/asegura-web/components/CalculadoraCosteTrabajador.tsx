@@ -1,7 +1,7 @@
 'use client'
 // Calculadora de `/calculadora-coste-trabajador`. La cuenta es el motor de
 // nóminas (`simularCosteContratacion` de `@central/module-nominas`, tablas de
-// cotización 2026 y algoritmo de retenciones de la AEAT) y corre AQUÍ, en el
+// cotización del año y algoritmo de retenciones de la AEAT) y corre AQUÍ, en el
 // navegador: no hay ruta ni BD, nada sale del equipo. `lib/coste-trabajador.ts`
 // traduce el formulario y los avisos.
 //
@@ -9,12 +9,11 @@
 // la persona toca un dato (como la calculadora de la hipoteca).
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 
-import { simularCosteContratacion, AÑO_SIMULADOR_POR_DEFECTO, type ResultadoSimulador } from '@central/module-nominas'
-import { EJEMPLO_COSTE, GRUPOS, leerDatosCoste, textosAvisos, type DatosCoste } from '@/lib/coste-trabajador'
+import { simularCosteContratacion, type ResultadoSimulador } from '@central/module-nominas'
+import { EJEMPLO_COSTE, GRUPOS, avisoTablasAñoAnterior, fechaHoyMadrid, leerDatosCoste, textosAvisos, type DatosCoste } from '@/lib/coste-trabajador'
 import { eur } from '@/lib/panel-demo'
 import { medir } from '@/lib/medir'
 
-const AÑO = AÑO_SIMULADOR_POR_DEFECTO
 const e = (c: number) => eur(c / 100)
 const pct = (n: number) => `${n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %`
 
@@ -67,7 +66,7 @@ export default function CalculadoraCosteTrabajador() {
   }
 
   const calc: Calculo = useMemo(() => {
-    const l = leerDatosCoste(d, AÑO)
+    const l = leerDatosCoste(d, fechaHoyMadrid())
     if (!l.ok) return { ok: false, motivo: `Falta ${l.falta}.` }
     try {
       return { ok: true, r: simularCosteContratacion(l.entrada) }
@@ -87,6 +86,7 @@ export default function CalculadoraCosteTrabajador() {
   const r = calc.ok ? calc.r : null
   const b = r?.base
   const avisos = r ? textosAvisos(r) : []
+  const avisoTablas = r ? avisoTablasAñoAnterior(r) : null
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))', gap: 'clamp(16px, 3vw, 32px)', alignItems: 'start' }}>
@@ -262,7 +262,8 @@ export default function CalculadoraCosteTrabajador() {
           </>
         )}
         <div className="tenue" style={{ fontSize: 13, lineHeight: 1.5 }}>
-          Cálculo orientativo con las tablas de cotización y retención de {AÑO}. No sustituye a la nómina ni al asesoramiento laboral o fiscal:
+          {avisoTablas && <p role="status" style={{ margin: '0 0 8px', fontWeight: 600 }}>{avisoTablas}</p>}
+          Cálculo orientativo con las tablas de cotización y retención{r ? ` de ${r.año}` : ''}. No sustituye a la nómina ni al asesoramiento laboral o fiscal:
           el convenio, las bonificaciones o las horas reales pueden cambiar las cifras.
         </div>
       </div>

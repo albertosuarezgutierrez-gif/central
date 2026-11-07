@@ -22,11 +22,27 @@ import { atEpPorCnae } from './at-ep'
 import { calcularTipoIrpf, type DetalleIrpf } from './irpf'
 import { calcularNominaCentimos, type NominaCentimos } from './motor'
 import { validarSituacionFamiliar, type SituacionFamiliar } from './situacion-familiar'
-import { tablaDelAño, type TablaAnual, type TablaIrpf } from './tablas'
+import { TablaNoDisponibleError } from './cifras'
+import { añosConTabla, añosConTablaIrpf, tablaDelAño, type TablaAnual, type TablaIrpf } from './tablas'
 import type { GrupoCotizacion } from './tipos'
 
-/** Año de tablas por defecto (el simulador no lee el reloj). */
-export const AÑO_SIMULADOR_POR_DEFECTO = 2026
+/**
+ * Año de las tablas para una fecha de cálculo («AAAA-MM-DD», la inyecta quien llama: el simulador no lee el reloj): el
+ * MÁS RECIENTE ≤ año de la fecha que tenga tablas de cotización Y de IRPF. Si las del año en curso aún no están
+ * cargadas, se usan las del anterior y la salida lo avisa (`tablasDeAñoAnterior`). Sin ninguna ≤ ese año → error.
+ */
+export function añoTablasSimulador(fechaCalculo: string): number {
+  const año = añoDeFecha(fechaCalculo)
+  const irpf = new Set(añosConTablaIrpf())
+  const candidatos = añosConTabla().filter(a => a <= año && irpf.has(a))
+  if (!candidatos.length) throw new TablaNoDisponibleError(año)
+  return Math.max(...candidatos)
+}
+
+function añoDeFecha(f: string): number {
+  if (typeof f !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(f)) throw new Error(`fechaCalculo inválida (AAAA-MM-DD): ${f}`)
+  return Number(f.slice(0, 4))
+}
 
 export const EXENCION_SEGURO_SALUD = {
   porPersona: cifra('lirpf_42_3_c_por_persona', 50_000, 'seguro', 'LIRPF art. 42.3.c) 2.º (BOE-A-2006-20764)'),
@@ -44,6 +60,7 @@ const LIMITE_ESPECIE_ET_PPM: Ppm = 300_000
 export const REGLAS_SIMULADOR_PENDIENTES = {
   at_ep_tabla_cnae: 'AT/EP tomado de la tabla interna por CNAE (at-ep.ts), no contrastada con la tarifa de primas (DA 4.ª Ley 42/2006)',
   duracion_temporal_desconocida: 'Contrato temporal sin saber si dura menos de un año: no se aplica el tipo mínimo de retención del 2 % (art. 86.2 RIRPF)',
+  tablas_de_año_anterior: 'Las tablas de cotización/IRPF del año de la fecha de cálculo no están cargadas: se han usado las del último año disponible',
 } as const
 
 export interface EntradaSimulador {
@@ -70,6 +87,9 @@ export interface EntradaSimulador {
     /** Cuántas de ellas tienen discapacidad (límite 1.500 €). */
     discapacidad?: number
   }
+  /** Fecha del cálculo («AAAA-MM-DD», hoy en Madrid en la web). Elige el año de las tablas (`añoTablasSimulador`). */
+  fechaCalculo?: string
+  /** Año de tablas EXPLÍCITO (gana a `fechaCalculo`). Hace falta uno de los dos. */
   año?: number
   /** Para tests. */
   tabla?: TablaAnual
@@ -111,7 +131,12 @@ export interface EscenarioCoste {
 }
 
 export interface ResultadoSimulador {
+  /** Año de las tablas usadas. */
   año: number
+  /** Año de la fecha de cálculo (null si solo se dio `año`). */
+  añoCalculo: number | null
+  /** true = las tablas son de un año ANTERIOR al de la fecha de cálculo (aviso visible y cifra aproximada). */
+  tablasDeAñoAnterior: boolean
   atEpPpm: Ppm
   atEpOrigen: 'explicito' | 'cnae' | 'provisional'
   /** Sin flexible (siempre). */
@@ -152,10 +177,17 @@ export function simularCosteContratacion(e: EntradaSimulador): ResultadoSimulado
     const errs = validarSituacionFamiliar(e.situacion)
     if (errs.length) throw new Error(`Situación familiar inválida: ${errs.join('; ')}`)
   }
-  const año = e.año ?? AÑO_SIMULADOR_POR_DEFECTO
+  if (e.año === undefined && e.fechaCalculo === undefined) throw new Error('Falta fechaCalculo (o año de tablas)')
+  const añoCalculo = e.fechaCalculo !== undefined ? añoDeFecha(e.fechaCalculo) : null
+  const año = e.año ?? añoTablasSimulador(e.fechaCalculo!)
   const tabla = e.tabla ?? tablaDelAño(año)
   const pendientes = new Set<string>()
   const avisos = new Set<string>()
+  const tablasDeAñoAnterior = añoCalculo !== null && año < añoCalculo
+  if (tablasDeAñoAnterior) {
+    avisos.add(`tablas_de_año_anterior:${año}`)
+    pendientes.add('regla:tablas_de_año_anterior')
+  }
 
   let atEpPpm: Ppm | null = null
   let atEpOrigen: ResultadoSimulador['atEpOrigen'] = 'provisional'
@@ -282,6 +314,8 @@ export function simularCosteContratacion(e: EntradaSimulador): ResultadoSimulado
   const cifrasPendientes = [...pendientes].sort()
   return {
     año,
+    añoCalculo,
+    tablasDeAñoAnterior,
     atEpPpm: atEpUsado,
     atEpOrigen,
     base,

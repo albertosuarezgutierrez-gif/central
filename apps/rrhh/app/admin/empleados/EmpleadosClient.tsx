@@ -97,7 +97,7 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa 
       <div className="mb-3 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
         <Boton onClick={() => setVerAlta(v => !v)} aria-expanded={verAlta} ancho className="sm:w-auto">{verAlta ? 'Cerrar' : '+ Añadir empleado'}</Boton>
         <Boton href="/admin/empleados/nuevo" variante="secundario" ancho className="sm:w-auto">Nuevo empleado (asistente)</Boton>
-        <Boton href="/admin/empleados/importar" variante="secundario" ancho className="sm:w-auto">Importar Excel/CSV</Boton>
+        <Boton href="/admin/empleados/importar" variante="secundario" ancho className="sm:w-auto">Importar CSV</Boton>
       </div>
 
       {/* Alta: oculta tras «+ Añadir empleado» */}

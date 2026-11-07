@@ -22,10 +22,13 @@ const SITUACION: Record<Situacion, { texto: string; tono: 'aviso' | 'alerta' | '
 
 type Contacto = { nombre: string; email: string } | null
 
+/** Último lead vivo de la obligación. `reintentable`: un 'incierto' de ≥ 24 h (lo calcula el servidor). */
+type LeadVivo = { estado: string; at: string; reintentable?: boolean }
+
 export default function SeguroConvenioClient({ obligaciones, afectados, leads, convenioEmpresa, contacto, hoy, sinObligacionAt }: {
   obligaciones: ObligacionConCobertura[]
   afectados: Record<string, Afectados>
-  leads: Record<string, { estado: string; at: string }>
+  leads: Record<string, LeadVivo>
   convenioEmpresa: string | null
   contacto: Contacto
   hoy: string
@@ -66,7 +69,7 @@ export default function SeguroConvenioClient({ obligaciones, afectados, leads, c
 }
 
 function TarjetaObligacion({ o, afectados, lead, contacto, hoy, onEditar }: {
-  o: ObligacionConCobertura; afectados: Afectados; lead: { estado: string; at: string } | null; contacto: Contacto; hoy: string; onEditar: () => void
+  o: ObligacionConCobertura; afectados: Afectados; lead: LeadVivo | null; contacto: Contacto; hoy: string; onEditar: () => void
 }) {
   const [pendiente, empezar] = useTransition()
   const [error, setError] = useState('')
@@ -136,8 +139,13 @@ function TarjetaObligacion({ o, afectados, lead, contacto, hoy, onEditar }: {
         </div>
       </form>
 
+      {lead?.estado === 'incierto' && (
+        <Aviso tono="info">Tu petición del {fechaEs(lead.at)} no se pudo confirmar: puede que ya se enviara y Grupo ASegura te contactará.
+          {lead.reintentable ? ' Si no te han contactado, puedes volver a pedirlo.' : ' Si en 24 horas no sabes nada, podrás volver a pedirlo.'}</Aviso>
+      )}
       {lead?.estado === 'enviado'
         ? <Aviso tono="ok">Pediste a Grupo ASegura que lo revisara el {fechaEs(lead.at)}. Te contactarán.</Aviso>
+        : lead?.estado === 'incierto' && !lead.reintentable ? null
         : pedir
           ? <FormLead obligacionId={o.id} contacto={contacto} onCerrar={() => setPedir(false)} />
           : <div><Boton variante="secundario" type="button" onClick={() => setPedir(true)}>Quiero que Grupo ASegura me lo revise</Boton></div>}

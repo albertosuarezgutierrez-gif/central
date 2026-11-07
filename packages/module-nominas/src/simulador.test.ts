@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { simularCosteContratacion, exencionSeguroSalud, type EntradaSimulador } from './simulador'
+import { simularCosteContratacion, exencionSeguroSalud, añoTablasSimulador, type EntradaSimulador } from './simulador'
 
 // Casos a mano con las tablas 2026 (Orden PJC/297/2026) y la escala del art. 85.1 RIRPF.
-const BASE: EntradaSimulador = { brutoAnual: 3_000_000, pagas: 12, grupo: 5, contrato: 'indefinido', jornadaPct: 100, atEpPpm: 15_000 }
+const BASE: EntradaSimulador = { brutoAnual: 3_000_000, pagas: 12, grupo: 5, contrato: 'indefinido', jornadaPct: 100, atEpPpm: 15_000, fechaCalculo: '2026-06-01' }
 
 describe('exención seguro de salud (LIRPF art. 42.3.c)', () => {
   it('500 € por persona, 1.500 € con discapacidad, prima repartida por igual', () => {
@@ -116,5 +116,28 @@ describe('simularCosteContratacion', () => {
     expect(() => simularCosteContratacion({ ...BASE, brutoAnual: 0 })).toThrow()
     expect(() => simularCosteContratacion({ ...BASE, jornadaPct: 0 })).toThrow()
     expect(() => simularCosteContratacion({ ...BASE, retribucionFlexible: { seguroSaludAnual: 3_000_000, beneficiarios: 1 } })).toThrow()
+  })
+})
+
+describe('año de las tablas (no fijo: sale de la fecha de cálculo inyectada)', () => {
+  it('fecha 2026 → tablas 2026, sin aviso', () => {
+    expect(añoTablasSimulador('2026-11-07')).toBe(2026)
+    const r = simularCosteContratacion(BASE)
+    expect(r).toMatchObject({ año: 2026, añoCalculo: 2026, tablasDeAñoAnterior: false })
+    expect(r.avisos.some(a => a.startsWith('tablas_de_año_anterior'))).toBe(false)
+  })
+  it('fecha de un año sin tablas cargadas (2027) → las del último disponible, con aviso y cifra aproximada', () => {
+    expect(añoTablasSimulador('2027-01-02')).toBe(2026)
+    const r = simularCosteContratacion({ ...BASE, fechaCalculo: '2027-01-02' })
+    expect(r).toMatchObject({ año: 2026, añoCalculo: 2027, tablasDeAñoAnterior: true, aproximado: true })
+    expect(r.avisos).toContain('tablas_de_año_anterior:2026')
+    expect(r.cifrasPendientes).toContain('regla:tablas_de_año_anterior')
+  })
+  it('sin tablas ≤ el año (o fecha mal) → error; sin fecha ni año → error (no hay año por defecto)', () => {
+    expect(() => añoTablasSimulador('2024-05-01')).toThrow()
+    expect(() => añoTablasSimulador('7/11/2026')).toThrow()
+    const { fechaCalculo: _f, ...sinFecha } = BASE
+    expect(() => simularCosteContratacion(sinFecha)).toThrow(/fechaCalculo/)
+    expect(simularCosteContratacion({ ...sinFecha, año: 2026 }).tablasDeAñoAnterior).toBe(false)
   })
 })

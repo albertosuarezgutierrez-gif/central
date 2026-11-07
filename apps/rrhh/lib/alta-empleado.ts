@@ -69,7 +69,10 @@ const TIPOS: Record<string, TipoContratoAlta> = {
 const t = (v: unknown) => (v == null ? '' : String(v)).trim()
 const opc = (v: unknown) => t(v) || null
 
-/** «15» / «15,5» / «15 %» → número. null si no es un número. */
+/**
+ * «15» / «15,5» / «15 %» → número en PORCENTAJE (15 = 15 %). null si no es un número. No interpreta fracciones (0,15):
+ * la importación rechaza antes las ambiguas de la hoja (`porcentajeDeHoja` en importar-empleados.ts).
+ */
 export function porcentaje(v: unknown): number | null {
   const s = t(v).replace(/\s|%/g, '').replace(',', '.')
   if (!s || !/^\d+(\.\d+)?$/.test(s)) return null

@@ -1,6 +1,6 @@
 import { Document, Page, Text, View, StyleSheet, renderToBuffer } from '@react-pdf/renderer'
 import type { NominaDesglose } from '@central/module-nominas'
-import { explicarNomina } from './nomina-explicacion'
+import { explicacionParaTrabajador, explicarNomina } from './nomina-explicacion'
 
 const s = StyleSheet.create({
   page: { padding: 40, fontSize: 10, fontFamily: 'Helvetica', color: '#111' },
@@ -27,18 +27,19 @@ interface NominaPdfProps {
   anexoExplicativo?: boolean
 }
 
+// Anexo para el TRABAJADOR: sin claves técnicas ni «No cuadra… Revisar» (solo en la vista admin).
 function AnexoExplicativo({ desglose, periodo }: { desglose: NominaDesglose; periodo: string }) {
-  const e = explicarNomina(desglose)
+  const e = explicacionParaTrabajador(explicarNomina(desglose), (desglose as { cifrasPendientes?: unknown } | null)?.cifrasPendientes)
   return (
     <Page size="A4" style={s.page}>
       <Text style={s.h1}>Cómo se ha calculado tu nómina</Text>
       <Text style={s.sub}>Periodo {periodo}</Text>
-      {e.avisos.map((a, i) => <Text key={`g${i}`} style={s.anexoAviso}>Atención: {a}</Text>)}
+      {e.avisos.map((a, i) => <Text key={`g${i}`} style={s.anexoAviso}>{a}</Text>)}
       {e.lineas.map(l => (
         <View key={l.id} wrap={false} style={{ marginTop: 6 }}>
           <View style={s.row}><Text style={{ fontFamily: 'Helvetica-Bold' }}>{l.titulo}</Text><Text>{l.importe}</Text></View>
           <Text style={s.anexo}>{l.explicacion}</Text>
-          {l.avisos.map((a, i) => <Text key={i} style={s.anexoAviso}>Atención: {a}</Text>)}
+          {l.avisos.map((a, i) => <Text key={i} style={s.anexoAviso}>{a}</Text>)}
         </View>
       ))}
       <Text style={s.footer}>Explicación generada automáticamente a partir del cálculo guardado · {periodo}</Text>

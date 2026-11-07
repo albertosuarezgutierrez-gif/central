@@ -42,13 +42,14 @@ export default function ImportarClient({ limiteFilas }: { limiteFilas: number })
   return (
     <div className="grid gap-4" style={REJILLA}>
       <Card className="grid gap-3" style={REJILLA}>
-        <p className="text-sm">1. Descarga la plantilla, rellena una fila por trabajador y guárdala como .xlsx o .csv.</p>
+        <p className="text-sm">1. Descarga la plantilla, rellena una fila por trabajador y guárdala como CSV. Si la tienes en Excel: Archivo › Guardar como › «CSV UTF-8». Los .xlsx no se admiten.</p>
+        <p className="text-xs text-ink-3">Jornada e IRPF en porcentaje: 100 o 100 % para jornada completa, 15 o 15 % de IRPF (no 1 ni 0,15).</p>
         <div className="flex flex-wrap gap-2">
           <Boton variante="secundario" href="/api/admin/empleados/importar/plantilla">Descargar plantilla (CSV, se abre con Excel)</Boton>
         </div>
         <label className="grid min-w-0 gap-1 text-sm" style={REJILLA}>
           <span className="font-semibold">2. Sube el fichero</span>
-          <input type="file" accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          <input type="file" accept=".csv,text/csv"
             className="min-h-[44px] w-full min-w-0"
             onChange={e => { setArchivo(e.target.files?.[0] ?? null); setPrevia(null); setResultado(null); setError('') }} />
         </label>

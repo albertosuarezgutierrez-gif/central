@@ -188,12 +188,15 @@ export function textoAfectados(a: Afectados): string {
   return a.sinCategoria > 0 ? `${base} (+${a.sinCategoria} sin categoría registrada: no se sabe)` : base
 }
 
-/** Lo que se pidió revisar, SIN datos personales (va a `rrhh.leads_correduria.resumen` y al comentario del lead). */
-export function resumenLead(d: { empresa: string; nif: string | null; o: ObligacionSeguro; afectados: Afectados }): string {
+/**
+ * Lo que se pidió revisar (va a `rrhh.leads_correduria.resumen` y al comentario del lead). SIN el NIF: en un autónomo es
+ * su DNI (dato personal), y la correduría identifica a la empresa por el nombre y el contacto del lead.
+ */
+export function resumenLead(d: { empresa: string; o: ObligacionSeguro; afectados: Afectados }): string {
   const ambito = d.o.ambito === 'todas' ? 'todas las categorías' : `categorías: ${(d.o.categorias ?? []).join(', ')}`
   return [
     `Revisión de seguro obligatorio por convenio (desde iarrhh).`,
-    `Empresa: ${d.empresa}${d.nif ? ` (NIF ${d.nif})` : ''}.`,
+    `Empresa: ${d.empresa}.`,
     `Convenio: ${d.o.convenio}, ${d.o.articulo}.`,
     `Exige ${fraseObligacion(d.o)}; ${ambito}.`,
     `${textoAfectados(d.afectados)}.`,
@@ -228,9 +231,21 @@ export function cuerpoLead(contacto: ContactoLead, tipo: TipoSeguroConvenio, res
   }
 }
 
-export type ResultadoLead = { estado: 'enviado' | 'error' | 'rechazado'; detalle: string; mensaje: string }
+/**
+ * Resultado del envío del lead. `incierto` = NO se sabe si plataforma lo registró (timeout, sin respuesta, 5xx o 2xx sin
+ * `ok`): puede que la ficha ya exista y Alberto ya tenga el aviso. NO se reenvía solo (sería un lead doble): el reintento
+ * es MANUAL y solo pasadas `HORAS_REINTENTO_INCIERTO` (o lo libera el operador poniendo la fila en 'error').
+ * `error` = plataforma contestó que NO lo ha registrado (4xx distinto de 422, p. ej. 429): se puede reintentar ya.
+ */
+export type ResultadoLead = { estado: 'enviado' | 'error' | 'rechazado' | 'incierto'; detalle: string; mensaje: string }
 
-/** Respuesta de plataforma → estado de la fila y mensaje al usuario. `status` 0 = no llegó (red/timeout). */
+export const HORAS_REINTENTO_INCIERTO = 24
+export const MENSAJE_LEAD_INCIERTO = 'Puede que ya se enviara: Grupo ASegura te contactará. No hace falta que lo repitas.'
+
+/**
+ * Respuesta de plataforma → estado de la fila y mensaje al usuario. `status` 0 = sin respuesta (red caída a medias o
+ * timeout): la petición pudo llegar y procesarse, así que es `incierto`, nunca `error` reintentable.
+ */
 export function interpretarRespuestaLead(status: number, json: unknown): ResultadoLead {
   const j = (typeof json === 'object' && json !== null ? json : {}) as Record<string, unknown>
   const motivo = typeof j.motivo === 'string' ? j.motivo.slice(0, 200) : null
@@ -240,6 +255,17 @@ export function interpretarRespuestaLead(status: number, json: unknown): Resulta
   if (status === 422) {
     return { estado: 'rechazado', detalle: `422${motivo ? `: ${motivo}` : ''}`.slice(0, 300), mensaje: motivo ?? 'Revisa tus datos de contacto.' }
   }
-  if (status === 0) return { estado: 'error', detalle: 'sin respuesta', mensaje: 'No se ha podido enviar ahora mismo. Inténtalo de nuevo en unos minutos.' }
+  if (status === 0) return { estado: 'incierto', detalle: 'sin respuesta', mensaje: MENSAJE_LEAD_INCIERTO }
+  if (status >= 500 || (status >= 200 && status < 300)) return { estado: 'incierto', detalle: `${status}`, mensaje: MENSAJE_LEAD_INCIERTO }
   return { estado: 'error', detalle: `${status}`, mensaje: status === 429 ? 'Demasiadas peticiones desde esta conexión. Inténtalo más tarde.' : 'No se ha podido enviar ahora mismo. Inténtalo de nuevo en unos minutos.' }
 }
+
+/** ¿Un lead `incierto` creado en `creadaAt` se puede volver a pedir A MANO en `ahora`? Solo pasadas 24 h. */
+export function inciertoReintentable(creadaAt: string, ahora: Date): boolean {
+  const t = Date.parse(creadaAt)
+  if (!Number.isFinite(t)) return false
+  return ahora.getTime() - t >= HORAS_REINTENTO_INCIERTO * 3_600_000
+}
+
+// Solo el código de un error a los logs (nunca `e.message`): ver lib/codigo-error.ts.
+export { codigoError } from './codigo-error'

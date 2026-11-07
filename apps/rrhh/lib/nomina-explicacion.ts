@@ -162,6 +162,31 @@ export function explicarNomina(datos: Partial<NominaDesglose> | null | undefined
   return { lineas, avisos: avisosGen }
 }
 
+export const AVISO_TRABAJADOR_PENDIENTES = 'Algunas cifras están pendientes de verificación oficial; tu empresa revisa tu nómina.'
+
+// Lo que es para la EMPRESA (revisión interna) y no se le enseña al trabajador: descuadres, claves técnicas del motor,
+// listas PENDIENTE_VERIFICAR y los «revisa…» dirigidos al responsable.
+const SOLO_EMPRESA: RegExp[] = [/^No cuadra/, /PENDIENTE_VERIFICAR/, /^Aviso del cálculo:/, /\brevis[ae]\b/i, /^No consta si había cifras/]
+
+/**
+ * Versión para el TRABAJADOR (anexo del PDF que recibe en /e): sin claves técnicas, sin listas PENDIENTE_VERIFICAR ni
+ * «No cuadra… Revisar» (eso solo en la vista admin, `explicarNomina` tal cual). Si había algo de eso, o cifras pendientes,
+ * UN mensaje humano en su lugar. Nunca afirma que todo esté verificado: sin dato de pendientes, también se avisa.
+ */
+export function explicacionParaTrabajador(e: NominaExplicada, cifrasPendientes?: unknown): NominaExplicada {
+  const esInterno = (a: string) => SOLO_EMPRESA.some(r => r.test(a))
+  let quitado = !Array.isArray(cifrasPendientes) || cifrasPendientes.length > 0
+  const lineas = e.lineas.map(l => {
+    const avisos = l.avisos.filter(a => !esInterno(a))
+    if (avisos.length !== l.avisos.length) quitado = true
+    return { ...l, avisos }
+  })
+  const avisos = e.avisos.filter(a => !esInterno(a))
+  if (avisos.length !== e.avisos.length) quitado = true
+  if (e.lineas.length === 0) return { lineas: [], avisos: ['No se ha podido preparar la explicación de esta nómina; tu empresa puede aclarártela.'] }
+  return { lineas, avisos: quitado ? [...avisos, AVISO_TRABAJADOR_PENDIENTES] : avisos }
+}
+
 /** Texto plano del anexo (para el PDF): una línea por concepto. */
 export function explicacionPlana(e: NominaExplicada): string[] {
   const out: string[] = []

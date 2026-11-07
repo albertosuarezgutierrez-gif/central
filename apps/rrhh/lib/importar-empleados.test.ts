@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   parsearCsv, tablaDesdeMatriz, prepararImportacion, celdaATexto, serieExcelAIso, campoDeCabecera, plantillaCsv, esZip,
-  LIMITE_FILAS, COLUMNAS,
+  LIMITE_FILAS, COLUMNAS, leerCsvSubido, porcentajeDeHoja, MENSAJE_SOLO_CSV,
 } from './importar-empleados'
 import { existentesVacios, registrarClaves } from './alta-empleado'
 
@@ -101,5 +101,65 @@ describe('esZip', () => {
   it('reconoce la firma de un .xlsx y rechaza texto', () => {
     expect(esZip(new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0]))).toBe(true)
     expect(esZip(new TextEncoder().encode('a;b;c'))).toBe(false)
+  })
+})
+
+describe('solo CSV: un Excel subido NO se abre (CVE-2023-30533 en xlsx@0.18.5)', () => {
+  it('ZIP (.xlsx/.ods) por firma, aunque se llame .csv, se rechaza con «guarda tu Excel como CSV»', () => {
+    expect(() => leerCsvSubido(new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0, 0]), 'empleados.csv')).toThrow(MENSAJE_SOLO_CSV)
+    expect(MENSAJE_SOLO_CSV).toMatch(/guarda tu Excel como CSV/)
+  })
+  it('.xls antiguo (OLE2) y extensiones de hoja de cálculo, rechazados', () => {
+    expect(() => leerCsvSubido(new Uint8Array([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1, 0]), 'x.bin')).toThrow(MENSAJE_SOLO_CSV)
+    for (const n of ['a.xlsx', 'a.XLS', 'a.ods', 'a.xlsm']) expect(() => leerCsvSubido(new TextEncoder().encode('a;b'), n)).toThrow(MENSAJE_SOLO_CSV)
+  })
+  it('CSV en UTF-8 se lee; uno que no es UTF-8 (Windows-1252) se rechaza en vez de romper las tildes', () => {
+    expect(leerCsvSubido(new TextEncoder().encode('Nombre;Apellidos\nAna;Núñez'), 'a.csv')).toEqual([['Nombre', 'Apellidos'], ['Ana', 'Núñez']])
+    expect(() => leerCsvSubido(new Uint8Array([0x4e, 0xfa, 0xf1, 0x65, 0x7a]), 'a.csv')).toThrow(/UTF-8/)
+  })
+})
+
+describe('porcentajes de la hoja (jornada, IRPF): la fracción de Excel no se adivina', () => {
+  it('con «%» (lo que Excel escribe en CSV para una celda con formato %) se respeta', () => {
+    expect(porcentajeDeHoja('jornada_pct', '100%')).toEqual({ texto: '100%' })
+    expect(porcentajeDeHoja('jornada_pct', '50 %')).toEqual({ texto: '50 %' })
+    expect(porcentajeDeHoja('irpf_pct', '15,5%')).toEqual({ texto: '15,5%' })
+  })
+  it('jornada ≤ 1 sin «%» (1 = 100 %, 0,5 = 50 %) → error de fila, nunca 1 %', () => {
+    for (const v of ['1', '0,5', '0.75', '1,0']) expect(porcentajeDeHoja('jornada_pct', v)).toHaveProperty('error.campo', 'jornada_pct')
+    expect(porcentajeDeHoja('jornada_pct', '50')).toEqual({ texto: '50' })
+  })
+  it('IRPF entre 0 y 1 sin «%» (0,15 = 15 %) → error; 0 y 1 (1 %) valen', () => {
+    for (const v of ['0,15', '0.02', '0,5']) expect(porcentajeDeHoja('irpf_pct', v)).toHaveProperty('error.campo', 'irpf_pct')
+    expect(porcentajeDeHoja('irpf_pct', '0')).toEqual({ texto: '0' })
+    expect(porcentajeDeHoja('irpf_pct', '1')).toEqual({ texto: '1' })
+    expect(porcentajeDeHoja('irpf_pct', '15')).toEqual({ texto: '15' })
+  })
+  it('en la vista previa: la fila con jornada «1» o IRPF «0,15» sale en error con UN mensaje por celda y no se da de alta', () => {
+    const cab = 'Apellidos;Nombre;DNI/NIE;Email;Tipo contrato;Fecha alta;Grupo cotización;Jornada %;Salario base €/mes;IRPF %'
+    const csv = [cab,
+      'García;Ana;12345678Z;ana@x.es;indefinido;01/11/2026;7;1;1.350,00;15',
+      'Ruiz;Eva;X1234567L;eva@x.es;indefinido;01/11/2026;7;100%;1.350,00;0,15',
+      'Sanz;Leo;Y0000000Z;leo@x.es;indefinido;01/11/2026;7;100 %;1.350,00;15 %',
+    ].join('\n')
+    const { previa, altas } = prepararImportacion(tablaDesdeMatriz(parsearCsv(csv)), ctx, existentesVacios())
+    const por = Object.fromEntries(previa.filas.map(f => [f.numero, f]))
+    expect(por[2].estado).toBe('error')
+    expect(por[2].errores.map(e => e.campo)).toEqual(['jornada_pct'])
+    expect(por[2].errores[0].mensaje).toMatch(/ambigua/)
+    expect(por[3].errores.map(e => e.campo)).toEqual(['irpf_pct'])
+    expect(altas.map(a => a.numero)).toEqual([4])
+    expect(altas[0].alta.contrato?.jornadaPct).toBe(100)
+  })
+})
+
+describe('guardián: la ruta de importación no abre .xlsx', () => {
+  it('sin import de xlsx ni lector XLSX en la ruta ni en el módulo', async () => {
+    const { readFileSync } = await import('node:fs')
+    const { join } = await import('node:path')
+    for (const f of ['app/api/admin/empleados/importar/route.ts', 'lib/importar-empleados.ts']) {
+      const src = readFileSync(join(__dirname, '..', f), 'utf8')
+      expect(src).not.toMatch(/from ['"]xlsx['"]|leerXlsx|importar-empleados-xlsx/)
+    }
   })
 })

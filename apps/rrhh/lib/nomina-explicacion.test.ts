@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { calcularNomina } from '@central/module-nominas'
 import type { ContratoLaboral } from '@central/module-nominas'
-import { explicarNomina, explicacionPlana } from './nomina-explicacion'
+import { AVISO_TRABAJADOR_PENDIENTES, explicacionParaTrabajador, explicarNomina, explicacionPlana } from './nomina-explicacion'
 
 const C: ContratoLaboral = { tipoContrato: 'indefinido', jornadaPct: 100, salarioBase: 3000, grupoCotizacion: 1, irpfRetencionPct: 15, conceptosFijos: [] }
 const sf = { vigenteDesde: '2026-01-01', vigenteHasta: null, situacion: 3 as const, fechaNacimientoContribuyente: '1990-05-10', discapacidad: 'ninguna' as const, descendientes: [], ascendientes: [] }
@@ -66,5 +66,30 @@ describe('explicarNomina', () => {
     const t = explicacionPlana(explicarNomina(d))
     expect(t.length).toBeGreaterThanOrEqual(6)
     expect(t.some(x => x.startsWith('Líquido a percibir (2.355,00€)'))).toBe(true)
+  })
+
+  it('anexo del TRABAJADOR: sin «No cuadra… Revisar», sin claves técnicas ni PENDIENTE_VERIFICAR; un mensaje humano', () => {
+    const d = calcularNomina(C, [], { periodo: '2026-04', atEp: 0.015, modo: 'calculo' })
+    const admin = explicarNomina({ ...d, cifrasPendientes: ['mei.reparto', 'irpf.minimos_2_7'], avisos: ['clave_rara_del_motor'], deducciones: { ...d.deducciones, contingencias_comunes: 150 } })
+    expect(JSON.stringify(admin)).toMatch(/No cuadra.*Revisar/)
+    expect(JSON.stringify(admin)).toContain('PENDIENTE_VERIFICAR')
+    const t = explicacionParaTrabajador(admin, ['mei.reparto', 'irpf.minimos_2_7'])
+    const txt = JSON.stringify(t)
+    for (const x of ['No cuadra', 'Revisar', 'PENDIENTE_VERIFICAR', 'mei.reparto', 'clave_rara_del_motor', 'Aviso del cálculo']) expect(txt).not.toContain(x)
+    expect(t.avisos).toEqual([AVISO_TRABAJADOR_PENDIENTES])
+    expect(t.lineas.length).toBe(admin.lineas.length)
+  })
+  it('anexo del trabajador sin pendientes ni descuadres: sin el aviso; sin dato de pendientes: con él (nunca «todo verificado»)', () => {
+    const d = calcularNomina(C, [], { periodo: '2026-04', atEp: 0.015, modo: 'calculo', irpfAlgoritmo: { situacion: sf } })
+    expect(explicacionParaTrabajador(explicarNomina({ ...d, cifrasPendientes: [] }), []).avisos).toEqual([])
+    expect(explicacionParaTrabajador(explicarNomina(d), undefined).avisos).toContain(AVISO_TRABAJADOR_PENDIENTES)
+  })
+})
+
+describe('guardián: el PDF del trabajador usa la versión para el trabajador', () => {
+  it('nomina-pdf.tsx pasa la explicación por explicacionParaTrabajador', async () => {
+    const { readFileSync } = await import('node:fs')
+    const src = readFileSync(new URL('./nomina-pdf.tsx', import.meta.url), 'utf8')
+    expect(src).toMatch(/explicacionParaTrabajador\(explicarNomina\(desglose\)/)
   })
 })

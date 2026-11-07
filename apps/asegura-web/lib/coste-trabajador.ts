@@ -60,7 +60,23 @@ const enteroDe = (txt: string): number | null => {
   return n !== null && Number.isInteger(n) ? n : null
 }
 
-export function leerDatosCoste(d: DatosCoste, año: number): Lectura {
+/** Hoy en Madrid («AAAA-MM-DD»). La fecha se INYECTA en el simulador (que no lee el reloj); `ahora` para los tests. */
+export function fechaHoyMadrid(ahora: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit' }).format(ahora)
+}
+
+/**
+ * Aviso VISIBLE cuando el simulador usa tablas de un año anterior al de hoy (las del año en curso aún no están
+ * cargadas). null si las tablas son del año en curso.
+ */
+export function avisoTablasAñoAnterior(r: { año: number; añoCalculo: number | null; tablasDeAñoAnterior: boolean }): string | null {
+  if (!r.tablasDeAñoAnterior || r.añoCalculo === null) return null
+  return `Aún no tenemos cargadas las tablas oficiales de ${r.añoCalculo}: el cálculo usa las de ${r.año}, así que las cifras de este año pueden variar.`
+}
+
+/** `fechaCalculo` = hoy en Madrid («AAAA-MM-DD»): el año de las tablas lo elige el simulador a partir de ella. */
+export function leerDatosCoste(d: DatosCoste, fechaCalculo: string): Lectura {
+  const año = Number(fechaCalculo.slice(0, 4))
   const bruto = leerNumero(d.bruto)
   if (bruto === null || bruto <= 0) return { ok: false, falta: 'el salario bruto anual' }
   const jornada = leerNumero(d.jornada)
@@ -71,7 +87,7 @@ export function leerDatosCoste(d: DatosCoste, año: number): Lectura {
   if (cnae && !/^\d{4}$/.test(cnae)) return { ok: false, falta: 'el CNAE (4 cifras) o déjalo en blanco' }
 
   const entrada: EntradaSimulador = {
-    año,
+    fechaCalculo,
     brutoAnual: aCentimos(bruto),
     pagas: d.pagas === '12' ? 12 : 14,
     prorrataExtras: d.pagas === '14p',
@@ -141,6 +157,7 @@ export const TEXTO_AVISO: Record<string, string> = {
   'regla:at_ep_empresa': 'Sin la actividad (CNAE) de la empresa, la cuota de accidentes de trabajo se calcula con un 1,50 % provisional.',
   'regla:at_ep_tabla_cnae': 'La cuota de accidentes de trabajo sale de nuestra tabla por actividad, pendiente de contrastar con la tarifa oficial.',
   'regla:duracion_temporal_desconocida': 'No sabemos si el contrato temporal dura menos de un año; si es así, la retención mínima de IRPF es del 2 %.',
+  'regla:tablas_de_año_anterior': 'Las tablas oficiales de este año aún no están cargadas: el cálculo usa las del año anterior y es aproximado.',
   'regla:base_min_parcial': 'A tiempo parcial la base mínima depende de las horas reales de cada mes; aquí se aproxima con el porcentaje de jornada.',
   cnae_sin_tarifa_at_ep: 'No tenemos tarifa de accidentes para ese CNAE: se usa un 1,50 % provisional.',
   'irpf:sin_modelo_145_sin_circunstancias': 'Sin situación familiar, la retención se calcula sin circunstancias personales ni familiares (art. 88.2 del Reglamento del IRPF).',

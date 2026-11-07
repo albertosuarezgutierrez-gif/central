@@ -1,26 +1,19 @@
-// Importación de empleados desde Excel/CSV. POST multipart `archivo` + `modo`:
+// Importación de empleados desde CSV (UTF-8, «;» o «,»). POST multipart `archivo` + `modo`:
 //  - `previa`    → valida cada fila (mismas reglas del asistente) y marca duplicados. No escribe nada.
 //  - `confirmar` → vuelve a leer y validar EL MISMO fichero en el servidor (la vista previa del navegador no se cree) y da
 //                  de alta SOLO las filas válidas, en UNA transacción (`darDeAltaLote`).
 // `empresa_id` SIEMPRE de getSesion(); nunca del formulario. 🚨 Ni el fichero ni sus filas van a logs.
+// 🚨 SOLO CSV: no se LEE ningún .xlsx subido (xlsx@0.18.5, CVE-2023-30533: contaminación de prototipo en la instancia
+// caliente, que atiende a todas las empresas). Volverá con xlsx ≥0.20.3. Un ZIP/.xlsx/.xls/.ods se rechaza con 422.
 import { NextResponse } from 'next/server'
 import { getSesion, AuthError } from '@/lib/tenant'
 import { listarTablasConvenio, convenioDeEmpresa } from '@/lib/convenio-tablas-repo'
 import { hoyMadrid } from '@/lib/fecha-madrid'
-import { LIMITE_BYTES, esZip, parsearCsv, prepararImportacion, tablaDesdeMatriz } from '@/lib/importar-empleados'
-import { leerXlsx } from '@/lib/importar-empleados-xlsx'
+import { LIMITE_BYTES, leerCsvSubido, prepararImportacion, tablaDesdeMatriz } from '@/lib/importar-empleados'
 import { darDeAltaLote, identidadesDeEmpresa } from '@/lib/alta-empleado-repo'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
-
-function leerMatriz(bytes: Uint8Array, nombre: string): unknown[][] {
-  if (esZip(bytes)) return leerXlsx(bytes)
-  if (/\.(xlsx|xls|ods)$/i.test(nombre)) throw new Error('Formato no admitido: guarda el Excel como .xlsx o .csv')
-  const texto = new TextDecoder('utf-8', { fatal: false }).decode(bytes)
-  if (texto.includes('\u0000')) throw new Error('El fichero no es un CSV de texto')
-  return parsearCsv(texto)
-}
 
 export async function POST(req: Request) {
   let empresa_id: string
@@ -38,9 +31,9 @@ export async function POST(req: Request) {
   if (archivo.size > LIMITE_BYTES) return NextResponse.json({ error: 'Fichero demasiado grande (máx. 2 MB)' }, { status: 413 })
 
   let matriz: unknown[][]
-  try { matriz = leerMatriz(new Uint8Array(await archivo.arrayBuffer()), archivo.name) }
+  try { matriz = leerCsvSubido(new Uint8Array(await archivo.arrayBuffer()), archivo.name) }
   catch (e) {
-    const msg = e instanceof Error && /Formato|Excel|CSV/.test(e.message) ? e.message : 'No se pudo leer el fichero'
+    const msg = e instanceof Error && /Formato|Excel|CSV|UTF-8/.test(e.message) ? e.message : 'No se pudo leer el fichero'
     return NextResponse.json({ error: msg }, { status: 422 })
   }
 
