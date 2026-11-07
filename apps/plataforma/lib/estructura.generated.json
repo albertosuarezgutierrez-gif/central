@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-11-07T09:17:39Z",
+  "generadoEn": "2026-11-07T10:21:22Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -720,8 +720,8 @@
         "evidencias": 0
       },
       "contabilidad": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 2
       },
       "housesevillana": {
         "estado": "no",
@@ -895,7 +895,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 10
+        "evidencias": 11
       },
       "asegura-portal": {
         "estado": "usado",
@@ -907,7 +907,7 @@
       },
       "contabilidad": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "housesevillana": {
         "estado": "no",
@@ -1267,7 +1267,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 35
+        "evidencias": 36
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2817,7 +2817,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 359
+        "evidencias": 362
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2828,8 +2828,8 @@
         "evidencias": 34
       },
       "contabilidad": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 2
       },
       "housesevillana": {
         "estado": "no",
@@ -3189,7 +3189,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 89
+        "evidencias": 90
       },
       "asegura-portal": {
         "estado": "usado",
@@ -5008,6 +5008,7 @@
       "/api/cron/polizas-pdf",
       "/api/cron/presentacion-app",
       "/api/cron/purga-rgpd",
+      "/api/cron/retencion-cartera",
       "/api/cron/revision-anual",
       "/api/cron/senales-patrimonio",
       "/api/cron/siniestros-vinculo",
@@ -7091,7 +7092,9 @@
       "seguros.queja",
       "seguros.recibo_devolucion",
       "seguros.recordatorios",
+      "seguros.renovacion_ciclo",
       "seguros.renovacion_contactos",
+      "seguros.renovacion_preferencias",
       "seguros.retencion_descartes",
       "seguros.siniestro_contrarios",
       "seguros.siniestro_intervinientes",
@@ -8338,7 +8341,7 @@
     "packages": 49,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1967,
+    "apis": 1968,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
