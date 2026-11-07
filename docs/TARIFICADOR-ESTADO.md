@@ -26,7 +26,7 @@ Actualizado: 07/11/2026
 | Allianz | Hogar | 1 prueba (07/09) | ok (2) | Ninguno abierto |
 | Allianz | Moto | no consta | ok | Ninguno abierto |
 | Allianz | Patinete | no consta | en construcción | Flag ALLIANZ_PATINETE_ACTIVO=false: falta regla de avance, pantalla de precio y diálogo de municipio |
-| Mapfre | Auto | ok hasta 15/10 | ok (45) | Variantes BASICar sin precio |
+| Mapfre | Auto | ok hasta 15/10 | ok (69 en 60 días) | Variantes BASICar sin precio: tras el proyecto no hay selector visible; falta pilotaje (0.8.61 diagnostica) |
 | Mapfre | Hogar | sin probar | ok (flag por entorno) | Activar el flag en el entorno |
 | Reale | Auto | ok hasta 15/10 | sin bot | Decidir si se construye |
 | Occident / Catalana | Auto y moto | ok hasta 15/10 | no consta | Ver nota 1 |
@@ -64,8 +64,9 @@ Actualizado: 07/11/2026
 ## Ideas añadidas al plan (04/11/2026, Alberto: «añade todas»)
 1. **Plantilla de alta de compañía** — tras el primer precio de Pelayo: recorrido común + ficha por compañía (dominios, pasos, pantalla de precio, inicio de emisión) + permisos en BD. Objetivo: compañía nueva en 1–2 pilotajes.
 2. **Comparativa por nivel de cobertura** — HECHO (07/11: niveles + bot vs Avant2 en el aviso). agrupar ofertas (bot y Avant2) en terceros / terceros ampliado / todo riesgo con las coberturas guardadas y dar la más barata de cada nivel (hoy «la más barata» compara coberturas distintas).
-3. **Corregir datos que hacen fallar** — póliza anterior (Occident exige 5 caracteres; Allianz rechaza `previousInsurancePolicy`) y equivalencia de vehículo en Mapfre.
+3. **Corregir datos que hacen fallar** — HECHO (póliza anterior corregida el 04/10; equivalencia Mapfre 0.8.9/0.8.55 y, el 07/11, IA/memoria también para Mapfre con código sintético). Los fallos que quedan en Avant2 son de suscripción de la compañía.
 4. **Matrícula por bot como primer paso de todo lead de coche** — modo `vehiculo` (0.3.48) rellena la ficha gratis antes de tarificar (activar tras probar con una matrícula real).
+   - **Enganchado (07/11/2026), apagado:** paso `vehiculo_leads` del barrido (`tarificador-cola`, 5 min) encola UNA consulta por lead de coche abierto con matrícula y ficha sin marca/modelo/código/confirmar (marca `info_riesgo.vehiculoConsulta`) y rellena marca/modelo/versión/1ª matriculación sin confirmar. Encender: `TARIFICADOR_RPA_ACTIVO=1` + `TARIFICADOR_VEHICULO_ACTIVO=1` en central-asegura y redeploy. Probar antes con UNA matrícula real: `POST /api/operador/tarificador/vehiculo {matricula}` (Bearer operador) y leer `GET …/vehiculo/<trabajoId>`; BD hoy: 0 trabajos `vehiculo`, caché vacía, SQL 2026-11-04e aplicado, integración Allianz auto `rpa_autorizada`.
 5. **Alarma de compañía sin precio** — HECHO (PR #5538; apagada con `TARIFICADOR_ALARMA_ACTIVA`, encender en Vercel central-asegura). Telegram si una compañía lleva 3 días sin precio o encadena errores (datos del panel de estado).
 6. **Re-tarificación de cartera en vigor a 45 días del vencimiento** — bot primero; Avant2 solo con el botón 💶.
 Pendiente de Alberto: capturas del panel de Avant2 (prompt de Claude en Chrome), URLs de los pasos de Pelayo, compañías principales por volumen, consulta del código 2115 de Generali a Codeoscopic.

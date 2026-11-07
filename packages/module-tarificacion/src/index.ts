@@ -511,6 +511,10 @@ export {
 } from './poblacion.ts'
 // Elegir UNA opción de una lista cerrada con IA INYECTADA (13/10/2026): versión del vehículo; después, población por CP.
 export {
+  PREFIJO_CODIGO_SINTETICO,
+  codigoSinteticoDeEtiqueta,
+  esCodigoSintetico,
+  conCodigosSinteticos,
   elegirDeLista,
   validarEleccionIa,
   mensajesEleccion,

@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { test } from 'node:test'
 import { mapfreAuto, tarificarVariantesComercialesMapfre, type ProductoVistoMapfre } from '../src/adapters/mapfre/auto.ts'
 
-test('v0.8.56 · versión', () => assert.equal(mapfreAuto.version, '0.8.60'))
+test('v0.8.56 · versión', () => assert.equal(mapfreAuto.version, '0.8.62'))
 
 const OPC = ['TERCEROS', 'TERCEROS AMPLIADO', 'TODO RIESGO', 'BASICar TERCEROS AMPLIADO', 'BASICar TODO RIESGO']
 const vistos = (): ProductoVistoMapfre[] => [

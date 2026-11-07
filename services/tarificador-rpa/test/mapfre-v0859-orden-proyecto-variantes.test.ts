@@ -16,7 +16,7 @@ import {
 import { EmisionBloqueadaError } from '@central/module-tarificacion'
 import type { CoberturasPorProducto } from '../src/adapters/mapfre/garantias.ts'
 
-test('v0.8.59 · versión', () => assert.equal(mapfreAuto.version, '0.8.60'))
+test('v0.8.59 · versión', () => assert.equal(mapfreAuto.version, '0.8.62'))
 
 const cob = (literal: string) => ({ clave: literal.toLowerCase(), literal, estado: 'incluida' as const, capital: null, limite: null, franquicia: null })
 const PRIMAS = [
@@ -93,7 +93,7 @@ test('cableado: el adaptador usa baseYLuegoVariantesMapfre(flujoBase, probarVari
   const src = readFileSync(join(import.meta.dirname, '../src/adapters/mapfre/auto.ts'), 'utf8')
   const cuerpo = src.slice(src.indexOf('export async function precioDesdeObjetoAsegurado'), src.indexOf('export const mapfreAuto'))
   assert.match(cuerpo, /await baseYLuegoVariantesMapfre\(flujoBase, probarVariantes\)/)
-  assert.match(cuerpo, /\{ recuperarBase: false \}/)
+  assert.match(cuerpo, /\{ recuperarBase: false, diagnosticarTarjetas: diagnosticarTarjetasMapfre \}/)
   const fn = src.slice(src.indexOf('export async function baseYLuegoVariantesMapfre'), src.indexOf('export function ofertasFinalesMapfre'))
   assert.ok(fn.indexOf('await base()') > -1 && fn.indexOf('await base()') < fn.indexOf('await variantes()'), 'base antes que variantes')
   const guard = readFileSync(join(import.meta.dirname, '../src/guard.ts'), 'utf8')

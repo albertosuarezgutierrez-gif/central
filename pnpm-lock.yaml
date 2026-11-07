@@ -398,6 +398,9 @@ importers:
       '@central/core-banca':
         specifier: workspace:*
         version: link:../../packages/core-banca
+      '@central/core-email':
+        specifier: workspace:*
+        version: link:../../packages/core-email
       '@central/core-fiscal':
         specifier: workspace:*
         version: link:../../packages/core-fiscal
@@ -407,6 +410,9 @@ importers:
       '@central/module-contabilidad':
         specifier: workspace:*
         version: link:../../packages/module-contabilidad
+      '@central/module-seguros':
+        specifier: workspace:*
+        version: link:../../packages/module-seguros
       '@prisma/client':
         specifier: ^5.22.0
         version: 5.22.0(prisma@5.22.0)

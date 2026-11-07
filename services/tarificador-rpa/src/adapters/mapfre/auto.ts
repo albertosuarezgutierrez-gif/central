@@ -1,4 +1,5 @@
 // Mapfre wmediadores · NSEI «Nueva Alta» AUTO y MOTO (13-14/10/2026).
+// v0.8.61 (07/11/2026, diagnóstico de 15 runs reales con variantes y 3 de elección de versión): (a) tras guardar el proyecto el selector comercial de las tarjetas NO está visible: la 1ª variante que lo comprueba corta las demás (fallarían igual) y se anota la ESTRUCTURA de las tarjetas (`diagnosticarTarjetasMapfre`, solo lectura) para el pilotaje; (b) la elección de versión por IA/memoria ya sirve para Mapfre (opciones sin código → código sintético por etiqueta, `conCodigosSinteticos`; en asegura).
 // v0.8.59 (03/11/2026, run real c380133b: variante sin recálculo a tiempo → tarjetas sin importe → proyecto NO guardado → 0 garantías): ORDEN invertido otra vez — primero el flujo base completo (proyecto → PDF → garantías) con los productos originales y DESPUÉS las variantes BASICar (`baseYLuegoVariantesMapfre`); las variantes salen sin proyecto ni PDF propios (aviso) y su recálculo espera hasta 30 s en el guard.
 // v0.8.58 (03/11/2026, run real 457d81a4: 0 garantías y sin BASICar): el «diálogo desconocido» tras elegir la variante era TRANSITORIO (ya no estaba al leerlo) → el guard lo trata como recálculo si se cierra solo en ≤4 s (nada se pulsa en él); y una tarjeta que ya muestra su producto pero SIN importe se recalcula con «Calcular» en la recuperación del estado base (sin importes, «Generar Proyecto» no guardaba → sin PDF → sin garantías).
 // v0.8.57 (03/11/2026): tras un diálogo desconocido al elegir una variante BASICar se anota su título/texto/botones (≤200, sin PII) y la selección base se RECUPERA antes de «Generar Proyecto» (nunca peor que la 0.8.55).
@@ -629,6 +630,36 @@ export async function leerProductosVistosMapfre(nsei: Pick<Frame, 'locator'>, le
 export const MAX_VARIANTES_COMERCIALES_MAPFRE = 4
 const MAX_MS_VARIANTES_MAPFRE = 120_000
 const esVarianteBasicar = (o: string) => /^BASICar\b/i.test(limpiar(o))
+/** v0.8.61: mensaje EXACTO del guard cuando la tarjeta no tiene un `mat-select` visible (guard.ts: `selector ausente o no visible`). */
+export const MENSAJE_SELECTOR_AUSENTE_MAPFRE = 'selector ausente o no visible'
+/** Pura (v0.8.61): ¿el fallo es «la tarjeta no tiene selector visible»? Es del ESTADO de la pantalla, no de la variante: todas las demás fallarían igual. */
+export const esSelectorAusenteMapfre = (e: unknown): boolean => e instanceof Error && limpiar(e.message) === MENSAJE_SELECTOR_AUSENTE_MAPFRE
+
+/** v0.8.61 · estructura (solo lectura, sin texto de cliente) de una tarjeta de producto: para saber POR QUÉ no hay selector visible. */
+export type TarjetaDiagMapfre = { selects: number; visibles: number; deshabilitados: number; botones: string[]; conImporte: boolean }
+
+/** Pura (v0.8.61): aviso de diagnóstico de las tarjetas sin selector, ≤300 caracteres. Solo recuentos y rótulos de botones del portal (≤24 car., máx. 4 por tarjeta). */
+export function avisoTarjetasSinSelectorMapfre(d: readonly TarjetaDiagMapfre[]): string {
+  if (d.length === 0) return 'diagnóstico de tarjetas: no se encontró ninguna tarjeta de producto'
+  const una = (t: TarjetaDiagMapfre, i: number) => `T${i + 1}: mat-select ${t.selects} (visibles ${t.visibles}, deshabilitados ${t.deshabilitados}), ${t.conImporte ? 'con' : 'sin'} importe, botones [${t.botones.slice(0, 4).map((b) => limpiar(b).slice(0, 24)).join(' | ')}]`
+  const t = `diagnóstico de tarjetas sin selector: ${d.slice(0, 4).map(una).join(' · ')}`
+  return t.length > 300 ? `${t.slice(0, 299)}…` : t
+}
+
+/** v0.8.61 (solo lectura): estructura de cada tarjeta de producto ahora mismo. No pulsa nada. */
+export async function diagnosticarTarjetasMapfre(nsei: Page): Promise<TarjetaDiagMapfre[]> {
+  return nsei.locator(SEL_PRODUCTO_PRIMAS_MAPFRE).evaluateAll((els) => els.map((e) => {
+    const selects = Array.from(e.querySelectorAll('mat-select'))
+    return {
+      selects: selects.length,
+      visibles: selects.filter((x) => (x as HTMLElement).getClientRects().length > 0 && getComputedStyle(x).visibility !== 'hidden').length,
+      deshabilitados: selects.filter((x) => x.getAttribute('aria-disabled') === 'true').length,
+      botones: Array.from(e.querySelectorAll('button, [role="button"]')).map((b) => ((b as HTMLElement).innerText || b.textContent || '').replace(/\s+/g, ' ').trim()).filter((x) => x !== '').slice(0, 4),
+      conImporte: /\d[\d.]*,\d{2}\s*€/.test(((e.querySelector('.caja-primas')?.textContent) ?? '')),
+    }
+  }))
+}
+
 const claveProducto = (t: string) => limpiar(t).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
 
 export type ResultadoVariantesMapfre = {
@@ -703,7 +734,7 @@ export async function tarificarVariantesComercialesMapfre(
   releer?: (pagina: Page) => Promise<TarjetaLeidaMapfre[]>,
   dialogos?: PuertasDialogoVarianteMapfre,
   /** v0.8.59: `recuperarBase: false` = sin la recuperación final del estado base (el adaptador ya guardó el proyecto antes de las variantes). */
-  opciones: { recuperarBase?: boolean } = {},
+  opciones: { recuperarBase?: boolean; /** v0.8.61: lectura de la estructura de las tarjetas cuando falta el selector. */ diagnosticarTarjetas?: (pagina: Page) => Promise<TarjetaDiagMapfre[]> } = {},
 ): Promise<ResultadoVariantesMapfre> {
   const salida: ResultadoVariantesMapfre = { primas: [], garantias: new Map(), restaurado: true, notas: [] }
   const tarificadas = new Set(primas.map((p) => claveProducto(p.producto)))
@@ -765,6 +796,14 @@ export async function tarificarVariantesComercialesMapfre(
         if (cerrado) registrar({ opcion, estado: 'bloqueada', prima: null, motivo: 'controles técnicos' })
       }
       if (!cerrado) registrar({ opcion, estado: 'no_leida', prima: null, motivo: e instanceof Error ? e.message : 'error' })
+      if (!cerrado && esSelectorAusenteMapfre(e)) {
+        // v0.8.61 (15 runs reales 02-03/11: TODAS las variantes «no leída: selector ausente o no visible» tras guardar el proyecto): es el ESTADO de la pantalla, no de la variante.
+        // Se corta aquí (no se prueba el resto, que fallaría igual), se cuentan las que quedan sin probar y se anota la ESTRUCTURA de las tarjetas para el pilotaje.
+        abortar = true
+        const restantes = candidatas.slice(0, MAX_VARIANTES_COMERCIALES_MAPFRE).length - candidatas.indexOf(opcion) - 1
+        salida.notas.push(`las tarjetas de Coberturas no muestran el selector comercial${opciones.recuperarBase === false ? ' tras guardar el proyecto' : ''}; ${restantes > 0 ? `${restantes} variante(s) más sin probar` : 'no quedaban más variantes'}`)
+        if (opciones.diagnosticarTarjetas) salida.notas.push(await opciones.diagnosticarTarjetas(nsei).then(avisoTarjetasSinSelectorMapfre, () => 'diagnóstico de tarjetas: no se pudo leer'))
+      }
       if (e instanceof ErrorSelectorComercialAlteradoMapfre) { cambiada = true; if (!cerrado) { abortar = true; salida.notas.push('variantes comerciales ABORTADAS por una anomalía del portal; se devuelve lo ya leído') } }
     }
     if (cambiada) {
@@ -2657,7 +2696,7 @@ export async function precioDesdeObjetoAsegurado(
       const inaccesible = await coberturasAccesiblesMapfre(nsei, v.productos)
       if (inaccesible) return { ...vacio, notas: [`variantes comerciales no probadas tras guardar el proyecto: «Coberturas» ya no está a la vista como se leyó (${inaccesible})`] }
       // v0.8.59: sin RECUPERACIÓN final del estado base: el proyecto ya está guardado y las ofertas base leídas.
-      return await tarificarVariantesComercialesMapfre(nsei, v.productos, primas, (pg, i, o, perm) => elegirCom(pg, i, o, perm), Date.now, leerTarjetasMapfre, { leer: leerDialogosMapfre, ...(ctx.cerrarControlesTecnicosMapfre ? { cerrarControlesTecnicos: (pg: Page) => ctx.cerrarControlesTecnicosMapfre!(pg) } : {}) }, { recuperarBase: false })
+      return await tarificarVariantesComercialesMapfre(nsei, v.productos, primas, (pg, i, o, perm) => elegirCom(pg, i, o, perm), Date.now, leerTarjetasMapfre, { leer: leerDialogosMapfre, ...(ctx.cerrarControlesTecnicosMapfre ? { cerrarControlesTecnicos: (pg: Page) => ctx.cerrarControlesTecnicosMapfre!(pg) } : {}) }, { recuperarBase: false, diagnosticarTarjetas: diagnosticarTarjetasMapfre })
     } catch (e) {
       if (e instanceof EmisionBloqueadaError) throw e
       return { ...vacio, restaurado: false, notas: [`variantes comerciales: error inesperado (${e instanceof Error ? limpiarMensajePortalDiagnosticoHasta(e.message, 80) : 'error'}); las ofertas base, el proyecto y sus garantías ya estaban leídos`] }
@@ -2714,8 +2753,9 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
+  // v0.8.62 (07/11/2026): si en el login de wmediadores falta el botón de entrada, el mensaje lleva los controles pulsables visibles (login.ts#describirControlesLogin, sin PII).
   // v0.8.60 (03/11/2026, AS-26-0067): lector de la tabla del PDF del proyecto (garantias.ts): celdas de texto, celdas de varias líneas y «pérdida total».
-  version: '0.8.60',
+  version: '0.8.62',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

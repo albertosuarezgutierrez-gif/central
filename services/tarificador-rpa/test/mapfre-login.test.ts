@@ -226,3 +226,28 @@ test('PORTALES_EXPLORACION registra mapfre con la credencial MAPFRE_WMEDIADORES'
   assert.equal(PORTALES_EXPLORACION.mapfre?.credencial, 'MAPFRE_WMEDIADORES')
   assert.equal(typeof PORTALES_EXPLORACION.mapfre?.entrar, 'function')
 })
+
+/** Login con los campos bien pero SIN botón reconocible (portal que cambió el control de entrada a un <div> sin rol). */
+const SIN_BOTON = `<!doctype html><html><body><div id="app"></div><script>
+setTimeout(function () {
+  document.getElementById('app').innerHTML = '<label>Código de usuario (NUUMA)</label><input type="text"><label>Contraseña:</label><input type="password">'
+    + '<a href="#">Cambiar contraseña</a><div id="x" style="cursor:pointer">Acceso seguro</div>';
+}, 300);
+</script></body></html>`
+
+test('v0.8.62 · sin botón de entrada → ErrorMapaIncompleto con los controles visibles (sin credenciales ni value)', async () => {
+  const { context, page, ctx } = await abrir()
+  try {
+    await context.route('**/sin-boton', (r) => r.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: SIN_BOTON }))
+    await assert.rejects(
+      () => login(page, ctx, `${base}/sin-boton`),
+      (e: unknown) => {
+        const m = (e as Error).message
+        return e instanceof ErrorMapaIncompleto && /botón de entrada/.test(m) && /controles visibles: a:«Cambiar contraseña»/.test(m) && !m.includes(USUARIO) && !m.includes(CLAVE)
+      },
+    )
+    assert.equal(await page.locator('input[type="password"]').inputValue(), '') // fail-closed: no se rellenó nada
+  } finally {
+    await context.close()
+  }
+})

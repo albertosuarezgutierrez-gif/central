@@ -11,9 +11,11 @@
   "dependencies": {
     "@central/brand": "workspace:*",
     "@central/core-banca": "workspace:*",
+    "@central/core-email": "workspace:*",
     "@central/core-fiscal": "workspace:*",
     "@central/core-identity": "workspace:*",
     "@central/module-contabilidad": "workspace:*",
+    "@central/module-seguros": "workspace:*",
     "@prisma/client": "^5.22.0",
     "next": "^15.5.28",
     "react": "^19.0.0",
