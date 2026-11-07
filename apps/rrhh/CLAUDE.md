@@ -15,6 +15,10 @@ con token o PIN.
 ## BD y schema
 - BD compartida del monorepo (`wswbehlcuxqxyinousql`, Supabase, schema `rrhh`).
 - Rol de BD: `rrhh_app` con `BYPASSRLS` (aislamiento por `empresa_id` en capa de aplicación).
+- 🚨 **Toda migración que cree tabla en `rrhh` debe hacer `REVOKE ALL ... FROM rrhh_app` + `GRANT` explícito a `rrhh_app`**:
+  el default ACL del schema (`pg_default_acl`) le da TODO (arwdDxtm) en cada tabla nueva, y un `GRANT` acotado solo no quita
+  nada (incidente 07/11/2026: `situacion_familiar` tenía DELETE/TRUNCATE; corregido en `0035_permisos_rrhh_app.sql`, cepo
+  `lib/permisos-rrhh-app-migracion.test.ts`). El default ACL NO se cambia (afectaría a las demás tablas).
 - Envs: `DATABASE_URL` / `DIRECT_URL` (Supabase pooler / directo).
 - ORM: Prisma (`prisma/schema.prisma`). Modelos principales: `empresas`, `usuarios_rrhh`,
   `empleados`, `documentos`, `solicitudes`, `usuario_empresas` (N:N responsable↔empresa),
@@ -108,7 +112,7 @@ El god-panel de plataforma crea empresas vía HTTP:
   🚨 Vencimiento de contrato: SOLO al responsable, en la tarjeta «Contratos que vencen» del Inicio de `/admin` (≤ 30 días, calculado al vuelo;
   `fecha_fin` NULL = «no se sabe»). NUNCA un aviso al trabajador en `/e` (podía leerse como preaviso del art. 49.1.c ET); cepo en
   `lib/vencimientos.test.ts`. Reglas del finiquito (fracción de mes, exención fin temporal) y del motor siguen `PENDIENTE_VERIFICAR`.
-  🚨 Migraciones 0032 y 0033 SIN aplicar en BD (0033 añade también `remesa_generada_at/remesa_msg_id`).
+  ✅ Migraciones 0032, 0033 y 0035 APLICADAS en BD el 07/11/2026 (0033 añade también `remesa_generada_at/remesa_msg_id`; 0035 ajusta permisos de rrhh_app).
 - `/api/cron/reenviar-contabilidad` — diario 6:40 UTC: reenvía a contabilidad las nóminas confirmadas pendientes (ver N1).
 - `/api/cron/recordatorio-fichaje` — L-V 9h (hora ES): push a empleados que aún no han fichado entrada.
 - `/api/cron/alerta-fichajes-abiertos` — diario 22h (hora ES): Telegram si un fichaje activo lleva
