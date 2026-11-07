@@ -7,8 +7,8 @@
 //  · RESPUESTA IDÉNTICA exista o no el correo: se escribe la fila del código SIEMPRE (los topes no son un oráculo).
 //  · A la BD va el HASH del código (HMAC con la pimienta `CONTABILIDAD_SESSION_SECRET`, prefijo de dominio), nunca los dígitos.
 //  · El intento se RESERVA antes de comparar (escritura condicionada): ráfagas en paralelo no multiplican intentos.
-//  · 🚨 COMUNICACIÓN SALIENTE: el canal de correo NO está conectado (regla del monorepo: nada sale a terceros sin OK de Alberto).
-//    El código queda en estado «no_enviado» y la pantalla lo dice. Conectar el envío = otro PR con el OK explícito.
+//  · El canal de correo (`lib/canal-correo.ts`, core-email) se inyecta desde la ruta. Sin proveedor configurado la ruta responde
+//    503 `canal_no_disponible` (no llega aquí); si el proveedor falla con un usuario real, 502 `envio_fallido` y la fila queda «fallido».
 import { createHmac } from 'node:crypto'
 import { requireSecret } from '@central/core-identity/secret'
 import { generarCodigo, estadoCodigo, MAX_INTENTOS, type EstadoCodigo } from '@central/core-identity/codigo-otp'
@@ -47,10 +47,7 @@ export interface RepoAcceso {
   empresasDeUsuario(usuarioId: string): Promise<EmpresaDeUsuario[]>
 }
 
-/**
- * Canal de envío del código. HOY no hay ninguno conectado: devuelve 'no_enviado' SIN mandar nada a nadie. Cuando Alberto dé el OK,
- * se inyecta uno real (core-email) que devuelva 'enviado'/'fallido'.
- */
+/** Canal de envío del código (puerto). El real está en `lib/canal-correo.ts`; `CANAL_NO_CONECTADO` queda para pruebas y desarrollo. */
 export type CanalCodigo = { conectado: boolean; enviar(c: { to: string; codigo: string }): Promise<EnvioCodigo> }
 export const CANAL_NO_CONECTADO: CanalCodigo = { conectado: false, enviar: async () => 'no_enviado' }
 
@@ -58,6 +55,7 @@ export type ResultadoSolicitar =
   | { ok: true; enviado: boolean }
   | { ok: false; status: 400; error: 'email_invalido' }
   | { ok: false; status: 429; error: 'demasiadas_peticiones'; retryAfter: number }
+  | { ok: false; status: 502; error: 'envio_fallido' }
 
 export async function solicitarCodigo(
   repo: RepoAcceso, canal: CanalCodigo, entrada: { email: unknown; ip: string }, ahora = new Date(),
@@ -75,6 +73,7 @@ export async function solicitarCodigo(
   const usuario = canal.conectado ? await repo.usuarioPorEmail(email) : null
   const envio: EnvioCodigo = usuario ? await canal.enviar({ to: email, codigo }) : 'no_enviado'
   await repo.crearOtp({ emailHash, codigoHash: hashCodigoAcceso(codigo), ip: entrada.ip, envio })
+  if (envio === 'fallido') return { ok: false, status: 502, error: 'envio_fallido' }
   // Desarrollo local SOLO (Vercel ejecuta preview y producción con NODE_ENV=production): sin canal no habría forma de entrar.
   if (process.env.NODE_ENV === 'development' && !canal.conectado) console.info(`[contabilidad] código de acceso (solo desarrollo) para ${email}: ${codigo}`)
   return { ok: true, enviado: canal.conectado }
