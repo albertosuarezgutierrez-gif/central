@@ -192,6 +192,7 @@ export function crearAlmacen() {
       async contarAvisosSinLeer() { return d.avisos.filter((a) => !a.leido).length },
       async marcarAvisosLeidos(usuarioId) { for (const a of d.avisos) if (!a.leido) { a.leido = true; a.leidoPor = usuarioId } },
       async contarCuentas() { return d.plan.length },
+      async contarAperturasVivas(anio) { return d.asientos.filter((a) => a.ejercicio === anio && a.origen === 'apertura' && !d.asientos.some((r) => r.reversaDe === a.id)).length },
       async sembrarPlan(filas) { for (const f of filas) if (!d.plan.some((c) => c.codigo === f.codigo)) d.plan.push({ ...f }) },
       async crearEjercicio(e) {
         if (d.ejercicios.some((x) => x.anio === e.anio)) return false

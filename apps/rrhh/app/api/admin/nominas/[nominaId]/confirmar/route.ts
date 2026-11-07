@@ -24,7 +24,8 @@ export async function POST(_req: Request, { params }: { params: Promise<{ nomina
     // N3: con `contabilidad_nominas` activo, la nómina debe producir un hecho que CUADRE; si no cuadra no se confirma (no queda a medias).
     // Si no se puede leer el interruptor, la excepción sube: confirmar no sigue «como si estuviera apagado».
     let hecho: ReturnType<typeof nominaAHecho> | null = null
-    if (await contabilidadDeNominas(empresa_id)) {
+    const destinoContabilidad = await contabilidadDeNominas(empresa_id)
+    if (destinoContabilidad) {
       try {
         hecho = nominaAHecho({ nominaId, empleadoId: nomina.empleado_id, periodo: nomina.periodo, desglose: nomina.datos_calculo })
       } catch (e) {
@@ -61,7 +62,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ nomina
     const confirmar = prisma.$executeRaw(Prisma.sql`
       UPDATE rrhh.nominas SET estado = 'confirmada', pdf_path = ${pdfPath}, confirmada_at = now()
       WHERE id = ${nominaId}::uuid AND empresa_id = ${empresa_id}::uuid`)
-    if (hecho) await prisma.$transaction([confirmar, encolarHechoNomina(empresa_id, nominaId, hecho)])
+    if (hecho) await prisma.$transaction([confirmar, encolarHechoNomina(empresa_id, nominaId, hecho, destinoContabilidad!)])
     else await confirmar
 
     return NextResponse.json({ ok: true, pdf_path: pdfPath })

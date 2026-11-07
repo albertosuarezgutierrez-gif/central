@@ -43,11 +43,11 @@ export function repoF6Sql(tx: TxSql, empresaId: string): RepoF6 {
       SELECT count(*)::int AS n FROM contabilidad.asientos a
        WHERE a.empresa_id = ${e}::uuid AND a.origen NOT IN ('apertura', 'cierre')
          AND a.ejercicio IN (SELECT x.anio FROM contabilidad.ejercicios x WHERE x.empresa_id = ${e}::uuid AND x.estado = 'abierto')
-         AND NOT EXISTS (SELECT 1 FROM contabilidad.revisiones r WHERE r.empresa_id = ${e}::uuid AND r.asiento_id = a.id)`),
+         AND NOT EXISTS (SELECT 1 FROM contabilidad.revisiones r WHERE r.empresa_id = ${e}::uuid AND r.asiento_id = a.id AND r.rol = 'gestor')`),
     contarFacturasAConfirmar: () => n(tx.$queryRaw<Fila[]>`
       SELECT count(*)::int AS n FROM contabilidad.facturas_recibidas f
        WHERE f.empresa_id = ${e}::uuid AND f.origen <> 'manual'
-         AND NOT EXISTS (SELECT 1 FROM contabilidad.revisiones r WHERE r.empresa_id = ${e}::uuid AND r.factura_recibida_id = f.id)`),
+         AND NOT EXISTS (SELECT 1 FROM contabilidad.revisiones r WHERE r.empresa_id = ${e}::uuid AND r.factura_recibida_id = f.id AND r.rol = 'gestor')`),
     contarAvisosSinLeer: () => n(tx.$queryRaw<Fila[]>`
       SELECT count(*)::int AS n FROM contabilidad.avisos WHERE empresa_id = ${e}::uuid AND leido_en IS NULL`),
     contarDeclaracionesBorrador: () => n(tx.$queryRaw<Fila[]>`
@@ -63,7 +63,7 @@ export function repoF6Sql(tx: TxSql, empresaId: string): RepoF6 {
           FROM contabilidad.asientos a
          WHERE a.empresa_id = ${e}::uuid AND a.origen NOT IN ('apertura', 'cierre')
            AND a.ejercicio IN (SELECT x.anio FROM contabilidad.ejercicios x WHERE x.empresa_id = ${e}::uuid AND x.estado = 'abierto')
-           AND NOT EXISTS (SELECT 1 FROM contabilidad.revisiones r WHERE r.empresa_id = ${e}::uuid AND r.asiento_id = a.id)
+           AND NOT EXISTS (SELECT 1 FROM contabilidad.revisiones r WHERE r.empresa_id = ${e}::uuid AND r.asiento_id = a.id AND r.rol = 'gestor')
          ORDER BY a.fecha DESC, a.numero DESC LIMIT ${limite}::int`
       return f.map((x) => ({ id: String(x.id), numero: enteroDeBd(x.numero, 'numero'), ejercicio: enteroDeBd(x.ejercicio, 'ejercicio'), fecha: fechaDeBd(x.fecha), concepto: String(x.concepto), comentarios: enteroDeBd(x.comentarios) }))
     },
@@ -74,7 +74,7 @@ export function repoF6Sql(tx: TxSql, empresaId: string): RepoF6 {
                (SELECT count(*)::int FROM contabilidad.comentarios c WHERE c.empresa_id = ${e}::uuid AND c.factura_recibida_id = f.id) AS comentarios
           FROM contabilidad.facturas_recibidas f
          WHERE f.empresa_id = ${e}::uuid AND f.origen <> 'manual'
-           AND NOT EXISTS (SELECT 1 FROM contabilidad.revisiones r WHERE r.empresa_id = ${e}::uuid AND r.factura_recibida_id = f.id)
+           AND NOT EXISTS (SELECT 1 FROM contabilidad.revisiones r WHERE r.empresa_id = ${e}::uuid AND r.factura_recibida_id = f.id AND r.rol = 'gestor')
          ORDER BY f.fecha DESC, f.creada_en DESC LIMIT ${limite}::int`
       return f.map((x) => ({ id: String(x.id), proveedor: String(x.proveedor_nombre), numero: String(x.numero), fecha: fechaDeBd(x.fecha), total: centimosDeBd(x.total_cent, 'total'), origen: String(x.origen), comentarios: enteroDeBd(x.comentarios) }))
     },
@@ -111,11 +111,11 @@ export function repoF6Sql(tx: TxSql, empresaId: string): RepoF6 {
         ? await tx.$executeRaw`
             INSERT INTO contabilidad.revisiones (empresa_id, asiento_id, usuario_id, rol)
             VALUES (${e}::uuid, ${asiento}::uuid, ${r.usuarioId}::uuid, ${r.rol}::text)
-            ON CONFLICT (empresa_id, asiento_id) WHERE asiento_id IS NOT NULL DO NOTHING`
+            ON CONFLICT DO NOTHING`
         : await tx.$executeRaw`
             INSERT INTO contabilidad.revisiones (empresa_id, factura_recibida_id, usuario_id, rol)
             VALUES (${e}::uuid, ${factura}::uuid, ${r.usuarioId}::uuid, ${r.rol}::text)
-            ON CONFLICT (empresa_id, factura_recibida_id) WHERE factura_recibida_id IS NOT NULL DO NOTHING`
+            ON CONFLICT DO NOTHING`
       return k === 1
     },
 

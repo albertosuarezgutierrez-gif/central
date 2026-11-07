@@ -6,7 +6,7 @@ import type { Asiento } from '../partida/asiento.ts'
 import type { Cuenta } from '../partida/plan.ts'
 import { escribirCsv } from '../onboarding/csv.ts'
 import {
-  A3_CONSTANTES, A3_FIN_LINEA, A3_LARGO_REGISTRO, A3_LONGITUD_CUENTA_DEFECTO, A3_REGISTRO_APUNTE, A3_REGISTRO_CUENTA, AVISO_PENDIENTE_CONTRASTAR,
+  A3_CONSTANTES, A3_FIN_LINEA, A3_LARGO_REGISTRO, A3_LONGITUD_CUENTA_DEFECTO, A3_REGISTRO_APUNTE, A3_REGISTRO_CUENTA, AVISO_PENDIENTE_CONTRASTAR, AVISO_PREFIJO_FORMULAS,
   HOLDED_DISENO, SAGE_DISENO, type CampoFijo, type DisenoCsv, type RegistroFijo,
 } from './diseno.ts'
 
@@ -88,7 +88,7 @@ function opcionesA3(o: OpcionesA3): { empresa: string; longitud: number } {
 }
 const resumen = (formato: FormatoExport, contenido: string, lineas: number, recortes: number): ResultadoExport => ({
   formato, contenido, lineas, recortes, extension: formato === 'a3' ? 'dat' : 'csv', codificacion: formato === 'a3' ? 'latin1' : 'utf-8',
-  pendienteContrastar: true, aviso: AVISO_PENDIENTE_CONTRASTAR,
+  pendienteContrastar: true, aviso: formato === 'a3' ? AVISO_PENDIENTE_CONTRASTAR : `${AVISO_PENDIENTE_CONTRASTAR} ${AVISO_PREFIJO_FORMULAS}`,
 })
 
 export function exportarDiarioA3(d: DatosExport, o: OpcionesA3): ResultadoExport {
@@ -138,7 +138,8 @@ function diarioCsv(formato: 'sage' | 'holded', d: DatosExport, dis: DisenoCsv): 
       ])
     }
   }
-  return resumen(formato, (dis.bom ? '﻿' : '') + escribirCsv(filas, { separador: dis.separador, finDeLinea: dis.finDeLinea }), filas.length - 1, 0)
+  // Columnas 5 y 6 (DEBE, HABER) = importes (pueden ir con signo): no se tocan. El resto es texto.
+  return resumen(formato, (dis.bom ? '﻿' : '') + escribirCsv(filas, { separador: dis.separador, finDeLinea: dis.finDeLinea, numericas: [5, 6] }), filas.length - 1, 0)
 }
 function planCsv(formato: 'sage' | 'holded', d: Pick<DatosExport, 'cuentas'>, dis: DisenoCsv): ResultadoExport {
   const filas = [[...dis.plan.cabecera], ...[...d.cuentas].sort((a, b) => (a.codigo < b.codigo ? -1 : 1)).map((c) => [c.codigo, c.nombre])]

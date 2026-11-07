@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-07T08:05:35Z",
-  "sha": "5ea42983547c4c84fafb05a1f5e314364ea14439",
+  "generadoEn": "2026-11-07T08:41:53Z",
+  "sha": "2847059d6b90a096d0eb877e63a84a4b16c2eb0b",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -77864,7 +77864,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/onboarding",
-      "hash": "2d9a69aa6608"
+      "hash": "a4f4d87a6139"
     },
     {
       "ruta": "apps/contabilidad/app/api/operador/empresas/route.ts",
@@ -80829,12 +80829,12 @@
           "exportada": true,
           "params": "f6: RepoF6, csv: string, validarNif: ValidadorNif, usuarioId: string | null",
           "retorno": "Promise<Res<",
-          "linea": 46
+          "linea": 50
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8acb9d8e2648"
+      "hash": "13525bc2a59a"
     },
     {
       "ruta": "apps/contabilidad/lib/pagina.ts",
@@ -81210,7 +81210,7 @@
         "unnest"
       ],
       "rutaApi": null,
-      "hash": "b1d70d03c1df"
+      "hash": "8ad6eef9b452"
     },
     {
       "ruta": "apps/contabilidad/lib/repo.ts",
@@ -81226,7 +81226,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": null,
-          "linea": 102
+          "linea": 104
         },
         {
           "nombre": "aAsiento",
@@ -81234,7 +81234,7 @@
           "exportada": false,
           "params": "f: Fila, apuntes: ApunteLeido[]",
           "retorno": "AsientoLeido",
-          "linea": 104
+          "linea": 106
         },
         {
           "nombre": "aApunte",
@@ -81242,7 +81242,7 @@
           "exportada": false,
           "params": "f: Fila",
           "retorno": "ApunteLeido",
-          "linea": 111
+          "linea": 113
         },
         {
           "nombre": "aEjercicio",
@@ -81250,7 +81250,7 @@
           "exportada": false,
           "params": "f: Fila",
           "retorno": "FilaEjercicio",
-          "linea": 115
+          "linea": 117
         },
         {
           "nombre": "repoSql",
@@ -81258,7 +81258,7 @@
           "exportada": true,
           "params": "tx: TxSql, empresaId: string",
           "retorno": "RepoContable",
-          "linea": 119
+          "linea": 121
         }
       ],
       "tablas": [
@@ -81266,7 +81266,7 @@
         "unnest"
       ],
       "rutaApi": null,
-      "hash": "52d7fb1bdf0f"
+      "hash": "8090bdf5dcb6"
     },
     {
       "ruta": "apps/contabilidad/lib/revertir.ts",
@@ -81694,7 +81694,7 @@
     {
       "ruta": "apps/contabilidad/test/_f6-memoria.ts",
       "ambito": "apps/contabilidad",
-      "resumen": "Fake en memoria de `RepoF6` que imita los triggers/FK de 0006: el objeto comentado/revisado debe existir en la MISMA empresa (FK compuesta), el autor debe tener vínculo ACTIVO con el rol que declara (trigger `autor_vinculado`), una sola revisión por objeto, y comentarios/revisiones solo se añaden.",
+      "resumen": "Fake en memoria de `RepoF6` que imita los triggers/FK de 0006: el objeto comentado/revisado debe existir en la MISMA empresa (FK compuesta), el autor debe tener vínculo ACTIVO con el rol que declara (trigger `autor_vinculado`), una sola revisión por (objeto, rol) (0008), y comentarios/revisiones sol",
       "exporta": [
         "f6Memoria"
       ],
@@ -81710,7 +81710,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4373fd671d3a"
+      "hash": "5a2a2f6eae71"
     },
     {
       "ruta": "apps/contabilidad/test/_repo-memoria.ts",
@@ -81731,7 +81731,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "63e8143bef7e"
+      "hash": "7598890dd779"
     },
     {
       "ruta": "apps/contabilidad/test/_resolver.mjs",
@@ -222438,7 +222438,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/admin/nominas/[nominaId]/confirmar",
-      "hash": "c4cdfa4ba979"
+      "hash": "b7f9e58638c0"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/nominas/[nominaId]/incidencias/[incId]/route.ts",
@@ -227422,10 +227422,10 @@
           "nombre": "encolarHechoNomina",
           "kind": "function",
           "exportada": true,
-          "params": "empresaId: string, nominaId: string, hecho: HechoNominaPuerto | HechoPagoNominaPuerto",
+          "params": "empresaId: string, nominaId: string, hecho: HechoNominaPuerto | HechoPagoNominaPuerto, contabilidadEmpresaId: string",
           "retorno": null,
-          "linea": 12,
-          "resumen": "PrismaPromise para componerla con otras sentencias en `prisma.$transaction([...])`. Repetir la ref no duplica ni sobrescribe."
+          "linea": 16,
+          "resumen": "PrismaPromise para componerla con otras sentencias en `prisma.$transaction([...])`. Repetir la ref no duplica ni sobrescribe. `contabilidadEmpresaId` = empresa de contabilidad DESTINO vigente al confi"
         },
         {
           "nombre": "leerColaHechosNominas",
@@ -227433,8 +227433,8 @@
           "exportada": true,
           "params": "ahora: Date, limite: number",
           "retorno": "Promise<FilaHechoNomina[]>",
-          "linea": 24,
-          "resumen": "Cola pendiente de empresas con `contabilidad_nominas` ACTIVO y empresa de contabilidad vinculada (si se apaga, deja de enviarse)."
+          "linea": 28,
+          "resumen": "Cola pendiente de empresas con `contabilidad_nominas` ACTIVO (si se apaga, deja de enviarse). El destino es el GUARDADO en la fila (0034), no el vínculo actual."
         },
         {
           "nombre": "marcarHechoNomina",
@@ -227442,14 +227442,14 @@
           "exportada": true,
           "params": "id: string, empresaId: string, v: { estado: 'enviado' | 'rechazado' | 'error'; detalle: string | null; intentos: number; proximoIntento: Date | null; ahora: Date },",
           "retorno": "Promise<void>",
-          "linea": 36
+          "linea": 40
         }
       ],
       "tablas": [
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "d6b9cbb698df"
+      "hash": "a8068c9fc0e9"
     },
     {
       "ruta": "apps/rrhh/lib/host-canonico.ts",
@@ -253901,7 +253901,7 @@
           "exportada": false,
           "params": "formato: 'sage' | 'holded', d: Pick<DatosExport, 'cuentas'>, dis: DisenoCsv",
           "retorno": "ResultadoExport",
-          "linea": 143
+          "linea": 144
         },
         {
           "nombre": "exportarDiarioSage",
@@ -253909,7 +253909,7 @@
           "exportada": true,
           "params": "d: DatosExport",
           "retorno": null,
-          "linea": 147
+          "linea": 148
         },
         {
           "nombre": "exportarPlanSage",
@@ -253917,7 +253917,7 @@
           "exportada": true,
           "params": "d: Pick<DatosExport, 'cuentas'>",
           "retorno": null,
-          "linea": 148
+          "linea": 149
         },
         {
           "nombre": "exportarDiarioHolded",
@@ -253925,7 +253925,7 @@
           "exportada": true,
           "params": "d: DatosExport",
           "retorno": null,
-          "linea": 149
+          "linea": 150
         },
         {
           "nombre": "exportarPlanHolded",
@@ -253933,7 +253933,7 @@
           "exportada": true,
           "params": "d: Pick<DatosExport, 'cuentas'>",
           "retorno": null,
-          "linea": 150
+          "linea": 151
         },
         {
           "nombre": "exportar",
@@ -253941,13 +253941,13 @@
           "exportada": true,
           "params": "formato: FormatoExport, que: 'diario' | 'plan', d: DatosExport, a3?: OpcionesA3",
           "retorno": "ResultadoExport",
-          "linea": 153,
+          "linea": 154,
           "resumen": "Punto de entrada único (lo usa la ruta). `a3` exige `a3: { codigoEmpresa }`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2615ec430d65"
+      "hash": "aada6bb22894"
     },
     {
       "ruta": "packages/module-contabilidad/src/factura-electronica/facturae.ts",
@@ -254976,12 +254976,21 @@
           "linea": 84
         },
         {
+          "nombre": "empiezaComoFormula",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: string",
+          "retorno": null,
+          "linea": 86,
+          "resumen": "Un texto que una hoja de cálculo ejecutaría como fórmula (empieza por = + - @, tabulador o CR)."
+        },
+        {
           "nombre": "escribirCsv",
           "kind": "function",
           "exportada": true,
-          "params": "filas: readonly (readonly string[])[], opciones: { separador?: Separador; finDeLinea?: '\\r\\n' | '\\n' } = {}",
+          "params": "filas: readonly (readonly string[])[], opciones: OpcionesEscrituraCsv = {}",
           "retorno": "string",
-          "linea": 85
+          "linea": 97
         },
         {
           "nombre": "importeACentimos",
@@ -254989,13 +254998,13 @@
           "exportada": true,
           "params": "v: string",
           "retorno": "Centimos | null",
-          "linea": 96,
+          "linea": 113,
           "resumen": "Importe de texto → céntimos, SIN pasar por float. Admite «1.234,56», «1234,56», «1234.56», «-12,5», «1,234.56», «1.234» (miles). Regla: si hay coma y punto, el ÚLTIMO es el decimal; solo coma → decima"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b931899db376"
+      "hash": "2ff6addb65f7"
     },
     {
       "ruta": "packages/module-contabilidad/src/onboarding/plan-csv.ts",
@@ -298493,6 +298502,6 @@
   ],
   "resumen": {
     "archivos": 6104,
-    "funciones": 24178
+    "funciones": 24179
   }
 }

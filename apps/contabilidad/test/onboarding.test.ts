@@ -51,9 +51,27 @@ test('saldos iniciales: crea UN asiento de apertura que cuadra, con su origen y 
   assert.deepEqual([a.origen, a.origenTipo, a.origenRef], ['apertura', 'apertura', 'apertura-inicial:2026'])
   assert.equal(a.apuntes.reduce((s, p) => s + p.debe, 0), a.apuntes.reduce((s, p) => s + p.haber, 0))
   assert.equal(d.auditoria.at(-1)!.accion, 'apertura_inicial')
-  // Segunda vez: la BD (índice/trigger de origen F5) lo impide → el caso de uso lanza y la transacción se revierte; nunca dos aperturas iniciales.
-  await assert.rejects(() => importarSaldosIniciales(repo, saldos, '2026-01-01', { usuarioId: U }), /ya existe/)
+  // Segunda vez: se rechaza con conflicto (409 en la ruta) antes de reservar número; nunca dos aperturas.
+  const otra = await importarSaldosIniciales(repo, saldos, '2026-01-01', { usuarioId: U })
+  assert.equal(otra.ok, false)
+  if (!otra.ok) { assert.equal(otra.conflicto, true); assert.match(otra.errores[0].motivo, /ya tiene un asiento de apertura/) }
   assert.equal(d.asientos.length, 1)
+  assert.equal(d.ejercicios[0].ultimo, 1)
+})
+
+test('saldos iniciales: una apertura HEREDADA del cierre (apertura:AAAA) también lo bloquea; si está rectificada, deja de bloquear', async () => {
+  const { d, repo } = nuevo()
+  const apuntes = [{ cuenta: '572', debe: 100, haber: 0 }, { cuenta: '100', debe: 0, haber: 100 }]
+  const n = await repo.reservarNumero(2026)
+  const id = await repo.insertarAsiento({ ejercicio: 2026, numero: n, fecha: '2026-01-01', concepto: 'Apertura 2026', origen: 'apertura', origenTipo: 'apertura', origenRef: 'apertura:2025', hash: 'h', apuntes })
+  const r = await importarSaldosIniciales(repo, saldos, '2026-01-01', { usuarioId: U })
+  assert.equal(r.ok, false)
+  if (!r.ok) assert.equal(r.conflicto, true)
+  assert.equal(d.asientos.length, 1)
+  const n2 = await repo.reservarNumero(2026)
+  await repo.insertarAsiento({ ejercicio: 2026, numero: n2, fecha: '2026-01-01', concepto: 'Rectifica', origen: 'rectificacion', reversaDe: id, hash: 'h2', apuntes: apuntes.map((p) => ({ cuenta: p.cuenta, debe: p.haber, haber: p.debe })) })
+  const ok = await importarSaldosIniciales(repo, saldos, '2026-01-01', { usuarioId: U })
+  assert.equal(ok.ok, true)
 })
 
 test('saldos iniciales: un balance que no cuadra NO crea asiento ni consume número; ejercicio inexistente o cerrado también falla', async () => {

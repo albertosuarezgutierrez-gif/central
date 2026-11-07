@@ -11,7 +11,7 @@ import type { RepoF6 } from './repo-f6.ts'
 import { ejercicioContable, hashAsiento, planDesdeFilas } from './servicio.ts'
 
 type Fila = { linea: number; motivo: string }
-type Res<T> = ({ ok: true } & T) | { ok: false; errores: Fila[] }
+type Res<T> = ({ ok: true } & T) | { ok: false; errores: Fila[]; conflicto?: true }
 
 export async function importarPlan(repo: RepoContable, f6: RepoF6, csv: string): Promise<Res<{ nuevas: number; yaExistentes: number; padres: number; avisos: Fila[] }>> {
   const plan = planDesdeFilas(await repo.planCuentas())
@@ -30,6 +30,10 @@ export async function importarSaldosIniciales(repo: RepoContable, csv: string, f
   const ej = Number.isInteger(anio) ? await repo.ejercicio(anio) : null
   if (!ej) return { ok: false, errores: [{ linea: 0, motivo: `no existe el ejercicio de la fecha ${fecha}` }] }
   if (ej.estado !== 'abierto') return { ok: false, errores: [{ linea: 0, motivo: `el ejercicio ${anio} está ${ej.estado === 'cerrado' ? 'cerrado' : 'en cierre'}` }] }
+  // Misma transacción que el insert: cualquier apertura viva del ejercicio (la inicial `apertura-inicial:AAAA` o la heredada del cierre `apertura:AAAA`) lo impide.
+  if ((await repo.contarAperturasVivas(anio)) > 0) {
+    return { ok: false, conflicto: true, errores: [{ linea: 0, motivo: `el ejercicio ${anio} ya tiene un asiento de apertura (inicial o heredado del cierre); rectifícalo antes de cargar saldos iniciales` }] }
+  }
   const plan = planDesdeFilas(await repo.planCuentas())
   const r = asientoAperturaInicial(csv, plan, ejercicioContable(ej), fecha)
   if (!r.ok) return { ok: false, errores: r.errores }

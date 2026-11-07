@@ -82,10 +82,27 @@ export function tablaCsv(
 }
 
 const necesitaComillas = (v: string, sep: string) => v.includes(sep) || v.includes('"') || v.includes('\n') || v.includes('\r')
-export function escribirCsv(filas: readonly (readonly string[])[], opciones: { separador?: Separador; finDeLinea?: '\r\n' | '\n' } = {}): string {
+/** Un texto que una hoja de cálculo ejecutaría como fórmula (empieza por = + - @, tabulador o CR). */
+const empiezaComoFormula = (v: string) => /^[=+\-@\t\r]/.test(v)
+export type OpcionesEscrituraCsv = {
+  separador?: Separador
+  finDeLinea?: '\r\n' | '\n'
+  /**
+   * Índices (0 = primera) de las columnas NUMÉRICAS: sus valores se escriben tal cual (un importe negativo empieza por «-» y no es una fórmula).
+   * El resto son TEXTO y, si empiezan por = + - @ tabulador o CR, se les antepone «'» (neutraliza la inyección de fórmulas en Excel/Calc).
+   * La decisión es por TIPO DE COLUMNA, nunca por el contenido. El prefijo «'» está pendiente de contrastar con Sage/Holded (ver AVISO_PREFIJO_FORMULAS).
+   */
+  numericas?: readonly number[]
+}
+export function escribirCsv(filas: readonly (readonly string[])[], opciones: OpcionesEscrituraCsv = {}): string {
   const sep = opciones.separador ?? ';'
   const eol = opciones.finDeLinea ?? '\r\n'
-  return filas.map((f) => f.map((v) => (necesitaComillas(v, sep) ? `"${v.replace(/"/g, '""')}"` : v)).join(sep)).join(eol) + (filas.length ? eol : '')
+  const num = new Set(opciones.numericas ?? [])
+  const campo = (v: string, i: number) => {
+    const t = !num.has(i) && empiezaComoFormula(v) ? `'${v}` : v
+    return necesitaComillas(t, sep) ? `"${t.replace(/"/g, '""')}"` : t
+  }
+  return filas.map((f) => f.map(campo).join(sep)).join(eol) + (filas.length ? eol : '')
 }
 
 /**

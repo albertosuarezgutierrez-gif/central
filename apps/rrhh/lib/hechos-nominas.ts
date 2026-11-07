@@ -8,11 +8,15 @@ import { Prisma } from '@prisma/client'
 import { prisma } from './prisma'
 import type { HechoNominaPuerto, HechoPagoNominaPuerto } from '@central/module-nominas'
 
-/** PrismaPromise para componerla con otras sentencias en `prisma.$transaction([...])`. Repetir la ref no duplica ni sobrescribe. */
-export function encolarHechoNomina(empresaId: string, nominaId: string, hecho: HechoNominaPuerto | HechoPagoNominaPuerto) {
+/**
+ * PrismaPromise para componerla con otras sentencias en `prisma.$transaction([...])`. Repetir la ref no duplica ni sobrescribe.
+ * `contabilidadEmpresaId` = empresa de contabilidad DESTINO vigente al confirmar (0034): se guarda en la fila y el envío usa ESA, no la actual
+ * de `empresa_modulos` (si luego se re-vincula la empresa, lo ya encolado sigue yendo a donde se decidió al confirmar).
+ */
+export function encolarHechoNomina(empresaId: string, nominaId: string, hecho: HechoNominaPuerto | HechoPagoNominaPuerto, contabilidadEmpresaId: string) {
   return prisma.$executeRaw(Prisma.sql`
-    INSERT INTO rrhh.hechos_nominas (empresa_id, nomina_id, tipo, ref, hecho, estado, intentos)
-    VALUES (${empresaId}::uuid, ${nominaId}::uuid, ${hecho.tipo}, ${hecho.ref}, ${JSON.stringify(hecho)}::jsonb, 'pendiente', 0)
+    INSERT INTO rrhh.hechos_nominas (empresa_id, nomina_id, tipo, ref, hecho, estado, intentos, contabilidad_empresa_id)
+    VALUES (${empresaId}::uuid, ${nominaId}::uuid, ${hecho.tipo}, ${hecho.ref}, ${JSON.stringify(hecho)}::jsonb, 'pendiente', 0, ${contabilidadEmpresaId}::uuid)
     ON CONFLICT (empresa_id, tipo, ref) DO NOTHING`)
 }
 
@@ -20,14 +24,14 @@ export type FilaHechoNomina = {
   id: string; empresa_id: string; nomina_id: string; tipo: string; hecho: unknown; intentos: number; contabilidad_empresa_id: string
 }
 
-/** Cola pendiente de empresas con `contabilidad_nominas` ACTIVO y empresa de contabilidad vinculada (si se apaga, deja de enviarse). */
+/** Cola pendiente de empresas con `contabilidad_nominas` ACTIVO (si se apaga, deja de enviarse). El destino es el GUARDADO en la fila (0034), no el vínculo actual. */
 export async function leerColaHechosNominas(ahora: Date, limite: number): Promise<FilaHechoNomina[]> {
   return prisma.$queryRaw<FilaHechoNomina[]>(Prisma.sql`
     SELECT h.id::text AS id, h.empresa_id::text AS empresa_id, h.nomina_id::text AS nomina_id, h.tipo, h.hecho, h.intentos,
-           m.contabilidad_empresa_id::text AS contabilidad_empresa_id
+           h.contabilidad_empresa_id::text AS contabilidad_empresa_id
     FROM rrhh.hechos_nominas h
     JOIN rrhh.empresa_modulos m ON m.empresa_id = h.empresa_id AND m.modulo = 'contabilidad_nominas' AND m.activo = true
-    WHERE h.estado IN ('pendiente', 'error') AND m.contabilidad_empresa_id IS NOT NULL
+    WHERE h.estado IN ('pendiente', 'error') AND h.contabilidad_empresa_id IS NOT NULL
       AND (h.proximo_intento IS NULL OR h.proximo_intento <= ${ahora}::timestamptz)
     ORDER BY h.creado_en ASC
     LIMIT ${limite}`)

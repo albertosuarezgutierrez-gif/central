@@ -1,5 +1,5 @@
 // Fake en memoria de `RepoF6` que imita los triggers/FK de 0006: el objeto comentado/revisado debe existir en la MISMA empresa (FK compuesta), el autor
-// debe tener vínculo ACTIVO con el rol que declara (trigger `autor_vinculado`), una sola revisión por objeto, y comentarios/revisiones solo se añaden.
+// debe tener vínculo ACTIVO con el rol que declara (trigger `autor_vinculado`), una sola revisión por (objeto, rol) (0008), y comentarios/revisiones solo se añaden.
 import type { ObjetoComentable, TerceroImportado } from '@central/module-contabilidad'
 import type { ComentarioLeido, NuevaRevision, NuevoComentario, RepoF6 } from '../lib/repo-f6.ts'
 import type { crearAlmacen } from './_repo-memoria.ts'
@@ -21,8 +21,8 @@ export function f6Memoria(d: DatosEmpresa): RepoF6 & { estado: EstadoF6 } {
   if (!estados.has(d)) estados.set(d, { comentarios: [], revisiones: [], terceros: [], facturas: [], avisosSinLeer: 0, borradores: 0, nombres: {} })
   const st = estados.get(d)!
   const abiertos = () => new Set(d.ejercicios.filter((e) => e.estado === 'abierto').map((e) => e.anio))
-  const asientosPend = () => d.asientos.filter((a) => a.origen !== 'apertura' && a.origen !== 'cierre' && abiertos().has(a.ejercicio) && !st.revisiones.some((r) => r.tipo === 'asiento' && r.id === a.id))
-  const facturasPend = () => st.facturas.filter((f) => f.origen !== 'manual' && !st.revisiones.some((r) => r.tipo === 'factura_recibida' && r.id === f.id))
+  const asientosPend = () => d.asientos.filter((a) => a.origen !== 'apertura' && a.origen !== 'cierre' && abiertos().has(a.ejercicio) && !st.revisiones.some((r) => r.tipo === 'asiento' && r.id === a.id && r.rol === 'gestor'))
+  const facturasPend = () => st.facturas.filter((f) => f.origen !== 'manual' && !st.revisiones.some((r) => r.tipo === 'factura_recibida' && r.id === f.id && r.rol === 'gestor'))
   const existe = (tipo: 'asiento' | 'factura_recibida', id: string) => (tipo === 'asiento' ? d.asientos.some((a) => a.id === id) : st.facturas.some((f) => f.id === id))
   const autorOk = (usuarioId: string, rol: string) => {
     if (!d.vinculos.some((v) => v.usuarioId === usuarioId && v.activo && v.rol === rol)) throw new Error('trigger autor_vinculado: sin acceso activo con ese rol')
@@ -53,7 +53,7 @@ export function f6Memoria(d: DatosEmpresa): RepoF6 & { estado: EstadoF6 } {
     async insertarRevision(r) {
       if (!existe(r.tipo, r.id)) throw new Error('FK compuesta: el objeto no es de esta empresa')
       autorOk(r.usuarioId, r.rol)
-      if (st.revisiones.some((x) => x.tipo === r.tipo && x.id === r.id)) return false
+      if (st.revisiones.some((x) => x.tipo === r.tipo && x.id === r.id && x.rol === r.rol)) return false // 0008: única por (objeto, rol)
       st.revisiones.push({ ...r })
       return true
     },

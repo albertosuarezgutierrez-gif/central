@@ -19,9 +19,9 @@ export async function POST(req: Request) {
   if (!b || typeof b.csv !== 'string' || !b.csv.trim()) return NextResponse.json({ error: 'datos_no_validos', errores: ['csv obligatorio'] }, { status: 400 })
   if (b.csv.length > MAX_CSV) return NextResponse.json({ error: 'datos_no_validos', errores: ['el CSV supera 2 MB'] }, { status: 413 })
   const csv = b.csv
-  const respuesta = (r: { ok: true } | { ok: false; errores: { linea: number; motivo: string }[] }, extra: object) =>
+  const respuesta = (r: { ok: true } | { ok: false; errores: { linea: number; motivo: string }[]; conflicto?: true }, extra: object) =>
     r.ok ? NextResponse.json({ ...r, ...extra }, { status: 201 })
-      : NextResponse.json({ error: 'importacion_no_valida', errores: r.errores.map((e) => (e.linea ? `línea ${e.linea}: ${e.motivo}` : e.motivo)) }, { status: 422 })
+      : NextResponse.json({ error: r.conflicto ? 'apertura_ya_existe' : 'importacion_no_valida', errores: r.errores.map((e) => (e.linea ? `línea ${e.linea}: ${e.motivo}` : e.motivo)) }, { status: r.conflicto ? 409 : 422 })
   try {
     if (b.accion === 'plan') return respuesta(await ejecutarF6(c.empresaId, (repo, f6) => importarPlan(repo, f6, csv)), {})
     if (b.accion === 'saldos') {

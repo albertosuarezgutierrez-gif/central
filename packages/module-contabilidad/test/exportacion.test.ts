@@ -88,3 +88,13 @@ test('honestidad: los tres formatos están marcados «por contrastar» y ningún
   assert.ok(A3_REGISTRO_APUNTE.campos.every((c) => c.certeza === 'por_contrastar'))
   for (const f of ['a3', 'sage', 'holded'] as const) assert.equal(exportar(f, 'plan', datos, { codigoEmpresa: '1' }).pendienteContrastar, true)
 })
+
+test('Sage/Holded: un concepto que empieza por «=» sale con «\'»; los importes siguen siendo importes; el aviso declara el prefijo pendiente de contrastar', () => {
+  const peligro: DatosExport = { ...datos, asientos: [{ ...asientos[1], concepto: '=CMD|calc', apuntes: [{ cuenta: '430', debe: 100, haber: 0, documento: '@doc' }, { cuenta: '705', debe: 0, haber: 100 }] }] }
+  for (const r of [exportar('sage', 'diario', peligro), exportar('holded', 'diario', peligro)]) {
+    assert.match(r.contenido, /'=CMD\|calc/)
+    assert.match(r.contenido, /'@doc/)
+    assert.match(r.contenido, /1[,.]00/)
+    assert.match(r.aviso, /apóstrofo.*pendiente de contrastar con Sage\/Holded/)
+  }
+})

@@ -13,6 +13,10 @@ export type Certeza = 'documentada' | 'por_contrastar'
 export const AVISO_PENDIENTE_CONTRASTAR =
   'Formato pendiente de contrastar con un fichero real del programa de destino. Importa primero un fichero de prueba (una empresa de pruebas, nunca la real) y compara el resultado antes de usarlo.'
 
+/** Los textos del CSV que empiezan por = + - @ tabulador o CR llevan delante «'» (anti-inyección de fórmulas); no está contrastado con Sage/Holded. */
+export const AVISO_PREFIJO_FORMULAS =
+  'Los textos que empiezan por = + - @ llevan delante un apóstrofo («\'») para que la hoja de cálculo no los ejecute como fórmula; este prefijo está pendiente de contrastar con Sage/Holded (puede verse como carácter en la importación).'
+
 // ───────────────────────────── A3 (SUENLACE / ASCII, registros de ancho fijo) ─────────────────────────────
 export type TipoCampoFijo = 'texto' | 'numero' | 'fecha' | 'importe' | 'signo_dh'
 export type CampoFijo = {

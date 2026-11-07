@@ -74,6 +74,7 @@ const LLAMADAS: [string, (r: RepoContable) => Promise<unknown>][] = [
   ['contarAvisosSinLeer', (r) => r.contarAvisosSinLeer()],
   ['marcarAvisosLeidos', (r) => r.marcarAvisosLeidos(E)],
   ['contarCuentas', (r) => r.contarCuentas()],
+  ['contarAperturasVivas', (r) => r.contarAperturasVivas(2026)],
   ['sembrarPlan', (r) => r.sembrarPlan([{ codigo: '572', nombre: 'B', grupo: 5, naturaleza: 'deudora', admiteApuntes: true, activa: true }])],
   ['crearEjercicio', (r) => r.crearEjercicio({ anio: 2026, inicio: '2026-01-01', fin: '2026-12-31', estado: 'abierto' })],
   ['vinculos', (r) => r.vinculos()],

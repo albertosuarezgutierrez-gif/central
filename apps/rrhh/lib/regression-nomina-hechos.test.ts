@@ -36,11 +36,11 @@ describe('confirmar nómina → outbox (misma transacción, idempotente)', () =>
   it('con el módulo activo, el hecho se calcula ANTES de tocar nada y un descuadre devuelve 422 sin confirmar', () => {
     expect(r.indexOf('nominaAHecho(')).toBeGreaterThan(0)
     expect(r.indexOf('nominaAHecho(')).toBeLessThan(r.indexOf('generarNominaPdf('))
-    expect(r).toMatch(/if \(await contabilidadDeNominas\(empresa_id\)\)/)
+    expect(r).toMatch(/const destinoContabilidad = await contabilidadDeNominas\(empresa_id\)\s+if \(destinoContabilidad\)/)
     expect(r).toMatch(/e instanceof ErrorNominaHecho\) return NextResponse\.json\([^)]*status: 422/)
   })
   it('confirmar y encolar van en prisma.$transaction; sin módulo no se encola', () => {
-    expect(r).toMatch(/prisma\.\$transaction\(\[confirmar, encolarHechoNomina\(empresa_id, nominaId, hecho\)\]\)/)
+    expect(r).toMatch(/prisma\.\$transaction\(\[confirmar, encolarHechoNomina\(empresa_id, nominaId, hecho, destinoContabilidad!?\)\]\)/)
     expect(r).toMatch(/if \(hecho\)/)
   })
   it('la cola es idempotente por (empresa_id, tipo, ref): ON CONFLICT DO NOTHING + UNIQUE en la migración', () => {
@@ -54,8 +54,26 @@ describe('confirmar nómina → outbox (misma transacción, idempotente)', () =>
     expect(leer('app/api/cron/enviar-hechos-nominas/route.ts')).toMatch(/autorizacionBearerValida\(req, 'CRON_SECRET'\)/)
     const q = leer('lib/hechos-nominas.ts')
     expect(q).toMatch(/m\.modulo = 'contabilidad_nominas' AND m\.activo = true/)
-    expect(q).toMatch(/m\.contabilidad_empresa_id IS NOT NULL/)
+    expect(q).toMatch(/h\.contabilidad_empresa_id IS NOT NULL/)
     expect(JSON.parse(readFileSync(join(APP, 'vercel.json'), 'utf8')).crons.map((c: { path: string }) => c.path)).toContain('/api/cron/enviar-hechos-nominas')
+  })
+})
+
+describe('destino guardado en la fila (0034)', () => {
+  it('encolar guarda el destino vigente y el envío lo lee de la FILA, nunca del JOIN actual', () => {
+    const q = leer('lib/hechos-nominas.ts')
+    expect(q).toMatch(/INSERT INTO rrhh\.hechos_nominas \([^)]*contabilidad_empresa_id\)/)
+    expect(q).toMatch(/\$\{contabilidadEmpresaId\}::uuid/)
+    expect(q).toMatch(/h\.contabilidad_empresa_id::text AS contabilidad_empresa_id/)
+    expect(q).not.toMatch(/m\.contabilidad_empresa_id/)
+  })
+  it('0034: columna aditiva e idempotente + relleno de las filas pendientes desde empresa_modulos', () => {
+    const sql = readFileSync(join(APP, 'prisma/migrations/0034_hechos_nominas_destino.sql'), 'utf8').replace(/^\s*--.*$/gm, '')
+    expect(sql).toMatch(/ALTER TABLE rrhh\.hechos_nominas ADD COLUMN IF NOT EXISTS contabilidad_empresa_id uuid/)
+    expect(sql).toMatch(/UPDATE rrhh\.hechos_nominas h\s+SET contabilidad_empresa_id = m\.contabilidad_empresa_id/)
+    expect(sql).toMatch(/h\.contabilidad_empresa_id IS NULL/)
+    expect(sql).toMatch(/h\.estado IN \('pendiente', 'error'\)/)
+    expect(sql).not.toMatch(/DROP|DELETE|TRUNCATE/)
   })
 })
 

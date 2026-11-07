@@ -112,3 +112,16 @@ test('plantilla por CNAE: sugiere, marca la sugerida y ofrece todas las plantill
   assert.equal(opcionesPlantilla('9999').opciones.find((x) => x.sugerida)!.sector, 'generico')
   assert.equal(sugerenciaPorCnae('9999').motivo, 'cnae_sin_plantilla')
 })
+
+test('escribirCsv: neutraliza fórmulas SOLO en columnas de texto (= + - @ tab CR → «\'»); las columnas numéricas no se tocan', () => {
+  const filas = [['=HYPERLINK("x")', '-5,00', 'ok'], ['+cmd', '-12,50', '@sum'], ['\tx', '3', '\rx'], ['-texto', '1', 'a-b']]
+  const t = escribirCsv(filas, { numericas: [1] })
+  const leido = leerCsv(t)
+  assert.deepEqual(leido[0], ['\'=HYPERLINK("x")', '-5,00', 'ok'])
+  assert.deepEqual(leido[1], ["'+cmd", '-12,50', "'@sum"])
+  assert.equal(leido[2][0], "'\tx")
+  assert.equal(leido[2][2], "'\rx")
+  assert.deepEqual(leido[3], ["'-texto", '1', 'a-b'])
+  // sin declarar columnas numéricas, un importe negativo es texto y se prefija (decide el tipo de columna, no el contenido)
+  assert.equal(leerCsv(escribirCsv([['-5,00']]), ';')[0][0], "'-5,00")
+})

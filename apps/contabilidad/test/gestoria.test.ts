@@ -111,6 +111,24 @@ test('revisar es idempotente y saca el asiento de pendientes sin tocar el asient
   assert.equal((await marcarRevisado(f6.A, g, { tipo: 'factura_recibida', id: 'f1' })).ok, false) // id no uuid: validación
 })
 
+test('la bandeja «pendiente de la gestoría» solo la vacía el GESTOR: la revisión del dueño no cuenta, y el gestor aún puede revisar después', async () => {
+  const { f6, ids } = await escenario()
+  const antes = await f6.A.contarAsientosSinRevisar()
+  const d = await marcarRevisado(f6.A, { usuarioId: DUENO_A, rol: 'dueno' }, { tipo: 'asiento', id: ids.A[0] })
+  assert.equal(d.ok && d.nuevo, true)
+  assert.equal(await f6.A.contarAsientosSinRevisar(), antes)
+  assert.ok((await f6.A.asientosSinRevisar(50)).some((a) => a.id === ids.A[0]))
+  const g = await marcarRevisado(f6.A, { usuarioId: GESTOR, rol: 'gestor' }, { tipo: 'asiento', id: ids.A[0] })
+  assert.equal(g.ok && g.nuevo, true)
+  assert.equal(await f6.A.contarAsientosSinRevisar(), antes - 1)
+})
+
+test('SQL real de repo-f6: las 4 consultas de pendientes filtran r.rol = \'gestor\' y el INSERT no depende del índice antiguo', () => {
+  const src = readFileSync(join(import.meta.dirname, '..', 'lib', 'repo-f6.ts'), 'utf8')
+  assert.equal(src.match(/FROM contabilidad\.revisiones r WHERE[^)]*r\.rol = 'gestor'\)/g)?.length, 4)
+  assert.doesNotMatch(src, /ON CONFLICT \(empresa_id, (asiento_id|factura_recibida_id)\)/)
+})
+
 test('entradas mal formadas se rechazan antes de llegar al repositorio', async () => {
   const { f6 } = await escenario()
   const g = { usuarioId: GESTOR, rol: 'gestor' as const }
