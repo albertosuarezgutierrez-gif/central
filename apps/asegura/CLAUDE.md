@@ -67,6 +67,9 @@
   `lib/pii-estado.ts` dice por qué no descifra (`ok` · `sin_clave` · `mal_formada` · `no_abre` · `sin_muestra`).
 - **`RESEND_API_KEY` restringida al MISMO dominio del remitente** (`envios.grupoasegura.es`). El transporte es SMTP.
 - `CRON_SECRET` solo por `Authorization: Bearer`; sin él no se autoriza a nadie, tampoco en desarrollo.
+- **Almacén de precios** (`seguros.observaciones_precio`, SQL `2026-11-07b`, spec `2026-11-07-almacen-precios.md`): escribe solo
+  con `OBSERVACIONES_PRECIO_ACTIVO=1` **y** `ASEGURA_PRECIOS_HUELLA_SECRET` (HMAC del grupo, `requireSecret`, sin fallback; no se
+  rota: cambiarlo parte los grupos). Enganches Avant2/bots tras el commit y sin lanzar; cron `observaciones-precio` cuenta por defecto.
 - `ASEGURA_PORTAL_PUENTE_SECRET` (puerto estrecho del portal, `/api/portal/*`): mismo valor en `asegura-portal`;
   esas rutas nunca aceptan `clienteId` (la ficha la resuelve `portal_vinculo`).
 

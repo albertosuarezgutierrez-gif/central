@@ -121,6 +121,10 @@
     {
       "path": "/api/cron/retencion-cartera",
       "schedule": "17 19 * * *"
+    },
+    {
+      "path": "/api/cron/observaciones-precio",
+      "schedule": "29 4 * * *"
     }
   ]
 }

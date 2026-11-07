@@ -272,6 +272,16 @@ export async function productividadAsegura(anio: number | null): Promise<Reenvio
   return getPuerto(`/api/operador/companias/productividad${anio === null ? '' : `?anio=${encodeURIComponent(String(anio))}`}`)
 }
 
+/** Cuadro de mando por compañía y año natural, con el año anterior (`GET /api/operador/companias/cuadro`). */
+export async function cuadroAsegura(anio: number | null): Promise<Reenvio> {
+  return getPuerto(`/api/operador/companias/cuadro${anio === null ? '' : `?anio=${encodeURIComponent(String(anio))}`}`)
+}
+
+/** Competitividad de precio por compañía y año natural (`GET /api/operador/companias/competitividad`). */
+export async function competitividadAsegura(anio: number | null): Promise<Reenvio> {
+  return getPuerto(`/api/operador/companias/competitividad${anio === null ? '' : `?anio=${encodeURIComponent(String(anio))}`}`)
+}
+
 /** «Coincide con el PDF»: sella `revisado_at` del acuerdo. El actor lo pone `cabeceras()` desde la sesión. */
 export async function cotejarAcuerdoAsegura(acuerdoId: string): Promise<Reenvio> {
   const h = await cabeceras()

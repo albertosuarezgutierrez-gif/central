@@ -28,6 +28,7 @@
 
 import { fotoVarianteJson, type SupuestoVariante } from '@central/module-seguros'
 import { prisma } from '../tenant.ts'
+import { anotarObservacionesTarificacion } from '../observaciones-precio.ts'
 import type { Cotizacion } from './respuesta.ts'
 import { sobreOpciones } from './coberturas.ts'
 import { PREFIJO_HISTORIAL_COTIZACION_INCOHERENTE, revisarCoherenciaCotizacion } from '@central/module-seguros'
@@ -396,6 +397,9 @@ export async function guardarSinTumbar(
       await guardarRespuestaCruda({ correduriaId: e.correduriaId, cotizacionId, respuesta: e.respuesta }, enTransaccion)
     }
     if (!e.simulado) await anotarIncoherencias(e, enTransaccion)
+    // ALMACÉN DE PRECIOS (07/11/2026): DESPUÉS del commit y sin lanzar (`anotarObservacionesTarificacion` nunca lanza; el
+    // `.catch` es la segunda red): un fallo aquí jamás convierte un precio pagado en «no guardada». Apagado por env.
+    if (!e.simulado) await anotarObservacionesTarificacion(e.correduriaId, cotizacionId, { creadoPor: 'sistema:avant2' }).catch(() => null)
     return { estado: 'guardada', cotizacionId }
   } catch (err) {
     return { estado: 'no_guardada', motivo: motivoDe(err) }

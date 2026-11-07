@@ -46,7 +46,7 @@ export default async function CompaniasPage() {
             </p>
           </div>
         ) : (
-          <ListaCompanias companias={r.companias} acuerdos={acuerdos} productividad={productividad} />
+          <ListaCompanias conCuadro companias={r.companias} acuerdos={acuerdos} productividad={productividad} />
         )}
       </div>
     </Pagina>
