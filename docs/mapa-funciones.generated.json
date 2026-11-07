@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-07T07:18:06Z",
-  "sha": "057b6b0f547ee029f7947bbf91dbca430e3e4ce8",
+  "generadoEn": "2026-11-07T07:46:27Z",
+  "sha": "960eb5b0df4fce6d6ef5b9692a47b8c53862d191",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -42826,7 +42826,7 @@
           "exportada": true,
           "params": "tx: { $executeRaw: typeof prisma.$executeRaw }, e: { correduriaId: string; intentoId: string; solicitadoPor: string; projectId: string },",
           "retorno": "Promise<void>",
-          "linea": 47,
+          "linea": 48,
           "resumen": "La línea del libro de un presupuesto traído de la web. Va DENTRO de la transacción que guarda la tarificación (la FK `intento_id` la exige): o se escriben las dos, o ninguna."
         },
         {
@@ -42835,7 +42835,7 @@
           "exportada": true,
           "params": "correduriaId: string, db: Db = prisma",
           "retorno": "Promise<Consumo>",
-          "linea": 77,
+          "linea": 78,
           "resumen": "Cuenta lo consumido hoy y este mes por esta correduría **en COTIZACIONES** (`POST /insurances`, 0,50€). 🚨 Desde el 21/09/2026 excluye los motivos de EMISIÓN (`rerate` / `submit`), que llevan su propi"
         },
         {
@@ -42844,7 +42844,7 @@
           "exportada": true,
           "params": "input: { correduriaId: string intentoId: string motivo: string solicitadoPor: string }, db: Db = prisma",
           "retorno": "Promise<Reserva>",
-          "linea": 119,
+          "linea": 120,
           "resumen": "Abre la reserva ANTES de llamar al vendor. El orden importa: si se escribiera después, una caída entre la llamada y el INSERT dejaría un cargo real sin rastro en el libro — y el tope contaría de menos"
         },
         {
@@ -42853,7 +42853,7 @@
           "exportada": false,
           "params": "tx: Db, correduriaId: string, q: | { tipo: 'cotizar'; topes: Topes; env: Env } | { tipo: 'emision'; operacion: OperacionEmision; topes: Topes; env: Env }, costeCents: number,",
           "retorno": "Promise<",
-          "linea": 151,
+          "linea": 152,
           "resumen": "🔒 Candado de GASTO por correduría + re-cuenta del libro y del tope en euros, DENTRO de la transacción que va a reservar (02/11/2026). Por qué: `cotizar()` y `conLibroDeEmision()` comprueban los topes"
         },
         {
@@ -42862,7 +42862,7 @@
           "exportada": true,
           "params": "input: { correduriaId: string intentoId: string motivo: string solicitadoPor: string huella: string forzar?: boolean /** Fecha de efecto (aaaa-mm-dd) del cuerpo: habilita reutilizar la copia hasta 24 h si sigue vigente. */ fechaEfecto?: str",
           "retorno": "Promise<ReservaAntiDuplicado>",
-          "linea": 217,
+          "linea": 218,
           "resumen": "Comprueba duplicado y RESERVA en la misma transacción, bajo `pg_advisory_xact_lock(hashtext(huella))`: dos pestañas con la misma petición se serializan y la segunda ve la reserva de la primera. Sin `f"
         },
         {
@@ -42871,7 +42871,7 @@
           "exportada": true,
           "params": "correduriaId: string, operacion: OperacionEmision, db: Db = prisma,",
           "retorno": "Promise<Consumo>",
-          "linea": 290,
+          "linea": 300,
           "resumen": "Lo consumido hoy y este mes en UNA operación de emisión (`rerate` / `submit`). 🚨 Mismo contrato que `consumoActual`: **NO atrapa errores**. Si no se puede leer el libro, el llamante (`libro-emision.t"
         },
         {
@@ -42880,7 +42880,7 @@
           "exportada": true,
           "params": "input: { correduriaId: string intentoId: string operacion: OperacionEmision solicitadoPor: string costeCents: number projectId: string | null /** * Huella anti doble clic (05/11/2026), la MISMA columna y el mismo candado que `reservarSinDup",
           "retorno": "Promise<Reserva>",
-          "linea": 337,
+          "linea": 347,
           "resumen": "Abre la reserva de un ReRate o de un Submit ANTES de llamar al vendor. Gemela de `reservar()`, con dos diferencias que son el motivo de que exista aparte en vez de un parámetro opcional: el `motivo` e"
         },
         {
@@ -42889,7 +42889,7 @@
           "exportada": true,
           "params": "intentoId: string",
           "retorno": "Promise<void>",
-          "linea": 397,
+          "linea": 407,
           "resumen": "Cierra como facturable una línea de emisión. Aparte de `cerrarFacturable()` por una razón concreta: allí el `projectId` es lo que devuelve la cotización y no se conocía antes de llamar, así que el cie"
         },
         {
@@ -42898,7 +42898,7 @@
           "exportada": true,
           "params": "intentoId: string, projectId: string",
           "retorno": "Promise<void>",
-          "linea": 408,
+          "linea": 418,
           "resumen": "El vendor respondió: hay proyecto y, por tanto, cargo."
         },
         {
@@ -42907,7 +42907,7 @@
           "exportada": true,
           "params": "intentoId: string, evidencia: string, errorCodigo: string,",
           "retorno": "Promise<void>",
-          "linea": 430,
+          "linea": 440,
           "resumen": "Cierra como NO facturable. Exige evidencia por contrato (y por CHECK en BD). Solo hay tres evidencias admisibles, y todas significan que el vendor no llegó a tarificar: fallo de autenticación (401/403"
         },
         {
@@ -42916,7 +42916,7 @@
           "exportada": true,
           "params": "correduriaId: string, costes: { rerate: number; submit: number; limites: number }, db: Db = prisma,",
           "retorno": "Promise<number | null>",
-          "linea": 455,
+          "linea": 465,
           "resumen": "Lo gastado este mes natural (Madrid) en el libro, en céntimos. Lo lee el tope en euros (`tope-euros-bd.ts`), que no toca la tabla: el libro solo se mira desde aquí. Las líneas de ReRate/Submit/límites"
         }
       ],
@@ -42925,7 +42925,7 @@
         "ventana"
       ],
       "rutaApi": null,
-      "hash": "b786a983eaad"
+      "hash": "5a3b789dc3d3"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/contador.ts",
@@ -43304,7 +43304,7 @@
           "exportada": false,
           "params": "correduriaId: string",
           "retorno": "Promise<readonly FilaCatalogoMin[] | null>",
-          "linea": 132,
+          "linea": 134,
           "resumen": "Lectura real de la última instantánea. Sin tabla devuelve `null` (no se sabe ≠ no hay)."
         },
         {
@@ -43313,7 +43313,7 @@
           "exportada": false,
           "params": "deps: DepsCotizar, p: PeticionCotizacion, extra: { cotizacion: Cotizacion; intentoId: string | null; simulado: boolean; respuesta?: unknown },",
           "retorno": "Promise<Guardado>",
-          "linea": 146,
+          "linea": 148,
           "resumen": "Guarda la cotización sin poder tumbarla. 🚨 El orden y el `try` de aquí son la decisión de diseño del módulo: cuando se llega a este punto el cliente YA ha pagado los 0,50€ y YA tiene su precio. Perde"
         },
         {
@@ -43322,7 +43322,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined> = process.env,",
           "retorno": "Promise<",
-          "linea": 205,
+          "linea": 207,
           "resumen": "Sonda GRATIS: pide solo el token OAuth2. Sirve para verificar host y credenciales sin gastar una cotización — que es como hay que estrenar la integración, porque no hay sandbox utilizable. Un fallo de"
         },
         {
@@ -43331,7 +43331,7 @@
           "exportada": true,
           "params": "correduriaId: string, env: Record<string, string | undefined> = process.env,",
           "retorno": null,
-          "linea": 232,
+          "linea": 234,
           "resumen": "Lo consumido y lo que queda. Para pintarlo antes de que nadie pulse nada."
         },
         {
@@ -43340,7 +43340,7 @@
           "exportada": false,
           "params": "cuerpo: unknown",
           "retorno": "string | null",
-          "linea": 262,
+          "linea": 264,
           "resumen": "`effectiveDate` (aaaa-mm-dd) del cuerpo; `null` si no consta."
         },
         {
@@ -43349,12 +43349,12 @@
           "exportada": true,
           "params": "p: PeticionCotizacion, env: Record<string, string | undefined> = process.env, deps: DepsCotizar = {},",
           "retorno": "Promise<ResultadoCotizacion>",
-          "linea": 267
+          "linea": 269
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b07bf80cd436"
+      "hash": "5c1f9b57ebe5"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/crudo.ts",
@@ -44228,7 +44228,7 @@
           "exportada": true,
           "params": "f: string, n: number",
           "retorno": "string",
-          "linea": 35,
+          "linea": 43,
           "resumen": "`f` (aaaa-mm-dd) más `n` meses en UTC, sin desbordar el día (31/01 + 1 mes = 28/29-02)."
         },
         {
@@ -44237,7 +44237,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 45
+          "linea": 53
         },
         {
           "nombre": "dias",
@@ -44245,7 +44245,7 @@
           "exportada": false,
           "params": "a: string, b: string",
           "retorno": "number",
-          "linea": 50,
+          "linea": 58,
           "resumen": "Días entre dos fechas ISO (b - a)."
         },
         {
@@ -44254,7 +44254,7 @@
           "exportada": true,
           "params": "vencimiento: string | null | undefined, efectoActual: string | null | undefined, hoy: string,",
           "retorno": "string | null",
-          "linea": 58,
+          "linea": 66,
           "resumen": "La fecha de efecto de la renovación: `fecha_efecto_actual` si es futura (anualidad nueva ya emitida), si no el vencimiento. `null` = no consta ninguna."
         },
         {
@@ -44263,7 +44263,7 @@
           "exportada": true,
           "params": "vencimiento: string | null | undefined, efectoActual: string | null | undefined, hoy: string,",
           "retorno": "",
-          "linea": 69,
+          "linea": 77,
           "resumen": "El corte (si lo hay) de la renovación, sin tener en cuenta lo que fuerce el operador."
         },
         {
@@ -44272,13 +44272,13 @@
           "exportada": true,
           "params": "entrada: { vencimiento: string | null | undefined /** `fecha_efecto_actual` de la póliza (CIMA). */ efectoActual?: string | null hoy: string explicita?: unknown }",
           "retorno": "EvaluacionRenovacion",
-          "linea": 121,
+          "linea": 129,
           "resumen": "La decisión entera de una RENOVACIÓN: la fecha de efecto con la que se cotiza, o el corte GRATIS. `explicita` = la fecha de efecto que el operador puso a mano (correcciones): manda, y queda registrada"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cfa3cd8c0ff8"
+      "hash": "3c94f094ab02"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/emision-externa.ts",
@@ -45037,7 +45037,7 @@
           "exportada": true,
           "params": "operacion: OperacionEmision, env: Record<string, string | undefined>,",
           "retorno": "number",
-          "linea": 108,
+          "linea": 109,
           "resumen": "Céntimos que se apuntan por cada línea de esta operación. Puro."
         },
         {
@@ -45046,7 +45046,7 @@
           "exportada": true,
           "params": "operacion: OperacionEmision, env: Record<string, string | undefined>,",
           "retorno": "Topes",
-          "linea": 119,
+          "linea": 120,
           "resumen": "se pisan con su propia env. Puro."
         },
         {
@@ -45055,7 +45055,7 @@
           "exportada": true,
           "params": "operacion: OperacionEmision, llamadas: number, costeCents: number,",
           "retorno": "string",
-          "linea": 146,
+          "linea": 147,
           "resumen": "Cómo se dice lo que llevamos gastado en esta operación. 🚨 Con `costeCents = 0` **no se escribe «0,00€»**: eso afirmaría que estas llamadas son gratis, y lo único cierto es que nadie lo ha confirmado."
         },
         {
@@ -45064,13 +45064,13 @@
           "exportada": true,
           "params": "operacion: OperacionEmision, consumo: Consumo, topes: Topes, costeCents: number,",
           "retorno": "Veredicto",
-          "linea": 162,
+          "linea": 163,
           "resumen": "¿Cabe UNA llamada más de esta operación? Mismo contrato que `puedeCotizar()` —y por las mismas razones: se evalúa ANTES de llamar y sobre el libro ya persistido— pero con su propio recuento y sus prop"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "825f0f42038e"
+      "hash": "4d1da4ecd24b"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/guarda-catalogo.ts",
@@ -45198,6 +45198,7 @@
       "ambito": "apps/asegura",
       "resumen": "Guarda ANTI-DUPLICADO de la cotización (08/10/2026). PURO, sin BD ni alias `@/`. Codeoscopic cobra 0,50 € por cada `POST /insurances` con 200, aunque sea el mismo proyecto repetido. Doble clic, recarga o dos pestañas = dos cargos; y un timeout (150 s) cuenta como facturable, así que el usuario repit",
       "exporta": [
+        "caducidadDePrecios",
         "jsonCanonico",
         "huellaCotizacion",
         "bloqueaDuplicado",
@@ -45206,12 +45207,21 @@
       ],
       "funciones": [
         {
+          "nombre": "caducidadDePrecios",
+          "kind": "function",
+          "exportada": true,
+          "params": "precios: ReadonlyArray<{ expiraEn: string | null }>",
+          "retorno": "number | null",
+          "linea": 32,
+          "resumen": "Caducidad (ms epoch) de una copia: la MÁS TEMPRANA de las `expirationDate` de sus precios, y solo si TODOS la declaran (un precio sin fecha no se da por vigente: «no se sabe» ≠ «vale 30 días»). `null`"
+        },
+        {
           "nombre": "jsonCanonico",
           "kind": "function",
           "exportada": true,
           "params": "v: unknown",
           "retorno": "string",
-          "linea": 20,
+          "linea": 44,
           "resumen": "JSON canónico: claves ordenadas a todos los niveles; `undefined` fuera (como hace `JSON.stringify`)."
         },
         {
@@ -45220,7 +45230,7 @@
           "exportada": true,
           "params": "e: { cuerpo: unknown ramo: string | null | undefined correduriaId: string oportunidadId?: string | null polizaId?: string | null }",
           "retorno": "string",
-          "linea": 36,
+          "linea": 60,
           "resumen": "sha256 (hex) de cuerpo canónico + ramo + correduría + contexto (`oportunidadId ?? polizaId`). El contexto evita que la misma petición lanzada desde OTRA oportunidad/póliza reutilice la copia de precio"
         },
         {
@@ -45229,7 +45239,7 @@
           "exportada": true,
           "params": "f: FilaPrevia, ahora: Date, ventanaMin = VENTANA_DUPLICADO_MIN",
           "retorno": "boolean",
-          "linea": 52,
+          "linea": 76,
           "resumen": "¿Esta fila previa bloquea? Reservada (en curso o timeout sin prueba) o facturable dentro de la ventana."
         },
         {
@@ -45238,7 +45248,7 @@
           "exportada": true,
           "params": "e: { previas: FilaPrevia[] copias: ReadonlySet<string> ahora: Date forzar?: boolean ventanaMin?: number /** Fecha de efecto (aaaa-mm-dd) del cuerpo que se va a enviar (= la de la copia: misma huella). */ fechaEfecto?: string | null /** Hoy ",
           "retorno": "DecisionDuplicado",
-          "linea": 71,
+          "linea": 95,
           "resumen": "Llamar / reutilizar / bloquear. `forzar` salta la guarda (recotización explícita del operador). `copias` = intentos cuya copia de precios consta en `tarificaciones` (con respuesta cruda). Dentro de 15"
         },
         {
@@ -45247,13 +45257,13 @@
           "exportada": true,
           "params": "e: { operacion: string correduriaId: string projectId: string precioId?: string | number | null productId?: string | number | null fechaEfecto?: string | null /** Opciones/descuentos/correcciones que viajan: otro cuerpo = otra operación (no",
           "retorno": "string",
-          "linea": 111,
+          "linea": 144,
           "resumen": "Huella de una operación de emisión (ReRate…) para frenar el doble clic (05/11/2026). Mismo contrato que `huellaCotizacion`: solo viaja el hash, nunca datos. Identifica «el mismo ReRate»: proyecto + pr"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "27195cb7cd96"
+      "hash": "9454610152cd"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/importar.ts",
@@ -47473,7 +47483,9 @@
       "ambito": "apps/asegura",
       "resumen": "Tras un 200 de `POST /insurances` el cargo (0,50 €) ya está hecho. PURO, sin BD. Si la respuesta no se puede interpretar (sin `projectId`…), NO se vuelve a cobrar al reintentar: la reserva se cierra como facturable y el mensaje lo dice claro.",
       "exporta": [
-        "leerTrasCobro"
+        "leerTrasCobro",
+        "projectIdDeCrudo",
+        "leerTrasCobroRecuperando"
       ],
       "funciones": [
         {
@@ -47483,11 +47495,29 @@
           "params": "crudo: unknown, leer: (raw: unknown) => Cotizacion = leerCotizacion,",
           "retorno": "",
           "linea": 10
+        },
+        {
+          "nombre": "projectIdDeCrudo",
+          "kind": "function",
+          "exportada": true,
+          "params": "crudo: unknown",
+          "retorno": "string | null",
+          "linea": 22,
+          "resumen": "`projectId` del 200 cobrado aunque la respuesta no se pueda interpretar entera (`id` de raíz: número o dígitos)."
+        },
+        {
+          "nombre": "leerTrasCobroRecuperando",
+          "kind": "function",
+          "exportada": true,
+          "params": "crudo: unknown, recuperar: ((projectId: string) => Promise<unknown>) | null, leer: (raw: unknown) => Cotizacion = leerCotizacion,",
+          "retorno": "Promise<",
+          "linea": 36,
+          "resumen": "Como `leerTrasCobro`, pero si la respuesta cobrada es ilegible y trae `projectId`, recupera el proyecto con un GET GRATIS (`GET /insurances/{id}`: Codeoscopic 06/11/2026, «Puedes hacer el GET sin cost"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7864ead4fb8a"
+      "hash": "5107505569c3"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/valores-ficha.ts",
@@ -64161,7 +64191,7 @@
         "codeoscopic_projects"
       ],
       "rutaApi": null,
-      "hash": "99c16ae805a1"
+      "hash": "9b1c4eb1719e"
     },
     {
       "ruta": "apps/asegura/lib/revision-anual.ts",
@@ -142504,7 +142534,7 @@
           "exportada": false,
           "params": "estado: DP[] | null, codes: string[]",
           "retorno": null,
-          "linea": 22
+          "linea": 23
         },
         {
           "nombre": "DomoticaClient",
@@ -142512,7 +142542,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 30
+          "linea": 31
         },
         {
           "nombre": "fmtDT",
@@ -142520,7 +142550,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 205
+          "linea": 206
         },
         {
           "nombre": "TarjetaAcceso",
@@ -142528,7 +142558,7 @@
           "exportada": false,
           "params": "{ d, apartamentos, ocupado, setOcupado, setError, cargar }: { d: Disp; apartamentos: { id: number; name: string }[]; ocupado: boolean; setOcupado: (b: boolean) => void; setError: (s: string | null) => void; cargar: () => Promise<void>; }",
           "retorno": null,
-          "linea": 209
+          "linea": 210
         },
         {
           "nombre": "SelectorTipo",
@@ -142536,7 +142566,7 @@
           "exportada": false,
           "params": "{ tipo, onChange, disabled }: { tipo: string; onChange: (v: string) => void; disabled?: boolean }",
           "retorno": null,
-          "linea": 444,
+          "linea": 450,
           "resumen": "Override manual del tipo de aparato: la categoría Tuya del NIVIAN puede no reconocerse y entonces la cerradura se pinta como ventilador. Aquí se fuerza «Cerradura» para que salga su tarjeta de acceso."
         },
         {
@@ -142545,14 +142575,14 @@
           "exportada": false,
           "params": "{ titulo, b }: { titulo: string; b: BloqueSonda }",
           "retorno": null,
-          "linea": 456
+          "linea": 462
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "3b7d9086eea0"
+      "hash": "725462bbbdcf"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/domotica/page.tsx",
@@ -155325,7 +155355,7 @@
         "next"
       ],
       "rutaApi": "/api/sivra/domotica/acceso/[id]/abrir",
-      "hash": "b44d87bffb59"
+      "hash": "01ae39a3d25e"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/domotica/acceso/[id]/pin/[ref]/route.ts",
@@ -155409,7 +155439,7 @@
         "next"
       ],
       "rutaApi": "/api/sivra/domotica/acceso/[id]",
-      "hash": "6fcec12d5634"
+      "hash": "4e4cad76a823"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/domotica/acceso/programador/route.ts",
@@ -155460,7 +155490,7 @@
           "exportada": false,
           "params": "pin: string, nombreDisp: string",
           "retorno": "string",
-          "linea": 78,
+          "linea": 81,
           "resumen": "Mensaje al huésped con el PIN (canal 'huesped'/'ambos'). Texto sobrio, sin datos de más."
         },
         {
@@ -155469,7 +155499,7 @@
           "exportada": false,
           "params": "cfg: ConfigAcceso, r: ReservaAcceso, pin: string, nombreDisp: string",
           "retorno": "Promise<boolean>",
-          "linea": 83,
+          "linea": 86,
           "resumen": "Entrega el PIN según el canal configurado. Devuelve true si se entregó por algún canal."
         },
         {
@@ -155478,7 +155508,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 101
+          "linea": 104
         }
       ],
       "tablas": [
@@ -155488,7 +155518,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/domotica/acceso/programador",
-      "hash": "9eafba50faa3"
+      "hash": "5f45f3ab3b6c"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/domotica/comando/route.ts",
@@ -155585,7 +155615,7 @@
         "next"
       ],
       "rutaApi": "/api/sivra/domotica/dispositivos",
-      "hash": "0d2569851043"
+      "hash": "b15ccbfe22a2"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/domotica/programador/route.ts",
@@ -155600,7 +155630,7 @@
           "exportada": false,
           "params": "dispId: string, accion: string, reservaRef: string | null, detalle: unknown",
           "retorno": null,
-          "linea": 19
+          "linea": 20
         },
         {
           "nombre": "GET",
@@ -155608,7 +155638,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 27
+          "linea": 28
         }
       ],
       "tablas": [
@@ -155617,7 +155647,7 @@
         "next"
       ],
       "rutaApi": "/api/sivra/domotica/programador",
-      "hash": "cbfca74b8749"
+      "hash": "97ad00f1df0a"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/eventos/calendario/route.ts",
@@ -185546,6 +185576,9 @@
         "madridOffsetMin",
         "madridEpoch",
         "ventanaPin",
+        "ventanaVencida",
+        "pinEntregadoVigente",
+        "protegeFilaDeError",
         "reconciliar",
         "necesitaAvisoOffline",
         "desajustesVentana"
@@ -185579,13 +185612,40 @@
           "resumen": "Ventana de validez del PIN de una reserva, en epoch (segundos), aplicando los márgenes."
         },
         {
+          "nombre": "ventanaVencida",
+          "kind": "function",
+          "exportada": true,
+          "params": "hastaEpoch: number, ahoraEpoch: number",
+          "retorno": "boolean",
+          "linea": 67,
+          "resumen": "¿La ventana ya venció? Nunca se crea ni se recrea un PIN en ese caso (Tuya responde 2334 expiry < now)."
+        },
+        {
+          "nombre": "pinEntregadoVigente",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: Pick<PinExistente, 'entregado' | 'tuyaPasswordId'>",
+          "retorno": "boolean",
+          "linea": 72,
+          "resumen": "Fila de un PIN YA ENTREGADO y con id en Tuya: un fallo de recreación no puede pisarla con `error`."
+        },
+        {
+          "nombre": "protegeFilaDeError",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { estado: string; entregado: boolean; tuyaPasswordId: string | null }, nuevoEstado: string",
+          "retorno": "boolean",
+          "linea": 78,
+          "resumen": "Espejo en TS de la guarda del ON CONFLICT de `upsertPin`: solo se protege la fila viva (activo/error) ya entregada con id en Tuya; sobre una fila `borrado`/`caducado` un error real de recreación SÍ se"
+        },
+        {
           "nombre": "reconciliar",
           "kind": "function",
           "exportada": true,
           "params": "reservas: ReservaAcceso[], cfg: CfgProgramador, existentes: PinExistente[], ahoraEpoch: number,",
           "retorno": "",
-          "linea": 69,
-          "resumen": "Decide qué crear y qué borrar. Idempotente por reserva_ref: - crear: reservas con autoPin activo que NO tengan ya un PIN vivo (activo). - borrar: PIN activos cuya ventana ya venció (si autoBorrarTrasC"
+          "linea": 89,
+          "resumen": "Decide qué crear, qué borrar y qué cerrar. Idempotente por reserva_ref: - crear: reservas con autoPin activo, sin PIN vivo (activo), con la ventana AÚN por venir y sin un PIN entregado en la fila (un "
         },
         {
           "nombre": "necesitaAvisoOffline",
@@ -185593,7 +185653,7 @@
           "exportada": true,
           "params": "online: boolean, proximoCheckinEpoch: number | null, ahoraEpoch: number, leadHoras: number,",
           "retorno": "boolean",
-          "linea": 87,
+          "linea": 118,
           "resumen": "¿Hay que avisar de cerradura offline antes de un check-in? True si la cerradura está offline y falta menos de `leadHoras` para el próximo check-in (para tener margen de resolverlo antes de que llegue "
         },
         {
@@ -185602,13 +185662,13 @@
           "exportada": true,
           "params": "reservas: ReservaAcceso[], cfg: CfgProgramador, existentes: PinExistente[], ahoraEpoch: number, toleranciaMin = 5,",
           "retorno": "Desajuste[]",
-          "linea": 136,
+          "linea": 167,
           "resumen": "PIN vivos cuya ventana ya no cuadra con la reserva + la config de hoy. Solo mira PIN en estado `activo` que tengan reserva viva: un `manual:*` o el PIN de una reserva que ya salió del horizonte no son"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "afea8d8fd688"
+      "hash": "e0879c983d75"
     },
     {
       "ruta": "apps/plataforma/lib/domotica/acceso-puro.ts",
@@ -185616,6 +185676,10 @@
       "resumen": "lib/domotica/acceso-puro.ts — parte PURA del cliente de acceso (sin IO), testeable con node --test. Vive aparte de acceso.ts para que los tests no arrastren el import de tuya.ts.",
       "exporta": [
         "elegirCodigoAbrir",
+        "elegirMetodoAbrir",
+        "resumirRespuestaTuya",
+        "esAperturaRemotaDesactivada",
+        "aperturaOk",
         "queryOrdenada",
         "variantesAperturas",
         "normalizarAcceso"
@@ -185627,7 +185691,43 @@
           "exportada": true,
           "params": "codes: string[]",
           "retorno": "string | null",
-          "linea": 9
+          "linea": 11
+        },
+        {
+          "nombre": "elegirMetodoAbrir",
+          "kind": "function",
+          "exportada": true,
+          "params": "codes: string[], categoria?: string | null",
+          "retorno": "MetodoAbrir | null",
+          "linea": 26,
+          "resumen": "Elige CÓMO abrir. Smart lock (categoría mk/ms/jtmspro, o solo expone `remote_no_dp_key`) → apertura remota sin contraseña. DP booleano real (unlock_request/open_door/manual_lock) → /commands. Nada → n"
+        },
+        {
+          "nombre": "resumirRespuestaTuya",
+          "kind": "function",
+          "exportada": true,
+          "params": "via: string, env: { success?: boolean; code?: number; msg?: string; result?: unknown }",
+          "retorno": "RespuestaTuya",
+          "linea": 38,
+          "resumen": "Recorta la respuesta de Tuya a lo que se puede guardar en el log (sin secretos: nada de tickets/claves)."
+        },
+        {
+          "nombre": "esAperturaRemotaDesactivada",
+          "kind": "function",
+          "exportada": true,
+          "params": "msg?: string",
+          "retorno": "boolean",
+          "linea": 46,
+          "resumen": "¿Tuya dice que la apertura remota está desactivada en la cerradura? (heurística sobre msg/code)."
+        },
+        {
+          "nombre": "aperturaOk",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: RespuestaTuya",
+          "retorno": "boolean",
+          "linea": 54,
+          "resumen": "Veredicto de un intento de apertura remota: ok solo si success y result no es false."
         },
         {
           "nombre": "queryOrdenada",
@@ -185635,7 +185735,7 @@
           "exportada": true,
           "params": "params: Record<string, string | number>",
           "retorno": "string",
-          "linea": 27,
+          "linea": 71,
           "resumen": "Query canónica de Tuya: los parámetros DEBEN ir ORDENADOS alfabéticamente por clave; si no, la firma HMAC v2 no valida y devuelve 1004 \"sign invalid\" (el servidor los reordena antes de recomputar la f"
         },
         {
@@ -185644,7 +185744,7 @@
           "exportada": true,
           "params": "deviceId: string, ahoraMs: number, ventanaMs = 90 * 24 * 60 * 60 * 1000,",
           "retorno": "Array<",
-          "linea": 36,
+          "linea": 80,
           "resumen": "Variantes documentadas para leer el HISTORIAL de aperturas de una cerradura Tuya, en orden de preferencia. El endpoint y los nombres de parámetro cambiaron entre versiones de la API (por eso el `open-"
         },
         {
@@ -185653,12 +185753,12 @@
           "exportada": true,
           "params": "clave: string, r: { ok: boolean; result?: unknown; msg?: string }",
           "retorno": "BloqueSonda",
-          "linea": 52
+          "linea": 96
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b66cee388937"
+      "hash": "0e5d429387b0"
     },
     {
       "ruta": "apps/plataforma/lib/domotica/acceso.ts",
@@ -185679,7 +185779,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 11
+          "linea": 14
         },
         {
           "nombre": "generarPin",
@@ -185687,7 +185787,7 @@
           "exportada": true,
           "params": "longitud: number",
           "retorno": "string",
-          "linea": 14,
+          "linea": 17,
           "resumen": "PIN aleatorio de N dígitos (crypto, no Math.random). Nunca empieza por 0 para no perder longitud."
         },
         {
@@ -185696,7 +185796,7 @@
           "exportada": false,
           "params": "method: string, path: string",
           "retorno": "Promise<",
-          "linea": 22,
+          "linea": 25,
           "resumen": "Envuelve una llamada door-lock: devuelve {ok, result|msg} sin lanzar."
         },
         {
@@ -185705,26 +185805,44 @@
           "exportada": false,
           "params": "deviceId: string",
           "retorno": "Promise<",
-          "linea": 34,
+          "linea": 37,
           "resumen": "Historial de aperturas de la cerradura: prueba las variantes documentadas (el endpoint/params de Tuya cambió entre versiones — el `open-logs` viejo daba 1100) y devuelve la PRIMERA que responde, anota"
         },
         {
           "nombre": "sondearAcceso",
           "kind": "function",
           "exportada": true,
-          "params": "deviceId: string",
+          "params": "deviceId: string, categoria?: string | null",
           "retorno": "Promise<",
-          "linea": 45,
+          "linea": 48,
           "resumen": "Sonda read-only: reúne spec + status (garantizados) + intentos door-lock (best effort)."
+        },
+        {
+          "nombre": "pedirTicketPassword",
+          "kind": "function",
+          "exportada": false,
+          "params": "deviceId: string, token: string",
+          "retorno": "Promise<",
+          "linea": 74,
+          "resumen": "Ticket de contraseña de Tuya (lo piden el PIN online y la apertura remota sin contraseña)."
+        },
+        {
+          "nombre": "abrirSinPassword",
+          "kind": "function",
+          "exportada": false,
+          "params": "deviceId: string",
+          "retorno": "Promise<ResultadoAbrir>",
+          "linea": 88,
+          "resumen": "Apertura remota SIN contraseña (smart lock): ticket → open-door; si falla, door-operate (ticket nuevo)."
         },
         {
           "nombre": "abrirMomentaneo",
           "kind": "function",
           "exportada": true,
-          "params": "deviceId: string",
-          "retorno": "Promise<",
-          "linea": 70,
-          "resumen": "Apertura momentánea: manda el DP de abrir (pulso). El relé del NIVIAN cierra solo. Devuelve { ok } o { ok:false, error } — nunca deja \"mantener abierta\"."
+          "params": "deviceId: string, categoria?: string | null",
+          "retorno": "Promise<ResultadoAbrir>",
+          "linea": 125,
+          "resumen": "DP booleano real → /commands. Devuelve el método usado y la respuesta de Tuya para registrarlos."
         },
         {
           "nombre": "crearPinOnline",
@@ -185732,7 +185850,7 @@
           "exportada": false,
           "params": "deviceId: string, pin: string, nombre: string, effectiveEpoch: number, invalidEpoch: number",
           "retorno": "Promise<ResultadoPin>",
-          "linea": 97,
+          "linea": 154,
           "resumen": "Contraseña ONLINE: ticket + AES. `effectiveEpoch`/`invalidEpoch` en segundos."
         },
         {
@@ -185741,7 +185859,7 @@
           "exportada": false,
           "params": "deviceId: string, nombre: string, effectiveEpoch: number, invalidEpoch: number",
           "retorno": "Promise<ResultadoPin>",
-          "linea": 123,
+          "linea": 178,
           "resumen": "Contraseña OFFLINE: Tuya genera el código (no lo elegimos) y funciona sin conexión de la cerradura."
         },
         {
@@ -185750,7 +185868,7 @@
           "exportada": true,
           "params": "deviceId: string, opts: { nombre: string; desdeEpoch: number; hastaEpoch: number; pinPreferido?: string; longitud?: number },",
           "retorno": "Promise<ResultadoPin>",
-          "linea": 135,
+          "linea": 190,
           "resumen": "Crea un PIN temporal para la ventana dada. Devuelve el código a entregar o un error claro."
         },
         {
@@ -185759,7 +185877,7 @@
           "exportada": true,
           "params": "deviceId: string, tuyaPasswordId: string",
           "retorno": "Promise<",
-          "linea": 153,
+          "linea": 208,
           "resumen": "Borra un PIN temporal por su id de Tuya. Prueba online y offline. Idempotente-ish (si ya no existe, ok)."
         },
         {
@@ -185768,13 +185886,13 @@
           "exportada": true,
           "params": "deviceId: string",
           "retorno": "Promise<",
-          "linea": 168,
+          "linea": 223,
           "resumen": "Lista los PIN temporales que la cerradura expone por cloud (para conciliar / diagnosticar)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6e29688a9cd9"
+      "hash": "06952e6fa492"
     },
     {
       "ruta": "apps/plataforma/lib/domotica/meteo.ts",
@@ -185963,7 +186081,7 @@
         "domotica_dispositivos"
       ],
       "rutaApi": null,
-      "hash": "1163e92cc1ea"
+      "hash": "053c26eec770"
     },
     {
       "ruta": "apps/plataforma/lib/domotica/tipo.ts",
@@ -186125,12 +186243,21 @@
           "resumen": "Códigos de error de suscripción/permiso del trial de IoT Core (observados en docs/foros)."
         },
         {
+          "nombre": "requestRaw",
+          "kind": "function",
+          "exportada": false,
+          "params": "method: string, path: string, body?: unknown, accessToken?: string",
+          "retorno": "Promise<TuyaEnvelopeRaw<T>>",
+          "linea": 40,
+          "resumen": "Igual que `request` pero SIN lanzar si Tuya responde success:false: devuelve el sobre entero (success, code, msg, result) para poder registrarlo tal cual (p. ej. el log de «abrir»)."
+        },
+        {
           "nombre": "request",
           "kind": "function",
           "exportada": false,
           "params": "method: string, path: string, body?: unknown, accessToken?: string",
           "retorno": "Promise<T>",
-          "linea": 36
+          "linea": 59
         },
         {
           "nombre": "getToken",
@@ -186138,7 +186265,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<string>",
-          "linea": 61
+          "linea": 70
         },
         {
           "nombre": "normalizarDispositivo",
@@ -186146,7 +186273,7 @@
           "exportada": true,
           "params": "d: Record<string, unknown>",
           "retorno": "TuyaDevice",
-          "linea": 73,
+          "linea": 82,
           "resumen": "Normaliza una fila de dispositivo de CUALQUIERA de los dos endpoints de listado (los nombres de campo difieren: associated-users usa name/online, cloud/thing usa customName/isOnline)."
         },
         {
@@ -186155,7 +186282,7 @@
           "exportada": true,
           "params": "...listas: TuyaDevice[][]",
           "retorno": "TuyaDevice[]",
-          "linea": 83,
+          "linea": 92,
           "resumen": "Fusiona varias listas deduplicando por id; la PRIMERA aparición gana (orden de prioridad)."
         },
         {
@@ -186164,7 +186291,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<TuyaDevice[]>",
-          "linea": 93,
+          "linea": 102,
           "resumen": "Dispositivos de las cuentas de app vinculadas al proyecto por QR (\"Link App Account\"). Es el endpoint correcto para el flujo de setup (docs/DOMOTICA-TUYA.md): el ventilador se vincula escaneando el QR"
         },
         {
@@ -186173,7 +186300,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<TuyaDevice[]>",
-          "linea": 112,
+          "linea": 121,
           "resumen": "Dispositivos importados DIRECTAMENTE al proyecto cloud (sin cuenta de app). Complementa al anterior por si algún cacharro se añadió por ese camino en vez del QR."
         },
         {
@@ -186182,7 +186309,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<TuyaDevice[]>",
-          "linea": 124,
+          "linea": 133,
           "resumen": "Dispositivos visibles para el proyecto por CUALQUIER vía de alta (QR + importados). Prueba ambos endpoints y los fusiona. Si el principal (QR) falla y el secundario no aporta nada, propaga el error re"
         },
         {
@@ -186191,7 +186318,7 @@
           "exportada": true,
           "params": "deviceId: string",
           "retorno": "Promise<TuyaDP[]>",
-          "linea": 137
+          "linea": 146
         },
         {
           "nombre": "tuyaGetSpec",
@@ -186199,7 +186326,7 @@
           "exportada": true,
           "params": "deviceId: string",
           "retorno": "Promise<",
-          "linea": 142
+          "linea": 151
         },
         {
           "nombre": "tuyaSendCommands",
@@ -186207,7 +186334,7 @@
           "exportada": true,
           "params": "deviceId: string, commands: TuyaDP[]",
           "retorno": "Promise<void>",
-          "linea": 147
+          "linea": 156
         },
         {
           "nombre": "elegirCodigo",
@@ -186215,7 +186342,7 @@
           "exportada": true,
           "params": "codes: string[], candidatos: readonly string[]",
           "retorno": "string | null",
-          "linea": 158
+          "linea": 167
         },
         {
           "nombre": "codigoVentilador",
@@ -186223,13 +186350,13 @@
           "exportada": true,
           "params": "deviceId: string",
           "retorno": "Promise<",
-          "linea": 164,
+          "linea": 173,
           "resumen": "Code del switch del ventilador según el estado actual del dispositivo."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e1346c411fdd"
+      "hash": "7d469101095f"
     },
     {
       "ruta": "apps/plataforma/lib/duplicados-asegura.ts",
@@ -296696,6 +296823,6 @@
   ],
   "resumen": {
     "archivos": 6062,
-    "funciones": 24036
+    "funciones": 24049
   }
 }

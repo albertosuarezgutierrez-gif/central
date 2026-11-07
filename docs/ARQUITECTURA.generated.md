@@ -303,6 +303,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, contabilidad, housesevillana, mariscos, taller, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (05/11/2026) 05/11/2026) Domótica · Socorro: «Abrir» no abría + PIN automático muerto desde 11/09 (PR #5576, mergeado 07/11)
 - (05/11/2026) 05/11/2026) Correduría · Avant2 sin gasto en balde + renovación por la app (PR #5555, #5557, #5562, #5569)
 - (05/11/2026) 05/11/2026) Plataforma · lupa de búsqueda de la correduría en la cabecera
 - (05/11/2026) 05/11/2026) Plataforma · «Nueva tarea» no guardaba + atajo en cabecera fija
@@ -312,5 +313,4 @@
 - (04/11/2026) 04/11/2026) Correduría · WhatsApp: aprendizaje + autonomía gradual
 - (04/11/2026) 04/11/2026) Correduría · WhatsApp: respuestas del cliente → propuestas CRM — PR #5486
 - (03/11/2026) 03/11/2026) Correduría · regularización RC fase 3 (respuesta a Occident + cierre manual) — ✅ PR #5472 mergeado
-- (03/11/2026) 03/11/2026) Correduría · buscador de cartera tolerante (caso Antonio Villegas)
 
