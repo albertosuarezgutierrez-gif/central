@@ -123,7 +123,7 @@ export async function comparativaDeOportunidad(correduriaId: string, oportunidad
 }
 
 /** La última tarificación REAL de Avant2 colgada de la oportunidad (con o sin póliza). `null` = no hay. */
-async function ultimaAvant2DeOportunidad(correduriaId: string, oportunidadId: string) {
+export async function ultimaAvant2DeOportunidad(correduriaId: string, oportunidadId: string) {
   const [t] = await prisma.$queryRaw<{ id: string; creado_at: Date; project_id_codeoscopic: string | null; peticion: unknown; fallos: unknown }[]>`
     select id::text as id, creado_at, project_id_codeoscopic, peticion, fallos
     from tarificaciones

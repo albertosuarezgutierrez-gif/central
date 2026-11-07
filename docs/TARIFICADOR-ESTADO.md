@@ -12,9 +12,11 @@ Actualizado: 07/11/2026
 
 ## 1b. Coste y estado de compañías en Avant2 (07/11/2026)
 
-- **Coste según contrato** (Codeoscopic, «Contrato Workspace 2025.v2», 20/05/2026, cláusula séptima): «Api Rest modelo 3, importe de cotizaciones, 0.50 euros+IVA/cotiz». El contrato fija precio solo por cotización y NO menciona ReRate, pre-emisión ni emisión (ni como cobrables ni como gratuitas): siguen contándose a 0,50 € en el libro hasta confirmación escrita; no se ha puesto su coste a 0.
+- **Coste según contrato** (Codeoscopic, «Contrato Workspace 2025.v2», 20/05/2026, cláusula séptima): «Api Rest modelo 3, importe de cotizaciones, 0.50 euros+IVA/cotiz». El contrato fija precio solo por cotización y NO menciona ReRate, pre-emisión ni emisión (ni como cobrables ni como gratuitas). Alberto lo confirma («solo por tarificar») y Codeoscopic también (02/10 y 06/11): desde el 07/11 ReRate/Submit cuentan 0 € en el libro (los topes de número siguen).
 - **Pelayo** en Avant2: conectado, pero devuelve «Riesgo no asegurable» en perfiles fuera de su nicho. No es error: es selección de riesgo (Pelayo es barata para riesgos específicos).
-- **Mapfre** en Avant2: solo producto 2026. Pendiente de verificar con la próxima cotización real si devuelve precio, antes de preguntar a Codeoscopic.
+- **Mapfre** en Avant2: producto 2026 VERIFICADO con la cotización real del 06/11 (auto, 11 precios). Generali: código 2115 (producto en piloto → ticket a Soporte).
+- **Criterio de afinaciones del panel (Alberto, 07/11/2026):** los campos que DECLARAN el riesgo (alarma, domótica, prefabricada, animales, baños, póliza de comunidad…) van en su valor veraz por defecto (No / 0), nunca «Sí» para abaratar: un riesgo mal declarado deja el siniestro sin cubrir. El máximo solo en lo comercial (descuentos/comisión; el ReRate ya pide 50 y baja si la compañía lo rechaza). Lo que cambie por cliente sale de SUS datos, no de la afinación.
+- **Qué devuelve la API:** al cotizar no mandamos esas opciones (aplica la afinación del panel). El GET gratis `…/offers/{oferta}/coverages` devuelve `formattedOptions` = etiqueta + valor aplicados (se guardan en `tarificacion_precios.opciones`), pero SIN el id del campo. Para mandar el valor real de un cliente hay que ponerlo en el ReRate (gratis) con el id del campo, que solo sale del formulario de Avant2 (como se hizo con los descuentos de Allianz/Generali el 03/10). Mapfre hogar aún no se ha cotizado por Avant2 (solo bots): pendiente ver sus campos en la primera cotización real.
 
 ## 2. Compañía × ramo × canal
 
@@ -61,10 +63,10 @@ Actualizado: 07/11/2026
 
 ## Ideas añadidas al plan (04/11/2026, Alberto: «añade todas»)
 1. **Plantilla de alta de compañía** — tras el primer precio de Pelayo: recorrido común + ficha por compañía (dominios, pasos, pantalla de precio, inicio de emisión) + permisos en BD. Objetivo: compañía nueva en 1–2 pilotajes.
-2. **Comparativa por nivel de cobertura** — agrupar ofertas (bot y Avant2) en terceros / terceros ampliado / todo riesgo con las coberturas guardadas y dar la más barata de cada nivel (hoy «la más barata» compara coberturas distintas).
+2. **Comparativa por nivel de cobertura** — HECHO (07/11: niveles + bot vs Avant2 en el aviso). agrupar ofertas (bot y Avant2) en terceros / terceros ampliado / todo riesgo con las coberturas guardadas y dar la más barata de cada nivel (hoy «la más barata» compara coberturas distintas).
 3. **Corregir datos que hacen fallar** — póliza anterior (Occident exige 5 caracteres; Allianz rechaza `previousInsurancePolicy`) y equivalencia de vehículo en Mapfre.
 4. **Matrícula por bot como primer paso de todo lead de coche** — modo `vehiculo` (0.3.48) rellena la ficha gratis antes de tarificar (activar tras probar con una matrícula real).
-5. **Alarma de compañía sin precio** — Telegram si una compañía lleva 3 días sin precio o encadena errores (datos del panel de estado).
+5. **Alarma de compañía sin precio** — HECHO (PR #5538; apagada con `TARIFICADOR_ALARMA_ACTIVA`, encender en Vercel central-asegura). Telegram si una compañía lleva 3 días sin precio o encadena errores (datos del panel de estado).
 6. **Re-tarificación de cartera en vigor a 45 días del vencimiento** — bot primero; Avant2 solo con el botón 💶.
 Pendiente de Alberto: capturas del panel de Avant2 (prompt de Claude en Chrome), URLs de los pasos de Pelayo, compañías principales por volumen, consulta del código 2115 de Generali a Codeoscopic.
 

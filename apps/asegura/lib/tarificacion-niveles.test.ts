@@ -2,7 +2,7 @@
 // `tarificacion_precios` (Avant2: categoría/modalidad; bot RPA: producto «Auto · …» + coberturas `{nombre, incluida}`).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { lineasMasBarataPorNivel, masBarataPorNivel, MAX_LINEAS_NIVELES, nivelDeOferta, SIN_CLASIFICAR, type OfertaParaNivel } from './tarificacion-niveles.ts'
+import { lineasBotVsAvant2, lineasMasBarataPorNivel, masBarataPorNivel, parejasBotAvant2, MAX_LINEAS_NIVELES, nivelDeOferta, SIN_CLASIFICAR, type OfertaParaNivel } from './tarificacion-niveles.ts'
 import { textoAvisoPresupuestoRpa } from './presupuesto-rpa-reglas.ts'
 
 const av = (compania: string, categoria: string, modalidad: string, primaEur: number, extra: Partial<OfertaParaNivel> = {}): OfertaParaNivel => ({
@@ -110,6 +110,32 @@ test('hogar: continente/contenido + RC + daños eléctricos; si falta algo, sin 
   assert.equal(nivel('hogar', rpa('allianz', 'Allianz HOGAR · COMPLETO', 250)), SIN_CLASIFICAR)
   const r = masBarataPorNivel('hogar', [rpa('A', 'Hogar', 300, { coberturas: completa }), rpa('C', 'Hogar', 280, { coberturas: completa }), rpa('D', 'Hogar', 100)])
   assert.deepEqual([r.niveles.length, r.niveles[0]!.masBarata.compania, r.sinClasificar.length], [1, 'C', 1])
+})
+
+test('bot ↔ Avant2: pareja por compañía y nivel con diferencia en € y %, sin inventar la otra mitad', () => {
+  const b = (c: string, prod: string, p: number, e: Partial<OfertaParaNivel> = {}) => rpa(c, prod, p, { origen: 'bot', ...e })
+  const a = (c: string, cat: string, p: number, e: Partial<OfertaParaNivel> = {}) => av(c, cat, `${c} ${cat}`, p, { origen: 'avant2', ...e })
+  const r = masBarataPorNivel('auto', [
+    b('Reale', 'Auto · Terceros', 200), a('Reale', 'Terceros', 220), a('Reale', 'Terceros', 250), // pareja: Avant2 +20 (+10%)
+    b('Mapfre', 'Auto · Terceros', 300), // solo bot
+    a('Fiatc', 'Terceros', 180), // solo Avant2
+    b('Allianz', 'Auto · Terceros', 200), a('Allianz', 'Terceros', 200), // empate exacto
+    b('Pelayo', 'Auto · Terceros', 100, { origen: null }), a('Pelayo', 'Terceros', 120), // sin origen: no hay pareja
+    b('Zurich', 'Auto', 100), a('Zurich', '', 90), // sin categoría: sin clasificar
+  ])
+  const p = parejasBotAvant2(r)
+  assert.deepEqual(p.map((x) => x.compania).sort(), ['Allianz', 'Reale'])
+  const reale = p.find((x) => x.compania === 'Reale')!
+  assert.deepEqual([reale.nivel, reale.botEur, reale.avant2Eur, reale.diferenciaEur, reale.diferenciaPct], ['Terceros básico', 200, 220, 20, 10])
+  assert.equal(p.find((x) => x.compania === 'Allianz')!.diferenciaEur, 0)
+  assert.ok(r.sinClasificar.some((x) => x.compania === 'Zurich'))
+  assert.equal(r.niveles[0]!.masBarata.compania, 'Pelayo')
+  const l = lineasBotVsAvant2(r)
+  assert.equal(l.length, 2)
+  assert.match(l.find((x) => x.includes('Reale'))!, /bot 200,00€ vs Avant2 220,00€ — Avant2 \+20,00€ \(\+10%\)/)
+  assert.deepEqual(lineasBotVsAvant2(null), [])
+  assert.deepEqual(parejasBotAvant2(masBarataPorNivel('auto', [b('X', 'Auto · Terceros', 100)])), [])
+  assert.match(textoAvisoPresupuestoRpa({ cliente: null, referencia: 'OP-1', ramo: 'auto', companias: ['Reale'], primas: [200], enlace: 'x', narrativa: 'ia', sinIa: null, niveles: r }), /🔁 Terceros básico · Reale/)
 })
 
 test('Telegram: ≤4 líneas, dinero en español, y el bloque va en el aviso sin romper coherencia', () => {
