@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-11-05T07:59:47Z",
+  "generadoEn": "2026-11-05T09:23:05Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1713,7 +1713,7 @@
       },
       "contabilidad": {
         "estado": "usado",
-        "evidencias": 51
+        "evidencias": 65
       },
       "housesevillana": {
         "estado": "no",
@@ -5470,15 +5470,19 @@
       "/api/banco/conciliar",
       "/api/banco/importar",
       "/api/banco/reglas",
+      "/api/cierre",
       "/api/compras",
       "/api/compras/proveedor",
       "/api/cron/avisos",
+      "/api/cuentas-anuales",
       "/api/hechos",
       "/api/impuestos/calcular",
       "/api/impuestos/declaraciones/[id]",
       "/api/impuestos/declaraciones/[id]/borrador",
       "/api/impuestos/libros",
+      "/api/impuestos/sociedades",
       "/api/informes/[clave]",
+      "/api/inmovilizado",
       "/api/operador/empresas",
       "/api/pagos",
       "/api/reglas"
@@ -7179,10 +7183,13 @@
     "asegura-web": [],
     "contabilidad": [
       "contabilidad.acceso_otps",
+      "contabilidad.activos_fijos",
+      "contabilidad.amortizacion_tabla",
       "contabilidad.apuntes",
       "contabilidad.asientos",
       "contabilidad.auditoria",
       "contabilidad.avisos",
+      "contabilidad.cierres_ejercicio",
       "contabilidad.conciliaciones",
       "contabilidad.consentimiento_seguros",
       "contabilidad.declaraciones",
@@ -7192,6 +7199,7 @@
       "contabilidad.hechos_contables",
       "contabilidad.movimientos_banco",
       "contabilidad.origenes_autorizados",
+      "contabilidad.periodificaciones",
       "contabilidad.plan_cuentas",
       "contabilidad.proveedores",
       "contabilidad.reglas_asiento",
@@ -7510,6 +7518,7 @@
       "rrhh.mensajes",
       "rrhh.nominas",
       "rrhh.push_subscriptions",
+      "rrhh.situacion_familiar",
       "rrhh.solicitudes",
       "rrhh.usuarios_rrhh"
     ],
@@ -8309,7 +8318,7 @@
     "packages": 49,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1950,
+    "apis": 1954,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

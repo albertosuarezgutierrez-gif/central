@@ -108,6 +108,7 @@ export const SEMILLA_PGC_PYMES: readonly FilaSemilla[] = [
   ['642', 'Seguridad Social a cargo de la empresa', 'D'],
   ['649', 'Otros gastos sociales', 'D'],
   ['662', 'Intereses de deudas', 'D'],
+  ['671', 'Pérdidas procedentes del inmovilizado material', 'D'],
   ['669', 'Otros gastos financieros', 'D'],
   ['680', 'Amortización del inmovilizado intangible', 'D'],
   ['681', 'Amortización del inmovilizado material', 'D'],
@@ -124,6 +125,7 @@ export const SEMILLA_PGC_PYMES: readonly FilaSemilla[] = [
   ['752', 'Ingresos por arrendamientos', 'A'],
   ['759', 'Ingresos por servicios diversos', 'A'],
   ['769', 'Otros ingresos financieros', 'A'],
+  ['771', 'Beneficios procedentes del inmovilizado material', 'A'],
 ]
 
 const CODIGO_RE = /^[1-9][0-9]{2,}$/

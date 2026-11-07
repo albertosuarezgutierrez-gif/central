@@ -38,3 +38,13 @@ export function aplicarTipo(base: Centimos, tipo: Ppm): Centimos {
   if (!esCentimos(base) || !Number.isSafeInteger(tipo)) throw new Error('aplicarTipo exige enteros (céntimos y ppm)')
   return Math.round((base * tipo) / 1_000_000)
 }
+
+/** 1 centésima de punto porcentual (0,01 %) = 100 ppm. Los tipos de retención se expresan con 2 decimales de %. */
+export const PPM_POR_CENTESIMA = 100
+
+/** Tipo = num / den en % con 2 decimales (redondeo al más próximo, o `abajo`), devuelto en ppm. num, den enteros; den > 0. */
+export function cocienteATipo(num: number, den: number, redondeo: 'cercano' | 'abajo' = 'cercano'): Ppm {
+  if (!Number.isSafeInteger(num) || !Number.isSafeInteger(den) || den <= 0) throw new Error('cocienteATipo exige enteros y denominador > 0')
+  const centesimas = (num * 10_000) / den
+  return (redondeo === 'abajo' ? Math.floor(centesimas) : Math.round(centesimas)) * PPM_POR_CENTESIMA
+}

@@ -102,8 +102,21 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
         { error: 'Este empleado tiene documentos firmados: no puede borrarse (se conserva por evidencia legal). Dale de baja en su lugar.' },
         { status: 409 })
     }
-    await prisma.$executeRaw(Prisma.sql`DELETE FROM rrhh.documentos WHERE empleado_id=${id}::uuid AND empresa_id=${empresa_id}::uuid`)
-    await prisma.$executeRaw(Prisma.sql`DELETE FROM rrhh.empleados WHERE id=${id}::uuid AND empresa_id=${empresa_id}::uuid`)
+    const MSG_145 = 'Este empleado tiene comunicaciones de situación familiar (modelo 145): no puede borrarse (son evidencia de sus nóminas). Dale de baja en su lugar.'
+    // 0032 (FK RESTRICT): se avisa ANTES de borrar nada. Si la tabla aún no existe (migración sin aplicar), no hay 145 que proteger.
+    try {
+      const f145 = await prisma.$queryRaw<any[]>(Prisma.sql`
+        SELECT 1 FROM rrhh.situacion_familiar WHERE empleado_id=${id}::uuid AND empresa_id=${empresa_id}::uuid LIMIT 1`)
+      if (f145[0]) return NextResponse.json({ error: MSG_145 }, { status: 409 })
+    } catch (e) { if (!/situacion_familiar|42P01/.test(String((e as any)?.message ?? e) + String((e as any)?.meta?.code ?? ''))) throw e }
+    try {
+      await prisma.$executeRaw(Prisma.sql`DELETE FROM rrhh.documentos WHERE empleado_id=${id}::uuid AND empresa_id=${empresa_id}::uuid`)
+      await prisma.$executeRaw(Prisma.sql`DELETE FROM rrhh.empleados WHERE id=${id}::uuid AND empresa_id=${empresa_id}::uuid`)
+    } catch (e) {
+      // Carrera: se creó un 145 entre la comprobación y el borrado → la FK RESTRICT (23503) lo impide.
+      if (/23503|situacion_familiar_empleado_fk/.test(String((e as any)?.message ?? e) + String((e as any)?.meta?.code ?? ''))) return NextResponse.json({ error: MSG_145 }, { status: 409 })
+      throw e
+    }
     return NextResponse.json({ ok: true })
   } catch (e) { if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: 401 }); throw e }
 }
