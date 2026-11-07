@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-07T09:17:39Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-07T10:32:26Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 15 apps · 49 packages · 23 capacidades · 44 skills · 1967 rutas API.
+**Resumen:** 15 apps · 49 packages · 23 capacidades · 44 skills · 1968 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -20,8 +20,8 @@
 ### asegura
 - **Módulos que usa:** core-ai, core-catastro, core-direccion, core-email, core-firma, core-identity, core-telegram, core-vehiculos, module-patrimonio, module-seguros, module-seguros-pii, module-seguros-portal, module-tarificacion
 - **Capacidades:** QR / portal cliente
-- **Tablas (156):** de, if, seguros._volcado_control, seguros.acuerdo_comisiones, seguros.acuerdo_objetivos, seguros.acuerdos_compania, seguros.anulacion, seguros.aprobacion, seguros.auditoria, seguros.aviso_web, seguros.backfill_dni_plan, seguros.bien_documentos, seguros.bienes_asegurables, seguros.borradores_presupuesto, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.cambio_cuenta_solicitud, seguros.campana_envio, seguros.carta_mediador, seguros.cartera_foto, seguros.channel_inbound_messages, seguros.cima_decisiones, seguros.cima_ficheros, seguros.claves_mediador, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_mote, seguros.cliente_relaciones…
-- **Rutas API:** 321
+- **Tablas (158):** de, if, seguros._volcado_control, seguros.acuerdo_comisiones, seguros.acuerdo_objetivos, seguros.acuerdos_compania, seguros.anulacion, seguros.aprobacion, seguros.auditoria, seguros.aviso_web, seguros.backfill_dni_plan, seguros.bien_documentos, seguros.bienes_asegurables, seguros.borradores_presupuesto, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.cambio_cuenta_solicitud, seguros.campana_envio, seguros.carta_mediador, seguros.cartera_foto, seguros.channel_inbound_messages, seguros.cima_decisiones, seguros.cima_ficheros, seguros.claves_mediador, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_mote, seguros.cliente_relaciones…
+- **Rutas API:** 322
 ### asegura-portal
 - **Módulos que usa:** core-ai, core-catastro, core-direccion, core-email, core-identity, core-push, core-telegram, module-documental, module-patrimonio, module-seguros, module-seguros-pii, module-seguros-portal, module-tarificacion
 - **Capacidades:** QR / portal cliente, Facturación / VeriFactu, Escáner / OCR, Notificaciones (push)
@@ -33,7 +33,7 @@
 - **Tablas (0):** —
 - **Rutas API:** 3
 ### contabilidad
-- **Módulos que usa:** core-banca, core-fiscal, core-identity, module-contabilidad
+- **Módulos que usa:** core-banca, core-email, core-fiscal, core-identity, module-contabilidad, module-seguros
 - **Capacidades:** Informes
 - **Tablas (28):** contabilidad.acceso_otps, contabilidad.activos_fijos, contabilidad.amortizacion_tabla, contabilidad.apuntes, contabilidad.asientos, contabilidad.auditoria, contabilidad.avisos, contabilidad.cierres_ejercicio, contabilidad.comentarios, contabilidad.conciliaciones, contabilidad.consentimiento_seguros, contabilidad.declaraciones, contabilidad.ejercicios, contabilidad.empresas, contabilidad.facturas_recibidas, contabilidad.hechos_contables, contabilidad.movimientos_banco, contabilidad.origenes_autorizados, contabilidad.periodificaciones, contabilidad.plan_cuentas, contabilidad.proveedores, contabilidad.reglas_asiento, contabilidad.reglas_conciliacion, contabilidad.revisiones, contabilidad.terceros, contabilidad.usuario_empresas, contabilidad.usuarios, sin
 - **Rutas API:** 32
@@ -100,7 +100,7 @@
   - Lo usan: asegura, asegura-portal, ia-rest, ialimp, plataforma, taller, transporte
   - Depende de: core-catastro
 - **core-email** (core) → `@central/core-email`
-  - Lo usan: asegura, asegura-portal, ialimp, plataforma, rrhh, sivra
+  - Lo usan: asegura, asegura-portal, contabilidad, ialimp, plataforma, rrhh, sivra
   - Depende de: —
 - **core-firma** (core) → `@central/core-firma`
   - Lo usan: asegura, ialimp, rrhh
@@ -202,7 +202,7 @@
   - Lo usan: ialimp, rrhh
   - Depende de: core-firma, module-documental
 - **module-seguros** (module) → `@central/module-seguros`
-  - Lo usan: asegura, asegura-portal, asegura-web, plataforma
+  - Lo usan: asegura, asegura-portal, asegura-web, contabilidad, plataforma
   - Depende de: core-ai, core-direccion, module-seguros-pii, module-seguros-portal, module-tarificacion
 - **module-seguros-pii** (module) → `@central/module-seguros-pii`
   - Lo usan: asegura, asegura-portal
