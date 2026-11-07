@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { getSesion, AuthError } from '@/lib/tenant'
-import { generarAccesoToken, normalizarEmpleado } from '@/lib/empleados'
-import { nuevaPersonaId } from '@central/core-identity'
+import { validarAltaRapida } from '@/lib/alta-empleado'
+import { darDeAltaLote } from '@/lib/alta-empleado-repo'
+import { codigoError } from '@/lib/codigo-error'
 import { saldoVacacionesEmpleados } from '@/lib/solicitudes'
 import { SQL_COLUMNAS_LISTADO_EMPLEADOS } from '@/lib/empleados-columnas'
 
@@ -28,16 +29,16 @@ export async function POST(req: Request) {
   try {
     const { empresa_id } = await getSesion()
     const body = await req.json().catch(() => ({}))
-    const n = normalizarEmpleado(body)
-    const token = generarAccesoToken()
-    const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
-      INSERT INTO rrhh.empleados (empresa_id, nombre, apellidos, dni, email, telefono, puesto, acceso_token, persona_id)
-      VALUES (${empresa_id}::uuid, ${n.nombre}, ${n.apellidos}, ${n.dni}, ${n.email}, ${n.telefono}, ${body.puesto ?? null}, ${token}, ${nuevaPersonaId()}::uuid)
-      RETURNING id, nombre, apellidos`)
-    return NextResponse.json({ empleado: rows[0] }, { status: 201 })
+    // Misma escritura que el asistente y la importación (lib/alta-empleado-repo.ts): duplicados mirados bajo cerrojo.
+    const v = validarAltaRapida(body ?? {})
+    if (!v.ok) return NextResponse.json({ error: v.error }, { status: 400 })
+    const r = await darDeAltaLote(empresa_id, [v.alta])
+    if (!r.creados.length) return NextResponse.json({ error: r.rechazadas[0]?.motivo ?? 'No se pudo crear' }, { status: 409 })
+    return NextResponse.json({ empleado: { id: r.creados[0].id, nombre: v.alta.nombre, apellidos: v.alta.apellidos } }, { status: 201 })
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: 401 })
-    if (e instanceof Error && e.message.includes('obligatorio')) return NextResponse.json({ error: e.message }, { status: 400 })
-    throw e
+    // 🚨 No se relanza: el error de Prisma lleva valores de la fila (DNI, NAF, IBAN) y Next lo volcaría al log.
+    console.error('[empleados] alta fallida', codigoError(e))
+    return NextResponse.json({ error: 'No se ha podido dar de alta al empleado. Vuelve a intentarlo.' }, { status: 500 })
   }
 }

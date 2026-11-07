@@ -2,6 +2,7 @@
 export const EVENTOS = {
   bonificacion_calculo: 'bonificacion_calculo', // primer resultado completo en la calculadora de bonificación hipotecaria (prop `compensa`)
   calculadora_calculo: 'calculadora_calculo', // la persona pulsó calcular en la calculadora de vencimientos
+  coste_trabajador_calculo: 'coste_trabajador_calculo', // primer resultado tras tocar un dato en la calculadora de coste de un trabajador (props `flexible`, `aproximado`; NUNCA el salario)
   cta_portal_click: 'cta_portal_click', // clic en cualquier botón que lleva al portal (prop `origen`)
   acceso_click: 'acceso_click', // clic en un acceso que NO va al portal: herramientas, ramos, siniestro, WhatsApp, «que me llamen» (prop `origen`)
   lead_enviado: 'lead_enviado', // el formulario de contacto respondió ok (prop `ramo`)

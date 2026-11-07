@@ -202,6 +202,8 @@ export const NAV = [
   { href: '/carta-baja-seguro', texto: 'Carta para dar de baja un seguro' },
   // 29/09/2026: la calculadora del seguro del banco, enlazada desde el pie por lo mismo.
   { href: '/calculadora-bonificacion-hipoteca', texto: 'Calculadora del seguro de la hipoteca' },
+  // 07/11/2026: calculadora del coste de contratar (motor de nóminas), con el seguro de salud como retribución flexible.
+  { href: '/calculadora-coste-trabajador', texto: 'Calculadora del coste de un trabajador' },
   // 30/09/2026: entrada nueva por otro agente, enlazada desde cabecera pero fuera de ella.
   { href: '/seguro-hipoteca-banco-obligatorio', texto: '¿Es obligatorio el seguro del banco?' },
 ] as const

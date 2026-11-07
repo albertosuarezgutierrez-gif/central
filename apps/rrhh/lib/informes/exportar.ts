@@ -130,6 +130,15 @@ export function generarXlsx(r: ResultadoInforme, cab: CabeceraInforme): Buffer {
   return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx', compression: true }) as Buffer
 }
 
+/**
+ * Inyección de fórmulas (CSV injection): un TEXTO que empieza por = + - @ (o tabulador / retorno) Excel lo ejecuta como
+ * fórmula al abrir el CSV (p. ej. el nombre de un empleado «=HYPERLINK(...)»). Se neutraliza con una comilla simple
+ * delante. Solo para texto: los números (también los negativos, «-12,50») salen por la rama numérica y no pasan por aquí.
+ */
+export function neutralizarFormula(s: string): string {
+  return /^[=+\-@\t\r]/.test(s) ? `'${s}` : s
+}
+
 /** CSV para Excel en español: `;` de separador, coma decimal, BOM UTF-8. Solo el detalle. */
 export function generarCsv(r: ResultadoInforme): string {
   const esc = (s: string) => `"${s.replace(/"/g, '""')}"`
@@ -139,9 +148,9 @@ export function generarCsv(r: ResultadoInforme): string {
     if (typeof v === 'number' && (tipo === 'dinero' || tipo === 'horas' || tipo === 'numero')) {
       return (tipo === 'numero' && Number.isInteger(v) ? String(v) : v.toFixed(2)).replace('.', ',')
     }
-    return formatearValor(tipo, v)
+    return neutralizarFormula(formatearValor(tipo, v))
   }
-  const lineas = [r.columnas.map(c => esc(c.etiqueta)).join(';')]
+  const lineas = [r.columnas.map(c => esc(neutralizarFormula(c.etiqueta))).join(';')]
   for (const f of r.filas) lineas.push(r.columnas.map(c => esc(valorCsv(c.tipo, f[c.clave] ?? null))).join(';'))
   return '﻿' + lineas.join('\r\n')
 }
