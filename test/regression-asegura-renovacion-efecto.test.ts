@@ -35,3 +35,12 @@ test('el helper puro mantiene las cuatro causas de corte', () => {
     assert.ok(h.includes(`causa: '${c}'`), `falta la causa ${c}`)
   }
 })
+
+test('la ventana de renovación es de 30 días (Codeoscopic 06/11/2026: la oferta vale 15-30 días), con constante propia', () => {
+  const h = leer('lib/codeoscopic/efecto-renovacion.ts')
+  assert.match(h, /export const VENTANA_RENOVACION_DIAS = 30\b/, 'la ventana de renovación ya no es 30 días')
+  assert.ok(h.includes('06/11/2026'), 'falta la fuente (correo Codeoscopic 06/11/2026)')
+  const cuerpo = h.slice(h.indexOf('export function corteDeVencimiento(')).replace(/^\s*(\/\/|\*|\/\*).*$/gm, '')
+  assert.ok(cuerpo.includes('sumarDias(hoy, VENTANA_RENOVACION_DIAS)'), 'el corte no usa VENTANA_RENOVACION_DIAS')
+  assert.ok(!/MAX_DIAS_VISTA/.test(cuerpo), 'el corte de renovación vuelve a usar el tope duro de 90 días')
+})

@@ -16,6 +16,30 @@ export const VENTANA_DUPLICADO_MIN = 15
  */
 export const VENTANA_REUTILIZAR_MIN = 24 * 60
 
+/**
+ * Techo de la reutilización cuando la copia trae la caducidad de sus precios (correo Codeoscopic 06/11/2026: una
+ * oferta vale «entre 15 y 30 días, depende de la compañía»). Es solo el tope de lo que se LEE de la BD; quien manda
+ * es la fecha de caducidad de la propia copia. Sin ella, `VENTANA_REUTILIZAR_MIN` (24 h) sigue siendo el límite.
+ */
+export const VENTANA_REUTILIZAR_MAX_MIN = 30 * 24 * 60
+
+/**
+ * Caducidad (ms epoch) de una copia: la MÁS TEMPRANA de las `expirationDate` de sus precios, y solo si TODOS la
+ * declaran (un precio sin fecha no se da por vigente: «no se sabe» ≠ «vale 30 días»). `null` = sin caducidad fiable →
+ * el límite fijo de 24 h. Solo recibe los precios (`Precio.expiraEn`): la `expirationDate` de una identificación
+ * (documento del tomador) NO es esto y jamás pasa por aquí.
+ */
+export function caducidadDePrecios(precios: ReadonlyArray<{ expiraEn: string | null }>): number | null {
+  if (precios.length === 0) return null
+  let min = Infinity
+  for (const p of precios) {
+    const t = typeof p.expiraEn === 'string' ? Date.parse(p.expiraEn) : NaN
+    if (!Number.isFinite(t)) return null
+    if (t < min) min = t
+  }
+  return min
+}
+
 /** JSON canónico: claves ordenadas a todos los niveles; `undefined` fuera (como hace `JSON.stringify`). */
 export function jsonCanonico(v: unknown): string {
   if (v === undefined) return 'null'
@@ -64,7 +88,7 @@ export type DecisionDuplicado =
  * Llamar / reutilizar / bloquear. `forzar` salta la guarda (recotización explícita del operador).
  * `copias` = intentos cuya copia de precios consta en `tarificaciones` (con respuesta cruda).
  * Dentro de 15 min: solo una facturable con copia se reutiliza; una reservada, o sin copia, bloquea (409) sin cargo.
- * Entre 15 min y 24 h: se reutiliza una con copia (facturable, o reservada cuyo cierre falló tras cobrar) SOLO si
+ * Entre 15 min y 24 h (o hasta la caducidad de los precios de la copia, si la declara): se reutiliza una con copia (facturable, o reservada cuyo cierre falló tras cobrar) SOLO si
  * la fecha de efecto sigue vigente; sin fecha conocida no se afirma nada y se llama (conservador a favor de la copia
  * caducada: nunca se sirve un precio que la compañía ya no confirmaría).
  */
@@ -78,6 +102,8 @@ export function decidirDuplicado(e: {
   fechaEfecto?: string | null
   /** Hoy en Madrid (aaaa-mm-dd); se inyecta en los tests. */
   hoy?: string
+  /** Caducidad (ms epoch, `caducidadDePrecios`) de la copia de cada intento. Ausente/`null` = límite fijo de 24 h. */
+  caducidades?: ReadonlyMap<string, number | null>
 }): DecisionDuplicado {
   if (e.forzar === true) return { accion: 'llamar' }
   const vivas = e.previas
@@ -95,7 +121,14 @@ export function decidirDuplicado(e: {
   if (!efectoVigente) return { accion: 'llamar' }
   const larga = e.previas
     .filter((f) => f.estado !== 'descartado' && e.copias.has(f.intentoId))
-    .filter((f) => e.ahora.getTime() - f.creadoAt.getTime() <= VENTANA_REUTILIZAR_MIN * 60_000)
+    .filter((f) => {
+      const edadMs = e.ahora.getTime() - f.creadoAt.getTime()
+      const caduca = e.caducidades?.get(f.intentoId) ?? null
+      // Con caducidad declarada manda ella (sin pasar de 30 días); sin ella, las 24 h de siempre.
+      return caduca !== null
+        ? e.ahora.getTime() < caduca && edadMs <= VENTANA_REUTILIZAR_MAX_MIN * 60_000
+        : edadMs <= VENTANA_REUTILIZAR_MIN * 60_000
+    })
     .sort((a, b) => b.creadoAt.getTime() - a.creadoAt.getTime())[0]
   return larga ? { accion: 'reutilizar', intentoId: larga.intentoId } : { accion: 'llamar' }
 }

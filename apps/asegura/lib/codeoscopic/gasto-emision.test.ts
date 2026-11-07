@@ -19,11 +19,11 @@ import type { Consumo } from './contador.ts'
 
 const VACIO: Consumo = { diaFacturables: 0, diaEnVuelo: 0, mesFacturables: 0, mesEnVuelo: 0 }
 
-test('el coste arranca en 0,50 €: sin confirmar, cuenta como una tarificación (Alberto, 29/09/2026)', () => {
-  assert.equal(COSTE_EMISION_CENTS_DEFECTO, 50)
-  assert.equal(costeEmisionCents('rerate', {}), 50)
-  assert.equal(costeEmisionCents('submit', {}), 50)
-  assert.equal(costeEmisionCents('limites_hogar', {}), 50)
+test('el coste arranca en 0 €: el contrato solo cobra la cotización (Alberto, 07/11/2026)', () => {
+  assert.equal(COSTE_EMISION_CENTS_DEFECTO, 0)
+  assert.equal(costeEmisionCents('rerate', {}), 0)
+  assert.equal(costeEmisionCents('submit', {}), 0)
+  assert.equal(costeEmisionCents('limites_hogar', {}), 0)
   // Una env explícita manda, también a 0 (el día que Codeoscopic confirme que es gratis).
   assert.equal(costeEmisionCents('rerate', { [ENV_COSTE_CENTS.rerate]: '0' }), 0)
 })
@@ -33,7 +33,7 @@ test('el coste se pone por env, sin tocar código, y cada operación lleva la su
   assert.equal(costeEmisionCents('rerate', env), 50)
   assert.equal(costeEmisionCents('submit', env), 25)
   // Y no se cruzan: poner el del ReRate no le pone precio al Submit.
-  assert.equal(costeEmisionCents('submit', { [ENV_COSTE_CENTS.rerate]: '10' }), 50)
+  assert.equal(costeEmisionCents('submit', { [ENV_COSTE_CENTS.rerate]: '10' }), 0)
 })
 
 test('un coste ilegible o desbocado NO se interpreta como «lo que diga el vendor»', () => {

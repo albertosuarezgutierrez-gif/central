@@ -74,7 +74,7 @@
 - **Cada `POST /insurances` cuesta 0,50€ y NO es idempotente: UN solo intento** (solo se re-pide el token tras un
   401). Arranca APAGADO (`CODEOSCOPIC_TARIFICACION_ACTIVA`). Contador persistente `seguros.codeoscopic_consumo`:
   sin libro no se cotiza; una cotización sin desenlace CUENTA como gastada. ReRate y Submit pasan por su propio
-  embudo (`libro-emision.ts`, motivos y topes separados; su coste va en env y **0 = «sin confirmar», no gratis**).
+  embudo (`libro-emision.ts`, motivos y topes separados; su coste va en env; **defecto 0 €: el contrato solo cobra la cotización** (07/11/2026), los topes de número siguen).
   Codeoscopic (correo 02/10/2026, hilo «Duda»): se factura por cada `POST /insurances` con HTTP 200 (aunque sea el
   mismo riesgo; 4xx/5xx no cuentan), solo en producción; septiembre = 28 facturables. ReRate y Submit no aparecen
   como facturables: resuelto por inferencia; confirmación explícita no pedida.

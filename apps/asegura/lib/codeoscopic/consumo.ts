@@ -25,7 +25,8 @@ import { esquema } from '../esquema-bd.ts'
 
 /** ¿Existe ya la columna `huella` (SQL 2026-10-08)? Vive aquí: solo este fichero nombra el libro. */
 const hayHuella = () => esquema.existeColumna('codeoscopic_consumo', 'huella')
-import { decidirDuplicado, VENTANA_DUPLICADO_MIN, VENTANA_REUTILIZAR_MIN, type FilaPrevia } from './huella.ts'
+import { decidirDuplicado, caducidadDePrecios, VENTANA_DUPLICADO_MIN, VENTANA_REUTILIZAR_MAX_MIN, type FilaPrevia } from './huella.ts'
+import { leerCotizacion } from './respuesta.ts'
 
 export type Reserva = { intentoId: string; correduriaId: string }
 
@@ -247,7 +248,7 @@ export async function reservarSinDuplicado(input: {
        where correduria_id = ${input.correduriaId}::uuid
          and huella = ${input.huella}
          and estado in ('reservado', 'facturable')
-         and creado_at >= now() - make_interval(mins => ${VENTANA_REUTILIZAR_MIN}::int)
+         and creado_at >= now() - make_interval(mins => ${VENTANA_REUTILIZAR_MAX_MIN}::int)
        order by creado_at desc`
     const previas: FilaPrevia[] = filas.map((f) => ({ estado: f.estado, creadoAt: new Date(f.creado_at), intentoId: f.intento_id }))
     const copias = new Map<string, { respuesta: unknown; cotizacionId: string }>()
@@ -260,7 +261,16 @@ export async function reservarSinDuplicado(input: {
            and simulado = false and respuesta is not null`
       for (const r of t) copias.set(r.intento_id, { respuesta: r.respuesta, cotizacionId: r.id })
     }
-    const d = decidirDuplicado({ previas, copias: new Set(copias.keys()), ahora: new Date(), forzar: input.forzar, fechaEfecto: input.fechaEfecto })
+    // Caducidad declarada por los precios de cada copia (ilegible o sin fecha = null → límite de 24 h).
+    const caducidades = new Map<string, number | null>()
+    for (const [id, c] of copias) {
+      try {
+        caducidades.set(id, caducidadDePrecios(leerCotizacion(c.respuesta).precios))
+      } catch {
+        caducidades.set(id, null)
+      }
+    }
+    const d = decidirDuplicado({ previas, copias: new Set(copias.keys()), ahora: new Date(), forzar: input.forzar, fechaEfecto: input.fechaEfecto, caducidades })
     if (d.accion === 'reutilizar') {
       const c = copias.get(d.intentoId)!
       return { resultado: 'reutilizar', intentoId: d.intentoId, ...c }
