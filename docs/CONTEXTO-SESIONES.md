@@ -104,7 +104,7 @@ Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; ti
 original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados revisado/falta_roto/devuelto + bloque en ficha. `rrhh.material_empleado`
 (0028, aplicada). Pendiente fase 2: revisión periódica mensual.
 
-## (05/11/2026) Domótica · Socorro: «Abrir» no abría + PIN automático muerto desde 11/09
+## (05/11/2026) Domótica · Socorro: «Abrir» no abría + PIN automático muerto desde 11/09 (PR #5576, mergeado 07/11)
 - Cron PIN leía 0 reservas de Smoobu en silencio (`apartments[]` + `.catch(()=>null)`): desde 27/09 los huéspedes reciben el código MAESTRO. Ahora `apartmentId=` + `bookingsDeRespuesta` lanza → Telegram crítico.
 - «Abrir» mandaba `remote_no_dp_key=true` (Tuya acepta, la NIVIAN `mk` no abre). Ahora ticket + `door-lock/password-free/open-door` (fallback `smart-lock/.../door-operate`); respuesta Tuya en `domotica_log.detalle`. Endpoints NO probados contra la cerradura real.
 - Falso «error» en PIN ya entregados de reservas vencidas → `caducado`; no se recrea con ventana vencida. UI muestra `detalle.error`.
