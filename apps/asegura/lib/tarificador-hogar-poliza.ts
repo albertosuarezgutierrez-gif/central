@@ -36,12 +36,26 @@ const clave = (s: string | null | undefined) => (s ?? '').normalize('NFD').repla
 
 /** Códigos CIMA del uso del inmueble que dicen SIN AMBIGÜEDAD el uso del bot. El resto no se interpreta (queda sin contestar). */
 const USO_DE_CODIGO_CIMA: Record<string, string> = { HA: 'habitual', SE: 'secundaria' }
-/** Código CIMA de la clase de inmueble que dice sin ambigüedad el tipo del bot. */
+/**
+ * Código CIMA de la clase de inmueble (EIAC V07.1, «Documentos Estándar» §13.3.8 `claves_claseinmueble`) que dice sin ambigüedad el tipo del bot.
+ * PI «Piso intermedio» y PP «Piso» → piso · UD «Unifamiliar adosada» → adosada · UI «Unifamiliar AISLADA» → independiente.
+ * NO se traducen (el bot seguirá pidiéndolos): UU «Vivienda unifamiliar» (genérica: NO es adosada, UD es la adosada), UP «Unifamiliar pareada»
+ * (el bot no tiene pareada) y el resto (garaje, local, caravana, planta baja, bajo tejado…).
+ */
 const TIPO_DE_CODIGO_CIMA: Record<string, string> = {
   PI: 'piso',
+  PP: 'piso',
   // UD (unifamiliar, 01/11/2026, «coger el más similar»): el tipo más parecido de Allianz sin llegar al extremo es `adosada` (casa en
   // hilera; `independiente` sería más caro y no se sabe si lo es). SUPUESTO: el precio sale estimado.
   UD: 'adosada',
+  UI: 'independiente',
+}
+
+/** Traducción PURA del código CIMA `ClaseInmueble` al tipo de vivienda del bot; código no documentado/ambiguo o vacío → `null` (sigue faltando). */
+export function tipoViviendaDeClaseInmuebleCima(codigo: unknown): string | null {
+  if (typeof codigo !== 'string') return null
+  const c = codigo.trim().toUpperCase()
+  return Object.hasOwn(TIPO_DE_CODIGO_CIMA, c) ? TIPO_DE_CODIGO_CIMA[c] : null
 }
 
 /**
@@ -166,7 +180,7 @@ export function riesgoHogarDePolizas(
   // 4) Elecciones: solo los códigos de CIMA que no dejan duda. Régimen y madera no constan en la póliza: no se suponen.
   const codigo = (k: string) => (esObj(datos) && typeof datos[k] === 'string' ? (datos[k] as string).trim().toUpperCase() : '')
   const uso = USO_DE_CODIGO_CIMA[codigo('usoInmueble')] ?? ''
-  const tipoVivienda = TIPO_DE_CODIGO_CIMA[codigo('claseInmueble')] ?? ''
+  const tipoVivienda = tipoViviendaDeClaseInmuebleCima(codigo('claseInmueble')) ?? ''
   if (uso) supuestos.push('uso')
   if (tipoVivienda) supuestos.push('tipoVivienda')
   if (elecciones.regimen) supuestos.push('regimen')

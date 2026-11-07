@@ -11,7 +11,7 @@ import { AVISO_GARANTIAS_POSIBLEMENTE_INCOMPLETAS, coberturasPorProducto, oferta
 import { filasDePdf, textoDePdf } from '../src/pdf-texto.ts'
 import type { OfertaNormalizada } from '@central/module-tarificacion'
 
-test('v0.8.60 · versión', () => assert.equal(mapfreAuto.version, '0.8.61'))
+test('v0.8.60 · versión', () => assert.equal(mapfreAuto.version, '0.8.62'))
 
 type Celda = [x: number, y: number, t: string]
 const pdfDe = (celdas: Celda[]) => {

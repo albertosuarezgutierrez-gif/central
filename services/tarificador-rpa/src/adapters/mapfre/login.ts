@@ -70,6 +70,39 @@ function botonEntrar(page: Page): Locator {
     .first()
 }
 
+/**
+ * v0.8.62 (07/11/2026): DIAGNÓSTICO del login sin PII cuando falta el botón de entrada (el humo del 06 y 07/11 paró aquí sin captura ni HTML).
+ * Forma CERRADA: solo etiqueta, tipo, ¿deshabilitado? y texto recortado de los controles pulsables VISIBLES (≤12, texto ≤30). Se llama antes de
+ * rellenar nada, así que no puede contener usuario ni contraseña; el `value` de los campos no se lee jamás.
+ */
+export async function describirControlesLogin(page: Page): Promise<string> {
+  try {
+    // Como `hogar-modalidades.ts`: el shim de `__name` evita que tsx/esbuild rompa la función serializada en el navegador.
+    const leer = (): string[] => {
+      const vis =(e: Element) => {
+        const r = e.getBoundingClientRect()
+        const st = getComputedStyle(e)
+        return r.width > 0 && r.height > 0 && st.visibility !== 'hidden' && st.display !== 'none'
+      }
+      const sel = 'button, [role="button"], a, input[type="submit"], input[type="button"], [type="submit"]'
+      return Array.from(document.querySelectorAll(sel))
+        .filter(vis)
+        .slice(0, 12)
+        .map((e) => {
+          const tag = e.tagName.toLowerCase()
+          const tipo = (e.getAttribute('type') ?? e.getAttribute('role') ?? '').slice(0, 12)
+          const dis = (e as HTMLButtonElement).disabled === true || e.getAttribute('aria-disabled') === 'true'
+          const txt = (tag === 'input' ? '' : (e.textContent ?? '')).replace(/\s+/g, ' ').trim().slice(0, 30)
+          return `${tag}${tipo ? `[${tipo}]` : ''}${dis ? '(deshabilitado)' : ''}:«${txt}»`
+        })
+    }
+    const filas = (await page.evaluate(`(() => { globalThis.__name = globalThis.__name || ((f) => f); return (${leer.toString()})() })()`)) as string[]
+    return filas.length ? filas.join(' | ') : 'ningún control pulsable visible'
+  } catch {
+    return 'no se pudo leer el DOM'
+  }
+}
+
 async function visible(l: Locator): Promise<boolean> {
   return l.isVisible().catch(() => false)
 }
@@ -103,7 +136,9 @@ export async function login(page: Page, ctx: CtxLoginMapfre, urlLogin: string = 
   const usuario = campoUsuario(page)
   if (!(await visible(usuario))) throw new ErrorMapaIncompleto('el selector del campo de usuario del login de wmediadores')
   const entrar = botonEntrar(page)
-  if (!(await visible(entrar))) throw new ErrorMapaIncompleto('el selector del botón de entrada del login de wmediadores')
+  if (!(await visible(entrar))) {
+    throw new ErrorMapaIncompleto(`el selector del botón de entrada del login de wmediadores (controles visibles: ${await describirControlesLogin(page)})`)
+  }
 
   await usuario.fill(ctx.credenciales.usuario)
   await ctx.pausa()
