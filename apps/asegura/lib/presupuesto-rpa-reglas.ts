@@ -12,7 +12,7 @@ import { nombreDePila } from '@central/module-seguros'
 import { franquiciaGeneral as franquiciaGeneralRpa, garantiasComoRegistro, validarOfertas, type OfertaNormalizada } from '@central/module-tarificacion'
 import type { SobreCoberturas } from './codeoscopic/coberturas-presupuesto.ts'
 import { eur } from './dinero.ts'
-import { lineasMasBarataPorNivel, type ResultadoNiveles } from './tarificacion-niveles.ts'
+import { lineasBotVsAvant2, lineasMasBarataPorNivel, type ResultadoNiveles } from './tarificacion-niveles.ts'
 
 /** Quién firma lo que hace el bot (columna `creado_por` de presupuesto y ofertas). Así se distinguen de los manuales. */
 export const ACTOR_RPA = 'tarificador-rpa'
@@ -526,6 +526,7 @@ export function textoAvisoPresupuestoRpa(e: EntradaAvisoRpa): string {
     `Ofertas: ${e.primas.length}${companias ? ` (${escapeHtml(companias)})` : ''}`,
     `Primas anuales: ${rango ? escapeHtml(rango) : 'no constan'}`,
     ...lineasMasBarataPorNivel(e.niveles).map((l) => escapeHtml(l)),
+    ...lineasBotVsAvant2(e.niveles).map((l) => escapeHtml(l)),
     ...(e.sinLeer?.length ? [`Sin leer: ${escapeHtml([...new Set(e.sinLeer)].join(', '))} (no entran en el borrador).`] : []),
     ...(e.conservados ? [`Hay ${e.conservados === 1 ? 'otro borrador' : `${e.conservados} borradores`} del bot que ya habías tocado: lo${e.conservados === 1 ? '' : 's'} dejo. Mira cuál vale y retira el otro.`] : []),
     e.narrativa === 'ia'

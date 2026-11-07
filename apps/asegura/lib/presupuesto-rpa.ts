@@ -34,7 +34,8 @@ import { caducidadOfertas, type FilaOferta } from './ofertas-reglas'
 import { leerOportunidadParaOfertas } from './oportunidad-ofertas'
 import { autocompletarNecesidades } from './presupuesto'
 import { gastoIaAuto } from './ia-tope-estudio'
-import { masBarataPorNivel, type ResultadoNiveles } from './tarificacion-niveles'
+import { ultimaAvant2DeOportunidad } from './comparativa-oportunidad'
+import { masBarataPorNivel, type OfertaParaNivel, type ResultadoNiveles } from './tarificacion-niveles'
 import { comprobarCoherenciaPrecios, fechaEfectoDeRiesgos, lineasRevisar, type AvisoCoherencia } from './tarificacion-coherencia'
 import { cargarPropuestaOportunidad, referenciaOportunidad } from './propuesta-oportunidad'
 import { trabajosVigentes, type TrabajoParaPropuesta } from './propuesta-oportunidad-reglas'
@@ -234,7 +235,7 @@ async function preparar(correduriaId: string, oportunidadId: string, opts: Opcio
   const coherencia = avisosCoherencia(vivas, leidaDe, op.ramo ?? op.ramoOferta, filas, ahora)
   // 04/11/2026: la más barata POR NIVEL de cobertura (no se compara un terceros con un todo riesgo). Va al Telegram y a
   // `estudio.rpa.niveles`. Sin datos suficientes, la oferta queda «sin clasificar» (nunca se inventa el nivel). Nunca tumba el borrador.
-  const niveles = nivelesDeOpciones(op.ramo ?? op.ramoOferta, opciones, (ofertaId) => leidaDe.get(claveRpaDeFila(vivas.find((v) => v.id === ofertaId)?.datosExtra) ?? ''))
+  const niveles = await nivelesDeOpciones(correduriaId, op.id, op.ramo ?? op.ramoOferta, opciones, (ofertaId) => leidaDe.get(claveRpaDeFila(vivas.find((v) => v.id === ofertaId)?.datosExtra) ?? ''))
   const { venceEl } = calcularVencimiento({ creadoAt: ahora, fechaEfecto: null, expiraOferta: cad.expira })
   // El token en claro no se guarda ni se devuelve: es un borrador; el aviso (`accion:'avisar'`) genera el enlace.
   const tokenHash = await hashTokenVista(generarTokenVista())
@@ -327,16 +328,33 @@ async function preparar(correduriaId: string, oportunidadId: string, opts: Opcio
 }
 
 /** «La más barata» por nivel de las opciones del borrador. `null` = no se pudo calcular (no se afirma nada). Nunca lanza. */
-function nivelesDeOpciones(
+async function nivelesDeOpciones(
+  correduriaId: string,
+  oportunidadId: string,
   ramo: string | null,
   opciones: readonly { ofertaId: string; compania: string; producto: string; primaEur: number; franquiciaEur: number | null }[],
   leidaDeOferta: (ofertaId: string) => OfertaRpaLeida | undefined,
-): ResultadoNiveles | null {
+): Promise<ResultadoNiveles | null> {
   try {
-    return masBarataPorNivel(ramo, opciones.map((o) => ({
-      id: o.ofertaId, compania: o.compania, producto: o.producto, primaEur: o.primaEur, franquiciaEur: o.franquiciaEur,
+    const bots: OfertaParaNivel[] = opciones.map((o) => ({
+      id: o.ofertaId, compania: o.compania, producto: o.producto, primaEur: o.primaEur, franquiciaEur: o.franquiciaEur, origen: 'bot',
       coberturas: sobreCoberturasRpa(leidaDeOferta(o.ofertaId)?.oferta.coberturas, '')?.lista ?? null,
-    })))
+    }))
+    // La última cotización REAL de Avant2 de la oportunidad (solo lectura, gratis), si no ha caducado. Lectura accesoria:
+    // si falla, los niveles salen solo con los bots (no se afirma nada de Avant2).
+    let avant2: OfertaParaNivel[] = []
+    try {
+      const av = await ultimaAvant2DeOportunidad(correduriaId, oportunidadId)
+      if (av && !av.caducada) {
+        avant2 = av.precios.map((p) => ({
+          id: p.id, compania: p.compania ?? '', producto: p.producto ?? '', modalidad: p.modalidad, categoria: p.categoria,
+          primaEur: p.primaEur, franquiciaEur: p.franquiciaEur, garantias: p.garantias?.porClave ?? null, origen: 'avant2' as const,
+        }))
+      }
+    } catch (e) {
+      registrarErrorCartera('presupuesto/rpa/niveles-avant2', e)
+    }
+    return masBarataPorNivel(ramo, [...bots, ...avant2])
   } catch (e) {
     registrarErrorCartera('presupuesto/rpa/niveles', e)
     return null
