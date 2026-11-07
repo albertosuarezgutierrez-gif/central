@@ -21,3 +21,10 @@ export function esTablaAusente(e: unknown): boolean {
   if (/\bcolumn\b/i.test(msg)) return false
   return /\b42P01\b/.test(msg) || /relation "?[\w.]+"? does not exist/i.test(msg)
 }
+
+/** Solo «tabla/relación no existe» (42P01, migración sin aplicar) equivale a «sin filas»; cualquier otro fallo de BD
+ *  se RELANZA: sería `no_encontrado` → webhook 200 → Resend no reintenta y la queja/rebote se perdería. */
+export function tragarSoloTablaAusente(err: unknown): never[] {
+  if (esTablaAusente(err)) return []
+  throw err
+}

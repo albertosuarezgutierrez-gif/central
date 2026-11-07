@@ -35,9 +35,15 @@ test('el correo felicita y no vende: sin pólizas, compañías, precios ni ofert
 })
 
 test('🚨 sin proveedor de correo se SUELTA la reserva: el reintento del día aún felicita', () => {
-  const cuerpo = src.slice(src.indexOf("if (res === 'sin_proveedor')"))
+  const cuerpo = src.slice(src.indexOf("if (res.resultado === 'sin_proveedor')"))
   const borra = cuerpo.indexOf('delete from felicitacion')
   assert.ok(borra >= 0 && borra < cuerpo.indexOf("throw new Error('sin_correo_configurado')"))
+})
+
+test('🚨 rebote ≠ baja: la ficha lee también `emailRebotadoAt` y el id de Resend queda atado a la felicitación', () => {
+  assert.match(src, /emailOptOutAt: true, emailRebotadoAt: true/)
+  const tras = src.slice(src.indexOf("if (res.resultado !== 'enviado')"))
+  assert.ok(tras.indexOf('guardarResendFelicitacion(correduriaId, f.id, anio, res.resendId)') > 0)
 })
 
 test('el correo lleva el logo en PNG desde la web pública y existe en el disco', () => {

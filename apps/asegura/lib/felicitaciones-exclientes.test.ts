@@ -35,9 +35,9 @@ test('variante: vigente fuera de CIMA → posible_cliente; el resto → ex_clien
   assert.equal(v([{ ...vivaEnVigor, sustituidaAt: new Date() }]), 'ex_cliente')
 })
 
-test('🚨 la consulta: persona física, no fusionada, con póliza, sin cartera en vigor, sin baja y con fecha', () => {
+test('🚨 la consulta: persona física, no fusionada, con póliza, sin cartera en vigor, sin baja, sin email rebotado y con fecha', () => {
   assert.match(src, /OR: \[\{ tipoPersona: null \}, \{ NOT: \{ tipoPersona: 'juridica' \} \}\]/)
-  assert.match(src, /mergedIntoClienteId: null, emailOptOutAt: null, fechaNacimiento: \{ not: null \}/)
+  assert.match(src, /mergedIntoClienteId: null, emailOptOutAt: null, emailRebotadoAt: null, fechaNacimiento: \{ not: null \}/)
   assert.match(src, /polizas: \{ some: \{ mergedIntoPolizaId: null \} \}/)
   assert.match(src, /polizas: \{ none: \{ mergedIntoPolizaId: null, \.\.\.WHERE_CARTERA_EN_VIGOR \} \}/)
   // Sin email válido no se reserva nada (aquí no hay «solo en la app»).

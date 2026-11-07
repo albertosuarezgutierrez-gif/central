@@ -38,6 +38,8 @@ import { ordenPolizasFicha } from '@central/module-seguros'
 import { listarContactos, type Identidad } from './cartera-edicion'
 import { listarRelaciones, type RelacionCartera } from './cartera-relaciones'
 import { correosCliente, type CorreoFicha } from './correo-seguimiento'
+import { sondaEmailDe } from './email-estado-bd'
+import type { Contactabilidad, EstadoEmail } from './email-estado.ts'
 import { cotizacionesVivas, historialCliente, notasCliente, type HistorialFila, type NotasCliente } from './cartera-historial'
 import { listarDocumentos } from './cartera-documentos'
 import { SELECT_SINIESTRO, conTercerosCima, mapSiniestro } from './cartera-siniestros'
@@ -402,6 +404,13 @@ export type ContactoFicha = {
   ciudad: string | null
   provincia: string | null
   codigoPostal: string | null
+  /**
+   * Sonda del email (07/11/2026) de TODOS los envíos a la dirección actual: sin_comprobar · entregado · abierto ·
+   * entro_portal · rebotado · baja. `null` = no se pudo mirar o no hay email. Nunca «válido» sin un evento.
+   */
+  estadoEmail?: EstadoEmail | null
+  /** `ilocalizable` = email malo y ningún teléfono utilizable (DERIVADO: no es una baja). `null` = no se pudo mirar. */
+  contactabilidad?: Contactabilidad | null
 }
 
 export type FichaCliente = {
@@ -913,6 +922,7 @@ export async function fichaCliente(
   }
   const historial = await historialCliente(correduriaId, c.id)
   const correos = await correosCliente(correduriaId, c.id)
+  const sonda = await sondaEmailDe(correduriaId, [c.id]).then((m) => m.get(c.id) ?? null).catch(() => null)
   const notas = await notasCliente(correduriaId, c.id, c.notas ?? null)
   const presupuestos = await cotizacionesVivas(correduriaId, c.id, DIAS_PRESUPUESTO_VIVO)
   const estado = estadoCliente({
@@ -939,6 +949,8 @@ export async function fichaCliente(
       ciudad: c.ciudad ?? null,
       provincia: c.provincia ?? null,
       codigoPostal: c.codigoPostal ?? null,
+      estadoEmail: sonda?.estadoEmail ?? null,
+      contactabilidad: sonda?.contactabilidad ?? null,
     },
     // Por qué no se abre lo cifrado, si no se abre: sin clave / mal pegada /
     // distinta de la del CRM. Se prueba con el teléfono o el email de ESTA

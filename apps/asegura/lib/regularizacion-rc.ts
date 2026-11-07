@@ -65,13 +65,13 @@ async function conMigracion<T>(f: () => Promise<T>): Promise<T | { estado: 'sin_
 
 type FichaCliente = {
   id: string; nombre: string; apellidos: string; tipoPersona: string | null
-  email: string | null; emailOptOutAt: Date | null; emails: { email: string; esPrincipal: boolean; createdAt: Date }[]
+  email: string | null; emailOptOutAt: Date | null; emailRebotadoAt: Date | null; emails: { email: string; esPrincipal: boolean; createdAt: Date }[]
 }
 
 async function fichaDe(correduriaId: string, clienteId: string): Promise<FichaCliente | null> {
   return (await prismaAsegura().cliente.findFirst({
     where: { id: clienteId, correduriaId },
-    select: { id: true, nombre: true, apellidos: true, tipoPersona: true, email: true, emailOptOutAt: true, emails: { select: { email: true, esPrincipal: true, createdAt: true } } },
+    select: { id: true, nombre: true, apellidos: true, tipoPersona: true, email: true, emailOptOutAt: true, emailRebotadoAt: true, emails: { select: { email: true, esPrincipal: true, createdAt: true } } },
   })) as FichaCliente | null
 }
 

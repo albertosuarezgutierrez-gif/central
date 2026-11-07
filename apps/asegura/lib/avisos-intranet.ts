@@ -39,6 +39,7 @@
  * entra, resuelve dos y se va tranquilo. Se cuenta en `ilegibles` y se reintenta
  * en la pasada siguiente.
  */
+import { emailBloqueado } from './email-estado.ts'
 import {
   estadoPeticion, entraEnVentana, DIAS_ANTELACION_MAX, DIAS_VENTANA_AVISO, HORAS_ENLACE_DIRECTO, HREF_POR_TIPO, generarTokenEnlace, hashTokenEnlace, urlEnlaceDirecto,
   CORTE_AVISO_POLIZA_NUEVA, DIAS_AVISO_POLIZA_NUEVA, polizasNuevasParaAviso, type FilaPolizaNueva,
@@ -974,12 +975,13 @@ export async function avisarIntranet(
       where: { id: p.clienteId, correduriaId },
       select: {
         emailOptOutAt: true,
+        emailRebotadoAt: true,
         email: true,
         emails: { select: { email: true, esPrincipal: true, createdAt: true } },
       },
     })
-    // Orden de siempre (principal → más antigua → columna suelta); baja de correo = no se escribe.
-    const candidatas = ficha && !ficha.emailOptOutAt
+    // Orden de siempre (principal → más antigua → columna suelta); baja de correo o email rebotado = no se escribe.
+    const candidatas = ficha && !emailBloqueado(ficha)
       ? [
           ...[...ficha.emails]
             .sort((x, y) => (x.esPrincipal !== y.esPrincipal ? (x.esPrincipal ? -1 : 1) : x.createdAt.getTime() - y.createdAt.getTime()))

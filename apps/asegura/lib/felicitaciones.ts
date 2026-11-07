@@ -10,7 +10,9 @@
 //    Es un correo automático a clientes; lo enciende Alberto.
 //  - La fila se RESERVA antes de enviar (`on conflict do nothing`): dos pasadas solapadas no
 //    mandan dos correos. Si el correo no sale, la fila pasa a `solo_app` y se felicita en el portal.
-//  - Baja de correo (`email_opt_out_at`) o sin correo → solo en la app.
+//  - Baja de correo (`email_opt_out_at`), email rebotado (`email_rebotado_at`) o sin correo → solo en la app.
+//  - El id de Resend queda en `felicitacion.resend_message_id`: es lo que ata la felicitación a su embudo
+//    (Campañas → Felicitaciones) y la convierte en SONDA del email de la ficha (`campana-felicitacion.ts`).
 //  - Los EX-clientes (póliza pero sin cartera en vigor) van aparte, con su puerta: `felicitaciones-exclientes.ts`.
 import { anioCumpleanos, diaMadrid, esCumpleanos, WHERE_CARTERA_EN_VIGOR } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
@@ -52,7 +54,7 @@ export async function felicitarCumpleanos(
   const fichas = titulares.length === 0 ? [] : await db.cliente.findMany({
     where: { id: { in: titulares.map((t) => t.clienteId) }, correduriaId, mergedIntoClienteId: null, NOT: { tipoPersona: 'juridica' } },
     select: {
-      id: true, nombre: true, fechaNacimiento: true, emailOptOutAt: true, email: true,
+      id: true, nombre: true, fechaNacimiento: true, emailOptOutAt: true, emailRebotadoAt: true, email: true,
       emails: { select: { email: true, esPrincipal: true, createdAt: true } },
     },
   })
@@ -80,15 +82,31 @@ export async function felicitarCumpleanos(
     const destino = destinatarioDeCliente(f)
     if (!destino) { r.soloApp += 1; continue }
     const res = await enviarFelicitacion(destino, { nombre: nombreDePila(f.nombre), enlace }, { correduriaId, clienteId: f.id })
-    if (res === 'sin_proveedor') {
+    if (res.resultado === 'sin_proveedor') {
       // Avería de configuración, no del cliente: se suelta la reserva para que el reintento de hoy
       // (con la env ya puesta) sí le mande el correo. Si no, perdería su felicitación del año.
       await db.$executeRaw`delete from felicitacion where cliente_id = ${f.id}::uuid and anio = ${anio} and canal = 'solo_app'`
       throw new Error('sin_correo_configurado')
     }
-    if (res !== 'enviado') { r.fallidos += 1; continue }
+    if (res.resultado !== 'enviado') { r.fallidos += 1; continue }
     r.enviados += 1
     await db.felicitacion.updateMany({ where: { clienteId: f.id, anio }, data: { canal: 'correo' } })
+    await guardarResendFelicitacion(correduriaId, f.id, anio, res.resendId)
   }
   return r
+}
+
+/**
+ * Ata la felicitación a su correo de Resend. Sentencia APARTE y que no lanza: si fallara, la felicitación ya salió
+ * y su `canal` ya es `correo`; el embudo la sigue encontrando por `correo_envio` (misma ficha y día).
+ */
+export async function guardarResendFelicitacion(correduriaId: string, clienteId: string, anio: number, resendId: string | null): Promise<void> {
+  if (!resendId) return
+  try {
+    await prismaAsegura().$executeRaw`
+      update felicitacion set resend_message_id = ${resendId}
+      where correduria_id = ${correduriaId}::uuid and cliente_id = ${clienteId}::uuid and anio = ${anio} and resend_message_id is null`
+  } catch (e) {
+    console.error('[felicitaciones] no se pudo guardar el id de Resend:', e instanceof Error ? e.message : e)
+  }
 }

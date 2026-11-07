@@ -9,6 +9,8 @@
 // 🚨 `null` ≠ 0. asegura manda `null` en entregados/abiertos/clics cuando algún envío no tiene eventos
 // legibles: «no se sabe». Aquí NUNCA se convierte en 0 ni en un % inventado; se pinta «—».
 import { cabecerasPuerto } from './puerto-actor.ts'
+import { leerContactabilidad, leerEstadoEmail, type Contactabilidad, type EstadoEmail } from './email-estado-asegura.ts'
+export { ETIQUETA_ESTADO_EMAIL, type Contactabilidad, type EstadoEmail } from './email-estado-asegura.ts'
 
 export type EmbudoCampana = {
   enviados: number
@@ -20,6 +22,11 @@ export type EmbudoCampana = {
   registrados: number
   rebotados: number | null
   bajas: number
+  /**
+   * Solo en campañas que sondean el email (felicitaciones): email malo Y ningún teléfono utilizable. `undefined` =
+   * la campaña no lo calcula; `null` = no se puede afirmar la cifra (lista recortada o lectura caída).
+   */
+  ilocalizables?: number | null
 }
 
 export type EtapaPersona = 'fallido' | 'sin_datos' | 'enviado' | 'entregado' | 'abierto' | 'clic' | 'visita' | 'registrado'
@@ -41,6 +48,9 @@ export type PersonaCampana = {
   registradoEn: string | null
   bajaEn: string | null
   rebotadoEn: string | null
+  /** Sonda del email de la ficha (felicitaciones). `null` = no se sabe / la campaña no lo da. */
+  estadoEmail: EstadoEmail | null
+  contactabilidad: Contactabilidad | null
 }
 
 export type GrupoEmbudo = { grupo: string; embudo: EmbudoCampana }
@@ -85,6 +95,8 @@ export function leerEmbudo(v: unknown): EmbudoCampana | null {
     registrados,
     rebotados: numeroONull(o.rebotados),
     bajas: numeroONull(o.bajas) ?? 0,
+    // Ausente = la campaña no lo calcula (no se pinta); presente y no numérico = «no se sabe».
+    ...('ilocalizables' in o ? { ilocalizables: numeroONull(o.ilocalizables) } : {}),
   }
 }
 
@@ -122,6 +134,8 @@ function leerPersona(v: unknown): PersonaCampana | null {
     registradoEn: cadena(o.registradoEn),
     bajaEn: cadena(o.bajaEn),
     rebotadoEn: cadena(o.rebotadoEn),
+    estadoEmail: leerEstadoEmail(o.estadoEmail),
+    contactabilidad: leerContactabilidad(o.contactabilidad),
   }
 }
 
@@ -170,11 +184,25 @@ export function textoNumero(n: number | null): string {
   return n === null ? '—' : String(Math.trunc(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.')
 }
 
-export type PasoEmbudo = { clave: string; etiqueta: string; valor: number | null; pctPrevio: number | null }
+export type PasoEmbudo = {
+  clave: string; etiqueta: string; valor: number | null; pctPrevio: number | null
+  /** Clave del paso sobre el que va el % (`null` en el primero). */
+  base: string | null
+}
 
-/** Los seis pasos del embudo, cada % sobre el paso ANTERIOR (el primero no lleva %). */
-export function pasosEmbudo(e: EmbudoCampana): PasoEmbudo[] {
-  const base: [string, string, number | null][] = [
+/**
+ * Cómo se pinta el embudo de una campaña. Por defecto, los seis pasos encadenados. Una campaña puede renombrar un
+ * paso, ocultarlo (`null`) o hacerlo INDEPENDIENTE: no implica a los anteriores, su % va sobre el primero y su lista
+ * es solo de quien tiene SU evento (felicitaciones: «entró al portal» no prueba que pinchara el correo).
+ */
+export type FormaEmbudo = {
+  etiquetas?: Partial<Record<string, string | null>>
+  independientes?: readonly string[]
+}
+
+/** Los pasos del embudo, cada % sobre el paso ANTERIOR visible (el primero no lleva %); un independiente, sobre el primero. */
+export function pasosEmbudo(e: EmbudoCampana, forma: FormaEmbudo = {}): PasoEmbudo[] {
+  const todos: [string, string, number | null][] = [
     ['enviados', 'Enviados', e.enviados],
     ['entregados', 'Entregados', e.entregados],
     ['abiertos', 'Abiertos', e.abiertos],
@@ -182,10 +210,18 @@ export function pasosEmbudo(e: EmbudoCampana): PasoEmbudo[] {
     ['visitas', 'Visitas', e.visitas],
     ['registrados', 'Registrados', e.registrados],
   ]
-  return base.map(([clave, etiqueta, valor], i) => ({
-    clave, etiqueta, valor,
-    pctPrevio: i === 0 ? null : porcentaje(valor, base[i - 1][2]),
-  }))
+  const visibles = todos
+    .map(([clave, etiqueta, valor]) => [clave, forma.etiquetas?.[clave] === undefined ? etiqueta : forma.etiquetas[clave], valor] as const)
+    .filter((x): x is readonly [string, string, number | null] => x[1] !== null)
+  const indep = new Set(forma.independientes ?? [])
+  let previo: readonly [string, string, number | null] | null = null
+  const out: PasoEmbudo[] = []
+  for (const [i, [clave, etiqueta, valor]] of visibles.entries()) {
+    const sobre = i === 0 ? null : indep.has(clave) ? visibles[0] : previo
+    out.push({ clave, etiqueta, valor, base: sobre ? sobre[0] : null, pctPrevio: sobre ? porcentaje(valor, sobre[2]) : null })
+    if (!indep.has(clave)) previo = [clave, etiqueta, valor]
+  }
+  return out
 }
 
 const NIVEL_ETAPA: Record<EtapaPersona, number> = {
@@ -209,11 +245,13 @@ const EVENTOS_PASO: Record<string, (keyof PersonaCampana)[]> = {
  * «Abiertos» incluye a quien hizo clic). Una fila por persona (la campaña es única por persona).
  * Orden: evento del paso más reciente primero.
  */
-export function personasDelPaso(personas: readonly PersonaCampana[], clave: string): PersonaCampana[] {
+export function personasDelPaso(personas: readonly PersonaCampana[], clave: string, independiente = false): PersonaCampana[] {
   const nivel = NIVEL_PASO[clave]
   if (nivel === undefined) return []
+  // Paso independiente: solo quien tiene SU evento (no se deduce de la etapa).
+  const propio = EVENTOS_PASO[clave]?.[0]
   return personas
-    .filter((p) => p.etapa !== 'fallido' && NIVEL_ETAPA[p.etapa] >= nivel)
+    .filter((p) => p.etapa !== 'fallido' && (independiente ? propio !== undefined && typeof p[propio] === 'string' && p[propio] !== '' : NIVEL_ETAPA[p.etapa] >= nivel))
     .sort((a, b) => (fechaDelPaso(b, clave)?.iso ?? '').localeCompare(fechaDelPaso(a, clave)?.iso ?? ''))
 }
 
@@ -221,8 +259,9 @@ export function personasDelPaso(personas: readonly PersonaCampana[], clave: stri
  * Fecha del evento del paso. Si el propio no consta pero otro posterior lo implica (p. ej. clic sin
  * apertura registrada), se da la fecha de ese y `inferido: true`. `null` = sin fecha: no se inventa.
  */
-export function fechaDelPaso(p: PersonaCampana, clave: string): { iso: string; inferido: boolean } | null {
-  const campos = EVENTOS_PASO[clave] ?? []
+export function fechaDelPaso(p: PersonaCampana, clave: string, independiente = false): { iso: string; inferido: boolean } | null {
+  const todos = EVENTOS_PASO[clave] ?? []
+  const campos = independiente ? todos.slice(0, 1) : todos
   for (const [i, c] of campos.entries()) {
     const v = p[c]
     if (typeof v === 'string' && v) return { iso: v, inferido: i > 0 }
@@ -252,11 +291,28 @@ export function estadoPersona(p: Pick<PersonaCampana, 'etapa' | 'bajaEn' | 'rebo
 
 export type Reenvio = { status: number; json: unknown }
 
-/** Las campañas que la pantalla sabe pedir. Mismos ids que asegura (`campana_envio.campana`). */
+/** Cómo se presenta una campaña: textos de los bloques de grupos y la forma de su embudo. */
+export type DefCampana = {
+  id: string; titulo: string; sub: string
+  forma?: FormaEmbudo
+  /** Título del bloque por «variante» y por «lote», y cómo se nombran en cada persona. */
+  tituloVariantes?: string; tituloLotes?: string; etiquetaLote?: string
+}
+
+/**
+ * Las campañas que la pantalla sabe pedir. Mismos ids que asegura (`campana_envio.campana`; `felicitacion` es la
+ * tabla de felicitaciones de cumpleaños, que asegura lee aparte).
+ */
 export const CAMPANAS_CORREO = [
   { id: 'presentacion_app', titulo: 'Presentación app (leads)', sub: 'Correo de presentación de la app a los leads antiguos. Solo lectura: el envío lo hace el cron de asegura.' },
   { id: 'aviso_venc_app', titulo: 'App en el aviso de vencimiento', sub: 'Bloque «Tu app gratuita» dentro del aviso de vencimiento a clientes en vigor que aún no entran al portal. Sin eventos de apertura/clic: cuenta visitas y altas por el enlace personal.' },
-] as const
+  {
+    id: 'felicitacion', titulo: 'Felicitaciones de cumpleaños',
+    sub: 'Felicitaciones por correo a clientes en vigor y ex-clientes, usadas como sonda del email de la ficha: quien rebota tiene el email malo (no es una baja). «Entró al portal» = entró en los 7 días siguientes, haya pinchado o no el correo.',
+    forma: { etiquetas: { enviados: 'Felicitados', visitas: 'Entró al portal (≤7 días)', registrados: null }, independientes: ['visitas'] },
+    tituloVariantes: 'Clientes en vigor frente a ex-clientes', tituloLotes: 'Por año', etiquetaLote: 'año',
+  },
+] as const satisfies readonly DefCampana[]
 export type IdCampana = (typeof CAMPANAS_CORREO)[number]['id']
 
 /** `null` = no es una campaña conocida (la ruta responde 400; nunca se reenvía texto libre). */

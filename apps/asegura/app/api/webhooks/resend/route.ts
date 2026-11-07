@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server'
 import { verificarWebhookResend, interpretarEventoResend } from '@/lib/recaptacion-webhook'
 import { aseguraConfigurada, prismaAsegura } from '@/lib/asegura-db'
 import { Prisma } from '@/lib/generated/asegura-client'
-import { aplicarBajaPorRebote } from '@/lib/cartera-recaptacion'
-import { aplicarBajaCampanaPorRebote } from '@/lib/presentacion-app'
+import { aplicarReboteOQueja } from '@/lib/email-rebote'
 import { interpretarEventoCorreo, registrarEventoCorreo } from '@/lib/correo-seguimiento'
 
 export const dynamic = 'force-dynamic'
@@ -15,9 +14,12 @@ export const dynamic = 'force-dynamic'
 //
 // Apertura/clic solo AVANZAN: un evento duplicado o desordenado no puede
 // hacer retroceder `pinchado` a `abierto`. Rebote/queja son ESTADOS
-// TERMINALES fuera de esa progresión — no compiten con ella, y además
-// disparan opt-out automático (dirección muerta o queja de spam no se
-// reintentan nunca, con o sin cooldown).
+// TERMINALES fuera de esa progresión — no compiten con ella.
+//
+// Rebote ≠ baja (07/11/2026): un rebote duro o una supresión de CUALQUIER
+// correo nuestro marcan el email como MALO (`email_rebotado_at`, se limpia si
+// cambia la dirección); solo la queja de spam es baja (`email_opt_out_at`).
+// Lo decide `aplicarReboteOQueja` (`lib/email-rebote.ts`), una vez por evento.
 export async function POST(req: Request) {
   const cuerpoCrudo = await req.text()
   const cabeceras = {
@@ -52,6 +54,15 @@ export async function POST(req: Request) {
     seguimientoCaido
       ? NextResponse.json({ estado: 'error', motivo: 'seguimiento_no_guardado' }, { status: 500 })
       : NextResponse.json({ estado: 'ok' })
+  // Rebote/supresión/queja de cualquier correo (felicitación, campaña, recaptación, avisos). No lanza; si la BD
+  // falla se responde 500 para que Resend reintente (idempotente: solo escribe donde aún no hay marca/baja).
+  if (eventoCorreo !== null) {
+    const r = await aplicarReboteOQueja(eventoCorreo)
+    if (r.estado === 'error') {
+      seguimientoCaido = true
+      console.error('[webhooks/resend] no se pudo aplicar el rebote/queja:', r.motivo)
+    }
+  }
   if (evento === null) return fin()
   try {
     const esTerminal = evento.estado === 'rebotado' || evento.estado === 'queja'
@@ -62,20 +73,6 @@ export async function POST(req: Request) {
          and canal = 'email'
          and (${esTerminal} or not (estado = 'pinchado' and ${evento.estado} = 'abierto'))
     `)
-    if (evento.estado === 'rebotado' || evento.estado === 'queja') {
-      const baja = await aplicarBajaPorRebote(evento.resendMessageId, evento.estado)
-      if (baja.estado === 'error') {
-        console.error('[webhooks/resend] no se pudo aplicar la baja automática:', baja.motivo)
-      }
-      // El mismo rebote/queja puede ser de un correo de CAMPAÑA (`campana_envio`), no de recaptación:
-      // cada función solo encuentra los suyos y la otra contesta `no_encontrado`. No lanza.
-      if (baja.estado === 'no_encontrado') {
-        const bajaCampana = await aplicarBajaCampanaPorRebote(evento.resendMessageId, evento.estado)
-        if (bajaCampana.estado === 'error') {
-          console.error('[webhooks/resend] no se pudo aplicar la baja automática de campaña:', bajaCampana.motivo)
-        }
-      }
-    }
     return fin()
   } catch (e) {
     console.error('[webhooks/resend] no se pudo actualizar recaptacion_envios:', e instanceof Error ? e.message : e)

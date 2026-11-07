@@ -6,8 +6,8 @@ import { Badge, btnStyle } from '@/components/ui'
 import { fechaEs, fechaHoraEs } from '@/lib/ficha-asegura'
 import Bloque from './Bloque'
 import {
-  CAMPANAS_CORREO, estadoPersona, fechaDelPaso, interpretarCampana, type IdCampana, pasosEmbudo, personasDelPaso, textoNumero, textoPorcentaje,
-  type EmbudoCampana, type GrupoEmbudo, type PersonaCampana, type RespuestaCampana,
+  CAMPANAS_CORREO, ETIQUETA_ESTADO_EMAIL, estadoPersona, fechaDelPaso, interpretarCampana, type IdCampana, pasosEmbudo, personasDelPaso, textoNumero, textoPorcentaje,
+  type DefCampana, type EmbudoCampana, type FormaEmbudo, type GrupoEmbudo, type PersonaCampana, type RespuestaCampana,
 } from '@/lib/campana-presentacion'
 
 /**
@@ -33,11 +33,11 @@ function motivoTexto(r: Exclude<RespuestaCampana, { estado: 'ok' }>): string {
 const fecha = (iso: string | null) => (iso ? fechaEs(iso) : '—')
 
 /** Lista de quien está en un paso del embudo: cliente (ficha), correo y fecha/hora del evento. 50 + «Ver más». */
-function ListaPaso({ id, clave, etiqueta, valor, personas, parcial }: {
-  id: string; clave: string; etiqueta: string; valor: number | null; personas: PersonaCampana[]; parcial: boolean
+function ListaPaso({ id, clave, etiqueta, valor, personas, parcial, independiente }: {
+  id: string; clave: string; etiqueta: string; valor: number | null; personas: PersonaCampana[]; parcial: boolean; independiente: boolean
 }) {
   const [visibles, setVisibles] = useState(PAGINA)
-  const lista = useMemo(() => personasDelPaso(personas, clave), [personas, clave])
+  const lista = useMemo(() => personasDelPaso(personas, clave, independiente), [personas, clave, independiente])
   const pMuted = { fontSize: 13, color: 'var(--muted)', margin: 0 } as const
   return (
     <div id={id} style={{ border: '1px solid var(--border)', borderRadius: 12, padding: 12, marginTop: 12, minWidth: 0 }}>
@@ -48,11 +48,13 @@ function ListaPaso({ id, clave, etiqueta, valor, personas, parcial }: {
           ? <p style={pMuted}>Nadie en este paso todavía.</p>
           : <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: 8 }}>
               {lista.slice(0, visibles).map((p) => {
-                const f = fechaDelPaso(p, clave)
+                const f = fechaDelPaso(p, clave, independiente)
                 return (
                   <div key={`${p.clienteId}-${p.lote}`} style={{ borderTop: '1px solid var(--border)', paddingTop: 8, minWidth: 0 }}>
                     <Link href={`/correduria/cliente/${p.clienteId}`} style={{ fontWeight: 700, overflowWrap: 'anywhere' }}>{p.nombre || 'Sin nombre'}</Link>
-                    <div style={{ fontSize: 12, color: 'var(--muted)', overflowWrap: 'anywhere' }}>{p.email ?? 'Correo no legible'}</div>
+                    <div style={{ fontSize: 12, color: 'var(--muted)', overflowWrap: 'anywhere' }}>
+                      {p.email ?? 'Correo no legible'}{p.estadoEmail ? ` · ${ETIQUETA_ESTADO_EMAIL[p.estadoEmail]}` : ''}{p.contactabilidad === 'ilocalizable' ? ' · ilocalizable' : ''}
+                    </div>
                     <div style={{ fontSize: 12, color: 'var(--muted)' }}>
                       {f ? fechaHoraEs(f.iso) : 'Sin fecha'}{f?.inferido ? ' (deducido de un paso posterior)' : ''}
                     </div>
@@ -76,8 +78,10 @@ function ListaPaso({ id, clave, etiqueta, valor, personas, parcial }: {
   )
 }
 
-function Tarjetas({ e, personas }: { e: EmbudoCampana; personas: PersonaCampana[] }) {
-  const pasos = pasosEmbudo(e)
+function Tarjetas({ e, personas, forma }: { e: EmbudoCampana; personas: PersonaCampana[]; forma?: FormaEmbudo }) {
+  const pasos = pasosEmbudo(e, forma)
+  const etiquetaDe = (clave: string | null) => pasos.find((x) => x.clave === clave)?.etiqueta.toLowerCase() ?? 'paso anterior'
+  const independientes = new Set(forma?.independientes ?? [])
   const [abierto, setAbierto] = useState<string | null>(null)
   const sel = pasos.find((p) => p.clave === abierto) ?? null
   return (
@@ -96,7 +100,7 @@ function Tarjetas({ e, personas }: { e: EmbudoCampana; personas: PersonaCampana[
               <div style={{ fontSize: 12, color: 'var(--muted)' }}>{p.etiqueta}</div>
               <div style={{ fontSize: 20, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{textoNumero(p.valor)}</div>
               <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-                {p.pctPrevio === null && p.clave === 'enviados' ? 'punto de partida' : `${textoPorcentaje(p.pctPrevio)} del paso anterior`}
+                {p.base === null ? 'punto de partida' : independientes.has(p.clave) ? `${textoPorcentaje(p.pctPrevio)} de ${etiquetaDe(p.base)}` : `${textoPorcentaje(p.pctPrevio)} del paso anterior`}
               </div>
             </button>
           )
@@ -104,18 +108,20 @@ function Tarjetas({ e, personas }: { e: EmbudoCampana; personas: PersonaCampana[
       </div>
       {sel && (
         <ListaPaso key={sel.clave} id={`paso-${sel.clave}`} clave={sel.clave} etiqueta={sel.etiqueta} valor={sel.valor}
-          personas={personas} parcial={e.enviados > personas.length} />
+          personas={personas} parcial={e.enviados > personas.length} independiente={independientes.has(sel.clave)} />
       )}
       <p style={{ margin: '10px 0 0', fontSize: 11, color: 'var(--muted)' }}>
-        No salieron: {textoNumero(e.fallidos)} · Rebotes: {textoNumero(e.rebotados)} · Bajas: {textoNumero(e.bajas)}.
+        No salieron: {textoNumero(e.fallidos)} · Rebotes: {textoNumero(e.rebotados)} · Bajas: {textoNumero(e.bajas)}
+        {e.ilocalizables !== undefined && <> · Ilocalizables (email malo y sin teléfono): {textoNumero(e.ilocalizables)}</>}.
+        {e.ilocalizables !== undefined && ' Un rebote no es una baja: marca el email como malo para buscar otro contacto.'}
         Un «—» es que no hay datos suficientes para afirmarlo, no que sea cero. Pulsa una tarjeta para ver quién está en ese paso.
       </p>
     </>
   )
 }
 
-function FilaResumen({ g }: { g: GrupoEmbudo }) {
-  const pasos = pasosEmbudo(g.embudo)
+function FilaResumen({ g, forma }: { g: GrupoEmbudo; forma?: FormaEmbudo }) {
+  const pasos = pasosEmbudo(g.embudo, forma)
   return (
     <div style={{ border: '1px solid var(--border)', borderRadius: 12, padding: 12, minWidth: 0 }}>
       <div style={{ fontWeight: 700, marginBottom: 6 }}>{g.grupo}</div>
@@ -124,7 +130,7 @@ function FilaResumen({ g }: { g: GrupoEmbudo }) {
           <div key={p.clave}>
             <span style={{ color: 'var(--muted)' }}>{p.etiqueta}: </span>
             <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{textoNumero(p.valor)}</strong>
-            {p.clave !== 'enviados' && <span style={{ color: 'var(--muted)' }}> ({textoPorcentaje(p.pctPrevio)})</span>}
+            {p.base !== null && <span style={{ color: 'var(--muted)' }}> ({textoPorcentaje(p.pctPrevio)})</span>}
           </div>
         ))}
       </div>
@@ -132,23 +138,28 @@ function FilaResumen({ g }: { g: GrupoEmbudo }) {
   )
 }
 
-function Persona({ p }: { p: PersonaCampana }) {
+function Persona({ p, def }: { p: PersonaCampana; def: DefCampana }) {
   const estado = estadoPersona(p)
   const malo = estado === 'Rebotado' || estado === 'Baja' || estado === 'No salió'
+  const felicitacion = def.id === 'felicitacion'
   return (
     <div style={{ border: '1px solid var(--border)', borderRadius: 12, padding: 12, minWidth: 0 }}>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         <strong style={{ overflowWrap: 'anywhere' }}>{p.nombre || '—'}</strong>
         <Badge tono={malo ? 'negativo' : 'neutral'}>{estado}</Badge>
-        <span style={{ fontSize: 12, color: 'var(--muted)' }}>Variante {p.variante || '—'} · lote {p.lote}</span>
+        {p.estadoEmail && <Badge tono={p.estadoEmail === 'rebotado' || p.estadoEmail === 'baja' ? 'negativo' : 'neutral'}>{ETIQUETA_ESTADO_EMAIL[p.estadoEmail]}</Badge>}
+        {p.contactabilidad === 'ilocalizable' && <Badge tono="negativo">Ilocalizable: busca otro contacto</Badge>}
+        <span style={{ fontSize: 12, color: 'var(--muted)' }}>
+          {felicitacion ? `${p.variante || '—'} · ${def.etiquetaLote ?? 'lote'} ${p.lote}` : `Variante ${p.variante || '—'} · lote ${p.lote}`}
+        </span>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '2px 12px', marginTop: 6, fontSize: 12, color: 'var(--muted)' }}>
         <span>Enviado: {fecha(p.enviadoEn)}</span>
         <span>Entregado: {fecha(p.entregadoEn)}</span>
         <span>Abierto: {fecha(p.abiertoEn)}</span>
         <span>Clic: {fecha(p.clicEn)}</span>
-        <span>Visita: {fecha(p.visitaEn)}</span>
-        <span>Registrado: {fecha(p.registradoEn)}</span>
+        <span>{felicitacion ? 'Entró al portal' : 'Visita'}: {fecha(p.visitaEn)}</span>
+        {!felicitacion && <span>Registrado: {fecha(p.registradoEn)}</span>}
         <span>Rebote: {fecha(p.rebotadoEn)}</span>
         <span>Baja: {fecha(p.bajaEn)}</span>
       </div>
@@ -161,7 +172,7 @@ export default function Campanas() {
   const [cargando, setCargando] = useState(true)
   const [visibles, setVisibles] = useState(PAGINA)
   const [campana, setCampana] = useState<IdCampana>('presentacion_app')
-  const def = CAMPANAS_CORREO.find((c) => c.id === campana) ?? CAMPANAS_CORREO[0]
+  const def: DefCampana = CAMPANAS_CORREO.find((c) => c.id === campana) ?? CAMPANAS_CORREO[0]
 
   const leer = async (id: IdCampana = campana) => {
     setCargando(true)
@@ -225,24 +236,24 @@ export default function Campanas() {
         {ok && fallo && (
           <p role="alert" style={{ ...pMuted, color: 'var(--negative)', marginBottom: 10 }}>La última actualización falló ({motivoTexto(fallo)}). Se muestra lo anterior.</p>
         )}
-        {ok && <Tarjetas e={ok.total} personas={ok.personas} />}
+        {ok && <Tarjetas e={ok.total} personas={ok.personas} forma={def.forma} />}
       </Bloque>
 
       {ok && (
         <>
-          <Bloque titulo="Variante A frente a B" Icono={GitCompare}>
+          <Bloque titulo={def.tituloVariantes ?? 'Variante A frente a B'} Icono={GitCompare}>
             {ok.porVariante.length === 0
               ? <p style={pMuted}>Sin variantes con envíos todavía.</p>
               : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: 10 }}>
-                  {ok.porVariante.map((g) => <FilaResumen key={g.grupo} g={g} />)}
+                  {ok.porVariante.map((g) => <FilaResumen key={g.grupo} g={g} forma={def.forma} />)}
                 </div>}
           </Bloque>
 
-          <Bloque titulo="Por lote" Icono={Layers}>
+          <Bloque titulo={def.tituloLotes ?? 'Por lote'} Icono={Layers}>
             {ok.porLote.length === 0
               ? <p style={pMuted}>Aún no ha salido ningún lote.</p>
               : <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: 10 }}>
-                  {ok.porLote.map((g) => <FilaResumen key={g.grupo} g={g} />)}
+                  {ok.porLote.map((g) => <FilaResumen key={g.grupo} g={g} forma={def.forma} />)}
                 </div>}
           </Bloque>
 
@@ -250,7 +261,7 @@ export default function Campanas() {
             {personas.length === 0
               ? <p style={pMuted}>Sin personas todavía.</p>
               : <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: 8 }}>
-                  {personas.slice(0, visibles).map((p) => <Persona key={`${p.clienteId}-${p.lote}`} p={p} />)}
+                  {personas.slice(0, visibles).map((p) => <Persona key={`${p.clienteId}-${p.lote}`} p={p} def={def} />)}
                   {visibles < personas.length && (
                     <button type="button" onClick={() => setVisibles((v) => v + PAGINA)} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
                       Ver más ({personas.length - visibles} restantes)

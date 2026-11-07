@@ -18,6 +18,7 @@ import { leerSiniestros, type SiniestroCartera } from './siniestros-asegura.ts'
 // cuando lo que pasa es que el puerto no responde.
 
 import { cabecerasPuerto } from './puerto-actor.ts'
+import { leerContactabilidad, leerEstadoEmail, type Contactabilidad, type EstadoEmail } from './email-estado-asegura.ts'
 export type EstadoFicha = 'sin_configurar' | 'error' | 'no_encontrado' | 'ok'
 
 export type RecibosPoliza = {
@@ -148,6 +149,10 @@ export type ContactoFicha = {
   /** La calle va cifrada: `null` + `direccionIlegible` = está pero no abre. */
   direccion: string | null
   direccionIlegible: boolean
+  /** Sonda del email (de todos los envíos a la dirección actual). `null` = no se sabe o asegura no lo manda. */
+  estadoEmail: EstadoEmail | null
+  /** `ilocalizable` = email malo y sin teléfono utilizable: buscar otro contacto (no es una baja). */
+  contactabilidad: Contactabilidad | null
 }
 
 /** Quién más hay en una póliza. Misma forma que en `@central/module-seguros`. */
@@ -879,6 +884,8 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
         codigoPostal: cadena(c.codigoPostal),
         direccion: cadena(c.direccion),
         direccionIlegible: c.direccionIlegible === true,
+        estadoEmail: leerEstadoEmail(c.estadoEmail),
+        contactabilidad: leerContactabilidad(c.contactabilidad),
       },
       polizas,
       siniestros,

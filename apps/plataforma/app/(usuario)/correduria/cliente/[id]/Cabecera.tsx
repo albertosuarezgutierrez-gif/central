@@ -16,6 +16,7 @@ import ProbarTarificacion from './ProbarTarificacion'
 import WhatsappReciboDevuelto from '../../poliza/[id]/WhatsappReciboDevuelto'
 import { fmt, TIPOS } from './piezas'
 import { avisoVaArriba } from '@/lib/correduria/aviso-vencimiento'
+import { ETIQUETA_CONTACTABILIDAD, ETIQUETA_ESTADO_EMAIL, tonoEstadoEmail, type Contactabilidad, type EstadoEmail } from '@/lib/email-estado-asegura'
 
 /**
  * La cabecera de la ficha: quién es, cómo se le llama y **qué exige una llamada
@@ -488,7 +489,10 @@ function Contacto({ clienteId, nombre, esCliente, c, intervinientes, piiClave, c
   /** Decide QUÉ mensaje se abre en WhatsApp. Lo calcula la cabecera, con el
    *  mismo criterio que el rótulo de estado. */
   esCliente: boolean
-  c: { telefono: string | null; email: string | null; telefonoIlegible: boolean; emailIlegible: boolean; ciudad: string | null; provincia: string | null; codigoPostal?: string | null }
+  c: {
+    telefono: string | null; email: string | null; telefonoIlegible: boolean; emailIlegible: boolean; ciudad: string | null; provincia: string | null; codigoPostal?: string | null
+    estadoEmail?: EstadoEmail | null; contactabilidad?: Contactabilidad | null
+  }
   intervinientes: IntervinienteFicha[] | null
   piiClave: string | null
   /** Todos los teléfonos/emails; `null` = asegura no manda el bloque (no se afirma «solo uno»). */
@@ -573,11 +577,20 @@ function Contacto({ clienteId, nombre, esCliente, c, intervinientes, piiClave, c
           {deOtro(ef.viaEmail)}
           {ef.canalCorreduria.email ? canalTag : null}
           {mas(masEmail)}
+          {/* Sonda del email (07/11/2026): de los correos ya enviados a ESTA dirección. Sin dato no se pinta nada:
+              nunca «válido» sin un evento que lo pruebe. */}
+          {c.estadoEmail && ef.viaEmail !== 'interviniente' && (
+            <span style={{ marginLeft: 6 }}><Badge tono={tonoEstadoEmail(c.estadoEmail)} title="Según los correos ya enviados a esta dirección (entrega, apertura, rebote) y si entró al portal.">{ETIQUETA_ESTADO_EMAIL[c.estadoEmail]}</Badge></span>
+          )}
         </span>
       ) : (
         <span style={FILA} title={c.emailIlegible ? `Está guardado pero no se puede descifrar: ${causaPii}` : 'No consta email'}>
           <Ico i={c.emailIlegible ? Lock : Mail} />{c.emailIlegible ? 'cifrado' : ef.canalCorreduria.email ? 'sin email propio' : 'sin email'}{ef.canalCorreduria.email && !c.emailIlegible ? canalTag : null}
         </span>
+      )}
+      {/* Señal, no baja: el rebote no impide llamarle; si tampoco hay teléfono, hay que buscar otro contacto. */}
+      {c.contactabilidad === 'ilocalizable' && (
+        <Badge tono="negativo" title="El email rebota (o no hay) y no consta ningún teléfono utilizable. No es una baja: busca otro contacto.">{ETIQUETA_CONTACTABILIDAD.ilocalizable}</Badge>
       )}
       {sitio && <span style={FILA}><Ico i={MapPin} />{sitio}</span>}
     </>

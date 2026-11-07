@@ -17,9 +17,9 @@ export type EventoUtilResend = {
  * `email.bounced`/`email.complained` (14/09/2026): hasta hoy solo se
  * escuchaba apertura/clic, así que una dirección MUERTA o una queja de spam
  * se reintentaba cada 14 días para siempre — indistinguible de un lead que
- * simplemente no abre. Los dos son estados TERMINALES: aplican opt-out (ver
- * `aplicarBajaPorRebote` en `cartera-recaptacion.ts`), no compiten con la
- * progresión enviado→abierto→pinchado.
+ * simplemente no abre. Los dos son estados TERMINALES (el rebote marca el
+ * email como malo y la queja da de baja: `aplicarReboteOQueja` en
+ * `email-rebote.ts`), no compiten con la progresión enviado→abierto→pinchado.
  */
 export function interpretarEventoResend(payload: unknown): EventoUtilResend | null {
   if (typeof payload !== 'object' || payload === null) return null

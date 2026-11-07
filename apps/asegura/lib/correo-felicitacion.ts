@@ -80,31 +80,35 @@ function plantilla(c: { asunto: string; saludo: string; parrafos: string[]; boto
 }
 
 export type ResultadoFelicitacion = 'enviado' | 'sin_proveedor' | 'rechazado'
+/** `resendId` = id de Resend si salió por la API (por SMTP no hay): se guarda en `felicitacion.resend_message_id`. */
+export type EnvioFelicitacion = { resultado: ResultadoFelicitacion; resendId: string | null }
 
 export async function enviarFelicitacion(
   destino: string,
   d: DatosFelicitacion,
   quien: { correduriaId: string; clienteId: string },
-): Promise<ResultadoFelicitacion> {
+): Promise<EnvioFelicitacion> {
   // Import dinámico: el cepo del cuerpo corre con `node --test`, que no resuelve Prisma ni `@central/core-email`.
-  const { enviarCorreoCliente } = await import('./correo-envio')
+  const { enviarCorreoSeguido } = await import('./correo-envio')
   const { asunto, texto, html } = cuerpoFelicitacion(d)
   // Sale por el punto único con seguimiento: queda en `correo_envio` y sus eventos en la ficha.
-  return enviarCorreoCliente({ ...quien, tipo: 'felicitacion', to: destino, asunto, texto, html })
+  const r = await enviarCorreoSeguido({ ...quien, tipo: 'felicitacion', to: destino, asunto, texto, html })
+  return { resultado: r.resultado, resendId: r.resendId ?? null }
 }
 
 export async function enviarFelicitacionExcliente(
   destino: string,
   d: DatosFelicitacion & { variante: VarianteCorreoExcliente },
   quien: { correduriaId: string; clienteId: string; anio: number },
-): Promise<ResultadoFelicitacion> {
-  const { enviarCorreoCliente } = await import('./correo-envio')
+): Promise<EnvioFelicitacion> {
+  const { enviarCorreoSeguido } = await import('./correo-envio')
   const { asunto, texto, html } = cuerpoFelicitacionExcliente(d)
   // Idempotencia de Resend (24 h): un doble ✅ que se colara no manda dos correos.
-  return enviarCorreoCliente({
+  const r = await enviarCorreoSeguido({
     correduriaId: quien.correduriaId, clienteId: quien.clienteId, tipo: 'felicitacion', to: destino, asunto, texto, html,
     idempotencia: `felicitacion-excliente:${quien.clienteId}:${quien.anio}`,
     // Alberto (30/10/2026): felicitaciones y reconquista salen de hola@grupoasegura.es, pase lo que pase con la env.
     remitente: remitenteCorreo(REMITENTE_CORREDURIA),
   })
+  return { resultado: r.resultado, resendId: r.resendId ?? null }
 }

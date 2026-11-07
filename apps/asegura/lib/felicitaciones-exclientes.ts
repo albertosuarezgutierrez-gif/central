@@ -44,7 +44,7 @@ async function hayMigracion(db: { $queryRaw: (q: TemplateStringsArray, ...v: unk
 }
 
 const SELECT_FICHA = {
-  id: true, nombre: true, apellidos: true, fechaNacimiento: true, dniLookupHash: true, emailOptOutAt: true, email: true,
+  id: true, nombre: true, apellidos: true, fechaNacimiento: true, dniLookupHash: true, emailOptOutAt: true, emailRebotadoAt: true, email: true,
   emails: { select: { email: true, esPrincipal: true, createdAt: true } },
   polizas: { where: { mergedIntoPolizaId: null }, select: { importRef: true, eiacXmlHash: true, estado: true, sustituidaAt: true, fechaVencimiento: true, fechaSituacion: true } },
 } as const
@@ -80,6 +80,7 @@ export async function felicitarExclientes(
   const { destinatarioDeCliente } = await import('./avisos-vencimiento-reglas')
   const { enlacePortal } = await import('./avisos-intranet-reglas')
   const { cuerpoFelicitacionExcliente, enviarFelicitacionExcliente } = await import('./correo-felicitacion')
+  const { guardarResendFelicitacion } = await import('./felicitaciones')
   const { tgSendButtons } = await import('@central/core-telegram')
 
   const ahora = opciones.ahora ?? new Date()
@@ -91,7 +92,7 @@ export async function felicitarExclientes(
   // Persona física (tipo_persona IS DISTINCT FROM 'juridica'), no fusionada, con alguna póliza y NINGUNA en vigor.
   const fichas = await db.cliente.findMany({
     where: {
-      correduriaId, mergedIntoClienteId: null, emailOptOutAt: null, fechaNacimiento: { not: null },
+      correduriaId, mergedIntoClienteId: null, emailOptOutAt: null, emailRebotadoAt: null, fechaNacimiento: { not: null },
       AND: [
         { OR: [{ tipoPersona: null }, { NOT: { tipoPersona: 'juridica' } }] },
         { polizas: { some: { mergedIntoPolizaId: null } } },
@@ -150,13 +151,14 @@ export async function felicitarExclientes(
     }
 
     const res = await enviarFelicitacionExcliente(destino, { nombre, enlace, variante }, { correduriaId, clienteId: f.id, anio })
-    if (res === 'sin_proveedor') {
+    if (res.resultado === 'sin_proveedor') {
       await db.$executeRaw`delete from felicitacion where cliente_id = ${f.id}::uuid and anio = ${anio} and canal = 'enviando'`
       throw new Error('sin_correo_configurado')
     }
-    const final = res === 'enviado' ? 'correo' : 'solo_app'
+    const final = res.resultado === 'enviado' ? 'correo' : 'solo_app'
     await db.$executeRaw`update felicitacion set canal = ${final} where cliente_id = ${f.id}::uuid and anio = ${anio} and canal = 'enviando'`
-    if (res === 'enviado') r.enviados += 1
+    if (res.resultado === 'enviado') await guardarResendFelicitacion(correduriaId, f.id, anio, res.resendId)
+    if (res.resultado === 'enviado') r.enviados += 1
     else r.fallidos += 1
   }
   return r
@@ -222,13 +224,15 @@ export async function decidirFelicitacionExcliente(
   if (!destino) { await fijar('solo_app'); return { estado: 'sin_destino' } }
 
   const { enviarFelicitacionExcliente } = await import('./correo-felicitacion')
+  const { guardarResendFelicitacion } = await import('./felicitaciones')
   const res = await enviarFelicitacionExcliente(destino, { nombre: nombreDePila(ficha.nombre), enlace, variante }, { correduriaId, clienteId: ficha.id, anio: d.anio })
-  if (res === 'sin_proveedor') {
+  if (res.resultado === 'sin_proveedor') {
     // Avería de configuración: vuelve a pendiente para que el mismo botón sirva cuando esté arreglado.
     await fijar('pendiente_ok')
     return { estado: 'sin_correo_configurado' }
   }
-  if (res !== 'enviado') { await fijar('solo_app'); return { estado: 'fallida' } }
+  if (res.resultado !== 'enviado') { await fijar('solo_app'); return { estado: 'fallida' } }
   await fijar('correo')
+  await guardarResendFelicitacion(correduriaId, ficha.id, d.anio, res.resendId)
   return { estado: 'enviada', variante }
 }

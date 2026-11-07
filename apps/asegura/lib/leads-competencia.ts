@@ -146,7 +146,7 @@ export async function leadsCompetencia(
       ), 0)::float8 as prima,
       o.fecha_fin_vigencia as "fechaFin",
       case when c.wa_opt_out_at is null then c.telefono else null end as telefono,
-      case when c.email_opt_out_at is null then c.email else null end as email,
+      case when c.email_opt_out_at is null and c.email_rebotado_at is null then c.email else null end as email,
       -- Solo el último año: el «aparcar» es hasta el aniversario siguiente, no
       -- para siempre. Un rebote o una queja no es un intento que le llegara.
       -- Una llamada, un email o un WhatsApp registrados como tarea cerrada de
@@ -224,7 +224,7 @@ export async function leadsCompetencia(
       and c.activo
       and (
         (c.telefono is not null and c.wa_opt_out_at is null)
-        or (c.email is not null and c.email_opt_out_at is null)
+        or (c.email is not null and c.email_opt_out_at is null and c.email_rebotado_at is null)
       )
       and not exists (
         select 1 from polizas p

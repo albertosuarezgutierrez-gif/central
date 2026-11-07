@@ -168,6 +168,7 @@ export async function ejecutarRevisionAnual(opts: { hoy?: Date; forzarContar?: b
     select: {
       id: true,
       emailOptOutAt: true,
+      emailRebotadoAt: true,
       email: true,
       emails: { select: { email: true, esPrincipal: true, createdAt: true } },
     },
