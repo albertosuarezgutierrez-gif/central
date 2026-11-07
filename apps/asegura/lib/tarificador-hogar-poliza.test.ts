@@ -183,3 +183,15 @@ test('ClaseInmueble CIMA (EIAC V07.1 §13.3.8): solo los códigos documentados s
   assert.equal(tipoViviendaDeClaseInmuebleCima(' ui '), 'independiente') // «Unifamiliar aislada»
   for (const c of ['UU', 'UP', 'PL', 'PB', 'GA', 'ZZ', '', null, undefined, 7, 'constructor']) assert.equal(tipoViviendaDeClaseInmuebleCima(c), null, String(c))
 })
+
+test('uso CIMA §13.3.37: AL → alquiler (sin tocar el régimen supuesto); NI → sin contestar (se pregunta)', () => {
+  const al = riesgoHogarDePolizas([fila({ datosEspecificos: datos({ usoInmueble: 'AL' }) })], descifrar, AHORA, SUPUESTOS_HOGAR_DESDE_POLIZA)
+  const d = probar(al.reconstruccion)
+  assert.ok(d.ok, JSON.stringify(d))
+  if (d.ok) { const x = d.entrada.riesgo as Record<string, any>; assert.equal(x.hogar.uso, 'alquiler'); assert.equal(x.hogar.regimen, 'propietario') }
+  assert.ok(al.supuestos.includes('uso') && al.supuestos.includes('regimen'))
+  const ni = riesgoHogarDePolizas([fila({ datosEspecificos: datos({ usoInmueble: 'NI' }) })], descifrar, AHORA, SUPUESTOS_HOGAR_DESDE_POLIZA)
+  const re = ni.reconstruccion
+  assert.ok(re.riesgo === null && 'faltan' in re)
+  if (re.riesgo === null && 'faltan' in re) assert.ok(re.faltan.some((e) => /Uso de la vivienda/.test(e)))
+})
