@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-11-07T08:56:51Z",
+  "generadoEn": "2026-11-07T09:17:39Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1267,7 +1267,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 34
+        "evidencias": 35
       },
       "asegura-portal": {
         "estado": "usado",
@@ -5215,6 +5215,7 @@
       "/api/operador/solicitud-datos/lead-web",
       "/api/operador/solicitud-renovacion/preparar",
       "/api/operador/solicitud-renovacion/publicar",
+      "/api/operador/solicitud-renovacion/reintentar-bots",
       "/api/operador/supresiones",
       "/api/operador/sustituciones",
       "/api/operador/tareas",
@@ -8337,7 +8338,7 @@
     "packages": 49,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1966,
+    "apis": 1967,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
