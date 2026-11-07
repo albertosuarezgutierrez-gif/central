@@ -320,6 +320,7 @@ estabilidad de la forma son la evidencia) antes de tocar el parser.
   tirado. **Copia de TODO lo de CIMA en Google Drive, carpeta «CIMA»** (zips del Portal
   CIMA): es lo que permite reprocesar con `cima-rescate-lote` (repo `asegura`) cuando el
   lector aprende un campo, porque TIREA no reentrega lo confirmado.
+- **`docs/cima/README.md`** — fuente de verdad de campos y claves EIAC V07.1 (estructura, 90 tablas `claves_*`, normas de uso; búscalas con Grep antes de inventar un campo o un código).
 - Negocio y ciclo semanal → skill **`agente-correduria`**.
 - Pantallas y escrituras del CRM → skill **`correduria-crm`**.
 - Infra y traspaso → `apps/asegura/CLAUDE.md` + `docs/TRASPASO-CORREDURIA.md`.
