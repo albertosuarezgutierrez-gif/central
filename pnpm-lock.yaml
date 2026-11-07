@@ -401,6 +401,9 @@ importers:
       '@central/core-fiscal':
         specifier: workspace:*
         version: link:../../packages/core-fiscal
+      '@central/core-herramientas':
+        specifier: workspace:*
+        version: link:../../packages/core-herramientas
       '@central/core-identity':
         specifier: workspace:*
         version: link:../../packages/core-identity
@@ -428,6 +431,64 @@ importers:
       xlsx:
         specifier: ^0.18.5
         version: 0.18.5
+    devDependencies:
+      '@types/node':
+        specifier: ^22
+        version: 22.19.20
+      '@types/react':
+        specifier: ^19
+        version: 19.2.17
+      '@types/react-dom':
+        specifier: ^19
+        version: 19.2.3(@types/react@19.2.17)
+      eslint:
+        specifier: ^9
+        version: 9.39.4(jiti@2.7.0)
+      eslint-config-next:
+        specifier: ^16.2.6
+        version: 16.2.7(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+      prisma:
+        specifier: ^5.22.0
+        version: 5.22.0
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
+  apps/empresa:
+    dependencies:
+      '@central/brand':
+        specifier: workspace:*
+        version: link:../../packages/brand
+      '@central/core-email':
+        specifier: workspace:*
+        version: link:../../packages/core-email
+      '@central/core-firma':
+        specifier: workspace:*
+        version: link:../../packages/core-firma
+      '@central/core-herramientas':
+        specifier: workspace:*
+        version: link:../../packages/core-herramientas
+      '@central/core-identity':
+        specifier: workspace:*
+        version: link:../../packages/core-identity
+      '@central/core-telegram':
+        specifier: workspace:*
+        version: link:../../packages/core-telegram
+      '@central/legal-templates':
+        specifier: workspace:*
+        version: link:../../packages/legal-templates
+      '@prisma/client':
+        specifier: ^5.22.0
+        version: 5.22.0(prisma@5.22.0)
+      next:
+        specifier: ^15.5.28
+        version: 15.5.28(@babel/core@7.29.7)(@types/node@22.19.20)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.4(react@19.2.4)
     devDependencies:
       '@types/node':
         specifier: ^22
@@ -850,6 +911,9 @@ importers:
       '@central/core-fiscal':
         specifier: workspace:*
         version: link:../../packages/core-fiscal
+      '@central/core-herramientas':
+        specifier: workspace:*
+        version: link:../../packages/core-herramientas
       '@central/core-identity':
         specifier: workspace:*
         version: link:../../packages/core-identity
@@ -989,6 +1053,9 @@ importers:
       '@central/core-firma':
         specifier: file:../../packages/core-firma
         version: link:../../packages/core-firma
+      '@central/core-herramientas':
+        specifier: file:../../packages/core-herramientas
+        version: link:../../packages/core-herramientas
       '@central/core-identity':
         specifier: file:../../packages/core-identity
         version: link:../../packages/core-identity
@@ -1406,6 +1473,8 @@ importers:
 
   packages/core-fiscal: {}
 
+  packages/core-herramientas: {}
+
   packages/core-identity:
     dependencies:
       jose:
@@ -1535,6 +1604,9 @@ importers:
 
   packages/module-seguros:
     dependencies:
+      '@central/legal-templates':
+        specifier: workspace:*
+        version: link:../legal-templates
       libphonenumber-js:
         specifier: ^1.12.0
         version: 1.13.14

@@ -1,0 +1,33 @@
+{
+  "name": "empresa",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "node --import ./test/_registro.mjs --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@central/brand": "workspace:*",
+    "@central/core-email": "workspace:*",
+    "@central/core-firma": "workspace:*",
+    "@central/core-herramientas": "workspace:*",
+    "@central/core-identity": "workspace:*",
+    "@central/core-telegram": "workspace:*",
+    "@central/legal-templates": "workspace:*",
+    "@prisma/client": "^5.22.0",
+    "next": "^15.5.28",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "^16.2.6",
+    "prisma": "^5.22.0",
+    "typescript": "^5"
+  }
+}

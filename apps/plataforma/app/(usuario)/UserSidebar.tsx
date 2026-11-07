@@ -96,6 +96,7 @@ const NAV_PISOS = [
 
 const NAV_OPERADOR = [
   { href: '/operador/clientes', icon: Building2, label: 'Clientes' },
+  { href: '/operador/empresas', icon: Briefcase, label: 'Mi empresa' },
   { href: '/operador/personas', icon: User, label: 'Personas' },
   { href: '/operador/flota-mapa', icon: Satellite, label: 'Flota (mapa)' },
   { href: '/operador/iarest', icon: UtensilsCrossed, label: 'ia-rest' },

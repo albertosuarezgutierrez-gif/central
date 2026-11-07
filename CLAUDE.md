@@ -17,6 +17,8 @@
   Es LA pantalla de Alberto, también de la correduría (`/correduria`).
 - **`apps/contabilidad`** — contabilidad multi-empresa (herramienta agnóstica de sector que se regala a clientes; schema `contabilidad`,
   rol `prisma_contabilidad`, puerto `POST /api/hechos`). Spec `docs/superpowers/specs/2026-11-04-modulo-contabilidad.md`.
+- **`apps/empresa`** — «Mi empresa» (`empresa.grupoasegura.es`): herramientas por empresa + contrato de encargo firmado (schema `herramientas`,
+  rol `prisma_herramientas`). Operador en plataforma `/operador/empresas`. No lee `seguros` ni importa `module-seguros`. `CLAUDE.md` propio.
 - **`apps/rrhh`** — Portal del Empleado (schema `rrhh`, rol `rrhh_app`). Alta de empresas por `/api/operador/empresas`.
 - **`apps/transporte`** — flota/portes (`module-flota` + `module-transporte`, rol `prisma_transporte`).
 - **`apps/alquiler`** — alquiler de materiales (`module-alquiler`, rol `prisma_alquiler`).
@@ -125,8 +127,8 @@ y los `module-*` de cada vertical.
   **Prohibido:** commit vacío, cerrar/reabrir, rama nueva por iniciativa propia, tocar el ruleset o su bypass.
 - Requeridos = nombres de JOB: `Análisis estático · Patrones conocidos`, `Lint · TypeCheck · Build`,
   `Tests (packages + guardián)` + `Typecheck · <app>` (el ruleset exige 9; los demás corren). Los `Vercel – *` no.
-- ⚠️ **La matriz de `tests.yml` ya NO son 9 apps: son 15** — `ia-rest, ialimp, sivra, plataforma, rrhh, transporte,
-  alquiler, almacen, mariscos, asegura, asegura-portal, asegura-web, housesevillana, taller, contabilidad`. Cuéntalas en el workflow antes de
+- ⚠️ **La matriz de `tests.yml` ya NO son 9 apps: son 16** — `ia-rest, ialimp, sivra, plataforma, rrhh, transporte,
+  alquiler, almacen, mariscos, asegura, asegura-portal, asegura-web, housesevillana, taller, contabilidad, empresa`. Cuéntalas en el workflow antes de
   citar la cifra (lo vigila `test/regression-matriz-typecheck.test.ts`); **una app nueva se añade a la matriz** en su alta.
 - **Todo se puede correr en local:** `npx --yes pnpm@10.33.0 install --no-frozen-lockfile`; `pnpm test` (raíz);
   por app `pnpm exec prisma generate` + `pnpm exec tsc --noEmit -p tsconfig.json`; QA y lint/build desde `apps/ia-rest`.
