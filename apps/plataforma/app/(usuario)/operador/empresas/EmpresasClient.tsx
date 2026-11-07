@@ -26,7 +26,7 @@ const EST_H: Record<string, string> = { apagada: 'Sin contratar', pendiente_firm
 const ERR: Record<string, string> = {
   destinatario_cambiado: 'El dueño cambió mientras mirabas: vuelve a revisar a quién se envía.', canal_no_disponible: '«Mi empresa» no tiene proveedor de correo configurado: NO se ha emitido nada.',
   falta_confirmar_borrador: 'Marca que sabes que el texto es un borrador sin revisión de abogado.', sin_configurar: 'Falta EMPRESA_URL / HERRAMIENTAS_OPERADOR_SECRET en plataforma.',
-  sin_respuesta: '«Mi empresa» no respondió. No se sabe si el envío salió: refresca la ficha ANTES de repetir.', ref_no_editable_con_herramienta_contratada: 'No se cambia la ref de una herramienta ya contratada.',
+  sin_respuesta: '«Mi empresa» no respondió. No se sabe si el envío salió: refresca la ficha ANTES de repetir.', ref_no_editable: 'No se cambia la ref de una herramienta ya contratada.',
   herramienta_no_contratada: 'Solo se concede lo contratado (emite el contrato primero).', es_el_dueno: 'Esa persona es el dueño.', datos_dueno_invalidos: 'Revisa nombre, correo, NIF y título del dueño.',
   datos_acceso_invalidos: 'Revisa nombre, correo y rol.', version_no_firmable: 'Esa versión ya no admite envíos (firmada, anulada o caducada).',
 }

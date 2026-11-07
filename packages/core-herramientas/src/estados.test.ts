@@ -52,6 +52,7 @@ test('permisos: el admin NO firma ni reparte accesos; el dueño sí', () => {
   assert.equal(puede(null, 'ver_portada'), false)
   assert.equal(puede('consulta', 'firmar'), false, 'el socio en consulta no firma')
   assert.equal(puede('consulta', 'dar_acceso'), false, 'el socio en consulta no reparte accesos')
+  assert.equal(puede('consulta', 'abrir'), false, 'consulta no abre apps (roles.ts mapea consulta → null): ve el panel')
 })
 
 const cuenta: HerramientaDeCuenta[] = [
@@ -77,8 +78,11 @@ test('portada del admin: SOLO lo concedido; sin concesiones no ve nada', () => {
   assert.equal(puedeAbrir(cuenta, { rol: 'admin', concedidas: ['contabilidad'] }, 'contabilidad'), true)
 })
 
-test('portada de consulta: ve TODO lo contratado sin concesiones (como el dueño)', () => {
-  assert.deepEqual(herramientasVisibles(cuenta, { rol: 'consulta', concedidas: [] }), herramientasVisibles(cuenta, { rol: 'dueno', concedidas: [] }))
+test('portada de consulta: ve TODO lo contratado sin concesiones (como el dueño) pero NADA es abrible', () => {
+  const v = herramientasVisibles(cuenta, { rol: 'consulta', concedidas: [] })
+  assert.deepEqual(v.map((t) => [t.herramienta, t.estado]), herramientasVisibles(cuenta, { rol: 'dueno', concedidas: [] }).map((t) => [t.herramienta, t.estado]))
+  assert.ok(v.every((t) => t.abrible === false))
+  assert.equal(puedeAbrir(cuenta, { rol: 'consulta', concedidas: [] }, 'contabilidad'), false)
 })
 
 test('conceder solo lo contratado', () => {

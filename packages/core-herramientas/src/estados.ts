@@ -77,11 +77,11 @@ export const esRol = (v: unknown): v is Rol => typeof v === 'string' && (ROLES a
 const VE_TODO: readonly Rol[] = ['dueno', 'consulta']
 export type Accion = 'ver_portada' | 'ver_contrato' | 'firmar' | 'dar_acceso' | 'abrir'
 
-/** Matriz cerrada. El admin (p. ej. Pilar, gestora) VE y OPERA pero NO firma ni reparte accesos. */
+/** Matriz cerrada. consulta VE el panel pero no abre apps (MAPEO_POR_DEFECTO la mapea a null). El admin (p. ej. Pilar, gestora) VE y OPERA pero NO firma ni reparte accesos. */
 const MATRIZ: Record<Rol, readonly Accion[]> = {
   dueno: ['ver_portada', 'ver_contrato', 'firmar', 'dar_acceso', 'abrir'],
   admin: ['ver_portada', 'ver_contrato', 'abrir'],
-  consulta: ['ver_portada', 'ver_contrato', 'abrir'],
+  consulta: ['ver_portada', 'ver_contrato'],
   // Nunca traspaso para empleados (spec §5.2): su sesión es la de la app, no la de Mi empresa.
   empleado: ['ver_portada'],
 }

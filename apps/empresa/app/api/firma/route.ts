@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { canjearCodigo, claveFirma } from '@/lib/acceso'
-import { repoOtpBd, conRepoFirma, personaPropia } from '@/lib/db'
+import { conRepoFirma, personaPropia } from '@/lib/db'
 import { firmarContrato } from '@/lib/firma'
 import { leerContexto } from '@/lib/contexto'
 import { ipDeCabecera } from '@/lib/ip'
@@ -15,6 +15,8 @@ const MENSAJE_BD: Record<string, [number, string]> = {
   documento_cambiado: [409, 'documento_cambiado'], version_no_firmable: [409, 'version_no_firmable'],
   solo_firma_el_dueno: [403, 'solo_firma_el_dueno'], version_de_otro_firmante: [403, 'version_de_otro_firmante'],
   duplicate: [409, 'ya_firmado'],
+  version_no_existe: [404, 'version_no_existe'], sello_de_tiempo_fuera_de_rango: [409, 'sello_de_tiempo_fuera_de_rango'],
+  sin_persona: [401, 'sin_persona'],
 }
 
 export async function POST(req: Request) {
@@ -26,9 +28,9 @@ export async function POST(req: Request) {
   const yo = await personaPropia(ctx.personaId)
   if (!yo) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   try {
-    const r = await conRepoFirma(ctx.personaId, (repo) => firmarContrato(repo, yo,
+    const r = await conRepoFirma(ctx.personaId, (repo, repoOtp) => firmarContrato(repo, yo,
       { versionId, nombre: b.nombre, titulo: b.titulo, shaVisto: b.sha256, consiento: b.consiento, ip: ipDeCabecera(req.headers.get('x-forwarded-for')), ua: req.headers.get('user-agent') ?? 'desconocido' },
-      () => canjearCodigo(repoOtpBd, { email: yo.email, codigo: b.codigo, proposito: 'firma', clave: claveFirma(versionId, yo.email) }),
+      () => canjearCodigo(repoOtp, { email: yo.email, codigo: b.codigo, proposito: 'firma', clave: claveFirma(versionId, yo.email) }),
       MEDIADOR.marca))
     if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status })
     await avisarFirma(r.razonSocial, r.n).catch(() => undefined)

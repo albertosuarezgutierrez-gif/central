@@ -10,6 +10,9 @@ import { CATALOGO, esHerramienta, puedeAbrir, firmarTraspaso, envSecretoTraspaso
 // La app destino vuelve a exigir SU usuario_empresas: el token no autoriza nada por sí solo.
 export const dynamic = 'force-dynamic'
 
+// Únicos errores de registrar_traspaso que significan «no tienes acceso»; cualquier otro fallo de BD es del servidor (503, no 403).
+const ERRORES_DE_ACCESO = ['sin_acceso', 'herramienta_no_activa', 'sin_acceso_a_la_herramienta']
+
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!))
 const pagina = (cuerpo: string, status = 200) => new Response(`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Abriendo…</title>` +
   `<style>body{font-family:system-ui,sans-serif;max-width:480px;margin:48px auto;padding:0 16px}button,a.btn{min-height:44px;padding:0 18px;font-size:16px}</style></head><body>${cuerpo}</body></html>`,
@@ -32,8 +35,11 @@ export async function POST(req: Request) {
   let reg: { ref: string; email: string }
   try {
     reg = await registrarTraspaso(ctx.personaId, ctx.cuenta.id, h, jti, aud, new Date(ahora.getTime() + VIDA_TRASPASO_S * 1000))
-  } catch {
-    return error('No tienes acceso a esta herramienta en esta empresa.', 403)
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : ''
+    if (ERRORES_DE_ACCESO.some((k) => msg.includes(k))) return error('No tienes acceso a esta herramienta en esta empresa.', 403)
+    console.error('[empresa] fallo al registrar el traspaso:', msg.slice(0, 200))
+    return error('No se pudo abrir la herramienta ahora mismo. Inténtalo de nuevo en unos minutos.', 503)
   }
   const token = await firmarTraspaso({ aud, sub: ctx.personaId, email: reg.email, ref: reg.ref, jti }, secreto, ahora)
   return pagina(`<form id="f" method="post" action="${esc(base)}/api/auth/traspaso"><input type="hidden" name="token" value="${esc(token)}">` +

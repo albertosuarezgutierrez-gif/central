@@ -35,6 +35,7 @@ export function AccesosCliente({ miembros, contratadas }: { miembros: MiembroVis
       </ul>
       <form className="seccion" style={{ display: 'grid', gap: 12, padding: 16 }} onSubmit={(e) => { e.preventDefault(); pedir('POST', { email, nombre, rol, herramientas: rol === 'consulta' ? [] : hs }) }}>
         <h2 style={{ margin: 0 }}>Dar acceso</h2>
+        <p className="tenue" style={{ margin: 0 }}>Si la persona ya tiene acceso, quedan exactamente las herramientas que marques: las desmarcadas se quitan.</p>
         <label className="campo">Correo<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></label>
         <label className="campo">Nombre<input value={nombre} onChange={(e) => setNombre(e.target.value)} required /></label>
         <label className="campo">Papel

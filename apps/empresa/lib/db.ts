@@ -17,31 +17,35 @@ type Fila = Record<string, unknown>
 const n = (v: unknown) => (typeof v === 'bigint' ? Number(v) : Number(v ?? 0))
 
 // ─── Login / sesión ────────────────────────────────────────────────────────────────────────────────────────────────
-export const repoOtpBd: RepoOtp = {
-  async contarRecientesPorClave(p: Proposito, claveHash, desde) {
-    const f = await sql.$queryRaw<Fila[]>`SELECT count(*)::int AS n FROM herramientas.acceso_otp WHERE proposito = ${p} AND email_hash = ${claveHash} AND creado_en >= ${desde}`
-    return n(f[0]?.n)
-  },
-  async contarRecientesPorIp(ip, desde) {
-    const f = await sql.$queryRaw<Fila[]>`SELECT count(*)::int AS n FROM herramientas.acceso_otp WHERE ip = ${ip} AND creado_en >= ${desde}`
-    return n(f[0]?.n)
-  },
-  async crearOtp(x: { proposito: Proposito; claveHash: string; codigoHash: string; ip: string; envio: EnvioCodigo }) {
-    await sql.$executeRaw`INSERT INTO herramientas.acceso_otp (proposito, email_hash, codigo_hash, ip, envio) VALUES (${x.proposito}, ${x.claveHash}, ${x.codigoHash}, ${x.ip}, ${x.envio})`
-  },
-  async ultimoOtp(p, claveHash) {
-    const f = await sql.$queryRaw<Fila[]>`SELECT id, codigo_hash, creado_en, intentos, usado_en FROM herramientas.acceso_otp
-      WHERE proposito = ${p} AND email_hash = ${claveHash} ORDER BY creado_en DESC LIMIT 1`
-    if (!f[0]) return null
-    return { id: String(f[0].id), codigoHash: String(f[0].codigo_hash), creadoEn: f[0].creado_en as Date, intentos: n(f[0].intentos), usadoEn: (f[0].usado_en as Date | null) ?? null }
-  },
-  async reservarIntento(id, max) {
-    return (await sql.$executeRaw`UPDATE herramientas.acceso_otp SET intentos = intentos + 1 WHERE id = ${id}::uuid AND usado_en IS NULL AND intentos < ${max}::int`) === 1
-  },
-  async gastarOtp(id) {
-    return (await sql.$executeRaw`UPDATE herramientas.acceso_otp SET usado_en = now() WHERE id = ${id}::uuid AND usado_en IS NULL`) === 1
-  },
+export function crearRepoOtp(sql: TxSql): RepoOtp {
+  return {
+    async contarRecientesPorClave(p: Proposito, claveHash, desde) {
+      const f = await sql.$queryRaw<Fila[]>`SELECT count(*)::int AS n FROM herramientas.acceso_otp WHERE proposito = ${p} AND email_hash = ${claveHash} AND creado_en >= ${desde}`
+      return n(f[0]?.n)
+    },
+    async contarRecientesPorIp(ip, desde) {
+      const f = await sql.$queryRaw<Fila[]>`SELECT count(*)::int AS n FROM herramientas.acceso_otp WHERE ip = ${ip} AND creado_en >= ${desde}`
+      return n(f[0]?.n)
+    },
+    async crearOtp(x: { proposito: Proposito; claveHash: string; codigoHash: string; ip: string; envio: EnvioCodigo }) {
+      await sql.$executeRaw`INSERT INTO herramientas.acceso_otp (proposito, email_hash, codigo_hash, ip, envio) VALUES (${x.proposito}, ${x.claveHash}, ${x.codigoHash}, ${x.ip}, ${x.envio})`
+    },
+    async ultimoOtp(p, claveHash) {
+      const f = await sql.$queryRaw<Fila[]>`SELECT id, codigo_hash, creado_en, intentos, usado_en FROM herramientas.acceso_otp
+        WHERE proposito = ${p} AND email_hash = ${claveHash} ORDER BY creado_en DESC LIMIT 1`
+      if (!f[0]) return null
+      return { id: String(f[0].id), codigoHash: String(f[0].codigo_hash), creadoEn: f[0].creado_en as Date, intentos: n(f[0].intentos), usadoEn: (f[0].usado_en as Date | null) ?? null }
+    },
+    async reservarIntento(id, max) {
+      return (await sql.$executeRaw`UPDATE herramientas.acceso_otp SET intentos = intentos + 1 WHERE id = ${id}::uuid AND usado_en IS NULL AND intentos < ${max}::int`) === 1
+    },
+    async gastarOtp(id) {
+      return (await sql.$executeRaw`UPDATE herramientas.acceso_otp SET usado_en = now() WHERE id = ${id}::uuid AND usado_en IS NULL`) === 1
+    },
+  }
 }
+/** Repo OTP sobre el cliente global (rutas de login, fuera de cualquier transacción de persona). */
+export const repoOtpBd: RepoOtp = crearRepoOtp(sql)
 
 export async function personaPorEmail(email: string): Promise<{ id: string; nombre: string; sv: number } | null> {
   const f = await sql.$queryRaw<Fila[]>`SELECT o_id, o_nombre, o_sv FROM herramientas.persona_por_email(${email}::text)`
@@ -151,8 +155,12 @@ export async function registrarTraspaso(personaId: string, cuentaId: string, her
   })
 }
 
-/** Repositorio de firma de UNA persona: todo en la MISMA transacción RLS (lectura + firmar_version). */
-export function conRepoFirma<R>(personaId: string, fn: (repo: RepoFirma) => Promise<R>): Promise<R> {
+/**
+ * Repositorio de firma de UNA persona: todo en la MISMA transacción RLS (lectura + firmar_version). `repoOtp` va sobre ESA
+ * transacción: el canje del código (reservar intento + gastar) comparte conexión (sin P2024 con connection_limit=1) y, si
+ * firmar_version hace rollback, el código vuelve a estar sin gastar.
+ */
+export function conRepoFirma<R>(personaId: string, fn: (repo: RepoFirma, repoOtp: RepoOtp) => Promise<R>): Promise<R> {
   return conPersona(personaId, (tx) => fn({
     async version(versionId) {
       const f = await tx.$queryRaw<Fila[]>`SELECT cv.id, cv.n, cv.estado, cv.caduca_en, cv.documento_html, cv.documento_sha256, cv.destinatario_persona_id, cv.variables, ct.cuenta_id
@@ -172,7 +180,7 @@ export function conRepoFirma<R>(personaId: string, fn: (repo: RepoFirma) => Prom
         ${a.shaVisto}::text, ${a.firmadoEn}::timestamptz, ${JSON.stringify(a.evidencia)}::jsonb, ${a.certificadoHtml}::text, ${a.certificadoSha}::text) AS id`
       return String(f[0]?.id)
     },
-  }), { timeout: 15_000 })
+  }, crearRepoOtp(tx)), { timeout: 15_000 })
 }
 
 export async function personaPropia(personaId: string): Promise<{ id: string; email: string; nombre: string } | null> {

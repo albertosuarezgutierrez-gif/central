@@ -7,6 +7,7 @@ import { PLANTILLA_ENCARGO_V1 } from '../../../packages/core-herramientas/src/pl
 
 const sql = readFileSync(new URL('../prisma/sql/0001_herramientas.sql', import.meta.url), 'utf8')
 const p2 = readFileSync(new URL('../prisma/sql/0002_plantilla_encargo_v1.sql', import.meta.url), 'utf8')
+const p4 = readFileSync(new URL('../prisma/sql/0004_correcciones_review.sql', import.meta.url), 'utf8')
 const semilla = readFileSync(new URL('../prisma/sql/0003_semilla_g2_global2.sql', import.meta.url), 'utf8')
 
 test('rol propio NOBYPASSRLS y RLS FORZADO en TODAS las tablas del schema', () => {
@@ -86,4 +87,12 @@ test('I-2: la semilla identifica a cada persona por ID de ficha, nunca por nombr
     assert.ok(codigo.includes(`'${id}'`), `falta el id ${id}`)
   }
   assert.match(codigo, /WHERE em\.id = c_manuel/); assert.match(codigo, /WHERE em\.id = c_javier/); assert.match(codigo, /WHERE u\.id = c_pilar/)
+})
+
+test('0004: re-conceder deja EXACTAMENTE lo marcado y consulta no salta a las apps', () => {
+  assert.match(p4, /^BEGIN;[\s\S]*COMMIT;\s*$/m)
+  assert.match(p4, /DELETE FROM herramientas\.miembro_herramienta\s+WHERE cuenta_id = p_cuenta AND persona_id = v_persona\s+AND herramienta <> ALL/)
+  assert.match(p4, /v_rol IN \('empleado', 'consulta'\) THEN RAISE EXCEPTION 'sin_acceso'/)
+  assert.match(p4, /SECURITY DEFINER SET search_path = herramientas, pg_temp/)
+  assert.doesNotMatch(p4, /GRANT[^;]*prisma_herramientas_op/, '0004 no toca los permisos del operador')
 })

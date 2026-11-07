@@ -226,3 +226,10 @@ real es el job `typecheck` de `.github/workflows/tests.yml`.
 
 ## Alta de marca de un cliente nuevo
 Subir logo (Cuenta o `logo_base64`+`logo_mime` en `POST /api/operador/empresas`) → `lib/logo-empresa.ts` recorta márgenes, limita a 600 px, guarda PNG en el bucket (`branding/<empresa>/…`) y, si no hay `color_primario`, lo deriva del logo (`lib/logo-pixeles.ts`; gris/blanco → null = look ASegura). `public/logos/*` es solo legado. Revisar el contraste en la vista previa de Cuenta (`paletaEmpresa` oscurece lo claro). El operador escribe `color_primario` (la columna `marca_color` es heredada).
+
+## Alta de trabajadores, seguro de convenio y nómina explicable (07/11/2026)
+- Alta: `/admin/empleados/nuevo` e `importar`; escritura ÚNICA `darDeAltaLote` (`lib/alta-empleado-repo.ts`), reglas puras en `lib/alta-empleado.ts`. `POST /api/admin/empleados` la reutiliza.
+- Importación SOLO CSV: no se lee ningún .xlsx subido (`xlsx@0.18.5`, CVE-2023-30533; solo escribe informes). Volverá con xlsx ≥0.20.3.
+- Seguro de convenio: `lib/seguro-convenio.ts` (NULL ≠ `no_cubierto` ≠ `cubierto`); lead a la correduría solo con botón + consentimiento; timeout/5xx = `incierto` (no se reenvía; reintento manual tras 24 h). ✅ 0036 aplicada en BD (07/11/2026); la siguiente libre es la 0038 (0037 = `traspasos_usados`).
+- Nómina explicable: `lib/nomina-explicacion.ts`; el PDF lleva anexo al confirmar.
+- Detalle íntegro: `docs/claude-md/RRHH-alta-convenio-nomina-2026-11-07.md`.
