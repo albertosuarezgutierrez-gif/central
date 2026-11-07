@@ -2,7 +2,10 @@
 // nombre y NIF inventados; catálogo de ejemplo.
 import { describe, it, expect } from 'vitest'
 import {
+  codigoSinteticoDeEtiqueta,
+  conCodigosSinteticos,
   contextoEleccionVersion,
+  esCodigoSintetico,
   elegirDeLista,
   mensajesEleccion,
   peticionEleccionVersion,
@@ -195,5 +198,39 @@ describe('ramo auto (coche): elección de lista y contexto', () => {
     expect(ctx).toEqual({ ramo: 'auto', marca: 'MARCA PRUEBA', modelo: 'MODELO X', clase: null, cilindradaCc: null, descripcion: null })
     const dump = JSON.stringify(ctx)
     for (const personal of ['1234BCD', '41003', '1980', '2000', 'mujer', '12345678Z', 'Persona', 'Inventada']) expect(dump.includes(personal)).toBe(false)
+  })
+})
+
+describe('código sintético para portales sin código (Mapfre, v0.8.61)', () => {
+  const SIN = [
+    { codigo: null, etiqueta: 'Marca Prueba Modelo 2.9 Gl · 163 CV · 2902 cc · 01/01/2004' },
+    { codigo: null, etiqueta: 'Marca Prueba Modelo 2.9 Gls · 163 CV · 2902 cc · 01/09/2004' },
+  ]
+  const RIESGO = { ramo: 'auto' as const, seleccionVehiculo: { marca: 'MARCA', modelo: 'PRUEBA', clase: null, cilindradaCc: null, descripcion: '2.9 GLS' } }
+  it('es estable, ≤60 caracteres, insensible a tildes/mayúsculas/espacios y distinto entre etiquetas', () => {
+    const a = codigoSinteticoDeEtiqueta(SIN[0].etiqueta)
+    expect(a).toBe(codigoSinteticoDeEtiqueta('  MARCA  prueba modelo 2.9 GL · 163 cv · 2902 CC · 01/01/2004'))
+    expect(a).not.toBe(codigoSinteticoDeEtiqueta(SIN[1].etiqueta))
+    expect(a).toMatch(/^et:[0-9a-f]{8}$/)
+    expect(esCodigoSintetico(a)).toBe(true)
+    expect(esCodigoSintetico('V001')).toBe(false)
+    expect(esCodigoSintetico(null)).toBe(false)
+  })
+  it('sin ningún código → todas lo reciben y la petición a la IA ya es posible; antes era null', () => {
+    expect(peticionEleccionVersion(RIESGO, SIN)).toBeNull()
+    const con = conCodigosSinteticos(SIN)
+    expect(con.every((o) => esCodigoSintetico(o.codigo))).toBe(true)
+    expect(con.map((o) => o.etiqueta)).toEqual(SIN.map((o) => o.etiqueta))
+    const p = peticionEleccionVersion(RIESGO, con)
+    expect(p?.opciones.map((o) => o.codigo)).toEqual(con.map((o) => o.codigo))
+  })
+  it('con códigos reales no se toca; con mezcla tampoco (sigue sin petición: decide una persona); dos etiquetas iguales no se adivinan', () => {
+    expect(conCodigosSinteticos(OPCIONES)).toEqual(OPCIONES)
+    const mezcla = [{ codigo: 'V1', etiqueta: 'A' }, { codigo: null, etiqueta: 'B' }]
+    expect(conCodigosSinteticos(mezcla)).toEqual(mezcla)
+    expect(peticionEleccionVersion(RIESGO, conCodigosSinteticos(mezcla))).toBeNull()
+    const repetida = [SIN[0], { codigo: null, etiqueta: SIN[0].etiqueta.toUpperCase() }]
+    expect(peticionEleccionVersion(RIESGO, conCodigosSinteticos(repetida))).toBeNull()
+    expect(conCodigosSinteticos([])).toEqual([])
   })
 })

@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(07/11/2026) Mapfre auto 0.8.61: BASICar sin precio + equivalencia de versión.** Causa (a): 15 runs con variantes, ninguna con prima; tras guardar el proyecto el `mat-select` de las tarjetas no está visible, antes del proyecto el recálculo/diálogo deja tarjetas sin importe. Fix parcial: corta el bucle y anota la estructura de las tarjetas; el arreglo real necesita pilotaje (plan en TARIFICADOR-RPA.md).
+Causa (b): los fallos de versión (Terracan 18-19/10, Forfour 02/11) ya los cubrían 0.8.9/0.8.55; el hueco era que la IA/memoria no actuaba en Mapfre (filas sin código): código sintético `et:`+hash (`conCodigosSinteticos`). Sin PR ni push (rama de worktree).
+Aviso: el smoke de login de Mapfre falló 2 veces el 07/11 («mapa incompleto: selector del botón de entrada del login de wmediadores»): mirar si el portal cambió.
+
 **(07/11/2026) Contabilidad F0-F5 + portal de proveedores + nóminas N0/N1 mergeados.** PRs #5545 F0, #5553 F1, #5558 F2, #5565 F3, #5570 (F4 impuestos + portal proveedores + N0), #5575 (F5 cierre + N1 IRPF).
 Specs: `docs/superpowers/specs/2026-11-04-modulo-contabilidad.md` y `2026-11-05-modulo-nominas.md`. Modelos AEAT y 200/202 solo BORRADOR (casillas sin contrastar, sin fichero oficial). Factura de proveedor leída por IA exige confirmación humana (solo XML Facturae/UBL contabiliza solo).
 Nóminas: cifras 2026 (MEI, mínimos, solidaridad, límites IRPF art. 81/85.3) `PENDIENTE_VERIFICAR` → modo cálculo bloqueado hasta que un asesor las contraste; «sin 145» marcado pendiente (art. 88 RIRPF ≠ tipo máximo del spec).

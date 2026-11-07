@@ -11,6 +11,7 @@
 //
 // Las rutas del worker solo conocen el id del trabajo; aquí el trabajo se lee por id y se relanza con SU correduría.
 
+import { esCodigoSintetico } from '@central/module-tarificacion'
 import { iaTexto } from './ia'
 import { prisma } from './tenant'
 import { lanzarPendientes } from './tarificador'
@@ -44,7 +45,8 @@ async function aplicar(f: FilaEleccion, e: { codigo: string; etiqueta: string },
       where t.id = ${f.id}::uuid and t.correduria_id = ${f.correduria_id}::uuid for update`
     const a = filas[0]
     if (!a || a.estado !== 'requiere_humano' || a.tiene_eleccion || (a.error_en ?? null) !== errorEn) return false
-    const eleccion = JSON.stringify({ codigo: e.codigo, etiqueta: e.etiqueta })
+    // v0.8.61: un código SINTÉTICO no existe en el portal: se escribe `{ codigo: null, etiqueta }` (la convención de Mapfre; el bot elige la fila por la etiqueta).
+    const eleccion = JSON.stringify({ codigo: esCodigoSintetico(e.codigo) ? null : e.codigo, etiqueta: e.etiqueta })
     const marca = JSON.stringify({ motivo: motivo.slice(0, 300), en: new Date().toISOString(), origen: m.origen, clave: m.clave })
     const n = await tx.$executeRaw`
       update seguros.tarificacion_trabajos
