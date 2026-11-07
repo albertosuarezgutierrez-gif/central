@@ -11,6 +11,7 @@
  * - Una lectura que falla devuelve `null`, nunca una lista vacía que diría «no hay variantes».
  */
 import { prisma } from '@/lib/tenant'
+import { siniestrosCimaDeCliente } from '@/lib/antecedentes-cima-bd'
 import { mismaPersonaPorNombre } from './misma-persona'
 import { competenciaDePoliza } from './seguro-anterior-de-poliza'
 import { carnetDeNuevaPersona } from './carnet-nueva-persona'
@@ -176,6 +177,12 @@ export type Riesgo = {
     seguroAnterior: SeguroAnterior | null
     historialDeclarado: HistorialDeclaradoRiesgo
     carnet: { fecha: string | null; conductor: RolFigura | null; legible: boolean } | null
+    /**
+     * Siniestros CON CULPA en los últimos 5 años que trae CIMA (07/11/2026, `siniestrosConCulpaCima`): `N` = referencias
+     * distintas, `0` = revisado, `null` = no se puede afirmar (IN/NA/NULL, sin fecha o referencia) o el cliente no tiene
+     * póliza de auto/moto en vigor con historial CIMA. Solo auto/moto. Nunca se escribe en el riesgo guardado.
+     */
+    siniestrosCima: number | null
   }
   /**
    * El conductor OCASIONAL (15/10/2026): `null` = el ramo no tiene ese papel. Dentro, `ningunoConfirmadoAt` = cuándo se
@@ -374,6 +381,7 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
     seguroAnterior: seguroAnteriorDe(op.seguro_anterior),
     historialDeclarado: historialDeclaradoDe(op.historial_declarado),
     carnet: conVehiculo ? { fecha: carnetElegido?.fecha ?? null, conductor: rolCarnet, legible: carnetElegido?.legible ?? false } : null,
+    siniestrosCima: op.tipo === 'auto' || op.tipo === 'moto' ? await siniestrosCimaDeCliente(correduriaId, op.cliente_id) : null,
   }
 
   return {

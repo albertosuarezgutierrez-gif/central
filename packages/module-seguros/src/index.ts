@@ -41,6 +41,14 @@ export {
 } from './cartera-viva.ts'
 
 export {
+  siniestrosConCulpaCima,
+  inicioVentanaAntecedentes,
+  esSiniestroConCulpaCima,
+  VENTANA_ANTECEDENTES_ANIOS,
+  type FilaSiniestroCima,
+} from './antecedentes-cima.ts'
+
+export {
   POLIZA_ESTADOS_VIGENTES,
   esEstadoVigente,
   vigenciaPoliza,

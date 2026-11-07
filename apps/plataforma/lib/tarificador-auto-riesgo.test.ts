@@ -234,3 +234,45 @@ test('compañía anterior de riesgo: un CÓDIGO DGS del historial llega al bot c
   assert.equal(companiaAnteriorDeRiesgo(r), null)
   assert.equal(formularioBotsAutoDeRiesgo(r).companiaAnterior, null)
 })
+
+// ── Siniestros de CIMA (07/11/2026) ─────────────────────────────────────────────────────────────────────────────────
+const conCima = (cima: number | null | undefined, declarado: number | null = null) => riesgo({
+  historial: {
+    seguroAnterior: null,
+    historialDeclarado: { aniosAsegurado: 8, aniosSinSiniestros: null, siniestrosUltimos5: declarado, tieneSeguroActual: true },
+    carnet: { fecha: '2005-06-30', legible: true },
+    siniestrosCima: cima,
+  },
+})
+const filaSin = (r: RiesgoParaBotsAuto) => {
+  const x = formularioBotAuto(formularioBotsAutoDeRiesgo(r))
+  assert.equal(x.ok, true)
+  const riesgoBot = (x as { riesgo: Record<string, unknown> }).riesgo
+  const c = checklistCompania('mapfre', 'auto', riesgoBot)
+  return { riesgo: riesgoBot, estado: (c as Extract<typeof c, { estado: 'evaluado' }>).filas.find((f) => f.clave === 'siniestrosUltimos5Anios')?.estado }
+}
+
+test('CIMA N>0: viaja N como DATO y el supuesto favorable NO se aplica', () => {
+  const f = filaSin(conCima(2))
+  assert.equal(f.riesgo.siniestrosUltimos5Anios, 2)
+  assert.notEqual(f.estado, 'supuesto')
+})
+
+test('CIMA 0 (revisado): viaja 0 como dato, no como supuesto', () => {
+  const f = filaSin(conCima(0))
+  assert.equal(f.riesgo.siniestrosUltimos5Anios, 0)
+  assert.notEqual(f.estado, 'supuesto')
+})
+
+test('CIMA null (no se puede afirmar) o ausente: sigue el supuesto actual, marcado como SUPUESTO', () => {
+  for (const cima of [null, undefined]) {
+    const f = filaSin(conCima(cima))
+    assert.equal(f.riesgo.siniestrosUltimos5Anios, null)
+    assert.equal(f.estado, 'supuesto')
+  }
+})
+
+test('lo declarado en el formulario MANDA sobre CIMA', () => {
+  assert.equal(filaSin(conCima(3, 1)).riesgo.siniestrosUltimos5Anios, 1)
+  assert.equal(filaSin(conCima(3, 0)).riesgo.siniestrosUltimos5Anios, 0)
+})
