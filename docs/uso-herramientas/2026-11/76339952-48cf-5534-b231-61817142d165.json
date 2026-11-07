@@ -1,0 +1,20 @@
+{
+ "sesion": "76339952-48cf-5534-b231-61817142d165",
+ "inicio": "2026-11-07T09:40:24.569Z",
+ "fin": "2026-11-07T09:40:39.712Z",
+ "llamadas": 2,
+ "categorias": {
+  "otro": {
+   "llamadas": 2,
+   "chars_in": 471,
+   "chars_out": 541,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "PushNotification": 1
+   }
+  }
+ }
+}
