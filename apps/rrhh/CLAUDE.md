@@ -242,8 +242,3 @@ Subir logo (Cuenta o `logo_base64`+`logo_mime` en `POST /api/operador/empresas`)
   (antes de desplegar). La siguiente libre es la 0037.
 - Nómina explicable: `lib/nomina-explicacion.ts` (`explicarNomina`, avisos si falta desglose/tablas) en la pantalla y en el PDF:
   al confirmar (`/api/admin/nominas/[nominaId]/confirmar`) el PDF lleva el anexo «Cómo se ha calculado tu nómina».
-
-## Para apps/asegura-web/CLAUDE.md (no existe; crear)
-
-# CLAUDE.md — asegura-web (grupoasegura.es)
-- Web pública SIN BD. Reglas generales en el CLAUDE.md raíz.
