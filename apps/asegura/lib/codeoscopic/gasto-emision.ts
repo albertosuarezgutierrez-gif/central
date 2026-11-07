@@ -80,13 +80,14 @@ export const ENV_TOPE_MENSUAL: Record<OperacionEmision, string> = {
 }
 
 /**
- * **0,50 € por defecto (decisión de Alberto, 29/09/2026).** Hasta ese día era 0 = «sin
- * confirmar», y el libro contaba la línea sin ponerle precio. Desde el tope en EUROS
- * (`tope-euros.ts`) cada ReRate, Submit o recomendación de capital cuenta 0,50 € mientras
- * Codeoscopic no confirme su coste por escrito. Una env explícita (también `0`, si se confirma
- * que es gratis) manda sobre este defecto.
+ * **0 € por defecto (Alberto, 07/11/2026: «no cobra emisión, solo por tarificar»).** El contrato
+ * (Workspace 20/05/2026, cláusula 7ª) solo pone precio a la cotización (0,50€+IVA) y Codeoscopic
+ * lo confirmó por escrito (02/10 y 06/11/2026: solo se factura `POST /insurances` con 200).
+ * Del 29/09 al 07/11/2026 contaba 0,50€ por prudencia. La LÍNEA se sigue apuntando y los topes de
+ * NÚMERO (`topesEmision`) siguen cazando un bucle; lo único que cambia es que no suma euros.
+ * Una env explícita manda sobre este defecto (si Codeoscopic empezara a cobrarlo: `50`).
  */
-export const COSTE_EMISION_CENTS_DEFECTO = 50
+export const COSTE_EMISION_CENTS_DEFECTO = 0
 
 /** Techo contra el dedo gordo: un `5000` donde iba `50` serían 50,00€ por ReRate. */
 export const COSTE_EMISION_CENTS_MAXIMO = 500
