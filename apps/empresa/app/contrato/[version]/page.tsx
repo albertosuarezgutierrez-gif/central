@@ -22,6 +22,8 @@ export default async function Contrato({ params }: { params: Promise<{ version: 
   })
   if (!d || !yo) notFound()
   const { v, rol } = d
+  // El empleado (y quien no tenga `ver_contrato` en ESA cuenta) no ve el contrato: como si no existiera.
+  if (!puede(rol, 'ver_contrato')) notFound()
   const estado = estadoEfectivo(v, new Date())
   const puedoFirmar = estado === 'enviado' && puede(rol, 'firmar') && v.destinatarioPersonaId === yo.id
   const cuenta = ctx.cuentas.find((c) => c.id === v.cuentaId) ?? ctx.cuenta

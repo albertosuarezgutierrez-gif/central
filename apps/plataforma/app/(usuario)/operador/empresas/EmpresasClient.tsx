@@ -199,7 +199,7 @@ function Ficha({ id, alCambiar }: { id: string; alCambiar: () => void }) {
       {ok && <div style={{ color: 'var(--positive)' }}>{ok}</div>}
       <div style={{ fontSize: 13, color: 'var(--muted)' }}>
         Domicilio: {c.domicilio.via ? `${c.domicilio.via}, nº ${c.domicilio.numero ?? '¿?'}${c.domicilio.resto ? `, ${c.domicilio.resto}` : ''}, ${c.domicilio.cp ?? '¿CP?'} ${c.domicilio.municipio ?? ''} (${c.domicilio.provincia ?? ''})` : 'sin fijar (lo exige el contrato)'}
-        {' '}<button type="button" style={{ ...btn, minHeight: 36 }} onClick={() => setEditar(true)}>Editar</button>
+        {' '}<button type="button" style={btn} onClick={() => setEditar(true)}>Editar</button>
       </div>
       {editar && <AltaCuenta inicial={c} id={c.id} alCerrar={() => { setEditar(false); refrescar() }} />}
 
@@ -232,7 +232,7 @@ function Ficha({ id, alCambiar }: { id: string; alCambiar: () => void }) {
                 {m.herramientas.length > 0 && <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>{m.herramientas.map((h) => {
                   const hid = h as IdHerramienta; const fila = m.roles_app?.[h]
                   return <label key={h} style={{ fontSize: 12, display: 'inline-flex', gap: 4, alignItems: 'center' }}>{CATALOGO[hid]?.nombre ?? h}:
-                    <select style={{ ...inp, minHeight: 36, fontSize: 13, width: 'auto' }} value={fila?.rol_app ?? ''} onChange={(x) => accion({ accion: 'rol_app', personaId: m.persona_id, herramienta: h, rolApp: x.target.value }, 'Rol en la herramienta guardado.')}>
+                    <select style={{ ...inp, fontSize: 13, width: 'auto' }} value={fila?.rol_app ?? ''} onChange={(x) => accion({ accion: 'rol_app', personaId: m.persona_id, herramienta: h, rolApp: x.target.value }, 'Rol en la herramienta guardado.')}>
                       <option value="">{`por defecto (${rolEnHerramienta(hid, m.rol) ?? 'no entra'})`}</option>
                       {ROLES_APP[APP_DE_ROLES[hid]].map((r) => <option key={r} value={r}>{r}</option>)}
                     </select>{fila?.propagacion === 'pendiente' ? ' · en la app: pendiente' : ''}</label>
@@ -241,8 +241,8 @@ function Ficha({ id, alCambiar }: { id: string; alCambiar: () => void }) {
                 {cambio && cambio.estado === 'desaparecida' && <div style={{ fontSize: 13, color: 'var(--negative)' }}>La relación de la que salió este rol ya no está en la ficha de la sociedad. Revísalo.</div>}
                 {m.rol !== 'dueno' && <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
                   {(m.rol === 'admin' || m.rol === 'empleado') && c.herramientas.filter((h) => (h.estado === 'activa' || h.estado === 'pendiente_firma') && !m.herramientas.includes(h.herramienta)).map((h) =>
-                    <button key={h.herramienta} type="button" style={{ ...btn, minHeight: 36 }} onClick={() => accion({ accion: 'acceso', email: m.email, nombre: m.nombre, rol: m.rol, herramientas: [...m.herramientas, h.herramienta] }, 'Acceso concedido.')}>+ {CATALOGO[h.herramienta].nombre}</button>)}
-                  <button type="button" style={{ ...btn, minHeight: 36 }} onClick={() => window.confirm(`¿Quitar todo el acceso de ${m.nombre}?`) && accion({ accion: 'quitar_acceso', personaId: m.persona_id, herramienta: null }, 'Acceso retirado.')}>Quitar acceso</button>
+                    <button key={h.herramienta} type="button" style={btn} onClick={() => accion({ accion: 'acceso', email: m.email, nombre: m.nombre, rol: m.rol, herramientas: [...m.herramientas, h.herramienta] }, 'Acceso concedido.')}>+ {CATALOGO[h.herramienta].nombre}</button>)}
+                  <button type="button" style={btn} onClick={() => window.confirm(`¿Quitar todo el acceso de ${m.nombre}?`) && accion({ accion: 'quitar_acceso', personaId: m.persona_id, herramienta: null }, 'Acceso retirado.')}>Quitar acceso</button>
                 </div>}
               </li>
             )
@@ -309,7 +309,7 @@ function HerramientaRef({ h, fila, marcada, alMarcar, alGuardar, contratable }: 
       </label>
       <div style={{ fontSize: 12, color: 'var(--muted)' }}>{fila ? EST_H[fila.estado] : 'Sin contratar'}{fila?.propagacion === 'pendiente' ? ' · submódulo en rrhh: actívalo en Clientes (pendiente)' : ''}{!CATALOGO[h].traspaso ? ' · salto directo en F2' : ''}</div>
       <input style={{ ...inp, marginTop: 6, fontSize: 13 }} value={ref} onChange={(x) => setRef(x.target.value)} placeholder={CATALOGO[h].refEtiqueta} disabled={!editable} aria-label={CATALOGO[h].refEtiqueta} />
-      {editable && <button type="button" style={{ ...btn, minHeight: 36, marginTop: 6 }} disabled={!ref.trim() || ref === fila?.ref_externa} onClick={() => alGuardar(ref.trim())}>Guardar ref</button>}
+      {editable && <button type="button" style={{ ...btn, marginTop: 6 }} disabled={!ref.trim() || ref === fila?.ref_externa} onClick={() => alGuardar(ref.trim())}>Guardar ref</button>}
     </div>
   )
 }

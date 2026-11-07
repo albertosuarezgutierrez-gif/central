@@ -1,10 +1,10 @@
-// Cliente Prisma del schema `herramientas` (rol prisma_herramientas, NOBYPASSRLS). Lecturas del panel SOLO dentro de
-// `conPersona` (RLS); escrituras SOLO por funciones SECURITY DEFINER de 0001. SQL con plantilla (parámetros enlazados).
+// Cliente Prisma del PANEL: schema `herramientas`, rol prisma_herramientas (NOBYPASSRLS, sin EXECUTE de op_*). Lecturas SOLO
+// dentro de `conPersona` (RLS); escrituras SOLO por funciones SECURITY DEFINER de 0001. SQL con plantilla (parámetros enlazados).
+// Las funciones del OPERADOR viven en `db-operador.ts` (otro rol y otra URL; solo las importan las rutas /api/operador/*).
 import { PrismaClient } from '@prisma/client'
 import { esHerramienta, type IdHerramienta, type Rol, type EstadoHerramienta, type EstadoVersion, type VariablesContrato } from '@central/core-herramientas'
 import { crearConPersona, type ClienteConTx, type TxSql } from './rls.ts'
 import type { RepoOtp, Proposito, EnvioCodigo } from './acceso.ts'
-import type { RepoOperador, DatosEmision } from './operador.ts'
 import type { RepoFirma, VersionParaFirmar } from './firma.ts'
 
 const g = globalThis as unknown as { prismaHerramientas?: PrismaClient }
@@ -109,12 +109,15 @@ export async function versionesDeCuenta(personaId: string, cuentaId: string): Pr
 }
 
 /** Documento (contrato o certificado) de una versión VISIBLE para la persona (RLS). */
-export async function documentoDePersona(personaId: string, versionId: string, tipo: 'contrato' | 'certificado'): Promise<{ html: string; sha: string } | null> {
+export async function documentoDePersona(personaId: string, versionId: string, tipo: 'contrato' | 'certificado'): Promise<{ html: string; sha: string; cuentaId: string } | null> {
   return conPersona(personaId, async (tx) => {
     const f = tipo === 'contrato'
-      ? await tx.$queryRaw<Fila[]>`SELECT documento_html AS html, documento_sha256 AS sha FROM herramientas.contrato_version WHERE id = ${versionId}::uuid`
-      : await tx.$queryRaw<Fila[]>`SELECT certificado_html AS html, certificado_sha256 AS sha FROM herramientas.firma WHERE contrato_version_id = ${versionId}::uuid`
-    return f[0] ? { html: String(f[0].html), sha: String(f[0].sha) } : null
+      ? await tx.$queryRaw<Fila[]>`SELECT cv.documento_html AS html, cv.documento_sha256 AS sha, ct.cuenta_id FROM herramientas.contrato_version cv
+          JOIN herramientas.contrato ct ON ct.id = cv.contrato_id WHERE cv.id = ${versionId}::uuid`
+      : await tx.$queryRaw<Fila[]>`SELECT fi.certificado_html AS html, fi.certificado_sha256 AS sha, ct.cuenta_id FROM herramientas.firma fi
+          JOIN herramientas.contrato_version cv ON cv.id = fi.contrato_version_id JOIN herramientas.contrato ct ON ct.id = cv.contrato_id
+          WHERE fi.contrato_version_id = ${versionId}::uuid`
+    return f[0] ? { html: String(f[0].html), sha: String(f[0].sha), cuentaId: String(f[0].cuenta_id) } : null
   })
 }
 
@@ -170,67 +173,6 @@ export function conRepoFirma<R>(personaId: string, fn: (repo: RepoFirma) => Prom
       return String(f[0]?.id)
     },
   }), { timeout: 15_000 })
-}
-
-// ─── Operador (funciones op_*; la ruta ya comprobó el Bearer) ──────────────────────────────────────────────────────
-export const repoOperadorBd: RepoOperador = {
-  async datosEmision(cuentaId) {
-    const f = await sql.$queryRaw<Fila[]>`SELECT herramientas.op_datos_emision(${cuentaId}::uuid) AS d`
-    return (f[0]?.d as DatosEmision | null) ?? null
-  },
-  async emitirVersion(e) {
-    const f = await sql.$queryRaw<Fila[]>`SELECT o_version, o_n, o_envio FROM herramientas.op_emitir_version(${e.cuentaId}::uuid, ${e.herramientas}::text[],
-      ${e.plantillaId}::uuid, ${JSON.stringify(e.variables)}::jsonb, ${e.html}::text, ${e.sha}::text, ${e.confirmo}::text, ${e.caduca}::timestamptz, ${e.actor}::text)`
-    return { versionId: String(f[0].o_version), n: n(f[0].o_n), envioId: String(f[0].o_envio) }
-  },
-  async reservarEnvio(versionId, tipo, confirmo, actor) {
-    const f = await sql.$queryRaw<Fila[]>`SELECT o_envio, o_destinatario, o_razon FROM herramientas.op_reservar_envio(${versionId}::uuid, ${tipo}::text, ${confirmo}::text, ${actor}::text)`
-    return { envioId: String(f[0].o_envio), destinatario: String(f[0].o_destinatario), razonSocial: String(f[0].o_razon) }
-  },
-  async resolverEnvio(envioId, estado, proveedorId, error) {
-    await sql.$executeRaw`SELECT herramientas.op_resolver_envio(${envioId}::uuid, ${estado}::text, ${proveedorId}::text, ${error}::text)`
-  },
-}
-
-export async function opListar(): Promise<unknown> {
-  const f = await sql.$queryRaw<Fila[]>`SELECT herramientas.op_listar() AS d`
-  return f[0]?.d ?? []
-}
-export async function opFicha(cuentaId: string): Promise<unknown> {
-  const f = await sql.$queryRaw<Fila[]>`SELECT herramientas.op_ficha(${cuentaId}::uuid) AS d`
-  return f[0]?.d ?? null
-}
-export async function opAltaCuenta(d: { cif: string; razon: string; via: string | null; numero: string | null; resto: string | null; cp: string | null; municipio: string | null; provincia: string | null; acento: string | null; logo: string | null }, actor: string) {
-  const f = await sql.$queryRaw<Fila[]>`SELECT o_id, o_creada FROM herramientas.op_alta_cuenta(${d.cif}::text, ${d.razon}::text, ${d.via}::text, ${d.numero}::text,
-    ${d.resto}::text, ${d.cp}::text, ${d.municipio}::text, ${d.provincia}::text, ${d.acento}::text, ${d.logo}::text, ${actor}::text)`
-  return { id: String(f[0].o_id), creada: f[0].o_creada === true }
-}
-export async function opFijarDueno(cuentaId: string, d: { email: string; nombre: string; nif: string | null; titulo: string | null }, actor: string): Promise<string> {
-  const f = await sql.$queryRaw<Fila[]>`SELECT herramientas.op_fijar_dueno(${cuentaId}::uuid, ${d.email}::text, ${d.nombre}::text, ${d.nif}::text, ${d.titulo}::text, ${actor}::text) AS id`
-  return String(f[0].id)
-}
-export async function opFijarRef(cuentaId: string, h: IdHerramienta, ref: string, actor: string) {
-  await sql.$executeRaw`SELECT herramientas.op_fijar_ref(${cuentaId}::uuid, ${h}::text, ${ref}::uuid, ${actor}::text)`
-}
-export async function opDarAcceso(cuentaId: string, d: { email: string; nombre: string; rol: 'admin' | 'consulta' | 'empleado'; herramientas: IdHerramienta[] }, actor: string): Promise<string> {
-  const f = await sql.$queryRaw<Fila[]>`SELECT herramientas.op_dar_acceso(${cuentaId}::uuid, ${d.email}::text, ${d.nombre}::text, ${d.rol}::text, ${d.herramientas}::text[], ${actor}::text) AS id`
-  return String(f[0].id)
-}
-export async function opQuitarAcceso(cuentaId: string, personaId: string, h: IdHerramienta | null, actor: string) {
-  await sql.$executeRaw`SELECT herramientas.op_quitar_acceso(${cuentaId}::uuid, ${personaId}::uuid, ${h}::text, ${actor}::text)`
-}
-export async function opFijarOrigen(cuentaId: string, personaId: string, origen: Record<string, unknown>, actor: string) {
-  await sql.$executeRaw`SELECT herramientas.op_fijar_origen(${cuentaId}::uuid, ${personaId}::uuid, ${JSON.stringify(origen)}::jsonb, ${actor}::text)`
-}
-export async function opFijarRolApp(cuentaId: string, personaId: string, h: IdHerramienta, rolApp: string | null, actor: string) {
-  await sql.$executeRaw`SELECT herramientas.op_fijar_rol_app(${cuentaId}::uuid, ${personaId}::uuid, ${h}::text, ${rolApp}::text, ${actor}::text)`
-}
-export async function opAnular(versionId: string, actor: string) {
-  await sql.$executeRaw`SELECT herramientas.op_anular_version(${versionId}::uuid, ${actor}::text)`
-}
-export async function opDocumento(versionId: string, tipo: 'contrato' | 'certificado'): Promise<{ html: string; sha: string } | null> {
-  const f = await sql.$queryRaw<Fila[]>`SELECT o_html, o_sha FROM herramientas.op_documento(${versionId}::uuid, ${tipo}::text)`
-  return f[0]?.o_html ? { html: String(f[0].o_html), sha: String(f[0].o_sha) } : null
 }
 
 export async function personaPropia(personaId: string): Promise<{ id: string; email: string; nombre: string } | null> {

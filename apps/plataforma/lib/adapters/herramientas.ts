@@ -2,10 +2,15 @@
 // HERRAMIENTAS_OPERADOR_SECRET (PROPIO; no reutilizar otros). Requiere en plataforma: EMPRESA_URL + HERRAMIENTAS_OPERADOR_SECRET.
 // El `actor` (email del superadmin) lo pone SIEMPRE el servidor desde la sesión, nunca la petición: queda como prueba del OK
 // de cada envío (`envio.confirmado_por`). Este adaptador NO envía nada por sí solo: solo reenvía el clic del operador.
+import { requireSecret } from '@central/core-identity'
+
 export type Respuesta = { status: number; json: unknown }
 
 const base = () => process.env.EMPRESA_URL?.trim().replace(/\/$/, '') || null
-const secreto = () => process.env.HERRAMIENTAS_OPERADOR_SECRET?.trim() || null
+/** requireSecret (sin fallback a literal). Ausente o vacío → null → 503 «sin_configurar» (falla cerrado, nunca sin Bearer). */
+const secreto = (): string | null => {
+  try { return requireSecret('HERRAMIENTAS_OPERADOR_SECRET').trim() || null } catch { return null }
+}
 
 export const herramientasConfigurado = () => base() !== null && secreto() !== null
 

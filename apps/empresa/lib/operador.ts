@@ -67,7 +67,7 @@ export function statusDeErrorBd(msg: string): { status: number; error: string } 
   for (const [clave, status] of [['destinatario_cambiado', 409], ['version_desfasada', 409], ['variables_de_otro_dueno', 409], ['sin_dueno', 422],
     ['falta_ref_externa', 422], ['version_no_firmable', 409], ['version_no_existe', 404], ['version_no_anulable', 409], ['es_el_dueno', 409],
     ['herramienta_no_contratada', 422], ['rol_invalido', 400], ['titulo_invalido', 400], ['faltan_correo_o_nombre', 400],
-    ['ref_no_editable', 409], ['miembro_no_existe', 404]] as const) {
+    ['ref_no_editable', 409], ['miembro_no_existe', 404], ['sin_bd_operador', 503]] as const) {
     if (msg.includes(clave)) return { status, error: clave }
   }
   return { status: 500, error: 'error_bd' }

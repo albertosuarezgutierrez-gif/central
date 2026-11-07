@@ -5,8 +5,10 @@
 --    (contabilidad.empresas, rrhh.empresas, rrhh.empleados, rrhh.usuarios_rrhh). Si una subconsulta no encuentra
 --    EXACTAMENTE una fila, ese paso se SALTA con un NOTICE (nunca se adivina): se completa en plataforma → /operador/empresas.
 -- Roles (decisión de Alberto, 07/11/2026):
---   · Manuel Antonio Piña Franco → DUEÑO (firma) de las dos.
---   · Francisco Javier Velasco Carrera (socio) → CONSULTA de las dos (ve todo; no firma ni da accesos).
+--   · Manuel Antonio Piña Franco (rrhh.empleados 561af4e5-fe47-4f20-823d-c0729d9fa400) → DUEÑO (firma) de las dos.
+--   · Francisco Javier Velasco Carrera (rrhh.empleados 85667270-74c3-4345-b553-153872a07e7f, socio) → CONSULTA de las dos.
+--   🚨 Identidad por ID de ficha, NUNCA por nombre ni LIKE (regla «NIF/id → ficha → nombre»): así se elige al FIRMANTE.
+--      Ids comprobados en BD (solo lectura) el 07/11/2026; si la ficha no está o no tiene correo, el paso se SALTA.
 --   · Pilar (usuarios_rrhh 4affe1ad-899f-4949-a8bb-ec8ac8030269) → ADMINISTRACIÓN de las dos, en TODAS las herramientas
 --     contratadas (opera, no firma). Ningún rol se deduce de apellidos: cada uno es decisión declarada de Alberto.
 -- Lo que NO se rellena aquí, a propósito: domicilio social (no está en BD con CP/municipio validados) y título del firmante
@@ -23,6 +25,9 @@ DECLARE
   v_rrhh uuid;
   v_n int;
   v_email text; v_nombre text; v_dni text;
+  c_manuel constant uuid := '561af4e5-fe47-4f20-823d-c0729d9fa400';   -- rrhh.empleados.id (dueño)
+  c_javier constant uuid := '85667270-74c3-4345-b553-153872a07e7f';   -- rrhh.empleados.id (consulta)
+  c_pilar  constant uuid := '4affe1ad-899f-4949-a8bb-ec8ac8030269';   -- rrhh.usuarios_rrhh.id (administración)
 BEGIN
   FOR e IN SELECT * FROM (VALUES ('B88936158'), ('B05457247')) AS t(cif) LOOP
     -- Empresa: razón social desde contabilidad (ya dada de alta el 07/11).
@@ -46,37 +51,33 @@ BEGIN
       RAISE NOTICE '%: % empresas de rrhh candidatas: ref de rrhh/nóminas sin fijar', e.cif, v_n; v_rrhh := NULL;
     END IF;
 
-    -- Dueño: Manuel, desde la ficha de empleado (de cualquiera de las dos empresas). Un correo DISTINTO = no se adivina.
-    SELECT count(DISTINCT lower(btrim(em.email))) INTO v_n FROM rrhh.empleados em
-     WHERE em.email IS NOT NULL AND lower(em.nombre || ' ' || coalesce(em.apellidos, '')) LIKE '%manuel antonio%pi_a franco%';
-    IF v_n = 1 THEN
-      SELECT lower(btrim(em.email)), btrim(em.nombre || ' ' || coalesce(em.apellidos, '')),
-             CASE WHEN upper(replace(em.dni, ' ', '')) ~ '^([XYZ]|[0-9])[0-9]{7}[A-Z]$' THEN upper(replace(em.dni, ' ', '')) END
-        INTO v_email, v_nombre, v_dni
-        FROM rrhh.empleados em
-       WHERE em.email IS NOT NULL AND lower(em.nombre || ' ' || coalesce(em.apellidos, '')) LIKE '%manuel antonio%pi_a franco%'
-       ORDER BY (em.dni IS NOT NULL) DESC LIMIT 1;
+    -- Dueño: Manuel, por el ID de su ficha de empleado (nunca por nombre). Sin ficha o sin correo → no se adivina.
+    v_email := NULL; v_nombre := NULL; v_dni := NULL;
+    SELECT lower(btrim(em.email)), btrim(em.nombre || ' ' || coalesce(em.apellidos, '')),
+           CASE WHEN upper(replace(em.dni, ' ', '')) ~ '^([XYZ]|[0-9])[0-9]{7}[A-Z]$' THEN upper(replace(em.dni, ' ', '')) END
+      INTO v_email, v_nombre, v_dni
+      FROM rrhh.empleados em WHERE em.id = c_manuel AND em.email IS NOT NULL AND btrim(em.email) <> '';
+    IF v_email IS NOT NULL THEN
       PERFORM herramientas.op_fijar_origen(v_cuenta, herramientas.op_fijar_dueno(v_cuenta, v_email, v_nombre, v_dni, NULL, v_actor),
                                            '{"fuente":"semilla","decision":"Alberto 07/11/2026"}'::jsonb, v_actor);
     ELSE
-      RAISE NOTICE '%: % correos candidatos para Manuel: dueño sin fijar', e.cif, v_n;
+      RAISE NOTICE '%: la ficha % (dueño) no está o no tiene correo: dueño sin fijar', e.cif, c_manuel;
     END IF;
 
-    -- Consulta: Francisco Javier (socio).
-    SELECT count(DISTINCT lower(btrim(em.email))) INTO v_n FROM rrhh.empleados em
-     WHERE em.email IS NOT NULL AND lower(em.nombre || ' ' || coalesce(em.apellidos, '')) LIKE '%francisco javier%velasco carrera%';
-    IF v_n = 1 THEN
-      SELECT lower(btrim(em.email)), btrim(em.nombre || ' ' || coalesce(em.apellidos, '')) INTO v_email, v_nombre
-        FROM rrhh.empleados em
-       WHERE em.email IS NOT NULL AND lower(em.nombre || ' ' || coalesce(em.apellidos, '')) LIKE '%francisco javier%velasco carrera%' LIMIT 1;
+    -- Consulta: Francisco Javier (socio), por el ID de su ficha.
+    v_email := NULL; v_nombre := NULL;
+    SELECT lower(btrim(em.email)), btrim(em.nombre || ' ' || coalesce(em.apellidos, '')) INTO v_email, v_nombre
+      FROM rrhh.empleados em WHERE em.id = c_javier AND em.email IS NOT NULL AND btrim(em.email) <> '';
+    IF v_email IS NOT NULL THEN
       PERFORM herramientas.op_fijar_origen(v_cuenta, herramientas.op_dar_acceso(v_cuenta, v_email, v_nombre, 'consulta', ARRAY[]::text[], v_actor),
                                            '{"fuente":"semilla","decision":"Alberto 07/11/2026"}'::jsonb, v_actor);
     ELSE
-      RAISE NOTICE '%: % correos candidatos para Francisco Javier: consulta sin fijar', e.cif, v_n;
+      RAISE NOTICE '%: la ficha % (consulta) no está o no tiene correo: consulta sin fijar', e.cif, c_javier;
     END IF;
 
     -- Administración: Pilar (usuario de rrhh). Sus herramientas se le CONCEDEN tras la emisión (solo se concede lo contratado).
-    SELECT lower(btrim(u.email)), btrim(u.nombre) INTO v_email, v_nombre FROM rrhh.usuarios_rrhh u WHERE u.id = '4affe1ad-899f-4949-a8bb-ec8ac8030269';
+    v_email := NULL; v_nombre := NULL;
+    SELECT lower(btrim(u.email)), btrim(u.nombre) INTO v_email, v_nombre FROM rrhh.usuarios_rrhh u WHERE u.id = c_pilar;
     IF v_email IS NOT NULL THEN
       -- TODA la administración de las dos (contabilidad, RRHH, nóminas, documentación): se le concede todo lo que tenga ref.
       -- La concesión exige herramienta contratada: si aún no hay contrato emitido, se le concede al re-ejecutar tras emitir.

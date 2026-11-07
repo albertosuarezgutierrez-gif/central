@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { operadorAutorizado, noAutorizado, actorValido, textoONull } from '@/lib/http'
-import { opListar, opAltaCuenta } from '@/lib/db'
+import { opListar, opAltaCuenta } from '@/lib/db-operador'
+import { statusDeErrorBd } from '@/lib/operador'
 import { cifValido } from '@central/core-herramientas'
 import { normalizarHex } from '@/lib/marca'
 
@@ -9,7 +10,12 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(req: Request) {
   if (!operadorAutorizado(req)) return noAutorizado()
-  return NextResponse.json({ cuentas: await opListar() })
+  try {
+    return NextResponse.json({ cuentas: await opListar() })
+  } catch (e) {
+    const s = statusDeErrorBd(e instanceof Error ? e.message : '')
+    return NextResponse.json({ error: s.error }, { status: s.status })
+  }
 }
 
 export async function POST(req: Request) {
@@ -24,10 +30,16 @@ export async function POST(req: Request) {
   const cp = textoONull(dom.cp, 5)
   if (cp && !/^\d{5}$/.test(cp)) return NextResponse.json({ error: 'cp_invalido' }, { status: 400 })
   const logo = textoONull(b?.logoUrl, 500)
-  const r = await opAltaCuenta({
-    cif, razon, via: textoONull(dom.via), numero: textoONull(dom.numero, 20), resto: textoONull(dom.resto), cp,
-    municipio: textoONull(dom.municipio), provincia: textoONull(dom.provincia), acento: normalizarHex(b?.acento),
-    logo: logo && /^https:\/\//.test(logo) ? logo : null,
-  }, actor)
-  return NextResponse.json({ ok: true, ...r })
+  try {
+    const r = await opAltaCuenta({
+      cif, razon, via: textoONull(dom.via), numero: textoONull(dom.numero, 20), resto: textoONull(dom.resto), cp,
+      municipio: textoONull(dom.municipio), provincia: textoONull(dom.provincia), acento: normalizarHex(b?.acento),
+      logo: logo && /^https:\/\//.test(logo) ? logo : null,
+    }, actor)
+    return NextResponse.json({ ok: true, ...r })
+  } catch (e) {
+    const s = statusDeErrorBd(e instanceof Error ? e.message : '')
+    if (s.status === 500) console.error('[empresa] alta cuenta:', e instanceof Error ? e.message.slice(0, 200) : e)
+    return NextResponse.json({ error: s.error }, { status: s.status })
+  }
 }

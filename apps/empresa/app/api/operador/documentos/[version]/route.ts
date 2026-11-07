@@ -1,5 +1,5 @@
 import { operadorAutorizado, noAutorizado, uuidONull } from '@/lib/http'
-import { opDocumento } from '@/lib/db'
+import { opDocumento, SinBdOperadorError } from '@/lib/db-operador'
 import { sha256Hex } from '@central/core-herramientas'
 
 // Descarga para el operador (contrato firmado / certificado). Se recalcula el hash antes de servir (verificarIntegridad).
@@ -10,7 +10,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ version:
   const v = uuidONull((await params).version)
   const tipo = new URL(req.url).searchParams.get('tipo') === 'certificado' ? 'certificado' : 'contrato'
   if (!v) return new Response('No encontrado', { status: 404 })
-  const d = await opDocumento(v, tipo)
+  let d: Awaited<ReturnType<typeof opDocumento>>
+  try {
+    d = await opDocumento(v, tipo)
+  } catch (e) {
+    if (e instanceof SinBdOperadorError) return new Response('Puerto del operador sin configurar', { status: 503 })
+    throw e
+  }
   if (!d) return new Response('No encontrado', { status: 404 })
   const sha = await sha256Hex(d.html)
   if (sha !== d.sha) return new Response('Integridad NO verificada', { status: 409 })

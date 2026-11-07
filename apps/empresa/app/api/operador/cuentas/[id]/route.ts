@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { operadorAutorizado, noAutorizado, actorValido, uuidONull, textoONull } from '@/lib/http'
-import { opFicha, opFijarDueno, opFijarRef, opDarAcceso, opQuitarAcceso, opFijarOrigen, opFijarRolApp, opAnular, repoOperadorBd } from '@/lib/db'
+import { opFicha, opFijarDueno, opFijarRef, opDarAcceso, opQuitarAcceso, opFijarOrigen, opFijarRolApp, opAnular, repoOperadorBd } from '@/lib/db-operador'
 import { previsualizar, activar, reenviar, statusDeErrorBd } from '@/lib/operador'
 import { obtenerCanal, urlPanel } from '@/lib/canal-correo'
 import { emailValido } from '@/lib/acceso'
@@ -18,8 +18,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   if (!operadorAutorizado(req)) return noAutorizado()
   const id = uuidONull((await params).id)
   if (!id) return mal('cuenta_no_valida')
-  const f = await opFicha(id)
-  return f ? NextResponse.json({ cuenta: f }) : mal('cuenta_no_existe', 404)
+  try {
+    const f = await opFicha(id)
+    return f ? NextResponse.json({ cuenta: f }) : mal('cuenta_no_existe', 404)
+  } catch (e) {
+    const s = statusDeErrorBd(e instanceof Error ? e.message : '')
+    return mal(s.error, s.status)
+  }
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {

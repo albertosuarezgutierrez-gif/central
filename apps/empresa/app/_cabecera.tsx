@@ -2,6 +2,7 @@ import { marcaCabecera, SELLO } from '@/lib/marca'
 import { SelectorEmpresa } from './SelectorEmpresa'
 import { SalirBoton } from './_salir'
 import type { CuentaPanel } from '@/lib/db'
+import { puede } from '@central/core-herramientas'
 
 /** Cabecera: selector de empresa (logo/iniciales + nombre; chevron solo con varias) + «con Grupo ASegura» pequeño · Salir. */
 export function Cabecera({ cuentas, actual }: { cuentas: CuentaPanel[]; actual: CuentaPanel | null }) {
@@ -15,7 +16,7 @@ export function Cabecera({ cuentas, actual }: { cuentas: CuentaPanel[]; actual: 
         </div>
         <nav className="cabecera-acciones" aria-label="Menú">
           <a href="/" className="btn-fantasma">Inicio</a>
-          <a href="/contratos" className="btn-fantasma">Contratos</a>
+          {puede(actual?.rol, 'ver_contrato') && <a href="/contratos" className="btn-fantasma">Contratos</a>}
           {actual?.rol === 'dueno' && <a href="/accesos" className="btn-fantasma">Accesos</a>}
           <SalirBoton />
         </nav>

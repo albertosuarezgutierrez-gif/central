@@ -50,3 +50,40 @@ test('la semilla no escribe ningún correo ni NIF de persona a mano', () => {
   assert.ok(!/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}/.test(sinComentarios), 'correo literal en la semilla')
   assert.ok(!/'([XYZ]|\d)\d{7}[A-Z]'/.test(sinComentarios), 'NIF literal en la semilla')
 })
+
+test('I-4: rol del operador aparte (NOBYPASSRLS) y op_* SOLO para él; el panel nunca las ejecuta', () => {
+  assert.match(sql, /CREATE ROLE prisma_herramientas_op WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS/)
+  assert.match(sql, /ALTER ROLE prisma_herramientas_op WITH NOBYPASSRLS/)
+  assert.match(sql, /IF r\.proname LIKE 'op\\_%' THEN\s+EXECUTE format\('GRANT EXECUTE ON FUNCTION %s TO prisma_herramientas_op', r\.firma\);\s+ELSE\s+EXECUTE format\('GRANT EXECUTE ON FUNCTION %s TO prisma_herramientas', r\.firma\);/)
+  for (const m of sql.matchAll(/GRANT[^;]*TO prisma_herramientas_op\b[^;]*;/g)) {
+    assert.ok(!/\bON (herramientas\.[a-z_]+|ALL TABLES)/.test(m[0]) || /EXECUTE ON FUNCTION/.test(m[0]), `el rol del operador no lee tablas: ${m[0]}`)
+  }
+})
+
+test('I-1: contrato, versión, firma, persona y miembros SOLO para gestores (el empleado no)', () => {
+  assert.match(sql, /FUNCTION herramientas\.es_miembro_gestor\(p_cuenta uuid\)[\s\S]{0,400}m\.rol IN \('dueno', 'admin', 'consulta'\)/)
+  const politica = (nombre: string) => sql.match(new RegExp(`CREATE POLICY ${nombre} ON[\\s\\S]*?;`))?.[0] ?? ''
+  for (const p of ['contrato_de_miembro', 'version_de_miembro', 'firma_de_miembro', 'miembro_de_miembro', 'concesion_de_miembro']) {
+    assert.match(politica(p), /es_miembro_gestor\(/, `${p} debe usar es_miembro_gestor`)
+  }
+  for (const p of ['contrato_de_miembro', 'version_de_miembro', 'firma_de_miembro']) {
+    assert.doesNotMatch(politica(p), /es_miembro\(/, `${p} no puede abrirse a cualquier miembro`)
+  }
+  assert.match(sql, /FUNCTION herramientas\.comparte_cuenta[\s\S]{0,400}es_miembro_gestor\(m\.cuenta_id\)/)
+})
+
+test('OTP: un código gastado no revive ni bajan los intentos (trigger)', () => {
+  assert.match(sql, /CREATE TRIGGER trg_acceso_otp_solo_avanza BEFORE UPDATE OR DELETE ON herramientas\.acceso_otp/)
+  assert.match(sql, /IF OLD\.usado_en IS NOT NULL THEN\s+RAISE EXCEPTION/)
+  assert.match(sql, /NEW\.intentos NOT IN \(OLD\.intentos, OLD\.intentos \+ 1\)/)
+})
+
+test('I-2: la semilla identifica a cada persona por ID de ficha, nunca por nombre ni LIKE', () => {
+  const codigo = semilla.split('\n').filter((l) => !l.trim().startsWith('--')).join('\n')
+  assert.doesNotMatch(codigo, /\bI?LIKE\b|\bSIMILAR TO\b/i, 'búsqueda por texto en la semilla')
+  assert.doesNotMatch(codigo, /WHERE[^;]*\b(nombre|apellidos)\b[^;]*(=|~)/i, 'filtro por nombre en la semilla')
+  for (const id of ['561af4e5-fe47-4f20-823d-c0729d9fa400', '85667270-74c3-4345-b553-153872a07e7f', '4affe1ad-899f-4949-a8bb-ec8ac8030269']) {
+    assert.ok(codigo.includes(`'${id}'`), `falta el id ${id}`)
+  }
+  assert.match(codigo, /WHERE em\.id = c_manuel/); assert.match(codigo, /WHERE em\.id = c_javier/); assert.match(codigo, /WHERE u\.id = c_pilar/)
+})

@@ -1,7 +1,8 @@
+import { redirect } from 'next/navigation'
 import { exigirContexto } from '@/lib/contexto'
 import { versionesDeCuenta } from '@/lib/db'
 import { Cabecera } from '../_cabecera'
-import { estadoEfectivo, fechaLegible, CATALOGO, esHerramienta } from '@central/core-herramientas'
+import { estadoEfectivo, fechaLegible, CATALOGO, esHerramienta, puede } from '@central/core-herramientas'
 
 export const dynamic = 'force-dynamic'
 const ESTADO: Record<string, string> = { enviado: 'Pendiente de firma', firmado: 'Firmado (vigente)', anulado: 'Anulado', caducado: 'Caducado', sustituido: 'Sustituido' }
@@ -10,6 +11,8 @@ const ESTADO: Record<string, string> = { enviado: 'Pendiente de firma', firmado:
 export default async function Contratos() {
   const ctx = await exigirContexto()
   const c = ctx.cuenta
+  // El empleado (y quien no tenga `ver_contrato`) no ve contratos ni certificados.
+  if (c && !puede(c.rol, 'ver_contrato')) redirect('/')
   const vs = c ? await versionesDeCuenta(ctx.personaId, c.id) : []
   const ahora = new Date()
   return (

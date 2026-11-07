@@ -11,7 +11,13 @@
 --     una persona solo ve las cuentas de las que es miembro ACTIVO. Sin ajuste → NULL → cero filas (falla cerrado).
 --   · El rol solo LEE (SELECT filtrado por RLS) salvo `acceso_otp` (hashes). TODA escritura va por funciones SECURITY DEFINER
 --     con search_path fijo y comprobaciones propias: `firmar_version`/`dar_acceso`/`registrar_traspaso` (con persona fijada,
---     comprueban el rol en BD) y `op_*` (puerto del operador; la ruta exige antes el Bearer HERRAMIENTAS_OPERADOR_SECRET).
+--     comprueban el rol en BD).
+--   · DOS roles: `prisma_herramientas` (panel de la persona; NO puede ejecutar `op_*`) y `prisma_herramientas_op` (SOLO
+--     EXECUTE de `op_*`, sin tablas; lo usan únicamente las rutas /api/operador/*, que exigen antes el Bearer
+--     HERRAMIENTAS_OPERADOR_SECRET). Un fallo en una ruta del panel no equivale a operador. Ambos NOBYPASSRLS. Contraseñas:
+--     ALTER ROLE prisma_herramientas_op WITH PASSWORD <gestor> en el MISMO paso que HERRAMIENTAS_OP_DATABASE_URL de `empresa`.
+--   · El EMPLEADO (rol 'empleado') solo ve su portada: ni contratos, ni firmas/certificado, ni otras personas ni miembros
+--     (`es_miembro_gestor`). Misma matriz que `puede(rol, 'ver_contrato')` de core-herramientas/estados.ts.
 --   · INMUTABLE en BD (no solo en código): `plantilla`, `firma`, `evento`, `traspaso_emitido`, `contrato` → trigger que
 --     rechaza UPDATE/DELETE/TRUNCATE. `contrato_version`: su contenido no cambia; solo `estado` por la lista blanca de abajo.
 --     `envio`: se reserva `enviando` ANTES de llamar al proveedor y se resuelve UNA vez (aceptado|fallido); nunca se borra.
@@ -29,6 +35,14 @@ BEGIN
 END $$;
 ALTER ROLE prisma_herramientas WITH NOBYPASSRLS;
 ALTER ROLE prisma_herramientas SET search_path = herramientas;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'prisma_herramientas_op') THEN
+    CREATE ROLE prisma_herramientas_op WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
+  END IF;
+END $$;
+ALTER ROLE prisma_herramientas_op WITH NOBYPASSRLS;
+ALTER ROLE prisma_herramientas_op SET search_path = herramientas;
 
 CREATE SCHEMA IF NOT EXISTS herramientas;
 REVOKE ALL ON SCHEMA herramientas FROM PUBLIC;
@@ -233,6 +247,27 @@ CREATE TABLE herramientas.acceso_otp (
   creado_en   timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX acceso_otp_email ON herramientas.acceso_otp (email_hash, creado_en DESC);
+-- Un código GASTADO no revive y los intentos no bajan (el rol tiene UPDATE(intentos, usado_en) con política USING(true)):
+--   · fila con usado_en → ya no cambia nada · usado_en solo pasa de NULL a now() · intentos solo sube de 1 en 1 · el resto, fijo.
+CREATE OR REPLACE FUNCTION herramientas.otp_solo_avanza() RETURNS trigger
+  LANGUAGE plpgsql AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    RAISE EXCEPTION 'herramientas.acceso_otp: no se borra' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  IF OLD.usado_en IS NOT NULL THEN
+    RAISE EXCEPTION 'herramientas.acceso_otp: código ya consumido' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  IF (NEW.id, NEW.proposito, NEW.email_hash, NEW.codigo_hash, NEW.ip, NEW.envio, NEW.creado_en)
+     IS DISTINCT FROM (OLD.id, OLD.proposito, OLD.email_hash, OLD.codigo_hash, OLD.ip, OLD.envio, OLD.creado_en)
+     OR NEW.intentos NOT IN (OLD.intentos, OLD.intentos + 1) THEN
+    RAISE EXCEPTION 'herramientas.acceso_otp: solo avanza (intentos +1 o gastar)' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  IF NEW.usado_en IS NOT NULL THEN NEW.usado_en := now(); END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER trg_acceso_otp_solo_avanza BEFORE UPDATE OR DELETE ON herramientas.acceso_otp
+  FOR EACH ROW EXECUTE FUNCTION herramientas.otp_solo_avanza();
 CREATE INDEX acceso_otp_ip ON herramientas.acceso_otp (ip, creado_en DESC);
 
 -- Solo jti/aud/persona/exp: el token no se guarda.
@@ -325,11 +360,18 @@ CREATE OR REPLACE FUNCTION herramientas.es_miembro(p_cuenta uuid) RETURNS boolea
   AS $$ SELECT EXISTS (SELECT 1 FROM herramientas.cuenta_miembro m JOIN herramientas.cuenta c ON c.id = m.cuenta_id
                         WHERE m.cuenta_id = p_cuenta AND m.persona_id = herramientas.persona_actual()
                           AND m.estado = 'activo' AND c.activo) $$;
+-- Miembro activo que NO es empleado (= puede(rol, 'ver_contrato')): contratos, firmas, personas y miembros de la cuenta.
+CREATE OR REPLACE FUNCTION herramientas.es_miembro_gestor(p_cuenta uuid) RETURNS boolean
+  LANGUAGE sql STABLE SECURITY DEFINER SET search_path = herramientas, pg_temp
+  AS $$ SELECT EXISTS (SELECT 1 FROM herramientas.cuenta_miembro m JOIN herramientas.cuenta c ON c.id = m.cuenta_id
+                        WHERE m.cuenta_id = p_cuenta AND m.persona_id = herramientas.persona_actual()
+                          AND m.estado = 'activo' AND c.activo AND m.rol IN ('dueno', 'admin', 'consulta')) $$;
+-- Una persona se ve a sí misma; a las demás, solo desde una cuenta en la que es gestor (el empleado no ve a nadie más).
 CREATE OR REPLACE FUNCTION herramientas.comparte_cuenta(p_persona uuid) RETURNS boolean
   LANGUAGE sql STABLE SECURITY DEFINER SET search_path = herramientas, pg_temp
   AS $$ SELECT p_persona = herramientas.persona_actual()
             OR EXISTS (SELECT 1 FROM herramientas.cuenta_miembro m WHERE m.persona_id = p_persona AND m.estado = 'activo'
-                         AND herramientas.es_miembro(m.cuenta_id)) $$;
+                         AND herramientas.es_miembro_gestor(m.cuenta_id)) $$;
 
 DO $$
 DECLARE t text;
@@ -340,15 +382,20 @@ BEGIN
   END LOOP;
 END $$;
 CREATE POLICY cuenta_de_miembro ON herramientas.cuenta FOR SELECT USING (herramientas.es_miembro(id));
-CREATE POLICY miembro_de_miembro ON herramientas.cuenta_miembro FOR SELECT USING (herramientas.es_miembro(cuenta_id));
+-- Su PROPIA fila de miembro y sus PROPIAS concesiones las ve cualquier miembro (el selector y la portada las necesitan);
+-- las de los demás, solo el gestor.
+CREATE POLICY miembro_de_miembro ON herramientas.cuenta_miembro FOR SELECT
+  USING (herramientas.es_miembro_gestor(cuenta_id) OR (persona_id = herramientas.persona_actual() AND herramientas.es_miembro(cuenta_id)));
 CREATE POLICY herramienta_de_miembro ON herramientas.cuenta_herramienta FOR SELECT USING (herramientas.es_miembro(cuenta_id));
-CREATE POLICY concesion_de_miembro ON herramientas.miembro_herramienta FOR SELECT USING (herramientas.es_miembro(cuenta_id));
-CREATE POLICY contrato_de_miembro ON herramientas.contrato FOR SELECT USING (herramientas.es_miembro(cuenta_id));
+CREATE POLICY concesion_de_miembro ON herramientas.miembro_herramienta FOR SELECT
+  USING (herramientas.es_miembro_gestor(cuenta_id) OR (persona_id = herramientas.persona_actual() AND herramientas.es_miembro(cuenta_id)));
+-- Contrato, versiones y firmas (con el certificado: NIF, IP y UA del dueño): solo gestores, nunca el empleado.
+CREATE POLICY contrato_de_miembro ON herramientas.contrato FOR SELECT USING (herramientas.es_miembro_gestor(cuenta_id));
 CREATE POLICY version_de_miembro ON herramientas.contrato_version FOR SELECT
-  USING (EXISTS (SELECT 1 FROM herramientas.contrato c WHERE c.id = contrato_id AND herramientas.es_miembro(c.cuenta_id)));
+  USING (EXISTS (SELECT 1 FROM herramientas.contrato c WHERE c.id = contrato_id AND herramientas.es_miembro_gestor(c.cuenta_id)));
 CREATE POLICY firma_de_miembro ON herramientas.firma FOR SELECT
   USING (EXISTS (SELECT 1 FROM herramientas.contrato_version v JOIN herramientas.contrato c ON c.id = v.contrato_id
-                  WHERE v.id = contrato_version_id AND herramientas.es_miembro(c.cuenta_id)));
+                  WHERE v.id = contrato_version_id AND herramientas.es_miembro_gestor(c.cuenta_id)));
 CREATE POLICY persona_visible ON herramientas.persona FOR SELECT USING (herramientas.comparte_cuenta(id));
 CREATE POLICY plantilla_publica ON herramientas.plantilla FOR SELECT USING (true);
 -- Sin persona todavía (se pide antes de entrar) y sin datos de nadie: solo hashes HMAC.
@@ -542,7 +589,8 @@ BEGIN
     VALUES (p_cuenta, p_actor, 'acceso_retirado', jsonb_build_object('persona', p_persona, 'herramienta', p_herramienta));
 END $$;
 
--- ─── 6. Puerto del OPERADOR (la ruta exige Bearer HERRAMIENTAS_OPERADOR_SECRET; p_actor = email del operador) ───────
+-- ─── 6. Puerto del OPERADOR (EXECUTE solo a prisma_herramientas_op; la ruta exige Bearer HERRAMIENTAS_OPERADOR_SECRET;
+--        p_actor = email del operador) ─────────────────────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION herramientas.op_alta_cuenta(
   p_cif text, p_razon text, p_via text, p_numero text, p_resto text, p_cp text, p_municipio text, p_provincia text,
   p_acento text, p_logo text, p_actor text)
@@ -811,21 +859,26 @@ $$;
 
 -- ─── 7. Permisos MÍNIMOS ────────────────────────────────────────────────────────────────────────────────────────────
 DO $$
-DECLARE f text;
+DECLARE f text; r record;
 BEGIN
   FOR f IN SELECT p.oid::regprocedure::text FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'herramientas' LOOP
     EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC', f);
   END LOOP;
-  -- Al rol: las de la persona y las del operador. NUNCA las internas (_persona, _conceder, _retirar, _ficha).
-  FOR f IN SELECT p.oid::regprocedure::text FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+  -- Panel (prisma_herramientas): las de la persona. Operador (prisma_herramientas_op): SOLO las op_*. Ninguno recibe las
+  -- internas (_persona, _conceder, _retirar, _ficha) ni las de trigger. El panel NUNCA ejecuta op_* (I-4 de la auditoría).
+  FOR r IN SELECT p.oid::regprocedure::text AS firma, p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
             WHERE n.nspname = 'herramientas' AND p.proname NOT LIKE '\_%' AND p.prokind = 'f'
-              AND p.proname NOT IN ('prohibir_cambios', 'version_solo_estado', 'envio_una_resolucion', 'tocar_actualizado_en') LOOP
-    EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO prisma_herramientas', f);
+              AND p.proname NOT IN ('prohibir_cambios', 'version_solo_estado', 'envio_una_resolucion', 'tocar_actualizado_en', 'otp_solo_avanza') LOOP
+    IF r.proname LIKE 'op\_%' THEN
+      EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO prisma_herramientas_op', r.firma);
+    ELSE
+      EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO prisma_herramientas', r.firma);
+    END IF;
   END LOOP;
 END $$;
 
-GRANT USAGE ON SCHEMA herramientas TO prisma_herramientas;
-REVOKE ALL ON ALL TABLES IN SCHEMA herramientas FROM prisma_herramientas;
+GRANT USAGE ON SCHEMA herramientas TO prisma_herramientas, prisma_herramientas_op;
+REVOKE ALL ON ALL TABLES IN SCHEMA herramientas FROM prisma_herramientas, prisma_herramientas_op;
 GRANT SELECT ON herramientas.cuenta, herramientas.persona, herramientas.cuenta_miembro, herramientas.cuenta_herramienta,
                 herramientas.miembro_herramienta, herramientas.plantilla, herramientas.contrato, herramientas.contrato_version,
                 herramientas.firma TO prisma_herramientas;
@@ -837,10 +890,11 @@ COMMIT;
 -- ── Verificación tras aplicar (solo lectura) ─────────────────────────────────────────────────────────────────────────
 -- SELECT relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
 --  WHERE n.nspname = 'herramientas' AND c.relkind = 'r' AND NOT (c.relrowsecurity AND c.relforcerowsecurity);   → 0 filas
--- SELECT rolbypassrls FROM pg_roles WHERE rolname = 'prisma_herramientas';                                         → false
+-- SELECT rolname, rolbypassrls FROM pg_roles WHERE rolname IN ('prisma_herramientas', 'prisma_herramientas_op');    → false, false
+-- SELECT has_function_privilege('prisma_herramientas', 'herramientas.op_listar()', 'EXECUTE');                     → false
 -- Cepo de aislamiento entre schemas (debe salir VACÍO):
 -- SELECT table_schema, table_name, privilege_type FROM information_schema.role_table_grants
---  WHERE grantee = 'prisma_herramientas' AND table_schema <> 'herramientas';
+--  WHERE grantee IN ('prisma_herramientas', 'prisma_herramientas_op') AND table_schema <> 'herramientas';
 -- SELECT has_table_privilege('prisma_herramientas', 'herramientas.firma', 'UPDATE');                                → false
 -- Inmutabilidad (como postgres, en una transacción que se deshace):
 --   BEGIN; UPDATE herramientas.plantilla SET estado = 'revisada';   → ERROR tabla inmutable; ROLLBACK;

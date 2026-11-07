@@ -7,7 +7,7 @@ import { repoResponsable } from '@/lib/acceso-responsable-repo'
 import { emitirSesionResponsable, DESTINO_RESPONSABLE } from '@/lib/abrir-sesion-responsable'
 
 // Entrada del RESPONSABLE desde «Mi empresa»: token HS256 de un solo uso (aud=rrhh, secreto PROPIO; jamás JWT_SECRET).
-// El token no autoriza: se consume el jti (0036), se busca al responsable por su correo VERIFICADO y se exige
+// El token no autoriza: se consume el jti (0037), se busca al responsable por su correo VERIFICADO y se exige
 // `rrhh.usuario_empresas` para esa empresa. Nunca abre sesiones de empleado.
 export const dynamic = 'force-dynamic'
 
