@@ -54,6 +54,7 @@ import { purgarEvidenciaCaducada, purgarRecorridosCaducados, purgarRiesgoTrabajo
 import { atascoParaFallo, caducarAtascos, caducarPausas, evaluarCorte, guardarAtasco, pausarTrasHumo, pausaViva, sqlSinPausa } from './tarificador-robustez'
 import { PREFIJO_HUMO_NO_SOPORTADO, estadoTrasFalloHumo, humoPideParar } from './tarificador-humo-reglas'
 import { entradaDePilotaje } from './tarificador-pilotaje'
+import { engancharVehiculosDeLeads, type ResumenVehiculoLeads } from './tarificador-vehiculo-lead'
 import { COMPANIA_VEHICULO, MODO_VEHICULO, normalizarMatriculaConsulta } from './tarificador-vehiculo-reglas'
 import {
   CLAVE_ESPERA_VEHICULO,
@@ -1156,6 +1157,8 @@ export type ResumenBarrido = {
   atascosCaducados?: number
   /** Generali en espera del vehículo (18/10/2026): cuántos recibieron el de Allianz/Mapfre y cuántos se cancelaron sin él. */
   esperasVehiculo?: { inyectados: number; cancelados: number; liberados: number; esperando: number }
+  /** Idea 4 (07/11/2026): leads de coche con matrícula y sin ficha → consulta de vehículo por bot (apagado: `omitido`). */
+  vehiculoLeads?: ResumenVehiculoLeads
   lanzar: Record<string, ResumenLanzar>
 }
 
@@ -1238,6 +1241,9 @@ export async function barrerTarificadorRpa(correduriaId: string, deps: DepsLanza
 
   // Vehículo encadenado (Generali, 18/10/2026): inyecta el de Allianz/Mapfre o cancela si ya no puede llegar. Sin lanzar.
   r.esperasVehiculo = await paso('esperas_vehiculo', () => resolverEsperasVehiculo(correduriaId))
+
+  // Matrícula por bot como primer paso de un lead de coche (idea 4): apagado por defecto (`TARIFICADOR_VEHICULO_ACTIVO`). Antes de lanzar.
+  r.vehiculoLeads = await paso('vehiculo_leads', () => engancharVehiculosDeLeads(correduriaId, deps.env))
 
   // Lanzar máquinas SÍ depende del flag (`lanzarPendientes` también lo comprueba).
   if (!activo) return r
