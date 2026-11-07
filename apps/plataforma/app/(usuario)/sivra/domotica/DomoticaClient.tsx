@@ -342,7 +342,7 @@ function TarjetaAcceso({ d, apartamentos, ocupado, setOcupado, setError, cargar 
                 <br />{fmtDT(p.valido_desde)} → {fmtDT(p.valido_hasta)}
               </div>
               {p.estado === 'error' && p.detalle?.error && (
-                <div style={{ fontSize: 11, color: 'var(--danger, #b91c1c)', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
+                <div style={{ fontSize: 11, color: 'var(--negative)', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
                   {String(p.detalle.error).slice(0, 160)}{String(p.detalle.error).length > 160 ? '…' : ''}
                 </div>
               )}
