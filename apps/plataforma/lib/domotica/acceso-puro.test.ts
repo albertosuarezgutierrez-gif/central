@@ -35,3 +35,27 @@ test('variantesAperturas: la ventana por defecto son 90 días hacia atrás', () 
   assert.match(vs[0].path, /startTime=0(&|$)/)
   assert.match(vs[0].path, /endTime=7776000000/)
 })
+
+import { elegirMetodoAbrir, resumirRespuestaTuya, aperturaOk, esAperturaRemotaDesactivada } from './acceso-puro.ts'
+
+test('elegirMetodoAbrir: remote_no_dp_key → password-free (no commands)', () => {
+  assert.deepEqual(elegirMetodoAbrir(['battery_percentage', 'remote_no_dp_key'], null), { metodo: 'password-free' })
+})
+test('elegirMetodoAbrir: categoría smart lock (mk/ms/jtmspro) → password-free', () => {
+  for (const c of ['mk', 'ms', 'jtmspro']) assert.deepEqual(elegirMetodoAbrir(['unlock_request'], c), { metodo: 'password-free' })
+})
+test('elegirMetodoAbrir: DP booleano real → commands', () => {
+  assert.deepEqual(elegirMetodoAbrir(['switch', 'unlock_request'], 'wk'), { metodo: 'commands', code: 'unlock_request' })
+  assert.deepEqual(elegirMetodoAbrir(['open_door'], undefined), { metodo: 'commands', code: 'open_door' })
+  assert.equal(elegirMetodoAbrir(['switch_led'], 'dj'), null)
+})
+test('resumirRespuestaTuya / aperturaOk: result false o success false = no abierto; sin secretos', () => {
+  assert.equal(aperturaOk(resumirRespuestaTuya('x', { success: true, result: true })), true)
+  assert.equal(aperturaOk(resumirRespuestaTuya('x', { success: true, result: false })), false)
+  assert.equal(aperturaOk(resumirRespuestaTuya('x', { success: false, code: 1109, msg: 'boom' })), false)
+  assert.equal(resumirRespuestaTuya('x', { success: true, result: { ticket_key: 'SECRETO' } }).result, '[objeto]')
+})
+test('esAperturaRemotaDesactivada reconoce el mensaje de Tuya', () => {
+  assert.equal(esAperturaRemotaDesactivada('remote unlock is not enabled'), true)
+  assert.equal(esAperturaRemotaDesactivada('sign invalid'), false)
+})

@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  madridOffsetMin, madridEpoch, ventanaPin, reconciliar, necesitaAvisoOffline, desajustesVentana,
+  madridOffsetMin, madridEpoch, ventanaPin, reconciliar, necesitaAvisoOffline, desajustesVentana, protegeFilaDeError,
   type ReservaAcceso, type PinExistente, type CfgProgramador,
 } from './acceso-programador.ts'
 
@@ -154,4 +154,61 @@ test('desajustesVentana: arrastra si el PIN ya está en manos del huésped', () 
   const cfg = { ...CFG, margenSalidaMin: 120 }
   const [d] = desajustesVentana([reserva()], cfg, [pinVivo({ entregado: true })], ANTES)
   assert.equal(d.entregado, true, 'reponer un PIN ya entregado no es lo mismo que reponer uno que nadie tiene')
+})
+
+import { ventanaVencida, pinEntregadoVigente } from './acceso-programador.ts'
+
+test('reconciliar: NUNCA crea un PIN cuya ventana ya venció (Tuya 2334 expiry < now)', () => {
+  const r = reserva()
+  const { hastaEpoch } = ventanaPin(r, CFG)
+  const { crear } = reconciliar([r], CFG, [], hastaEpoch + 60)
+  assert.equal(crear.length, 0)
+  assert.equal(ventanaVencida(hastaEpoch, hastaEpoch), true)
+})
+test('reconciliar: fila entregada con PIN en Tuya y estado error no se recrea ni se pisa', () => {
+  const r = reserva()
+  const { desdeEpoch, hastaEpoch } = ventanaPin(r, CFG)
+  const ex = { reservaRef: r.id, estado: 'error', validoDesdeEpoch: desdeEpoch, validoHastaEpoch: hastaEpoch, tuyaPasswordId: 'tp1', entregado: true }
+  assert.equal(pinEntregadoVigente(ex), true)
+  assert.equal(reconciliar([r], CFG, [ex], desdeEpoch).crear.length, 0)
+})
+test('reconciliar: fila error + entregada + ventana vencida → cerrar (caducado), no error', () => {
+  const r = reserva()
+  const { desdeEpoch, hastaEpoch } = ventanaPin(r, CFG)
+  const ex = { reservaRef: r.id, estado: 'error', validoDesdeEpoch: desdeEpoch, validoHastaEpoch: hastaEpoch, tuyaPasswordId: 'tp1', entregado: true }
+  const { cerrar, crear } = reconciliar([r], CFG, [ex], hastaEpoch + 3600)
+  assert.deepEqual(cerrar.map(p => p.reservaRef), [r.id])
+  assert.equal(crear.length, 0)
+  // un error real (sin PIN entregado ni id) NO se cierra
+  assert.equal(reconciliar([], CFG, [{ ...ex, entregado: false, tuyaPasswordId: null }], hastaEpoch + 3600).cerrar.length, 0)
+})
+
+import { bookingsDeRespuesta } from './acceso-programador.ts'
+
+test('bookingsDeRespuesta: ok con bookings (también vacío legítimo) → array', () => {
+  assert.deepEqual(bookingsDeRespuesta(true, 200, '{"bookings":[{"id":1}]}'), [{ id: 1 }])
+  assert.deepEqual(bookingsDeRespuesta(true, 200, '{"bookings":[]}'), [])
+})
+test('bookingsDeRespuesta: !ok, JSON roto o sin bookings → lanza (no «0 reservas» en silencio)', () => {
+  assert.throws(() => bookingsDeRespuesta(false, 401, '{"detail":"x"}'), /401/)
+  assert.throws(() => bookingsDeRespuesta(true, 200, '<html>'), /sin «bookings»/)
+  assert.throws(() => bookingsDeRespuesta(true, 200, '{"error":"y"}'), /sin «bookings»/)
+})
+
+import { readFileSync } from 'node:fs'
+
+test('protegeFilaDeError: solo protege filas vivas entregadas con id en Tuya', () => {
+  const f = (estado: string, entregado = true, id: string | null = 'x') => protegeFilaDeError({ estado, entregado, tuyaPasswordId: id }, 'error')
+  assert.equal(f('activo'), true)
+  assert.equal(f('error'), true)
+  assert.equal(f('borrado'), false)
+  assert.equal(f('caducado'), false)
+  assert.equal(f('activo', false), false)
+  assert.equal(f('activo', true, null), false)
+  assert.equal(protegeFilaDeError({ estado: 'activo', entregado: true, tuyaPasswordId: 'x' }, 'activo'), false)
+})
+
+test('upsertPin: la guarda SQL del ON CONFLICT refleja el helper', () => {
+  const src = readFileSync(new URL('../../app/api/sivra/domotica/acceso/programador/route.ts', import.meta.url), 'utf8')
+  assert.match(src, /domotica_acceso_pin\.estado IN \('activo','error'\)/)
 })
