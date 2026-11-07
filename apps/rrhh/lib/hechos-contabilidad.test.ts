@@ -8,8 +8,8 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { calcularModelo190 } from '@central/module-contabilidad'
 import {
-  ENV_SECRETO, clasificarRespuesta, enviarNominaAContabilidad, fechaDePeriodo, hechoDeNomina, leerConfigContabilidad,
-  type DatosEnvio, type DepsEnvio, type FilaNominaEnvio,
+  ENV_SECRETO, LOTE_REENVIO, SE_REINTENTA, clasificarRespuesta, enviarNominaAContabilidad, fechaDePeriodo, hechoDeNomina,
+  leerConfigContabilidad, reenviarLote, type DatosEnvio, type DepsEnvio, type FilaNominaEnvio,
 } from './hechos-contabilidad'
 import { anioPedido, certificadoDeNominas, eurosEs } from './hechos-contabilidad-certificado'
 import { envSecretoHechos } from '../../contabilidad/lib/secretos.ts'
@@ -142,5 +142,47 @@ describe('certificado de retenciones', () => {
     expect(eurosEs(5)).toBe('0,05€')
     const hoy = new Date('2026-11-07T00:00:00Z')
     expect([anioPedido(null, hoy), anioPedido('2026', hoy), anioPedido('2027', hoy), anioPedido('20x6', hoy)]).toEqual([2025, 2026, null, null])
+  })
+})
+
+describe('reenvío a contabilidad (cron diario y botón): SE_REINTENTA tiene quien lo use', () => {
+  const cand = (n: number) => Array.from({ length: n }, (_, i) => ({ id: `n${i}`, empresa_id: i % 2 ? 'emp-B' : 'emp-A' }))
+
+  it('cada envío va con la empresa de SU fila, y el lote está limitado (quedan si llega una de más)', async () => {
+    const llamadas: [string, string][] = []
+    const enviar = async (e: string, n: string) => { llamadas.push([e, n]); return { estado: 'enviado' as const, detalle: null } }
+    const r = await reenviarLote(cand(LOTE_REENVIO + 1), LOTE_REENVIO, { presupuestoMs: 60_000, enviar })
+    expect(r.procesadas).toBe(LOTE_REENVIO)
+    expect(r.quedan).toBe(true)
+    expect(llamadas[0]).toEqual(['emp-A', 'n0'])
+    expect(llamadas[1]).toEqual(['emp-B', 'n1'])
+    expect(r.porEstado).toEqual({ enviado: LOTE_REENVIO })
+    const corto = await reenviarLote(cand(3), LOTE_REENVIO, { presupuestoMs: 60_000, enviar })
+    expect(corto.quedan).toBe(false)
+  })
+
+  it('se para al agotar el presupuesto de tiempo (no se corta a mitad por maxDuration)', async () => {
+    let t = 0
+    const enviar = async () => { t += 20_000; return { estado: 'error' as const, detalle: 'HTTP 503' } }
+    const r = await reenviarLote(cand(10), LOTE_REENVIO, { presupuestoMs: 45_000, ahora: () => t, enviar })
+    expect(r.procesadas).toBe(3)
+    expect(r.quedan).toBe(true)
+    expect(r.porEstado).toEqual({ error: 3 })
+  })
+
+  it('las consultas de candidatas piden SE_REINTENTA o NULL de confirmadas; el cron está en vercel.json y pide CRON_SECRET', () => {
+    expect([...SE_REINTENTA]).toEqual(['pendiente_vincular', 'sin_configurar', 'error'])
+    const lib = readFileSync(join(__dirname, 'hechos-contabilidad.ts'), 'utf8')
+    for (const f of ['candidatasReenvioTodas', 'candidatasReenvioEmpresa']) {
+      const cuerpo = lib.slice(lib.indexOf(`export async function ${f}`), lib.indexOf('LIMIT', lib.indexOf(`export async function ${f}`)))
+      expect(cuerpo, f).toMatch(/n\.estado = 'confirmada'/)
+      expect(cuerpo, f).toMatch(/n\.contabilidad_estado IS NULL OR n\.contabilidad_estado = ANY\(\$\{\[\.\.\.SE_REINTENTA\]\}/)
+    }
+    const ruta = readFileSync(join(__dirname, '..', 'app/api/cron/reenviar-contabilidad/route.ts'), 'utf8')
+    expect(ruta).toMatch(/autorizacionBearerValida\(req, 'CRON_SECRET'\)/)
+    expect(ruta).toMatch(/export const maxDuration = 60/)
+    const vercel = JSON.parse(readFileSync(join(__dirname, '..', 'vercel.json'), 'utf8')) as { crons: { path: string; schedule: string }[] }
+    const cron = vercel.crons.find(c => c.path === '/api/cron/reenviar-contabilidad')
+    expect(cron?.schedule).toMatch(/^\d+ \d+ \* \* \*$/)
   })
 })

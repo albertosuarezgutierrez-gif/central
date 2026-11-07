@@ -11,10 +11,12 @@ export type DatosInicio = {
   correosFallidos: number | null
   /** Fichajes sin salida de las últimas 24 h; `undefined` = la empresa no usa fichaje. */
   fichajesAbiertos: number | null | undefined
+  /** Contratos activos que terminan en ≤ 30 días (solo para el responsable) y temporales sin fecha de fin conocida. */
+  contratosVencen: { lineas: string[]; total: number; sinFecha: number } | null
 }
 
 export type TonoTarjeta = 'alerta' | 'aviso' | 'ok' | 'neutro'
-export type Tarjeta = { id: string; tono: TonoTarjeta; titulo: string; texto: string; href: string; enlace: string; urgente: boolean }
+export type Tarjeta = { id: string; tono: TonoTarjeta; titulo: string; texto: string; href: string; enlace: string; urgente: boolean; lista?: string[] }
 
 const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`
 
@@ -70,6 +72,22 @@ export function tarjetasInicio(d: DatosInicio): Tarjeta[] {
       href: '/admin/fichajes', enlace: 'Ver fichajes',
     })
   }
+  // Contratos que vencen: decisión de la EMPRESA (renovar o comunicar la finalización con su preaviso). El empleado no ve nada.
+  if (d.contratosVencen === null) t.push(noSe('contratos', 'Contratos que vencen', '/admin/empleados', 'Abrir empleados'))
+  else {
+    const c = d.contratosVencen
+    const sinFecha = c.sinFecha > 0 ? ` ${plural(c.sinFecha, 'contrato', 'contratos')} sin fecha de fin ni duración indefinida registradas: no se sabe cuándo ${c.sinFecha === 1 ? 'vence' : 'vencen'}.` : ''
+    t.push({
+      id: 'contratos', tono: c.total > 0 ? 'aviso' : 'ok', urgente: c.total > 0,
+      titulo: 'Contratos que vencen',
+      texto: c.total > 0
+        ? `${plural(c.total, 'contrato termina', 'contratos terminan')} en los próximos 30 días. Decide si se renueva o comunica la finalización con el preaviso que corresponda.${sinFecha}`
+        : `Ningún contrato con fecha de fin registrada termina en los próximos 30 días.${sinFecha}`,
+      lista: c.lineas.length ? c.lineas : undefined,
+      href: '/admin/empleados', enlace: 'Ver empleados',
+    })
+  }
+
   // Lo que pide acción, primero.
   return t.sort((a, b) => Number(b.urgente) - Number(a.urgente))
 }

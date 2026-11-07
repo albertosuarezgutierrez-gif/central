@@ -1,5 +1,5 @@
 -- Nóminas P2 (07/11/2026): contratos con inicio/fin/duración, bajas, IBAN/NIF, tablas salariales de convenio a mano,
--- incidencias recurrentes y avisos de vencimiento de contrato. ADITIVA e idempotente. NO aplicada a la BD real desde el código.
+-- incidencias recurrentes, emisión a contabilidad y sello de la remesa SEPA. ADITIVA e idempotente. NO aplicada a la BD real desde el código.
 -- 🚨 Aplicar ANTES de desplegar el código: Prisma lee las columnas nuevas de `contratos_laborales` e `incidencias_mes`
 -- (sin ellas, generar/recalcular nóminas y la pantalla de contrato dan 500).
 -- Todo NULL-able: NULL = «no se sabe» (filas anteriores a esta migración), nunca «no hay» ni «indefinido».
@@ -77,17 +77,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_incidencias_copia
 CREATE INDEX IF NOT EXISTS incidencias_recurrentes_idx
   ON rrhh.incidencias_mes (empresa_id) WHERE periodicidad IS NOT NULL AND copiada_de IS NULL;
 
--- 6) Aviso de vencimiento de contrato (cron diario `/api/cron/vencimiento-contratos`, a 30 y 15 días) en `rrhh.avisos`.
---    Se amplía el catálogo de tipos (mismo patrón que 0023) y se añade la clave de idempotencia: contrato + fecha de fin + umbral
---    (si se prorroga y cambia la fecha de fin, vuelven a saltar). Solo intranet: el cron NO manda email ni push.
-ALTER TABLE rrhh.avisos ADD COLUMN IF NOT EXISTS clave_idempotencia text;
-ALTER TABLE rrhh.avisos DROP CONSTRAINT IF EXISTS avisos_tipo_check;
-ALTER TABLE rrhh.avisos ADD CONSTRAINT avisos_tipo_check CHECK (tipo IN
-  ('solicitud_firma', 'recordatorio_firma', 'reclamacion_firma', 'documento_nuevo', 'vencimiento_contrato'));
-CREATE UNIQUE INDEX IF NOT EXISTS avisos_clave_idempotencia_uq
-  ON rrhh.avisos (empresa_id, clave_idempotencia) WHERE clave_idempotencia IS NOT NULL;
+-- 6) (Retirado antes de aplicar, 07/11/2026) El aviso de vencimiento de contrato YA NO va al empleado en `rrhh.avisos`: un aviso
+--    automático al trabajador podía leerse como preaviso (art. 49.1.c ET). Se muestra al RESPONSABLE en el Inicio de /admin,
+--    calculado al vuelo desde `contratos_laborales.fecha_fin` (sin tabla ni columna nueva). `rrhh.avisos` no se toca.
 
--- 7) Emisión del asiento de la nómina a contabilidad (al confirmar). NULL = nunca intentado (no «no aplica» ni «ok»).
+-- 7) Emisión del asiento de la nómina a contabilidad (al confirmar; el cron `/api/cron/reenviar-contabilidad` reintenta los
+--    estados reintentables y los NULL de nóminas confirmadas). NULL = nunca intentado (no «no aplica» ni «ok»).
 ALTER TABLE rrhh.nominas
   ADD COLUMN IF NOT EXISTS contabilidad_estado     text,
   ADD COLUMN IF NOT EXISTS contabilidad_detalle    text,
@@ -95,3 +90,10 @@ ALTER TABLE rrhh.nominas
 ALTER TABLE rrhh.nominas DROP CONSTRAINT IF EXISTS nominas_contabilidad_estado_ck;
 ALTER TABLE rrhh.nominas ADD CONSTRAINT nominas_contabilidad_estado_ck CHECK (contabilidad_estado IS NULL OR contabilidad_estado IN
   ('enviado', 'pendiente_regla', 'pendiente_vincular', 'sin_configurar', 'error', 'rechazado', 'no_enviable'));
+
+-- 8) Remesa SEPA de nóminas: sello de generación por nómina, contra el DOBLE PAGO. Al descargar la remesa se anota la hora y el
+--    MsgId (determinista por empresa + periodo + contenido) en cada nómina incluida; si alguna ya lo tiene, la descarga responde
+--    409 y pide confirmación explícita. NULL = nunca se ha generado remesa con ella desde la app (no «pagada» ni «sin pagar»).
+ALTER TABLE rrhh.nominas
+  ADD COLUMN IF NOT EXISTS remesa_generada_at timestamptz,
+  ADD COLUMN IF NOT EXISTS remesa_msg_id      text;

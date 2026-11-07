@@ -119,15 +119,16 @@ export function leerConfigContabilidad(env: Record<string, string | undefined> =
  * Estado del envío (columna `rrhh.nominas.contabilidad_estado`; NULL = nunca intentado / no se sabe):
  *   enviado            201/200 asentado (o duplicado idempotente)        · no se reintenta
  *   pendiente_regla    202: contabilidad lo guardó pero falta regla/ejercicio · no se reintenta (lo resuelve contabilidad)
- *   pendiente_vincular la empresa no tiene contabilidad_empresa_id       · se reintenta al vincular
- *   sin_configurar     falta CONTABILIDAD_URL o el secreto                · se reintenta
- *   error              red, timeout, 401, 429, 5xx                         · se reintenta
+ *   pendiente_vincular la empresa no tiene contabilidad_empresa_id       · se reintenta (cron diario / botón)
+ *   sin_configurar     falta CONTABILIDAD_URL o el secreto                · se reintenta (cron diario / botón)
+ *   error              red, timeout, 401, 429, 5xx                         · se reintenta (cron diario / botón)
  *   rechazado          400/403/409/422: hay que mirarlo                    · NO se reintenta solo
  *   no_enviable        el desglose no permite construir el hecho          · NO se reintenta solo
  */
 export type EstadoEnvio = 'enviado' | 'pendiente_regla' | 'pendiente_vincular' | 'sin_configurar' | 'error' | 'rechazado' | 'no_enviable'
 export type ResultadoEnvio = { estado: EstadoEnvio; detalle: string | null }
 
+/** Estados que reintentan el cron `/api/cron/reenviar-contabilidad` y el botón «Reintentar envío» (más los NULL de confirmadas). */
 export const SE_REINTENTA: readonly EstadoEnvio[] = ['pendiente_vincular', 'sin_configurar', 'error']
 
 /** `status` null = sin respuesta (red caída, timeout). PURO. */
@@ -224,6 +225,71 @@ function depsReales(): DepsEnvio {
     config: () => leerConfigContabilidad(),
     fetch: (url, init) => fetch(url, init),
   }
+}
+
+// ── Reenvío (cron diario y botón del responsable) ─────────────────────────────────────────────────────────────────
+// Candidatas: nóminas CONFIRMADAS con `contabilidad_estado` en SE_REINTENTA o NULL (confirmadas antes del emisor, o el
+// envío no llegó a anotarse). Idempotente por `ref = nomina:<id>`: reenviar una ya asentada da 200 «duplicado».
+// Lotes limitados y presupuesto de tiempo: con `fetch` de 10 s, 25 envíos caídos no caben en 60 s; se para antes y lo
+// que queda sale en el siguiente pase (la más antigua primero, para no dejar ninguna atrás).
+
+export const LOTE_REENVIO = 25
+export type CandidataReenvio = { id: string; empresa_id: string }
+
+/**
+ * Cron: candidatas de TODAS las empresas (excepción MULTIEMPRESA del cepo, con motivo). Cada fila lleva SU empresa_id y
+ * el envío se hace con él: nunca se mezcla. `minutosQuietas` evita pisar una confirmación que se está enviando ahora.
+ */
+export async function candidatasReenvioTodas(limite: number, minutosQuietas = 15): Promise<CandidataReenvio[]> {
+  return prisma.$queryRaw<CandidataReenvio[]>(Prisma.sql`
+    SELECT n.id::text AS id, n.empresa_id::text AS empresa_id
+    FROM rrhh.nominas n
+    WHERE n.estado = 'confirmada'
+      AND (n.contabilidad_estado IS NULL OR n.contabilidad_estado = ANY(${[...SE_REINTENTA]}::text[]))
+      AND COALESCE(n.contabilidad_intento_at, n.confirmada_at, n.generada_at) < now() - make_interval(mins => ${minutosQuietas}::int)
+    ORDER BY n.contabilidad_intento_at ASC NULLS FIRST, n.confirmada_at ASC NULLS FIRST
+    LIMIT ${limite}::int`)
+}
+
+/** Botón del responsable: SOLO la empresa de la sesión, sin espera (lo pide una persona). */
+export async function candidatasReenvioEmpresa(empresaId: string, limite: number): Promise<CandidataReenvio[]> {
+  return prisma.$queryRaw<CandidataReenvio[]>(Prisma.sql`
+    SELECT n.id::text AS id, n.empresa_id::text AS empresa_id
+    FROM rrhh.nominas n
+    WHERE n.empresa_id = ${empresaId}::uuid AND n.estado = 'confirmada'
+      AND (n.contabilidad_estado IS NULL OR n.contabilidad_estado = ANY(${[...SE_REINTENTA]}::text[]))
+    ORDER BY n.contabilidad_intento_at ASC NULLS FIRST, n.confirmada_at ASC NULLS FIRST
+    LIMIT ${limite}::int`)
+}
+
+export type ResultadoLote = {
+  procesadas: number
+  /** true = puede quedar alguna (lote lleno o se acabó el tiempo): el siguiente pase sigue. */
+  quedan: boolean
+  porEstado: Partial<Record<EstadoEnvio, number>>
+  resultados: { id: string; estado: EstadoEnvio }[]
+}
+
+/** Reenvía un lote ya elegido. PURO salvo `enviar` (inyectado). Nunca lanza: `enviarNominaAContabilidad` no lanza. */
+export async function reenviarLote(
+  candidatas: CandidataReenvio[],
+  limite: number,
+  opts: { presupuestoMs: number; ahora?: () => number; enviar?: (empresaId: string, nominaId: string) => Promise<ResultadoEnvio> },
+): Promise<ResultadoLote> {
+  const ahora = opts.ahora ?? Date.now
+  const enviar = opts.enviar ?? ((e: string, n: string) => enviarNominaAContabilidad(e, n))
+  const inicio = ahora()
+  const porEstado: Partial<Record<EstadoEnvio, number>> = {}
+  const resultados: { id: string; estado: EstadoEnvio }[] = []
+  let cortado = false
+  for (const c of candidatas.slice(0, limite)) {
+    if (ahora() - inicio > opts.presupuestoMs) { cortado = true; break }
+    const r = await enviar(c.empresa_id, c.id)
+    porEstado[r.estado] = (porEstado[r.estado] ?? 0) + 1
+    resultados.push({ id: c.id, estado: r.estado })
+  }
+  // Quien llama pide `limite + 1` candidatas: si llega una de más, quedan.
+  return { procesadas: resultados.length, quedan: cortado || candidatas.length > limite, porEstado, resultados }
 }
 
 // ── Certificado de retenciones (portal /e) ──────────────────────────────────────────────────────────────────────────

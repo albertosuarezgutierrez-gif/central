@@ -39,10 +39,9 @@ describe('0033_nominas_contratos_convenio.sql', () => {
     expect(codigo).toMatch(/ALTER TABLE rrhh\.convenio_tablas_salariales ENABLE ROW LEVEL SECURITY/)
     expect(codigo).toMatch(/GRANT SELECT, INSERT, UPDATE, DELETE ON rrhh\.convenio_tablas_salariales TO rrhh_app/)
   })
-  it('avisos: el catálogo AMPLÍA el de 0023 (no quita tipos) y la idempotencia es por empresa', () => {
-    const tipos = codigo.match(/avisos_tipo_check CHECK \(tipo IN\s*\(([^)]*)\)/)?.[1] ?? ''
-    for (const t of ['solicitud_firma', 'recordatorio_firma', 'reclamacion_firma', 'documento_nuevo', 'vencimiento_contrato']) expect(tipos).toContain(`'${t}'`)
-    expect(codigo).toMatch(/UNIQUE INDEX IF NOT EXISTS avisos_clave_idempotencia_uq\s+ON rrhh\.avisos \(empresa_id, clave_idempotencia\)/)
+  it('no toca rrhh.avisos: el vencimiento de contrato NO se avisa al empleado (riesgo de leerse como preaviso)', () => {
+    expect(codigo).not.toMatch(/\brrhh\.avisos\b(?!_admin)/)
+    expect(codigo).not.toMatch(/vencimiento_contrato/)
   })
 })
 
@@ -53,5 +52,12 @@ describe('0033: estado de la emisión a contabilidad en nominas', () => {
     }
     const v = codigo.match(/nominas_contabilidad_estado_ck CHECK \(contabilidad_estado IS NULL OR contabilidad_estado IN\s*\(([^)]*)\)/)?.[1] ?? ''
     expect(v.match(/'[a-z_]+'/g)).toEqual(["'enviado'", "'pendiente_regla'", "'pendiente_vincular'", "'sin_configurar'", "'error'", "'rechazado'", "'no_enviable'"])
+  })
+})
+
+describe('0033: sello de la remesa SEPA en nominas (contra el doble pago)', () => {
+  it('remesa_generada_at timestamptz y remesa_msg_id text, NULL-ables', () => {
+    expect(codigo).toMatch(/ALTER TABLE rrhh\.nominas[\s\S]*ADD COLUMN IF NOT EXISTS remesa_generada_at\s+timestamptz/)
+    expect(codigo).toMatch(/ALTER TABLE rrhh\.nominas[\s\S]*ADD COLUMN IF NOT EXISTS remesa_msg_id\s+text/)
   })
 })

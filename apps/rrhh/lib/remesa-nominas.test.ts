@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { armarRemesaNominas, eurosACentimos, textoSepa, type ArmarRemesaParams } from './remesa-nominas'
+import { armarRemesaNominas, eurosACentimos, idMensajeRemesa, textoSepa, type ArmarRemesaParams } from './remesa-nominas'
 
 // IBAN de ejemplo públicos (checksum válido), no son cuentas reales.
 const IBAN_EMPRESA = 'ES9121000418450200051332'
@@ -41,7 +41,11 @@ describe('armarRemesaNominas', () => {
     expect(r.num_transferencias).toBe(2)
     expect(r.nombreFichero).toBe('remesa-nominas-2026-11.xml')
     const xml = r.xml
-    expect(xml).toContain('<MsgId>NOM20261120261107100000</MsgId>')
+    expect(xml).toContain(`<MsgId>${r.id_mensaje}</MsgId>`)
+    expect(xml).toContain(`<PmtInfId>${r.id_mensaje}-001</PmtInfId>`)
+    expect(r.id_mensaje).toMatch(/^NOM202611[0-9A-F]{22}$/)
+    expect(`${r.id_mensaje}-001`.length).toBeLessThanOrEqual(35)
+    expect(r.nomina_ids).toEqual(['aaaaaaaa-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000002'])
     expect(xml).toContain('<CreDtTm>2026-11-07T10:00:00</CreDtTm>')
     expect(xml).toContain('<Nm>Mariscos Gonzalez SL</Nm>')
     expect(xml).toContain('<Id>B12345678000</Id>')
@@ -130,6 +134,31 @@ describe('armarRemesaNominas', () => {
     expect(errores(armarRemesaNominas(base({ nominas: [{ ...b.nominas[0], periodo: '2026-10' }] }))).map(e => e.codigo)).toEqual(['nomina_otro_periodo'])
     expect(errores(armarRemesaNominas(base({ fechaEjecucion: '2026-11-06' }))).map(e => e.codigo)).toEqual(['fecha_invalida'])
     expect(errores(armarRemesaNominas(base({ fechaEjecucion: '2026-02-30' }))).map(e => e.codigo)).toEqual(['fecha_invalida'])
+  })
+})
+
+describe('MsgId determinista (contra el doble pago)', () => {
+  const id = (over: Partial<ArmarRemesaParams> = {}) => {
+    const r = armarRemesaNominas(base(over))
+    if (!r.ok) throw new Error(JSON.stringify(r.errores))
+    return r.id_mensaje
+  }
+  it('mismo contenido → mismo MsgId, aunque cambien la hora de creación, la fecha de cargo o el orden', () => {
+    const a = id()
+    expect(id({ creadoEn: new Date('2026-11-08T18:30:00Z') })).toBe(a)
+    expect(id({ fechaEjecucion: '2026-11-30' })).toBe(a)
+    expect(id({ nominas: [...base().nominas].reverse() })).toBe(a)
+  })
+  it('contenido distinto → MsgId distinto (importe, IBAN, nómina de más, otra empresa u otro periodo)', () => {
+    const a = id()
+    const nominas = base().nominas
+    expect(id({ nominas: nominas.map((n, i) => (i === 0 ? { ...n, liquido_centimos: 123457 } : n)) })).not.toBe(a)
+    expect(id({ empleados: base().empleados.map((e, i) => (i === 1 ? { ...e, iban: IBAN_A } : e)) })).not.toBe(a)
+    expect(id({ nominas: nominas.filter((_, i) => i !== 1) })).not.toBe(a)
+    const t = [{ nominaId: 'n1', iban: IBAN_A, centimos: 100 }]
+    const ref = idMensajeRemesa({ empresaId: EMP, periodo: '2026-11', ibanCargo: IBAN_EMPRESA, transferencias: t })
+    expect(idMensajeRemesa({ empresaId: OTRA, periodo: '2026-11', ibanCargo: IBAN_EMPRESA, transferencias: t })).not.toBe(ref)
+    expect(idMensajeRemesa({ empresaId: EMP, periodo: '2026-12', ibanCargo: IBAN_EMPRESA, transferencias: t })).not.toBe(ref)
   })
 })
 

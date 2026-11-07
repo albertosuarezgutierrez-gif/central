@@ -6,6 +6,7 @@ import UiPage from '@/components/ui/Page'
 import Boton from '@/components/ui/Boton'
 import DistribuirPdfPanel from './DistribuirPdfPanel'
 import EstadoModuloNominas from './EstadoModuloNominas'
+import ReenviarContabilidadBoton from './ReenviarContabilidadBoton'
 import { leerModulo } from '@/lib/modulos-empresa'
 
 export default async function Page() {
@@ -32,6 +33,8 @@ export default async function Page() {
         <Boton variante="secundario" href="/admin/nominas/convenio">Tablas del convenio</Boton>
         <Boton variante="secundario" href="/admin/nominas/finiquito">Calcular finiquito</Boton>
       </nav>
+
+      <ReenviarContabilidadBoton />
 
       <DistribuirPdfPanel />
 

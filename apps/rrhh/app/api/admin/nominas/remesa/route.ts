@@ -1,22 +1,24 @@
 /**
  * Remesa SEPA (pain.001, propósito SALA) de las nóminas CONFIRMADAS del periodo, como descarga XML.
- *   GET  ?periodo=YYYY-MM&fecha=YYYY-MM-DD
- *   POST { periodo, fecha_ejecucion }
+ *   POST { periodo, fecha_ejecucion, confirmar_repeticion? }
  * `empresa_id` SOLO de getSesion() (cepo `lib/aislamiento-nominas.test.ts`). Con cualquier problema (IBAN ausente o
  * inválido, líquido desconocido…) responde 422 con la lista de empleados afectados y NO sale fichero.
+ * 🚨 Contra el DOBLE PAGO: cada nómina incluida se sella (`remesa_generada_at`). Si alguna ya tenía remesa generada responde
+ * 409 con el aviso y NO sale fichero, salvo `confirmar_repeticion: true` explícito (booleano, no «truthy»). Solo POST: un GET
+ * que sella se dispararía con una precarga o un enlace.
  * 🚨 Ningún IBAN a logs ni en los mensajes de error.
  */
 import { NextResponse } from 'next/server'
 import { getSesion, AuthError } from '@/lib/tenant'
 import { armarRemesaNominas } from '@/lib/remesa-nominas'
-import { cargarDatosRemesa } from '@/lib/remesa-nominas-datos'
+import { cargarDatosRemesa, sellarRemesa } from '@/lib/remesa-nominas-datos'
 
 function hoyMadrid(ahora: Date): string {
   // en-CA formatea YYYY-MM-DD.
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit' }).format(ahora)
 }
 
-async function responder(periodo: unknown, fecha: unknown): Promise<Response> {
+export async function POST(req: Request) {
   let empresa_id: string
   try {
     ({ empresa_id } = await getSesion())
@@ -24,13 +26,16 @@ async function responder(periodo: unknown, fecha: unknown): Promise<Response> {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: 401 })
     throw e
   }
+  const cuerpo = await req.json().catch(() => ({})) as { periodo?: unknown; fecha_ejecucion?: unknown; confirmar_repeticion?: unknown }
+  const { periodo } = cuerpo
+  const confirmarRepeticion = cuerpo.confirmar_repeticion === true
 
   if (typeof periodo !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(periodo)) {
     return NextResponse.json({ error: 'periodo debe ser YYYY-MM' }, { status: 400 })
   }
   const ahora = new Date()
   const hoy = hoyMadrid(ahora)
-  const fechaEjecucion = typeof fecha === 'string' && fecha ? fecha : hoy
+  const fechaEjecucion = typeof cuerpo.fecha_ejecucion === 'string' && cuerpo.fecha_ejecucion ? cuerpo.fecha_ejecucion : hoy
 
   const datos = await cargarDatosRemesa(empresa_id, periodo)
   if (!datos.empresa) return NextResponse.json({ error: 'Empresa no encontrada' }, { status: 404 })
@@ -38,6 +43,21 @@ async function responder(periodo: unknown, fecha: unknown): Promise<Response> {
   const r = armarRemesaNominas({ ...datos, empresa: datos.empresa, periodo, fechaEjecucion, hoy, creadoEn: ahora })
   if (!r.ok) {
     return NextResponse.json({ error: 'No se puede generar la remesa', errores: r.errores, no_confirmadas: r.no_confirmadas }, { status: 422 })
+  }
+
+  const sello = await sellarRemesa({ empresaId: empresa_id, nominaIds: r.nomina_ids, idMensaje: r.id_mensaje, confirmarRepeticion })
+  if (!sello.ok) {
+    const ultima = sello.previas.map(p => p.remesa_generada_at).sort().at(-1) ?? null
+    const mismoFichero = sello.previas.every(p => p.remesa_msg_id === r.id_mensaje)
+    return NextResponse.json({
+      error: 'remesa_ya_generada',
+      aviso: `${sello.previas.length} de ${r.nomina_ids.length} nóminas ya están en una remesa generada antes. `
+        + 'Si esa remesa ya se subió al banco, volver a subirla PAGA DOS VECES. Descárgala de nuevo solo si la anterior no se llegó a enviar o el banco la rechazó.',
+      ya_generadas: sello.previas.length,
+      total: r.nomina_ids.length,
+      ultima_generacion: ultima,
+      mismo_fichero: mismoFichero,
+    }, { status: 409 })
   }
 
   return new Response(r.xml, {
@@ -49,16 +69,8 @@ async function responder(periodo: unknown, fecha: unknown): Promise<Response> {
       'X-Remesa-Transferencias': String(r.num_transferencias),
       'X-Remesa-Total-Centimos': String(r.total_centimos),
       'X-Remesa-No-Confirmadas': String(r.no_confirmadas),
+      'X-Remesa-Id': r.id_mensaje,
+      'X-Remesa-Repetida': String(sello.previas.length),
     },
   })
-}
-
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url)
-  return responder(searchParams.get('periodo'), searchParams.get('fecha'))
-}
-
-export async function POST(req: Request) {
-  const datos = await req.json().catch(() => ({})) as { periodo?: unknown; fecha_ejecucion?: unknown }
-  return responder(datos.periodo, datos.fecha_ejecucion)
 }

@@ -165,8 +165,8 @@ export default function ContratoForm({ empleadoId, inicial, tablas = null }: {
         {esIndefinido
           ? 'Indefinido: sin fecha de fin.'
           : fechaFin
-            ? 'Se avisará en el portal del empleado a 30 y 15 días de la fecha de fin.'
-            : 'Fecha de fin sin indicar: consta como «no se sabe» (no como indefinido) y no habrá aviso de vencimiento.'}
+            ? 'Aparecerá en «Contratos que vencen» del Inicio (solo lo ve la empresa) 30 días antes de la fecha de fin.'
+            : 'Fecha de fin sin indicar: consta como «no se sabe» (no como indefinido) y no aparecerá en «Contratos que vencen».'}
       </p>
 
       <label className="flex flex-col gap-1 text-sm">

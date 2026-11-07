@@ -65,8 +65,11 @@ export default function NominasPanel({ periodo, inicial }: { periodo: string; in
     if (r.ok) {
       const malas = (j.resultados ?? []).filter((x: { ok: boolean }) => !x.ok) as { id: string; error?: string }[]
       const nombre = (id: string) => nominas.find(n => n.id === id)?.empleado_nombre ?? id
-      setResumenLote(`${j.confirmadas} confirmada(s)` + (malas.length ? ` · sin confirmar: ${malas.map(m => `${nombre(m.id)} (${m.error ?? 'error'})`).join('; ')}` : ''))
-      setSeleccion(new Set())
+      const pendientes: string[] = Array.isArray(j.pendientes) ? j.pendientes : []
+      setResumenLote(`${j.confirmadas} confirmada(s)` + (malas.length ? ` · sin confirmar: ${malas.map(m => `${nombre(m.id)} (${m.error ?? 'error'})`).join('; ')}` : '')
+        + (pendientes.length ? ` · quedan ${pendientes.length} sin procesar (siguen seleccionadas): pulsa «Aprobar» otra vez` : ''))
+      // Las que no cupieron en esta llamada siguen marcadas para la siguiente.
+      setSeleccion(new Set(pendientes))
       await recargar()
     } else setError(j.error ?? 'Error al aprobar el lote')
     setAprobando(false)

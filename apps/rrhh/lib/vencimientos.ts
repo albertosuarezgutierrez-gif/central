@@ -1,10 +1,11 @@
-// Regla PURA de los avisos de vencimiento de contrato (cron diario `/api/cron/vencimiento-contratos`). Sin BD ni reloj:
-// `hoy` se inyecta (fecha ISO en hora de Madrid). Avisos a 30 y 15 días de `fecha_fin`.
+// Regla PURA de los contratos que VENCEN (Inicio del responsable en `/admin`). Sin BD ni reloj: `hoy` se inyecta (fecha ISO
+// en hora de Madrid). Lista de los que terminan en ≤ 30 días.
+// 🚨 Va al RESPONSABLE, NUNCA al trabajador (07/11/2026): un aviso automático de fin de contrato al empleado podía
+// leerse como el preaviso del art. 49.1.c ET. Comunicar la finalización o la renovación es una decisión de la empresa.
 // 🚨 `fecha_fin` NULL = «no se sabe» (contrato anterior a 0033 o sin rellenar), NO «indefinido»: solo es indefinido con
-// `duracion = 'indefinido'` explícita. Ninguno de los dos genera aviso, pero se distinguen en pantalla.
+// `duracion = 'indefinido'` explícita. Ninguno de los dos entra en la lista, pero se distinguen en pantalla.
 
-export const UMBRALES_DIAS = [30, 15] as const
-export type Umbral = (typeof UMBRALES_DIAS)[number]
+export const DIAS_VENCIMIENTO = 30
 
 const FECHA = /^\d{4}-\d{2}-\d{2}$/
 
@@ -36,53 +37,36 @@ export function estadoFinContrato(c: { duracion: string | null; fechaFin: string
   return { tipo: 'no_se_sabe' }
 }
 
-/**
- * Umbral que toca avisar hoy: el MÁS PEQUEÑO que ya se ha alcanzado (≤ 15 → 15; ≤ 30 → 30). Fin ya pasado → null.
- * Si el cron no corrió el día exacto (o el contrato se dio de alta con 20 días), avisa al primer pase: la idempotencia
- * por (contrato, fecha_fin, umbral) evita repetir.
- */
-export function umbralQueToca(hoy: string, fechaFin: string | null): Umbral | null {
-  if (!fechaFin) return null
-  const d = diasEntreFechas(hoy, fechaFin)
-  if (d < 0) return null
-  const alcanzados = UMBRALES_DIAS.filter(u => d <= u)
-  return alcanzados.length ? (Math.min(...alcanzados) as Umbral) : null
-}
-
-/** Clave de idempotencia en `rrhh.avisos.clave_idempotencia`: si se prorroga (cambia la fecha), vuelve a avisar. */
-export function claveAvisoVencimiento(contratoId: string, fechaFin: string, umbral: Umbral): string {
-  return `vencimiento:${contratoId}:${fechaFin}:${umbral}`
-}
-
 /** dd/mm/aaaa */
 export function fechaEs(iso: string): string {
   const [y, m, d] = iso.split('-')
   return `${d}/${m}/${y}`
 }
 
-/** Texto neutro (la empresa decide si renueva): solo informa de la fecha que consta en el contrato. */
-export function textoAvisoVencimiento(p: { fechaFin: string; dias: number }): { titulo: string; cuerpo: string } {
-  const cuando = p.dias === 0 ? 'hoy' : p.dias === 1 ? 'mañana' : `dentro de ${p.dias} días`
-  return {
-    titulo: `Tu contrato tiene fecha de fin el ${fechaEs(p.fechaFin)}`,
-    cuerpo: `Según tu contrato, la fecha de fin es el ${fechaEs(p.fechaFin)} (${cuando}). La empresa te informará de su renovación o finalización.`,
-  }
-}
-
 export interface ContratoVencible {
   contratoId: string
-  empresaId: string
   empleadoId: string
+  empleado: string
   fechaFin: string | null
 }
 
-/** Qué avisos generar hoy (puro). */
-export function avisosDeHoy(contratos: ContratoVencible[], hoy: string) {
-  const out: { contratoId: string; empresaId: string; empleadoId: string; fechaFin: string; umbral: Umbral; dias: number; clave: string }[] = []
+/**
+ * Contratos que terminan entre hoy y `dias` (incluidos), del más próximo al más lejano. `fecha_fin` NULL = «no se sabe»:
+ * no entra (no se afirma que venza ni que no). Ya pasados: fuera (no es «vence pronto»).
+ */
+export function contratosQueVencen(contratos: ContratoVencible[], hoy: string, dias: number = DIAS_VENCIMIENTO) {
+  const out: (ContratoVencible & { fechaFin: string; dias: number })[] = []
   for (const c of contratos) {
-    const u = umbralQueToca(hoy, c.fechaFin)
-    if (u === null || !c.fechaFin) continue
-    out.push({ ...c, fechaFin: c.fechaFin, umbral: u, dias: diasEntreFechas(hoy, c.fechaFin), clave: claveAvisoVencimiento(c.contratoId, c.fechaFin, u) })
+    if (!c.fechaFin) continue
+    const d = diasEntreFechas(hoy, c.fechaFin)
+    if (d < 0 || d > dias) continue
+    out.push({ ...c, fechaFin: c.fechaFin, dias: d })
   }
-  return out
+  return out.sort((a, b) => a.dias - b.dias || a.empleado.localeCompare(b.empleado, 'es'))
+}
+
+/** Línea para el responsable: «Ana Núñez — 01/12/2026 (dentro de 24 días)». */
+export function lineaVencimiento(c: { empleado: string; fechaFin: string; dias: number }): string {
+  const cuando = c.dias === 0 ? 'hoy' : c.dias === 1 ? 'mañana' : `dentro de ${c.dias} días`
+  return `${c.empleado || 'Empleado sin nombre'} — ${fechaEs(c.fechaFin)} (${cuando})`
 }

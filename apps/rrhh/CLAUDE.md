@@ -92,13 +92,24 @@ El god-panel de plataforma crea empresas vía HTTP:
   `calculo` (fail-closed) y en `simulacion` quedan en `datos_calculo.cifrasPendientes`. Confirmar exige esa lista vacía.
 - Interruptor: solo el operador (`PUT /api/operador/empresas/modulos`); el responsable lo VE en /admin/nominas, sin botón.
 - Aislamiento: cepo `lib/aislamiento-nominas.test.ts`: cada SQL FILTRA por `empresa_id` en WHERE/ON (nombrarla en el SELECT no vale);
-  únicas excepciones `MULTIEMPRESA` (fichero+tabla exactos: login por correo y los dos crons). A la IA de reparto solo va `textoMinimoParaIA`.
+  únicas excepciones `MULTIEMPRESA` (fichero+tabla exactos: login por correo, cron de nóminas y cron reenviar-contabilidad). A la IA de reparto solo va `textoMinimoParaIA`.
 - **N1 (07/11/2026):** finiquito `/admin/nominas/finiquito` (`calcularFiniquito` en modo `simulacion`; cuerpo→entrada en `lib/finiquito-entrada.ts`,
-  euros→céntimos una vez) · remesa SEPA pain.001 propósito SALA (`/api/admin/nominas/remesa`, `@central/module-pagos`; IBAN nunca a logs) ·
+  euros→céntimos una vez) · remesa SEPA pain.001 propósito SALA (`POST /api/admin/nominas/remesa`, `@central/module-pagos`; IBAN nunca a logs).
+  🚨 Contra el doble pago: MsgId/PmtInfId DETERMINISTAS por empresa+periodo+contenido (`idMensajeRemesa`; la fecha de cargo no entra) y sello
+  `nominas.remesa_generada_at/remesa_msg_id` en una transacción `FOR UPDATE`; si alguna nómina ya tenía remesa → 409 con aviso y solo
+  `confirmar_repeticion: true` (booleano exacto) la repite. Sin GET (un GET que sella se dispara con un enlace) ·
   emisor a contabilidad de cada nómina confirmada (`lib/hechos-contabilidad.ts`, envs `CONTABILIDAD_URL` + `CONTABILIDAD_HECHOS_SECRET_RRHH` con
-  `requireSecret`; sin ellas = `sin_configurar`, no se envía) · certificado de retenciones en `/e` (`/api/e/certificado-retenciones`, mismas
-  cifras que el 190 de `@central/module-contabilidad`) · tablas de convenio `/admin/nominas/convenio` · cron `vencimiento-contratos` (diario).
-  Reglas del finiquito (fracción de mes, exención fin temporal) y del motor siguen `PENDIENTE_VERIFICAR`. 🚨 Migraciones 0032 y 0033 SIN aplicar en BD.
+  `requireSecret`; sin ellas = `sin_configurar`, no se envía). Los estados `SE_REINTENTA` (pendiente_vincular, sin_configurar, error) y los NULL
+  de confirmadas los REENVÍA el cron diario `/api/cron/reenviar-contabilidad` (todas las empresas, cada envío con la empresa de SU fila; lote 25,
+  presupuesto 45 s, idempotente por ref `nomina:<id>`) y el botón «Reintentar envío a contabilidad» de `/admin/nominas`
+  (`POST /api/admin/nominas/reenviar-contabilidad`, empresa de la sesión). `rechazado`/`no_enviable` NO se reintentan solos ·
+  certificado de retenciones en `/e` (`/api/e/certificado-retenciones`, mismas cifras que el 190 de `@central/module-contabilidad`) ·
+  tablas de convenio `/admin/nominas/convenio` · «Aprobar lote» (`POST /api/admin/nominas`): 25 por llamada, el resto vuelve en `pendientes`.
+  🚨 Vencimiento de contrato: SOLO al responsable, en la tarjeta «Contratos que vencen» del Inicio de `/admin` (≤ 30 días, calculado al vuelo;
+  `fecha_fin` NULL = «no se sabe»). NUNCA un aviso al trabajador en `/e` (podía leerse como preaviso del art. 49.1.c ET); cepo en
+  `lib/vencimientos.test.ts`. Reglas del finiquito (fracción de mes, exención fin temporal) y del motor siguen `PENDIENTE_VERIFICAR`.
+  🚨 Migraciones 0032 y 0033 SIN aplicar en BD (0033 añade también `remesa_generada_at/remesa_msg_id`).
+- `/api/cron/reenviar-contabilidad` — diario 6:40 UTC: reenvía a contabilidad las nóminas confirmadas pendientes (ver N1).
 - `/api/cron/recordatorio-fichaje` — L-V 9h (hora ES): push a empleados que aún no han fichado entrada.
 - `/api/cron/alerta-fichajes-abiertos` — diario 22h (hora ES): Telegram si un fichaje activo lleva
   >10h sin fichar salida.

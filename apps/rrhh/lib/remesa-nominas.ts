@@ -11,7 +11,12 @@
  *  - Nómina o empleado de OTRA empresa → rechazado (defensa en profundidad: `rrhh_app` tiene BYPASSRLS).
  *  - Σ importes de la remesa = Σ líquidos, en céntimos enteros.
  *  - Los mensajes de error NUNCA incluyen el IBAN (ni de empleado ni de empresa).
+ *  - Contra el DOBLE PAGO: MsgId/PmtInfId DETERMINISTAS por empresa + periodo + contenido (`idMensajeRemesa`). Descargar dos
+ *    veces la misma remesa da el mismo identificador (el banco rechaza el duplicado); una remesa distinta (otra nómina, otro
+ *    importe, otro IBAN) da otro. La fecha de ejecución y la de creación NO entran: cambiarlas no convierte un pago en otro.
+ *    El sello por nómina (`nominas.remesa_generada_at`) y el 409 sin confirmación viven en la ruta.
  */
+import { createHash } from 'node:crypto'
 import { generarSepaXml, validarIban } from '@central/module-pagos'
 
 export interface EmpresaRemesa {
@@ -76,6 +81,10 @@ export interface RemesaOk {
   total_centimos: number
   /** Nóminas del periodo que NO entran por no estar confirmadas (se avisa, no se pagan). */
   no_confirmadas: number
+  /** MsgId del fichero (determinista; PmtInfId = `${id_mensaje}-001`). */
+  id_mensaje: string
+  /** Nóminas que van en el fichero: son las que se sellan con `remesa_generada_at`. */
+  nomina_ids: string[]
 }
 
 export interface RemesaError {
@@ -131,6 +140,23 @@ export function textoSepa(s: string, max: number): string {
     .replace(/\s+/g, ' ').trim().slice(0, max)
 }
 
+/**
+ * MsgId determinista: `NOM` + AAAAMM + 22 hex de sha256(empresa, periodo, IBAN de cargo, transferencias ordenadas). 31
+ * caracteres: con el sufijo `-001` del PmtInfId cabe en los 35 de SEPA. PURO.
+ */
+export function idMensajeRemesa(p: {
+  empresaId: string
+  periodo: string
+  ibanCargo: string
+  transferencias: { nominaId: string; iban: string; centimos: number }[]
+}): string {
+  const lineas = [...p.transferencias]
+    .sort((a, b) => (a.nominaId < b.nominaId ? -1 : a.nominaId > b.nominaId ? 1 : 0))
+    .map(t => `${t.nominaId}|${t.iban}|${t.centimos}`)
+  const hash = createHash('sha256').update([p.empresaId, p.periodo, p.ibanCargo, ...lineas].join('\n')).digest('hex')
+  return `NOM${p.periodo.replace('-', '')}${hash.slice(0, 22).toUpperCase()}`
+}
+
 function nombreCompleto(e: EmpleadoRemesa): string {
   return [e.nombre, e.apellidos].filter(Boolean).join(' ').trim()
 }
@@ -163,6 +189,7 @@ export function armarRemesaNominas(p: ArmarRemesaParams): RemesaOk | RemesaError
 
   const vistos = new Set<string>()
   const transferencias: { creditorName: string; creditorIban: string; importe: number; concepto: string; endToEndId: string }[] = []
+  const contenido: { nominaId: string; iban: string; centimos: number }[] = []
   let total_centimos = 0
 
   for (const n of confirmadas) {
@@ -212,6 +239,7 @@ export function armarRemesaNominas(p: ArmarRemesaParams): RemesaOk | RemesaError
       continue
     }
     total_centimos += c
+    contenido.push({ nominaId: n.id, iban, centimos: c })
     transferencias.push({
       creditorName: textoSepa(nombreCompleto(e) || 'Empleado', 70),
       creditorIban: iban,
@@ -223,7 +251,7 @@ export function armarRemesaNominas(p: ArmarRemesaParams): RemesaOk | RemesaError
 
   if (errores.length > 0) return { ok: false, errores, no_confirmadas }
 
-  const idMensaje = `NOM${p.periodo.replace('-', '')}${p.creadoEn.toISOString().replace(/\D/g, '').slice(0, 14)}`
+  const idMensaje = idMensajeRemesa({ empresaId: empresa.id, periodo: p.periodo, ibanCargo: ibanEmpresa, transferencias: contenido })
   const xml = generarSepaXml({
     debtorName: textoSepa(empresa.nombre, 70),
     debtorIban: ibanEmpresa,
@@ -244,5 +272,7 @@ export function armarRemesaNominas(p: ArmarRemesaParams): RemesaOk | RemesaError
     num_transferencias: transferencias.length,
     total_centimos,
     no_confirmadas,
+    id_mensaje: idMensaje,
+    nomina_ids: contenido.map(t => t.nominaId),
   }
 }

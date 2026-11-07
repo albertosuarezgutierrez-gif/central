@@ -194,6 +194,9 @@ model nominas {
   contabilidad_estado     String?
   contabilidad_detalle    String?
   contabilidad_intento_at DateTime? @db.Timestamptz(6)
+  /// Migración 0033: sello de la remesa SEPA (contra el doble pago). NULL = nunca generada desde la app.
+  remesa_generada_at      DateTime? @db.Timestamptz(6)
+  remesa_msg_id           String?
   creada_at     DateTime  @default(now()) @db.Timestamptz(6)
   incidencias   incidencias_mes[]
 

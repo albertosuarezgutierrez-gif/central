@@ -28,8 +28,8 @@
       "schedule": "0 8 * * *"
     },
     {
-      "path": "/api/cron/vencimiento-contratos",
-      "schedule": "15 7 * * *"
+      "path": "/api/cron/reenviar-contabilidad",
+      "schedule": "40 6 * * *"
     }
   ]
 }

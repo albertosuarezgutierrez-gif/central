@@ -14,6 +14,7 @@ const ICONO: Record<string, string> = {
   firmas: 'M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z',
   correos: 'M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2M22 6l-10 7L2 6',
   fichajes: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20M12 6v6l4 2',
+  contratos: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2',
 }
 
 /** Inicio del responsable (presentacional): las tarjetas de pendientes ya calculadas por `tarjetasInicio`. */
@@ -34,6 +35,12 @@ export default function InicioAdmin({ nombreEmpresa, tarjetas }: { nombreEmpresa
                 <Chip tono={TONO[t.tono]}>{ETIQUETA[t.tono]}</Chip>
               </div>
               <p className="min-w-0 break-words text-sm text-ink-2">{t.texto}</p>
+              {t.lista && (
+                <ul className="min-w-0 list-disc break-words pl-5 text-sm text-ink-2">
+                  {t.lista.slice(0, 10).map(l => <li key={l}>{l}</li>)}
+                  {t.lista.length > 10 && <li>y {t.lista.length - 10} más</li>}
+                </ul>
+              )}
               <div className="mt-auto pt-1"><Boton href={t.href} variante={t.urgente ? 'primario' : 'secundario'}>{t.enlace}</Boton></div>
             </Card>
           </li>
