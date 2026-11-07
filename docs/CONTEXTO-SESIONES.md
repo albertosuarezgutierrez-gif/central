@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(07/11/2026) Contabilidad F0-F5 + portal de proveedores + nóminas N0/N1 mergeados.** PRs #5545 F0, #5553 F1, #5558 F2, #5565 F3, #5570 (F4 impuestos + portal proveedores + N0), #5575 (F5 cierre + N1 IRPF).
+Specs: `docs/superpowers/specs/2026-11-04-modulo-contabilidad.md` y `2026-11-05-modulo-nominas.md`. Modelos AEAT y 200/202 solo BORRADOR (casillas sin contrastar, sin fichero oficial). Factura de proveedor leída por IA exige confirmación humana (solo XML Facturae/UBL contabiliza solo).
+Nóminas: cifras 2026 (MEI, mínimos, solidaridad, límites IRPF art. 81/85.3) `PENDIENTE_VERIFICAR` → modo cálculo bloqueado hasta que un asesor las contraste; «sin 145» marcado pendiente (art. 88 RIRPF ≠ tipo máximo del spec).
+SQL SIN APLICAR (Alberto): taller 0009-0012, contabilidad 0001-0005, rrhh 0031-0032. Triggers de 0005/0032 sin ejecutar contra Postgres: probar en rama Supabase antes.
+Pendiente Alberto: proyecto Vercel `contabilidad` + envs (`CONTABILIDAD_SESSION_SECRET`, `_OPERADOR_SECRET`, `_HECHOS_SECRET_TALLER`, `CONTABILIDAD_URL`), `CONFIG_SIF` del taller, asesor fiscal y graduado social.
+Siguiente: F6 (portal gestoría, export A3/Sage, UBL) y N2-N5. Duda abierta: mensaje truncado de Alberto «Y dejar espacio para…» (Global 2 herramientas).
+
 **(04/11/2026)** — Tarificador ASegura: estado vivo en `docs/TARIFICADOR-ESTADO.md` (canal bot RPA + Avant2 provisional; Pelayo en pilotaje, 0.3.47 en curso). Actualizar ese fichero, no esta entrada.
 
 **(04/11/2026) Instagram de ia.rest → Grupo ASegura.** Alberto reabre la decisión del 07/09 (LinkedIn sí, IG no); sigue sin haber perfil de IG.
