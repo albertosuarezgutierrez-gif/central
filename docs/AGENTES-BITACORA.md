@@ -17,6 +17,7 @@
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
+- **2026-11-07 · facturas-correo** · hizo: salud Vía B OK (última copia 06/11), backlog 4.0 = 0 sin_revisar (27 revisadas_sin_cargo), revisión de candidatos Gmail 7d; no archivó ni escribió en BD; dudas: 4 correos Endesa Socorro 24 (jul-oct) solo traen enlace, sin PDF en Drive ni fila en facturas_drive, y hay 2 cargos Endesa sin conciliar (−121,59 28/10; −97,04 30/10, destino turistico_pisos) → Alberto debe descargar los PDF; fallos: —; PRs/commits: —
 - **2026-11-05 · conectores-vigia** · hizo: preflight canal 200; ListConnectors (44, todos `enabledInChat:false`) → higiene de cuenta; registro actualizado; dudas: —; fallos: canario (Paso 3) imposible por 3er mes (sin conectores adjuntos); pasos 0-bis/1/2 no ejecutados por falta de llamadas reales; PRs/commits: rama claude/vigilant-euler-skre08
 
 - **2026-11-04 · psd2-health-check** · hizo: consulta de frescura PSD2, estado OK (ultimo mov 03/11, 46 vs 40 en 30d, 0 sin fecha); latido enviado; dudas: —; fallos: —; PRs/commits: —
