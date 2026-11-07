@@ -10,7 +10,7 @@
 //     para quien ES el cliente de la invitación (nunca se atribuye un consentimiento al dueño de un vehículo ajeno).
 import {
   caducidadInvitacion, comprobarReserva, ESTADOS_CITA_OCUPAN, esCorreo, estadoCitaAlPedir, estadoInvitacion, fechaLocal, huecosDisponibles,
-  invitacionAbierta, minutosPendientesOt, normalizarMatricula, normalizarMovil, SERVICIO_DIAGNOSTICO, validarMatricula, ocupacionDia, sumarDias,
+  invitacionAbierta, minutosPendientesOt, normalizarMatricula, validarMovilCliente, SERVICIO_DIAGNOSTICO, validarMatricula, ocupacionDia, sumarDias,
   instanteLocal, type ConfigTaller, type Existentes, type Hueco, type OcupacionDia,
 } from '@central/module-taller'
 import { registrarConsentimientos, type CasillasMarcadas, type TxConsent } from './consentimientos.ts'
@@ -174,9 +174,10 @@ export async function reservarPorInvitacion(tx: TxCitas, e: EntradaReserva, noti
   if (!nombre || nombre.length > 200) return { ok: false, status: 400, mensaje: 'Falta tu nombre' }
   const correo = e.correo.trim()
   if (correo && !esCorreo(correo)) return { ok: false, status: 400, mensaje: 'Correo inválido' }
-  const movil = e.movil.trim() ? normalizarMovil(e.movil) : null
-  if (e.movil.trim() && !movil) return { ok: false, status: 400, mensaje: 'Teléfono móvil inválido' }
-  if (!movil && !correo) return { ok: false, status: 400, mensaje: 'Déjanos un móvil o un correo para confirmarte la cita' }
+  // Móvil OBLIGATORIO (07/11/2026): la reserva puede crear la ficha del cliente y sin móvil no se localiza al propietario.
+  const vm = validarMovilCliente(e.movil)
+  if (!vm.ok) return { ok: false, status: 400, mensaje: vm.motivo }
+  const movil = vm.movil
 
   // 1) Candado del taller y estado FRESCO: lo que se vio en pantalla no vale.
   await bloquearAgenda(tx, e.tallerId)

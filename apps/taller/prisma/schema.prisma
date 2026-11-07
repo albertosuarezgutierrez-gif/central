@@ -357,6 +357,9 @@ model Vehiculo {
   kmActuales           Int?      @map("km_actuales")
   itvHasta             DateTime? @map("itv_hasta") @db.Date
   seguroHasta          DateTime? @map("seguro_hasta") @db.Date
+  seguroHastaPor       String?   @map("seguro_hasta_por") @db.Uuid
+  seguroHastaEn        DateTime? @map("seguro_hasta_en") @db.Timestamptz(6)
+  seguroHastaOrigen    String?   @map("seguro_hasta_origen")
   aseguradora          String?
   proximaRevisionKm    Int?      @map("proxima_revision_km")
   proximaRevisionFecha DateTime? @map("proxima_revision_fecha") @db.Date

@@ -74,7 +74,7 @@ export function ReservaCliente({ token, inicial, servicios, textoAsegura, textoT
         <input value={matricula} autoCapitalize="characters" autoComplete="off" maxLength={20} onChange={(e) => setMatricula(e.target.value)} required />
       </label>
       <label>Tu nombre<input value={nombre} maxLength={200} onChange={(e) => setNombre(e.target.value)} required /></label>
-      <label>Móvil<input inputMode="tel" value={movil} maxLength={30} onChange={(e) => setMovil(e.target.value)} /></label>
+      <label>Móvil (obligatorio)<input type="tel" inputMode="tel" autoComplete="tel" required value={movil} maxLength={30} onChange={(e) => setMovil(e.target.value)} /></label>
       <label>Correo<input type="email" value={correo} maxLength={200} onChange={(e) => setCorreo(e.target.value)} /></label>
       <label>¿Qué necesitas?
         <select value={servicio} onChange={(e) => { setServicio(e.target.value); setSemana(0); setElegido(null); setHuecos(null) }} required>
@@ -113,7 +113,7 @@ export function ReservaCliente({ token, inicial, servicios, textoAsegura, textoT
       </fieldset>
 
       {error && <p className="aviso-error" role="alert">{error}</p>}
-      <button className="btn" type="submit" disabled={enviando || !elegido || !matricula.trim() || !nombre.trim()}>{enviando ? 'Reservando…' : 'Confirmar cita'}</button>
+      <button className="btn" type="submit" disabled={enviando || !elegido || !matricula.trim() || !nombre.trim() || !movil.trim()}>{enviando ? 'Reservando…' : 'Confirmar cita'}</button>
     </form>
   )
 }
