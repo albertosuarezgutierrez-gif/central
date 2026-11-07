@@ -2,7 +2,7 @@
 -- Diseño: docs/superpowers/specs/2026-11-07-retencion-cartera.md. Código: apps/asegura/lib/retencion-cartera.ts (BD) +
 -- retencion-cartera-reglas.ts (PURO, con test) + app/api/cron/retencion-cartera/route.ts.
 --
--- ⛔ NO APLICADA. Sin ella el cron NO actúa: manda a Alberto el Telegram de ENSAYO («falta la migración») y no crea nada; las
+-- ✅ APLICADA en producción (07/11/2026). Sin ella el cron NO actúa: manda a Alberto el Telegram de ENSAYO («falta la migración») y no crea nada; las
 --    preferencias se toman por defecto (40 días, 10 %). Va después de 2026-11-05b/c/d (presupuesto de renovación y solicitud de datos).
 --
 -- Dos tablas nuevas (no columnas en `presupuesto`/`solicitud_datos`: el ciclo existe ANTES de que haya presupuesto o solicitud,

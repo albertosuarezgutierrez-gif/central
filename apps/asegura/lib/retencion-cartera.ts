@@ -1,6 +1,6 @@
 // RETENCIÓN DE CARTERA F1 (07/11/2026): la parte con BD y Telegram del calendario de renovación. Reglas PURAS (con test) en
 // `retencion-cartera-reglas.ts`; diseño en docs/superpowers/specs/2026-11-07-retencion-cartera.md.
-// Migración `prisma/sql/2026-11-07a_retencion_cartera.sql` (NO APLICADA a la fecha): sin ella, ENSAYO (no se crea nada).
+// Migración `prisma/sql/2026-11-07a_retencion_cartera.sql` (✅ APLICADA en producción el 07/11/2026): sin ella, ENSAYO (no se crea nada).
 //
 // Reutiliza, no rehace:
 //   · datos    → `prepararSolicitudRenovacion` (PR #5569): crea el BORRADOR y manda a Alberto el Telegram con ✅ `cdr_env`.
