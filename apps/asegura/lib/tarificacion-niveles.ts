@@ -29,6 +29,8 @@ export type OfertaParaNivel = {
   coberturas?: readonly CoberturaParaClasificar[] | null
   /** Garantías ya clasificadas (`porClave` de Avant2). Si viene, manda sobre `coberturas`. */
   garantias?: Record<string, EstadoGarantia> | null
+  /** Quién la dio: bot RPA o Avant2. Ausente = no se sabe (no entra en las parejas bot↔Avant2). */
+  origen?: 'bot' | 'avant2' | null
 }
 
 export type ClasificacionNivel = { nivel: string; fuente: 'categoria' | 'modalidad' | 'producto' | 'coberturas' | null; motivo?: string }
@@ -41,6 +43,7 @@ export type OfertaEnNivel = {
   primaEur: number
   /** Garantías que esta oferta tiene (`si`) y otra del nivel NO (`no` afirmado). `null` = sus coberturas no constan. */
   extras: string[] | null
+  origen: 'bot' | 'avant2' | null
 }
 
 export type NivelCobertura = {
@@ -200,7 +203,7 @@ export function masBarataPorNivel(ramo: string | null | undefined, ofertas: read
         .map((k) => etiquetaGarantia(ramoCat!, k))
     }
     const ofertasNivel: OfertaEnNivel[] = miembros.map((m, i) => ({
-      id: m.o.id ?? null, compania: m.o.compania, nombre: (m.o.modalidad?.trim() || m.o.producto).trim(), primaEur: m.prima, extras: extrasDe(i),
+      id: m.o.id ?? null, compania: m.o.compania, nombre: (m.o.modalidad?.trim() || m.o.producto).trim(), primaEur: m.prima, extras: extrasDe(i), origen: m.o.origen ?? null,
     }))
     const gBarata = miembros[0]!.g
     const faltan = gBarata
@@ -242,7 +245,7 @@ export function lineasMasBarataPorNivel(r: ResultadoNiveles | null | undefined, 
       n.empatadas.length ? `empate con ${[...new Set(n.empatadas.map((e) => e.compania))].join(', ')}` : null,
       n.faltanEnLaMasBarata?.length ? `le falta ${n.faltanEnLaMasBarata.slice(0, 3).join(', ')}${n.faltanEnLaMasBarata.length > 3 ? '…' : ''}` : null,
     ].filter(Boolean).join('; ')
-    return `💶 Más barata · ${n.nivel}: ${b.compania} (${b.nombre}) ${eur(b.primaEur)} — ${notas}`
+    return `💶 Más barata · ${n.nivel}: ${b.compania} (${b.nombre})${b.origen === 'avant2' ? ' [Avant2]' : ''} ${eur(b.primaEur)} — ${notas}`
   }
   const cola = r.sinClasificar.length ? `💶 Sin clasificar: ${r.sinClasificar.length} oferta${r.sinClasificar.length === 1 ? '' : 's'} (no compiten por nivel).` : null
   const todas = [...r.niveles.map(linea), ...(cola ? [cola] : [])]
@@ -252,4 +255,62 @@ export function lineasMasBarataPorNivel(r: ResultadoNiveles | null | undefined, 
   const caben = max - 1
   const resto = r.niveles.length - caben
   return [...r.niveles.slice(0, caben).map(linea), `💶 … y ${resto} nivel${resto === 1 ? '' : 'es'} más${cola ? ` (+${r.sinClasificar.length} sin clasificar)` : ''}: míralos en la oportunidad.`]
+}
+
+// ─── Bot ↔ Avant2 de la misma compañía y nivel ────────────────────────────────
+
+export type ParejaBotAvant2 = {
+  nivel: string
+  compania: string
+  botEur: number
+  avant2Eur: number
+  /** Avant2 − bot, en €. Positivo = Avant2 más cara. */
+  diferenciaEur: number
+  /** Diferencia sobre el precio del bot, en % (1 decimal). */
+  diferenciaPct: number
+}
+
+const claveCompania = (c: string): string => claveCobertura(c)
+const redondea = (n: number, d: number): number => Math.round(n * 10 ** d) / 10 ** d
+
+/**
+ * Por nivel y compañía con precio de AMBOS orígenes: la más barata del bot frente a la más barata de Avant2. PURO.
+ * Sin origen declarado, o con un solo origen, no hay pareja (nunca se inventa la otra mitad).
+ */
+export function parejasBotAvant2(r: ResultadoNiveles | null | undefined): ParejaBotAvant2[] {
+  if (!r) return []
+  const salida: ParejaBotAvant2[] = []
+  for (const n of r.niveles) {
+    const porCompania = new Map<string, { nombre: string; bot: number | null; avant2: number | null }>()
+    for (const o of n.ofertas) {
+      if (o.origen !== 'bot' && o.origen !== 'avant2') continue
+      const k = claveCompania(o.compania)
+      if (!k) continue
+      const f = porCompania.get(k) ?? { nombre: o.compania, bot: null, avant2: null }
+      f[o.origen] = f[o.origen] === null ? o.primaEur : Math.min(f[o.origen]!, o.primaEur)
+      porCompania.set(k, f)
+    }
+    for (const f of porCompania.values()) {
+      if (f.bot === null || f.avant2 === null) continue
+      salida.push({
+        nivel: n.nivel, compania: f.nombre, botEur: f.bot, avant2Eur: f.avant2,
+        diferenciaEur: redondea(f.avant2 - f.bot, 2), diferenciaPct: redondea(((f.avant2 - f.bot) / f.bot) * 100, 1),
+      })
+    }
+  }
+  return salida
+}
+
+export const MAX_LINEAS_BOT_AVANT2 = 3
+
+/** Líneas «🔁 Bot vs Avant2 …» del Telegram (texto plano), como mucho `max`. Sin parejas → `[]`. */
+export function lineasBotVsAvant2(r: ResultadoNiveles | null | undefined, max = MAX_LINEAS_BOT_AVANT2): string[] {
+  const p = parejasBotAvant2(r)
+  const linea = (x: ParejaBotAvant2) => {
+    const signo = x.diferenciaEur > 0 ? '+' : x.diferenciaEur < 0 ? '-' : ''
+    const dif = x.diferenciaEur === 0 ? 'igual' : `Avant2 ${signo}${eur(Math.abs(x.diferenciaEur))} (${signo}${String(Math.abs(x.diferenciaPct)).replace('.', ',')}%)`
+    return `🔁 ${x.nivel} · ${x.compania}: bot ${eur(x.botEur)} vs Avant2 ${eur(x.avant2Eur)} — ${dif}`
+  }
+  if (p.length <= max) return p.map(linea)
+  return [...p.slice(0, max - 1).map(linea), `🔁 … y ${p.length - (max - 1)} pareja${p.length - (max - 1) === 1 ? '' : 's'} más bot↔Avant2: míralas en la oportunidad.`]
 }

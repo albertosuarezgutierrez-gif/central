@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-07T08:56:51Z",
-  "sha": "221d4ba67073a00df2c5e1f9632c3e31ec68e236",
+  "generadoEn": "2026-11-07T09:17:39Z",
+  "sha": "b2228ae85ee7fbaf787fc7b23668a72360626f15",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -33225,6 +33225,15 @@
       "hash": "be60a8f539ae"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/solicitud-renovacion/reintentar-bots/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [],
+      "rutaApi": "/api/operador/solicitud-renovacion/reintentar-bots",
+      "hash": "c07a86ed6f62"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/supresiones/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -65949,6 +65958,98 @@
       "hash": "7a92bdfda861"
     },
     {
+      "ruta": "apps/asegura/lib/solicitud-renovacion-bots-reglas.ts",
+      "ambito": "apps/asegura",
+      "resumen": "BOTS AUTOMÁTICOS TRAS LA RESPUESTA DEL CLIENTE a la solicitud de datos de la renovación (Alberto, 07/11/2026). Lo PURO (sin BD ni red), con test. Idea de negocio: tarificar primero con NUESTROS bots (gratis) para gastar menos Avant2 (Codeoscopic cobra 0,50 € por cotización). Avant2 NO se lanza desde",
+      "exporta": [
+        "decidirLanzamientoBots",
+        "resultadoDeEncolar",
+        "textoMotivoNoEncolar",
+        "textoBotsRenovacion",
+        "algunaEnMarcha",
+        "botonesBotsRenovacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "decidirLanzamientoBots",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: { faltas: number | null; rpaActivo: boolean; companias: readonly string[] }",
+          "retorno": "DecisionBots",
+          "linea": 21,
+          "resumen": "¿Se lanzan los bots? Orden: riesgo ilegible → no se afirma nada; aún faltan datos (`faltas` > 0) → no; interruptor `TARIFICADOR_RPA_ACTIVO` apagado → no; ninguna compañía con bot de hogar activo → no."
+        },
+        {
+          "nombre": "resultadoDeEncolar",
+          "kind": "function",
+          "exportada": true,
+          "params": "compania: string, r: RespuestaEncolar",
+          "retorno": "ResultadoCompania",
+          "linea": 40,
+          "resumen": "Traduce el resultado de `encolarTrabajo` (que ya deduplica por riesgo vivo). Motivo recortado: nunca valores. PURA."
+        },
+        {
+          "nombre": "textoMotivoNoEncolar",
+          "kind": "function",
+          "exportada": true,
+          "params": "m: MotivoNoEncolar",
+          "retorno": "string",
+          "linea": 53
+        },
+        {
+          "nombre": "textoBotsRenovacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: { decision: DecisionBots; resultados: readonly ResultadoCompania[]; faltasTexto?: string | null; fallo?: string | null }",
+          "retorno": "string",
+          "linea": 58,
+          "resumen": "Telegram a Alberto tras el intento. Solo compañías, estados y motivos cortos (sin datos personales). PURA."
+        },
+        {
+          "nombre": "algunaEnMarcha",
+          "kind": "function",
+          "exportada": true,
+          "params": "rs: readonly ResultadoCompania[]",
+          "retorno": "boolean",
+          "linea": 80,
+          "resumen": "¿Alguna compañía quedó realmente en marcha o con precio? (si no, el mensaje no puede decir «en marcha»). PURA."
+        },
+        {
+          "nombre": "botonesBotsRenovacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "solicitudId: string",
+          "retorno": "Boton[][]",
+          "linea": 85,
+          "resumen": "Botón de reintento: siempre; el de «Probar» queda en plataforma."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7796a4b84d7b"
+    },
+    {
+      "ruta": "apps/asegura/lib/solicitud-renovacion-bots.ts",
+      "ambito": "apps/asegura",
+      "resumen": "BOTS AUTOMÁTICOS tras la respuesta del cliente a la solicitud de datos de la renovación (Alberto, 07/11/2026). La decisión y los textos (PUROS, con test) viven en `solicitud-renovacion-bots-reglas.ts`. Qué hace: encola, por el MISMO camino que «Probar» (`riesgoHogarDeRiesgoOportunidad` → `decidirRie",
+      "exporta": [
+        "lanzarBotsRenovacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "lanzarBotsRenovacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, e: { clienteId: string; oportunidadId: string; /** nº de preguntas que aún le faltan al bot (`null` = no se pudo leer). */ faltas: number | null }, env: Record<string, string | undefined> = process.env,",
+          "retorno": "Promise<ResultadoBotsRenovacion>",
+          "linea": 21
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "da5d91007aa0"
+    },
+    {
       "ruta": "apps/asegura/lib/solicitud-renovacion-lectura.ts",
       "ambito": "apps/asegura",
       "resumen": "SOLICITUD DE DATOS DE LA RENOVACIÓN (05/11/2026): la lectura LIGERA para el cron de avisos (`avisos-intranet.ts`), en fichero aparte para que el cron no cargue el Catastro, Telegram ni el tarificador de `solicitud-renovacion.ts`. Solo LEE. 🛡️ Por `correduria_id`. Sin la migración 2026-11-05d no pue",
@@ -66054,7 +66155,9 @@
         "prepararSolicitudRenovacion",
         "publicarSolicitudRenovacion",
         "solicitudParaIdentidad",
-        "responderSolicitudIdentidad"
+        "responderSolicitudIdentidad",
+        "lanzarYAvisarBots",
+        "reintentarBotsRenovacion"
       ],
       "funciones": [
         {
@@ -66063,7 +66166,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 36
+          "linea": 38
         },
         {
           "nombre": "plataforma",
@@ -66071,7 +66174,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 37
+          "linea": 39
         },
         {
           "nombre": "urlModificarDatos",
@@ -66079,7 +66182,7 @@
           "exportada": true,
           "params": "polizaId: string",
           "retorno": null,
-          "linea": 38
+          "linea": 40
         },
         {
           "nombre": "migracionSolicitudRenovacion",
@@ -66087,7 +66190,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<boolean>",
-          "linea": 41,
+          "linea": 43,
           "resumen": "¿Está la migración 2026-11-05d? Un fallo que NO es «falta la columna» se propaga (no se confunde con «no está»)."
         },
         {
@@ -66096,7 +66199,7 @@
           "exportada": false,
           "params": "correduriaId: string, oportunidadId: string",
           "retorno": "Promise<FaltaHogarBot[] | null>",
-          "linea": 52,
+          "linea": 54,
           "resumen": "Lo que el bot echa en falta HOY del riesgo de la oportunidad (`null` = no se pudo leer: no se afirma nada)."
         },
         {
@@ -66105,7 +66208,7 @@
           "exportada": true,
           "params": "correduriaId: string, e: { polizaId: string; actor: string }, ahora: Date = new Date()",
           "retorno": "Promise<ResultadoPrepararDatos>",
-          "linea": 65
+          "linea": 67
         },
         {
           "nombre": "publicarSolicitudRenovacion",
@@ -66113,7 +66216,7 @@
           "exportada": true,
           "params": "correduriaId: string, e: { solicitudId: string; actor: string; via: 'telegram' | 'pantalla'; telegramMessageId?: number | null }",
           "retorno": "Promise<ResultadoPublicarDatos>",
-          "linea": 157,
+          "linea": 159,
           "resumen": "Publica la solicitud en la app (✅). Desde Telegram es OBLIGATORIO el `message_id` del botón y tiene que ser el del último mensaje de revisión. Un solo uso (CAS sobre `publicada_at`). El plazo cuenta d"
         },
         {
@@ -66122,7 +66225,7 @@
           "exportada": false,
           "params": "correduriaId: string, id: string",
           "retorno": "Promise<FilaRenovacion | null>",
-          "linea": 194
+          "linea": 196
         },
         {
           "nombre": "quienEs",
@@ -66130,7 +66233,7 @@
           "exportada": false,
           "params": "correduriaId: string, f: FilaRenovacion, identidadId: string",
           "retorno": "Promise<QuienContestaDatos | null>",
-          "linea": 206,
+          "linea": 208,
           "resumen": "¿Quién es esta identidad para esta solicitud? `null` = nadie (404). La regla es la ÚNICA, la del portal."
         },
         {
@@ -66139,7 +66242,7 @@
           "exportada": true,
           "params": "correduriaId: string, identidadId: string, solicitudId: string",
           "retorno": "Promise<SolicitudParaIdentidad>",
-          "linea": 220,
+          "linea": 222,
           "resumen": "Lo que pinta la página del portal: solo los CAMPOS (etiquetas). Nada de la ficha, ni el DNI (lo tiene la ficha)."
         },
         {
@@ -66148,8 +66251,26 @@
           "exportada": true,
           "params": "correduriaId: string, identidadId: string, solicitudId: string, respuestas: Record<string, unknown>",
           "retorno": "Promise<ResultadoResponderIdentidad>",
-          "linea": 239,
+          "linea": 241,
           "resumen": "Contesta (tomador o autorizado). Se aceptan EXACTAMENTE los campos que se aprobaron (los de la fila). Lo declarado va a `datosVivienda` sin pisar nada (`responderFila` → `trasCompletarHogar` → `planEs"
+        },
+        {
+          "nombre": "lanzarYAvisarBots",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, clienteId: string, oportunidadId: string, solicitudId?: string",
+          "retorno": "Promise<",
+          "linea": 266,
+          "resumen": "Relee lo que le falta al bot y, si ya no le falta nada, encola los bots de hogar (`lanzarBotsRenovacion`, mismo camino y guardas que «Probar»). Telegram a Alberto con lo que pasó + botón de reintento."
+        },
+        {
+          "nombre": "reintentarBotsRenovacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, solicitudId: string",
+          "retorno": "Promise<ResultadoReintentoBots>",
+          "linea": 294,
+          "resumen": "El botón «🔁 Reintentar bots» (`cdr_bot:<id>`): solo una solicitud de renovación de esta correduría YA contestada."
         }
       ],
       "tablas": [
@@ -66161,7 +66282,7 @@
         "solicitud_datos"
       ],
       "rutaApi": null,
-      "hash": "875d455f76b5"
+      "hash": "02c1a8c06ba1"
     },
     {
       "ruta": "apps/asegura/lib/solicitudes-abandonadas.ts",
@@ -158338,7 +158459,7 @@
           "exportada": false,
           "params": "cuentaId: string, texto: string, fromId: unknown",
           "retorno": "Promise<void>",
-          "linea": 1713,
+          "linea": 1733,
           "resumen": "Texto libre de Alberto (escrito o transcrito de una nota de voz) → correduría o contable. El patrimonial ya se desvía antes; aquí solo se decide entre estos dos, y ante cualquier duda gana el contable"
         },
         {
@@ -158347,7 +158468,7 @@
           "exportada": false,
           "params": "updateId: unknown",
           "retorno": "Promise<boolean>",
-          "linea": 1720,
+          "linea": 1740,
           "resumen": "`true` = este update ya se procesó (reintento de Telegram). Sin id o sin BD → `false` (se procesa)."
         },
         {
@@ -158356,7 +158477,7 @@
           "exportada": false,
           "params": "updateId: unknown",
           "retorno": "Promise<void>",
-          "linea": 1732
+          "linea": 1752
         },
         {
           "nombre": "correduriaSegura",
@@ -158364,7 +158485,7 @@
           "exportada": false,
           "params": "texto: string, fromId: unknown",
           "retorno": "Promise<void>",
-          "linea": 1738,
+          "linea": 1758,
           "resumen": "El asistente corre en `after`: un error ya no da 500 (ni reintento), así que se le dice a Alberto."
         }
       ],
@@ -158395,7 +158516,7 @@
         "trading_watchlist"
       ],
       "rutaApi": "/api/sivra/mensajes/telegram-webhook",
-      "hash": "b8d762a8e97c"
+      "hash": "37214fc20009"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/webhook/route.ts",
@@ -211183,10 +211304,12 @@
       "resumen": "SOLICITUD DE DATOS DE LA RENOVACIÓN por la app (05/11/2026): la parte de PLATAFORMA. · «Pedir datos al cliente por la app» en `/correduria/poliza/[id]` → `POST /api/operador/solicitud-renovacion/preparar` (asegura): pregunta SOLO lo que el bot de hogar echa en falta, deja la solicitud SIN publicar y",
       "exporta": [
         "decidirBotonCdr",
+        "decidirBotonBotsCdr",
         "lineaTrasEnviarCdr",
         "prepararSolicitudRenovacionAsegura",
         "publicarSolicitudRenovacionAsegura",
-        "estadoDeCdr"
+        "estadoDeCdr",
+        "reintentarBotsRenovacionAsegura"
       ],
       "funciones": [
         {
@@ -211199,12 +211322,21 @@
           "resumen": "¿Vale esta pulsación? Solo el titular (from.id EXACTO); sin chat configurado, nadie. PURO."
         },
         {
+          "nombre": "decidirBotonBotsCdr",
+          "kind": "function",
+          "exportada": true,
+          "params": "cb: { from?: { id?: unknown } | null } | null | undefined, accion: string, args: readonly string[], chatAutorizado: string | undefined",
+          "retorno": "DecisionBotonCdr",
+          "linea": 29,
+          "resumen": "¿Vale el «🔁 Reintentar bots» (`cdr_bot:<id>`)? Misma puerta del titular. PURO."
+        },
+        {
           "nombre": "lineaTrasEnviarCdr",
           "kind": "function",
           "exportada": true,
           "params": "estado: string",
           "retorno": "string",
-          "linea": 29,
+          "linea": 35,
           "resumen": "Línea que sustituye a los botones tras pulsar ✅. PURO."
         },
         {
@@ -211213,7 +211345,7 @@
           "exportada": false,
           "params": "path: string, body: Record<string, unknown>, actor?: string, timeoutMs = 55_000",
           "retorno": "Promise<Reenvio>",
-          "linea": 46
+          "linea": 52
         },
         {
           "nombre": "prepararSolicitudRenovacionAsegura",
@@ -211221,7 +211353,7 @@
           "exportada": true,
           "params": "e: { polizaId: string; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 65,
+          "linea": 71,
           "resumen": "Prepara la solicitud (gratis; no sale nada). `actor` = el email de la sesión; lo pone el servidor."
         },
         {
@@ -211230,7 +211362,7 @@
           "exportada": true,
           "params": "e: { solicitudId: string; actor: string; via: 'telegram' | 'pantalla'; telegramMessageId?: number | null }, actorPuerto?: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 70,
+          "linea": 76,
           "resumen": "El ✅. `via: 'telegram'`: asegura EXIGE `telegramMessageId` y que sea el último mensaje de revisión (si no, 409)."
         },
         {
@@ -211239,13 +211371,22 @@
           "exportada": true,
           "params": "r: Reenvio",
           "retorno": "string",
-          "linea": 78,
+          "linea": 84,
           "resumen": "El `estado` de la respuesta (para la línea de Telegram). Nunca lanza."
+        },
+        {
+          "nombre": "reintentarBotsRenovacionAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "solicitudId: string, actorPuerto?: string",
+          "retorno": "Promise<Reenvio>",
+          "linea": 93,
+          "resumen": "«🔁 Reintentar bots» (07/11/2026): vuelve a encolar los bots de hogar de una renovación YA contestada. Solo precio (gratis): ni Avant2 ni emisión ni nada al cliente. asegura manda su propio Telegram c"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b3fdc05d3589"
+      "hash": "1f0c19869f82"
     },
     {
       "ruta": "apps/plataforma/lib/subastas-ingesta.ts",
@@ -299725,7 +299866,7 @@
     }
   ],
   "resumen": {
-    "archivos": 6129,
-    "funciones": 24279
+    "archivos": 6132,
+    "funciones": 24290
   }
 }
