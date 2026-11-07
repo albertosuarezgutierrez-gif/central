@@ -34,8 +34,8 @@ const esObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object
 const sinNulos = <T extends Record<string, unknown>>(o: T): Partial<T> => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== null && v !== undefined)) as Partial<T>
 const clave = (s: string | null | undefined) => (s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
 
-/** Códigos CIMA del uso del inmueble que dicen SIN AMBIGÜEDAD el uso del bot. El resto no se interpreta (queda sin contestar). */
-const USO_DE_CODIGO_CIMA: Record<string, string> = { HA: 'habitual', SE: 'secundaria' }
+/** Códigos CIMA del uso del inmueble (§13.3.37; AL = «Alquiler o cesión 3º») que dicen SIN AMBIGÜEDAD el uso del bot. NI y desconocidos no se interpretan (queda sin contestar). AL NO cambia el régimen (sigue el supuesto: no consta si quien asegura es propietario). */
+const USO_DE_CODIGO_CIMA: Record<string, string> = { HA: 'habitual', SE: 'secundaria', AL: 'alquiler' }
 /**
  * Código CIMA de la clase de inmueble (EIAC V07.1, «Documentos Estándar» §13.3.8 `claves_claseinmueble`) que dice sin ambigüedad el tipo del bot.
  * PI «Piso intermedio» y PP «Piso» → piso · UD «Unifamiliar adosada» → adosada · UI «Unifamiliar AISLADA» → independiente.
