@@ -1,3 +1,4 @@
+import { respuestaDeErrorBd } from '@/lib/errores-bd'
 import { NextResponse } from 'next/server'
 import { CATEGORIAS_ACTIVO } from '@central/module-contabilidad'
 import { leerContexto } from '@/lib/contexto'
@@ -8,7 +9,7 @@ import { altaActivo, amortizarPeriodo, bajaDeActivo, guardarTabla } from '@/lib/
 //   alta      { origen?, refExterna, descripcion, categoria, fechaAlta, valorAdquisicion (céntimos), valorResidual?, porcentajePb?, yaContabilizado?, cuentaContrapartida? }
 //             Idempotente por (origen, refExterna): así lo usan otras verticales (p. ej. RRHH) con origen = 'rrhh'.
 //   amortizar { anio, mes? }          · baja { ref, fecha, precioVenta?, cuentaContrapartida? }          · tabla { filas: FilaTablaAmortizacion[] }
-// Todo o nada: si algo no se puede asentar, la transacción se revierte entera. Esquema 0005 sin aplicar → 503.
+// Todo o nada: si algo no se puede asentar, la transacción se revierte entera. Esquema 0005 sin aplicar → 503; duplicado → 409; resto → 500.
 export const dynamic = 'force-dynamic'
 
 const num = (v: unknown) => (typeof v === 'number' && Number.isSafeInteger(v) ? v : undefined)
@@ -52,8 +53,9 @@ export async function POST(req: Request) {
       const r = await ejecutarF5(c.empresaId, async (_repo, f5) => guardarTabla(f5, filas, meta))
       return r.ok ? NextResponse.json(r, { status: 201 }) : NextResponse.json({ error: 'tabla_no_valida', errores: r.errores }, { status: 422 })
     }
-  } catch {
-    return NextResponse.json({ error: 'cierre_no_disponible', errores: ['No se pudo completar la operación (¿falta aplicar el esquema de la fase 5, 0005_cierre.sql?).'] }, { status: 503 })
+  } catch (e) {
+    const { status, body } = respuestaDeErrorBd(e)
+    return NextResponse.json(body, { status })
   }
   return NextResponse.json({ error: 'datos_no_validos', errores: ['accion desconocida'] }, { status: 400 })
 }

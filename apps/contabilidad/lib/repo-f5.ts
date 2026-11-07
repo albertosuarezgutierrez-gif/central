@@ -137,8 +137,10 @@ export function repoF5Sql(tx: TxSql, empresaId: string): RepoF5 {
 
     async asientoPorOrigen(tipo, ref) {
       const f = await tx.$queryRaw<Fila[]>`
-        SELECT id, numero FROM contabilidad.asientos
-         WHERE empresa_id = ${e}::uuid AND origen_tipo = ${tipo} AND origen_ref = ${ref} ORDER BY numero LIMIT 1`
+        SELECT a.id, a.numero FROM contabilidad.asientos a
+         WHERE a.empresa_id = ${e}::uuid AND a.origen_tipo = ${tipo} AND a.origen_ref = ${ref}
+           AND NOT EXISTS (SELECT 1 FROM contabilidad.asientos r WHERE r.empresa_id = a.empresa_id AND r.reversa_de = a.id)
+         ORDER BY a.numero LIMIT 1`
       return f[0] ? { id: String(f[0].id), numero: enteroDeBd(f[0].numero, 'numero') } : null
     },
 

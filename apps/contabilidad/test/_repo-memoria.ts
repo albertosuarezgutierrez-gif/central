@@ -52,11 +52,11 @@ export function crearAlmacen() {
       async insertarAsiento(a: NuevoAsiento) {
         if (d.asientos.some((x) => x.ejercicio === a.ejercicio && x.numero === a.numero)) throw new Error('número de asiento duplicado')
         if (a.reversaDe && d.asientos.some((x) => x.reversaDe === a.reversaDe)) throw new Error('ya rectificado (unique)')
-        // 0001: trigger «ejercicio abierto». 0005: índice único parcial de los asientos de amortización/periodificación/cierre/apertura.
+        // 0001: trigger «ejercicio abierto». 0005: trigger de unicidad (salvo rectificados) de los asientos de amortización/periodificación/cierre/apertura.
         const ej = d.ejercicios.find((x) => x.anio === a.ejercicio)
         if (!ej) throw new Error(`no existe el ejercicio ${a.ejercicio}`)
         if (ej.estado !== 'abierto') throw new Error(`trigger: el ejercicio ${a.ejercicio} está ${ej.estado}: no admite asientos`)
-        if (a.origenTipo && ['amortizacion', 'periodificacion', 'cierre', 'apertura'].includes(a.origenTipo) && d.asientos.some((x) => x.origenTipo === a.origenTipo && x.origenRef === a.origenRef)) {
+        if (a.origenTipo && ['amortizacion', 'periodificacion', 'cierre', 'apertura'].includes(a.origenTipo) && d.asientos.some((x) => x.origenTipo === a.origenTipo && x.origenRef === a.origenRef && !d.asientos.some((r) => r.reversaDe === x.id))) {
           throw new Error('uq_asientos_origen_f5: ya existe un asiento con ese origen')
         }
         const debe = a.apuntes.reduce((s, p) => s + p.debe, 0)

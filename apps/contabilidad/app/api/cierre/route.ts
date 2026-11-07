@@ -1,3 +1,4 @@
+import { respuestaDeErrorBd } from '@/lib/errores-bd'
 import { NextResponse } from 'next/server'
 import { leerContexto } from '@/lib/contexto'
 import { ejecutarF5 } from '@/lib/cierre-carga'
@@ -7,7 +8,7 @@ import { altaPeriodificacion, cerrarEjercicio, periodificarCierre } from '@/lib/
 //   periodificacion { ref, tipo: 'gasto'|'ingreso', descripcion, cuentaOrigen, importe (céntimos), inicio, fin }
 //   periodificar    { anio }                      → asiento 480/485 al 31/12 y su reversa el 1/1 (dueño o gestor)
 //   cerrar          { anio, confirmar: true }     → regularización, cierre y apertura; el ejercicio queda CERRADO y es DEFINITIVO (solo el dueño)
-// Todo o nada. Esquema 0005 sin aplicar → 503.
+// Todo o nada. Esquema 0005 sin aplicar → 503; duplicado → 409; resto → 500.
 export const dynamic = 'force-dynamic'
 
 const num = (v: unknown) => (typeof v === 'number' && Number.isSafeInteger(v) ? v : NaN)
@@ -36,8 +37,9 @@ export async function POST(req: Request) {
       const r = await ejecutarF5(c.empresaId, (repo, f5) => cerrarEjercicio(repo, f5, num(b.anio), meta))
       return r.ok ? NextResponse.json(r, { status: 201 }) : NextResponse.json({ error: 'cierre_no_valido', errores: r.errores }, { status: 422 })
     }
-  } catch {
-    return NextResponse.json({ error: 'cierre_no_disponible', errores: ['No se pudo completar la operación (¿falta aplicar el esquema de la fase 5, 0005_cierre.sql?).'] }, { status: 503 })
+  } catch (e) {
+    const { status, body } = respuestaDeErrorBd(e)
+    return NextResponse.json(body, { status })
   }
   return NextResponse.json({ error: 'datos_no_validos', errores: ['accion desconocida'] }, { status: 400 })
 }

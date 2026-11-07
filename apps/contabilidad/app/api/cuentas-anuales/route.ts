@@ -1,3 +1,4 @@
+import { respuestaDeErrorBd } from '@/lib/errores-bd'
 import { NextResponse } from 'next/server'
 import { memoriaATexto } from '@central/module-contabilidad'
 import { leerContexto } from '@/lib/contexto'
@@ -39,7 +40,8 @@ export async function GET(req: Request) {
       return new Response(aHtmlImprimible(r.t.tabla, { nombre: r.empresa?.razonSocial ?? 'Contabilidad', color: paletaEmpresa(r.empresa?.colorPrimario)?.brand ?? null, sello: SELLO }, new Date().toISOString().slice(0, 10)), { headers: { ...cab, 'content-type': 'text/html; charset=utf-8' } })
     }
     return new Response(aCsv(r.t.tabla), { headers: { ...cab, 'content-type': 'text/csv; charset=utf-8', 'content-disposition': `attachment; filename="${nombre}.csv"` } })
-  } catch {
-    return NextResponse.json({ error: 'no_disponible', errores: ['No se pudo leer el ejercicio (¿falta aplicar el esquema de la fase 5?).'] }, { status: 503 })
+  } catch (e) {
+    const { status, body } = respuestaDeErrorBd(e)
+    return NextResponse.json(body, { status })
   }
 }

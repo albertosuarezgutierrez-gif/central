@@ -61,12 +61,45 @@ test('ejercicio CERRADO es definitivo y solo se cierra con registro de cierre y 
 test('apertura ≡ cierre exigido por la BD al registrar el cierre; cierre y apertura van juntos', () => {
   assert.match(CODIGO, /GROUP BY p\.cuenta HAVING sum\(p\.haber - p\.debe\) <> 0/)
   assert.match(CODIGO, /BEFORE INSERT ON contabilidad\.cierres_ejercicio\s+FOR EACH ROW EXECUTE FUNCTION contabilidad\.cierre_apertura_igual\(\)/)
-  assert.match(CODIGO, /CHECK \(\(asiento_cierre_id IS NULL\) = \(asiento_apertura_id IS NULL\)\)/)
   assert.match(CODIGO, /UNIQUE \(empresa_id, anio\)/)
 })
 
-test('un asiento de amortización/periodificación/cierre/apertura se asienta UNA vez por periodo (índice único parcial)', () => {
-  assert.match(CODIGO, /CREATE UNIQUE INDEX uq_asientos_origen_f5 ON contabilidad\.asientos \(empresa_id, origen_tipo, origen_ref\)\s+WHERE origen_tipo IN \('amortizacion', 'periodificacion', 'cierre', 'apertura'\)/)
+test('cierres_ejercicio: cierre y apertura NOT NULL (la regularización puede faltar) y pertenecen al año que toca', () => {
+  const def = CODIGO.slice(CODIGO.indexOf('CREATE TABLE contabilidad.cierres_ejercicio ('))
+  const tabla = def.slice(0, def.indexOf('\n);'))
+  assert.match(tabla, /asiento_cierre_id\s+uuid NOT NULL/)
+  assert.match(tabla, /asiento_apertura_id\s+uuid NOT NULL/)
+  assert.match(tabla, /asiento_regularizacion_id\s+uuid,/)
+  assert.doesNotMatch(tabla, /asiento_(cierre|apertura)_id IS NULL/)
+  const fn = CODIGO.slice(CODIGO.indexOf('FUNCTION contabilidad.cierre_apertura_igual'), CODIGO.indexOf('CREATE TRIGGER trg_cierres_ejercicio_apertura_igual'))
+  assert.match(fn, /a\.id = NEW\.asiento_cierre_id\s+AND a\.ejercicio = NEW\.anio AND a\.origen = 'cierre'/)
+  assert.match(fn, /a\.id = NEW\.asiento_apertura_id\s+AND a\.ejercicio = NEW\.anio \+ 1 AND a\.origen = 'apertura'/)
+  assert.match(fn, /a\.id = NEW\.asiento_regularizacion_id\s+AND a\.ejercicio = NEW\.anio AND a\.origen = 'cierre'/)
+})
+
+test('un ejercicio cerrado no admite apuntes: trigger BEFORE INSERT/UPDATE en apuntes que mira el estado del ejercicio del asiento', () => {
+  assert.match(CODIGO, /BEFORE INSERT OR UPDATE ON contabilidad\.apuntes\s+FOR EACH ROW EXECUTE FUNCTION contabilidad\.apunte_en_ejercicio_abierto\(\)/)
+  const fn = CODIGO.slice(CODIGO.indexOf('FUNCTION contabilidad.apunte_en_ejercicio_abierto'), CODIGO.indexOf('CREATE TRIGGER trg_apuntes_ejercicio_abierto'))
+  assert.match(fn, /JOIN contabilidad\.ejercicios e ON e\.empresa_id = a\.empresa_id AND e\.anio = a\.ejercicio/)
+  assert.match(fn, /v_estado IS DISTINCT FROM 'abierto' THEN\s+RAISE EXCEPTION/)
+})
+
+test('ejercicios: anio = año de inicio (CHECK) y sin solapes entre ejercicios de la misma empresa (trigger con bloqueo)', () => {
+  assert.match(CODIGO, /ALTER TABLE contabilidad\.ejercicios ADD CONSTRAINT \w+ CHECK \(anio = extract\(year FROM inicio\)::int\)/)
+  assert.match(CODIGO, /BEFORE INSERT OR UPDATE OF inicio, fin ON contabilidad\.ejercicios\s+FOR EACH ROW EXECUTE FUNCTION contabilidad\.ejercicio_sin_solape\(\)/)
+  const fn = CODIGO.slice(CODIGO.indexOf('FUNCTION contabilidad.ejercicio_sin_solape'), CODIGO.indexOf('CREATE TRIGGER trg_ejercicios_sin_solape'))
+  assert.match(fn, /pg_advisory_xact_lock/)
+  assert.match(fn, /x\.empresa_id = NEW\.empresa_id AND x\.id <> NEW\.id AND x\.inicio <= NEW\.fin AND x\.fin >= NEW\.inicio/)
+})
+
+test('un asiento de amortización/periodificación/cierre/apertura se asienta UNA vez por periodo, salvo que el anterior esté rectificado (trigger, 23505)', () => {
+  assert.doesNotMatch(CODIGO, /CREATE UNIQUE INDEX uq_asientos_origen_f5/)
+  assert.match(CODIGO, /BEFORE INSERT ON contabilidad\.asientos\s+FOR EACH ROW EXECUTE FUNCTION contabilidad\.asiento_origen_f5_unico\(\)/)
+  const fn = CODIGO.slice(CODIGO.indexOf('FUNCTION contabilidad.asiento_origen_f5_unico'), CODIGO.indexOf('CREATE TRIGGER trg_asientos_origen_f5_unico'))
+  assert.match(fn, /NEW\.origen_tipo IN \('amortizacion', 'periodificacion', 'cierre', 'apertura'\)/)
+  assert.match(fn, /pg_advisory_xact_lock/)
+  assert.match(fn, /NOT EXISTS \(SELECT 1 FROM contabilidad\.asientos r WHERE r\.empresa_id = a\.empresa_id AND r\.reversa_de = a\.id\)/)
+  assert.match(fn, /ERRCODE = '23505'/)
 })
 
 test('FK compuestas a asientos de la MISMA empresa', () => {
@@ -94,7 +127,7 @@ test('permisos mínimos: SELECT/INSERT, UPDATE solo de baja (activos) y de estad
 
 test('es ADITIVA (sin DROP ni ALTER de columnas), va en una transacción y NO está aplicada (la cabecera lo dice)', () => {
   assert.doesNotMatch(CODIGO, /\bDROP\b/i)
-  assert.doesNotMatch(CODIGO, /ALTER TABLE contabilidad\.(asientos|apuntes|ejercicios|plan_cuentas)\s+(ADD|DROP|ALTER)/i)
+  assert.doesNotMatch(CODIGO, /ALTER TABLE contabilidad\.(asientos|apuntes|ejercicios|plan_cuentas)\s+(ADD COLUMN|DROP|ALTER COLUMN)/i)
   assert.match(CODIGO, /^\s*BEGIN;/m)
   assert.match(CODIGO, /COMMIT;\s*$/m)
   assert.match(SQL, /NO APLICADA/)

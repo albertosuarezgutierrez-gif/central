@@ -9,7 +9,7 @@ import { saldosDeAsientos, resultadoDeAsientos, type Asiento, type HechoContable
 import {
   altaActivo, amortizarPeriodo, bajaDeActivo, cerrarEjercicio, cuentasAnuales, diagnosticoCierre, guardarTabla, periodificarCierre, altaPeriodificacion, movimientosInmovilizado,
 } from '../lib/cierre.ts'
-import { recibirHecho, registrarAsientoManual } from '../lib/servicio.ts'
+import { recibirHecho, registrarAsientoManual, rectificarAsiento } from '../lib/servicio.ts'
 import { crearAlmacen } from './_repo-memoria.ts'
 import { f5Memoria } from './_f5-memoria.ts'
 
@@ -240,4 +240,76 @@ test('aislamiento: las fichas de una empresa no existen para otra', async () => 
   await altaActivo(al.repo(A), fA, entrada(), {}, meta(hoyCierre, 'A-1'))
   assert.equal((await fA.activos()).length, 1)
   assert.equal((await fB.activos()).length, 0)
+})
+
+test('baja con amortización POSTERIOR ya asentada: se revierte el exceso (D281/H681) y 281 queda a cero; en otro ejercicio abierto, un ajuste por ejercicio', async () => {
+  const { repo, f5, d } = await escenario()
+  d.ejercicios.push({ anio: 2027, inicio: '2027-01-01', fin: '2027-12-31', estado: 'abierto', ultimo: 0 })
+  const hoy = new Date('2027-03-15T10:00:00Z')
+  await altaActivo(repo, f5, entrada({ valorAdquisicion: 120000, porcentajePb: 1200, yaContabilizado: false, fechaAlta: '2026-10-01' }), {}, meta(hoy, 'A-1'))
+  for (const [anio, mes] of [[2026, 10], [2026, 11], [2026, 12], [2027, 1], [2027, 2]]) assert.ok((await amortizarPeriodo(repo, f5, { anio, mes }, meta(hoy))).ok)
+  const baja = await bajaDeActivo(repo, f5, { ref: 'A-1', fecha: '2026-10-31' }, meta(hoy))
+  assert.ok(baja.ok, baja.ok ? '' : baja.errores.join())
+  if (baja.ok) assert.equal(baja.ajusteAmortizacion, 4 * 1200)
+  assert.equal(saldosCuenta(d, 2026, '281') + saldosCuenta(d, 2027, '281'), 0)
+  assert.equal(saldosCuenta(d, 2026, '681'), 1200, 'solo queda la cuota de octubre')
+  assert.equal(saldosCuenta(d, 2027, '681'), 0)
+  assert.equal(d.asientos.filter((a) => a.origenRef?.startsWith('baja-activo-ajuste:')).length, 2)
+})
+
+test('baja con amortización posterior asentada en un ejercicio CERRADO: se rechaza con mensaje claro y no se toca nada', async () => {
+  const { repo, f5, d } = await escenario()
+  await altaActivo(repo, f5, entrada({ valorAdquisicion: 120000, porcentajePb: 1200, yaContabilizado: false, fechaAlta: '2026-10-01' }), {}, meta(hoyCierre, 'A-1'))
+  for (const mes of [10, 11, 12]) assert.ok((await amortizarPeriodo(repo, f5, { anio: 2026, mes }, meta())).ok)
+  const antes = d.asientos.length
+  d.ejercicios.find((e) => e.anio === 2026)!.estado = 'cerrado'
+  const ko = await bajaDeActivo(repo, f5, { ref: 'A-1', fecha: '2026-10-31' }, meta())
+  assert.ok(!ko.ok && /cerrado/.test(ko.errores.join()))
+  assert.equal(d.asientos.length, antes)
+  assert.equal(f5.estado.activos[0].estado, 'activo')
+})
+
+test('alta con fecha en ejercicio cerrado: se rechaza', async () => {
+  const { repo, f5, d } = await escenario()
+  d.ejercicios.find((e) => e.anio === 2026)!.estado = 'cerrado'
+  const r = await altaActivo(repo, f5, entrada({ refExterna: 'C1' }), {}, meta(hoyCierre, 'A-1'))
+  assert.ok(!r.ok && /cerrado/.test(r.errores.join()))
+  assert.equal(f5.estado.activos.length, 0)
+})
+
+test('alta con fecha antigua en ejercicio abierto: asienta la amortización atrasada de los periodos ya asentados (y la baja posterior cuadra)', async () => {
+  const { repo, f5, d } = await escenario()
+  const hoy = new Date('2026-08-15T10:00:00Z')
+  await altaActivo(repo, f5, entrada({ refExterna: 'OTRO', fechaAlta: '2026-01-10', valorAdquisicion: 60000 }), {}, meta(hoy, 'A-0'))
+  for (const mes of [3, 4]) assert.ok((await amortizarPeriodo(repo, f5, { anio: 2026, mes }, meta(hoy))).ok)
+  const base = saldosCuenta(d, 2026, '681')
+  const r = await altaActivo(repo, f5, entrada({ refExterna: 'ANTIGUO', fechaAlta: '2026-03-05', valorAdquisicion: 120000, porcentajePb: 1200 }), {}, meta(hoy, 'A-1'))
+  assert.ok(r.ok, r.ok ? '' : r.errores.join())
+  if (r.ok) assert.ok(r.avisos.some((a) => /atrasada/.test(a)))
+  assert.equal(saldosCuenta(d, 2026, '681') - base, 2 * 1200, 'marzo y abril, ya asentados sin el bien')
+  // Mayo aún no asentado: lo recoge la amortización normal, sin duplicar.
+  assert.ok((await amortizarPeriodo(repo, f5, { anio: 2026, mes: 5 }, meta(hoy))).ok)
+  const baja = await bajaDeActivo(repo, f5, { ref: 'A-1', fecha: '2026-05-31' }, meta(hoy))
+  assert.ok(baja.ok, baja.ok ? '' : baja.errores.join())
+})
+
+test('amortización rectificada: el mes puede reasentarse; sin rectificar sigue siendo idempotente', async () => {
+  const { repo, f5, d } = await escenario()
+  await altaActivo(repo, f5, entrada({ valorAdquisicion: 120000, porcentajePb: 1200 }), {}, meta(hoyCierre, 'A-1'))
+  const a = await amortizarPeriodo(repo, f5, { anio: 2026, mes: 2 }, meta())
+  assert.ok(a.ok && a.asientoId)
+  const rect = await rectificarAsiento(repo, a.ok ? a.asientoId! : '', '2026-02-28', { actor: 'usuario' })
+  assert.ok(rect.ok, rect.ok ? '' : rect.errores.join())
+  const b = await amortizarPeriodo(repo, f5, { anio: 2026, mes: 2 }, meta())
+  assert.ok(b.ok && !b.duplicado && b.asientoId && b.asientoId !== (a.ok ? a.asientoId : null))
+  assert.equal(saldosCuenta(d, 2026, '681'), 1200)
+  const c = await amortizarPeriodo(repo, f5, { anio: 2026, mes: 2 }, meta())
+  assert.ok(c.ok && c.duplicado)
+})
+
+test('cierre de un ejercicio sin saldos: se rechaza (0005 exige asiento de cierre y de apertura)', async () => {
+  const al = crearAlmacen(); const d = al.empresaLista(A, 2026, 'abierto')
+  const r = await cerrarEjercicio(al.repo(A), f5Memoria(d), 2026, meta())
+  assert.ok(!r.ok && /sin saldos|no tiene saldos/.test(r.errores.join()))
+  assert.equal(d.ejercicios[0].estado, 'abierto')
 })

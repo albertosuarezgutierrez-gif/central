@@ -2,7 +2,7 @@
 -- Spec: docs/superpowers/specs/2026-11-04-modulo-contabilidad.md F5. Requiere 0001 (0003/0004 no son necesarias).
 --
 -- ⛔ NO APLICADA. Se aplica a mano como `postgres` (preview → producción tras OK de Alberto). ADITIVA: solo CREA tablas/funciones/índices,
---    añade dos cuentas al plan de las empresas existentes y un GRANT de columna. NO es idempotente en las tablas (CREATE TABLE sin IF NOT
+--    añade dos cuentas al plan de las empresas existentes, un CHECK en `ejercicios` y un GRANT de columna. NO es idempotente en las tablas (CREATE TABLE sin IF NOT
 --    EXISTS): se aplica UNA vez. Mientras no esté aplicada, /cierre, /inmovilizado y /cuentas-anuales lo dicen en vez de romper.
 --
 -- Diseño:
@@ -13,7 +13,8 @@
 --   · `cierres_ejercicio`: UNA fila por ejercicio cerrado con sus asientos de regularización, cierre y apertura. Inmutable.
 --   · `ejercicios.estado`: abierto → (en_cierre) → cerrado; CERRADO ES DEFINITIVO. Para cerrar hace falta la fila de `cierres_ejercicio` y que
 --     TODAS las cuentas 6/7 estén a cero; la apertura debe ser el cierre con debe/haber intercambiados (apertura ≡ cierre).
---   · Un asiento de amortización/periodificación/cierre/apertura no se puede asentar dos veces para el mismo periodo (índice único parcial).
+--   · Un asiento de amortización/periodificación/cierre/apertura no se puede asentar dos veces para el mismo periodo salvo que el anterior esté
+--     rectificado (trigger con bloqueo; 23505). Un ejercicio cerrado tampoco admite apuntes; `anio` = año de `inicio` y no hay ejercicios solapados.
 --   · RLS ENABLE + FORCE por empresa (`empresa_actual()`), permisos mínimos para `prisma_contabilidad`, SIN DELETE ni TRUNCATE. Importes en
 --     céntimos (bigint), sin float.
 
@@ -156,18 +157,17 @@ CREATE TABLE contabilidad.cierres_ejercicio (
   anio                       integer NOT NULL,
   -- + beneficio · − pérdida (el que fue a la cuenta 129).
   resultado_cent             bigint NOT NULL,
+  -- La regularización puede faltar (ejercicio sin cuentas 6/7); el cierre y la apertura son siempre obligatorios.
   asiento_regularizacion_id  uuid,
-  asiento_cierre_id          uuid,
-  asiento_apertura_id        uuid,
+  asiento_cierre_id          uuid NOT NULL,
+  asiento_apertura_id        uuid NOT NULL,
   cerrado_por                uuid,
   cerrado_en                 timestamptz NOT NULL DEFAULT now(),
   UNIQUE (empresa_id, anio),
   FOREIGN KEY (empresa_id, anio) REFERENCES contabilidad.ejercicios (empresa_id, anio),
   FOREIGN KEY (empresa_id, asiento_regularizacion_id) REFERENCES contabilidad.asientos (empresa_id, id),
   FOREIGN KEY (empresa_id, asiento_cierre_id) REFERENCES contabilidad.asientos (empresa_id, id),
-  FOREIGN KEY (empresa_id, asiento_apertura_id) REFERENCES contabilidad.asientos (empresa_id, id),
-  -- Cierre y apertura van juntos o no hay ninguno (ejercicio sin saldos).
-  CHECK ((asiento_cierre_id IS NULL) = (asiento_apertura_id IS NULL))
+  FOREIGN KEY (empresa_id, asiento_apertura_id) REFERENCES contabilidad.asientos (empresa_id, id)
 );
 CREATE TRIGGER trg_cierres_ejercicio_inmutable
   BEFORE UPDATE OR DELETE ON contabilidad.cierres_ejercicio
@@ -180,7 +180,21 @@ CREATE TRIGGER trg_cierres_ejercicio_sin_truncate
 CREATE OR REPLACE FUNCTION contabilidad.cierre_apertura_igual() RETURNS trigger
   LANGUAGE plpgsql AS $$
 BEGIN
-  IF NEW.asiento_cierre_id IS NOT NULL AND NEW.asiento_apertura_id IS NOT NULL AND EXISTS (
+  -- Los asientos pertenecen al año que toca: regularización y cierre al ejercicio `anio`; apertura al siguiente (y con su tipo de origen).
+  IF NEW.asiento_regularizacion_id IS NOT NULL AND NOT EXISTS (
+       SELECT 1 FROM contabilidad.asientos a WHERE a.empresa_id = NEW.empresa_id AND a.id = NEW.asiento_regularizacion_id
+          AND a.ejercicio = NEW.anio AND a.origen = 'cierre') THEN
+    RAISE EXCEPTION 'la regularización del ejercicio % debe ser un asiento de cierre de ese mismo ejercicio', NEW.anio;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM contabilidad.asientos a WHERE a.empresa_id = NEW.empresa_id AND a.id = NEW.asiento_cierre_id
+                    AND a.ejercicio = NEW.anio AND a.origen = 'cierre') THEN
+    RAISE EXCEPTION 'el asiento de cierre del ejercicio % debe ser un asiento de cierre de ese mismo ejercicio', NEW.anio;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM contabilidad.asientos a WHERE a.empresa_id = NEW.empresa_id AND a.id = NEW.asiento_apertura_id
+                    AND a.ejercicio = NEW.anio + 1 AND a.origen = 'apertura') THEN
+    RAISE EXCEPTION 'el asiento de apertura del ejercicio % debe ser una apertura del ejercicio siguiente (%)', NEW.anio, NEW.anio + 1;
+  END IF;
+  IF EXISTS (
        SELECT 1 FROM contabilidad.apuntes p
         WHERE p.empresa_id = NEW.empresa_id AND p.asiento_id IN (NEW.asiento_cierre_id, NEW.asiento_apertura_id)
         GROUP BY p.cuenta HAVING sum(p.haber - p.debe) <> 0) THEN
@@ -219,9 +233,58 @@ CREATE TRIGGER trg_ejercicios_estado
   BEFORE UPDATE ON contabilidad.ejercicios
   FOR EACH ROW EXECUTE FUNCTION contabilidad.ejercicio_estado_valido();
 
--- Un asiento de amortización / periodificación / cierre / apertura se asienta UNA vez por periodo (idempotencia en la propia BD).
-CREATE UNIQUE INDEX uq_asientos_origen_f5 ON contabilidad.asientos (empresa_id, origen_tipo, origen_ref)
-  WHERE origen_tipo IN ('amortizacion', 'periodificacion', 'cierre', 'apertura');
+-- Un asiento de amortización / periodificación / cierre / apertura se asienta UNA vez por periodo (idempotencia en la propia BD), salvo que el
+-- anterior ya esté RECTIFICADO (tiene su contraasiento: `reversa_de`): entonces el periodo puede reasentarse. Un índice único parcial no puede mirar
+-- otras filas, así que lo hace un trigger, serializado por (empresa, tipo, ref) con un bloqueo de asesoramiento. 23505 = duplicado (la app responde 409).
+CREATE OR REPLACE FUNCTION contabilidad.asiento_origen_f5_unico() RETURNS trigger
+  LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.origen_tipo IN ('amortizacion', 'periodificacion', 'cierre', 'apertura') THEN
+    PERFORM pg_advisory_xact_lock(hashtextextended(NEW.empresa_id::text || '|' || NEW.origen_tipo || '|' || coalesce(NEW.origen_ref, ''), 0));
+    IF EXISTS (SELECT 1 FROM contabilidad.asientos a
+                WHERE a.empresa_id = NEW.empresa_id AND a.origen_tipo = NEW.origen_tipo AND a.origen_ref IS NOT DISTINCT FROM NEW.origen_ref
+                  AND NOT EXISTS (SELECT 1 FROM contabilidad.asientos r WHERE r.empresa_id = a.empresa_id AND r.reversa_de = a.id)) THEN
+      RAISE EXCEPTION 'uq_asientos_origen_f5: ya existe un asiento % % sin rectificar', NEW.origen_tipo, NEW.origen_ref USING ERRCODE = '23505';
+    END IF;
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER trg_asientos_origen_f5_unico
+  BEFORE INSERT ON contabilidad.asientos
+  FOR EACH ROW EXECUTE FUNCTION contabilidad.asiento_origen_f5_unico();
+
+-- Un ejercicio CERRADO no admite apuntes (defensa en profundidad: el trigger de `asientos` mira el ejercicio, este mira el del asiento del apunte).
+CREATE OR REPLACE FUNCTION contabilidad.apunte_en_ejercicio_abierto() RETURNS trigger
+  LANGUAGE plpgsql AS $$
+DECLARE v_estado text;
+BEGIN
+  SELECT e.estado INTO v_estado FROM contabilidad.asientos a
+    JOIN contabilidad.ejercicios e ON e.empresa_id = a.empresa_id AND e.anio = a.ejercicio
+   WHERE a.empresa_id = NEW.empresa_id AND a.id = NEW.asiento_id;
+  IF v_estado IS DISTINCT FROM 'abierto' THEN
+    RAISE EXCEPTION 'el ejercicio del asiento % está % (o no existe): no admite apuntes', NEW.asiento_id, coalesce(v_estado, 'inexistente');
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER trg_apuntes_ejercicio_abierto
+  BEFORE INSERT OR UPDATE ON contabilidad.apuntes
+  FOR EACH ROW EXECUTE FUNCTION contabilidad.apunte_en_ejercicio_abierto();
+
+-- Ejercicios: `anio` es el año de `inicio`, y dos ejercicios de la misma empresa no se solapan (trigger: sin extensión btree_gist).
+ALTER TABLE contabilidad.ejercicios ADD CONSTRAINT ejercicios_anio_es_el_de_inicio CHECK (anio = extract(year FROM inicio)::int);
+CREATE OR REPLACE FUNCTION contabilidad.ejercicio_sin_solape() RETURNS trigger
+  LANGUAGE plpgsql AS $$
+BEGIN
+  PERFORM pg_advisory_xact_lock(hashtextextended('ejercicios|' || NEW.empresa_id::text, 0));
+  IF EXISTS (SELECT 1 FROM contabilidad.ejercicios x
+              WHERE x.empresa_id = NEW.empresa_id AND x.id <> NEW.id AND x.inicio <= NEW.fin AND x.fin >= NEW.inicio) THEN
+    RAISE EXCEPTION 'el ejercicio % se solapa con otro ejercicio de la misma empresa', NEW.anio;
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER trg_ejercicios_sin_solape
+  BEFORE INSERT OR UPDATE OF inicio, fin ON contabilidad.ejercicios
+  FOR EACH ROW EXECUTE FUNCTION contabilidad.ejercicio_sin_solape();
 
 -- ─── 7. RLS ENABLE + FORCE por empresa ──────────────────────────────────────────────────────────────────────────────────
 DO $$

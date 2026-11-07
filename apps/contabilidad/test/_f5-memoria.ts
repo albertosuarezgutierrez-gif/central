@@ -54,7 +54,7 @@ export function f5Memoria(d: DatosEmpresa): RepoF5 & { estado: EstadoF5 } {
       }
     },
     async asientoPorOrigen(tipo, ref) {
-      const a = d.asientos.find((x) => x.origenTipo === tipo && x.origenRef === ref)
+      const a = d.asientos.find((x) => x.origenTipo === tipo && x.origenRef === ref && !d.asientos.some((r) => r.reversaDe === x.id))
       return a ? { id: a.id, numero: a.numero } : null
     },
     async cierre(anio) { return st.cierres.find((c) => c.anio === anio) ?? null },

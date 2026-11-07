@@ -23,6 +23,42 @@ type Res<T> = ({ ok: true } & T) | { ok: false; errores: string[] }
 const fallo = (...errores: string[]): { ok: false; errores: string[] } => ({ ok: false, errores })
 const iso = (d: Date) => d.toISOString().slice(0, 10)
 const mesStr = (anio: number, mes: number) => `${anio}-${String(mes).padStart(2, '0')}`
+const ultimoDia = (anio: number, mes: number) => `${mesStr(anio, mes)}-${String(new Date(Date.UTC(anio, mes, 0)).getUTCDate()).padStart(2, '0')}`
+
+type CuotasPorAnio = Map<number, { cuota: number; ultimoMes: number; meses: string[] }>
+
+/**
+ * Cuotas del bien (cuadro SIN baja) de meses cuyo periodo YA tiene su asiento de amortización (mensual o anual), a partir de `desdeMes` (exclusive si
+ * `exclusivo`). Es la amortización que ya se contabilizó sin este bien (alta con fecha antigua) o con él tras su baja (baja anticipada).
+ */
+async function cuotasYaAsentadas(f5: RepoF5, ficha: FichaActivo, desdeMes: string, exclusivo: boolean, hoy: Date): Promise<CuotasPorAnio> {
+  const r: CuotasPorAnio = new Map()
+  const anuales = new Map<number, boolean>()
+  const anioHoy = Number(iso(hoy).slice(0, 4))
+  for (const fila of cuadroAmortizacion({ ...ficha, fechaBaja: null })) {
+    if (exclusivo ? fila.mes <= desdeMes : fila.mes < desdeMes) continue
+    const [a, m] = fila.mes.split('-').map(Number)
+    if (a > anioHoy) break
+    if (fila.cuota <= 0) continue
+    if (!anuales.has(a)) anuales.set(a, !!(await f5.asientoPorOrigen('amortizacion', refAmortizacion({ anio: a }))))
+    const asentada = anuales.get(a) || !!(await f5.asientoPorOrigen('amortizacion', refAmortizacion({ anio: a, mes: m })))
+    if (!asentada) continue
+    const x = r.get(a) ?? { cuota: 0, ultimoMes: 0, meses: [] }
+    x.cuota += fila.cuota; x.ultimoMes = anuales.get(a) ? 12 : Math.max(x.ultimoMes, m); x.meses.push(fila.mes)
+    r.set(a, x)
+  }
+  return r
+}
+
+/** Todos los ejercicios afectados deben estar ABIERTOS; devuelve el mensaje de error o null. */
+async function ejerciciosAbiertos(f5: RepoF5, anios: Iterable<number>, que: string): Promise<string | null> {
+  for (const a of anios) {
+    const ej = await f5.ejercicioBloqueado(a)
+    if (!ej) return `no existe el ejercicio ${a}, ${que}`
+    if (ej.estado !== 'abierto') return `el ejercicio ${a} está ${ej.estado === 'cerrado' ? 'cerrado' : 'en cierre'}, ${que}`
+  }
+  return null
+}
 
 /** Tabla de amortización vigente de la empresa (la última versión guardada) o la de defecto. */
 export async function tablaVigente(f5: RepoF5): Promise<{ version: number | null; filas: readonly FilaTablaAmortizacion[] }> {
@@ -80,6 +116,14 @@ export async function altaActivo(repo: RepoContable, f5: RepoF5, entrada: Entrad
   const ref = meta.ref ?? `A-${String(entrada?.fechaAlta ?? '').slice(0, 4)}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
   let ficha: FichaActivo
   try { ficha = fichaDesdeEntrada(entrada, ref, tabla.filas) } catch (e) { const m = mensajes(e); if (m) return fallo(...m); throw e }
+  // Un ejercicio cerrado es definitivo: ni el bien ni su amortización atrasada pueden entrar en él.
+  const anioAlta = Number(ficha.fechaAlta.slice(0, 4))
+  const ejAlta = await f5.ejercicioBloqueado(anioAlta)
+  if (ejAlta && ejAlta.estado !== 'abierto') return fallo(`la fecha de alta ${ficha.fechaAlta} cae en el ejercicio ${anioAlta}, que está ${ejAlta.estado === 'cerrado' ? 'cerrado' : 'en cierre'}: no admite altas`)
+  // Alta con fecha antigua: la amortización de los periodos YA asentados (sin este bien) se asienta ahora, año a año, en su ejercicio (debe estar abierto).
+  const atrasadas = await cuotasYaAsentadas(f5, ficha, ficha.fechaAlta.slice(0, 7), false, meta.hoy)
+  const errAtrasada = await ejerciciosAbiertos(f5, atrasadas.keys(), 'y la amortización atrasada del bien debe asentarse en él: revisa la fecha de alta')
+  if (errAtrasada) return fallo(errAtrasada)
   let asientoAltaId: string | null = null
   try {
     if (!ficha.yaContabilizado) {
@@ -90,14 +134,18 @@ export async function altaActivo(repo: RepoContable, f5: RepoF5, entrada: Entrad
   const id = await f5.insertarActivo({ ficha, usuarioId: meta.usuarioId, asientoAltaId })
   if (!id) return fallo('otra petición dio de alta el mismo bien a la vez: repite la operación')
   await repo.auditar({ actor: 'usuario', usuarioId: meta.usuarioId, accion: 'alta_activo', entidad: 'activos_fijos', entidadId: id, detalle: { ref, origen: ficha.origen, refExterna: ficha.refExterna } })
-  // Si el bien entra en un mes que ya tiene su amortización asentada, esa cuota NO se ha contabilizado: se avisa.
   const avisos: string[] = []
-  const anio = Number(ficha.fechaAlta.slice(0, 4))
-  const mesAlta = Number(ficha.fechaAlta.slice(5, 7))
-  const hayAnual = await f5.asientoPorOrigen('amortizacion', refAmortizacion({ anio }))
-  const mensuales: string[] = []
-  for (let m = mesAlta; m <= 12; m++) if (await f5.asientoPorOrigen('amortizacion', refAmortizacion({ anio, mes: m }))) mensuales.push(mesStr(anio, m))
-  if (hayAnual || mensuales.length) avisos.push(`La amortización de ${hayAnual ? `todo ${anio}` : mensuales.join(', ')} ya estaba asentada SIN este bien: asienta la diferencia a mano (asiento manual 681/281).`)
+  try {
+    for (const [a, x] of [...atrasadas.entries()].sort(([p], [q]) => p - q)) {
+      const asiento: Asiento = {
+        fecha: ultimoDia(a, x.ultimoMes), ejercicio: a, concepto: `Amortización atrasada de ${ficha.descripcion} (${x.meses[0]} a ${x.meses[x.meses.length - 1]})`,
+        apuntes: [{ cuenta: ficha.cuentaGasto, debe: x.cuota, haber: 0, documento: ficha.ref }, { cuenta: ficha.cuentaAmortizacionAcumulada, debe: 0, haber: x.cuota, documento: ficha.ref }],
+        origen: { tipo: 'manual', ref: `amortizacion-atrasada:${ficha.ref}:${a}` },
+      }
+      await persistir(repo, asiento, { origen: 'manual' }, meta)
+      avisos.push(`Se asentó la amortización atrasada de ${a} (${x.meses.length} mes(es), ya asentados sin este bien).`)
+    }
+  } catch (e) { const m = mensajes(e); if (m) return fallo(...m); throw e }
   return { ok: true, ref, duplicado: false, asientoAltaId, avisos }
 }
 
@@ -126,9 +174,14 @@ export async function amortizarPeriodo(repo: RepoContable, f5: RepoF5, p: { anio
   } catch (e) { const m = mensajes(e); if (m) return fallo(...m); throw e }
 }
 
-export type ResultadoBaja = Res<{ resultado: number; valorNetoContable: number; asientoId: string }>
+export type ResultadoBaja = Res<{ resultado: number; valorNetoContable: number; asientoId: string; /** Céntimos de amortización posterior a la baja ya asentada y revertida. */ ajusteAmortizacion: number }>
 
-/** Baja o venta de un bien: exige la amortización asentada hasta el mes de la baja y deja el resultado en 671/771. */
+/**
+ * Baja o venta de un bien: exige la amortización asentada hasta el mes de la baja y deja el resultado en 671/771.
+ * Si ya hay amortización asentada DESPUÉS de la baja (el bien seguía en las fichas), el exceso se revierte con un asiento D 281 / H 681 por ejercicio,
+ * fechado en el último mes asentado de ese ejercicio: cada ejercicio corrige su propio gasto sobrante (PGC: no se amortiza un bien dado de baja, y un
+ * ejercicio aún abierto se corrige dentro de sí mismo, sin pasar por 120/121). Si ese ejercicio ya está cerrado NO se toca (es definitivo): se rechaza.
+ */
 export async function bajaDeActivo(
   repo: RepoContable, f5: RepoF5, entrada: { ref: string; fecha: string; precioVenta?: number; cuentaContrapartida?: string }, meta: MetaCierre,
 ): Promise<ResultadoBaja> {
@@ -150,14 +203,26 @@ export async function bajaDeActivo(
     if (!asentada) return fallo(`asienta primero la amortización hasta ${ultimo.mes} (el neto contable de la baja depende de ella)`)
   }
   const acumulada = amortizacionAcumuladaHasta({ ...ficha, fechaBaja: null }, mesBaja)
+  const exceso = await cuotasYaAsentadas(f5, ficha, mesBaja, true, meta.hoy)
+  const errExceso = await ejerciciosAbiertos(f5, exceso.keys(), 'pero ya tiene amortización posterior a la baja asentada y no puede revertirse: corrígelo con un asiento manual en un ejercicio abierto')
+  if (errExceso) return fallo(`no se puede dar de baja: ${errExceso}`)
   let r: ReturnType<typeof bajaActivo>
   try {
     r = bajaActivo(ficha, { fecha: entrada.fecha, amortizacionAcumulada: acumulada, ...(entrada.precioVenta !== undefined ? { precioVenta: entrada.precioVenta } : {}), ...(entrada.cuentaContrapartida ? { cuentaContrapartida: entrada.cuentaContrapartida } : {}) })
     const ap = await persistir(repo, r.asiento, { origen: 'manual' }, meta)
+    let ajuste = 0
+    for (const [a, x] of [...exceso.entries()].sort(([p], [q]) => p - q)) {
+      await persistir(repo, {
+        fecha: ultimoDia(a, x.ultimoMes), ejercicio: a, concepto: `Ajuste de amortización posterior a la baja de ${ficha.descripcion}`,
+        apuntes: [{ cuenta: ficha.cuentaAmortizacionAcumulada, debe: x.cuota, haber: 0, documento: ficha.ref }, { cuenta: ficha.cuentaGasto, debe: 0, haber: x.cuota, documento: ficha.ref }],
+        origen: { tipo: 'manual', ref: `baja-activo-ajuste:${ficha.ref}:${a}` },
+      }, { origen: 'manual' }, meta)
+      ajuste += x.cuota
+    }
     const ok = await f5.darDeBajaActivo(ficha.ref, { fecha: entrada.fecha, precioVenta: entrada.precioVenta ?? null, resultado: r.resultado, asientoId: ap.id })
     if (!ok) return fallo('el activo ya estaba dado de baja')
     await repo.auditar({ actor: 'usuario', usuarioId: meta.usuarioId, accion: 'baja_activo', entidad: 'activos_fijos', entidadId: activo.id, detalle: { ref: ficha.ref, resultado: r.resultado } })
-    return { ok: true, resultado: r.resultado, valorNetoContable: r.valorNetoContable, asientoId: ap.id }
+    return { ok: true, resultado: r.resultado, valorNetoContable: r.valorNetoContable, asientoId: ap.id, ajusteAmortizacion: ajuste }
   } catch (e) { const m = mensajes(e); if (m) return fallo(...m); throw e }
 }
 
@@ -278,13 +343,15 @@ export async function cerrarEjercicio(repo: RepoContable, f5: RepoF5, anio: numb
     const sintetico: Asiento = { fecha: `${anio}-12-31`, ejercicio: anio, concepto: 'saldos del ejercicio', apuntes: saldos.map((s) => ({ cuenta: s.cuenta, debe: s.debe, haber: s.haber })) }
     const plan = prepararCierre({ asientos: [sintetico], anio, plan: ctx.plan, ejercicio: ctx.ejercicio, ejercicioSiguiente: ejercicioContable(sig) })
     if (!plan.ok) return fallo(...plan.errores)
+    // 0005: el registro de cierre exige asiento de cierre Y de apertura (la regularización puede faltar si no hay cuentas 6/7).
+    if (!plan.plan.cierre || !plan.plan.apertura) return fallo(`el ejercicio ${anio} no tiene saldos que cerrar: no se puede cerrar un ejercicio sin asiento de cierre y de apertura`)
     const reg = plan.plan.regularizacion ? await persistir(repo, plan.plan.regularizacion, { origen: 'cierre' }, meta) : null
-    const cie = plan.plan.cierre ? await persistir(repo, plan.plan.cierre, { origen: 'cierre' }, meta) : null
-    const ape = plan.plan.apertura ? await persistir(repo, plan.plan.apertura, { origen: 'apertura' }, meta) : null
-    await f5.insertarCierre({ anio, resultado: plan.plan.resultado, asientoRegularizacionId: reg?.id ?? null, asientoCierreId: cie?.id ?? null, asientoAperturaId: ape?.id ?? null, usuarioId: meta.usuarioId })
+    const cie = await persistir(repo, plan.plan.cierre, { origen: 'cierre' }, meta)
+    const ape = await persistir(repo, plan.plan.apertura, { origen: 'apertura' }, meta)
+    await f5.insertarCierre({ anio, resultado: plan.plan.resultado, asientoRegularizacionId: reg?.id ?? null, asientoCierreId: cie.id, asientoAperturaId: ape.id, usuarioId: meta.usuarioId })
     if (!(await f5.cerrarEjercicio(anio))) return fallo('no se pudo marcar el ejercicio como cerrado')
     await repo.auditar({ actor: 'usuario', usuarioId: meta.usuarioId, accion: 'cerrar_ejercicio', entidad: 'ejercicios', entidadId: String(anio), detalle: { resultado: plan.plan.resultado } })
-    return { ok: true, resultado: plan.plan.resultado, regularizacionId: reg?.id ?? null, cierreId: cie?.id ?? null, aperturaId: ape?.id ?? null, sinSaldos: !cie }
+    return { ok: true, resultado: plan.plan.resultado, regularizacionId: reg?.id ?? null, cierreId: cie.id, aperturaId: ape.id, sinSaldos: false }
   } catch (e) { const m = mensajes(e); if (m) return fallo(...m); throw e }
 }
 
