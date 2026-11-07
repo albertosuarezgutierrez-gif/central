@@ -1829,3 +1829,42 @@ export {
   validarValoracion,
   type ValoracionAnalisis,
 } from './siniestro-privado.ts'
+
+// Cuadro de mando por compañía y año natural (07/11/2026).
+export {
+  cuadroCompanias,
+  esAsistencia,
+  semaforoSiniestralidad,
+  variacionPct,
+  MUESTRA_MINIMA_SINIESTROS,
+} from './cuadro-compania.ts'
+export type {
+  PolizaCuadro,
+  SiniestroCuadro,
+  ProduccionCuadro,
+  FilaRamoCuadro,
+  CarteraCuadro,
+  ProduccionAnio,
+  EstadoSiniestralidad,
+  SiniestralidadAnio,
+  ComisionAnio,
+  CuadroCompaniaAnio,
+  SemaforoSiniestralidad,
+} from './cuadro-compania.ts'
+
+export {
+  calcularCompetitividad,
+  frasesCompetitividad,
+  pctEs,
+  MUESTRA_MINIMA_COMPETITIVIDAD,
+  VENTANA_DIAS_DEFECTO,
+} from './competitividad-precio.ts'
+export type {
+  ObservacionPrecio,
+  FuenteObservacion,
+  OpcionesCompetitividad,
+  ResultadoCompetitividad,
+  FilaPareja,
+  FilaSegmento,
+  PierdeContra,
+} from './competitividad-precio.ts'

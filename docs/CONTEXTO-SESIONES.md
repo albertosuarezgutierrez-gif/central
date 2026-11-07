@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(07/11/2026) Cuadro de mando por compañía y año natural en `/correduria/companias` (sin PR aún, rama de worktree).** Puerto `GET /api/operador/companias/cuadro?anio=` (`apps/asegura/lib/cuadro-companias.ts`) + proxy `/api/correduria/companias/cuadro` (añade `comisiones_devengo`). Cálculo puro en `module-seguros/cuadro-compania.ts`; UI `CuadroCompanias.tsx` (tabla ordenable + 4 bloques, también en la ficha).
+Decisiones de Alberto: rentabilidad = comisión; siniestralidad solo informativa (con cobertura «importes en X de Y», sin importes ≠ 0 %, semáforo contra `siniestralidad_max_pct`). Incurrido = indemnización + reserva (pagos NO se suman: coinciden con la indemnización). Cartera de año cerrado = RECONSTRUIDA. Baja = `cancelada` + `fecha_situacion`; el motivo no consta en CIMA.
+Pendiente: sin desplegar ni probado contra el puerto real (solo SELECT equivalentes); cargar objetivos/`siniestralidad_max_pct` de los acuerdos para ver semáforos.
+
+**(07/11/2026) Competitividad de precio por compañía + «Preparar reunión» (sin PR aún, rama de worktree, encima del cuadro).** Cálculo PURO sobre `ObservacionPrecio` genérica (`module-seguros/competitividad-precio.ts`): misma petición (`grupoComparacion`) + mismo ramo y nivel + ventana de 7 días; % sobre la más barata y sobre la mediana de las otras, posición, top-3 rivales; observaciones sueltas (`grupoComparacion` null) → métrica de segmento. ADAPTADOR aparte `asegura/lib/observaciones-precio-tarificaciones.ts` (Avant2 + bots, reutiliza `nivelDeOferta`); puerto `/api/operador/companias/competitividad` + proxy; bloque en el cuadro y botón en la ficha (`lib/preparar-reunion.ts`, texto determinista).
+Reglas: sin nivel no compite; incoherentes/fuera de rango fuera; «sin precio» solo de `fallos` de Avant2 (los fallos de bots son de robot, no de la compañía); muestra <5 avisada; sin datos ≠ 0 %.
+Pendiente: cuando exista el almacén único de observaciones, cambiar solo el adaptador. Sin desplegar.
+
 **(07/11/2026) Herramientas de captación de nóminas — PR #5604.** Simulador de coste + salud flexible (`module-nominas/simulador.ts`) y calculadora pública `/calculadora-coste-trabajador` en asegura-web.
 rrhh: alta asistente 3 pasos `/admin/empleados/nuevo` + importación Excel/CSV `/admin/empleados/importar`; `POST /api/admin/empleados` ya escribe por `darDeAltaLote` (duplicados bajo cerrojo; 409 si choca; DNI opcional = null).
 Nómina explicable: anexo en el PDF al confirmar. Seguro obligatorio por convenio + lead a plataforma con consentimiento: **migración rrhh 0036 SIN APLICAR** (aplicar antes de desplegar).

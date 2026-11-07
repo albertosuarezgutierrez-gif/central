@@ -1,6 +1,6 @@
 'use client'
 import { useRouter } from 'next/navigation'
-import { FileText, KeyRound, Percent, TrendingUp, Users } from 'lucide-react'
+import { BarChart3, FileText, KeyRound, TrendingUp, Users } from 'lucide-react'
 import type { LineaComision } from '@central/module-seguros'
 import { etiquetaArea } from '@central/module-seguros'
 import type { Compania } from '@/lib/companias-asegura'
@@ -9,6 +9,7 @@ import Bloque from '../../Bloque'
 import ContactoAcciones from '../../ContactoAcciones'
 import { ChipsAcuerdos, ProduccionCompania, TarjetaAcuerdo } from '../AcuerdosVista'
 import ComisionReal from '../ComisionReal'
+import { CuadroFicha } from '../CuadroCompanias'
 
 export type ComisionRealDatos =
   | { estado: 'ok'; lineas: LineaComision[]; truncado: boolean; sinProducto: number }
@@ -37,7 +38,20 @@ export default function FichaCompania({ codigo, compania, acuerdos, productivida
 
   return (
     <div style={{ display: 'grid', gap: 0, gridTemplateColumns: 'minmax(0, 1fr)' }}>
-      <Bloque Icono={KeyRound} titulo="Claves y acuerdos" primero
+      <Bloque Icono={BarChart3} titulo="Cuadro de mando del año" primero
+        sub="Para la reunión con la compañía: cartera, producción, siniestralidad (informativa) y comisión, con el año anterior.">
+        <CuadroFicha
+          codigo={codigo}
+          nombre={compania?.nombreComun ?? codigo}
+          acuerdos={acuerdos}
+          productividad={productividad}
+          pactado={comisionReal.estado === 'ok'
+            ? <ComisionReal lineas={comisionReal.lineas} truncado={comisionReal.truncado} sinProducto={comisionReal.sinProducto} />
+            : <NoComprobado que="Comisión real" motivo={comisionReal.estado === 'error' ? comisionReal.motivo : 'puerto sin configurar'} />}
+        />
+      </Bloque>
+
+      <Bloque Icono={KeyRound} titulo="Claves y acuerdos"
         sub="Un acuerdo paga por lo producido con SU clave. Sin clave asignada, su productividad queda pendiente.">
         <ChipsAcuerdos codigo={codigo} r={acuerdos} />
         {claves.length > 0 && (
@@ -69,13 +83,6 @@ export default function FichaCompania({ codigo, compania, acuerdos, productivida
                 ))}
               </div>
             )}
-      </Bloque>
-
-      <Bloque Icono={Percent} titulo="Firmado frente a lo aplicado en CIMA"
-        sub="Solo las líneas con código de producto de CIMA se pueden cruzar con los recibos (24 meses).">
-        {comisionReal.estado === 'ok'
-          ? <ComisionReal lineas={comisionReal.lineas} truncado={comisionReal.truncado} sinProducto={comisionReal.sinProducto} />
-          : <NoComprobado que="Comisión real" motivo={comisionReal.estado === 'error' ? comisionReal.motivo : 'puerto sin configurar'} />}
       </Bloque>
 
       <Bloque Icono={Users} titulo="Contactos">
