@@ -15,9 +15,11 @@ export type {
 export {
   generarSepaXml,
   validarIban,
+  SEPA_PROPOSITOS,
 } from './sepa-xml'
 
 export type {
   SepaTransferencia,
   SepaDocumentoParams,
+  SepaProposito,
 } from './sepa-xml'

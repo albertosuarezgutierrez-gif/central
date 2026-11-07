@@ -13,6 +13,8 @@
     "@central/brand": "file:../../packages/brand",
     "@central/core-ai": "file:../../packages/core-ai",
     "@central/module-nominas": "file:../../packages/module-nominas",
+    "@central/module-pagos": "file:../../packages/module-pagos",
+    "@central/module-contabilidad": "file:../../packages/module-contabilidad",
     "@central/core-email": "file:../../packages/core-email",
     "@central/core-identity": "file:../../packages/core-identity",
     "@central/core-firma": "file:../../packages/core-firma",

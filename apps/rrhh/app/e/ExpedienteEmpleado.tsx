@@ -260,6 +260,16 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
         )}
       </section>
 
+      <section className="my-3 rounded-card border border-line bg-card p-4">
+        <h2 className="text-base">Certificado de retenciones (IRPF)</h2>
+        <p className="mt-0.5 text-xs text-ink-3">Para tu declaración de la renta: lo que has cobrado, lo que te han retenido y tus cotizaciones del año, según tus nóminas.</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {[new Date().getFullYear() - 1, new Date().getFullYear()].map(a => (
+            <a key={a} href={`/api/e/certificado-retenciones?anio=${a}`} className="inline-flex min-h-[44px] items-center rounded-[10px] border border-line px-4 text-sm font-semibold text-ink no-underline hover:text-accent">Descargar {a}</a>
+          ))}
+        </div>
+      </section>
+
       </div>
       )}
 

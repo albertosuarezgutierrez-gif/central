@@ -88,4 +88,6 @@ export interface NominaDesglose {
   modo?: 'calculo' | 'simulacion'
   cifrasPendientes?: string[]
   avisos?: string[]
+  /** Retención por el algoritmo AEAT: tipo (%, 2 decimales) y motivo. null = % plano del contrato; ausente = borrador anterior. */
+  irpfAlgoritmo?: { tipoPct: number; motivo: string } | null
 }

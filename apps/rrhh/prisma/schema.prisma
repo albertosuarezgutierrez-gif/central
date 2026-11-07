@@ -17,6 +17,11 @@ model empresas {
   at_ep_tipo   Decimal? @db.Decimal(6, 4)
   /// Fichar sin ubicación en emergencia (migración 0024); el fichaje queda marcado para el responsable.
   permite_fichar_sin_ubicacion Boolean @default(true)
+  /// Migración 0033 (NULL = no se sabe): ordenante de la remesa SEPA y enlace con el módulo de contabilidad (sin FK: otro schema).
+  nif                     String?
+  iban                    String?
+  bic                     String?
+  contabilidad_empresa_id String?  @db.Uuid
   creada_at    DateTime @default(now()) @db.Timestamptz(6)
   usuarios     usuarios_rrhh[]
   empleados    empleados[]
@@ -65,6 +70,10 @@ model empleados {
   pin_hash      String?
   /// Revocación de sesiones del portal /e (migración 0021): el token lleva esta versión.
   sesion_version Int      @default(0)
+  /// Migración 0033: baja (finiquito) e IBAN de la nómina. NULL = no se sabe.
+  fecha_baja    DateTime? @db.Date
+  motivo_baja   String?
+  iban          String?
   creada_at     DateTime  @default(now()) @db.Timestamptz(6)
   empresa       empresas  @relation(fields: [empresa_id], references: [id])
   documentos    documentos[]
@@ -159,6 +168,10 @@ model contratos_laborales {
   categoria_convenio String?
   conceptos_fijos    Json     @default("[]")
   vigente_desde      DateTime @db.Date
+  /// Migración 0033. NULL = no se sabe. `duracion` 'indefinido' | 'temporal'; un indefinido no lleva fecha_fin.
+  fecha_inicio       DateTime? @db.Date
+  fecha_fin          DateTime? @db.Date
+  duracion           String?
   activo             Boolean  @default(true)
   creada_at          DateTime @default(now()) @db.Timestamptz(6)
 
@@ -177,6 +190,10 @@ model nominas {
   generada_at   DateTime  @default(now()) @db.Timestamptz(6)
   confirmada_at DateTime? @db.Timestamptz(6)
   enviada_at    DateTime? @db.Timestamptz(6)
+  /// Migración 0033: emisión a contabilidad al confirmar. NULL = nunca intentado.
+  contabilidad_estado     String?
+  contabilidad_detalle    String?
+  contabilidad_intento_at DateTime? @db.Timestamptz(6)
   creada_at     DateTime  @default(now()) @db.Timestamptz(6)
   incidencias   incidencias_mes[]
 
@@ -193,8 +210,29 @@ model incidencias_mes {
   importe    Decimal? @db.Decimal(10, 2)
   horas      Decimal? @db.Decimal(6, 2)
   dias       Int?
+  /// Migración 0033: NULL = puntual. Solo la original (copiada_de NULL) se repite al generar el mes.
+  periodicidad     String?
+  recurrente_hasta String?
+  copiada_de       String?  @db.Uuid
   creada_at  DateTime @default(now()) @db.Timestamptz(6)
   nomina     nominas  @relation(fields: [nomina_id], references: [id], onDelete: Cascade)
 
   @@index([nomina_id])
+}
+
+/// Tablas salariales del convenio metidas a mano (migración 0033). Importes en CÉNTIMOS; NULL = no se sabe.
+model convenio_tablas_salariales {
+  id                 String   @id @default(uuid()) @db.Uuid
+  empresa_id         String   @db.Uuid
+  convenio           String
+  anio               Int      @db.SmallInt
+  categoria          String
+  salario_base_cent  BigInt
+  plus_convenio_cent BigInt?
+  pagas              Int?     @db.SmallInt
+  creada_por         String?
+  creada_at          DateTime @default(now()) @db.Timestamptz(6)
+  actualizada_at     DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([empresa_id])
 }

@@ -30,3 +30,11 @@ idénticos. Preferir bases de código abierto MIT/Apache.
 ## Ideas pendientes
 
 - [sector] programa visto → qué hace → cómo lo haríamos nosotros
+- [nóminas] simulador de coste empresa → bruto + SS empresa + finiquito potencial por puesto → motor `module-nominas` en modo `simulacion`, pantalla pública de captación.
+- [nóminas] alta en 3 pasos → empresa, convenio, empleados → asistente sobre `/api/operador/empresas` + tablas de convenio.
+- [nóminas] importar Excel → plantilla de empleados/salarios del gestor anterior → parseo `xlsx` + emparejado por NIF (nunca fundir identidades).
+- [nóminas] nómina explicable → cada línea con su porqué y su fuente → `datos_calculo` + texto por concepto en `/e`.
+- [nóminas] SILTRA → ficheros de cotización a la TGSS → generador desde las nóminas confirmadas (fase posterior, alto riesgo).
+- [nóminas] IT/bajas → partes de baja y su efecto en la nómina → incidencias del mes con complemento por convenio.
+- [nóminas→correduría] detector de seguro obligatorio por convenio (vida/accidentes) → lead a la correduría, solo con consentimiento registrado.
+- [nóminas→correduría] seguro de salud como retribución flexible exenta (hasta 500 €/año por persona, art. 42.3.c LIRPF) → simulador de ahorro + lead.

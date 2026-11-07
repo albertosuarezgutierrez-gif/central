@@ -16,12 +16,12 @@ export interface TablaIrpf {
   año: number
   /** Escala general de retención (art. 85.1 RIRPF). */
   escala: TramoEscalaIrpf[]
-  /** Tipo aplicado cuando no hay modelo 145 (regla del spec de nóminas; ver irpf.ts). */
-  tipoMaximo: Cifra<Ppm>
   /** Tipo mínimo en contratos/relaciones de duración inferior al año (art. 86.2 RIRPF). */
   tipoMinimoContratoCorto: Cifra<Ppm>
   /** Gastos deducibles del art. 19.2 LIRPF (además de las cotizaciones del trabajador). */
   gastos: { otros: Cifra<Centimos>; discapacidad33: Cifra<Centimos>; discapacidad65: Cifra<Centimos> }
+  /** Art. 83.3.e) RIRPF: minoración por más de dos descendientes con derecho a mínimo. */
+  reduccionMasDeDosDescendientes: Cifra<Centimos>
   /** Reducción por obtención de rendimientos del trabajo (art. 20 LIRPF). */
   reduccionTrabajo: {
     umbral1: Cifra<Centimos>
@@ -48,10 +48,15 @@ export interface TablaIrpf {
   }
   /** Préstamo de vivienda habitual anterior a 2013 con derecho a deducción: el tipo baja X puntos si la retribución no excede el límite. */
   hipotecaAnterior2013: { reduccionTipo: Cifra<Ppm>; limiteRetribucion: Cifra<Centimos> }
-  /** Art. 85.3 RIRPF: la cuota de retención no excede `porcentaje` × (retribución − mínimo personal y familiar). */
-  limite853: { porcentaje: Cifra<Ppm> }
+  /** Art. 85.3 RIRPF: si la retribución ≤ `retribucionHasta`, la cuota no excede `porcentaje` × (retribución − límite excluyente del art. 81). */
+  limite853: { porcentaje: Cifra<Ppm>; retribucionHasta: Cifra<Centimos> }
+  /** Art. 85.2 RIRPF: anualidades por alimentos a hijos — incremento del mínimo para la cuota 2. */
+  anualidadesIncrementoMinimo: Cifra<Centimos>
   /** Límite excluyente de retener (art. 81.1 RIRPF), clave `${situacion}:${hijos}` (hijos 0, 1 ó 2 = «2 o más»). Combinación ausente = no aplica. */
   exento: Partial<Record<string, Cifra<Centimos>>>
-  /** Deducción para rentas ≤ SMI (2026): solo se detecta el supuesto, no se calcula (regla pendiente). */
-  deduccionSmi: { importeMaximo: Cifra<Centimos>; retribucionHasta: Cifra<Centimos> }
+  /**
+   * Deducción DA 61.ª LIRPF (rentas del trabajo bajas). Se aplica en la CUOTA LÍQUIDA de la declaración, NO en la retención
+   * (el procedimiento de retención de los arts. 82-86 RIRPF no la contempla): solo informativa (aviso).
+   */
+  deduccionSmi: { importeMaximo: Cifra<Centimos>; retribucionPlena: Cifra<Centimos>; retribucionHasta: Cifra<Centimos> }
 }

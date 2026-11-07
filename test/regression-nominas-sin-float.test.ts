@@ -49,6 +49,9 @@ function listar(dir: string): string[] {
 
 // La ÚNICA conversión euros→céntimos permitida: eurosACentimos (toPrecision evita 1,005 × 100 = 100,4999…).
 const PERMITIDO_DINERO = /toPrecision\(15\)/
+// Redondeo de DÍAS (no dinero) a 2 decimales para mostrar, en el finiquito. Texto EXACTO de la línea: otro `* 100` en
+// finiquito.ts sigue fallando.
+const PERMITIDO_FINIQUITO_DIAS = /^\s*const r2 = \(x: number\) => Math\.round\(x \* 100\) \/ 100\s*$/
 
 const FUENTES_MODULO = listar(join(RAIZ, 'packages/module-nominas/src'))
 const FUENTES_RRHH = listar(join(RAIZ, 'apps/rrhh')).filter(p => /nomina|contrato/i.test(relative(join(RAIZ, 'apps/rrhh'), p)))
@@ -61,7 +64,7 @@ test('hay fuentes que vigilar (el guardián no se queda ciego si mueven carpetas
 test('module-nominas: ningún `* 100` sobre euros ni toFixed (salvo eurosACentimos con toPrecision)', () => {
   const malas: string[] = []
   for (const f of FUENTES_MODULO) {
-    const permitido = f.endsWith('/dinero.ts') ? PERMITIDO_DINERO : undefined
+    const permitido = f.endsWith('/dinero.ts') ? PERMITIDO_DINERO : f.endsWith('/finiquito.ts') ? PERMITIDO_FINIQUITO_DIAS : undefined
     for (const v of violaciones(readFileSync(f, 'utf8'), { toFixed: true, permitido })) malas.push(`${relative(RAIZ, f)} ${v}`)
   }
   assert.deepEqual(malas, [])

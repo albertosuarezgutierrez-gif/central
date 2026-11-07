@@ -1,5 +1,7 @@
 'use client'
 import { useState } from 'react'
+import { categoriasDelAnio, proponerSalario, type FilaTablaConvenio } from '@/lib/convenio-tablas'
+import { eur, eurCent } from '@/app/admin/nominas/formato'
 
 type ContratoActual = {
   salarioBase: number
@@ -10,11 +12,22 @@ type ContratoActual = {
   categoriaConvenio: string | null
   conceptosFijos: { nombre: string; importe: number }[]
   vigenteDesde: string
+  fechaInicio?: string | null
+  fechaFin?: string | null
+  duracion?: 'indefinido' | 'temporal' | null
 } | null
 
 const GRUPOS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
 
-export default function ContratoForm({ empleadoId, inicial }: { empleadoId: string; inicial: ContratoActual }) {
+const MOTIVO_SIN_PROPUESTA = {
+  sin_categoria: '',
+  sin_tabla: 'Sin tabla del convenio para esta categoría y año: indica el salario a mano.',
+  ambigua: 'Hay varias filas (distintos convenios) para esta categoría y año: indica el salario a mano.',
+} as const
+
+export default function ContratoForm({ empleadoId, inicial, tablas = null }: {
+  empleadoId: string; inicial: ContratoActual; tablas?: FilaTablaConvenio[] | null
+}) {
   const today = new Date().toISOString().split('T')[0]
   const [salarioBase, setSalario] = useState(String(inicial?.salarioBase ?? ''))
   const [grupoCotizacion, setGrupo] = useState(String(inicial?.grupoCotizacion ?? '5'))
@@ -23,12 +36,30 @@ export default function ContratoForm({ empleadoId, inicial }: { empleadoId: stri
   const [irpfPct, setIrpf] = useState(String(inicial?.irpfRetencionPct ?? '0'))
   const [categoriaConvenio, setCategoria] = useState(inicial?.categoriaConvenio ?? '')
   const [vigenteDesde, setVigente] = useState(inicial ? (inicial.vigenteDesde as string).slice(0, 10) : today)
+  const [fechaInicio, setFechaInicio] = useState(inicial?.fechaInicio ? inicial.fechaInicio.slice(0, 10) : '')
+  const [fechaFin, setFechaFin] = useState(inicial?.fechaFin ? inicial.fechaFin.slice(0, 10) : '')
+  // Solo «parcial» necesita la duración aparte; indefinido/temporal la llevan en el tipo. '' = no se sabe.
+  const [duracionParcial, setDuracionParcial] = useState<string>(inicial?.tipoContrato === 'parcial' ? inicial?.duracion ?? '' : '')
   const [conceptosFijos, setConceptos] = useState<{ nombre: string; importe: number }[]>(inicial?.conceptosFijos ?? [])
   const [newConcepto, setNewConcepto] = useState('')
   const [newImporte, setNewImporte] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [msg, setMsg] = useState('')
   const [error, setError] = useState('')
+
+  const duracion = tipoContrato === 'parcial' ? duracionParcial : tipoContrato
+  const esIndefinido = duracion === 'indefinido'
+  const anioTabla = Number((vigenteDesde || today).slice(0, 4))
+  const categorias = tablas ? categoriasDelAnio(tablas, anioTabla) : []
+  const propuesta = tablas ? proponerSalario(tablas, { anio: anioTabla, categoria: categoriaConvenio }) : null
+  const salarioPropuesto = propuesta?.ok ? (propuesta.fila.salarioBaseCent / 100).toFixed(2) : null
+
+  function cambiarCategoria(v: string) {
+    setCategoria(v)
+    // Propone sin pisar: solo rellena si el salario está vacío; si no, queda el botón «Usar».
+    const p = tablas ? proponerSalario(tablas, { anio: anioTabla, categoria: v }) : null
+    if (p?.ok && !salarioBase) setSalario((p.fila.salarioBaseCent / 100).toFixed(2))
+  }
 
   function addConcepto() {
     if (!newConcepto || !newImporte) return
@@ -51,6 +82,9 @@ export default function ContratoForm({ empleadoId, inicial }: { empleadoId: stri
         categoriaConvenio: categoriaConvenio || null,
         conceptosFijos,
         vigenteDesde,
+        fechaInicio: fechaInicio || null,
+        fechaFin: esIndefinido ? null : fechaFin || null,
+        duracion: duracion || null,
       }),
     })
     if (r.ok) { setMsg('Contrato guardado correctamente') }
@@ -81,7 +115,7 @@ export default function ContratoForm({ empleadoId, inicial }: { empleadoId: stri
       <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-sm">
           Tipo contrato
-          <select value={tipoContrato} onChange={e => setTipo(e.target.value)} className="border border-line rounded px-2 py-1">
+          <select value={tipoContrato} onChange={e => { setTipo(e.target.value); if (e.target.value === 'indefinido') setFechaFin('') }} className="border border-line rounded px-2 py-1">
             <option value="indefinido">Indefinido</option>
             <option value="temporal">Temporal</option>
             <option value="parcial">Parcial</option>
@@ -106,16 +140,60 @@ export default function ContratoForm({ empleadoId, inicial }: { empleadoId: stri
         </label>
       </div>
 
+      <fieldset className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-3">
+        <legend className="text-sm mb-1">Duración del contrato</legend>
+        {tipoContrato === 'parcial' && (
+          <label className="flex flex-col gap-1 text-sm">
+            Duración
+            <select value={duracionParcial} onChange={e => { setDuracionParcial(e.target.value); if (e.target.value === 'indefinido') setFechaFin('') }} className="border border-line rounded px-2 py-1">
+              <option value="">No se sabe</option>
+              <option value="indefinido">Indefinida</option>
+              <option value="temporal">Temporal</option>
+            </select>
+          </label>
+        )}
+        <label className="flex flex-col gap-1 text-sm">
+          Fecha de inicio
+          <input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} className="border border-line rounded px-2 py-1" />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          Fecha de fin
+          <input type="date" value={esIndefinido ? '' : fechaFin} min={fechaInicio || undefined} disabled={esIndefinido} onChange={e => setFechaFin(e.target.value)} className="border border-line rounded px-2 py-1" />
+        </label>
+      </fieldset>
+      <p className="text-ink-3 text-xs -mt-2">
+        {esIndefinido
+          ? 'Indefinido: sin fecha de fin.'
+          : fechaFin
+            ? 'Se avisará en el portal del empleado a 30 y 15 días de la fecha de fin.'
+            : 'Fecha de fin sin indicar: consta como «no se sabe» (no como indefinido) y no habrá aviso de vencimiento.'}
+      </p>
+
       <label className="flex flex-col gap-1 text-sm">
         Categoría convenio (opcional)
-        <input value={categoriaConvenio} onChange={e => setCategoria(e.target.value)} className="border border-line rounded px-2 py-1" placeholder="p. ej. Grupo I" />
+        <input value={categoriaConvenio} onChange={e => cambiarCategoria(e.target.value)} list="categorias-convenio" className="border border-line rounded px-2 py-1" placeholder="p. ej. Grupo I" />
+        <datalist id="categorias-convenio">
+          {categorias.map(c => <option key={c} value={c} />)}
+        </datalist>
       </label>
+      {propuesta?.ok && salarioPropuesto && (
+        <div className="flex flex-wrap items-center gap-2 text-sm -mt-2">
+          <span>Tabla «{propuesta.fila.convenio}» {propuesta.fila.anio}: salario base {eurCent(propuesta.fila.salarioBaseCent)}</span>
+          {salarioBase !== salarioPropuesto && (
+            <button type="button" className="min-h-[44px] bg-transparent text-accent" onClick={() => setSalario(salarioPropuesto)}>Usar este salario</button>
+          )}
+        </div>
+      )}
+      {propuesta && !propuesta.ok && MOTIVO_SIN_PROPUESTA[propuesta.motivo] && (
+        <p className="text-ink-3 text-xs -mt-2">{MOTIVO_SIN_PROPUESTA[propuesta.motivo]}</p>
+      )}
+      {tablas === null && <p className="text-ink-3 text-xs -mt-2">No se han podido leer las tablas del convenio: indica el salario a mano.</p>}
 
       <div>
         <p className="text-sm mb-2">Conceptos fijos (complementos, pluses mensuales)</p>
         {conceptosFijos.map((c, i) => (
           <div key={i} className="flex items-center justify-between text-sm py-1">
-            <span>{c.nombre} — {c.importe.toFixed(2)} €</span>
+            <span>{c.nombre} — {eur(c.importe)}</span>
             <button type="button" className="text-alert text-xs" onClick={() => removeConcepto(i)}>✕</button>
           </div>
         ))}

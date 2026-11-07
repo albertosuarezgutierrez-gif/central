@@ -3,6 +3,7 @@ import { getSesion, AuthError } from '@/lib/tenant'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { contratoActivoDeEmpleado } from '@/lib/contratos'
+import { listarTablasConvenio } from '@/lib/convenio-tablas-repo'
 import ContratoForm from './ContratoForm'
 import UiPage from '@/components/ui/Page'
 import Card from '@/components/ui/Card'
@@ -16,12 +17,16 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     SELECT id, nombre FROM rrhh.empleados WHERE id = ${id}::uuid AND empresa_id = ${empresa_id}::uuid LIMIT 1`)
   if (!empRows[0]) notFound()
 
-  const contrato = await contratoActivoDeEmpleado(empresa_id, id)
+  const [contrato, tablas] = await Promise.all([
+    contratoActivoDeEmpleado(empresa_id, id),
+    // Tabla del convenio (0033): sin ella el formulario funciona igual, solo no propone salario («no se sabe», no 0).
+    listarTablasConvenio(empresa_id).catch(e => { console.error('[contrato] tablas de convenio', e instanceof Error ? e.message : e); return null }),
+  ])
   const contratoSerial = contrato ? JSON.parse(JSON.stringify(contrato)) : null
 
   return (
     <UiPage titulo="Contrato laboral" volver={{ href: `/admin/empleados/${id}`, texto: empRows[0].nombre }} ancho="formulario">
-      <Card><ContratoForm empleadoId={id} inicial={contratoSerial} /></Card>
+      <Card><ContratoForm empleadoId={id} inicial={contratoSerial} tablas={tablas} /></Card>
     </UiPage>
   )
 }

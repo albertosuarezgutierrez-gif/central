@@ -7,13 +7,14 @@
  *   devengado      = salarioEf + complementos + [prorrata si se prorratea] + [paga extra si toca este mes]
  *                    + horas extra + pluses − descuentos
  *   remuneración CC = devengado − horas extra − paga extra cobrada este mes + prorrata (14 pagas, siempre)
- *   base CC        = clamp(remuneración CC, mín. grupo [× jornada si parcial], máx.)
- *   base CP        = clamp(remuneración CC + horas extra, mín., máx.)      (AT/EP, desempleo, FOGASA, FP)
- *   exceso solid.  = max(0, remuneración CC + horas extra − máx.)          → tramos de solidaridad
+ *   base CC        = clamp(remuneración CC, mín. grupo, máx.)          (Orden PJC/297/2026 arts. 1.1 y 3)
+ *   base CP        = clamp(remuneración CC + horas extra, tope mín., máx.) (AT/EP, desempleo, FOGASA, FP: arts. 1.2, 2.2, 33.1)
+ *   tiempo parcial = mínimos POR HORA × horas trabajadas del mes (arts. 38.3 y 39); sin horas → mínimo × jornada (pendiente)
+ *   exceso solid.  = max(0, remuneración CC + horas extra − máx.)          → tramos de solidaridad (art. 17, reparto por tramo)
  *   MEI            = sobre base CC
  *   IRPF           = devengado × % del contrato (plano) o, con `irpfAlgoritmo`, × tipo del algoritmo AEAT (irpf.ts)
  *   neto           = devengado − deducciones trabajador ; coste = devengado + cuota empresa
- * Grupos 8-11: bases diarias × días naturales del mes.
+ * Grupos 8-11: bases diarias × días naturales del mes (mínimo CP = mínimo CC: no se toca, fuera de alcance).
  *
  * Modos: «calculo» = nómina que se confirmará → cualquier cifra/regla PENDIENTE_VERIFICAR usada LANZA.
  *        «simulacion» = borrador: usa los candidatos y lista lo pendiente en `cifrasPendientes`.
@@ -43,6 +44,9 @@ export interface EntradaNomina {
   /** null = no se sabe (p. ej. contrato «parcial» sin duración): pendiente en modo cálculo. */
   duracion: DuracionContrato | null
   jornadaPct: number // 100 = completa
+  /** Tiempo parcial: horas ordinarias + complementarias REALMENTE trabajadas en el mes (art. 39.2 Orden PJC/297/2026).
+   *  Sin dato (undefined) = «no se sabe» → mínimo mensual × jornada y regla pendiente. */
+  horasTrabajadasMes?: number
   salarioBase: Centimos // mensual, jornada completa
   complementosFijos: { concepto: string; importe: Centimos }[]
   pagas: 12 | 14
@@ -95,7 +99,7 @@ export interface NominaCentimos {
 
 /** Reglas que el motor N0 aún no implementa bien: en modo cálculo bloquean si se activan. */
 export const REGLAS_PENDIENTES = {
-  base_min_parcial: 'Base mínima a tiempo parcial: la Orden fija mínimos POR HORA; aquí se usa el mínimo mensual × jornada (aproximación)',
+  base_min_parcial: 'Base mínima a tiempo parcial sin `horasTrabajadasMes`: la Orden fija mínimos POR HORA (arts. 38.3 y 39); se usa el mínimo mensual × jornada (aproximación)',
   horas_extra_cotizacion_adicional: 'Horas extra: falta la cotización adicional (LGSS art. 149) y el precio por convenio (aquí salario/160)',
   it_prestacion: 'Baja IT: se descuenta por días; falta la prestación (60 %/75 %, pago delegado)',
   duracion_contrato: 'Contrato «parcial» sin duración conocida: no se sabe si desempleo va a tipo indefinido o temporal',
@@ -164,25 +168,37 @@ export function calcularNominaCentimos(e: EntradaNomina, opts: OpcionesCalculo):
 
   // ── Bases ──────────────────────────────────────────────────────────────
   let min: Centimos
+  let minCP: Centimos
   let max: Centimos
   if (esMensual(e.grupo)) {
     const b = tabla.basesMensuales[e.grupo]
     min = usar(b.min)
     max = usar(b.max)
+    minCP = usar(tabla.topeMinimoCP)
   } else {
     const b = tabla.basesDiarias[e.grupo as GrupoDiario]
     const dias = diasDelMes(año, mes)
     min = usar(b.min) * dias
     max = usar(b.max) * dias
+    minCP = min
   }
   if (e.jornadaPct < 100) {
-    regla('base_min_parcial')
-    min = Math.round((min * e.jornadaPct) / 100)
+    const horas = e.horasTrabajadasMes
+    const hCC = tabla.parcial.minimoHoraCC[e.grupo]
+    const hCP = tabla.parcial.minimoHoraCP
+    if (horas !== undefined && hCC.valor !== null && hCP.valor !== null) {
+      if (!(Number.isFinite(horas) && horas >= 0)) throw new Error(`horasTrabajadasMes inválidas: ${horas}`)
+      min = Math.round(horas * usar(hCC))
+      minCP = Math.round(horas * usar(hCP))
+    } else {
+      regla('base_min_parcial')
+      min = Math.round((min * e.jornadaPct) / 100)
+      minCP = Math.round((minCP * e.jornadaPct) / 100)
+    }
   }
   const remCC = total - horasExtra - pagaExtra + prorrataMensual - prorrataCobrada
-  const clamp = (x: number) => Math.max(min, Math.min(max, x))
-  const baseCC = clamp(remCC)
-  const baseCP = clamp(remCC + horasExtra)
+  const baseCC = Math.max(min, Math.min(max, remCC))
+  const baseCP = Math.max(minCP, Math.min(max, remCC + horasExtra))
   const exceso = Math.max(0, remCC + horasExtra - max)
 
   // ── Tipos ──────────────────────────────────────────────────────────────
@@ -199,26 +215,40 @@ export function calcularNominaCentimos(e: EntradaNomina, opts: OpcionesCalculo):
     atEp = AT_EP_PROVISIONAL
   }
 
-  // Solidaridad por tramos sobre el exceso.
+  // Solidaridad por tramos sobre el exceso. Reparto: el de la Orden por tramo (2026, art. 17.1) o, sin él, proporción de CC.
   let solTrab = 0
   let solEmp = 0
   if (exceso > 0) {
     let resto = exceso
     let desde = 0
-    let solTotal = 0
+    let solTotalSinReparto = 0
     for (const tramo of tabla.solidaridad.tramos) {
       const hasta = tramo.hastaPctSobreMax === null ? Infinity : Math.round((max * tramo.hastaPctSobreMax) / 100)
       const enTramo = Math.min(resto, hasta - desde)
-      if (enTramo > 0) solTotal += aplicarTipo(enTramo, usar(tramo.tipo))
+      if (enTramo > 0) {
+        const total = usar(tramo.tipo)
+        if (tramo.reparto) {
+          const pe = usar(tramo.reparto.empresa)
+          const pt = usar(tramo.reparto.trabajador)
+          if (pe + pt !== total) throw new Error(`Solidaridad: el reparto del tramo no suma su tipo (${tramo.tipo.clave})`)
+          solEmp += aplicarTipo(enTramo, pe)
+          solTrab += aplicarTipo(enTramo, pt)
+        } else solTotalSinReparto += aplicarTipo(enTramo, total)
+      }
       resto -= Math.max(0, enTramo)
       desde = hasta
       if (resto <= 0) break
     }
-    usar(tabla.solidaridad.repartoComoCC)
-    const ccE = usar(t.contingenciasComunes.empresa)
-    const ccT = usar(t.contingenciasComunes.trabajador)
-    solTrab = Math.round((solTotal * ccT) / (ccE + ccT))
-    solEmp = solTotal - solTrab
+    if (solTotalSinReparto > 0) {
+      const rcc = tabla.solidaridad.repartoComoCC
+      if (!rcc) throw new Error('Solidaridad: tramo sin reparto y la tabla no dice cómo repartir')
+      usar(rcc)
+      const ccE = usar(t.contingenciasComunes.empresa)
+      const ccT = usar(t.contingenciasComunes.trabajador)
+      const tr = Math.round((solTotalSinReparto * ccT) / (ccE + ccT))
+      solTrab += tr
+      solEmp += solTotalSinReparto - tr
+    }
   }
 
   const trabajadorSinIrpf = {

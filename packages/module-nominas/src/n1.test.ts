@@ -93,13 +93,15 @@ describe('embargo de salario (art. 607 LEC)', () => {
 
 describe('atrasos', () => {
   const lineas = [{ concepto: 'Revisión convenio 2025', importe: 100_000, añoDevengo: 2025 }, { concepto: 'Plus enero', importe: 50_000, añoDevengo: 2026 }]
-  it('concepto separado: retención 15 % = 150,00 + 75,00; líquido 1.275,00 de 1.500,00; marca el ejercicio anterior', () => {
-    const r = procesarAtrasos(lineas, '2026-03', 150_000, 'simulacion')
+  it('concepto separado: ejercicio anterior al 15 % FIJO (art. 80.1.5.º RIRPF), año en curso al tipo del pagador', () => {
+    // tipo del pagador 9 %: 1.000 × 15 % = 150,00 (2025) + 500 × 9 % = 45,00 (2026) → retención 195,00; líquido 1.305,00
+    const r = procesarAtrasos(lineas, '2026-03', 90_000, 'simulacion')
     expect(r.total).toBe(150_000)
-    expect(r.retencion).toBe(22_500)
-    expect(r.neto).toBe(127_500)
+    expect(r.lineas.map(l => l.retencion)).toEqual([15_000, 4_500])
+    expect(r.retencion).toBe(19_500)
+    expect(r.neto).toBe(130_500)
     expect(r.lineas.map(l => l.ejercicioAnterior)).toEqual([true, false])
-    expect(r.cifrasPendientes).toEqual(['regla:cotizacion_atrasos', 'regla:irpf_atrasos'])
+    expect(r.cifrasPendientes).toEqual(['regla:cotizacion_atrasos'])
   })
   it('modo cálculo bloquea; atraso solo del año en curso sigue pendiente de la cotización', () => {
     expect(() => procesarAtrasos(lineas, '2026-03', 150_000, 'calculo')).toThrow(CifraPendienteError)
@@ -134,17 +136,18 @@ describe('motor con IRPF por algoritmo', () => {
     expect(r.trabajador.irpf).toBe(45_000)
     expect(r.irpf).toBeNull()
   })
-  it('modo cálculo con la tabla IRPF 2026 REAL lanza (cifras IRPF pendientes) y la simulación las lista', () => {
+  it('con la tabla IRPF 2026 REAL (verificada en el BOE) el IRPF ya no bloquea el modo cálculo', () => {
     const e = entrada({ salarioBase: 300_000, irpfAlgoritmo: { situacion: sf() } })
-    const sim = calcularNominaCentimos(e, { modo: 'simulacion' })
-    expect(sim.cifrasPendientes).toContain('irpf_limite_853_pct')
-    expect(() => calcularNominaCentimos(e, { modo: 'calculo' })).toThrow(CifraPendienteError)
+    const r = calcularNominaCentimos(e, { modo: 'calculo' })
+    expect(r.cifrasPendientes).toEqual([])
+    expect(r.irpf?.motivo).toBe('algoritmo')
   })
-  it('sin modelo 145: el motor retiene el tipo máximo sobre el devengado y avisa', () => {
-    const r = calcularNominaCentimos(entrada({ salarioBase: 100_000, irpfAlgoritmo: { situacion: null } }), { modo: 'simulacion', tablaIrpf: T })
-    expect(r.trabajador.irpf).toBe(47_000)
-    expect(r.avisos).toContain('irpf:sin_modelo_145_tipo_maximo')
-    expect(r.cifrasPendientes).toContain('regla:irpf_sin_145')
+  it('sin modelo 145: art. 88.2 → mismo tipo que un soltero sin hijos ni circunstancias, sin regla pendiente', () => {
+    const sin = calcularNominaCentimos(entrada({ salarioBase: 300_000, irpfAlgoritmo: { situacion: null } }), { modo: 'calculo' })
+    const soltero = calcularNominaCentimos(entrada({ salarioBase: 300_000, irpfAlgoritmo: { situacion: sf() } }), { modo: 'calculo' })
+    expect(sin.trabajador.irpf).toBe(soltero.trabajador.irpf)
+    expect(sin.avisos).toContain('irpf:sin_modelo_145_sin_circunstancias')
+    expect(sin.cifrasPendientes).toEqual([])
   })
 })
 
@@ -155,7 +158,7 @@ describe('propiedad: neto = devengos − deducciones y suma por conceptos = tota
   const pick = <X>(xs: X[]): X => xs[rnd(xs.length)]
 
   function aleatoria(): EntradaNomina {
-    const grupo = pick([1, 4, 5, 6, 7, 8, 9, 10, 11] as const) // grupos 2 y 3: base mínima 2026 sin cifra (CifraDesconocidaError a propósito)
+    const grupo = pick([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] as const)
     const pagas = pick([12, 14] as const)
     const algoritmo = rnd(3) > 0
     return {

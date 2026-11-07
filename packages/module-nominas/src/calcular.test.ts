@@ -27,15 +27,27 @@ describe('adaptador euros (llamadores de rrhh)', () => {
     expect(d.netoAPagar).toBe(2355)
     expect(d.cuotaPatronal.total).toBe(964.5)
     expect(d.tablasAño).toBe(2026)
-    expect(d.cifrasPendientes).toEqual(['mei_empresa', 'mei_trabajador'])
+    expect(d.cifrasPendientes).toEqual([]) // Orden PJC/297/2026 verificada
+    expect(d.irpfAlgoritmo).toBeNull() // % plano
   })
   it('«parcial» sin duración → pendiente; con duración explícita, no', () => {
     const p: ContratoLaboral = { ...C, tipoContrato: 'parcial', jornadaPct: 50, grupoCotizacion: 1 }
     expect(calcularNomina(p, [], { periodo: '2026-04', atEp: 0.015, modo: 'simulacion' }).cifrasPendientes).toContain('regla:duracion_contrato')
     expect(calcularNomina({ ...p, duracion: 'indefinido' }, [], { periodo: '2026-04', atEp: 0.015, modo: 'simulacion' }).cifrasPendientes).not.toContain('regla:duracion_contrato')
   })
-  it('modo cálculo con 2026 sin verificar lanza', () => {
-    expect(() => calcularNomina(C, [], { periodo: '2026-04', atEp: 0.015, modo: 'calculo' })).toThrow(CifraPendienteError)
+  it('modo cálculo: 2026 verificada calcula; una regla pendiente (AT/EP sin resolver) lanza', () => {
+    expect(calcularNomina(C, [], { periodo: '2026-04', atEp: 0.015, modo: 'calculo' }).netoAPagar).toBe(2355)
+    expect(() => calcularNomina(C, [], { periodo: '2026-04', atEp: null, modo: 'calculo' })).toThrow(CifraPendienteError)
+  })
+  it('irpfAlgoritmo: usa el algoritmo AEAT en vez del % plano (rrhh lo rellena desde situacion_familiar)', () => {
+    const sf = { vigenteDesde: '2026-01-01', vigenteHasta: null, situacion: 3 as const, fechaNacimientoContribuyente: '1990-05-10', discapacidad: 'ninguna' as const, descendientes: [], ascendientes: [] }
+    // 3.000 €/mes × 12 = 36.000 € · SS mensual 141 + 46,50 + 3 + 4,50 = 195 → 2.340/año · base = 36.000 − 2.340 − 2.000 = 31.660
+    // esc = 4.225,50 + 11.460×30 % (3.438) = 7.663,50 · cuota 6.609 · RA > 35.200 (sin 85.3) · 18,3583 % → 18,36 · IRPF = 3.000 × 18,36 % = 550,80
+    const d = calcularNomina(C, [], { periodo: '2026-04', atEp: 0.015, modo: 'calculo', irpfAlgoritmo: { situacion: sf } })
+    expect(d.irpfAlgoritmo).toEqual({ tipoPct: 18.36, motivo: 'algoritmo' })
+    expect(d.deducciones.irpf).toBe(550.8)
+    const sin = calcularNomina(C, [], { periodo: '2026-04', atEp: 0.015, modo: 'calculo', irpfAlgoritmo: { situacion: null } })
+    expect(sin.irpfAlgoritmo?.motivo).toBe('sin_145_sin_circunstancias')
   })
   it('AT/EP null («no se sabe») no se rellena en silencio: queda pendiente', () => {
     expect(calcularNomina(C, [], { periodo: '2026-04', atEp: null, modo: 'simulacion' }).cifrasPendientes).toContain('regla:at_ep_empresa')

@@ -109,3 +109,26 @@ test('202 pendiente_de_regla (sin ejercicio) y 422 rechazado (nómina que no cua
   delete process.env.CONTABILIDAD_HECHOS_SECRET_RRHH
   assert.equal(r2.status, 422)
 })
+
+test('nómina con perceptor (NIF, nombre, provincia) y clave A: el puerto la acepta y los conserva en el hecho; sin ellos también', () => {
+  const nomina = { tipo: 'nomina', fecha: '2026-01-31', ref: 'nomina:1', bruto: 100000, ssEmpresa: 30000, irpf: 0, ssTrabajador: 6350, liquido: 93650 }
+  const sin = parsearEntradaHecho({ empresaId: A, hecho: nomina })
+  assert.ok(sin.ok)
+  assert.equal('perceptor' in sin.valor.hecho, false)
+  const con = parsearEntradaHecho({ empresaId: A, hecho: { ...nomina, perceptor: { nif: '12345678-z', nombre: ' Ana ', provincia: '41' }, clave: 'A' } })
+  assert.ok(con.ok, JSON.stringify(con))
+  assert.deepEqual((con.valor.hecho as unknown as Record<string, unknown>).perceptor, { nif: '12345678Z', nombre: 'Ana', provincia: '41' })
+  assert.equal((con.valor.hecho as unknown as Record<string, unknown>).clave, 'A')
+  const soloNombre = parsearEntradaHecho({ empresaId: A, hecho: { ...nomina, perceptor: { nombre: 'Sin DNI' } } })
+  assert.ok(soloNombre.ok, 'sin NIF se admite: el 190 lo lista como incompleto')
+  const malos = [
+    { ...nomina, perceptor: 'Ana' },
+    { ...nomina, perceptor: { nif: '1', nombre: 'Ana' } },
+    { ...nomina, perceptor: { nif: '12345678Z' } },
+    { ...nomina, perceptor: { nif: '12345678Z', nombre: 'Ana', provincia: 'Sevilla' } },
+    { ...nomina, perceptor: { nif: '12345678Z', nombre: 'Ana', iban: 'ES00' } },
+    { ...nomina, clave: 'Z' },
+    { tipo: 'venta', fecha: '2026-03-10', ref: 'F-9', desglose: [{ base: 1, tipoIva: 21 }], perceptor: { nif: '12345678Z', nombre: 'Ana' } },
+  ]
+  for (const h of malos) assert.equal(parsearEntradaHecho({ empresaId: A, hecho: h }).ok, false, JSON.stringify(h))
+})

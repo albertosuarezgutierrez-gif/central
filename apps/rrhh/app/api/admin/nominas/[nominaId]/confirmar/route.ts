@@ -6,6 +6,7 @@ import { obtenerNomina } from '@/lib/nominas'
 import { generarNominaPdf } from '@/lib/nomina-pdf'
 import { subirObjeto } from '@/lib/storage'
 import { desgloseConfirmable } from '@central/module-nominas'
+import { enviarNominaAContabilidad } from '@/lib/hechos-contabilidad'
 
 export async function POST(_req: Request, { params }: { params: Promise<{ nominaId: string }> }) {
   try {
@@ -47,7 +48,10 @@ export async function POST(_req: Request, { params }: { params: Promise<{ nomina
       UPDATE rrhh.nominas SET estado = 'confirmada', pdf_path = ${pdfPath}, confirmada_at = now()
       WHERE id = ${nominaId}::uuid AND empresa_id = ${empresa_id}::uuid`)
 
-    return NextResponse.json({ ok: true, pdf_path: pdfPath })
+    // DESPUÉS de confirmar: el hecho viaja a contabilidad. Nunca lanza ni deshace la nómina; el estado queda anotado para reintento.
+    const contabilidad = await enviarNominaAContabilidad(empresa_id, nominaId)
+
+    return NextResponse.json({ ok: true, pdf_path: pdfPath, contabilidad: contabilidad.estado })
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: 401 })
     throw e

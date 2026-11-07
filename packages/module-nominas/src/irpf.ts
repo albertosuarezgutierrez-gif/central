@@ -1,19 +1,21 @@
 /**
- * IRPF — retención por el algoritmo de la AEAT (Reglamento IRPF arts. 80-89). Puro, en CÉNTIMOS y ppm, por año.
- *
- * Pasos (UNA retención anual → un TIPO que se aplica a cada pago del año; la regularización lo recalcula):
- *   1. RA   = retribución anual previsible (dineraria + especie).
- *   2. RN   = max(0, RA − cotizaciones SS del trabajador − otros gastos 2.000 € [− 3.500/7.750 € discapacidad del trabajador]).
- *   3. red  = reducción art. 20 LIRPF según RN (7.302 € hasta 14.852; 7.302 − 1,75·(RN−14.852) hasta 17.673,52;
- *             2.364,34 − 1,14·(RN−17.673,52) hasta 19.747,50; 0 desde ahí).
- *   4. base = max(0, RN − red − pensión compensatoria al cónyuge).
- *   5. mín  = mínimo personal y familiar (modelo 145; arts. 57-61 LIRPF).
- *   6. cuota = max(0, escala(base) − escala(mín)); escala = art. 85.1 RIRPF, UN solo redondeo por aplicación.
- *   7. límite art. 85.3: cuota ≤ pct × (RA − mín)  (PENDIENTE_VERIFICAR: la base del límite no está contrastada).
- *   8. tipo = cuota / RA con 2 decimales (art. 86.1) → ppm múltiplo de 100.
- *   9. ajustes del tipo: hipoteca vivienda anterior a 2013 (−2 puntos si RA ≤ 33.007,20 €); mínimo 2 % en contratos < 1 año;
- *      mínimo exento (art. 81.1: RA ≤ límite → 0; por encima, la retención no pasa de RA − límite).
- *  Sin modelo 145 (`situacion === null`): tipo MÁXIMO de la tabla (regla del spec, ver abajo) — no se aplica nada de lo anterior.
+ * IRPF — retención por el procedimiento general del Reglamento (RIRPF arts. 82-86). Puro, en CÉNTIMOS y ppm, por año.
+ * Fuente: RIRPF y LIRPF consolidados del BOE (ver tablas/irpf-2026.ts). Orden de operaciones (art. 82):
+ *   1. RA    = cuantía total de retribuciones previsibles del año (art. 83.2; sin atrasos de ejercicios anteriores).
+ *   2. RNr   = max(0, RA − cotizaciones del trabajador)                       (art. 83.3.b; base de la reducción, art. 20 LIRPF).
+ *   3. red   = reducción art. 83.3.d) según RNr, con tope RNr.
+ *   4. gast  = min(2.000 [+3.500/7.750 discapacidad], RNr)                     (art. 83.3.c y art. 19.2.f LIRPF).
+ *   5. base  = max(0, RNr − gast − red − 600 € si > 2 descendientes − pensión compensatoria)  (art. 83.3.e-f).
+ *   6. mín   = mínimo personal y familiar (art. 84; arts. 57-61 LIRPF; descendientes por mitad salvo derecho exclusivo).
+ *   7. cuota = max(0, esc(base) − esc(mín)) [art. 85.1]; con anualidades por alimentos < base: esc(anual.) + esc(base − anual.)
+ *              − esc(mín + 1.980) [art. 85.2]. Si base − mín ≤ 0 → tipo 0 (art. 86.1).
+ *   8. límite art. 85.3: si RA ≤ 35.200 €, cuota ≤ 43 % × (RA − límite excluyente del art. 81 de su situación).
+ *   9. tipo  = cuota / RA con 2 decimales (art. 86.1); −2 puntos por hipoteca si RA < 33.007,2 € (art. 86.1);
+ *              mínimo 2 % en contratos de duración inferior al año (art. 86.2).
+ *  10. límite excluyente (art. 81.1): RA ≤ límite → 0 %, SALVO cuando corresponde el tipo mínimo del art. 86.2 (art. 81.3).
+ *  Sin modelo 145 (`situacion === null`): art. 88.2 → mismo cálculo SIN circunstancias personales ni familiares
+ *  (mínimo personal 5.550 €, situación 3.ª, sin descendientes, sin discapacidad, sin pensión ni hipoteca).
+ *  La deducción DA 61.ª LIRPF (rentas ≤ 20.048,45 €) va a la cuota líquida de la declaración, no a la retención: solo aviso.
  *
  * Fail-closed: cifra con `valor: null` → CifraDesconocidaError (salvo el límite excluyente: se omite y queda PENDIENTE);
  * cifra/regla PENDIENTE_VERIFICAR → en modo «calculo» LANZA CifraPendienteError, en «simulacion» se lista.
@@ -25,13 +27,12 @@ import { tablaIrpfDelAño, type TablaIrpf } from './tablas'
 
 export type ModoIrpf = 'calculo' | 'simulacion'
 
-/** Reglas del IRPF que este módulo NO resuelve bien aún: en modo cálculo bloquean si se activan. */
+/**
+ * Reglas del IRPF que este módulo NO resuelve bien aún: en modo cálculo bloquean si se activan.
+ * Cerradas el 07/11/2026 con el BOE: sin 145 (art. 88.2 RIRPF), anualidades por alimentos (art. 85.2), deducción SMI
+ * (DA 61.ª LIRPF: no afecta a la retención), atrasos de ejercicios anteriores (art. 80.1.5.º: 15 %, ver atrasos.ts).
+ */
 export const REGLAS_IRPF_PENDIENTES = {
-  irpf_sin_145:
-    'Sin modelo 145 se aplica el tipo MÁXIMO (regla del spec, fuente secundaria). Mi lectura del art. 88 RIRPF es que se calcula con el solo mínimo personal: revisar con asesor laboral antes de confirmar',
-  irpf_anualidades_alimentos: 'Anualidades por alimentos a hijos (art. 85 RIRPF, escala aparte): no implementado',
-  irpf_deduccion_smi: 'Deducción 2026 para rentas ≤ SMI (hasta 590,89 €, decreciente): norma y fórmula sin identificar; no se aplica',
-  irpf_atrasos: 'Retención de atrasos de ejercicios anteriores: el tipo (actual vs. del año de devengo) no está contrastado',
   embargo_paga_extra: 'Embargo en el mes de paga extra: criterio de cómputo (SMI por percepción) no contrastado',
 } as const
 
@@ -53,16 +54,22 @@ export interface OpcionesIrpf {
   tabla?: TablaIrpf
 }
 
-export type MotivoTipoIrpf = 'algoritmo' | 'sin_145_tipo_maximo' | 'minimo_exento' | 'sin_retribucion'
+export type MotivoTipoIrpf = 'algoritmo' | 'sin_145_sin_circunstancias' | 'minimo_exento' | 'sin_retribucion'
 
 export interface DetalleIrpf {
   año: number
   motivo: MotivoTipoIrpf
   retribucionAnual: Centimos
   cotizacionesAnual: Centimos
+  /** Cotizaciones + otros gastos del art. 19.2.f) ya limitados. */
   gastos: Centimos
+  /** RA − gastos (art. 19 LIRPF). */
   rendimientoNeto: Centimos
+  /** RA − cotizaciones: el rendimiento sobre el que se calcula la reducción (art. 20 LIRPF último párr.; art. 83.3.d). */
+  rendimientoNetoReduccion: Centimos
   reduccionTrabajo: Centimos
+  /** 600 € por más de dos descendientes (art. 83.3.e). */
+  reduccionDescendientes: Centimos
   pensionCompensatoria: Centimos
   baseTipo: Centimos
   minimoPersonalFamiliar: Centimos
@@ -98,11 +105,12 @@ function reduccionArt20(rn: Centimos, tabla: TablaIrpf, usar: Usar): Centimos {
   return 0
 }
 
+/** Art. 60 LIRPF: 3.000/9.000 € + 3.000 € de asistencia si necesita ayuda de terceros, movilidad reducida O grado ≥ 65 %. */
 function minimoDiscapacidad(grado: SituacionFamiliar['discapacidad'], asistencia: boolean | undefined, m: TablaIrpf['minimos'], usar: Usar): Centimos {
   let x = 0
   if (grado === '33') x += usar(m.discapacidad33)
   else if (grado === '65') x += usar(m.discapacidad65)
-  if (asistencia) x += usar(m.asistencia)
+  if (asistencia || grado === '65') x += usar(m.asistencia)
   return x
 }
 
@@ -115,9 +123,7 @@ export function minimoPersonalYFamiliar(s: SituacionFamiliar, año: number, tabl
   if (edad > 75) total += usar(m.mayor75)
   total += minimoDiscapacidad(s.discapacidad, s.necesitaAsistencia, m, usar)
 
-  const desc = s.descendientes
-    .filter(d => !d.rentasMayores8000 && (edadA31Dic(d.fechaNacimiento, año) < 25 || d.discapacidad !== 'ninguna'))
-    .sort((a, b) => a.fechaNacimiento.localeCompare(b.fechaNacimiento))
+  const desc = descendientesConMinimo(s, año).sort((a, b) => a.fechaNacimiento.localeCompare(b.fechaNacimiento))
   desc.forEach((d, i) => {
     let x = usar(m.descendientes[Math.min(i, 3)])
     if (edadA31Dic(d.fechaNacimiento, año) < 3) x += usar(m.descendienteMenor3)
@@ -136,10 +142,21 @@ export function minimoPersonalYFamiliar(s: SituacionFamiliar, año: number, tabl
   return total
 }
 
-/** Hijos y otros descendientes que cuentan para la tabla del mínimo exento: 0, 1 ó 2 («2 o más»). */
-function hijosParaExento(s: SituacionFamiliar, año: number): 0 | 1 | 2 {
-  const n = s.descendientes.filter(d => !d.rentasMayores8000 && (edadA31Dic(d.fechaNacimiento, año) < 25 || d.discapacidad !== 'ninguna')).length
-  return n >= 2 ? 2 : (n as 0 | 1)
+/** Descendientes con derecho al mínimo (art. 58 LIRPF): < 25 años o con discapacidad, sin rentas > 8.000 €. */
+function descendientesConMinimo(s: SituacionFamiliar, año: number) {
+  return s.descendientes.filter(d => !d.rentasMayores8000 && (edadA31Dic(d.fechaNacimiento, año) < 25 || d.discapacidad !== 'ninguna'))
+}
+
+/**
+ * Clave del cuadro del art. 81.1: `${situación}:${hijos}` con hijos 0, 1 ó 2 («2 o más»). La situación 1.ª exige
+ * descendientes (monoparental); sin ellos el contribuyente está en la 3.ª (art. 81.1, 3.ª b-c).
+ */
+function claveExento(s: SituacionFamiliar | null, año: number): { clave: string; reclasificada: boolean } {
+  if (s === null) return { clave: '3:0', reclasificada: false }
+  const n = descendientesConMinimo(s, año).length
+  const hijos = n >= 2 ? 2 : n
+  if (s.situacion === 1 && hijos === 0) return { clave: '3:0', reclasificada: true }
+  return { clave: `${s.situacion}:${hijos}`, reclasificada: false }
 }
 
 export function calcularTipoIrpf(e: EntradaIrpf, opts: OpcionesIrpf): DetalleIrpf {
@@ -161,69 +178,81 @@ export function calcularTipoIrpf(e: EntradaIrpf, opts: OpcionesIrpf): DetalleIrp
     if (opts.modo === 'calculo' && cifrasPendientes.length) throw new CifraPendienteError(cifrasPendientes)
     return { año: opts.año, retribucionAnual: RA, cotizacionesAnual: e.cotizacionesAnual, ...d, cifrasPendientes, avisos }
   }
-  const vacio = { gastos: 0, rendimientoNeto: 0, reduccionTrabajo: 0, pensionCompensatoria: 0, baseTipo: 0, minimoPersonalFamiliar: 0, cuota1: 0, cuota2: 0 }
 
-  if (RA === 0) return cerrar({ ...vacio, motivo: 'sin_retribucion', cuota: 0, tipoPpm: 0 })
-
-  // Sin modelo 145 → tipo máximo (regla del spec; ver REGLAS_IRPF_PENDIENTES.irpf_sin_145).
-  if (e.situacion === null) {
-    pend.add('regla:irpf_sin_145')
-    avisos.push('sin_modelo_145_tipo_maximo')
-    const tipo = usar(tabla.tipoMaximo)
-    return cerrar({ ...vacio, motivo: 'sin_145_tipo_maximo', cuota: aplicarTipo(RA, tipo), tipoPpm: tipo })
+  if (RA === 0) {
+    return cerrar({ motivo: 'sin_retribucion', gastos: 0, rendimientoNeto: 0, rendimientoNetoReduccion: 0, reduccionTrabajo: 0, reduccionDescendientes: 0,
+      pensionCompensatoria: 0, baseTipo: 0, minimoPersonalFamiliar: 0, cuota1: 0, cuota2: 0, cuota: 0, tipoPpm: 0 })
   }
-  const s = e.situacion
 
-  const gastosDisc = s.necesitaAsistencia || s.discapacidad === '65' ? usar(tabla.gastos.discapacidad65) : s.discapacidad === '33' ? usar(tabla.gastos.discapacidad33) : 0
-  const gastos = e.cotizacionesAnual + usar(tabla.gastos.otros) + gastosDisc
-  const rn = Math.max(0, RA - gastos)
-  const red = reduccionArt20(rn, tabla, usar)
-  const pension = s.pensionCompensatoriaAnual ?? 0
-  const base = Math.max(0, rn - red - pension)
-  const minimo = minimoPersonalYFamiliar(s, opts.año, tabla, usar)
+  // Art. 88.2: sin comunicación, el tipo se calcula SIN las circunstancias personales y familiares.
+  const s = e.situacion
+  if (s === null) avisos.push('sin_modelo_145_sin_circunstancias')
+
+  const rnRed = Math.max(0, RA - e.cotizacionesAnual)
+  const red = Math.min(rnRed, reduccionArt20(rnRed, tabla, usar))
+  const gastosDisc = s === null ? 0 : s.necesitaAsistencia || s.discapacidad === '65' ? usar(tabla.gastos.discapacidad65) : s.discapacidad === '33' ? usar(tabla.gastos.discapacidad33) : 0
+  const gastosF = Math.min(rnRed, usar(tabla.gastos.otros) + gastosDisc)
+  const redDesc = s !== null && descendientesConMinimo(s, opts.año).length > 2 ? usar(tabla.reduccionMasDeDosDescendientes) : 0
+  const pension = s?.pensionCompensatoriaAnual ?? 0
+  const base = Math.max(0, rnRed - gastosF - red - redDesc - pension)
+  const minimo = s === null ? usar(tabla.minimos.personal) : minimoPersonalYFamiliar(s, opts.año, tabla, usar)
 
   const escala = tabla.escala.map(t => ({ hasta: t.hasta === null ? null : usar(t.hasta), tipo: usar(t.tipo) }))
-  const cuota1 = aplicarEscala(base, escala)
-  const cuota2 = aplicarEscala(minimo, escala)
-  let cuota = Math.max(0, cuota1 - cuota2)
-  if ((s.anualidadesAlimentosAnual ?? 0) > 0) pend.add('regla:irpf_anualidades_alimentos')
-
-  // Art. 85.3
-  const limite = aplicarTipo(Math.max(0, RA - minimo), usar(tabla.limite853.porcentaje))
-  if (cuota > limite) { cuota = limite; avisos.push('limite_art_85_3_aplicado') }
-
-  // Tipo con 2 decimales (art. 86.1): centésimas de % → ppm múltiplo de 100.
-  let tipo: Ppm = cocienteATipo(cuota, RA)
-
-  if (s.hipotecaViviendaAnterior2013 && RA <= usar(tabla.hipotecaAnterior2013.limiteRetribucion)) {
-    tipo = Math.max(0, tipo - usar(tabla.hipotecaAnterior2013.reduccionTipo))
-    avisos.push('reduccion_hipoteca_anterior_2013')
+  const anualidades = s?.anualidadesAlimentosAnual ?? 0
+  let cuota1: Centimos
+  let cuota2: Centimos
+  if (anualidades > 0 && anualidades < base) {
+    // Art. 85.2: escala por separado a las anualidades y al resto; mínimo incrementado en 1.980 €.
+    cuota1 = aplicarEscala(anualidades, escala) + aplicarEscala(base - anualidades, escala)
+    cuota2 = aplicarEscala(minimo + usar(tabla.anualidadesIncrementoMinimo), escala)
+    avisos.push('anualidades_alimentos_art_85_2')
+  } else {
+    if (anualidades > 0) avisos.push('anualidades_alimentos_no_inferiores_a_la_base')
+    cuota1 = aplicarEscala(base, escala)
+    cuota2 = aplicarEscala(minimo, escala)
   }
-  if (e.duracionInferiorAño) {
-    const min = usar(tabla.tipoMinimoContratoCorto)
-    if (tipo < min) { tipo = min; avisos.push('tipo_minimo_contrato_corto') }
-  }
-  if (RA <= usar(tabla.deduccionSmi.retribucionHasta)) pend.add('regla:irpf_deduccion_smi')
+  let cuota = base - minimo <= 0 ? 0 : Math.max(0, cuota1 - cuota2)
 
-  // Mínimo exento (art. 81.1).
-  let motivo: MotivoTipoIrpf = 'algoritmo'
-  const clave = `${s.situacion}:${hijosParaExento(s, opts.año)}`
+  const { clave, reclasificada } = claveExento(s, opts.año)
+  if (reclasificada) avisos.push('situacion_1_sin_descendientes_como_3')
   const exento = tabla.exento[clave]
+  let limiteExento: Centimos | null = null
   if (exento) {
-    if (exento.valor === null) {
-      pend.add(exento.clave)
-      avisos.push('minimo_exento_desconocido')
-    } else {
-      const limiteExento = usar(exento)
-      if (RA <= limiteExento) { tipo = 0; motivo = 'minimo_exento'; avisos.push('minimo_exento') }
-      else {
-        const tope = cocienteATipo(RA - limiteExento, RA, 'abajo')
-        if (tipo > tope) { tipo = tope; avisos.push('limite_sobre_minimo_exento') }
-      }
+    if (exento.valor === null) { pend.add(exento.clave); avisos.push('minimo_exento_desconocido') }
+    else limiteExento = usar(exento)
+  }
+
+  // Art. 85.3: solo con RA ≤ 35.200 €; tope = 43 % × (RA − límite excluyente de su situación).
+  if (RA <= usar(tabla.limite853.retribucionHasta)) {
+    if (limiteExento === null) avisos.push('limite_art_85_3_sin_limite_excluyente')
+    else {
+      const limite = aplicarTipo(Math.max(0, RA - limiteExento), usar(tabla.limite853.porcentaje))
+      if (cuota > limite) { cuota = limite; avisos.push('limite_art_85_3_aplicado') }
     }
   }
 
-  return cerrar({ gastos, rendimientoNeto: rn, reduccionTrabajo: red, pensionCompensatoria: pension, baseTipo: base, minimoPersonalFamiliar: minimo, cuota1, cuota2, motivo, cuota, tipoPpm: tipo })
+  // Art. 86.1: tipo con 2 decimales → ppm múltiplo de 100.
+  let tipo: Ppm = cocienteATipo(cuota, RA)
+  if (s?.hipotecaViviendaAnterior2013 && RA < usar(tabla.hipotecaAnterior2013.limiteRetribucion)) {
+    tipo = Math.max(0, tipo - usar(tabla.hipotecaAnterior2013.reduccionTipo))
+    avisos.push('reduccion_hipoteca_anterior_2013')
+  }
+  let motivo: MotivoTipoIrpf = s === null ? 'sin_145_sin_circunstancias' : 'algoritmo'
+  if (e.duracionInferiorAño) {
+    // Art. 86.2 + art. 81.3: con tipo mínimo no se aplica el límite excluyente.
+    const min = usar(tabla.tipoMinimoContratoCorto)
+    if (tipo < min) { tipo = min; avisos.push('tipo_minimo_contrato_corto') }
+    if (limiteExento !== null && RA <= limiteExento) avisos.push('limite_excluyente_no_aplica_contrato_corto')
+  } else if (limiteExento !== null && RA <= limiteExento) {
+    tipo = 0; motivo = 'minimo_exento'; avisos.push('minimo_exento')
+  }
+
+  if (RA < usar(tabla.deduccionSmi.retribucionHasta)) avisos.push('deduccion_da61_en_declaracion')
+
+  return cerrar({
+    motivo, gastos: e.cotizacionesAnual + gastosF, rendimientoNeto: rnRed - gastosF, rendimientoNetoReduccion: rnRed, reduccionTrabajo: red,
+    reduccionDescendientes: redDesc, pensionCompensatoria: pension, baseTipo: base, minimoPersonalFamiliar: minimo, cuota1, cuota2, cuota, tipoPpm: tipo,
+  })
 }
 
 /**

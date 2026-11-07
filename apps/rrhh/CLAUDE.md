@@ -79,7 +79,7 @@ El god-panel de plataforma crea empresas vía HTTP:
 ## Packages consumidos (transpilePackages)
 `@central/core-ai`, `@central/core-email`, `@central/core-firma`, `@central/core-storage`,
 `@central/core-identity`, `@central/legal-templates`, `@central/module-documental`,
-`@central/module-rrhh`, `@central/module-chat`, `@central/module-nominas`, `@central/module-geo`,
+`@central/module-rrhh`, `@central/module-chat`, `@central/module-nominas`, `@central/module-pagos`, `@central/module-contabilidad`, `@central/module-geo`,
 `@central/module-horario`, `@central/core-telegram` (aviso de fichajes abiertos, 16/07/2026).
 
 ## Crons (`vercel.json`)
@@ -91,7 +91,14 @@ El god-panel de plataforma crea empresas vía HTTP:
   Cada cifra con fuente y certeza; las `PENDIENTE_VERIFICAR` (reparto MEI, mínimos 2-7, solidaridad) bloquean el modo
   `calculo` (fail-closed) y en `simulacion` quedan en `datos_calculo.cifrasPendientes`. Confirmar exige esa lista vacía.
 - Interruptor: solo el operador (`PUT /api/operador/empresas/modulos`); el responsable lo VE en /admin/nominas, sin botón.
-- Aislamiento: cepo `lib/aislamiento-nominas.test.ts` (sin allowlist). A la IA de reparto solo va `textoMinimoParaIA`.
+- Aislamiento: cepo `lib/aislamiento-nominas.test.ts`: cada SQL FILTRA por `empresa_id` en WHERE/ON (nombrarla en el SELECT no vale);
+  únicas excepciones `MULTIEMPRESA` (fichero+tabla exactos: login por correo y los dos crons). A la IA de reparto solo va `textoMinimoParaIA`.
+- **N1 (07/11/2026):** finiquito `/admin/nominas/finiquito` (`calcularFiniquito` en modo `simulacion`; cuerpo→entrada en `lib/finiquito-entrada.ts`,
+  euros→céntimos una vez) · remesa SEPA pain.001 propósito SALA (`/api/admin/nominas/remesa`, `@central/module-pagos`; IBAN nunca a logs) ·
+  emisor a contabilidad de cada nómina confirmada (`lib/hechos-contabilidad.ts`, envs `CONTABILIDAD_URL` + `CONTABILIDAD_HECHOS_SECRET_RRHH` con
+  `requireSecret`; sin ellas = `sin_configurar`, no se envía) · certificado de retenciones en `/e` (`/api/e/certificado-retenciones`, mismas
+  cifras que el 190 de `@central/module-contabilidad`) · tablas de convenio `/admin/nominas/convenio` · cron `vencimiento-contratos` (diario).
+  Reglas del finiquito (fracción de mes, exención fin temporal) y del motor siguen `PENDIENTE_VERIFICAR`. 🚨 Migraciones 0032 y 0033 SIN aplicar en BD.
 - `/api/cron/recordatorio-fichaje` — L-V 9h (hora ES): push a empleados que aún no han fichado entrada.
 - `/api/cron/alerta-fichajes-abiertos` — diario 22h (hora ES): Telegram si un fichaje activo lleva
   >10h sin fichar salida.

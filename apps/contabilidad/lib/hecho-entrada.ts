@@ -17,12 +17,16 @@ const PERMITIDOS: Record<TipoHecho, string[]> = {
   compra: [...COMUNES, 'desglose', 'retencion'],
   cobro: [...COMUNES, 'importe', 'medio'],
   pago: [...COMUNES, 'importe', 'medio'],
-  nomina: [...COMUNES, 'bruto', 'ssEmpresa', 'irpf', 'ssTrabajador', 'liquido'],
+  // `perceptor` { nif, nombre, provincia? } y `clave` (A = trabajo) son opcionales: los lee impuestos-datos.ts para el 111/190.
+  nomina: [...COMUNES, 'bruto', 'ssEmpresa', 'irpf', 'ssTrabajador', 'liquido', 'perceptor', 'clave'],
 }
 const MAX_LINEAS = 200
 const MAX_DIMENSIONES = 8
 const CLAVE_DIM_RE = /^[a-z][a-z0-9_]{1,30}$/
 const CATEGORIA_RE = /^[a-z][a-z0-9_]{1,40}$/
+const CLAVE_190_RE = /^[A-L]$/
+const PROVINCIA_RE = /^\d{2}$/
+const NIF_RE = /^[A-Z0-9]{8,10}$/
 
 export type EntradaHecho = { empresaId: string; hecho: HechoContable }
 export type ResultadoParseo = { ok: true; valor: EntradaHecho } | { ok: false; errores: string[] }
@@ -90,6 +94,18 @@ export function parsearEntradaHecho(cuerpo: unknown): ResultadoParseo {
     if (!cent(h.importe) || h.importe === 0) errores.push('importe: entero > 0 en céntimos')
   } else {
     for (const k of ['bruto', 'ssEmpresa', 'irpf', 'ssTrabajador', 'liquido']) if (!cent(h[k])) errores.push(`${k}: entero ≥ 0 en céntimos`)
+    if (h.perceptor !== undefined) {
+      const per = h.perceptor
+      if (!esObj(per)) errores.push('perceptor: objeto { nif, nombre, provincia? }')
+      else {
+        for (const k of Object.keys(per)) if (!['nif', 'nombre', 'provincia'].includes(k)) errores.push(`perceptor: campo no admitido ${k}`)
+        // Sin NIF se admite (el 190 lo lista aparte como incompleto); con NIF, bien formado.
+        if (per.nif !== undefined && !(typeof per.nif === 'string' && NIF_RE.test(per.nif.toUpperCase().replace(/[\s.-]/g, '')))) errores.push('perceptor.nif: NIF/NIE de 8 a 10 caracteres')
+        if (!texto(per.nombre, 200)) errores.push('perceptor.nombre: texto de 1 a 200 caracteres')
+        if (per.provincia !== undefined && !(typeof per.provincia === 'string' && PROVINCIA_RE.test(per.provincia))) errores.push('perceptor.provincia: código de 2 dígitos')
+      }
+    }
+    if (h.clave !== undefined && !(typeof h.clave === 'string' && CLAVE_190_RE.test(h.clave))) errores.push('clave: clave de percepción del 190 (A-L)')
   }
 
   if (errores.length) return { ok: false, errores }
@@ -111,10 +127,15 @@ export function parsearEntradaHecho(cuerpo: unknown): ResultadoParseo {
   } else if (tipo === 'cobro' || tipo === 'pago') {
     hecho = { tipo, ...base, importe: h.importe as number, ...(h.medio !== undefined ? { medio: h.medio as MedioPago } : {}) }
   } else {
-    hecho = {
+    const per = h.perceptor as Record<string, string> | undefined
+    // HechoNomina no tipa `perceptor`/`clave`: viajan en el payload (y en su huella) para los modelos 111/190.
+    const nomina = {
       tipo, ...base, bruto: h.bruto as number, ssEmpresa: h.ssEmpresa as number, irpf: h.irpf as number,
       ssTrabajador: h.ssTrabajador as number, liquido: h.liquido as number,
+      ...(per ? { perceptor: { ...(per.nif !== undefined ? { nif: per.nif.toUpperCase().replace(/[\s.-]/g, '') } : {}), nombre: per.nombre.trim(), ...(per.provincia !== undefined ? { provincia: per.provincia } : {}) } } : {}),
+      ...(h.clave !== undefined ? { clave: h.clave as string } : {}),
     }
+    hecho = nomina as HechoContable
   }
   return { ok: true, valor: { empresaId: (cuerpo.empresaId as string).toLowerCase(), hecho } }
 }
