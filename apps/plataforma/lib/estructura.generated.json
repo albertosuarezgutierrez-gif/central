@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-11-07T09:17:39Z",
+  "generadoEn": "2026-11-07T12:33:38Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -7,6 +7,7 @@
     "asegura-portal",
     "asegura-web",
     "contabilidad",
+    "empresa",
     "housesevillana",
     "ia-rest",
     "ialimp",
@@ -58,6 +59,11 @@
       "id": "core-fiscal",
       "tipo": "core",
       "npm": "@central/core-fiscal"
+    },
+    {
+      "id": "core-herramientas",
+      "tipo": "core",
+      "npm": "@central/core-herramientas"
     },
     {
       "id": "core-identity",
@@ -413,6 +419,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "empresa": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -475,6 +485,10 @@
         "estado": "usado",
         "evidencias": 3
       },
+      "empresa": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -534,6 +548,10 @@
         "evidencias": 0
       },
       "contabilidad": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "empresa": {
         "estado": "no",
         "evidencias": 0
       },
@@ -599,6 +617,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "empresa": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "usado",
         "evidencias": 3
@@ -661,6 +683,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "empresa": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -720,8 +746,12 @@
         "evidencias": 0
       },
       "contabilidad": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "empresa": {
+        "estado": "usado",
+        "evidencias": 2
       },
       "housesevillana": {
         "estado": "no",
@@ -785,6 +815,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "empresa": {
+        "estado": "usado",
+        "evidencias": 3
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -847,6 +881,10 @@
         "estado": "usado",
         "evidencias": 4
       },
+      "empresa": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -884,6 +922,72 @@
         "evidencias": 0
       }
     },
+    "core-herramientas": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "contabilidad": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "empresa": {
+        "estado": "usado",
+        "evidencias": 18
+      },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "rrhh": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "taller": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
     "core-identity": {
       "almacen": {
         "estado": "usado",
@@ -895,7 +999,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 10
+        "evidencias": 12
       },
       "asegura-portal": {
         "estado": "usado",
@@ -907,7 +1011,11 @@
       },
       "contabilidad": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
+      },
+      "empresa": {
+        "estado": "usado",
+        "evidencias": 6
       },
       "housesevillana": {
         "estado": "no",
@@ -927,11 +1035,11 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 17
+        "evidencias": 18
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 13
+        "evidencias": 14
       },
       "sivra": {
         "estado": "usado",
@@ -968,6 +1076,10 @@
         "evidencias": 0
       },
       "contabilidad": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "empresa": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1033,6 +1145,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "empresa": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -1092,6 +1208,10 @@
         "evidencias": 0
       },
       "contabilidad": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "empresa": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1157,6 +1277,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "empresa": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -1219,6 +1343,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "empresa": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -1267,7 +1395,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 35
+        "evidencias": 36
       },
       "asegura-portal": {
         "estado": "usado",
@@ -1280,6 +1408,10 @@
       "contabilidad": {
         "estado": "no",
         "evidencias": 0
+      },
+      "empresa": {
+        "estado": "usado",
+        "evidencias": 2
       },
       "housesevillana": {
         "estado": "no",
@@ -1340,6 +1472,10 @@
         "evidencias": 0
       },
       "contabilidad": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "empresa": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1405,6 +1541,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "empresa": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -1464,6 +1604,10 @@
         "evidencias": 0
       },
       "contabilidad": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "empresa": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1529,6 +1673,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "empresa": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -1588,6 +1736,10 @@
         "evidencias": 0
       },
       "contabilidad": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "empresa": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1653,6 +1805,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "empresa": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -1715,6 +1871,10 @@
         "estado": "usado",
         "evidencias": 77
       },
+      "empresa": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -1774,6 +1934,10 @@
         "evidencias": 0
       },
       "contabilidad": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "empresa": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1839,6 +2003,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "empresa": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -1898,6 +2066,10 @@
         "evidencias": 0
       },
       "contabilidad": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "empresa": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1963,6 +2135,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "empresa": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -2022,6 +2198,10 @@
         "evidencias": 0
       },
       "contabilidad": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "empresa": {
         "estado": "no",
         "evidencias": 0
       },
@@ -2087,6 +2267,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "empresa": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -2146,6 +2330,10 @@
         "evidencias": 0
       },
       "contabilidad": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "empresa": {
         "estado": "no",
         "evidencias": 0
       },
@@ -2211,6 +2399,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "empresa": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -2266,10 +2458,14 @@
         "evidencias": 0
       },
       "asegura-web": {
+        "estado": "usado",
+        "evidencias": 4
+      },
+      "contabilidad": {
         "estado": "no",
         "evidencias": 0
       },
-      "contabilidad": {
+      "empresa": {
         "estado": "no",
         "evidencias": 0
       },
@@ -2295,7 +2491,7 @@
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 16
+        "evidencias": 19
       },
       "sivra": {
         "estado": "no",
@@ -2332,6 +2528,10 @@
         "evidencias": 0
       },
       "contabilidad": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "empresa": {
         "estado": "no",
         "evidencias": 0
       },
@@ -2397,6 +2597,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "empresa": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -2419,7 +2623,7 @@
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "sivra": {
         "estado": "no",
@@ -2456,6 +2660,10 @@
         "evidencias": 0
       },
       "contabilidad": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "empresa": {
         "estado": "no",
         "evidencias": 0
       },
@@ -2521,6 +2729,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "empresa": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -2580,6 +2792,10 @@
         "evidencias": 0
       },
       "contabilidad": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "empresa": {
         "estado": "no",
         "evidencias": 0
       },
@@ -2645,6 +2861,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "empresa": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -2704,6 +2924,10 @@
         "evidencias": 0
       },
       "contabilidad": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "empresa": {
         "estado": "no",
         "evidencias": 0
       },
@@ -2769,6 +2993,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "empresa": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -2817,7 +3045,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 359
+        "evidencias": 370
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2828,6 +3056,10 @@
         "evidencias": 34
       },
       "contabilidad": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "empresa": {
         "estado": "no",
         "evidencias": 0
       },
@@ -2849,7 +3081,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 253
+        "evidencias": 259
       },
       "rrhh": {
         "estado": "no",
@@ -2890,6 +3122,10 @@
         "evidencias": 0
       },
       "contabilidad": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "empresa": {
         "estado": "no",
         "evidencias": 0
       },
@@ -2955,6 +3191,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "empresa": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -3014,6 +3254,10 @@
         "evidencias": 0
       },
       "contabilidad": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "empresa": {
         "estado": "no",
         "evidencias": 0
       },
@@ -3079,6 +3323,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "empresa": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -3141,6 +3389,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "empresa": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -3171,7 +3423,7 @@
       },
       "taller": {
         "estado": "usado",
-        "evidencias": 64
+        "evidencias": 73
       },
       "transporte": {
         "estado": "no",
@@ -3189,7 +3441,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 89
+        "evidencias": 90
       },
       "asegura-portal": {
         "estado": "usado",
@@ -3200,6 +3452,10 @@
         "evidencias": 0
       },
       "contabilidad": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "empresa": {
         "estado": "no",
         "evidencias": 0
       },
@@ -3265,6 +3521,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "empresa": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -3327,6 +3587,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "empresa": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -3386,6 +3650,10 @@
         "evidencias": 0
       },
       "contabilidad": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "empresa": {
         "estado": "no",
         "evidencias": 0
       },
@@ -3453,6 +3721,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "empresa": {
+        "presente": false,
+        "evidencias": 0
+      },
       "housesevillana": {
         "presente": false,
         "evidencias": 0
@@ -3512,6 +3784,10 @@
         "evidencias": 0
       },
       "contabilidad": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "empresa": {
         "presente": false,
         "evidencias": 0
       },
@@ -3577,6 +3853,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "empresa": {
+        "presente": false,
+        "evidencias": 0
+      },
       "housesevillana": {
         "presente": false,
         "evidencias": 0
@@ -3636,6 +3916,10 @@
         "evidencias": 0
       },
       "contabilidad": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "empresa": {
         "presente": false,
         "evidencias": 0
       },
@@ -3701,6 +3985,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "empresa": {
+        "presente": false,
+        "evidencias": 0
+      },
       "housesevillana": {
         "presente": false,
         "evidencias": 0
@@ -3760,6 +4048,10 @@
         "evidencias": 0
       },
       "contabilidad": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "empresa": {
         "presente": false,
         "evidencias": 0
       },
@@ -3825,6 +4117,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "empresa": {
+        "presente": false,
+        "evidencias": 0
+      },
       "housesevillana": {
         "presente": false,
         "evidencias": 0
@@ -3884,6 +4180,10 @@
         "evidencias": 0
       },
       "contabilidad": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "empresa": {
         "presente": false,
         "evidencias": 0
       },
@@ -3949,6 +4249,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "empresa": {
+        "presente": false,
+        "evidencias": 0
+      },
       "housesevillana": {
         "presente": false,
         "evidencias": 0
@@ -4008,6 +4312,10 @@
         "evidencias": 0
       },
       "contabilidad": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "empresa": {
         "presente": false,
         "evidencias": 0
       },
@@ -4073,6 +4381,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "empresa": {
+        "presente": false,
+        "evidencias": 0
+      },
       "housesevillana": {
         "presente": false,
         "evidencias": 0
@@ -4132,6 +4444,10 @@
         "evidencias": 0
       },
       "contabilidad": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "empresa": {
         "presente": false,
         "evidencias": 0
       },
@@ -4197,6 +4513,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "empresa": {
+        "presente": false,
+        "evidencias": 0
+      },
       "housesevillana": {
         "presente": false,
         "evidencias": 0
@@ -4256,6 +4576,10 @@
         "evidencias": 0
       },
       "contabilidad": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "empresa": {
         "presente": false,
         "evidencias": 0
       },
@@ -4321,6 +4645,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "empresa": {
+        "presente": false,
+        "evidencias": 0
+      },
       "housesevillana": {
         "presente": false,
         "evidencias": 0
@@ -4380,6 +4708,10 @@
         "evidencias": 0
       },
       "contabilidad": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "empresa": {
         "presente": false,
         "evidencias": 0
       },
@@ -4445,6 +4777,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "empresa": {
+        "presente": false,
+        "evidencias": 0
+      },
       "housesevillana": {
         "presente": false,
         "evidencias": 0
@@ -4504,6 +4840,10 @@
         "evidencias": 0
       },
       "contabilidad": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "empresa": {
         "presente": false,
         "evidencias": 0
       },
@@ -4569,6 +4909,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "empresa": {
+        "presente": false,
+        "evidencias": 0
+      },
       "housesevillana": {
         "presente": false,
         "evidencias": 0
@@ -4631,6 +4975,10 @@
         "presente": true,
         "evidencias": 8
       },
+      "empresa": {
+        "presente": false,
+        "evidencias": 0
+      },
       "housesevillana": {
         "presente": false,
         "evidencias": 0
@@ -4690,6 +5038,10 @@
         "evidencias": 0
       },
       "contabilidad": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "empresa": {
         "presente": false,
         "evidencias": 0
       },
@@ -4755,6 +5107,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "empresa": {
+        "presente": false,
+        "evidencias": 0
+      },
       "housesevillana": {
         "presente": false,
         "evidencias": 0
@@ -4817,6 +5173,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "empresa": {
+        "presente": false,
+        "evidencias": 0
+      },
       "housesevillana": {
         "presente": false,
         "evidencias": 0
@@ -4868,6 +5228,7 @@
     "core-email": [],
     "core-firma": [],
     "core-fiscal": [],
+    "core-herramientas": [],
     "core-identity": [
       "module-seguros",
       "module-seguros-portal"
@@ -5005,9 +5366,11 @@
       "/api/cron/felicitaciones",
       "/api/cron/google-contactos",
       "/api/cron/indices-renta",
+      "/api/cron/observaciones-precio",
       "/api/cron/polizas-pdf",
       "/api/cron/presentacion-app",
       "/api/cron/purga-rgpd",
+      "/api/cron/retencion-cartera",
       "/api/cron/revision-anual",
       "/api/cron/senales-patrimonio",
       "/api/cron/siniestros-vinculo",
@@ -5100,8 +5463,10 @@
       "/api/operador/companias",
       "/api/operador/companias/acuerdo/cotejar",
       "/api/operador/companias/acuerdos",
+      "/api/operador/companias/competitividad",
       "/api/operador/companias/contacto",
       "/api/operador/companias/contacto/[id]",
+      "/api/operador/companias/cuadro",
       "/api/operador/companias/productividad",
       "/api/operador/contactos-movil",
       "/api/operador/correo/adjunto",
@@ -5468,6 +5833,7 @@
       "/api/auth/elegir",
       "/api/auth/logout",
       "/api/auth/solicitar",
+      "/api/auth/traspaso",
       "/api/auth/verificar",
       "/api/avisos/leer",
       "/api/banco/conciliar",
@@ -5494,6 +5860,20 @@
       "/api/operador/empresas",
       "/api/pagos",
       "/api/reglas"
+    ],
+    "empresa": [
+      "/api/accesos",
+      "/api/auth/elegir",
+      "/api/auth/logout",
+      "/api/auth/solicitar",
+      "/api/auth/verificar",
+      "/api/documento/[version]",
+      "/api/firma",
+      "/api/firma/codigo",
+      "/api/operador/cuentas",
+      "/api/operador/cuentas/[id]",
+      "/api/operador/documentos/[version]",
+      "/api/traspaso"
     ],
     "housesevillana": [],
     "ia-rest": [
@@ -6345,7 +6725,9 @@
       "/api/correduria/companias",
       "/api/correduria/companias/acuerdos",
       "/api/correduria/companias/acuerdos/cotejar",
+      "/api/correduria/companias/competitividad",
       "/api/correduria/companias/contactado",
+      "/api/correduria/companias/cuadro",
       "/api/correduria/companias/telefono",
       "/api/correduria/contactos-movil",
       "/api/correduria/contador",
@@ -6588,6 +6970,10 @@
       "/api/negocios",
       "/api/negocios/[id]",
       "/api/operador/agente-consulta",
+      "/api/operador/empresas",
+      "/api/operador/empresas/[id]",
+      "/api/operador/empresas/[id]/sugerencias",
+      "/api/operador/empresas/documento",
       "/api/operador/flota-mapa",
       "/api/operador/secretos/set",
       "/api/publico/asegura-ig/[id]",
@@ -6770,6 +7156,8 @@
       "/api/admin/empleados/[id]/documentos/generar",
       "/api/admin/empleados/[id]/documentos/presign",
       "/api/admin/empleados/[id]/enlace",
+      "/api/admin/empleados/importar",
+      "/api/admin/empleados/importar/plantilla",
       "/api/admin/empresa/ajustes",
       "/api/admin/fichajes",
       "/api/admin/fichajes/[id]",
@@ -6807,6 +7195,7 @@
       "/api/auth/cambiar-empresa",
       "/api/auth/logout",
       "/api/auth/seleccionar-empresa",
+      "/api/auth/traspaso",
       "/api/cron/alerta-fichajes-abiertos",
       "/api/cron/alerta-jornada-maxima",
       "/api/cron/enviar-hechos-nominas",
@@ -7062,6 +7451,7 @@
       "seguros.liquidaciones",
       "seguros.mediator_audit_log",
       "seguros.mensajes",
+      "seguros.observaciones_precio",
       "seguros.ofertas_automaticas",
       "seguros.operational_events",
       "seguros.oportunidad_figura",
@@ -7091,7 +7481,9 @@
       "seguros.queja",
       "seguros.recibo_devolucion",
       "seguros.recordatorios",
+      "seguros.renovacion_ciclo",
       "seguros.renovacion_contactos",
+      "seguros.renovacion_preferencias",
       "seguros.retencion_descartes",
       "seguros.siniestro_contrarios",
       "seguros.siniestro_intervinientes",
@@ -7222,9 +7614,25 @@
       "contabilidad.reglas_conciliacion",
       "contabilidad.revisiones",
       "contabilidad.terceros",
+      "contabilidad.traspasos_usados",
       "contabilidad.usuario_empresas",
       "contabilidad.usuarios",
       "sin"
+    ],
+    "empresa": [
+      "herramientas.acceso_otp",
+      "herramientas.contrato",
+      "herramientas.contrato_version",
+      "herramientas.cuenta",
+      "herramientas.cuenta_herramienta",
+      "herramientas.cuenta_miembro",
+      "herramientas.envio",
+      "herramientas.evento",
+      "herramientas.firma",
+      "herramientas.miembro_herramienta",
+      "herramientas.persona",
+      "herramientas.plantilla",
+      "herramientas.traspaso_emitido"
     ],
     "housesevillana": [],
     "ia-rest": [
@@ -7524,6 +7932,7 @@
       "rrhh.avisos",
       "rrhh.avisos_admin",
       "rrhh.contratos_laborales",
+      "rrhh.convenio_seguros_obligatorios",
       "rrhh.convenio_tablas_salariales",
       "rrhh.documentos",
       "rrhh.empleados",
@@ -7534,12 +7943,14 @@
       "rrhh.hechos_nominas",
       "rrhh.incidencias_mes",
       "rrhh.incidencias_ubicacion",
+      "rrhh.leads_correduria",
       "rrhh.material_empleado",
       "rrhh.mensajes",
       "rrhh.nominas",
       "rrhh.push_subscriptions",
       "rrhh.situacion_familiar",
       "rrhh.solicitudes",
+      "rrhh.traspasos_usados",
       "rrhh.usuarios_rrhh"
     ],
     "sivra": [
@@ -7859,6 +8270,7 @@
           "asegura-portal",
           "asegura-web",
           "contabilidad",
+          "empresa",
           "housesevillana",
           "ialimp",
           "mariscos",
@@ -7881,6 +8293,7 @@
           "asegura-portal",
           "asegura-web",
           "contabilidad",
+          "empresa",
           "housesevillana",
           "ialimp",
           "mariscos",
@@ -7904,6 +8317,7 @@
           "asegura-portal",
           "asegura-web",
           "contabilidad",
+          "empresa",
           "housesevillana",
           "ialimp",
           "mariscos",
@@ -7925,6 +8339,7 @@
           "asegura-portal",
           "asegura-web",
           "contabilidad",
+          "empresa",
           "housesevillana",
           "ialimp",
           "mariscos",
@@ -7947,6 +8362,7 @@
           "alquiler",
           "asegura-web",
           "contabilidad",
+          "empresa",
           "housesevillana",
           "ialimp",
           "mariscos",
@@ -7969,6 +8385,7 @@
           "asegura-portal",
           "asegura-web",
           "contabilidad",
+          "empresa",
           "housesevillana",
           "ialimp",
           "mariscos",
@@ -7992,6 +8409,7 @@
           "asegura-portal",
           "asegura-web",
           "contabilidad",
+          "empresa",
           "housesevillana",
           "ia-rest",
           "mariscos",
@@ -8015,6 +8433,7 @@
           "asegura-portal",
           "asegura-web",
           "contabilidad",
+          "empresa",
           "housesevillana",
           "mariscos",
           "rrhh",
@@ -8035,6 +8454,7 @@
           "asegura-portal",
           "asegura-web",
           "contabilidad",
+          "empresa",
           "housesevillana",
           "ia-rest",
           "ialimp",
@@ -8057,6 +8477,7 @@
           "asegura-portal",
           "asegura-web",
           "contabilidad",
+          "empresa",
           "housesevillana",
           "ia-rest",
           "ialimp",
@@ -8080,6 +8501,7 @@
           "asegura-portal",
           "asegura-web",
           "contabilidad",
+          "empresa",
           "housesevillana",
           "mariscos",
           "rrhh",
@@ -8102,6 +8524,7 @@
           "asegura-portal",
           "asegura-web",
           "contabilidad",
+          "empresa",
           "housesevillana",
           "ialimp",
           "mariscos",
@@ -8124,6 +8547,7 @@
           "asegura-portal",
           "asegura-web",
           "contabilidad",
+          "empresa",
           "housesevillana",
           "mariscos",
           "rrhh",
@@ -8147,6 +8571,7 @@
           "asegura-portal",
           "asegura-web",
           "contabilidad",
+          "empresa",
           "housesevillana",
           "mariscos",
           "rrhh",
@@ -8169,6 +8594,7 @@
           "asegura-portal",
           "asegura-web",
           "contabilidad",
+          "empresa",
           "housesevillana",
           "mariscos",
           "rrhh",
@@ -8191,6 +8617,7 @@
           "asegura-portal",
           "asegura-web",
           "contabilidad",
+          "empresa",
           "housesevillana",
           "mariscos",
           "rrhh",
@@ -8213,6 +8640,7 @@
           "asegura",
           "asegura-web",
           "contabilidad",
+          "empresa",
           "housesevillana",
           "mariscos",
           "rrhh",
@@ -8233,6 +8661,7 @@
           "asegura-portal",
           "asegura-web",
           "contabilidad",
+          "empresa",
           "housesevillana",
           "ialimp",
           "mariscos",
@@ -8256,6 +8685,7 @@
           "asegura",
           "asegura-web",
           "contabilidad",
+          "empresa",
           "housesevillana",
           "mariscos",
           "rrhh",
@@ -8278,6 +8708,7 @@
           "asegura",
           "asegura-portal",
           "asegura-web",
+          "empresa",
           "housesevillana",
           "ia-rest",
           "mariscos",
@@ -8301,6 +8732,7 @@
           "asegura",
           "asegura-web",
           "contabilidad",
+          "empresa",
           "housesevillana",
           "mariscos",
           "sivra",
@@ -8324,6 +8756,7 @@
           "asegura-portal",
           "asegura-web",
           "contabilidad",
+          "empresa",
           "housesevillana",
           "mariscos",
           "taller",
@@ -8334,11 +8767,11 @@
     "reimplementaciones": []
   },
   "resumen": {
-    "verticales": 15,
-    "packages": 49,
+    "verticales": 16,
+    "packages": 50,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1967,
+    "apis": 1993,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
