@@ -3,7 +3,7 @@
  * Tres estados honestos: fila → su valor · sin fila → «apagado» (es el defecto del módulo) · error al leer → «no se sabe».
  */
 export type ModoModulo = 'reparto' | 'calculo'
-export const MODULOS = ['nominas'] as const
+export const MODULOS = ['nominas', 'contabilidad_nominas'] as const
 export type Modulo = (typeof MODULOS)[number]
 
 export interface FilaModulo {
@@ -32,7 +32,11 @@ export function modoMotor(e: EstadoModulo): 'calculo' | 'simulacion' {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-export type CambioModulo = { empresaId: string; modulo: Modulo; activo: boolean; modo: ModoModulo; activadoPor: string }
+export type CambioModulo = {
+  empresaId: string; modulo: Modulo; activo: boolean; modo: ModoModulo; activadoPor: string
+  /** Solo `contabilidad_nominas` (N3): empresa de contabilidad que recibe los hechos de nómina. */
+  contabilidadEmpresaId: string | null
+}
 
 /** Valida el cuerpo del PUT del operador. Todo explícito: sin modo por defecto, sin «quién» vacío. */
 export function validarCambioModulo(b: unknown): { ok: true; cambio: CambioModulo } | { ok: false; error: string } {
@@ -44,5 +48,11 @@ export function validarCambioModulo(b: unknown): { ok: true; cambio: CambioModul
   if (o.modo !== 'reparto' && o.modo !== 'calculo') return { ok: false, error: "modo debe ser 'reparto' o 'calculo'" }
   const activadoPor = typeof o.activado_por === 'string' ? o.activado_por.trim().slice(0, 120) : ''
   if (!activadoPor) return { ok: false, error: 'activado_por obligatorio (quién lo activa)' }
-  return { ok: true, cambio: { empresaId, modulo: o.modulo as Modulo, activo: o.activo, modo: o.modo, activadoPor } }
+  let contabilidadEmpresaId: string | null = null
+  if (o.modulo === 'contabilidad_nominas') {
+    contabilidadEmpresaId = typeof o.contabilidad_empresa_id === 'string' ? o.contabilidad_empresa_id.trim().toLowerCase() : ''
+    if (o.activo && !UUID.test(contabilidadEmpresaId)) return { ok: false, error: 'contabilidad_empresa_id (uuid) obligatorio para activar contabilidad_nominas' }
+    if (!UUID.test(contabilidadEmpresaId)) contabilidadEmpresaId = null
+  }
+  return { ok: true, cambio: { empresaId, modulo: o.modulo as Modulo, activo: o.activo, modo: o.modo, activadoPor, contabilidadEmpresaId } }
 }

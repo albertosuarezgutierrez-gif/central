@@ -16,6 +16,10 @@ const ENLACES = [
   { href: '/diario', texto: 'Libro diario' },
   { href: '/mayor', texto: 'Mayor' },
   { href: '/asientos/nuevo', texto: 'Nuevo asiento' },
+  { href: '/gestoria', texto: 'Gestoría' },
+  { href: '/exportar', texto: 'Exportar' },
+  { href: '/onboarding', texto: 'Puesta en marcha' },
+  { href: '/sif', texto: 'Declaración SIF' },
   { href: '/ajustes/reglas', texto: 'Ajustes' },
   { href: '/ajustes/actividad', texto: 'Actividad' },
 ]

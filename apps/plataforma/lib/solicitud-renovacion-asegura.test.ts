@@ -36,3 +36,15 @@ test('el webhook enruta `cdr` con la puerta del titular, el mensaje del botón y
   assert.match(tramo, /via: 'telegram', telegramMessageId: mensajeId/)
   assert.equal((tramo.match(/publicarSolicitudRenovacionAsegura\(/g) ?? []).length, 1, 'una sola llamada: no se reintenta')
 })
+
+test('«🔁 Reintentar bots» (cdr_bot): solo el titular, solo la acción `bot`, y el webhook lo enruta sin tocar el ✅', async () => {
+  const { decidirBotonBotsCdr } = await import('./solicitud-renovacion-asegura.ts')
+  assert.equal(decidirBotonBotsCdr({ from: { id: 6 } }, 'bot', [S], '5').ok, false)
+  assert.equal(decidirBotonBotsCdr({ from: { id: 5 } }, 'env', [S], '5').ok, false)
+  assert.equal(decidirBotonBotsCdr({ from: { id: 5 } }, 'bot', ['x'], '5').ok, false)
+  assert.deepEqual(decidirBotonBotsCdr({ from: { id: 5 } }, 'bot', [S], '5'), { ok: true, solicitudId: S })
+  const ruta = readFileSync(new URL('../app/api/sivra/mensajes/telegram-webhook/route.ts', import.meta.url), 'utf8')
+  assert.match(ruta, /prefix === PREFIJO_CDR && action === 'bot'[\s\S]{0,600}decidirBotonBotsCdr\(/)
+  const asegura = readFileSync(new URL('../../asegura/lib/solicitud-renovacion-bots-reglas.ts', import.meta.url), 'utf8')
+  assert.match(asegura, /CALLBACK_REINTENTAR_BOTS = 'cdr_bot'/)
+})

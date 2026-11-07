@@ -1,9 +1,23 @@
 // Certificado anual de retenciones del EMPLEADO (portal /e). PURO.
-// Cadena idéntica a la de contabilidad: nómina confirmada → `hechoDeNomina` (lo que se envía al puerto) → `retencionDeNomina` (lo que
+// Cadena idéntica a la de contabilidad: nómina confirmada → `nominaAHecho` con perceptor (de @central/module-nominas: el MISMO hecho que
+// se encola en `rrhh.hechos_nominas` y viaja al puerto) → `retencionDeNomina` (lo que
 // contabilidad lee para el 111/190) → `calcularCertificadoRetenciones` (filas del 190 de ese NIF). Así las cifras del certificado son las
 // del 190 de la empresa para ese perceptor, siempre que contabilidad tenga esas mismas nóminas (estado `enviado`).
 import { calcularCertificadoRetenciones, retencionDeNomina, type CertificadoRetenciones, type RetencionTrabajo } from '@central/module-contabilidad'
-import { hechoDeNomina, type DatosCertificado } from '@/lib/hechos-contabilidad'
+import { nominaAHecho, type HechoNominaPuerto } from '@central/module-nominas'
+import type { DatosCertificado, FilaNominaCertificado } from '@/lib/certificado-retenciones-datos'
+
+/** El hecho que se encola al confirmar, reconstruido (determinista) para el certificado. Lo que no se puede asentar no se certifica. */
+export function hechoParaCertificado(n: FilaNominaCertificado): { ok: true; hecho: HechoNominaPuerto } | { ok: false; motivo: string } {
+  try {
+    return { ok: true, hecho: nominaAHecho({
+      nominaId: n.id, empleadoId: n.empleado_id, periodo: n.periodo, desglose: n.datos_calculo,
+      perceptor: { nombre: n.empleado_nombre, apellidos: n.empleado_apellidos, dni: n.empleado_dni, provincia: n.empleado_provincia },
+    }) }
+  } catch (e) {
+    return { ok: false, motivo: e instanceof Error ? e.message : 'nómina no asentable' }
+  }
+}
 
 export type ResultadoCertificado =
   | { ok: true; certificado: CertificadoRetenciones; empresa: DatosCertificado['empresa']; nominasIncluidas: number; noIncluidas: { periodo: string; motivo: string }[] }
@@ -16,7 +30,7 @@ export function certificadoDeNominas(datos: DatosCertificado, anio: number): Res
   const rs: RetencionTrabajo[] = []
   const noIncluidas: { periodo: string; motivo: string }[] = []
   for (const n of datos.nominas) {
-    const h = hechoDeNomina(n)
+    const h = hechoParaCertificado(n)
     if (!h.ok) { noIncluidas.push({ periodo: n.periodo, motivo: h.motivo }); continue }
     const l = retencionDeNomina({ ref: h.hecho.ref, fecha: h.hecho.fecha, payload: h.hecho })
     if (!l.ok) { noIncluidas.push({ periodo: n.periodo, motivo: l.motivo }); continue }

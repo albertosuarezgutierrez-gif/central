@@ -41,7 +41,7 @@ import { PREFIJO_CLP, decidirBotonClp, idDeEdicion } from '@/lib/correo/lead-cor
 import { guardarEdicionClp, resolverBotonClp } from '@/lib/correo/lead-correduria-pendiente'
 import { PREFIJO_CSG, decidirBotonCsg } from '@/lib/correo/contacto-sugerido'
 import { PREFIJO_FEX, decidirBotonFex, decidirFexEnAsegura, lineaTrasPulsarFex } from '@/lib/felicitaciones-exclientes-asegura'
-import { PREFIJO_CDR, decidirBotonCdr, estadoDeCdr, lineaTrasEnviarCdr, publicarSolicitudRenovacionAsegura } from '@/lib/solicitud-renovacion-asegura'
+import { PREFIJO_CDR, decidirBotonBotsCdr, decidirBotonCdr, estadoDeCdr, lineaTrasEnviarCdr, publicarSolicitudRenovacionAsegura, reintentarBotsRenovacionAsegura } from '@/lib/solicitud-renovacion-asegura'
 import { PREFIJO_CRV, decidirBotonCrv, estadoDe as estadoCrv, lineaTrasPublicarCrv, publicarRenovacionAsegura, whatsappDe as whatsappCrv } from '@/lib/renovacion-asegura'
 import { PREFIJO_WAP, actorTitular, decidirBotonWap, idDeCorreccionWap, lineaTrasPulsarWap, mensajeOriginalDeCorreccionWap, resueltaParaQuitarBotones, resolverPropuestaEnAsegura, textoPedirCorreccionWap } from '@/lib/correduria/whatsapp-propuesta-tg'
 import { cuentaTitularTelegram } from '@/lib/correduria/whatsapp-propuesta-tg-cuenta'
@@ -1069,6 +1069,26 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
         const linea = lineaTrasPublicarCrv(estadoCrv(r)) + (wa ? `\n<a href="${escapeHtml(wa)}">📲 Abrir el WhatsApp para mandarlo</a>` : '')
         if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${linea}`).catch(() => {})
         else await tgSend(linea).catch(() => {})
+      })
+      return NextResponse.json({ ok: true })
+    }
+
+    // ── 🔁 Reintentar los bots de una renovación ya contestada (cdr_bot:<solicitudId>, 07/11/2026) ──
+    // Solo precio (bots gratis, nunca Avant2). Solo el titular. asegura manda su propio Telegram con el resultado; aquí solo se
+    // acusa recibo. Un intento por pulsación (asegura deduplica trabajos vivos).
+    if (prefix === PREFIJO_CDR && action === 'bot') {
+      const d = decidirBotonBotsCdr(cb, action, args, process.env.TELEGRAM_CHAT_ID)
+      if (!d.ok) {
+        await tgAnswerCallback(cb.id, d.toast)
+        return NextResponse.json({ ok: true })
+      }
+      await tgAnswerCallback(cb.id, '⏳ Lanzando bots…')
+      after(async () => {
+        const r = await reintentarBotsRenovacionAsegura(d.solicitudId, 'sistema:telegram-datos-renovacion').catch(() => ({ status: 502, json: null }))
+        const e = estadoDeCdr(r)
+        if (e === 'sin_contestar' || e === 'no_encontrado' || e === 'sin_migracion' || r.status >= 500 || r.status === 401) {
+          await tgSend(`⚠️ <i>Reintento de bots: no se ha podido (${escapeHtml(e)}).</i>`).catch(() => {})
+        }
       })
       return NextResponse.json({ ok: true })
     }

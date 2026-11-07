@@ -25,6 +25,12 @@ export function decidirBotonCdr(cb: { from?: { id?: unknown } | null } | null | 
   return { ok: true, solicitudId: args[0].toLowerCase() }
 }
 
+/** ¿Vale el «🔁 Reintentar bots» (`cdr_bot:<id>`)? Misma puerta del titular. PURO. */
+export function decidirBotonBotsCdr(cb: { from?: { id?: unknown } | null } | null | undefined, accion: string, args: readonly string[], chatAutorizado: string | undefined): DecisionBotonCdr {
+  if (accion !== 'bot') return { ok: false, toast: 'Botón no válido' }
+  return decidirBotonCdr(cb, 'env', args, chatAutorizado)
+}
+
 /** Línea que sustituye a los botones tras pulsar ✅. PURO. */
 export function lineaTrasEnviarCdr(estado: string): string {
   switch (estado) {
@@ -78,4 +84,12 @@ export function publicarSolicitudRenovacionAsegura(e: { solicitudId: string; act
 export function estadoDeCdr(r: Reenvio): string {
   const j = r.json as { estado?: unknown } | null
   return typeof j?.estado === 'string' ? j.estado : `http_${r.status}`
+}
+
+/**
+ * «🔁 Reintentar bots» (07/11/2026): vuelve a encolar los bots de hogar de una renovación YA contestada. Solo precio (gratis):
+ * ni Avant2 ni emisión ni nada al cliente. asegura manda su propio Telegram con el resultado.
+ */
+export function reintentarBotsRenovacionAsegura(solicitudId: string, actorPuerto?: string): Promise<Reenvio> {
+  return llamar('/api/operador/solicitud-renovacion/reintentar-bots', { solicitudId }, actorPuerto, 55_000)
 }

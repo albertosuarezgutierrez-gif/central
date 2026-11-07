@@ -64,3 +64,10 @@ export * from './impuestos/index.ts'
 
 // ── F5: inmovilizado y amortizaciones, periodificaciones, cierre/apertura, cuentas anuales abreviadas, borradores 200/202, libros para legalizar ──
 export * from './cierre/index.ts'
+
+// ── F6: portal de la gestoría (bandeja, comentarios), export A3/Sage/Holded, factura electrónica (UBL EN 16931 / Facturae), onboarding, declaración SIF ──
+export * from './gestoria/index.ts'
+export * from './exportacion/index.ts'
+export * from './factura-electronica/index.ts'
+export * from './onboarding/index.ts'
+export * from './sif/index.ts'

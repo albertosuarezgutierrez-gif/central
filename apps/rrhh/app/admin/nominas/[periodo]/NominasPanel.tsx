@@ -1,8 +1,9 @@
 'use client'
 import { useState } from 'react'
 import Page from '@/components/ui/Page'
+import PropuestasFichajes from './PropuestasFichajes'
 import Boton from '@/components/ui/Boton'
-import { eur } from '../formato'
+import { eur, etiquetaContabilidad } from '../formato'
 import RemesaBoton from '../RemesaBoton'
 
 type Incidencia = { id: string; tipo: string; concepto: string; importe: number | null; horas: number | null; dias: number | null; periodicidad?: string | null; copiada_de?: string | null }
@@ -17,6 +18,9 @@ type Nomina = {
     netoAPagar: number
   }
   incidencias?: Incidencia[]
+  /** Estado del hecho de esta nómina en el outbox de contabilidad (NULL = no consta encolado). */
+  contabilidad_estado?: string | null
+  contabilidad_detalle?: string | null
 }
 
 const TIPOS_INCIDENCIA = [
@@ -191,7 +195,8 @@ export default function NominasPanel({ periodo, inicial }: { periodo: string; in
                         ))}
                       </ul>
                     )}
-                    <div className="flex flex-wrap gap-2 text-sm">
+                    <PropuestasFichajes nominaId={n.id} onCambio={recargar} />
+                    <div className="mt-3 flex flex-wrap gap-2 text-sm">
                       <select value={incTipo} onChange={e => setIncTipo(e.target.value)} className="border border-line rounded px-2 py-1">
                         {TIPOS_INCIDENCIA.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
                       </select>
@@ -232,7 +237,14 @@ export default function NominasPanel({ periodo, inicial }: { periodo: string; in
                     Neto: {fmt(n.datos_calculo?.netoAPagar ?? 0)}
                   </span>
                 </div>
-                <span className="text-ok text-sm">✔ Confirmada</span>
+                <span className="flex flex-wrap items-center gap-2 text-sm">
+                  <span className="text-ok">✔ Confirmada</span>
+                  {(() => {
+                    const c = etiquetaContabilidad(n.contabilidad_estado, n.contabilidad_detalle)
+                    if (!c) return null
+                    return <span className={c.tono === 'ok' ? 'text-ok' : c.tono === 'alerta' ? 'text-alert' : 'text-ink-3'} title={n.contabilidad_detalle ?? undefined}>· {c.texto}</span>
+                  })()}
+                </span>
               </li>
             ))}
           </ul>

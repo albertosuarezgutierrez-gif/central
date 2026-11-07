@@ -13,7 +13,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 
 const APP = join(__dirname, '..')
-const TABLAS = ['nominas', 'incidencias_mes', 'empleados', 'contratos_laborales', 'empresa_modulos']
+const TABLAS = ['nominas', 'incidencias_mes', 'empleados', 'contratos_laborales', 'empresa_modulos', 'hechos_nominas']
 
 function listar(dir: string): string[] {
   const out: string[] = []
@@ -76,14 +76,14 @@ export function sentenciasSinEmpresa(src: string): string[] {
   return malas
 }
 
-const RUTAS_NOMINA = ['app/api/admin/nominas', 'app/api/cron/nominas', 'app/api/cron/reenviar-contabilidad', 'app/admin/nominas', 'app/api/operador/empresas/modulos']
+const RUTAS_NOMINA = ['app/api/admin/nominas', 'app/api/cron/nominas', 'app/api/cron/enviar-hechos-nominas', 'app/admin/nominas', 'app/api/operador/empresas/modulos']
 const FICHEROS = [...listar(join(APP, 'lib')), ...RUTAS_NOMINA.flatMap(d => listar(join(APP, d)))]
 
 /** Lecturas que cruzan empresas A PROPÓSITO (antes de saber la empresa, o un cron que recorre todas). Clave exacta. */
 const MULTIEMPRESA: Record<string, string> = {
   'lib/acceso-email-repo.ts: SQL rrhh.empleados': 'login del empleado por correo: candidatos en TODAS sus empresas antes de elegir una',
   'lib/modulos-empresa.ts: SQL rrhh.empresa_modulos': 'cron de nóminas: lista las empresas con el módulo en modo calculo',
-  'lib/hechos-contabilidad.ts: SQL rrhh.nominas': 'cron reenviar-contabilidad (`candidatasReenvioTodas`): elige las nóminas pendientes de todas las empresas; cada envío va con la empresa_id de SU fila',
+  'lib/hechos-nominas.ts: SQL rrhh.hechos_nominas': 'cron enviar-hechos-nominas (`leerColaHechosNominas`): recorre el outbox de TODAS las empresas con `contabilidad_nominas` activo; cada envío va con la empresa_id y el destino de SU fila',
 }
 
 describe('aislamiento de nóminas/empleados (excepciones exactas)', () => {
@@ -92,7 +92,7 @@ describe('aislamiento de nóminas/empleados (excepciones exactas)', () => {
     expect(rel).toContain('lib/nominas.ts')
     expect(rel).toContain('lib/notificar.ts')
     expect(rel).toContain('app/api/cron/nominas/route.ts')
-    expect(rel).toContain('app/api/cron/reenviar-contabilidad/route.ts')
+    expect(rel).toContain('app/api/cron/enviar-hechos-nominas/route.ts')
     expect(rel.filter(f => f.startsWith('app/api/admin/nominas/')).length).toBeGreaterThanOrEqual(6)
   })
 

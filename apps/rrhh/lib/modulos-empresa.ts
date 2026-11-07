@@ -34,5 +34,26 @@ export async function guardarModulo(c: CambioModulo): Promise<boolean> {
     ON CONFLICT (empresa_id, modulo) DO UPDATE
       SET activo = EXCLUDED.activo, modo = EXCLUDED.modo, activado_por = EXCLUDED.activado_por, activado_at = now()
     WHERE rrhh.empresa_modulos.empresa_id = ${c.empresaId}::uuid`)
+  if (c.modulo === 'contabilidad_nominas') {
+    // Columna de la migración 0033; solo se toca para este módulo (el de nóminas sigue funcionando sin ella).
+    await prisma.$executeRaw(Prisma.sql`
+      UPDATE rrhh.empresa_modulos SET contabilidad_empresa_id = ${c.contabilidadEmpresaId}::uuid
+      WHERE empresa_id = ${c.empresaId}::uuid AND modulo = 'contabilidad_nominas'`)
+  }
   return true
+}
+
+/**
+ * N3: ¿a qué empresa de contabilidad se envían los hechos de nómina de ESTA empresa? `null` = módulo apagado o sin empresa vinculada
+ * (no se encola nada). Un error de lectura LANZA: confirmar una nómina no debe seguir «como si estuviera apagado» si no se sabe.
+ */
+export async function contabilidadDeNominas(empresaId: string): Promise<string | null> {
+  // 1.ª consulta sin columnas de la 0033: con el módulo apagado (lo normal) confirmar no depende de la migración.
+  const act = await prisma.$queryRaw<{ activo: boolean }[]>(Prisma.sql`
+    SELECT activo FROM rrhh.empresa_modulos WHERE empresa_id = ${empresaId}::uuid AND modulo = 'contabilidad_nominas' LIMIT 1`)
+  if (!act[0]?.activo) return null
+  const filas = await prisma.$queryRaw<{ cid: string | null }[]>(Prisma.sql`
+    SELECT contabilidad_empresa_id::text AS cid FROM rrhh.empresa_modulos
+    WHERE empresa_id = ${empresaId}::uuid AND modulo = 'contabilidad_nominas' AND activo = true LIMIT 1`)
+  return filas[0]?.cid ?? null
 }

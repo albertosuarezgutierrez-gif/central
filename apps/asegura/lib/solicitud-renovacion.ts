@@ -31,6 +31,8 @@ import { nombreDePila } from './presupuesto-rpa-reglas'
 import { URL_PLATAFORMA_DEFECTO } from './datos-cotizados'
 import { botonesRevisionDatos, decidirPreguntas, lineaHistorialPreparadaDatos, mensajeVigente, textoRevisionDatos } from './solicitud-renovacion-reglas'
 import { esColumnaAusente } from './pg-error'
+import { lanzarBotsRenovacion } from './solicitud-renovacion-bots'
+import { botonesBotsRenovacion, textoBotsRenovacion } from './solicitud-renovacion-bots-reglas'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const db = () => prismaAsegura()
@@ -249,18 +251,54 @@ export async function responderSolicitudIdentidad(correduriaId: string, identida
   const { oportunidadId } = f
   return responderFila(f, f.campos, respuestas, false, {
     papel: quien.papel, identidadId, nombre, texto: textoQuienContesto(quien),
-    // Tras escribir el riesgo: ¿le queda algo al bot? (Telegram aparte, corto). Nunca encola ni cotiza nada.
-    alTerminar: async () => {
-      try {
-        const faltas = await faltasDeOportunidad(correduriaId, oportunidadId)
-        await tgSend(faltas === null
-          ? '🔁 Renovación de hogar: no he podido releer el riesgo tras los datos del cliente. Míralo antes de tarificar.'
-          : faltas.length === 0
-            ? '🔁 Renovación de hogar: con los datos del cliente ya no le falta nada a los bots. Puedes tarificarla (Probar, gratis).'
-            : `🔁 Renovación de hogar: aún falta para los bots: ${faltas.map((x) => x.etiqueta).join(' · ')}`)
-      } catch (x) {
-        registrarErrorCartera('solicitud-renovacion/tras-contestar', x)
-      }
-    },
+    // Tras escribir el riesgo: ¿le queda algo al bot? Si no, los bots se lanzan SOLOS (gratis; Avant2 no). Nunca lanza.
+    alTerminar: async () => { await lanzarYAvisarBots(correduriaId, f.clienteId, oportunidadId, solicitudId) },
   })
+}
+
+// ─── Bots automáticos tras la respuesta (07/11/2026) ─────────────────────────
+
+/**
+ * Relee lo que le falta al bot y, si ya no le falta nada, encola los bots de hogar (`lanzarBotsRenovacion`, mismo camino y
+ * guardas que «Probar»). Telegram a Alberto con lo que pasó + botón de reintento. NUNCA lanza ni toca la respuesta del cliente
+ * (ya guardada): un fallo se registra y el aviso dice «bots no lanzados: motivo» (queda «Probar» como respaldo). Sin PII.
+ */
+export async function lanzarYAvisarBots(correduriaId: string, clienteId: string, oportunidadId: string, solicitudId?: string): Promise<{ estado: 'lanzados' | 'no_lanzados' | 'faltan_datos' | 'riesgo_no_leido' }> {
+  try {
+    const faltas = await faltasDeOportunidad(correduriaId, oportunidadId)
+    if (faltas === null) {
+      await tgSend('🔁 Renovación de hogar: no he podido releer el riesgo tras los datos del cliente. Bots no lanzados; míralo y usa «Probar».')
+      return { estado: 'riesgo_no_leido' }
+    }
+    if (faltas.length > 0) {
+      await tgSend(`🔁 Renovación de hogar: aún falta para los bots: ${faltas.map((x) => x.etiqueta).join(' · ')}. Bots no lanzados.`)
+      return { estado: 'faltan_datos' }
+    }
+    const r = await lanzarBotsRenovacion(correduriaId, { clienteId, oportunidadId, faltas: 0 })
+    const texto = textoBotsRenovacion({ decision: r.decision, resultados: r.resultados, fallo: r.fallo })
+    const enMarcha = r.decision.accion === 'encolar' && !r.fallo && r.resultados.some((x) => x.tipo !== 'rechazado')
+    if (solicitudId) await tgSendButtons(texto, botonesBotsRenovacion(solicitudId))
+    else await tgSend(texto)
+    return { estado: enMarcha ? 'lanzados' : 'no_lanzados' }
+  } catch (x) {
+    registrarErrorCartera('solicitud-renovacion/bots-aviso', x)
+    return { estado: 'no_lanzados' }
+  }
+}
+
+export type ResultadoReintentoBots =
+  | { estado: 'lanzados' | 'no_lanzados' | 'faltan_datos' | 'riesgo_no_leido'; solicitudId: string }
+  | { estado: 'sin_migracion' | 'invalido' | 'no_encontrado' | 'sin_contestar'; status: number; motivo: string }
+
+/** El botón «🔁 Reintentar bots» (`cdr_bot:<id>`): solo una solicitud de renovación de esta correduría YA contestada. */
+export async function reintentarBotsRenovacion(correduriaId: string, solicitudId: string): Promise<ResultadoReintentoBots> {
+  if (!UUID.test(solicitudId)) return { estado: 'invalido', status: 422, motivo: 'solicitudId no válido' }
+  if (!(await migracionSolicitudRenovacion())) return { estado: 'sin_migracion', status: 503, motivo: 'Falta aplicar la migración 2026-11-05d_solicitud_datos_renovacion.sql.' }
+  const [s] = await db().$queryRaw<{ clienteId: string; oportunidadId: string | null; estado: string; motivo: string | null }[]>`
+    select cliente_id::text as "clienteId", oportunidad_id::text as "oportunidadId", estado, motivo
+    from solicitud_datos where id = ${solicitudId}::uuid and correduria_id = ${correduriaId}::uuid`
+  if (!s || s.motivo !== MOTIVO_SOLICITUD_RENOVACION || !s.oportunidadId) return { estado: 'no_encontrado', status: 404, motivo: 'No es una solicitud de datos de renovación de esta correduría.' }
+  if (s.estado !== 'completada') return { estado: 'sin_contestar', status: 409, motivo: 'El cliente aún no ha contestado: no hay nada que tarificar.' }
+  const r = await lanzarYAvisarBots(correduriaId, s.clienteId, s.oportunidadId, solicitudId)
+  return { estado: r.estado, solicitudId }
 }

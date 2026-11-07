@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-07T08:26:08Z",
-  "sha": "cbe8eced9b797a72731d5d967e7722a01aed1f85",
+  "generadoEn": "2026-11-07T08:56:51Z",
+  "sha": "221d4ba67073a00df2c5e1f9632c3e31ec68e236",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -77214,13 +77214,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 24,
+          "linea": 28,
           "resumen": "Menú de secciones: marca la activa con el acento de la empresa. Solo navegación: no decide permisos."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a8ed5ed839ba"
+      "hash": "79cd90aa1cd2"
     },
     {
       "ruta": "apps/contabilidad/app/_salir.tsx",
@@ -77669,6 +77669,95 @@
       "hash": "67687950f3c1"
     },
     {
+      "ruta": "apps/contabilidad/app/api/exportar/route.ts",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 13
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/exportar",
+      "hash": "cf051e36252d"
+    },
+    {
+      "ruta": "apps/contabilidad/app/api/factura-electronica/route.ts",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 9
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/factura-electronica",
+      "hash": "cc649224b43b"
+    },
+    {
+      "ruta": "apps/contabilidad/app/api/gestoria/comentarios/route.ts",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 13
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 28
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/gestoria/comentarios",
+      "hash": "b6487a53f365"
+    },
+    {
+      "ruta": "apps/contabilidad/app/api/gestoria/revisiones/route.ts",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 10
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/gestoria/revisiones",
+      "hash": "a9a5f40f026e"
+    },
+    {
       "ruta": "apps/contabilidad/app/api/hechos/route.ts",
       "ambito": "apps/contabilidad",
       "exporta": [],
@@ -77832,6 +77921,26 @@
       "tablas": [],
       "rutaApi": "/api/inmovilizado",
       "hash": "e205a3c5ad2e"
+    },
+    {
+      "ruta": "apps/contabilidad/app/api/onboarding/route.ts",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 15
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/onboarding",
+      "hash": "a4f4d87a6139"
     },
     {
       "ruta": "apps/contabilidad/app/api/operador/empresas/route.ts",
@@ -78340,6 +78449,119 @@
       "hash": "e648b0ab4945"
     },
     {
+      "ruta": "apps/contabilidad/app/exportar/page.tsx",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "Exportar"
+      ],
+      "funciones": [
+        {
+          "nombre": "Exportar",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "Exportación del diario y del plan a A3, Sage y Holded. El formulario es un GET normal a /api/exportar (descarga directa, sin JavaScript)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "71d5dbd38991"
+    },
+    {
+      "ruta": "apps/contabilidad/app/gestoria/AbrirEmpresa.tsx",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "AbrirEmpresa"
+      ],
+      "funciones": [
+        {
+          "nombre": "AbrirEmpresa",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ empresaId, destino = '/gestoria/pendientes', texto = 'Abrir pendientes' }: { empresaId: string; destino?: string; texto?: string }",
+          "retorno": null,
+          "linea": 5,
+          "resumen": "Elige la empresa (revalidada en BD por /api/auth/elegir) y abre su bandeja de pendientes."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "15b8e55db15e"
+    },
+    {
+      "ruta": "apps/contabilidad/app/gestoria/page.tsx",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "Gestoria"
+      ],
+      "funciones": [
+        {
+          "nombre": "n",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: number | null",
+          "retorno": null,
+          "linea": 11
+        },
+        {
+          "nombre": "Gestoria",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 17,
+          "resumen": "Portal de la gestoría: SOLO las empresas con vínculo ACTIVO de rol gestor (la lista sale de BD por `empresas_de_usuario`, nunca de la URL). Cada empresa se consulta en su propia transacción RLS. «—» ="
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "bfdbc5698219"
+    },
+    {
+      "ruta": "apps/contabilidad/app/gestoria/pendientes/page.tsx",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "Pendientes"
+      ],
+      "funciones": [
+        {
+          "nombre": "Pendientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 11,
+          "resumen": "Pendientes de LA empresa elegida (RLS + contexto revalidado en BD): asientos sin revisar y facturas a confirmar, con revisión y comentarios."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4e2ae73dd64a"
+    },
+    {
+      "ruta": "apps/contabilidad/app/gestoria/pendientes/Revision.tsx",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "Revision"
+      ],
+      "funciones": [
+        {
+          "nombre": "Revision",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ objeto, comentarios }: { objeto: Objeto; comentarios: number }",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "Marcar como revisado + hilo de comentarios del objeto (se carga al abrirlo). Botones ≥ 44 px, sin tablas anchas."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4783a6efcd15"
+    },
+    {
       "ruta": "apps/contabilidad/app/graficas.tsx",
       "ambito": "apps/contabilidad",
       "exporta": [
@@ -78763,6 +78985,74 @@
       "hash": "6266703d1a1a"
     },
     {
+      "ruta": "apps/contabilidad/app/onboarding/Formularios.tsx",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "FormPlan",
+        "FormSaldos",
+        "FormTerceros"
+      ],
+      "funciones": [
+        {
+          "nombre": "FormCsv",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ accion, titulo, ayuda, ejemplo, conFecha = false, boton }: { accion: 'plan' | 'saldos' | 'terceros'; titulo: string; ayuda: string; ejemplo: string; conFecha?: boolean; boton: string }",
+          "retorno": null,
+          "linea": 8,
+          "resumen": "Un formulario de importación CSV: pega el texto o elige el fichero (se lee en el navegador). Todo o nada: si hay errores se listan por línea."
+        },
+        {
+          "nombre": "FormPlan",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 43
+        },
+        {
+          "nombre": "FormSaldos",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 47
+        },
+        {
+          "nombre": "FormTerceros",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 51
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a298674f7132"
+    },
+    {
+      "ruta": "apps/contabilidad/app/onboarding/page.tsx",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "Onboarding"
+      ],
+      "funciones": [
+        {
+          "nombre": "Onboarding",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 11,
+          "resumen": "Puesta en marcha guiada: plantilla por CNAE, plan de cuentas, saldos iniciales y terceros. Cada paso es independiente y se puede repetir sin duplicar."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d0c2ac0c6d67"
+    },
+    {
       "ruta": "apps/contabilidad/app/page.tsx",
       "ambito": "apps/contabilidad",
       "exporta": [
@@ -78838,6 +79128,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "3be2130b5d77"
+    },
+    {
+      "ruta": "apps/contabilidad/app/sif/page.tsx",
+      "ambito": "apps/contabilidad",
+      "exporta": [
+        "Sif"
+      ],
+      "funciones": [
+        {
+          "nombre": "Sif",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "Declaración responsable del productor del SIF. Los datos salen de la configuración (`SIF_*`); lo que falte se dice, no se inventa."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "23477566d586"
     },
     {
       "ruta": "apps/contabilidad/lib/acceso.ts",
@@ -79496,7 +79807,8 @@
       "resumen": "Contexto de la petición: sesión firmada + REVALIDACIÓN EN BD (fail-closed). Lo usan todas las páginas y APIs internas.",
       "exporta": [
         "leerContexto",
-        "exigirContexto"
+        "exigirContexto",
+        "leerUsuario"
       ],
       "funciones": [
         {
@@ -79516,11 +79828,20 @@
           "retorno": "Promise<Contexto>",
           "linea": 18,
           "resumen": "Para páginas: sin contexto vigente → al login."
+        },
+        {
+          "nombre": "leerUsuario",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 28,
+          "resumen": "Usuario con sesión vigente en BD pero SIN exigir empresa elegida (el portal de la gestoría lista varias). null si no hay sesión, está manipulada, caducada o el usuario ya no es vigente (baja o «Salir»"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bf4b7c8053d5"
+      "hash": "f228777bb288"
     },
     {
       "ruta": "apps/contabilidad/lib/db.ts",
@@ -79617,7 +79938,8 @@
       "resumen": "Traduce un error de BD a la respuesta HTTP de las rutas de la F5. Solo «tabla/función inexistente» (42P01/42883/3F000) significa «¿falta aplicar 0005?» (503); un duplicado (23505, p. ej. el periodo ya asentado) es un 409; cualquier otra cosa es un 500 que NO se disfraza de esquema pendiente.",
       "exporta": [
         "codigoSqlState",
-        "respuestaDeErrorBd"
+        "respuestaDeErrorBd",
+        "respuestaDeErrorBdFase"
       ],
       "funciones": [
         {
@@ -79636,11 +79958,20 @@
           "params": "e: unknown",
           "retorno": "RespuestaBd",
           "linea": 17
+        },
+        {
+          "nombre": "respuestaDeErrorBdFase",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: unknown, fichero: string",
+          "retorno": "RespuestaBd",
+          "linea": 27,
+          "resumen": "Igual que `respuestaDeErrorBd` pero para una fase concreta: el 503 nombra el fichero SQL que falta (p. ej. `0006_gestoria.sql`)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "724540992ff2"
+      "hash": "e9a3c52c8ac5"
     },
     {
       "ruta": "apps/contabilidad/lib/evolucion.ts",
@@ -79664,6 +79995,88 @@
       "hash": "6433a4c5e20f"
     },
     {
+      "ruta": "apps/contabilidad/lib/f6-carga.ts",
+      "ambito": "apps/contabilidad",
+      "resumen": "Ejecución de la fase 6 contra la BD: cada operación en SU PROPIA transacción RLS de la empresa, \"todo o nada\" (si el caso de uso devuelve `ok: false` se revierte lo que hubiera hecho). La lógica está en `gestoria.ts` / `onboarding.ts` (probada sin BD); esto solo junta los repositorios.",
+      "exporta": [
+        "conF6",
+        "ejecutarF6"
+      ],
+      "funciones": [
+        {
+          "nombre": "conF6",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "empresaId: string, fn: (repo: RepoContable, f6: RepoF6) => Promise<R>",
+          "retorno": null,
+          "linea": 11,
+          "resumen": "Lectura (o escritura) con ambos repositorios en una transacción propia. Si 0006 no está aplicada, las consultas a sus tablas lanzan: el llamador lo tolera."
+        },
+        {
+          "nombre": "ejecutarF6",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, fn: (repo: RepoContable, f6: RepoF6) => Promise<R>",
+          "retorno": "Promise<R>",
+          "linea": 15,
+          "resumen": "Escritura todo-o-nada: `ok: false` revierte la transacción y se devuelve el resultado tal cual."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ed3c1204792b"
+    },
+    {
+      "ruta": "apps/contabilidad/lib/gestoria.ts",
+      "ambito": "apps/contabilidad",
+      "resumen": "Casos de uso del portal de la GESTORÍA y de los comentarios (F6) sobre repositorios inyectados (tests con fakes). Sin BD directa. · El autor y su rol salen del CONTEXTO revalidado en BD (nunca del cuerpo de la petición). · Un comentario o una revisión solo existen para objetos de la empresa del cont",
+      "exporta": [
+        "anotarComentario",
+        "marcarRevisado",
+        "fuenteContadores",
+        "bandejaDelUsuario"
+      ],
+      "funciones": [
+        {
+          "nombre": "anotarComentario",
+          "kind": "function",
+          "exportada": true,
+          "params": "f6: RepoF6, autor: AutorF6, entrada: unknown",
+          "retorno": "Promise<Res<",
+          "linea": 11
+        },
+        {
+          "nombre": "marcarRevisado",
+          "kind": "function",
+          "exportada": true,
+          "params": "f6: RepoF6, autor: AutorF6, entrada: unknown",
+          "retorno": "Promise<Res<",
+          "linea": 22
+        },
+        {
+          "nombre": "fuenteContadores",
+          "kind": "function",
+          "exportada": true,
+          "params": "abrir: <R>(empresaId: string, fn: (f6: RepoF6) => Promise<R>) => Promise<R>",
+          "retorno": "FuentePendientes",
+          "linea": 36,
+          "resumen": "Contadores de UNA empresa. Cada contador en SU transacción: si una tabla aún no existe (0002/0004/0006 sin aplicar) falla solo ese y queda `null` («no se sabe»), nunca 0. `abrir` abre la transacción R"
+        },
+        {
+          "nombre": "bandejaDelUsuario",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "vinculos: readonly VinculoUsuario[], fuente: FuentePendientes",
+          "retorno": "Promise<BandejaGestor>",
+          "linea": 47,
+          "resumen": "Portal: bandeja de las empresas que el usuario gestiona. Los vínculos vienen de la BD (`empresas_de_usuario`), nunca de la petición."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "35b4add1d012"
+    },
+    {
       "ruta": "apps/contabilidad/lib/hecho-entrada.ts",
       "ambito": "apps/contabilidad",
       "resumen": "Validación del cuerpo del puerto `POST /api/hechos` → `HechoContable` de @central/module-contabilidad. PURO. La vertical dice QUÉ pasó; el núcleo decide CÓMO se asienta (spec §4.2). Por eso el puerto RECHAZA (400) cualquier campo de cuenta (`cuentaTercero`, `cuentaTesoreria`, `cuentaContrapartida`):",
@@ -79677,7 +80090,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 30
+          "linea": 34
         },
         {
           "nombre": "esFecha",
@@ -79685,7 +80098,7 @@
           "exportada": false,
           "params": "s: unknown",
           "retorno": "s is string",
-          "linea": 31
+          "linea": 35
         },
         {
           "nombre": "cent",
@@ -79693,7 +80106,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": null,
-          "linea": 36
+          "linea": 40
         },
         {
           "nombre": "texto",
@@ -79701,7 +80114,7 @@
           "exportada": false,
           "params": "v: unknown, max: number",
           "retorno": null,
-          "linea": 37
+          "linea": 41
         },
         {
           "nombre": "parsearEntradaHecho",
@@ -79709,12 +80122,12 @@
           "exportada": true,
           "params": "cuerpo: unknown",
           "retorno": "ResultadoParseo",
-          "linea": 39
+          "linea": 43
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "92f7d9fc1140"
+      "hash": "b1de47083c69"
     },
     {
       "ruta": "apps/contabilidad/lib/huella.ts",
@@ -79910,7 +80323,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "870106dfc1f9"
+      "hash": "3db401c52665"
     },
     {
       "ruta": "apps/contabilidad/lib/impuestos-tablas.ts",
@@ -80461,6 +80874,45 @@
       "hash": "157d994cf9b8"
     },
     {
+      "ruta": "apps/contabilidad/lib/onboarding.ts",
+      "ambito": "apps/contabilidad",
+      "resumen": "Casos de uso del ONBOARDING guiado (F6): plan de cuentas, saldos iniciales (asiento de apertura) y terceros. Repositorios inyectados; sin BD directa. · Plan: solo AÑADE cuentas (lo existente no se pisa); un padre que recibe subcuentas deja de admitir apuntes. · Saldos: UN asiento de apertura por eje",
+      "exporta": [
+        "importarPlan",
+        "importarSaldosIniciales",
+        "importarTerceros"
+      ],
+      "funciones": [
+        {
+          "nombre": "importarPlan",
+          "kind": "function",
+          "exportada": true,
+          "params": "repo: RepoContable, f6: RepoF6, csv: string",
+          "retorno": "Promise<Res<",
+          "linea": 16
+        },
+        {
+          "nombre": "importarSaldosIniciales",
+          "kind": "function",
+          "exportada": true,
+          "params": "repo: RepoContable, csv: string, fecha: string, meta: MetaApertura",
+          "retorno": "Promise<Res<",
+          "linea": 28
+        },
+        {
+          "nombre": "importarTerceros",
+          "kind": "function",
+          "exportada": true,
+          "params": "f6: RepoF6, csv: string, validarNif: ValidadorNif, usuarioId: string | null",
+          "retorno": "Promise<Res<",
+          "linea": 50
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "13525bc2a59a"
+    },
+    {
       "ruta": "apps/contabilidad/lib/pagina.ts",
       "ambito": "apps/contabilidad",
       "resumen": "Lo común de cada pantalla interna: contexto revalidado en BD + datos de la empresa para la cabecera.",
@@ -80804,6 +81256,39 @@
       "hash": "cc74c50efa6b"
     },
     {
+      "ruta": "apps/contabilidad/lib/repo-f6.ts",
+      "ambito": "apps/contabilidad",
+      "resumen": "Repositorio de la FASE 6 (portal de la gestoría, comentarios, revisiones, terceros) de UNA empresa. Mismas reglas que repo.ts / repo-f5.ts: · se construye SOLO dentro de `conEmpresa` (RLS) y TODA consulta filtra además por `empresa_id` explícito, enlazado como parámetro; · SQL parametrizado con plan",
+      "exporta": [
+        "repoF6Sql"
+      ],
+      "funciones": [
+        {
+          "nombre": "iso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": null,
+          "linea": 11
+        },
+        {
+          "nombre": "repoF6Sql",
+          "kind": "function",
+          "exportada": true,
+          "params": "tx: TxSql, empresaId: string",
+          "retorno": "RepoF6",
+          "linea": 38
+        }
+      ],
+      "tablas": [
+        "contabilidad",
+        "solo",
+        "unnest"
+      ],
+      "rutaApi": null,
+      "hash": "8ad6eef9b452"
+    },
+    {
       "ruta": "apps/contabilidad/lib/repo.ts",
       "ambito": "apps/contabilidad",
       "resumen": "Repositorio de la contabilidad de UNA empresa. Interfaz + implementación SQL (Postgres, schema `contabilidad`). 🚨 Aislamiento (dos capas, las dos obligatorias): 1. Se construye SOLO dentro de `conEmpresa(empresaId, tx => repoSql(tx, empresaId))`: RLS forzado por empresa. 2. Además, TODA consulta fi",
@@ -80817,7 +81302,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": null,
-          "linea": 102
+          "linea": 104
         },
         {
           "nombre": "aAsiento",
@@ -80825,7 +81310,7 @@
           "exportada": false,
           "params": "f: Fila, apuntes: ApunteLeido[]",
           "retorno": "AsientoLeido",
-          "linea": 104
+          "linea": 106
         },
         {
           "nombre": "aApunte",
@@ -80833,7 +81318,7 @@
           "exportada": false,
           "params": "f: Fila",
           "retorno": "ApunteLeido",
-          "linea": 111
+          "linea": 113
         },
         {
           "nombre": "aEjercicio",
@@ -80841,7 +81326,7 @@
           "exportada": false,
           "params": "f: Fila",
           "retorno": "FilaEjercicio",
-          "linea": 115
+          "linea": 117
         },
         {
           "nombre": "repoSql",
@@ -80849,7 +81334,7 @@
           "exportada": true,
           "params": "tx: TxSql, empresaId: string",
           "retorno": "RepoContable",
-          "linea": 119
+          "linea": 121
         }
       ],
       "tablas": [
@@ -80857,7 +81342,7 @@
         "unnest"
       ],
       "rutaApi": null,
-      "hash": "52d7fb1bdf0f"
+      "hash": "8090bdf5dcb6"
     },
     {
       "ruta": "apps/contabilidad/lib/revertir.ts",
@@ -81113,6 +81598,27 @@
       "hash": "90efe7f21f70"
     },
     {
+      "ruta": "apps/contabilidad/lib/sif-config.ts",
+      "ambito": "apps/contabilidad",
+      "resumen": "Configuración NO secreta del productor del SIF, leída de variables de entorno `SIF_*` (nombres, no valores). Lo que falte queda `null` y la pantalla lo dice.",
+      "exporta": [
+        "configSif"
+      ],
+      "funciones": [
+        {
+          "nombre": "configSif",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "env: Readonly<Record<string, string | undefined>> = process.env",
+          "retorno": "ConfiguracionSif",
+          "linea": 9
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5539d1f26017"
+    },
+    {
       "ruta": "apps/contabilidad/lib/sociedades-form.ts",
       "ambito": "apps/contabilidad",
       "resumen": "Entradas de los borradores 200/202 desde el formulario (query string). PURO. Regla del repo «dato que NO hay ≠ 0»: un campo vacío o ausente es `null` (no informado); solo un «0» escrito es un cero. Importes en formato español («1.234,56»); el porcentaje admite coma («25» o «25,5»).",
@@ -81182,12 +81688,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 10
+          "linea": 11
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "48db30152a06"
+      "hash": "f28a72a2ecea"
     },
     {
       "ruta": "apps/contabilidad/test/_f3-memoria.ts",
@@ -81262,6 +81768,27 @@
       "hash": "06af9f893b3d"
     },
     {
+      "ruta": "apps/contabilidad/test/_f6-memoria.ts",
+      "ambito": "apps/contabilidad",
+      "resumen": "Fake en memoria de `RepoF6` que imita los triggers/FK de 0006: el objeto comentado/revisado debe existir en la MISMA empresa (FK compuesta), el autor debe tener vínculo ACTIVO con el rol que declara (trigger `autor_vinculado`), una sola revisión por (objeto, rol) (0008), y comentarios/revisiones sol",
+      "exporta": [
+        "f6Memoria"
+      ],
+      "funciones": [
+        {
+          "nombre": "f6Memoria",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosEmpresa",
+          "retorno": "RepoF6 &",
+          "linea": 20
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5a2a2f6eae71"
+    },
+    {
       "ruta": "apps/contabilidad/test/_repo-memoria.ts",
       "ambito": "apps/contabilidad",
       "resumen": "Fake en memoria de `RepoContable` para probar los casos de uso sin BD. Imita las garantías de 0001 que importan aquí: datos separados por empresa, clave única de hechos (ON CONFLICT DO NOTHING → null), número correlativo por ejercicio y solo-añadir (no expone ningún UPDATE/DELETE de asientos; los gu",
@@ -81280,7 +81807,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "63e8143bef7e"
+      "hash": "7598890dd779"
     },
     {
       "ruta": "apps/contabilidad/test/_resolver.mjs",
@@ -220225,16 +220752,16 @@
           "nombre": "ContratoForm",
           "kind": "function",
           "exportada": true,
-          "params": "{ empleadoId, inicial }: { empleadoId: string; inicial: ContratoActual }",
+          "params": "{ empleadoId, inicial, tablas = null }: { empleadoId: string; inicial: ContratoActual; tablas?: FilaTablaConvenio[] | null }",
           "retorno": null,
-          "linea": 17
+          "linea": 28
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "17c359a9db72"
+      "hash": "8e12c2fc1771"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/[id]/contrato/page.tsx",
@@ -220249,7 +220776,7 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 10
+          "linea": 11
         }
       ],
       "tablas": [
@@ -220257,7 +220784,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "5a88e47c9197"
+      "hash": "d38217d701b4"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/[id]/ExpedienteClient.tsx",
@@ -220437,7 +220964,7 @@
           "nombre": "FichajesClient",
           "kind": "function",
           "exportada": true,
-          "params": "",
+          "params": "{ mesInicial, empleadoInicial }: { mesInicial?: string; empleadoInicial?: string } = {}",
           "retorno": null,
           "linea": 38
         }
@@ -220446,7 +220973,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "d8de1d8fe227"
+      "hash": "fcd581cfdc62"
     },
     {
       "ruta": "apps/rrhh/app/admin/fichajes/page.tsx",
@@ -220459,14 +220986,15 @@
           "nombre": "Page",
           "kind": "function",
           "exportada": true,
-          "params": "",
+          "params": "{ searchParams }: { searchParams: Promise<{ mes?: string; empleado_id?: string }> }",
           "retorno": null,
-          "linea": 5
+          "linea": 10,
+          "resumen": "la consulta sigue filtrando por la empresa de la sesión)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b4fa5ab0ebd0"
+      "hash": "4fb9e81b72b3"
     },
     {
       "ruta": "apps/rrhh/app/admin/firmas/FirmasClient.tsx",
@@ -220657,7 +221185,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 28
+          "linea": 35
         },
         {
           "nombre": "NominasPanel",
@@ -220665,14 +221193,14 @@
           "exportada": true,
           "params": "{ periodo, inicial }: { periodo: string; inicial: Nomina[] }",
           "retorno": null,
-          "linea": 30
+          "linea": 39
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "0182f3a96720"
+      "hash": "95b6feecacaa"
     },
     {
       "ruta": "apps/rrhh/app/admin/nominas/[periodo]/page.tsx",
@@ -220693,6 +221221,113 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "2d8d047a368c"
+    },
+    {
+      "ruta": "apps/rrhh/app/admin/nominas/[periodo]/PropuestasFichajes.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "PropuestasFichajes"
+      ],
+      "funciones": [
+        {
+          "nombre": "dd",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "f: string",
+          "retorno": null,
+          "linea": 17
+        },
+        {
+          "nombre": "PropuestasFichajes",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ nominaId, onCambio }: { nominaId: string; onCambio: () => void | Promise<void> }",
+          "retorno": null,
+          "linea": 19
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3d5d4620a3db"
+    },
+    {
+      "ruta": "apps/rrhh/app/admin/nominas/convenio/actions.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "guardarFila",
+        "borrarFila"
+      ],
+      "funciones": [
+        {
+          "nombre": "guardarFila",
+          "kind": "function",
+          "exportada": true,
+          "params": "datos: Record<string, unknown>",
+          "retorno": "Promise<ResultadoAccion>",
+          "linea": 10
+        },
+        {
+          "nombre": "borrarFila",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "Promise<ResultadoAccion>",
+          "linea": 25
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4f5b24f7bc79"
+    },
+    {
+      "ruta": "apps/rrhh/app/admin/nominas/convenio/page.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "Page"
+      ],
+      "funciones": [
+        {
+          "nombre": "Page",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 7
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4763c06574a9"
+    },
+    {
+      "ruta": "apps/rrhh/app/admin/nominas/convenio/TablasConvenioClient.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "TablasConvenioClient"
+      ],
+      "funciones": [
+        {
+          "nombre": "centAEuroTexto",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "c: number | null",
+          "retorno": null,
+          "linea": 11
+        },
+        {
+          "nombre": "TablasConvenioClient",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ filas, convenioEmpresa, anioActual }: { filas: Fila[]; convenioEmpresa: string | null; anioActual: number }",
+          "retorno": null,
+          "linea": 13
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "7a7d9d976216"
     },
     {
       "ruta": "apps/rrhh/app/admin/nominas/DistribuirPdfPanel.tsx",
@@ -220736,6 +221371,118 @@
       "hash": "7bef21fefbab"
     },
     {
+      "ruta": "apps/rrhh/app/admin/nominas/finiquito/FiniquitoClient.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "FiniquitoClient"
+      ],
+      "funciones": [
+        {
+          "nombre": "pagasPropuestas",
+          "kind": "function",
+          "exportada": false,
+          "params": "fechaBaja: string, importe: string",
+          "retorno": "Paga[]",
+          "linea": 35,
+          "resumen": "Pagas extra semestrales típicas del año de la baja (verano ene-jun, navidad jul-dic). Solo PROPUESTA: el convenio manda."
+        },
+        {
+          "nombre": "Fila",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ concepto, valor, fuerte }: { concepto: string; valor: string; fuerte?: boolean }",
+          "retorno": null,
+          "linea": 45
+        },
+        {
+          "nombre": "dias",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 54
+        },
+        {
+          "nombre": "FiniquitoClient",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ empleados }: { empleados: EmpleadoFiniquito[] }",
+          "retorno": null,
+          "linea": 56
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "91bdd6d7429f"
+    },
+    {
+      "ruta": "apps/rrhh/app/admin/nominas/finiquito/page.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "Page"
+      ],
+      "funciones": [
+        {
+          "nombre": "Page",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [
+        "next",
+        "rrhh"
+      ],
+      "rutaApi": null,
+      "hash": "70c1ce36a888"
+    },
+    {
+      "ruta": "apps/rrhh/app/admin/nominas/formato.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Dinero en formato español para las pantallas de nóminas: 2162.49 → «2.162,49€» (punto de miles también en 4 cifras, coma decimal, € detrás). Mismo criterio que `eur()` de plataforma (`apps/plataforma/lib/dinero.ts`). Puro.",
+      "exporta": [
+        "eur",
+        "eurCent",
+        "etiquetaContabilidad"
+      ],
+      "funciones": [
+        {
+          "nombre": "eur",
+          "kind": "function",
+          "exportada": true,
+          "params": "n: number | string | null | undefined",
+          "retorno": "string",
+          "linea": 3,
+          "resumen": "Dinero en formato español para las pantallas de nóminas: 2162.49 → «2.162,49€» (punto de miles también en 4 cifras, coma decimal, € detrás). Mismo criterio que `eur()` de plataforma (`apps/plataforma/"
+        },
+        {
+          "nombre": "eurCent",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: number | null | undefined",
+          "retorno": "string",
+          "linea": 10,
+          "resumen": "Céntimos enteros → «1.234,56€»."
+        },
+        {
+          "nombre": "etiquetaContabilidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "estado: string | null | undefined, detalle: string | null | undefined",
+          "retorno": "",
+          "linea": 18,
+          "resumen": "Estado del envío a contabilidad de UNA nómina, leído de su hecho en el outbox `rrhh.hechos_nominas` (`listarNominas`). PURO. null (sin fila) = no consta que se encolara (contabilidad de nóminas apagad"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6e4352ea6606"
+    },
+    {
       "ruta": "apps/rrhh/app/admin/nominas/page.tsx",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -220748,12 +221495,78 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 10
+          "linea": 12
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "023b51ad7d90"
+      "hash": "b1d95eb59810"
+    },
+    {
+      "ruta": "apps/rrhh/app/admin/nominas/ReenviarContabilidadBoton.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "ReenviarContabilidadBoton"
+      ],
+      "funciones": [
+        {
+          "nombre": "ReenviarContabilidadBoton",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 16
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "63d2301bd262"
+    },
+    {
+      "ruta": "apps/rrhh/app/admin/nominas/RemesaBoton.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "RemesaBoton"
+      ],
+      "funciones": [
+        {
+          "nombre": "fechaHora",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string | null",
+          "retorno": "string | null",
+          "linea": 17,
+          "resumen": "«2026-11-07 10:00:00.123+00» → «07/11/2026 11:00» (hora local del navegador)."
+        },
+        {
+          "nombre": "eurCentimos",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: number",
+          "retorno": "string",
+          "linea": 26,
+          "resumen": "Céntimos → «2.162,49€» (punto de miles también con 4 cifras, coma decimal, € detrás)."
+        },
+        {
+          "nombre": "hoyLocal",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 33
+        },
+        {
+          "nombre": "RemesaBoton",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ periodo, confirmadas }: { periodo: string; confirmadas: number }",
+          "retorno": null,
+          "linea": 38
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "23414aab02fc"
     },
     {
       "ruta": "apps/rrhh/app/admin/obras/ObrasClient.tsx",
@@ -221671,7 +222484,7 @@
           "exportada": true,
           "params": "req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 65
+          "linea": 73
         }
       ],
       "tablas": [
@@ -221679,7 +222492,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/admin/fichajes/[id]",
-      "hash": "775e25c6d607"
+      "hash": "4f3c0adeac82"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/fichajes/exportar/route.ts",
@@ -221917,6 +222730,27 @@
       "hash": "0945ea5b1dc0"
     },
     {
+      "ruta": "apps/rrhh/app/api/admin/nominas/[nominaId]/aprobar-fichajes/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: Request, { params }: { params: Promise<{ nominaId: string }> }",
+          "retorno": null,
+          "linea": 6,
+          "resumen": "N2: el responsable aprueba los fichajes cerrados del empleado y mes de ESTA nómina. empresa_id de la sesión; sin ids del cliente."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/admin/nominas/[nominaId]/aprobar-fichajes",
+      "hash": "4420359b5ea5"
+    },
+    {
       "ruta": "apps/rrhh/app/api/admin/nominas/[nominaId]/confirmar/route.ts",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -221929,7 +222763,7 @@
           "exportada": true,
           "params": "_req: Request, { params }: { params: Promise<{ nominaId: string }> }",
           "retorno": null,
-          "linea": 10
+          "linea": 12
         }
       ],
       "tablas": [
@@ -221937,7 +222771,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/admin/nominas/[nominaId]/confirmar",
-      "hash": "d344ad0a1d12"
+      "hash": "f7e9153dc03d"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/nominas/[nominaId]/incidencias/[incId]/route.ts",
@@ -221957,7 +222791,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/admin/nominas/[nominaId]/incidencias/[incId]",
-      "hash": "bb20779c8027"
+      "hash": "7153b734f710"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/nominas/[nominaId]/incidencias/route.ts",
@@ -221977,7 +222811,45 @@
       ],
       "tablas": [],
       "rutaApi": "/api/admin/nominas/[nominaId]/incidencias",
-      "hash": "89bc42027b34"
+      "hash": "6d55c304cff5"
+    },
+    {
+      "ruta": "apps/rrhh/app/api/admin/nominas/[nominaId]/propuestas-fichajes/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "errorDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "e: unknown",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "N2: GET = propuestas de horas extra/ausencias/retrasos desde los fichajes APROBADOS del mes (no escribe nada). POST { claves: string[] } = el responsable aprueba esas propuestas (se recalculan aquí; d"
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: Request, { params }: { params: Promise<{ nominaId: string }> }",
+          "retorno": null,
+          "linea": 19
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, { params }: { params: Promise<{ nominaId: string }> }",
+          "retorno": null,
+          "linea": 29
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/admin/nominas/[nominaId]/propuestas-fichajes",
+      "hash": "811bf1e289fc"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/nominas/distribuir-pdf/route.ts",
@@ -222000,6 +222872,26 @@
       "hash": "73b11bf8863d"
     },
     {
+      "ruta": "apps/rrhh/app/api/admin/nominas/finiquito/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 11
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/admin/nominas/finiquito",
+      "hash": "cf30a4ef4fc2"
+    },
+    {
       "ruta": "apps/rrhh/app/api/admin/nominas/generar/route.ts",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -222020,10 +222912,61 @@
       "hash": "6f53e6e2b7c2"
     },
     {
+      "ruta": "apps/rrhh/app/api/admin/nominas/reenviar-contabilidad/route.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "«Reintentar envío a contabilidad» del responsable: envía YA la cola del outbox `rrhh.hechos_nominas` de SU empresa (la de getSesion(), nunca de la petición), estados 'pendiente' y 'error', sin esperar al `proximo_intento`. Lo 'rechazado' no se reintenta solo. Mismo envío que el cron `/api/cron/envia",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 15
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/admin/nominas/reenviar-contabilidad",
+      "hash": "008b8a9943c6"
+    },
+    {
+      "ruta": "apps/rrhh/app/api/admin/nominas/remesa/route.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Remesa SEPA (pain.001, propósito SALA) de las nóminas CONFIRMADAS del periodo, como descarga XML. POST { periodo, fecha_ejecucion, confirmar_repeticion? } `empresa_id` SOLO de getSesion() (cepo `lib/aislamiento-nominas.test.ts`). Con cualquier problema (IBAN ausente o inválido, líquido desconocido…)",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "hoyMadrid",
+          "kind": "function",
+          "exportada": false,
+          "params": "ahora: Date",
+          "retorno": "string",
+          "linea": 16
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 21
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/admin/nominas/remesa",
+      "hash": "673e5e7bef68"
+    },
+    {
       "ruta": "apps/rrhh/app/api/admin/nominas/route.ts",
       "ambito": "apps/rrhh",
       "exporta": [
-        "GET"
+        "GET",
+        "POST"
       ],
       "funciones": [
         {
@@ -222033,11 +222976,19 @@
           "params": "req: Request",
           "retorno": null,
           "linea": 5
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 45
         }
       ],
       "tablas": [],
       "rutaApi": "/api/admin/nominas",
-      "hash": "7ec727c89f3d"
+      "hash": "7a4ccaf063fe"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/obras/[id]/route.ts",
@@ -222483,6 +223434,27 @@
       "hash": "bd8f0d79476f"
     },
     {
+      "ruta": "apps/rrhh/app/api/cron/enviar-hechos-nominas/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "N3: envía a contabilidad el outbox de nóminas confirmadas (solo empresas con `contabilidad_nominas` activo). Solo contadores en la respuesta."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/enviar-hechos-nominas",
+      "hash": "047652c3f999"
+    },
+    {
       "ruta": "apps/rrhh/app/api/cron/nominas/route.ts",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -222671,6 +223643,64 @@
       "tablas": [],
       "rutaApi": "/api/e/avisos/visto",
       "hash": "b3e2118020a3"
+    },
+    {
+      "ruta": "apps/rrhh/app/api/e/certificado-retenciones/certificado-pdf.tsx",
+      "ambito": "apps/rrhh",
+      "resumen": "PDF del certificado de retenciones e ingresos a cuenta del IRPF (rendimientos del trabajo) para el empleado. Solo pinta: las cifras llegan calculadas por `certificadoDeNominas` (mismas que el 190).",
+      "exporta": [
+        "generarCertificadoPdf"
+      ],
+      "funciones": [
+        {
+          "nombre": "Fila",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "{ k, v }: { k: string; v: string }",
+          "retorno": null,
+          "linea": 25
+        },
+        {
+          "nombre": "CertificadoPdf",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ certificado: c, empresa, fechaEmision }: PropsCertificado",
+          "retorno": null,
+          "linea": 27
+        },
+        {
+          "nombre": "generarCertificadoPdf",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PropsCertificado",
+          "retorno": "Promise<Buffer>",
+          "linea": 72
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "23aa5ec193ea"
+    },
+    {
+      "ruta": "apps/rrhh/app/api/e/certificado-retenciones/route.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "GET /api/e/certificado-retenciones?anio=AAAA → PDF del certificado de retenciones del EMPLEADO AUTENTICADO. Empleado y empresa salen SOLO de la sesión (`getSesionEmpleado`): la petición no puede nombrar a otro empleado (no se lee ningún id).",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 12
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/e/certificado-retenciones",
+      "hash": "7b3b84b50069"
     },
     {
       "ruta": "apps/rrhh/app/api/e/chat/route.ts",
@@ -223340,7 +224370,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "0c1a1b7eb42f"
+      "hash": "40a4327fd560"
     },
     {
       "ruta": "apps/rrhh/app/e/page.tsx",
@@ -223884,13 +224914,13 @@
           "exportada": true,
           "params": "{ nombreEmpresa, tarjetas }: { nombreEmpresa: string; tarjetas: Tarjeta[] }",
           "retorno": null,
-          "linea": 20,
+          "linea": 21,
           "resumen": "Inicio del responsable (presentacional): las tarjetas de pendientes ya calculadas por `tarjetasInicio`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "aed49b227216"
+      "hash": "ad7f0f2efc17"
     },
     {
       "ruta": "apps/rrhh/components/InstalarApp.tsx",
@@ -225457,6 +226487,30 @@
       "hash": "a8920c687d3b"
     },
     {
+      "ruta": "apps/rrhh/lib/certificado-retenciones-datos.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Lectura (Prisma) de las nóminas que alimentan el certificado de retenciones del portal /e. Movido aquí desde el emisor directo `lib/hechos-contabilidad.ts` (retirado el 07/11/2026 al unificar el envío en el outbox `rrhh.hechos_nominas`). SQL con empresa_id.",
+      "exporta": [
+        "leerDatosCertificado"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerDatosCertificado",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, empleadoId: string, anio: number",
+          "retorno": "Promise<DatosCertificado | null>",
+          "linea": 28,
+          "resumen": "Nóminas CONFIRMADAS del año de UN empleado de UNA empresa (ambos de la sesión del empleado, nunca de la petición). null = el empleado no existe en esa empresa."
+        }
+      ],
+      "tablas": [
+        "rrhh"
+      ],
+      "rutaApi": null,
+      "hash": "f0b54f13dcf5"
+    },
+    {
       "ruta": "apps/rrhh/lib/chat.ts",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -225565,7 +226619,9 @@
         "contratoActivoDeEmpleado",
         "crearContrato",
         "historialContratos",
-        "parsearDatosContrato"
+        "parsearDatosContrato",
+        "duracionDe",
+        "duracionInferiorAnio"
       ],
       "funciones": [
         {
@@ -225574,7 +226630,7 @@
           "exportada": false,
           "params": "r: Record<string, unknown>",
           "retorno": "ContratoRow",
-          "linea": 23
+          "linea": 29
         },
         {
           "nombre": "contratoActivoDeEmpleado",
@@ -225582,7 +226638,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string,",
           "retorno": "Promise<ContratoRow | null>",
-          "linea": 41
+          "linea": 50
         },
         {
           "nombre": "crearContrato",
@@ -225590,7 +226646,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, datos: DatosContrato,",
           "retorno": "Promise<void>",
-          "linea": 51
+          "linea": 60
         },
         {
           "nombre": "historialContratos",
@@ -225598,7 +226654,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string,",
           "retorno": "Promise<ContratoRow[]>",
-          "linea": 77
+          "linea": 89
         },
         {
           "nombre": "parsearDatosContrato",
@@ -225606,13 +226662,39 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "DatosContrato",
-          "linea": 92,
+          "linea": 104,
           "resumen": "Valida y parsea el body de una petición de creación/actualización de contrato."
+        },
+        {
+          "nombre": "fechaOpcional",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, campo: string",
+          "retorno": "Date | null",
+          "linea": 141
+        },
+        {
+          "nombre": "duracionDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown, tipo: TipoContrato",
+          "retorno": "DuracionContrato | null",
+          "linea": 153,
+          "resumen": "Duración del contrato. Explícita en el cuerpo, o la que dice el tipo cuando el tipo ES la duración (indefinido/temporal). «parcial» sin duración explícita → null («no se sabe»: el motor deja el desemp"
+        },
+        {
+          "nombre": "duracionInferiorAnio",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: { duracion: DuracionContrato | null; fechaInicio: Date | null; fechaFin: Date | null }",
+          "retorno": "boolean | undefined",
+          "linea": 166,
+          "resumen": "¿Duración inferior al año? (art. 86.2 RIRPF: tipo mínimo del 2 % en contratos de menos de un año). true/false solo con datos; undefined = «no se sabe» (temporal sin alguna de las dos fechas)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "64f127f54c92"
+      "hash": "f137fe68848b"
     },
     {
       "ruta": "apps/rrhh/lib/convenio-agente.ts",
@@ -225667,6 +226749,129 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "c367841265e2"
+    },
+    {
+      "ruta": "apps/rrhh/lib/convenio-tablas-repo.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Adaptador Prisma de `rrhh.convenio_tablas_salariales` (migración 0033). TODA sentencia filtra por `empresa_id` de la sesión (rrhh_app tiene BYPASSRLS: el aislamiento es del código). Las reglas viven en `convenio-tablas.ts` (puro).",
+      "exporta": [
+        "listarTablasConvenio",
+        "guardarFilaConvenio",
+        "borrarFilaConvenio",
+        "convenioDeEmpresa"
+      ],
+      "funciones": [
+        {
+          "nombre": "mapear",
+          "kind": "function",
+          "exportada": false,
+          "params": "r: FilaBd",
+          "retorno": "FilaTablaConvenio &",
+          "linea": 12
+        },
+        {
+          "nombre": "listarTablasConvenio",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string",
+          "retorno": "Promise<(FilaTablaConvenio &",
+          "linea": 24
+        },
+        {
+          "nombre": "guardarFilaConvenio",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, f: FilaTablaConvenio, por: string",
+          "retorno": "Promise<void>",
+          "linea": 35,
+          "resumen": "Alta o corrección de una fila (misma empresa + convenio + año + categoría = la misma fila)."
+        },
+        {
+          "nombre": "borrarFilaConvenio",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, id: string",
+          "retorno": "Promise<number>",
+          "linea": 49
+        },
+        {
+          "nombre": "convenioDeEmpresa",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string",
+          "retorno": "Promise<string | null>",
+          "linea": 55,
+          "resumen": "Convenio de la empresa (Ajustes → convenio): código REGCON o, si no, el nombre. null = no se sabe."
+        }
+      ],
+      "tablas": [
+        "rrhh",
+        "set"
+      ],
+      "rutaApi": null,
+      "hash": "1936409a968d"
+    },
+    {
+      "ruta": "apps/rrhh/lib/convenio-tablas.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Tablas salariales del convenio metidas A MANO (migración 0033, `rrhh.convenio_tablas_salariales`). Reglas PURAS: validar una fila y proponer el salario base de un contrato por su categoría. Importes en CÉNTIMOS enteros. Sin fila del año/categoría (o con varias que no se pueden desempatar) = «no se s",
+      "exporta": [
+        "normalizarCategoria",
+        "eurosTextoACentimos",
+        "parsearFilaConvenio",
+        "proponerSalario",
+        "categoriasDelAnio"
+      ],
+      "funciones": [
+        {
+          "nombre": "normalizarCategoria",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 23,
+          "resumen": "Categoría comparable: sin espacios sobrantes y sin distinguir mayúsculas (mismo criterio que el índice único de la BD)."
+        },
+        {
+          "nombre": "eurosTextoACentimos",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 28,
+          "resumen": "«1.234,56» / «1234.56» / «1234,5» → céntimos enteros. Sin float: se parte por el separador decimal."
+        },
+        {
+          "nombre": "parsearFilaConvenio",
+          "kind": "function",
+          "exportada": true,
+          "params": "b: Record<string, unknown>",
+          "retorno": "FilaTablaConvenio",
+          "linea": 45,
+          "resumen": "Valida y normaliza una fila que llega del formulario. Lanza con un mensaje legible."
+        },
+        {
+          "nombre": "proponerSalario",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: FilaTablaConvenio[], q: { anio: number; categoria: string | null | undefined; convenio?: string | null },",
+          "retorno": "Propuesta",
+          "linea": 76,
+          "resumen": "Salario de la tabla para la categoría del contrato y el AÑO de su vigencia. Si se conoce el convenio de la empresa, solo sus filas; si no, vale únicamente si hay UNA fila para esa categoría y año (var"
+        },
+        {
+          "nombre": "categoriasDelAnio",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: FilaTablaConvenio[], anio: number",
+          "retorno": "string[]",
+          "linea": 91,
+          "resumen": "Categorías (sin repetir) del año, para el desplegable del contrato."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f35c1aa65d61"
     },
     {
       "ruta": "apps/rrhh/lib/distribuir-documentos-reglas.ts",
@@ -226206,6 +227411,54 @@
       "hash": "7537532de6cf"
     },
     {
+      "ruta": "apps/rrhh/lib/enviar-hechos-nominas.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Envío del outbox de nóminas a contabilidad (`POST {CONTABILIDAD_URL}/api/hechos`), mismo patrón que apps/taller/lib/enviar-hechos.ts. El cron LEE la cola, envía FUERA de cualquier transacción y anota cada resultado. Sin CONTABILIDAD_URL/secreto: no se envía y queda pendiente. 2xx (201 asentado · 200",
+      "exporta": [
+        "leerConfigContabilidad",
+        "clasificarRespuesta",
+        "esperaTrasIntento",
+        "enviarHechosNominas"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerConfigContabilidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: Record<string, string | undefined> = process.env, secretoDe: (n: string) => string = requireSecret",
+          "retorno": "ConfigContabilidad | null",
+          "linea": 18
+        },
+        {
+          "nombre": "clasificarRespuesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number | null, cuerpo = ''",
+          "retorno": "Veredicto",
+          "linea": 32
+        },
+        {
+          "nombre": "esperaTrasIntento",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "n: number",
+          "retorno": "number",
+          "linea": 45
+        },
+        {
+          "nombre": "enviarHechosNominas",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DepsEnvio",
+          "retorno": "Promise<ResumenEnvio>",
+          "linea": 60
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5db576da0380"
+    },
+    {
       "ruta": "apps/rrhh/lib/envio-documentos.ts",
       "ambito": "apps/rrhh",
       "resumen": "Subida ASISTIDA por IA y envío MASIVO de documentos (admin RR.HH.). 1) `analizarStaging`: lee el PDF del staging, extrae el texto y pide a la IA una PROPUESTA (tipo, carpeta, título, firma, resumen, destinatarios). No escribe nada: solo propone. 2) `asignarStaging`: con lo que el responsable CONFIRM",
@@ -226345,6 +227598,28 @@
       "hash": "78f5472627c3"
     },
     {
+      "ruta": "apps/rrhh/lib/fecha-madrid.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Fecha de hoy en Madrid (AAAA-MM-DD). El reloj entra aquí, nunca dentro del módulo puro de nóminas (`hoy` se inyecta).",
+      "exporta": [
+        "hoyMadrid"
+      ],
+      "funciones": [
+        {
+          "nombre": "hoyMadrid",
+          "kind": "function",
+          "exportada": true,
+          "params": "ahora: Date = new Date()",
+          "retorno": "string",
+          "linea": 2,
+          "resumen": "Fecha de hoy en Madrid (AAAA-MM-DD). El reloj entra aquí, nunca dentro del módulo puro de nóminas (`hoy` se inyecta)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c7dcf1594017"
+    },
+    {
       "ruta": "apps/rrhh/lib/fichaje-taller.ts",
       "ambito": "apps/rrhh",
       "resumen": "Fichaje desde el taller (puerto de operador). Validación PURA de la entrada; la BD vive en el route.",
@@ -226374,6 +227649,65 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "eb6d6268f2c6"
+    },
+    {
+      "ruta": "apps/rrhh/lib/fichajes-nomina.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "N2 — Puerto de BD de «fichajes → incidencias de nómina». Lee, llama a la función PURA del módulo y (solo con la aprobación del responsable) escribe incidencias. rrhh_app tiene BYPASSRLS: TODA consulta lleva `empresa_id` de la SESIÓN (cepo `lib/regression-fichajes-nomina.test.ts` y `lib/aislamiento-n",
+      "exporta": [
+        "proponerDesdeFichajes",
+        "aprobarPropuestas",
+        "aprobarFichajesDeLaNomina"
+      ],
+      "funciones": [
+        {
+          "nombre": "limitesMes",
+          "kind": "function",
+          "exportada": false,
+          "params": "periodo: string",
+          "retorno": "",
+          "linea": 17
+        },
+        {
+          "nombre": "iso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 25
+        },
+        {
+          "nombre": "proponerDesdeFichajes",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, nominaId: string, hoy: string = hoyMadrid()",
+          "retorno": "Promise<PropuestasMes | null>",
+          "linea": 39
+        },
+        {
+          "nombre": "aprobarPropuestas",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, nominaId: string, claves: string[], hoy: string = hoyMadrid()",
+          "retorno": "Promise<ResultadoAprobacion | null>",
+          "linea": 111,
+          "resumen": "El responsable aprueba propuestas por CLAVE. Solo entran las que existen ahora mismo (recalculadas), tienen incidencia propia (las informativas —retrasos— y las compensadas con descanso no), no supera"
+        },
+        {
+          "nombre": "aprobarFichajesDeLaNomina",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, nominaId: string, usuario: string",
+          "retorno": "Promise<number | null>",
+          "linea": 129,
+          "resumen": "Aprueba los fichajes CERRADOS y aún sin aprobar de ese empleado en el mes de la nómina. Devuelve cuántos."
+        }
+      ],
+      "tablas": [
+        "rrhh"
+      ],
+      "rutaApi": null,
+      "hash": "19c291ab14ce"
     },
     {
       "ruta": "apps/rrhh/lib/fichajes.ts",
@@ -226481,6 +227815,45 @@
       ],
       "rutaApi": null,
       "hash": "360a3d51c3fd"
+    },
+    {
+      "ruta": "apps/rrhh/lib/finiquito-entrada.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Cuerpo de POST /api/admin/nominas/finiquito → `EntradaFiniquito` de @central/module-nominas. Puro, sin reloj. ÚNICO sitio que conoce la forma de la entrada del motor. Importes del formulario en EUROS → céntimos UNA vez aquí. Nada se rellena con un valor inventado: un campo obligatorio vacío es un er",
+      "exporta": [
+        "eurosACent",
+        "entradaFiniquito"
+      ],
+      "funciones": [
+        {
+          "nombre": "eurosACent",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 11,
+          "resumen": "Euros (número o texto con coma o punto) → céntimos enteros ≥ 0; null si no es un importe."
+        },
+        {
+          "nombre": "causaDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "b: Record<string, unknown>",
+          "retorno": "CausaExtincion | string",
+          "linea": 18
+        },
+        {
+          "nombre": "entradaFiniquito",
+          "kind": "function",
+          "exportada": true,
+          "params": "b: Record<string, unknown>",
+          "retorno": "EntradaFiniquitoArmada | string",
+          "linea": 45
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7d820cad68a5"
     },
     {
       "ruta": "apps/rrhh/lib/firma-empresa.ts",
@@ -226718,6 +228091,110 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "1a75aa84f2a4"
+    },
+    {
+      "ruta": "apps/rrhh/lib/hechos-contabilidad-certificado.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Certificado anual de retenciones del EMPLEADO (portal /e). PURO. Cadena idéntica a la de contabilidad: nómina confirmada → `nominaAHecho` con perceptor (de @central/module-nominas: el MISMO hecho que se encola en `rrhh.hechos_nominas` y viaja al puerto) → `retencionDeNomina` (lo que contabilidad lee",
+      "exporta": [
+        "hechoParaCertificado",
+        "certificadoDeNominas",
+        "eurosEs",
+        "anioPedido"
+      ],
+      "funciones": [
+        {
+          "nombre": "hechoParaCertificado",
+          "kind": "function",
+          "exportada": true,
+          "params": "n: FilaNominaCertificado",
+          "retorno": "",
+          "linea": 11,
+          "resumen": "El hecho que se encola al confirmar, reconstruido (determinista) para el certificado. Lo que no se puede asentar no se certifica."
+        },
+        {
+          "nombre": "certificadoDeNominas",
+          "kind": "function",
+          "exportada": true,
+          "params": "datos: DatosCertificado, anio: number",
+          "retorno": "ResultadoCertificado",
+          "linea": 26
+        },
+        {
+          "nombre": "eurosEs",
+          "kind": "function",
+          "exportada": true,
+          "params": "centimos: number",
+          "retorno": "string",
+          "linea": 46,
+          "resumen": "Dinero en formato español: 2.162,49 € → «2.162,49€» (puntos de miles también en 4 cifras)."
+        },
+        {
+          "nombre": "anioPedido",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: string | null, hoy: Date",
+          "retorno": "number | null",
+          "linea": 54,
+          "resumen": "Año pedido en la query: entero entre 2020 y el año en curso; por defecto, el anterior (el que se certifica en enero)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7117cc4f1120"
+    },
+    {
+      "ruta": "apps/rrhh/lib/hechos-nominas.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "N3 — OUTBOX de hechos contables de nómina (tabla rrhh.hechos_nominas, migración 0033). Aquí NUNCA hay HTTP: el hecho se inserta en la MISMA transacción que la confirmación de la nómina (si ésta falla, no queda hecho; si confirma, el hecho existe aunque contabilidad esté caída) y lo envía el cron `/a",
+      "exporta": [
+        "encolarHechoNomina",
+        "leerColaHechosNominas",
+        "leerColaHechosNominasEmpresa",
+        "marcarHechoNomina"
+      ],
+      "funciones": [
+        {
+          "nombre": "encolarHechoNomina",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, nominaId: string, hecho: HechoNominaPuerto | HechoPagoNominaPuerto, contabilidadEmpresaId: string",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "PrismaPromise para componerla con otras sentencias en `prisma.$transaction([...])`. Repetir la ref no duplica ni sobrescribe. `contabilidadEmpresaId` = empresa de contabilidad DESTINO vigente al confi"
+        },
+        {
+          "nombre": "leerColaHechosNominas",
+          "kind": "function",
+          "exportada": true,
+          "params": "ahora: Date, limite: number",
+          "retorno": "Promise<FilaHechoNomina[]>",
+          "linea": 28,
+          "resumen": "Cola pendiente de empresas con `contabilidad_nominas` ACTIVO (si se apaga, deja de enviarse). El destino es el GUARDADO en la fila (0034), no el vínculo actual."
+        },
+        {
+          "nombre": "leerColaHechosNominasEmpresa",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, limite: number",
+          "retorno": "Promise<FilaHechoNomina[]>",
+          "linea": 44,
+          "resumen": "Botón del responsable: la cola de SU empresa (la de la sesión), sin esperar al `proximo_intento` (lo pide una persona). Solo 'pendiente' y 'error'; lo 'rechazado' no se reintenta solo (hay que mirarlo"
+        },
+        {
+          "nombre": "marcarHechoNomina",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string, empresaId: string, v: { estado: 'enviado' | 'rechazado' | 'error'; detalle: string | null; intentos: number; proximoIntento: Date | null; ahora: Date },",
+          "retorno": "Promise<void>",
+          "linea": 56
+        }
+      ],
+      "tablas": [
+        "rrhh"
+      ],
+      "rutaApi": null,
+      "hash": "2cf380d778e5"
     },
     {
       "ruta": "apps/rrhh/lib/host-canonico.ts",
@@ -227340,7 +228817,7 @@
           "exportada": false,
           "params": "n: number, uno: string, varios: string",
           "retorno": null,
-          "linea": 19
+          "linea": 21
         },
         {
           "nombre": "tarjetasInicio",
@@ -227348,12 +228825,12 @@
           "exportada": true,
           "params": "d: DatosInicio",
           "retorno": "Tarjeta[]",
-          "linea": 21
+          "linea": 23
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d55fecabd553"
+      "hash": "afb18b186c80"
     },
     {
       "ruta": "apps/rrhh/lib/inicio-admin.ts",
@@ -227369,7 +228846,7 @@
           "exportada": false,
           "params": "etiqueta: string, f: () => Promise<T>",
           "retorno": "Promise<T | null>",
-          "linea": 7
+          "linea": 8
         },
         {
           "nombre": "datosInicio",
@@ -227377,14 +228854,15 @@
           "exportada": true,
           "params": "empresaId: string, tieneFichaje: boolean",
           "retorno": "Promise<DatosInicio>",
-          "linea": 11
+          "linea": 12
         }
       ],
       "tablas": [
+        "indefinido",
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "678d15eb532b"
+      "hash": "c3cef11da3cc"
     },
     {
       "ruta": "apps/rrhh/lib/instalar-app.ts",
@@ -227881,13 +229359,13 @@
           "exportada": true,
           "params": "b: unknown",
           "retorno": "",
-          "linea": 38,
+          "linea": 42,
           "resumen": "Valida el cuerpo del PUT del operador. Todo explícito: sin modo por defecto, sin «quién» vacío."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3addc66be629"
+      "hash": "873a2ba6ebe3"
     },
     {
       "ruta": "apps/rrhh/lib/modulos-empresa.ts",
@@ -227895,7 +229373,8 @@
       "exporta": [
         "leerModulo",
         "empresasConNominasEnCalculo",
-        "guardarModulo"
+        "guardarModulo",
+        "contabilidadDeNominas"
       ],
       "funciones": [
         {
@@ -227924,6 +229403,15 @@
           "retorno": "Promise<boolean>",
           "linea": 28,
           "resumen": "Solo el OPERADOR (ruta /api/operador/empresas/modulos). Devuelve false si la empresa no existe."
+        },
+        {
+          "nombre": "contabilidadDeNominas",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string",
+          "retorno": "Promise<string | null>",
+          "linea": 50,
+          "resumen": "N3: ¿a qué empresa de contabilidad se envían los hechos de nómina de ESTA empresa? `null` = módulo apagado o sin empresa vinculada (no se encola nada). Un error de lectura LANZA: confirmar una nómina "
         }
       ],
       "tablas": [
@@ -227931,7 +229419,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "b1c4516919b9"
+      "hash": "cba50f26b6bc"
     },
     {
       "ruta": "apps/rrhh/lib/nomina-pdf.tsx",
@@ -227975,7 +229463,13 @@
       "exporta": [
         "parsePeriodo",
         "periodoActual",
+        "ultimoDiaPeriodo",
+        "mesesEntre",
+        "tocaEnPeriodo",
+        "filaASituacionFamiliar",
+        "irpfAlgoritmoPara",
         "modoNominasEmpresa",
+        "contratoDeFila",
         "generarBorradores",
         "listarNominas",
         "obtenerNomina",
@@ -227990,7 +229484,7 @@
           "exportada": true,
           "params": "periodo: string",
           "retorno": "",
-          "linea": 8
+          "linea": 11
         },
         {
           "nombre": "periodoActual",
@@ -227998,7 +229492,76 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 15
+          "linea": 18
+        },
+        {
+          "nombre": "ultimoDiaPeriodo",
+          "kind": "function",
+          "exportada": true,
+          "params": "periodo: string",
+          "retorno": "string",
+          "linea": 24,
+          "resumen": "Último día del periodo (YYYY-MM-DD): la fecha con la que se busca el modelo 145 vigente de esa nómina."
+        },
+        {
+          "nombre": "mesesEntre",
+          "kind": "function",
+          "exportada": true,
+          "params": "desde: string, hasta: string",
+          "retorno": "number",
+          "linea": 36
+        },
+        {
+          "nombre": "tocaEnPeriodo",
+          "kind": "function",
+          "exportada": true,
+          "params": "o: { periodoOrigen: string; periodicidad: string | null; recurrenteHasta: string | null }, periodo: string,",
+          "retorno": "boolean",
+          "linea": 46,
+          "resumen": "¿Se copia la incidencia ORIGINAL (de la nómina de `periodoOrigen`) a la nómina de `periodo`? Solo hacia delante, cada `periodicidad` y hasta `recurrenteHasta` incluido (null = sin fin conocido). Una c"
+        },
+        {
+          "nombre": "fechaIso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string",
+          "linea": 62
+        },
+        {
+          "nombre": "filaASituacionFamiliar",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: Record<string, unknown>",
+          "retorno": "SituacionFamiliar",
+          "linea": 65,
+          "resumen": "Fila de `rrhh.situacion_familiar` → tipo del motor. Céntimos BIGINT → number entero (nunca euros float)."
+        },
+        {
+          "nombre": "irpfAlgoritmoPara",
+          "kind": "function",
+          "exportada": true,
+          "params": "historial: SituacionFamiliar[] | null, periodo: string, contrato: { duracion: DuracionContrato | null; fechaInicio: Date | null; fechaFin: Date | null },",
+          "retorno": "IrpfAlgoritmo | undefined",
+          "linea": 88,
+          "resumen": "`irpfAlgoritmo` para una nómina. `historial` null = la tabla del 145 NO se pudo leer («no se sabe»): devuelve undefined y el llamador decide (cálculo → falla; simulación → % plano del contrato con avi"
+        },
+        {
+          "nombre": "esTablaInexistente",
+          "kind": "function",
+          "exportada": false,
+          "params": "e: unknown",
+          "retorno": "boolean",
+          "linea": 101
+        },
+        {
+          "nombre": "historial145",
+          "kind": "function",
+          "exportada": false,
+          "params": "empresaId: string, empleadoId?: string",
+          "retorno": "Promise<Map<string, SituacionFamiliar[]> | null>",
+          "linea": 107,
+          "resumen": "Historial del 145 por empleado de la empresa; null = tabla sin crear (migración 0032 sin aplicar). Datos RGPD art. 9: no salen de aquí."
         },
         {
           "nombre": "atEpDeEmpresa",
@@ -228006,7 +229569,7 @@
           "exportada": false,
           "params": "empresaId: string",
           "retorno": "Promise<number | null>",
-          "linea": 21,
+          "linea": 132,
           "resumen": "AT/EP de la empresa como fracción. NULL = «no se sabe» (sin CNAE resuelto): el motor lo marca pendiente, no inventa 1,5 %."
         },
         {
@@ -228015,16 +229578,50 @@
           "exportada": true,
           "params": "empresaId: string",
           "retorno": "Promise<ModoCalculo>",
-          "linea": 28,
+          "linea": 139,
           "resumen": "Modo del motor para la empresa: 'calculo' solo con el módulo nóminas activo en modo cálculo (si no, borrador «simulación»)."
+        },
+        {
+          "nombre": "aFecha",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Date | null",
+          "linea": 148
+        },
+        {
+          "nombre": "contratoDeFila",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: FilaContrato",
+          "retorno": "",
+          "linea": 150
+        },
+        {
+          "nombre": "calcularConIrpf",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: ReturnType<typeof contratoDeFila>, incidencias: IncidenciaMes[], base: OpcionesNominaEuros, historial: SituacionFamiliar[] | null,",
+          "retorno": "NominaDesglose",
+          "linea": 169,
+          "resumen": "Llama al motor con el 145 como `irpfAlgoritmo`. 145 ilegible: en 'calculo' falla (fail-closed); en 'simulacion' usa el % plano del contrato y lo deja en `avisos`."
+        },
+        {
+          "nombre": "incidenciaMotor",
+          "kind": "function",
+          "exportada": false,
+          "params": "i: FilaIncidencia",
+          "retorno": "IncidenciaMes",
+          "linea": 189
         },
         {
           "nombre": "_recalcularDesglose",
           "kind": "function",
           "exportada": false,
-          "params": "empresaId: string, nominaId: string",
+          "params": "empresaId: string, nominaId: string, o: { excluir?: string } = {}",
           "retorno": "Promise<NominaDesglose>",
-          "linea": 32
+          "linea": 200,
+          "resumen": "Recalcula el desglose de una nómina. `excluir` = incidencia que se va a borrar (se calcula SIN ella antes de borrarla)."
         },
         {
           "nombre": "generarBorradores",
@@ -228032,7 +229629,7 @@
           "exportada": true,
           "params": "empresaId: string, periodo: string, modo: ModoCalculo,",
           "retorno": "Promise<",
-          "linea": 71,
+          "linea": 225,
           "resumen": "Borradores del mes. `modo` 'calculo' (cron, empresas con el módulo en cálculo) es fail-closed: una cifra legal PENDIENTE_VERIFICAR hace fallar ESE contrato (se cuenta en `errores`, sin datos personale"
         },
         {
@@ -228041,7 +229638,7 @@
           "exportada": true,
           "params": "empresaId: string, periodo: string",
           "retorno": null,
-          "linea": 129
+          "linea": 312
         },
         {
           "nombre": "obtenerNomina",
@@ -228049,15 +229646,15 @@
           "exportada": true,
           "params": "empresaId: string, nominaId: string",
           "retorno": null,
-          "linea": 140
+          "linea": 339
         },
         {
           "nombre": "addIncidencia",
           "kind": "function",
           "exportada": true,
-          "params": "empresaId: string, nominaId: string, datos: { tipo: TipoIncidencia; concepto: string; importe?: number; horas?: number; dias?: number },",
-          "retorno": null,
-          "linea": 155
+          "params": "empresaId: string, nominaId: string, datos: { tipo: TipoIncidencia; concepto: string; importe?: number; horas?: number; dias?: number /** 0033: null/undefined = puntual. */ periodicidad?: Periodicidad | null recurrenteHasta?: string | null ",
+          "retorno": "Promise<",
+          "linea": 355
         },
         {
           "nombre": "deleteIncidencia",
@@ -228065,7 +229662,8 @@
           "exportada": true,
           "params": "empresaId: string, incId: string",
           "retorno": "Promise<void>",
-          "linea": 193
+          "linea": 430,
+          "resumen": "Borra una incidencia de un borrador. Se calcula PRIMERO el desglose sin ella: si el recálculo falla (modo cálculo con una cifra pendiente, sin contrato…) no se borra nada (antes se borraba y el desglo"
         },
         {
           "nombre": "listarPeriodosConNominas",
@@ -228073,14 +229671,14 @@
           "exportada": true,
           "params": "empresaId: string",
           "retorno": null,
-          "linea": 213
+          "linea": 453
         }
       ],
       "tablas": [
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "2b5ad02e347d"
+      "hash": "ba07a753bf54"
     },
     {
       "ruta": "apps/rrhh/lib/notas-empleado.ts",
@@ -228459,6 +230057,106 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "c8c933a9e10b"
+    },
+    {
+      "ruta": "apps/rrhh/lib/remesa-nominas-datos.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Carga de BD para la remesa de nóminas (`lib/remesa-nominas.ts` es la lógica pura). TODA sentencia filtra por la `empresa_id` de la sesión (cepo `lib/aislamiento-nominas.test.ts`; `rrhh_app` tiene BYPASSRLS). `empresas.nif/iban/bic`, `empleados.iban` y `nominas.remesa_generada_at/remesa_msg_id` los a",
+      "exporta": [
+        "cargarDatosRemesa",
+        "sellarRemesa"
+      ],
+      "funciones": [
+        {
+          "nombre": "cargarDatosRemesa",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, periodo: string",
+          "retorno": "Promise<",
+          "linea": 11
+        },
+        {
+          "nombre": "sellarRemesa",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { empresaId: string nominaIds: string[] idMensaje: string confirmarRepeticion: boolean }",
+          "retorno": "Promise<",
+          "linea": 58,
+          "resumen": "Sella la generación de la remesa en cada nómina incluida (contra el doble pago), en UNA transacción con las filas bloqueadas (`FOR UPDATE`): dos descargas a la vez no pasan las dos el control. Si algu"
+        }
+      ],
+      "tablas": [
+        "rrhh"
+      ],
+      "rutaApi": null,
+      "hash": "6543678db2b5"
+    },
+    {
+      "ruta": "apps/rrhh/lib/remesa-nominas.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Remesa SEPA de transferencias (pain.001, propósito SALA) para pagar las nóminas CONFIRMADAS de una empresa y mes. Lógica PURA: sin BD ni reloj (la fecha de ejecución y la de creación se inyectan). La carga vive en `lib/remesa-nominas-datos.ts`. Reglas (todas fail-closed: ante la duda NO sale fichero",
+      "exporta": [
+        "eurosACentimos",
+        "textoSepa",
+        "idMensajeRemesa",
+        "armarRemesaNominas"
+      ],
+      "funciones": [
+        {
+          "nombre": "fechaValida",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: string",
+          "retorno": "boolean",
+          "linea": 113
+        },
+        {
+          "nombre": "eurosACentimos",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 123,
+          "resumen": "Euros (número o texto decimal, como sale de `datos_calculo->>'netoAPagar'`) → céntimos enteros. Devuelve `null` si no se sabe (ausente, vacío, no numérico, con más de 2 decimales efectivos): nunca 0 p"
+        },
+        {
+          "nombre": "textoSepa",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string, max: number",
+          "retorno": "string",
+          "linea": 136,
+          "resumen": "Texto para campos SEPA (charset latino básico): sin tildes, ñ→n, lo demás fuera del juego → espacio."
+        },
+        {
+          "nombre": "idMensajeRemesa",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { empresaId: string periodo: string ibanCargo: string transferencias: { nominaId: string; iban: string; centimos: number }[] }",
+          "retorno": "string",
+          "linea": 147,
+          "resumen": "MsgId determinista: `NOM` + AAAAMM + 22 hex de sha256(empresa, periodo, IBAN de cargo, transferencias ordenadas). 31 caracteres: con el sufijo `-001` del PmtInfId cabe en los 35 de SEPA. PURO."
+        },
+        {
+          "nombre": "nombreCompleto",
+          "kind": "function",
+          "exportada": false,
+          "params": "e: EmpleadoRemesa",
+          "retorno": "string",
+          "linea": 160
+        },
+        {
+          "nombre": "armarRemesaNominas",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: ArmarRemesaParams",
+          "retorno": "RemesaOk | RemesaError",
+          "linea": 164
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "31e510eeff48"
     },
     {
       "ruta": "apps/rrhh/lib/saludo.ts",
@@ -229045,6 +230743,85 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "c358e14aa0d4"
+    },
+    {
+      "ruta": "apps/rrhh/lib/vencimientos.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Regla PURA de los contratos que VENCEN (Inicio del responsable en `/admin`). Sin BD ni reloj: `hoy` se inyecta (fecha ISO en hora de Madrid). Lista de los que terminan en ≤ 30 días. 🚨 Va al RESPONSABLE, NUNCA al trabajador (07/11/2026): un aviso automático de fin de contrato al empleado podía leers",
+      "exporta": [
+        "diasEntreFechas",
+        "hoyMadrid",
+        "estadoFinContrato",
+        "fechaEs",
+        "contratosQueVencen",
+        "lineaVencimiento"
+      ],
+      "funciones": [
+        {
+          "nombre": "aUtc",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "number",
+          "linea": 12
+        },
+        {
+          "nombre": "diasEntreFechas",
+          "kind": "function",
+          "exportada": true,
+          "params": "desde: string, hasta: string",
+          "retorno": "number",
+          "linea": 20,
+          "resumen": "Días naturales de `desde` a `hasta` (negativo si ya pasó)."
+        },
+        {
+          "nombre": "hoyMadrid",
+          "kind": "function",
+          "exportada": true,
+          "params": "ahora: Date = new Date()",
+          "retorno": "string",
+          "linea": 25,
+          "resumen": "Fecha de hoy (YYYY-MM-DD) en Madrid, para el adaptador; la regla recibe `hoy` ya resuelto."
+        },
+        {
+          "nombre": "estadoFinContrato",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: { duracion: string | null; fechaFin: string | null }, hoy: string",
+          "retorno": "EstadoFin",
+          "linea": 34
+        },
+        {
+          "nombre": "fechaEs",
+          "kind": "function",
+          "exportada": true,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 41,
+          "resumen": "dd/mm/aaaa"
+        },
+        {
+          "nombre": "contratosQueVencen",
+          "kind": "function",
+          "exportada": true,
+          "params": "contratos: ContratoVencible[], hoy: string, dias: number = DIAS_VENCIMIENTO",
+          "retorno": null,
+          "linea": 57,
+          "resumen": "Contratos que terminan entre hoy y `dias` (incluidos), del más próximo al más lejano. `fecha_fin` NULL = «no se sabe»: no entra (no se afirma que venza ni que no). Ya pasados: fuera (no es «vence pron"
+        },
+        {
+          "nombre": "lineaVencimiento",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: { empleado: string; fechaFin: string; dias: number }",
+          "retorno": "string",
+          "linea": 69,
+          "resumen": "Línea para el responsable: «Ana Núñez — 01/12/2026 (dentro de 24 días)»."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7fdd091dbb7f"
     },
     {
       "ruta": "apps/rrhh/lib/verificacion.ts",
@@ -253019,6 +254796,465 @@
       "hash": "499d6c0e8a14"
     },
     {
+      "ruta": "packages/module-contabilidad/src/exportacion/exportar.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "Exportación del DIARIO y del PLAN DE CUENTAS a A3 (ancho fijo), Sage y Holded (CSV). PURO: recibe asientos y cuentas ya leídos; el diseño es dato (`diseno.ts`). Importes en céntimos enteros → texto sin pasar por float. Un asiento que no cuadra, una cuenta ausente del plan o un texto que no cabe en s",
+      "exporta": [
+        "importeTexto",
+        "aLatin1",
+        "componerRegistroFijo",
+        "cuentaA3",
+        "exportarDiarioA3",
+        "exportarPlanA3",
+        "exportarDiarioSage",
+        "exportarPlanSage",
+        "exportarDiarioHolded",
+        "exportarPlanHolded",
+        "exportar"
+      ],
+      "funciones": [
+        {
+          "nombre": "iso8",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "f: string",
+          "retorno": null,
+          "linea": 32
+        },
+        {
+          "nombre": "importeTexto",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Centimos, decimal: ',' | '.' = '.'",
+          "retorno": "string",
+          "linea": 33
+        },
+        {
+          "nombre": "aLatin1",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "Uint8Array",
+          "linea": 40,
+          "resumen": "Convierte a bytes latin1; lo que no existe en latin1 pasa a «?»."
+        },
+        {
+          "nombre": "validarDatos",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: DatosExport",
+          "retorno": "Map<string, string>",
+          "linea": 47,
+          "resumen": "───────── comprobaciones comunes ─────────"
+        },
+        {
+          "nombre": "ordenar",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "xs: readonly Asiento[]",
+          "retorno": null,
+          "linea": 60
+        },
+        {
+          "nombre": "campo",
+          "kind": "function",
+          "exportada": false,
+          "params": "reg: RegistroFijo, nombre: string",
+          "retorno": "CampoFijo",
+          "linea": 63,
+          "resumen": "───────── A3: registros de ancho fijo conducidos por el diseño ─────────"
+        },
+        {
+          "nombre": "componerRegistroFijo",
+          "kind": "function",
+          "exportada": true,
+          "params": "reg: RegistroFijo, valores: Readonly<Record<string, string>>",
+          "retorno": "string",
+          "linea": 69,
+          "resumen": "Compone un registro de ancho fijo a partir de {campo: valor ya formateado}. Un valor más ancho que su campo es error de diseño/datos."
+        },
+        {
+          "nombre": "cuentaA3",
+          "kind": "function",
+          "exportada": true,
+          "params": "codigo: string, longitud: number",
+          "retorno": "string",
+          "linea": 79
+        },
+        {
+          "nombre": "opcionesA3",
+          "kind": "function",
+          "exportada": false,
+          "params": "o: OpcionesA3",
+          "retorno": "",
+          "linea": 83
+        },
+        {
+          "nombre": "resumen",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "formato: FormatoExport, contenido: string, lineas: number, recortes: number",
+          "retorno": "ResultadoExport",
+          "linea": 89
+        },
+        {
+          "nombre": "exportarDiarioA3",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosExport, o: OpcionesA3",
+          "retorno": "ResultadoExport",
+          "linea": 94
+        },
+        {
+          "nombre": "exportarPlanA3",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: Pick<DatosExport, 'cuentas'>, o: OpcionesA3",
+          "retorno": "ResultadoExport",
+          "linea": 113
+        },
+        {
+          "nombre": "fechaCsv",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: string, d: DisenoCsv",
+          "retorno": "string",
+          "linea": 126,
+          "resumen": "───────── Sage / Holded: CSV conducido por el diseño ─────────"
+        },
+        {
+          "nombre": "diarioCsv",
+          "kind": "function",
+          "exportada": false,
+          "params": "formato: 'sage' | 'holded', d: DatosExport, dis: DisenoCsv",
+          "retorno": "ResultadoExport",
+          "linea": 130
+        },
+        {
+          "nombre": "planCsv",
+          "kind": "function",
+          "exportada": false,
+          "params": "formato: 'sage' | 'holded', d: Pick<DatosExport, 'cuentas'>, dis: DisenoCsv",
+          "retorno": "ResultadoExport",
+          "linea": 144
+        },
+        {
+          "nombre": "exportarDiarioSage",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "d: DatosExport",
+          "retorno": null,
+          "linea": 148
+        },
+        {
+          "nombre": "exportarPlanSage",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "d: Pick<DatosExport, 'cuentas'>",
+          "retorno": null,
+          "linea": 149
+        },
+        {
+          "nombre": "exportarDiarioHolded",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "d: DatosExport",
+          "retorno": null,
+          "linea": 150
+        },
+        {
+          "nombre": "exportarPlanHolded",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "d: Pick<DatosExport, 'cuentas'>",
+          "retorno": null,
+          "linea": 151
+        },
+        {
+          "nombre": "exportar",
+          "kind": "function",
+          "exportada": true,
+          "params": "formato: FormatoExport, que: 'diario' | 'plan', d: DatosExport, a3?: OpcionesA3",
+          "retorno": "ResultadoExport",
+          "linea": 154,
+          "resumen": "Punto de entrada único (lo usa la ruta). `a3` exige `a3: { codigoEmpresa }`."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "aada6bb22894"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/factura-electronica/facturae.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "Generador Facturae 3.2.2 (formato español de factura electrónica; administración pública vía FACe). PURO. Estructura según el esquema: FileHeader → Parties (SellerParty, BuyerParty) → Invoices/Invoice (InvoiceHeader, InvoiceIssueData, TaxesOutputs, TaxesWithheld, InvoiceTotals, Items, PaymentDetails",
+      "exporta": [
+        "generarFacturae"
+      ],
+      "funciones": [
+        {
+          "nombre": "direccion",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: ParteFactura",
+          "retorno": "string",
+          "linea": 11
+        },
+        {
+          "nombre": "parte",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: ParteFactura, rol: string",
+          "retorno": "string",
+          "linea": 15
+        },
+        {
+          "nombre": "euros",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "c: number",
+          "retorno": null,
+          "linea": 24
+        },
+        {
+          "nombre": "generarFacturae",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FacturaElectronica",
+          "retorno": "XmlFactura",
+          "linea": 26
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2027d77493e0"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/factura-electronica/modelo.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "Factura EMITIDA para la factura electrónica (UBL 2.1 EN 16931 y Facturae 3.2.2). PURO, céntimos enteros, sin float. El módulo no guardaba hasta ahora la factura emitida como entidad (las ventas entran como `HechoVenta`): este es su modelo de INTERCAMBIO. Cantidades en MILÉSIMAS (1000 = 1 unidad) y p",
+      "exporta": [
+        "calcularFacturaElectronica",
+        "problemasFacturaElectronica"
+      ],
+      "funciones": [
+        {
+          "nombre": "brutoLinea",
+          "kind": "function",
+          "exportada": false,
+          "params": "l: LineaFacturaElectronica",
+          "retorno": "Centimos",
+          "linea": 67
+        },
+        {
+          "nombre": "calcularFacturaElectronica",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: Pick<FacturaElectronica, 'lineas' | 'retencionPct'>",
+          "retorno": "TotalesFacturaElectronica",
+          "linea": 77
+        },
+        {
+          "nombre": "problemasFacturaElectronica",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FacturaElectronica",
+          "retorno": "string[]",
+          "linea": 104,
+          "resumen": "Lista de problemas de forma (no lanza). Vacía = la factura puede generarse."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "fdebc64eb123"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/factura-electronica/ubl.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "Generador UBL 2.1 · EN 16931 (CIUS-ES pendiente de contrastar). PURO. Elementos y orden según el esquema UBL 2.1 `Invoice`. Cubre los campos OBLIGATORIOS del modelo semántico EN 16931 (BT-1 número, BT-2 fecha, BT-3 tipo, BT-5 moneda, BG-4/BG-7 partes con nombre, dirección y país, BT-31/BT-48 identif",
+      "exporta": [
+        "generarUbl"
+      ],
+      "funciones": [
+        {
+          "nombre": "pais2",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "p?: string",
+          "retorno": null,
+          "linea": 12
+        },
+        {
+          "nombre": "parte",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: ParteFactura, etiqueta: 'AccountingSupplierParty' | 'AccountingCustomerParty'",
+          "retorno": "string",
+          "linea": 14
+        },
+        {
+          "nombre": "generarUbl",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FacturaElectronica",
+          "retorno": "XmlFactura",
+          "linea": 26
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c16bc108d0f1"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/factura-electronica/xml.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "Utilidades XML mínimas (sin dependencias). Escapa texto y atributos; `importe` formatea céntimos enteros sin float.",
+      "exporta": [
+        "esc",
+        "importe",
+        "milesimas",
+        "porcentajeTxt",
+        "el"
+      ],
+      "funciones": [
+        {
+          "nombre": "esc",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string",
+          "retorno": "string",
+          "linea": 4
+        },
+        {
+          "nombre": "importe",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Centimos, decimales: 2 | 6 = 2",
+          "retorno": "string",
+          "linea": 8
+        },
+        {
+          "nombre": "milesimas",
+          "kind": "function",
+          "exportada": true,
+          "params": "m: number",
+          "retorno": "string",
+          "linea": 14,
+          "resumen": "Milésimas → decimal con 3 decimales («2500» → «2.500»)."
+        },
+        {
+          "nombre": "porcentajeTxt",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: number",
+          "retorno": "string",
+          "linea": 18,
+          "resumen": "Porcentaje (número) → «21.00»; admite hasta 2 decimales."
+        },
+        {
+          "nombre": "el",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "tag: string, valor: string, attrs = ''",
+          "retorno": "string",
+          "linea": 23,
+          "resumen": "Elemento con texto: `<tag>valor</tag>`."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6e2933b8e8b5"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/gestoria/bandeja.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "Portal de la GESTORÍA · bandeja de pendientes por empresa. PURO (la fuente de datos se inyecta). 🚨 AISLAMIENTO: un gestor ve SOLO las empresas con vínculo ACTIVO de rol `gestor` (la tabla de asignación es `usuario_empresas`). `bandejaGestor` consulta la fuente ÚNICAMENTE con ids de esas empresas — ",
+      "exporta": [
+        "empresasGestionadas",
+        "gestionaEmpresa",
+        "resumirEmpresa",
+        "bandejaGestor"
+      ],
+      "funciones": [
+        {
+          "nombre": "valido",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: unknown",
+          "retorno": "n is number",
+          "linea": 34
+        },
+        {
+          "nombre": "empresasGestionadas",
+          "kind": "function",
+          "exportada": true,
+          "params": "vinculos: readonly VinculoUsuario[]",
+          "retorno": "VinculoUsuario[]",
+          "linea": 37,
+          "resumen": "Empresas que el usuario gestiona: vínculos de rol `gestor`, sin duplicados (el primero gana)."
+        },
+        {
+          "nombre": "gestionaEmpresa",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "vinculos: readonly VinculoUsuario[], empresaId: string",
+          "retorno": "boolean",
+          "linea": 51,
+          "resumen": "¿Gestiona este usuario esa empresa? (la pantalla de detalle lo comprueba antes de abrir nada)."
+        },
+        {
+          "nombre": "resumirEmpresa",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: { empresaId: string; razonSocial: string }, c: ContadoresPendientes",
+          "retorno": "PendientesEmpresa",
+          "linea": 54
+        },
+        {
+          "nombre": "bandejaGestor",
+          "kind": "function",
+          "exportada": true,
+          "params": "vinculos: readonly VinculoUsuario[], fuente: FuentePendientes",
+          "retorno": "Promise<BandejaGestor>",
+          "linea": 62
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "df15355328d5"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/gestoria/comentarios.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "Comentarios del dueño y de la gestoría por ASIENTO o por DOCUMENTO (factura recibida o referencia de documento). PURO. Un comentario cuelga de EXACTAMENTE un objeto. Solo se añaden (no se editan ni se borran: es el hilo de la conversación contable).",
+      "exporta": [
+        "validarComentario",
+        "validarRevision"
+      ],
+      "funciones": [
+        {
+          "nombre": "validarComentario",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: unknown",
+          "retorno": "",
+          "linea": 8
+        },
+        {
+          "nombre": "validarRevision",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: unknown",
+          "retorno": "",
+          "linea": 27,
+          "resumen": "Revisión: marca un asiento o una factura como revisados. Mismas reglas de identificador."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "14ea15ac8ac7"
+    },
+    {
       "ruta": "packages/module-contabilidad/src/impuestos/borrador.ts",
       "ambito": "packages/module-contabilidad",
       "resumen": "Borrador imprimible (HTML) y CSV de un modelo calculado. PURO. Es lo que se entrega MIENTRAS no exista el fichero oficial: «diseño oficial pendiente de contrastar» (el diseño de registro de la AEAT no se ha podido verificar; nunca se inventan posiciones).",
@@ -253076,6 +255312,62 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "e5d6fd9c48cc"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/impuestos/certificado-retenciones.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "Certificado anual de retenciones e ingresos a cuenta del IRPF (art. 108.3 RIRPF) para UN perceptor, y la lectura de un hecho de nómina como `RetencionPracticada`. PURO. Invariante: las cifras del certificado son las del 190 de ese perceptor. Por eso NO se recalculan: se pasa la lista de retenciones ",
+      "exporta": [
+        "retencionDeNomina",
+        "calcularCertificadoRetenciones"
+      ],
+      "funciones": [
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 22
+        },
+        {
+          "nombre": "str",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown, max = 200",
+          "retorno": "string | null",
+          "linea": 23
+        },
+        {
+          "nombre": "ent",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 24
+        },
+        {
+          "nombre": "retencionDeNomina",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: { ref: string; fecha: string; payload: unknown }",
+          "retorno": "LecturaNomina",
+          "linea": 29,
+          "resumen": "Hecho de nómina (payload del puerto) → retención de trabajo. `fecha` = la del hecho (periodo de la nómina)."
+        },
+        {
+          "nombre": "calcularCertificadoRetenciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "rs: readonly RetencionTrabajo[], anio: number, nif: string",
+          "retorno": "CertificadoRetenciones",
+          "linea": 71,
+          "resumen": "Certificado del ejercicio `anio` para el perceptor `nif`. Las demás retenciones de la lista se ignoran."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "285f1a3ae6b6"
     },
     {
       "ruta": "packages/module-contabilidad/src/impuestos/comun.ts",
@@ -253717,6 +256009,215 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "11390f354b9f"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/onboarding/csv.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "CSV mínimo y estricto para el onboarding y las exportaciones. PURO, sin dependencias. · Lee: BOM opcional, CRLF/LF, separador autodetectado (`;` `,` tabulador), comillas dobles con `\"\"` escapado y saltos de línea dentro de comillas. · Escribe: comillas solo cuando hacen falta; separador y fin de lín",
+      "exporta": [
+        "detectarSeparador",
+        "leerCsv",
+        "claveCabecera",
+        "tablaCsv",
+        "escribirCsv",
+        "importeACentimos"
+      ],
+      "funciones": [
+        {
+          "nombre": "detectarSeparador",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "Separador",
+          "linea": 10,
+          "resumen": "Separador más probable según la PRIMERA línea (fuera de comillas). Empate o ninguno → `;` (formato habitual en España)."
+        },
+        {
+          "nombre": "leerCsv",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string, separador?: Separador",
+          "retorno": "string[][]",
+          "linea": 22
+        },
+        {
+          "nombre": "claveCabecera",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 56,
+          "resumen": "Cabecera normalizada: minúsculas, sin tildes ni espacios/símbolos («Código» → «codigo»)."
+        },
+        {
+          "nombre": "tablaCsv",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string, alias: Readonly<Record<string, readonly string[]>>, obligatorias: readonly string[],",
+          "retorno": "",
+          "linea": 63,
+          "resumen": "Cabecera + filas como objetos. `alias`: clave canónica → variantes admitidas (ya normalizadas con `claveCabecera`). Devuelve las columnas que faltan (de `obligatorias`) para decirlo en vez de fallar a"
+        },
+        {
+          "nombre": "necesitaComillas",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: string, sep: string",
+          "retorno": null,
+          "linea": 84
+        },
+        {
+          "nombre": "empiezaComoFormula",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: string",
+          "retorno": null,
+          "linea": 86,
+          "resumen": "Un texto que una hoja de cálculo ejecutaría como fórmula (empieza por = + - @, tabulador o CR)."
+        },
+        {
+          "nombre": "escribirCsv",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: readonly (readonly string[])[], opciones: OpcionesEscrituraCsv = {}",
+          "retorno": "string",
+          "linea": 97
+        },
+        {
+          "nombre": "importeACentimos",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string",
+          "retorno": "Centimos | null",
+          "linea": 113,
+          "resumen": "Importe de texto → céntimos, SIN pasar por float. Admite «1.234,56», «1234,56», «1234.56», «-12,5», «1,234.56», «1.234» (miles). Regla: si hay coma y punto, el ÚLTIMO es el decimal; solo coma → decima"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2ff6addb65f7"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/onboarding/plan-csv.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "Onboarding · importar el PLAN DE CUENTAS de la empresa desde un CSV (el de su gestoría o su programa anterior). PURO. Columnas (cabecera obligatoria, en cualquier orden, con o sin tildes): `codigo`, `nombre` y, opcional, `naturaleza` (D/A, deudora/acreedora, debe/haber). Sin `naturaleza` se HEREDA d",
+      "exporta": [
+        "leerNaturaleza",
+        "importarPlanCsv"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerNaturaleza",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string",
+          "retorno": "'deudora' | 'acreedora' | null",
+          "linea": 22
+        },
+        {
+          "nombre": "importarPlanCsv",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string, plan: PlanDeCuentas",
+          "retorno": "ResultadoImportPlan",
+          "linea": 29
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7d341518ddb4"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/onboarding/plantilla-cnae.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "Onboarding · elegir la plantilla sectorial por CNAE. Reúne lo que YA existe (`sugerenciaPorCnae`, `PLANTILLAS`) en lo que necesita la pantalla: la sugerida (con su porqué), todas las seleccionables y cuántas cuentas añade cada una al PGC. Nunca se impone: el dueño o el gestor confirma.",
+      "exporta": [
+        "opcionesPlantilla"
+      ],
+      "funciones": [
+        {
+          "nombre": "opcionesPlantilla",
+          "kind": "function",
+          "exportada": true,
+          "params": "cnae: unknown",
+          "retorno": "",
+          "linea": 7
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9acfff1baca2"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/onboarding/saldos-iniciales.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "Onboarding · SALDOS INICIALES → asiento de APERTURA que CUADRA. PURO, céntimos enteros. CSV con columnas `cuenta` y (`debe`,`haber`) o `saldo` (+ deudor / − acreedor). Importes en formato español o ISO (ver `importeACentimos`). El asiento solo existe si el fichero CUADRA al céntimo: no se inventa un",
+      "exporta": [
+        "refAperturaInicial",
+        "leerSaldosCsv",
+        "asientoAperturaInicial"
+      ],
+      "funciones": [
+        {
+          "nombre": "refAperturaInicial",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "anio: number",
+          "retorno": null,
+          "linea": 12
+        },
+        {
+          "nombre": "leerSaldosCsv",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "",
+          "linea": 20,
+          "resumen": "Lee el CSV (sin construir el asiento). Una cuenta repetida SE SUMA por lado, sin compensar debe con haber."
+        },
+        {
+          "nombre": "asientoAperturaInicial",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string, plan: PlanDeCuentas, ejercicio: EjercicioContable, fecha: string",
+          "retorno": "ResultadoSaldos",
+          "linea": 51,
+          "resumen": "Asiento de apertura: una cuenta con debe Y haber se neta en el lado mayor (un apunte es debe XOR haber)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c84fbc9d1569"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/onboarding/terceros-csv.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "Onboarding · importar TERCEROS (clientes, proveedores, acreedores) desde un CSV con el NIF VALIDADO. PURO. El algoritmo del NIF/CIF vive en `@central/core-fiscal`; este núcleo no depende de ningún país: lo recibe inyectado (`validarNif`). Columnas: `nif`, `nombre`, `tipo` (cliente|proveedor|acreedor",
+      "exporta": [
+        "normalizarNifTercero",
+        "importarTercerosCsv"
+      ],
+      "funciones": [
+        {
+          "nombre": "normalizarNifTercero",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "v: string",
+          "retorno": null,
+          "linea": 13
+        },
+        {
+          "nombre": "importarTercerosCsv",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string, validarNif: ValidadorNif",
+          "retorno": "",
+          "linea": 15
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "23cf895107ec"
     },
     {
       "ruta": "packages/module-contabilidad/src/partida/asiento.ts",
@@ -254394,6 +256895,62 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "c26d01e78013"
+    },
+    {
+      "ruta": "packages/module-contabilidad/src/sif/declaracion.ts",
+      "ambito": "packages/module-contabilidad",
+      "resumen": "Declaración responsable del productor del Sistema Informático de Facturación (SIF), RD 1007/2023 y Orden HAC/1177/2024. PURO. 🚨 NO INVENTA DATOS DEL PRODUCTOR. Todo sale de la configuración que se le pasa; un dato ausente es `null` y la declaración queda INCOMPLETA (`completa: false`, con la lista ",
+      "exporta": [
+        "configSifDesdeEntorno",
+        "fechaLarga",
+        "declaracionResponsableSif"
+      ],
+      "funciones": [
+        {
+          "nombre": "limpio",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown, max = 300",
+          "retorno": "string | null",
+          "linea": 32
+        },
+        {
+          "nombre": "siNo",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "boolean | null",
+          "linea": 33
+        },
+        {
+          "nombre": "configSifDesdeEntorno",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: Readonly<Record<string, string | undefined>>",
+          "retorno": "ConfiguracionSif",
+          "linea": 41,
+          "resumen": "Lee la configuración de variables de entorno NO secretas (`SIF_*`). Lo que no esté, queda `null`."
+        },
+        {
+          "nombre": "fechaLarga",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "d: Date",
+          "retorno": null,
+          "linea": 54
+        },
+        {
+          "nombre": "declaracionResponsableSif",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: ConfiguracionSif, hoy: Date",
+          "retorno": "DeclaracionSif",
+          "linea": 56
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b6aba183335f"
     },
     {
       "ruta": "packages/module-contabilidad/src/tesoreria.ts",
@@ -255628,7 +258185,7 @@
     {
       "ruta": "packages/module-nominas/src/atrasos.ts",
       "ambito": "packages/module-nominas",
-      "resumen": "Atrasos (N1): concepto SEPARADO del devengo ordinario, con su año de devengo. No entran en `devengos.total` ni en las bases de cotización del mes (las cotizaciones de los atrasos se liquidan en el mes de devengo —no calculado aquí→ regla `cotizacion_atrasos`—). Retención: tipo del pagador sobre el i",
+      "resumen": "Atrasos (N1): concepto SEPARADO del devengo ordinario, con su año de devengo. No entran en `devengos.total` ni en las bases de cotización del mes (las cotizaciones de los atrasos se liquidan en el mes de devengo —no calculado aquí→ regla `cotizacion_atrasos`, que bloquea en modo «calculo»—). Retenci",
       "exporta": [
         "procesarAtrasos"
       ],
@@ -255639,12 +258196,12 @@
           "exportada": true,
           "params": "atrasos: Atraso[], periodo: string, tipoIrpf: Ppm, modo: 'calculo' | 'simulacion'",
           "retorno": "ResultadoAtrasos",
-          "linea": 31
+          "linea": 36
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ed85606d4219"
+      "hash": "9fc128802f04"
     },
     {
       "ruta": "packages/module-nominas/src/calcular.ts",
@@ -255662,7 +258219,7 @@
           "exportada": true,
           "params": "contrato: ContratoLaboral, incidencias: IncidenciaMes[], o: OpcionesNominaEuros",
           "retorno": "NominaDesglose",
-          "linea": 20
+          "linea": 37
         },
         {
           "nombre": "desgloseEnEuros",
@@ -255670,7 +258227,7 @@
           "exportada": true,
           "params": "r: NominaCentimos",
           "retorno": "NominaDesglose",
-          "linea": 48
+          "linea": 67
         },
         {
           "nombre": "desgloseConfirmable",
@@ -255678,13 +258235,13 @@
           "exportada": true,
           "params": "d: unknown",
           "retorno": "",
-          "linea": 97,
+          "linea": 117,
           "resumen": "¿Se puede CONFIRMAR (publicar al empleado) este desglose? Solo si se calculó con el motor N0 y sin nada pendiente. `cifrasPendientes` ausente (borrador anterior al 05/11/2026, tablas de 2025 con nombr"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8d47f19c05c2"
+      "hash": "90e186c362a5"
     },
     {
       "ruta": "packages/module-nominas/src/cifras.ts",
@@ -255706,6 +258263,38 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "4d1d0516d1e9"
+    },
+    {
+      "ruta": "packages/module-nominas/src/convenio.ts",
+      "ambito": "packages/module-nominas",
+      "resumen": "Tablas salariales de convenio colectivo (forma de los datos + búsqueda). SIN datos dentro: cada convenio se carga desde su publicación oficial (BOE/boletín autonómico) con su `fuente`. Importes en CÉNTIMOS. Búsqueda fail-closed: convenio/año/categoría que no está → null («no se sabe»), nunca la del ",
+      "exporta": [
+        "validarTablaSalarial",
+        "buscarCategoria"
+      ],
+      "funciones": [
+        {
+          "nombre": "validarTablaSalarial",
+          "kind": "function",
+          "exportada": true,
+          "params": "t: TablaSalarial",
+          "retorno": "string[]",
+          "linea": 48,
+          "resumen": "Errores de forma de una tabla (vacío = válida)."
+        },
+        {
+          "nombre": "buscarCategoria",
+          "kind": "function",
+          "exportada": true,
+          "params": "tablas: TablaSalarial[], q: { convenio: string; fecha: string; codigoCategoria: string },",
+          "retorno": "",
+          "linea": 70,
+          "resumen": "Categoría de un convenio vigente en `fecha` (YYYY-MM-DD). Si varias tablas del mismo convenio cubren la fecha, gana la de `vigenteDesde` más reciente. Sin coincidencia exacta de convenio + vigencia + "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "97b89fd5dae8"
     },
     {
       "ruta": "packages/module-nominas/src/dinero.ts",
@@ -255819,9 +258408,165 @@
       "hash": "2cb590faf3aa"
     },
     {
+      "ruta": "packages/module-nominas/src/finiquito.ts",
+      "ambito": "packages/module-nominas",
+      "resumen": "FINIQUITO (liquidación por extinción del contrato). Puro, en CÉNTIMOS, sin reloj: todas las fechas llegan en la entrada. Fuentes (textos consolidados del BOE, consultados el 07/11/2026): ET = RDLeg 2/2015 (BOE-A-2015-11430, últ. act. 21/10/2026): art. 38 (vacaciones), 49.1.c) (fin de contrato tempor",
+      "exporta": [
+        "diasInclusive",
+        "mesesDeServicio",
+        "calcularFiniquito"
+      ],
+      "funciones": [
+        {
+          "nombre": "dia",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: string",
+          "retorno": "number",
+          "linea": 99
+        },
+        {
+          "nombre": "fecha",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": "string",
+          "linea": 108
+        },
+        {
+          "nombre": "diasInclusive",
+          "kind": "function",
+          "exportada": true,
+          "params": "desde: string, hasta: string",
+          "retorno": "number",
+          "linea": 113,
+          "resumen": "Días entre dos fechas, ambos inclusive (0 si `hasta` < `desde`)."
+        },
+        {
+          "nombre": "sumarMeses",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: string, n: number",
+          "retorno": "string",
+          "linea": 118,
+          "resumen": "Suma `n` meses a una fecha (día recortado al último del mes de destino)."
+        },
+        {
+          "nombre": "mesesDeServicio",
+          "kind": "function",
+          "exportada": true,
+          "params": "desde: string, hasta: string",
+          "retorno": "",
+          "linea": 128,
+          "resumen": "Meses completos de servicio entre `desde` y `hasta` (inclusive) y los días sueltos que sobran."
+        },
+        {
+          "nombre": "calcularFiniquito",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaFiniquito, modo: ModoFiniquito",
+          "retorno": "Finiquito",
+          "linea": 138
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "491f577403b7"
+    },
+    {
+      "ruta": "packages/module-nominas/src/incidencias-fichajes.ts",
+      "ambito": "packages/module-nominas",
+      "resumen": "N2 — Fichajes → PROPUESTAS de incidencias (horas extra, ausencias, retrasos). PURO: sin BD ni reloj propio. Regla de oro: SUGIERE, no entra sola. Esta función solo devuelve propuestas; el responsable las aprueba una a una y solo entonces se convierten en `incidencias_mes` (apps/rrhh). Fail-closed y ",
+      "exporta": [
+        "parseConvenioHorario",
+        "diasPrevistosDelMes",
+        "incidenciasDesdeFichajes"
+      ],
+      "funciones": [
+        {
+          "nombre": "num",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 108
+        },
+        {
+          "nombre": "hhmm",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 109
+        },
+        {
+          "nombre": "parseConvenioHorario",
+          "kind": "function",
+          "exportada": true,
+          "params": "convenioDatos: unknown",
+          "retorno": "ConvenioHorario",
+          "linea": 112,
+          "resumen": "Lee `convenio_datos.horario` (estructura explícita; el texto libre del agente de convenios NO se interpreta). Todo lo ausente = null."
+        },
+        {
+          "nombre": "diasPrevistosDelMes",
+          "kind": "function",
+          "exportada": true,
+          "params": "periodo: string, convenio: Pick<ConvenioHorario, 'diasSemana' | 'festivos'>",
+          "retorno": "string[] | null",
+          "linea": 129,
+          "resumen": "Días del mes en que se debía trabajar según el convenio (días de la semana menos festivos). null = sin `diasSemana` → «no se sabe»."
+        },
+        {
+          "nombre": "local",
+          "kind": "function",
+          "exportada": false,
+          "params": "ms: number",
+          "retorno": "",
+          "linea": 147
+        },
+        {
+          "nombre": "esNoche",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "hora: number",
+          "retorno": null,
+          "linea": 152
+        },
+        {
+          "nombre": "horasDe",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "minutos: number",
+          "retorno": null,
+          "linea": 154,
+          "resumen": "Minutos → horas con 2 decimales, sin multiplicar por 100 en euros: min × 5/3 = centésimas de hora."
+        },
+        {
+          "nombre": "dd",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "fecha: string",
+          "retorno": null,
+          "linea": 155
+        },
+        {
+          "nombre": "incidenciasDesdeFichajes",
+          "kind": "function",
+          "exportada": true,
+          "params": "fichajes: readonly FichajeNomina[], contrato: ContratoHorario, convenio: ConvenioHorario, opts: OpcionesFichajes,",
+          "retorno": "ResultadoFichajes",
+          "linea": 161
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b1efe16d8acb"
+    },
+    {
       "ruta": "packages/module-nominas/src/irpf-prueba.ts",
       "ambito": "packages/module-nominas",
-      "resumen": "SOLO PARA TESTS (no se exporta en index.ts). Tabla IRPF 2026 con las cifras `PENDIENTE_VERIFICAR` convertidas a `probable` para poder ejercitar el modo «calculo» y la mecánica del algoritmo. 🚨 Los límites del mínimo exento son ILUSTRATIVOS (no oficiales): sirven para probar el mecanismo del art. 81",
+      "resumen": "SOLO PARA TESTS (no se exporta en index.ts). Copia mutable de la tabla IRPF 2026 (para tests que ponen una cifra a null o PENDIENTE). Desde el 07/11/2026 la tabla real está contrastada con el BOE: ya no hace falta «dar por buenas» cifras. /",
       "exporta": [
         "tablaIrpfDePrueba"
       ],
@@ -255832,17 +258577,17 @@
           "exportada": true,
           "params": "",
           "retorno": "TablaIrpf",
-          "linea": 13
+          "linea": 7
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f0e96e33da33"
+      "hash": "77d52cf9460e"
     },
     {
       "ruta": "packages/module-nominas/src/irpf.ts",
       "ambito": "packages/module-nominas",
-      "resumen": "IRPF — retención por el algoritmo de la AEAT (Reglamento IRPF arts. 80-89). Puro, en CÉNTIMOS y ppm, por año. Pasos (UNA retención anual → un TIPO que se aplica a cada pago del año; la regularización lo recalcula): 1. RA = retribución anual previsible (dineraria + especie). 2. RN = max(0, RA − cotiz",
+      "resumen": "IRPF — retención por el procedimiento general del Reglamento (RIRPF arts. 82-86). Puro, en CÉNTIMOS y ppm, por año. Fuente: RIRPF y LIRPF consolidados del BOE (ver tablas/irpf-2026.ts). Orden de operaciones (art. 82): 1. RA = cuantía total de retribuciones previsibles del año (art. 83.2; sin atrasos",
       "exporta": [
         "minimoPersonalYFamiliar",
         "calcularTipoIrpf",
@@ -255855,7 +258600,7 @@
           "exportada": false,
           "params": "base: Centimos, tramos: { hasta: Centimos | null; tipo: Ppm }[]",
           "retorno": "Centimos",
-          "linea": 81
+          "linea": 88
         },
         {
           "nombre": "reduccionArt20",
@@ -255863,7 +258608,7 @@
           "exportada": false,
           "params": "rn: Centimos, tabla: TablaIrpf, usar: Usar",
           "retorno": "Centimos",
-          "linea": 93
+          "linea": 100
         },
         {
           "nombre": "minimoDiscapacidad",
@@ -255871,7 +258616,8 @@
           "exportada": false,
           "params": "grado: SituacionFamiliar['discapacidad'], asistencia: boolean | undefined, m: TablaIrpf['minimos'], usar: Usar",
           "retorno": "Centimos",
-          "linea": 101
+          "linea": 109,
+          "resumen": "Art. 60 LIRPF: 3.000/9.000 € + 3.000 € de asistencia si necesita ayuda de terceros, movilidad reducida O grado ≥ 65 %."
         },
         {
           "nombre": "minimoPersonalYFamiliar",
@@ -255879,17 +258625,26 @@
           "exportada": true,
           "params": "s: SituacionFamiliar, año: number, tabla: TablaIrpf, usar: Usar",
           "retorno": "Centimos",
-          "linea": 110,
+          "linea": 118,
           "resumen": "Mínimo personal y familiar a efectos del tipo (art. 84 RIRPF) con los datos del modelo 145."
         },
         {
-          "nombre": "hijosParaExento",
+          "nombre": "descendientesConMinimo",
           "kind": "function",
           "exportada": false,
           "params": "s: SituacionFamiliar, año: number",
-          "retorno": "0 | 1 | 2",
-          "linea": 140,
-          "resumen": "Hijos y otros descendientes que cuentan para la tabla del mínimo exento: 0, 1 ó 2 («2 o más»)."
+          "retorno": null,
+          "linea": 146,
+          "resumen": "Descendientes con derecho al mínimo (art. 58 LIRPF): < 25 años o con discapacidad, sin rentas > 8.000 €."
+        },
+        {
+          "nombre": "claveExento",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: SituacionFamiliar | null, año: number",
+          "retorno": "",
+          "linea": 154,
+          "resumen": "Clave del cuadro del art. 81.1: `${situación}:${hijos}` con hijos 0, 1 ó 2 («2 o más»). La situación 1.ª exige descendientes (monoparental); sin ellos el contribuyente está en la 3.ª (art. 81.1, 3.ª b"
         },
         {
           "nombre": "calcularTipoIrpf",
@@ -255897,7 +258652,7 @@
           "exportada": true,
           "params": "e: EntradaIrpf, opts: OpcionesIrpf",
           "retorno": "DetalleIrpf",
-          "linea": 145
+          "linea": 162
         },
         {
           "nombre": "regularizarTipo",
@@ -255905,13 +258660,13 @@
           "exportada": true,
           "params": "p: { cuotaAnual: Centimos; retribucionAnual: Centimos; retribucionPercibida: Centimos; retenidoPracticado: Centimos }",
           "retorno": "",
-          "linea": 233,
+          "linea": 262,
           "resumen": "Regularización (arts. 87-88 RIRPF): al cambiar las circunstancias se recalcula la cuota anual y el tipo del resto del año = (cuota anual nueva − retenido ya) / (retribución anual − ya percibida), 2 de"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8994b3d83d37"
+      "hash": "4a38fc5271de"
     },
     {
       "ruta": "packages/module-nominas/src/motor.ts",
@@ -255927,7 +258682,7 @@
           "exportada": false,
           "params": "año: number, mes: number",
           "retorno": "number",
-          "linea": 108
+          "linea": 112
         },
         {
           "nombre": "esMensual",
@@ -255935,7 +258690,7 @@
           "exportada": false,
           "params": "g: GrupoCotizacion",
           "retorno": "g is GrupoMensual",
-          "linea": 112
+          "linea": 116
         },
         {
           "nombre": "calcularNominaCentimos",
@@ -255943,12 +258698,67 @@
           "exportada": true,
           "params": "e: EntradaNomina, opts: OpcionesCalculo",
           "retorno": "NominaCentimos",
-          "linea": 116
+          "linea": 120
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9247945d2f20"
+      "hash": "8fdeb5b215db"
+    },
+    {
+      "ruta": "packages/module-nominas/src/nomina-hecho.ts",
+      "ambito": "packages/module-nominas",
+      "resumen": "N3 — Nómina confirmada → «hecho contable» para el puerto de contabilidad (`POST /api/hechos`). PURO. El motor/BD guardan EUROS (NUMERIC → float); el puerto exige CÉNTIMOS. Cada importe se convierte UNA sola vez (`eurosACentimos`) y el cuadre se comprueba en céntimos: bruto − IRPF − SS trabajador = l",
+      "exporta": [
+        "nominaAHecho",
+        "pagoNominaAHecho"
+      ],
+      "funciones": [
+        {
+          "nombre": "perceptorDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: NonNullable<NominaParaHecho['perceptor']>",
+          "retorno": "NonNullable<HechoNominaPuerto['perceptor']>",
+          "linea": 73
+        },
+        {
+          "nombre": "ultimoDia",
+          "kind": "function",
+          "exportada": false,
+          "params": "periodo: string",
+          "retorno": "string",
+          "linea": 83
+        },
+        {
+          "nombre": "cent",
+          "kind": "function",
+          "exportada": false,
+          "params": "euros: unknown, etiqueta: string",
+          "retorno": "Centimos",
+          "linea": 90
+        },
+        {
+          "nombre": "nominaAHecho",
+          "kind": "function",
+          "exportada": true,
+          "params": "n: NominaParaHecho",
+          "retorno": "HechoNominaPuerto",
+          "linea": 95
+        },
+        {
+          "nombre": "pagoNominaAHecho",
+          "kind": "function",
+          "exportada": true,
+          "params": "h: Pick<HechoNominaPuerto, 'ref' | 'liquido'>, fechaPago: string",
+          "retorno": "HechoPagoNominaPuerto",
+          "linea": 130,
+          "resumen": "Pago del líquido: D465 / H572. La ref es distinta de la de la nómina, así que no choca con su idempotencia."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "40a0c560e2c7"
     },
     {
       "ruta": "packages/module-nominas/src/pagas.ts",
@@ -256403,7 +259213,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 22
+          "linea": 36
         },
         {
           "nombre": "pad2",
@@ -256411,7 +259221,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 31
+          "linea": 45
         },
         {
           "nombre": "genId",
@@ -256419,7 +259229,24 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 35
+          "linea": 49
+        },
+        {
+          "nombre": "aCentimos",
+          "kind": "function",
+          "exportada": false,
+          "params": "importe: number",
+          "retorno": "number",
+          "linea": 56,
+          "resumen": "Importe en euros → céntimos enteros. La suma de control (CtrlSum) se hace en enteros: sumar floats en euros puede descuadrar el céntimo en remesas largas y el banco rechaza el fichero entero si CtrlSu"
+        },
+        {
+          "nombre": "fmtCentimos",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: number",
+          "retorno": "string",
+          "linea": 61
         },
         {
           "nombre": "generarSepaXml",
@@ -256427,7 +259254,7 @@
           "exportada": true,
           "params": "params: SepaDocumentoParams",
           "retorno": "string",
-          "linea": 40
+          "linea": 67
         },
         {
           "nombre": "validarIban",
@@ -256435,13 +259262,13 @@
           "exportada": true,
           "params": "iban: string",
           "retorno": "boolean",
-          "linea": 117,
+          "linea": 161,
           "resumen": "Valida un IBAN (formato, checksum ISO 7064)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d44f7323bee7"
+      "hash": "de24d7a5ce3e"
     },
     {
       "ruta": "packages/module-patrimonio/src/acceso.ts",
@@ -296898,7 +299725,7 @@
     }
   ],
   "resumen": {
-    "archivos": 6063,
-    "funciones": 24056
+    "archivos": 6129,
+    "funciones": 24279
   }
 }

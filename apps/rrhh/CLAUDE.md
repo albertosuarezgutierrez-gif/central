@@ -96,24 +96,38 @@ El god-panel de plataforma crea empresas vía HTTP:
   `calculo` (fail-closed) y en `simulacion` quedan en `datos_calculo.cifrasPendientes`. Confirmar exige esa lista vacía.
 - Interruptor: solo el operador (`PUT /api/operador/empresas/modulos`); el responsable lo VE en /admin/nominas, sin botón.
 - Aislamiento: cepo `lib/aislamiento-nominas.test.ts`: cada SQL FILTRA por `empresa_id` en WHERE/ON (nombrarla en el SELECT no vale);
-  únicas excepciones `MULTIEMPRESA` (fichero+tabla exactos: login por correo, cron de nóminas y cron reenviar-contabilidad). A la IA de reparto solo va `textoMinimoParaIA`.
+  únicas excepciones `MULTIEMPRESA` (fichero+tabla exactos: login por correo, cron de nóminas y cron enviar-hechos-nominas). A la IA de reparto solo va `textoMinimoParaIA`.
 - **N1 (07/11/2026):** finiquito `/admin/nominas/finiquito` (`calcularFiniquito` en modo `simulacion`; cuerpo→entrada en `lib/finiquito-entrada.ts`,
   euros→céntimos una vez) · remesa SEPA pain.001 propósito SALA (`POST /api/admin/nominas/remesa`, `@central/module-pagos`; IBAN nunca a logs).
   🚨 Contra el doble pago: MsgId/PmtInfId DETERMINISTAS por empresa+periodo+contenido (`idMensajeRemesa`; la fecha de cargo no entra) y sello
   `nominas.remesa_generada_at/remesa_msg_id` en una transacción `FOR UPDATE`; si alguna nómina ya tenía remesa → 409 con aviso y solo
   `confirmar_repeticion: true` (booleano exacto) la repite. Sin GET (un GET que sella se dispara con un enlace) ·
-  emisor a contabilidad de cada nómina confirmada (`lib/hechos-contabilidad.ts`, envs `CONTABILIDAD_URL` + `CONTABILIDAD_HECHOS_SECRET_RRHH` con
-  `requireSecret`; sin ellas = `sin_configurar`, no se envía). Los estados `SE_REINTENTA` (pendiente_vincular, sin_configurar, error) y los NULL
-  de confirmadas los REENVÍA el cron diario `/api/cron/reenviar-contabilidad` (todas las empresas, cada envío con la empresa de SU fila; lote 25,
-  presupuesto 45 s, idempotente por ref `nomina:<id>`) y el botón «Reintentar envío a contabilidad» de `/admin/nominas`
-  (`POST /api/admin/nominas/reenviar-contabilidad`, empresa de la sesión). `rechazado`/`no_enviable` NO se reintentan solos ·
-  certificado de retenciones en `/e` (`/api/e/certificado-retenciones`, mismas cifras que el 190 de `@central/module-contabilidad`) ·
+  envío a contabilidad: ver «N3 — UN solo camino» abajo (el emisor directo `lib/hechos-contabilidad.ts` de #5588 se RETIRÓ) ·
+  certificado de retenciones en `/e` (`/api/e/certificado-retenciones`; reconstruye con `nominaAHecho` el MISMO hecho que se encola y lo
+  pasa por `retencionDeNomina`/`calcularModelo190` de `@central/module-contabilidad`: mismas cifras que el 190; lectura en `lib/certificado-retenciones-datos.ts`) ·
   tablas de convenio `/admin/nominas/convenio` · «Aprobar lote» (`POST /api/admin/nominas`): 25 por llamada, el resto vuelve en `pendientes`.
   🚨 Vencimiento de contrato: SOLO al responsable, en la tarjeta «Contratos que vencen» del Inicio de `/admin` (≤ 30 días, calculado al vuelo;
   `fecha_fin` NULL = «no se sabe»). NUNCA un aviso al trabajador en `/e` (podía leerse como preaviso del art. 49.1.c ET); cepo en
   `lib/vencimientos.test.ts`. Reglas del finiquito (fracción de mes, exención fin temporal) y del motor siguen `PENDIENTE_VERIFICAR`.
-  ✅ Migraciones 0032, 0033 y 0035 APLICADAS en BD el 07/11/2026 (0033 añade también `remesa_generada_at/remesa_msg_id`; 0035 ajusta permisos de rrhh_app).
-- `/api/cron/reenviar-contabilidad` — diario 6:40 UTC: reenvía a contabilidad las nóminas confirmadas pendientes (ver N1).
+- **N3 — nóminas → contabilidad, UN solo camino (unificado el 07/11/2026, decisión de Alberto):** OUTBOX `rrhh.hechos_nominas`.
+  Al confirmar, con el módulo `contabilidad_nominas` ACTIVO (lo enciende SOLO el operador, `PUT /api/operador/empresas/modulos`, con
+  `contabilidad_empresa_id` obligatorio), `nominaAHecho` (`@central/module-nominas`, con `perceptor {nif?, nombre, provincia?}` y `clave: 'A'`
+  para el 111/190) construye el hecho ANTES de tocar nada (si no cuadra → 422, no se confirma) y se encola en la MISMA transacción que la
+  confirmación, con el destino CONGELADO en la fila (0034). Confirmar NUNCA hace HTTP. Envía el cron `/api/cron/enviar-hechos-nominas`
+  (cada hora, :10; reintento con espera exponencial 5 min→12 h; 2xx = `enviado` —el 202 deja detalle «202: pendiente de regla»—, 401/5xx/red = `error`,
+  resto de 4xx = `rechazado`, que NO se reintenta solo) y el botón «Reintentar envío a contabilidad» (`POST /api/admin/nominas/reenviar-contabilidad`:
+  la cola de la empresa de la sesión, sin esperar). Estado visible por nómina en la lista de confirmadas = el de su fila de la cola
+  (`listarNominas`; sin fila = «no consta», no se pinta). Envs `CONTABILIDAD_URL` + `CONTABILIDAD_HECHOS_SECRET_RRHH` (`requireSecret`).
+  🔗 **Fuente ÚNICA del vínculo:** `empresa_modulos.contabilidad_empresa_id` (va con el interruptor y lo valida el operador).
+  🧹 **Pendiente de migración de limpieza (columnas SIN USO en código, NO borradas):** `empresas.contabilidad_empresa_id` y
+  `nominas.contabilidad_estado/_detalle/_intento_at` (de `0033_nominas_contratos_convenio`). Antes del DROP, comprobar en BD que
+  `empresas.contabilidad_empresa_id` está NULL en todas las filas (si alguna lo tiene, pasarlo a `empresa_modulos` y activar el módulo).
+  Cepo: `lib/regression-nominas-contabilidad-unificada.test.ts`.
+- 🔢 **Doble 0033 (a sabiendas):** `0033_fichajes_nomina_hechos.sql` (#5590) y `0033_nominas_contratos_convenio.sql` (#5588) se numeraron a la
+  vez y AMBAS están aplicadas en producción con ese nombre en `supabase_migrations.schema_migrations`: NO se renombran (se rompería la
+  trazabilidad). La siguiente libre es la 0036 (0034 = `hechos_nominas_destino`, 0035 = `permisos_rrhh_app`). El guardián de `lib/convenio-tablas-migracion.test.ts`
+  tolera SOLO ese par exacto. Aplicadas en BD (07/11/2026): 0032, las dos 0033, 0034 y 0035 (permisos mínimos de rrhh_app).
+- `/api/cron/enviar-hechos-nominas` — cada hora (:10): envía a contabilidad el outbox de nóminas (ver N3).
 - `/api/cron/recordatorio-fichaje` — L-V 9h (hora ES): push a empleados que aún no han fichado entrada.
 - `/api/cron/alerta-fichajes-abiertos` — diario 22h (hora ES): Telegram si un fichaje activo lleva
   >10h sin fichar salida.

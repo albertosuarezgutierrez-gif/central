@@ -11,8 +11,13 @@ const sql = readFileSync(join(DIR, '0033_nominas_contratos_convenio.sql'), 'utf8
 const codigo = sql.replace(/^\s*--.*$/gm, '').replace(/--.*$/gm, '')
 
 describe('0033_nominas_contratos_convenio.sql', () => {
-  it('es la única 0033', () => {
-    expect(readdirSync(DIR).filter(f => f.startsWith('0033_'))).toEqual(['0033_nominas_contratos_convenio.sql'])
+  it('doble 0033 TOLERADO solo para este par exacto (ambas ya aplicadas en producción con su nombre; ver apps/rrhh/CLAUDE.md)', () => {
+    // #5588 y #5590 numeraron 0033 a la vez. No se renombran: `supabase_migrations.schema_migrations` las registra con ese nombre.
+    // Cualquier otra repetición (o una tercera 0033) vuelve a fallar.
+    expect(readdirSync(DIR).filter(f => f.startsWith('0033_')).sort()).toEqual(['0033_fichajes_nomina_hechos.sql', '0033_nominas_contratos_convenio.sql'])
+    const numeros = readdirSync(DIR).filter(f => /^\d{4}_.*\.sql$/.test(f)).map(f => f.slice(0, 4))
+    const repetidos = [...new Set(numeros.filter((n, i) => numeros.indexOf(n) !== i))]
+    expect(repetidos.filter(n => n !== '0033' && Number(n) > 33), 'numeración nueva duplicada').toEqual([])
   })
   it('aditiva e idempotente: sin DROP TABLE/COLUMN, TRUNCATE, DELETE ni UPDATE de datos', () => {
     expect(codigo).not.toMatch(/DROP\s+(TABLE|COLUMN)|\bTRUNCATE\b|^\s*DELETE\b|^\s*UPDATE\b/im)
