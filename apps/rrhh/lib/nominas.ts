@@ -155,12 +155,20 @@ export async function obtenerNomina(empresaId: string, nominaId: string) {
 export async function addIncidencia(
   empresaId: string,
   nominaId: string,
-  datos: { tipo: TipoIncidencia; concepto: string; importe?: number; horas?: number; dias?: number },
-) {
+  datos: { tipo: TipoIncidencia; concepto: string; importe?: number; horas?: number; dias?: number; origen?: { clave: string; fichajeIds: string[] } },
+): Promise<{ id: string; duplicada?: boolean }> {
   const nomina = await prisma.nominas.findFirst({
     where: { id: nominaId, empresa_id: empresaId, estado: 'borrador' },
   })
   if (!nomina) throw new Error('Nómina no encontrada o ya confirmada')
+
+  if (datos.origen) {
+    // Idempotencia de las propuestas desde fichajes (columnas de la migración 0033): la misma clave no entra dos veces.
+    const ya = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
+      SELECT id FROM rrhh.incidencias_mes
+      WHERE empresa_id = ${empresaId}::uuid AND nomina_id = ${nominaId}::uuid AND origen_clave = ${datos.origen.clave} LIMIT 1`)
+    if (ya[0]) return { id: ya[0].id, duplicada: true }
+  }
 
   const inc = await prisma.incidencias_mes.create({
     data: {
@@ -173,6 +181,17 @@ export async function addIncidencia(
       dias: datos.dias ?? null,
     },
   })
+  if (datos.origen) {
+    try {
+      await prisma.$executeRaw(Prisma.sql`
+        UPDATE rrhh.incidencias_mes
+        SET origen = 'fichajes', origen_clave = ${datos.origen.clave}, origen_fichaje_ids = ${datos.origen.fichajeIds}::uuid[]
+        WHERE id = ${inc.id}::uuid AND empresa_id = ${empresaId}::uuid`)
+    } catch (e) {
+      await prisma.incidencias_mes.deleteMany({ where: { id: inc.id, empresa_id: empresaId } })
+      throw e
+    }
+  }
 
   let desglose: NominaDesglose
   try {

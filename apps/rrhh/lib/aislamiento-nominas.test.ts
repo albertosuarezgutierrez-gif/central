@@ -10,7 +10,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 
 const APP = join(__dirname, '..')
-const TABLAS = ['nominas', 'incidencias_mes', 'empleados', 'contratos_laborales', 'empresa_modulos']
+const TABLAS = ['nominas', 'incidencias_mes', 'empleados', 'contratos_laborales', 'empresa_modulos', 'hechos_nominas']
 
 function listar(dir: string): string[] {
   const out: string[] = []
@@ -53,7 +53,7 @@ export function sentenciasSinEmpresa(src: string): string[] {
   return malas
 }
 
-const RUTAS_NOMINA = ['app/api/admin/nominas', 'app/api/cron/nominas', 'app/admin/nominas', 'app/api/operador/empresas/modulos']
+const RUTAS_NOMINA = ['app/api/admin/nominas', 'app/api/cron/nominas', 'app/api/cron/enviar-hechos-nominas', 'app/admin/nominas', 'app/api/operador/empresas/modulos']
 const FICHEROS = [...listar(join(APP, 'lib')), ...RUTAS_NOMINA.flatMap(d => listar(join(APP, d)))]
 
 describe('aislamiento de nóminas/empleados (sin allowlist)', () => {

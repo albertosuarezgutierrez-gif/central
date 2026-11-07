@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Page from '@/components/ui/Page'
+import PropuestasFichajes from './PropuestasFichajes'
 
 type Incidencia = { id: string; tipo: string; concepto: string; importe: number | null; horas: number | null; dias: number | null }
 type Nomina = {
@@ -138,7 +139,8 @@ export default function NominasPanel({ periodo, inicial }: { periodo: string; in
                         ))}
                       </ul>
                     )}
-                    <div className="flex flex-wrap gap-2 text-sm">
+                    <PropuestasFichajes nominaId={n.id} onCambio={recargar} />
+                    <div className="mt-3 flex flex-wrap gap-2 text-sm">
                       <select value={incTipo} onChange={e => setIncTipo(e.target.value)} className="border border-line rounded px-2 py-1">
                         {TIPOS_INCIDENCIA.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
                       </select>

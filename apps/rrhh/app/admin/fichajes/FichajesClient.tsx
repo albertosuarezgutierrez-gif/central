@@ -35,11 +35,11 @@ function fmtISO(iso: string | null) {
   return new Date(iso).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
-export default function FichajesClient() {
+export default function FichajesClient({ mesInicial, empleadoInicial }: { mesInicial?: string; empleadoInicial?: string } = {}) {
   const hoy = new Date()
   const mesActual = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`
-  const [mes, setMes] = useState(mesActual)
-  const [empleadoId, setEmpleadoId] = useState('')
+  const [mes, setMes] = useState(mesInicial ?? mesActual)
+  const [empleadoId, setEmpleadoId] = useState(empleadoInicial ?? '')
   const [fichajes, setFichajes] = useState<Fichaje[]>([])
   const [empleados, setEmpleados] = useState<Empleado[]>([])
   const [editId, setEditId] = useState<string | null>(null)

@@ -5,7 +5,8 @@ import { COOKIE_NAME, leerCookie } from './lib/sesion-cookie'
 // Públicas: el login y su API; `/api/hechos` (Bearer por vertical, comprobado en la ruta); `/api/operador/` (Bearer del operador); `/api/cron/` (Bearer CRON_SECRET, comprobado en la ruta).
 const PUBLICAS = ['/login', '/api/auth/solicitar', '/api/auth/verificar', '/api/hechos', '/api/operador/', '/api/cron/']
 // Con sesión pero SIN empresa elegida todavía (gestor con varias): solo el selector, elegir y salir.
-const SIN_EMPRESA = ['/empresas', '/api/auth/elegir', '/api/auth/logout']
+// `/gestoria` (portal) lista varias empresas del gestor: no exige elegir una; sus datos salen de BD por usuario y cada empresa va en su propia transacción RLS.
+const SIN_EMPRESA = ['/empresas', '/gestoria', '/api/auth/elegir', '/api/auth/logout']
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl

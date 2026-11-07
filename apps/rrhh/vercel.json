@@ -26,6 +26,10 @@
     {
       "path": "/api/cron/recordatorio-firmas",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/enviar-hechos-nominas",
+      "schedule": "10 * * * *"
     }
   ]
 }

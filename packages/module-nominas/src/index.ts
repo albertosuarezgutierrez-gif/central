@@ -13,3 +13,5 @@ export type { EntradaIrpf, OpcionesIrpf, DetalleIrpf, ModoIrpf, MotivoTipoIrpf }
 export * from './pagas'
 export * from './embargo'
 export * from './atrasos'
+export * from './incidencias-fichajes'
+export * from './nomina-hecho'
