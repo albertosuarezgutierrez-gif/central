@@ -111,6 +111,8 @@ export type ResumenFicha = {
   }
   /** `null` = no se pudieron leer los siniestros. Jamás 0 por un fallo. */
   siniestrosAbiertos: number | null
+  /** Abiertos sin movimiento desde hace meses (`vigenciaSiniestro`): se enseñan aparte y NO suman a `siniestrosAbiertos`. `null` = no se pudieron leer. */
+  siniestrosSinConfirmar: number | null
   /** `null` = documentos no informados; si no, los que están en estado `pedido`. */
   documentosPendientes: number | null
   /** El vencimiento más cercano entre las VIVAS con fecha. `null` si ninguna la tiene. */
@@ -158,7 +160,7 @@ function ventanaDe(polizaId: string, vencimiento: Date, hoy: Date): ProximoVenci
  */
 export function resumenFicha(entrada: {
   polizas: PolizaResumible[]
-  siniestros: { abierto: boolean }[] | null
+  siniestros: { abierto: boolean; vigencia?: 'abierto' | 'sin_confirmar' | 'cerrado' }[] | null
   documentos: { estado: string }[] | null
   /** Por defecto `new Date()`. Parámetro SOLO para los tests: la función es pura. */
   hoy?: Date
@@ -218,6 +220,7 @@ export function resumenFicha(entrada: {
       polizasSinRecibos: conRecibos.filter(p => (p.recibos?.total ?? 0) === 0).length,
     },
     siniestrosAbiertos: entrada.siniestros === null ? null : entrada.siniestros.filter(s => s.abierto).length,
+    siniestrosSinConfirmar: entrada.siniestros === null ? null : entrada.siniestros.filter(s => s.vigencia === 'sin_confirmar').length,
     // `estadoDocumento` normaliza igual que el resto de la app: un valor que no
     // conoce NO es «pedido», así que la basura de la base no infla el contador.
     documentosPendientes:

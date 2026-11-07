@@ -6,6 +6,7 @@ import {
   etiquetaEstadoSiniestro,
   explicarSiniestro,
   resumirHistorialSiniestros,
+  siniestroAbierto,
   tonoEstadoSiniestro,
   type BienAsegurado,
   type TramitacionSiniestro,
@@ -585,7 +586,9 @@ export function lineaSiniestros(p: PolizaPortal): string | null {
   if (p.siniestros === null || p.siniestros.length === 0) return null
   const r = resumirHistorialSiniestros(p.siniestros)
   const total = r.total === 1 ? '1 siniestro' : `${r.total} siniestros`
-  return r.abiertos > 0 ? `${total} · ${r.abiertos} sin cerrar` : total
+  // Un «abierto» sin movimiento desde hace meses no es «sin cerrar» confirmado.
+  const abiertos = r.abiertos - p.siniestros.filter((s) => s.sinConfirmar === true && siniestroAbierto(s.estado)).length
+  return abiertos > 0 ? `${total} · ${abiertos} sin cerrar` : total
 }
 
 /**
@@ -653,7 +656,8 @@ export function HistorialSiniestros({
       <ul className="siniestros">
         {lista.map((s) => {
           const cuando = fechaEs(s.fechaHora)
-          const tono = tonoEstadoSiniestro(s.estado)
+          const sinConfirmar = s.sinConfirmar === true && siniestroAbierto(s.estado)
+          const tono = sinConfirmar ? 'cerrado' : tonoEstadoSiniestro(s.estado)
           return (
             <li key={s.id} id={anclaSiniestro(s.id)} className="siniestro" data-tono={tono}>
               <span className="siniestro-fecha">
@@ -664,7 +668,7 @@ export function HistorialSiniestros({
               <span
                 className={`chip${tono === 'abierto' ? ' aviso' : tono === 'rechazado' ? ' peligro' : ''}`}
               >
-                {etiquetaEstadoSiniestro(s.estado)}
+                {sinConfirmar ? 'Sin confirmar con la compañía' : etiquetaEstadoSiniestro(s.estado)}
               </span>
               {/* La referencia es con lo que la compañía contesta al teléfono
                   (informada en 67 de 67 de la cartera viva), así que va visible
@@ -689,7 +693,7 @@ export function HistorialSiniestros({
                   la explicación de abajo ya dice que se pregunte al corredor. */}
               {s.tramitacion && <TramitacionCompania t={s.tramitacion} />}
               {s.detalle && <DetalleCompania d={s.detalle} />}
-              <SiniestroExplicado estado={s.estado} fechaHora={s.fechaHora} />
+              {!sinConfirmar && <SiniestroExplicado estado={s.estado} fechaHora={s.fechaHora} />}
             </li>
           )
         })}

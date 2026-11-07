@@ -27,7 +27,7 @@
 // informa», NUNCA 0; `siniestros: null` = «no se pudo leer», NUNCA `[]`.
 
 import type { OrigenSiniestro, TerceroFicha, TramitacionCruda } from '@central/module-seguros'
-import { tercerosDeSiniestro } from '@central/module-seguros'
+import { tercerosDeSiniestro, leerVigenciaSiniestro } from '@central/module-seguros'
 import { cabecerasPuerto } from './puerto-actor.ts'
 import { leerDetalleCima, type DetalleCima } from './siniestro-detalle-cima.ts'
 import { cimaExtraTruncado, vistaCimaExtra, type GrupoCimaExtra } from './cima-extra-vista.ts'
@@ -65,6 +65,8 @@ export type SiniestroCartera = {
   /** Tiene `id_siniestro_entidad`: CIMA lo conoce (o ya le pusimos la referencia). */
   confirmadoCima: boolean
   abierto: boolean
+  /** `sin_confirmar` = abierto sin movimiento desde hace meses (no suma a abiertos). Asegura viejo sin el campo: se deriva de `abierto`. */
+  vigencia: 'abierto' | 'sin_confirmar' | 'cerrado'
   /** ISO. `null` = asegura no lo manda. */
   actualizado: string | null
   /**
@@ -269,6 +271,7 @@ export function leerSiniestro(v: unknown): SiniestroCartera | null {
     origen: s.origen === 'gestionado_correduria' ? 'gestionado_correduria' : 'cima',
     confirmadoCima: typeof s.confirmadoCima === 'boolean' ? s.confirmadoCima : true,
     abierto: s.abierto === true,
+    vigencia: leerVigenciaSiniestro(s.vigencia, s.abierto === true),
     actualizado: cadena(s.actualizado),
     datosRamo: datosRamoDe(s.datosRamo),
     danosCima: danosCimaDe(s.danosCima),

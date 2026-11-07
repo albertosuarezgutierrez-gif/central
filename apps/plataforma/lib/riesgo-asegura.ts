@@ -110,6 +110,8 @@ export type HistorialRiesgo = {
   /** Años asegurado / en la compañía DECLARADOS (fuera de `seguroAnterior`). Asegura sin la clave = los dos `null` (sin dato). */
   historialDeclarado: HistorialDeclaradoRiesgo
   carnet: { fecha: string | null; conductor: RolFigura | null; legible: boolean } | null
+  /** Siniestros con culpa en 5 años según CIMA (07/11/2026): `N` · `0` revisado · `null` = no se puede afirmar / sin historial CIMA / asegura no lo manda. */
+  siniestrosCima?: number | null
 }
 
 /** Lee `historial` sin fiarse: forma rara = `null` («no se sabe»); el seguro anterior pasa por el mismo saneado que al guardarlo. */
@@ -121,6 +123,8 @@ export function leerHistorialRiesgo(bruto: unknown): HistorialRiesgo | null {
     seguroAnterior: seguroAnteriorDe(o.seguroAnterior),
     historialDeclarado: historialDeclaradoDe(o.historialDeclarado),
     carnet: c ? { fecha: txt(c.fecha), conductor: esRolFigura(c.conductor) ? c.conductor : null, legible: c.legible === true } : null,
+    // Solo si asegura lo manda; ausente/raro = «no se sabe» (la lectura lo trata como `null`).
+    ...(typeof o.siniestrosCima === 'number' && Number.isInteger(o.siniestrosCima) && o.siniestrosCima >= 0 ? { siniestrosCima: o.siniestrosCima } : {}),
   }
 }
 
