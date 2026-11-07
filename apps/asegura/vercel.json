@@ -117,6 +117,10 @@
     {
       "path": "/api/cron/tarificador-alarma",
       "schedule": "35 8 * * *"
+    },
+    {
+      "path": "/api/cron/retencion-cartera",
+      "schedule": "17 19 * * *"
     }
   ]
 }
