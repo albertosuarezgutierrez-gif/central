@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-05T09:23:05Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-07T08:56:12Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 15 apps · 49 packages · 23 capacidades · 44 skills · 1954 rutas API.
+**Resumen:** 15 apps · 49 packages · 23 capacidades · 44 skills · 1960 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -21,7 +21,7 @@
 - **Módulos que usa:** core-ai, core-catastro, core-direccion, core-email, core-firma, core-identity, core-telegram, core-vehiculos, module-patrimonio, module-seguros, module-seguros-pii, module-seguros-portal, module-tarificacion
 - **Capacidades:** QR / portal cliente
 - **Tablas (156):** de, if, seguros._volcado_control, seguros.acuerdo_comisiones, seguros.acuerdo_objetivos, seguros.acuerdos_compania, seguros.anulacion, seguros.aprobacion, seguros.auditoria, seguros.aviso_web, seguros.backfill_dni_plan, seguros.bien_documentos, seguros.bienes_asegurables, seguros.borradores_presupuesto, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.cambio_cuenta_solicitud, seguros.campana_envio, seguros.carta_mediador, seguros.cartera_foto, seguros.channel_inbound_messages, seguros.cima_decisiones, seguros.cima_ficheros, seguros.claves_mediador, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_mote, seguros.cliente_relaciones…
-- **Rutas API:** 320
+- **Rutas API:** 321
 ### asegura-portal
 - **Módulos que usa:** core-ai, core-catastro, core-direccion, core-email, core-identity, core-push, core-telegram, module-documental, module-patrimonio, module-seguros, module-seguros-pii, module-seguros-portal, module-tarificacion
 - **Capacidades:** QR / portal cliente, Facturación / VeriFactu, Escáner / OCR, Notificaciones (push)
@@ -63,10 +63,10 @@
 - **Tablas (165):** agente_latidos, agente_reparaciones, agente_salud, agente_veredicto, agoda_hilos_correo, ai_usos, asegura_instagram_borradores, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cierres_mes, cima_liquidaciones, comisiones_cobertura, comisiones_devengo, comisiones_liquidacion_docs, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, consentimiento_registro, contable_accion, contable_feedback…
 - **Rutas API:** 537
 ### rrhh
-- **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
+- **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-contabilidad, module-documental, module-geo, module-horario, module-nominas, module-pagos, module-rrhh
 - **Capacidades:** Informes, Notificaciones (push), Asistente / copiloto IA
-- **Tablas (19):** rrhh.acceso_otps, rrhh.avisos, rrhh.avisos_admin, rrhh.contratos_laborales, rrhh.documentos, rrhh.empleados, rrhh.empresa_modulos, rrhh.empresas, rrhh.firma_otps, rrhh.firmas, rrhh.incidencias_mes, rrhh.incidencias_ubicacion, rrhh.material_empleado, rrhh.mensajes, rrhh.nominas, rrhh.push_subscriptions, rrhh.situacion_familiar, rrhh.solicitudes, rrhh.usuarios_rrhh
-- **Rutas API:** 89
+- **Tablas (20):** rrhh.acceso_otps, rrhh.avisos, rrhh.avisos_admin, rrhh.contratos_laborales, rrhh.convenio_tablas_salariales, rrhh.documentos, rrhh.empleados, rrhh.empresa_modulos, rrhh.empresas, rrhh.firma_otps, rrhh.firmas, rrhh.incidencias_mes, rrhh.incidencias_ubicacion, rrhh.material_empleado, rrhh.mensajes, rrhh.nominas, rrhh.push_subscriptions, rrhh.situacion_familiar, rrhh.solicitudes, rrhh.usuarios_rrhh
+- **Rutas API:** 94
 ### sivra
 - **Módulos que usa:** core-ai, core-email, core-identity, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
 - **Capacidades:** Eventos / catering / BEO, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, Marketing (blog/IG/SEO), Almacén / stock / ASN, Proveedores / compras, Asistente / copiloto IA
@@ -148,7 +148,7 @@
   - Lo usan: plataforma
   - Depende de: —
 - **module-contabilidad** (module) → `@central/module-contabilidad`
-  - Lo usan: contabilidad, ia-rest, ialimp, plataforma, sivra, taller
+  - Lo usan: contabilidad, ia-rest, ialimp, plataforma, rrhh, sivra, taller
   - Depende de: core-fiscal, module-nominas
 - **module-crm** (module) → `@central/module-crm`
   - Lo usan: ia-rest, ialimp
@@ -181,7 +181,7 @@
   - Lo usan: ia-rest
   - Depende de: —
 - **module-pagos** (module) → `@central/module-pagos`
-  - Lo usan: plataforma
+  - Lo usan: plataforma, rrhh
   - Depende de: —
 - **module-patrimonio** (module) → `@central/module-patrimonio`
   - Lo usan: asegura, asegura-portal
