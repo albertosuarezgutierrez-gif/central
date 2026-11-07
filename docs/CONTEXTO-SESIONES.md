@@ -12,6 +12,9 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(07/11/2026)** — Analizado el repo morluto/rea (MCP de ingeniería inversa, MIT): descartado como herramienta-regalo (necesita estación propia con Ghidra/Frida, no corre en Vercel), guardado como recurso en `docs/HERRAMIENTAS-CAPTACION.md`; no instalado.
+Método de captación acordado: copiar IDEA y FUNCIONAMIENTO observados desde fuera, código propio en central, sin copiar código ni marca (límite art. 100 LPI); se ofrece al sector como captación. Ideas pendientes en ese mismo doc.
+
 **(04/11/2026)** — Tarificador ASegura: estado vivo en `docs/TARIFICADOR-ESTADO.md` (canal bot RPA + Avant2 provisional; Pelayo en pilotaje, 0.3.47 en curso). Actualizar ese fichero, no esta entrada.
 
 **(04/11/2026) Instagram de ia.rest → Grupo ASegura.** Alberto reabre la decisión del 07/09 (LinkedIn sí, IG no); sigue sin haber perfil de IG.
