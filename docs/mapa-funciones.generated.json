@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-07T07:18:06Z",
-  "sha": "057b6b0f547ee029f7947bbf91dbca430e3e4ce8",
+  "generadoEn": "2026-11-07T07:31:55Z",
+  "sha": "9e52fa387f89d0ed9ec36cc70ca0b2affe246b10",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -42826,7 +42826,7 @@
           "exportada": true,
           "params": "tx: { $executeRaw: typeof prisma.$executeRaw }, e: { correduriaId: string; intentoId: string; solicitadoPor: string; projectId: string },",
           "retorno": "Promise<void>",
-          "linea": 47,
+          "linea": 48,
           "resumen": "La línea del libro de un presupuesto traído de la web. Va DENTRO de la transacción que guarda la tarificación (la FK `intento_id` la exige): o se escriben las dos, o ninguna."
         },
         {
@@ -42835,7 +42835,7 @@
           "exportada": true,
           "params": "correduriaId: string, db: Db = prisma",
           "retorno": "Promise<Consumo>",
-          "linea": 77,
+          "linea": 78,
           "resumen": "Cuenta lo consumido hoy y este mes por esta correduría **en COTIZACIONES** (`POST /insurances`, 0,50€). 🚨 Desde el 21/09/2026 excluye los motivos de EMISIÓN (`rerate` / `submit`), que llevan su propi"
         },
         {
@@ -42844,7 +42844,7 @@
           "exportada": true,
           "params": "input: { correduriaId: string intentoId: string motivo: string solicitadoPor: string }, db: Db = prisma",
           "retorno": "Promise<Reserva>",
-          "linea": 119,
+          "linea": 120,
           "resumen": "Abre la reserva ANTES de llamar al vendor. El orden importa: si se escribiera después, una caída entre la llamada y el INSERT dejaría un cargo real sin rastro en el libro — y el tope contaría de menos"
         },
         {
@@ -42853,7 +42853,7 @@
           "exportada": false,
           "params": "tx: Db, correduriaId: string, q: | { tipo: 'cotizar'; topes: Topes; env: Env } | { tipo: 'emision'; operacion: OperacionEmision; topes: Topes; env: Env }, costeCents: number,",
           "retorno": "Promise<",
-          "linea": 151,
+          "linea": 152,
           "resumen": "🔒 Candado de GASTO por correduría + re-cuenta del libro y del tope en euros, DENTRO de la transacción que va a reservar (02/11/2026). Por qué: `cotizar()` y `conLibroDeEmision()` comprueban los topes"
         },
         {
@@ -42862,7 +42862,7 @@
           "exportada": true,
           "params": "input: { correduriaId: string intentoId: string motivo: string solicitadoPor: string huella: string forzar?: boolean /** Fecha de efecto (aaaa-mm-dd) del cuerpo: habilita reutilizar la copia hasta 24 h si sigue vigente. */ fechaEfecto?: str",
           "retorno": "Promise<ReservaAntiDuplicado>",
-          "linea": 217,
+          "linea": 218,
           "resumen": "Comprueba duplicado y RESERVA en la misma transacción, bajo `pg_advisory_xact_lock(hashtext(huella))`: dos pestañas con la misma petición se serializan y la segunda ve la reserva de la primera. Sin `f"
         },
         {
@@ -42871,7 +42871,7 @@
           "exportada": true,
           "params": "correduriaId: string, operacion: OperacionEmision, db: Db = prisma,",
           "retorno": "Promise<Consumo>",
-          "linea": 290,
+          "linea": 300,
           "resumen": "Lo consumido hoy y este mes en UNA operación de emisión (`rerate` / `submit`). 🚨 Mismo contrato que `consumoActual`: **NO atrapa errores**. Si no se puede leer el libro, el llamante (`libro-emision.t"
         },
         {
@@ -42880,7 +42880,7 @@
           "exportada": true,
           "params": "input: { correduriaId: string intentoId: string operacion: OperacionEmision solicitadoPor: string costeCents: number projectId: string | null /** * Huella anti doble clic (05/11/2026), la MISMA columna y el mismo candado que `reservarSinDup",
           "retorno": "Promise<Reserva>",
-          "linea": 337,
+          "linea": 347,
           "resumen": "Abre la reserva de un ReRate o de un Submit ANTES de llamar al vendor. Gemela de `reservar()`, con dos diferencias que son el motivo de que exista aparte en vez de un parámetro opcional: el `motivo` e"
         },
         {
@@ -42889,7 +42889,7 @@
           "exportada": true,
           "params": "intentoId: string",
           "retorno": "Promise<void>",
-          "linea": 397,
+          "linea": 407,
           "resumen": "Cierra como facturable una línea de emisión. Aparte de `cerrarFacturable()` por una razón concreta: allí el `projectId` es lo que devuelve la cotización y no se conocía antes de llamar, así que el cie"
         },
         {
@@ -42898,7 +42898,7 @@
           "exportada": true,
           "params": "intentoId: string, projectId: string",
           "retorno": "Promise<void>",
-          "linea": 408,
+          "linea": 418,
           "resumen": "El vendor respondió: hay proyecto y, por tanto, cargo."
         },
         {
@@ -42907,7 +42907,7 @@
           "exportada": true,
           "params": "intentoId: string, evidencia: string, errorCodigo: string,",
           "retorno": "Promise<void>",
-          "linea": 430,
+          "linea": 440,
           "resumen": "Cierra como NO facturable. Exige evidencia por contrato (y por CHECK en BD). Solo hay tres evidencias admisibles, y todas significan que el vendor no llegó a tarificar: fallo de autenticación (401/403"
         },
         {
@@ -42916,7 +42916,7 @@
           "exportada": true,
           "params": "correduriaId: string, costes: { rerate: number; submit: number; limites: number }, db: Db = prisma,",
           "retorno": "Promise<number | null>",
-          "linea": 455,
+          "linea": 465,
           "resumen": "Lo gastado este mes natural (Madrid) en el libro, en céntimos. Lo lee el tope en euros (`tope-euros-bd.ts`), que no toca la tabla: el libro solo se mira desde aquí. Las líneas de ReRate/Submit/límites"
         }
       ],
@@ -42925,7 +42925,7 @@
         "ventana"
       ],
       "rutaApi": null,
-      "hash": "b786a983eaad"
+      "hash": "5a3b789dc3d3"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/contador.ts",
@@ -43304,7 +43304,7 @@
           "exportada": false,
           "params": "correduriaId: string",
           "retorno": "Promise<readonly FilaCatalogoMin[] | null>",
-          "linea": 132,
+          "linea": 134,
           "resumen": "Lectura real de la última instantánea. Sin tabla devuelve `null` (no se sabe ≠ no hay)."
         },
         {
@@ -43313,7 +43313,7 @@
           "exportada": false,
           "params": "deps: DepsCotizar, p: PeticionCotizacion, extra: { cotizacion: Cotizacion; intentoId: string | null; simulado: boolean; respuesta?: unknown },",
           "retorno": "Promise<Guardado>",
-          "linea": 146,
+          "linea": 148,
           "resumen": "Guarda la cotización sin poder tumbarla. 🚨 El orden y el `try` de aquí son la decisión de diseño del módulo: cuando se llega a este punto el cliente YA ha pagado los 0,50€ y YA tiene su precio. Perde"
         },
         {
@@ -43322,7 +43322,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined> = process.env,",
           "retorno": "Promise<",
-          "linea": 205,
+          "linea": 207,
           "resumen": "Sonda GRATIS: pide solo el token OAuth2. Sirve para verificar host y credenciales sin gastar una cotización — que es como hay que estrenar la integración, porque no hay sandbox utilizable. Un fallo de"
         },
         {
@@ -43331,7 +43331,7 @@
           "exportada": true,
           "params": "correduriaId: string, env: Record<string, string | undefined> = process.env,",
           "retorno": null,
-          "linea": 232,
+          "linea": 234,
           "resumen": "Lo consumido y lo que queda. Para pintarlo antes de que nadie pulse nada."
         },
         {
@@ -43340,7 +43340,7 @@
           "exportada": false,
           "params": "cuerpo: unknown",
           "retorno": "string | null",
-          "linea": 262,
+          "linea": 264,
           "resumen": "`effectiveDate` (aaaa-mm-dd) del cuerpo; `null` si no consta."
         },
         {
@@ -43349,12 +43349,12 @@
           "exportada": true,
           "params": "p: PeticionCotizacion, env: Record<string, string | undefined> = process.env, deps: DepsCotizar = {},",
           "retorno": "Promise<ResultadoCotizacion>",
-          "linea": 267
+          "linea": 269
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b07bf80cd436"
+      "hash": "5c1f9b57ebe5"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/crudo.ts",
@@ -44228,7 +44228,7 @@
           "exportada": true,
           "params": "f: string, n: number",
           "retorno": "string",
-          "linea": 35,
+          "linea": 43,
           "resumen": "`f` (aaaa-mm-dd) más `n` meses en UTC, sin desbordar el día (31/01 + 1 mes = 28/29-02)."
         },
         {
@@ -44237,7 +44237,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 45
+          "linea": 53
         },
         {
           "nombre": "dias",
@@ -44245,7 +44245,7 @@
           "exportada": false,
           "params": "a: string, b: string",
           "retorno": "number",
-          "linea": 50,
+          "linea": 58,
           "resumen": "Días entre dos fechas ISO (b - a)."
         },
         {
@@ -44254,7 +44254,7 @@
           "exportada": true,
           "params": "vencimiento: string | null | undefined, efectoActual: string | null | undefined, hoy: string,",
           "retorno": "string | null",
-          "linea": 58,
+          "linea": 66,
           "resumen": "La fecha de efecto de la renovación: `fecha_efecto_actual` si es futura (anualidad nueva ya emitida), si no el vencimiento. `null` = no consta ninguna."
         },
         {
@@ -44263,7 +44263,7 @@
           "exportada": true,
           "params": "vencimiento: string | null | undefined, efectoActual: string | null | undefined, hoy: string,",
           "retorno": "",
-          "linea": 69,
+          "linea": 77,
           "resumen": "El corte (si lo hay) de la renovación, sin tener en cuenta lo que fuerce el operador."
         },
         {
@@ -44272,13 +44272,13 @@
           "exportada": true,
           "params": "entrada: { vencimiento: string | null | undefined /** `fecha_efecto_actual` de la póliza (CIMA). */ efectoActual?: string | null hoy: string explicita?: unknown }",
           "retorno": "EvaluacionRenovacion",
-          "linea": 121,
+          "linea": 129,
           "resumen": "La decisión entera de una RENOVACIÓN: la fecha de efecto con la que se cotiza, o el corte GRATIS. `explicita` = la fecha de efecto que el operador puso a mano (correcciones): manda, y queda registrada"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cfa3cd8c0ff8"
+      "hash": "3c94f094ab02"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/emision-externa.ts",
@@ -45037,7 +45037,7 @@
           "exportada": true,
           "params": "operacion: OperacionEmision, env: Record<string, string | undefined>,",
           "retorno": "number",
-          "linea": 108,
+          "linea": 109,
           "resumen": "Céntimos que se apuntan por cada línea de esta operación. Puro."
         },
         {
@@ -45046,7 +45046,7 @@
           "exportada": true,
           "params": "operacion: OperacionEmision, env: Record<string, string | undefined>,",
           "retorno": "Topes",
-          "linea": 119,
+          "linea": 120,
           "resumen": "se pisan con su propia env. Puro."
         },
         {
@@ -45055,7 +45055,7 @@
           "exportada": true,
           "params": "operacion: OperacionEmision, llamadas: number, costeCents: number,",
           "retorno": "string",
-          "linea": 146,
+          "linea": 147,
           "resumen": "Cómo se dice lo que llevamos gastado en esta operación. 🚨 Con `costeCents = 0` **no se escribe «0,00€»**: eso afirmaría que estas llamadas son gratis, y lo único cierto es que nadie lo ha confirmado."
         },
         {
@@ -45064,13 +45064,13 @@
           "exportada": true,
           "params": "operacion: OperacionEmision, consumo: Consumo, topes: Topes, costeCents: number,",
           "retorno": "Veredicto",
-          "linea": 162,
+          "linea": 163,
           "resumen": "¿Cabe UNA llamada más de esta operación? Mismo contrato que `puedeCotizar()` —y por las mismas razones: se evalúa ANTES de llamar y sobre el libro ya persistido— pero con su propio recuento y sus prop"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "825f0f42038e"
+      "hash": "4d1da4ecd24b"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/guarda-catalogo.ts",
@@ -45198,6 +45198,7 @@
       "ambito": "apps/asegura",
       "resumen": "Guarda ANTI-DUPLICADO de la cotización (08/10/2026). PURO, sin BD ni alias `@/`. Codeoscopic cobra 0,50 € por cada `POST /insurances` con 200, aunque sea el mismo proyecto repetido. Doble clic, recarga o dos pestañas = dos cargos; y un timeout (150 s) cuenta como facturable, así que el usuario repit",
       "exporta": [
+        "caducidadDePrecios",
         "jsonCanonico",
         "huellaCotizacion",
         "bloqueaDuplicado",
@@ -45206,12 +45207,21 @@
       ],
       "funciones": [
         {
+          "nombre": "caducidadDePrecios",
+          "kind": "function",
+          "exportada": true,
+          "params": "precios: ReadonlyArray<{ expiraEn: string | null }>",
+          "retorno": "number | null",
+          "linea": 32,
+          "resumen": "Caducidad (ms epoch) de una copia: la MÁS TEMPRANA de las `expirationDate` de sus precios, y solo si TODOS la declaran (un precio sin fecha no se da por vigente: «no se sabe» ≠ «vale 30 días»). `null`"
+        },
+        {
           "nombre": "jsonCanonico",
           "kind": "function",
           "exportada": true,
           "params": "v: unknown",
           "retorno": "string",
-          "linea": 20,
+          "linea": 44,
           "resumen": "JSON canónico: claves ordenadas a todos los niveles; `undefined` fuera (como hace `JSON.stringify`)."
         },
         {
@@ -45220,7 +45230,7 @@
           "exportada": true,
           "params": "e: { cuerpo: unknown ramo: string | null | undefined correduriaId: string oportunidadId?: string | null polizaId?: string | null }",
           "retorno": "string",
-          "linea": 36,
+          "linea": 60,
           "resumen": "sha256 (hex) de cuerpo canónico + ramo + correduría + contexto (`oportunidadId ?? polizaId`). El contexto evita que la misma petición lanzada desde OTRA oportunidad/póliza reutilice la copia de precio"
         },
         {
@@ -45229,7 +45239,7 @@
           "exportada": true,
           "params": "f: FilaPrevia, ahora: Date, ventanaMin = VENTANA_DUPLICADO_MIN",
           "retorno": "boolean",
-          "linea": 52,
+          "linea": 76,
           "resumen": "¿Esta fila previa bloquea? Reservada (en curso o timeout sin prueba) o facturable dentro de la ventana."
         },
         {
@@ -45238,7 +45248,7 @@
           "exportada": true,
           "params": "e: { previas: FilaPrevia[] copias: ReadonlySet<string> ahora: Date forzar?: boolean ventanaMin?: number /** Fecha de efecto (aaaa-mm-dd) del cuerpo que se va a enviar (= la de la copia: misma huella). */ fechaEfecto?: string | null /** Hoy ",
           "retorno": "DecisionDuplicado",
-          "linea": 71,
+          "linea": 95,
           "resumen": "Llamar / reutilizar / bloquear. `forzar` salta la guarda (recotización explícita del operador). `copias` = intentos cuya copia de precios consta en `tarificaciones` (con respuesta cruda). Dentro de 15"
         },
         {
@@ -45247,13 +45257,13 @@
           "exportada": true,
           "params": "e: { operacion: string correduriaId: string projectId: string precioId?: string | number | null productId?: string | number | null fechaEfecto?: string | null /** Opciones/descuentos/correcciones que viajan: otro cuerpo = otra operación (no",
           "retorno": "string",
-          "linea": 111,
+          "linea": 144,
           "resumen": "Huella de una operación de emisión (ReRate…) para frenar el doble clic (05/11/2026). Mismo contrato que `huellaCotizacion`: solo viaja el hash, nunca datos. Identifica «el mismo ReRate»: proyecto + pr"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "27195cb7cd96"
+      "hash": "9454610152cd"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/importar.ts",
@@ -47473,7 +47483,9 @@
       "ambito": "apps/asegura",
       "resumen": "Tras un 200 de `POST /insurances` el cargo (0,50 €) ya está hecho. PURO, sin BD. Si la respuesta no se puede interpretar (sin `projectId`…), NO se vuelve a cobrar al reintentar: la reserva se cierra como facturable y el mensaje lo dice claro.",
       "exporta": [
-        "leerTrasCobro"
+        "leerTrasCobro",
+        "projectIdDeCrudo",
+        "leerTrasCobroRecuperando"
       ],
       "funciones": [
         {
@@ -47483,11 +47495,29 @@
           "params": "crudo: unknown, leer: (raw: unknown) => Cotizacion = leerCotizacion,",
           "retorno": "",
           "linea": 10
+        },
+        {
+          "nombre": "projectIdDeCrudo",
+          "kind": "function",
+          "exportada": true,
+          "params": "crudo: unknown",
+          "retorno": "string | null",
+          "linea": 22,
+          "resumen": "`projectId` del 200 cobrado aunque la respuesta no se pueda interpretar entera (`id` de raíz: número o dígitos)."
+        },
+        {
+          "nombre": "leerTrasCobroRecuperando",
+          "kind": "function",
+          "exportada": true,
+          "params": "crudo: unknown, recuperar: ((projectId: string) => Promise<unknown>) | null, leer: (raw: unknown) => Cotizacion = leerCotizacion,",
+          "retorno": "Promise<",
+          "linea": 36,
+          "resumen": "Como `leerTrasCobro`, pero si la respuesta cobrada es ilegible y trae `projectId`, recupera el proyecto con un GET GRATIS (`GET /insurances/{id}`: Codeoscopic 06/11/2026, «Puedes hacer el GET sin cost"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7864ead4fb8a"
+      "hash": "5107505569c3"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/valores-ficha.ts",
@@ -64161,7 +64191,7 @@
         "codeoscopic_projects"
       ],
       "rutaApi": null,
-      "hash": "99c16ae805a1"
+      "hash": "9b1c4eb1719e"
     },
     {
       "ruta": "apps/asegura/lib/revision-anual.ts",
@@ -296696,6 +296726,6 @@
   ],
   "resumen": {
     "archivos": 6062,
-    "funciones": 24036
+    "funciones": 24039
   }
 }
