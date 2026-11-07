@@ -73,6 +73,13 @@ export function pinEntregadoVigente(p: Pick<PinExistente, 'entregado' | 'tuyaPas
   return !!p.entregado && !!p.tuyaPasswordId
 }
 
+/** Espejo en TS de la guarda del ON CONFLICT de `upsertPin`: solo se protege la fila viva (activo/error) ya
+ *  entregada con id en Tuya; sobre una fila `borrado`/`caducado` un error real de recreación SÍ se escribe. */
+export function protegeFilaDeError(p: { estado: string; entregado: boolean; tuyaPasswordId: string | null }, nuevoEstado: string): boolean {
+  if (nuevoEstado !== 'error') return false
+  return (p.estado === 'activo' || p.estado === 'error') && !!p.entregado && !!p.tuyaPasswordId
+}
+
 // Decide qué crear, qué borrar y qué cerrar. Idempotente por reserva_ref:
 //  - crear: reservas con autoPin activo, sin PIN vivo (activo), con la ventana AÚN por venir y sin un PIN
 //    entregado en la fila (un PIN entregado con error de otra cosa no se recrea a ciegas).

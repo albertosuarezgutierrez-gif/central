@@ -45,9 +45,9 @@ async function sondearAperturas(deviceId: string): Promise<{ ok: boolean; result
 }
 
 // Sonda read-only: reúne spec + status (garantizados) + intentos door-lock (best effort).
-export async function sondearAcceso(deviceId: string): Promise<{
+export async function sondearAcceso(deviceId: string, categoria?: string | null): Promise<{
   spec: BloqueSonda; status: BloqueSonda; pins: BloqueSonda; tarjetas: BloqueSonda;
-  accesos: BloqueSonda; codigoAbrir: string | null;
+  accesos: BloqueSonda; codigoAbrir: string | null; metodoAbrir: string | null;
 }> {
   let specR: BloqueSonda, statusR: BloqueSonda
   try { specR = normalizarAcceso('spec', { ok: true, result: await tuyaGetSpec(deviceId) }) }
@@ -65,7 +65,9 @@ export async function sondearAcceso(deviceId: string): Promise<{
   const tarjetas = normalizarAcceso('tarjetas', await intentar('GET', `/v1.0/devices/${deviceId}/door-lock/cards`))
   const accesos = normalizarAcceso('accesos', await sondearAperturas(deviceId))
 
-  return { spec: specR, status: statusR, pins, tarjetas, accesos, codigoAbrir: elegirCodigoAbrir(codes) }
+  const m = elegirMetodoAbrir(codes, categoria)
+  const metodoAbrir = !m ? null : m.metodo === 'password-free' ? 'apertura remota (password-free)' : m.code
+  return { spec: specR, status: statusR, pins, tarjetas, accesos, codigoAbrir: elegirCodigoAbrir(codes), metodoAbrir }
 }
 
 // Ticket de contraseña de Tuya (lo piden el PIN online y la apertura remota sin contraseña).
@@ -91,17 +93,23 @@ async function abrirSinPassword(deviceId: string): Promise<ResultadoAbrir> {
     { via: 'smart-lock/password-free/door-operate', path: `/v1.0/smart-lock/devices/${deviceId}/password-free/door-operate`, body: t => ({ ticket_id: t, open: true }) },
   ]
   for (const v of vias) {
-    let ticketId: string
-    try { ticketId = (await pedirTicketPassword(deviceId, token)).ticket_id }
-    catch (e) {
+    try {
+      let ticketId: string
+      try { ticketId = (await pedirTicketPassword(deviceId, token)).ticket_id }
+      catch (e) {
+        const msg = e instanceof Error ? e.message : String(e)
+        respuestas.push({ via: `${v.via} (ticket)`, success: false, msg: msg.slice(0, 200) })
+        continue
+      }
+      const env = await tuyaRequestRaw<unknown>('POST', v.path, v.body(ticketId), token)
+      const r = resumirRespuestaTuya(v.via, env)
+      respuestas.push(r)
+      if (aperturaOk(r)) return { ok: true, metodo: 'password-free', respuestas }
+    } catch (e) {
+      // Timeout/red en esta vía: se registra (resumido, sin secretos) y se prueba la siguiente.
       const msg = e instanceof Error ? e.message : String(e)
-      respuestas.push({ via: `${v.via} (ticket)`, success: false, msg: msg.slice(0, 200) })
-      continue
+      respuestas.push({ via: v.via, success: false, msg: msg.slice(0, 200) })
     }
-    const env = await tuyaRequestRaw<unknown>('POST', v.path, v.body(ticketId), token)
-    const r = resumirRespuestaTuya(v.via, env)
-    respuestas.push(r)
-    if (aperturaOk(r)) return { ok: true, metodo: 'password-free', respuestas }
   }
   const ultimo = respuestas[respuestas.length - 1]
   const detalle = respuestas.map(x => `${x.via}: ${x.code ?? ''} ${x.msg ?? (x.result === false ? 'result=false' : '')}`.trim()).join(' · ')

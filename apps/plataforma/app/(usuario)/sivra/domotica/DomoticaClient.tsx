@@ -193,7 +193,7 @@ export default function DomoticaClient() {
 type BloqueSonda = { clave: string; ok: boolean; datos: unknown; error: string | null }
 type SondaAcceso = {
   spec: BloqueSonda; status: BloqueSonda; pins: BloqueSonda;
-  tarjetas: BloqueSonda; accesos: BloqueSonda; codigoAbrir: string | null;
+  tarjetas: BloqueSonda; accesos: BloqueSonda; codigoAbrir: string | null; metodoAbrir?: string | null;
 }
 
 const inp: React.CSSProperties = {
@@ -438,7 +438,7 @@ function TarjetaAcceso({ d, apartamentos, ocupado, setOcupado, setError, cargar 
           <BloqueSondaView titulo="📋 Accesos" b={sonda.accesos} />
           <BloqueSondaView titulo="⚙️ Funciones (spec)" b={sonda.spec} />
           <BloqueSondaView titulo="📟 Estado (DPs)" b={sonda.status} />
-          <p style={{ margin: 0, color: 'var(--muted)' }}>DP de apertura detectado: <code>{sonda.codigoAbrir || '—'}</code></p>
+          <p style={{ margin: 0, color: 'var(--muted)' }}>DP de apertura detectado: <code>{sonda.metodoAbrir || sonda.codigoAbrir || '—'}</code></p>
         </div>
       )}
     </div>

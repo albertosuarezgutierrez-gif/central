@@ -73,7 +73,8 @@ async function upsertPin(
       valido_desde = EXCLUDED.valido_desde, valido_hasta = EXCLUDED.valido_hasta,
       estado = EXCLUDED.estado, detalle = EXCLUDED.detalle, updated_at = now()
     WHERE EXCLUDED.estado <> 'error'
-       OR NOT (domotica_acceso_pin.entregado AND domotica_acceso_pin.tuya_password_id IS NOT NULL)`
+       OR NOT (domotica_acceso_pin.estado IN ('activo','error') AND domotica_acceso_pin.entregado
+               AND domotica_acceso_pin.tuya_password_id IS NOT NULL)`
 }
 
 // Mensaje al huésped con el PIN (canal 'huesped'/'ambos'). Texto sobrio, sin datos de más.

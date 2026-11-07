@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  madridOffsetMin, madridEpoch, ventanaPin, reconciliar, necesitaAvisoOffline, desajustesVentana,
+  madridOffsetMin, madridEpoch, ventanaPin, reconciliar, necesitaAvisoOffline, desajustesVentana, protegeFilaDeError,
   type ReservaAcceso, type PinExistente, type CfgProgramador,
 } from './acceso-programador.ts'
 
@@ -193,4 +193,22 @@ test('bookingsDeRespuesta: !ok, JSON roto o sin bookings → lanza (no «0 reser
   assert.throws(() => bookingsDeRespuesta(false, 401, '{"detail":"x"}'), /401/)
   assert.throws(() => bookingsDeRespuesta(true, 200, '<html>'), /sin «bookings»/)
   assert.throws(() => bookingsDeRespuesta(true, 200, '{"error":"y"}'), /sin «bookings»/)
+})
+
+import { readFileSync } from 'node:fs'
+
+test('protegeFilaDeError: solo protege filas vivas entregadas con id en Tuya', () => {
+  const f = (estado: string, entregado = true, id: string | null = 'x') => protegeFilaDeError({ estado, entregado, tuyaPasswordId: id }, 'error')
+  assert.equal(f('activo'), true)
+  assert.equal(f('error'), true)
+  assert.equal(f('borrado'), false)
+  assert.equal(f('caducado'), false)
+  assert.equal(f('activo', false), false)
+  assert.equal(f('activo', true, null), false)
+  assert.equal(protegeFilaDeError({ estado: 'activo', entregado: true, tuyaPasswordId: 'x' }, 'activo'), false)
+})
+
+test('upsertPin: la guarda SQL del ON CONFLICT refleja el helper', () => {
+  const src = readFileSync(new URL('../../app/api/sivra/domotica/acceso/programador/route.ts', import.meta.url), 'utf8')
+  assert.match(src, /domotica_acceso_pin\.estado IN \('activo','error'\)/)
 })
