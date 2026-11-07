@@ -4,6 +4,8 @@ import { useState } from 'react'
 const MENSAJE: Record<string, string> = {
   email_invalido: 'Ese correo no parece válido.',
   demasiadas_peticiones: 'Demasiadas peticiones. Espera un rato y vuelve a intentarlo.',
+  canal_no_disponible: 'El envío de códigos no está disponible ahora mismo. Avisa a Grupo ASegura.',
+  envio_fallido: 'No hemos podido enviar el correo. Inténtalo de nuevo en unos minutos.',
   datos_invalidos: 'El código son 6 cifras.',
   incorrecto: 'Código incorrecto.',
   caducado: 'El código ha caducado. Pide otro.',
@@ -29,7 +31,7 @@ export function LoginCliente() {
     const j = await r.json().catch(() => ({}))
     setEnviando(false)
     if (!r.ok) { setError(MENSAJE[j.error] ?? 'No se pudo pedir el código.'); return }
-    // Canal de correo sin conectar: se dice tal cual (el código existe, pero no ha salido a nadie).
+    // Solo en desarrollo local sin proveedor (enviado=false): el código no ha salido por correo.
     setAviso(j.enviado
       ? 'Si el correo tiene acceso, te hemos enviado un código de 6 cifras (válido 10 minutos).'
       : 'El envío por correo aún no está conectado: el código se ha generado pero NO se ha enviado. Pide acceso a Grupo ASegura.')
