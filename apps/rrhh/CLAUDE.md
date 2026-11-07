@@ -15,6 +15,10 @@ con token o PIN.
 ## BD y schema
 - BD compartida del monorepo (`wswbehlcuxqxyinousql`, Supabase, schema `rrhh`).
 - Rol de BD: `rrhh_app` con `BYPASSRLS` (aislamiento por `empresa_id` en capa de aplicación).
+- 🚨 **Toda migración que cree tabla en `rrhh` debe hacer `REVOKE ALL ... FROM rrhh_app` + `GRANT` explícito a `rrhh_app`**:
+  el default ACL del schema (`pg_default_acl`) le da TODO (arwdDxtm) en cada tabla nueva, y un `GRANT` acotado solo no quita
+  nada (incidente 07/11/2026: `situacion_familiar` tenía DELETE/TRUNCATE; corregido en `0035_permisos_rrhh_app.sql`, cepo
+  `lib/permisos-rrhh-app-migracion.test.ts`). El default ACL NO se cambia (afectaría a las demás tablas).
 - Envs: `DATABASE_URL` / `DIRECT_URL` (Supabase pooler / directo).
 - ORM: Prisma (`prisma/schema.prisma`). Modelos principales: `empresas`, `usuarios_rrhh`,
   `empleados`, `documentos`, `solicitudes`, `usuario_empresas` (N:N responsable↔empresa),
@@ -121,8 +125,8 @@ El god-panel de plataforma crea empresas vía HTTP:
   Cepo: `lib/regression-nominas-contabilidad-unificada.test.ts`.
 - 🔢 **Doble 0033 (a sabiendas):** `0033_fichajes_nomina_hechos.sql` (#5590) y `0033_nominas_contratos_convenio.sql` (#5588) se numeraron a la
   vez y AMBAS están aplicadas en producción con ese nombre en `supabase_migrations.schema_migrations`: NO se renombran (se rompería la
-  trazabilidad). La siguiente libre es la 0035 (0034 = `hechos_nominas_destino`). El guardián de `lib/convenio-tablas-migracion.test.ts`
-  tolera SOLO ese par exacto. Aplicadas en BD (07/11/2026): las dos 0033 y la 0034; la 0032 no consta aquí (comprobar antes de desplegar).
+  trazabilidad). La siguiente libre es la 0036 (0034 = `hechos_nominas_destino`, 0035 = `permisos_rrhh_app`). El guardián de `lib/convenio-tablas-migracion.test.ts`
+  tolera SOLO ese par exacto. Aplicadas en BD (07/11/2026): 0032, las dos 0033, 0034 y 0035 (permisos mínimos de rrhh_app).
 - `/api/cron/enviar-hechos-nominas` — cada hora (:10): envía a contabilidad el outbox de nóminas (ver N3).
 - `/api/cron/recordatorio-fichaje` — L-V 9h (hora ES): push a empleados que aún no han fichado entrada.
 - `/api/cron/alerta-fichajes-abiertos` — diario 22h (hora ES): Telegram si un fichaje activo lleva
