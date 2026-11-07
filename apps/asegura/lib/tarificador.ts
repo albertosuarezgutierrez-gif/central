@@ -48,6 +48,7 @@ import { caducarEmisiones } from './tarificador-emision'
 import { MENSAJE_EMISION_INCIERTA, autorizacionSinResolver } from './tarificador-emision-reglas'
 import { memoriaTrasExito } from './tarificador-eleccion-reglas'
 import { guardarMemoriaVersion } from './tarificador-memoria'
+import { anotarObservacionesTarificacion } from './observaciones-precio'
 import { formasRiesgoDuplicado } from './tarificador-duplicados'
 import { MAX_INTENTOS_TARIFICAR, RE_SQL_REINTENTAR_DESDE, codigoDeError, esModoTarificar, estadoTarificarTrasFallo, maxIntentosModo, reintentarDesde } from './tarificador-error-codigo'
 import { purgarEvidenciaCaducada, purgarRecorridosCaducados, purgarRiesgoTrabajos, purgarRiesgosCerrados } from './tarificador-purga'
@@ -878,6 +879,11 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
   if (interno.res.estado === 'registrado' && interno.res.estadoTrabajo === 'ok' && interno.res.tarificacionId && interno.traza) {
     const aprender = memoriaTrasExito(interno.traza.t)
     if (aprender) await guardarMemoriaVersion(aprender.k, { codigo: aprender.codigo, etiqueta: aprender.etiqueta, origen: 'ia' })
+  }
+  // ALMACÉN DE PRECIOS (07/11/2026): DESPUÉS del commit, con el riesgo EN MEMORIA (la fila ya está purgada: es la última ocasión
+  // de la edad del conductor, solo en TRAMO). No lanza (`.catch` = segunda red) y está apagado por env: el trabajo ya es `ok`.
+  if (interno.res.estado === 'registrado' && interno.res.estadoTrabajo === 'ok' && interno.res.tarificacionId && interno.traza) {
+    await anotarObservacionesTarificacion(interno.traza.t.correduria_id, interno.res.tarificacionId, { creadoPor: 'sistema:rpa', riesgoRpa: interno.traza.t.riesgo }).catch(() => null)
   }
   if (interno.traza) {
     if (!(await hayPasos())) {
