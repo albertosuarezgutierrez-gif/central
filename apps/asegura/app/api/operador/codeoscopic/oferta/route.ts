@@ -15,7 +15,7 @@ import {
   completarPersonas,
   type ResultadoCompletar,
 } from '@/lib/codeoscopic/emitir'
-import { conDescuentos, descuentosDelCuerpo, opcionesParaReRate, opcionesPorDefecto } from '@/lib/codeoscopic/opciones-producto'
+import { conDescuentos, descuentosDelCuerpo, descuentosAdmitidos, opcionesParaReRate } from '@/lib/codeoscopic/opciones-producto'
 import {
   interpretarError400,
   interpretarCamposProducto,
@@ -186,7 +186,7 @@ export const POST = auditado(async (req: Request) => {
   const producto = t.producto ?? tipoDeRamo(t.ramo)
   // Descuento pedido en una compañía/ramo sin el campo: se rechaza AQUÍ, antes de tocar el proyecto
   // del vendor (el PATCH de fecha o de personas invalida sus cotizaciones aunque sea gratis).
-  if (descuentosPedidos && !productOptionsCorredor && !opcionesPorDefecto(compania, producto)) {
+  if (descuentosPedidos && !productOptionsCorredor && descuentosAdmitidos(compania, producto).length === 0) {
     return NextResponse.json(
       { estado: 'error', causa: 'descuento_no_disponible', mensaje: 'esta compañía no admite ajustar el descuento en el ReRate (solo está catalogado en Allianz coche, moto y hogar, y en Generali coche, moto y hogar)' },
       { status: 422 },
@@ -382,7 +382,7 @@ export const POST = auditado(async (req: Request) => {
         const opcionesBase = productOptionsCorredor ?? opcionesParaReRate(precio.productOptions, compania, producto)
         let opcionesRerate = opcionesBase
         if (descuentosPedidos) {
-          const conDto = conDescuentos(opcionesBase, descuentosPedidos, productOptionsCorredor ? 'formulario' : 'catalogo')
+          const conDto = conDescuentos(opcionesBase, descuentosPedidos, productOptionsCorredor ? 'formulario' : 'catalogo', { compania, ramo: producto })
           // Sin llamar a la compañía: el campo no existe para este producto.
           if (!conDto.ok) {
             return NextResponse.json({ estado: 'error', causa: 'descuento_no_disponible', mensaje: conDto.motivo }, { status: 422 })

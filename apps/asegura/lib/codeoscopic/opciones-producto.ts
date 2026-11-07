@@ -31,14 +31,12 @@
 
 export type OpcionProducto = { id: string; type: string; value: unknown }
 
-// Descuentos por defecto al 50 (29/09/2026, decisión de Alberto): la compañía recorta al máximo que
-// admite y lo va variando, así que pedir 50 deja siempre el suyo. Medido en la web con la moto de
-// Manuel Piña (40961885): 50 + 50 dio el MISMO precio confirmado que 20 + 20, sin error.
-export const DESCUENTO_POR_DEFECTO = 50
+// 07/11/2026 (decisión de Alberto): el ReRate YA NO manda descuentos comerciales por defecto. Codeoscopic
+// confirmó que las «afinaciones» que Alberto configura en el panel de Avant2 solo se aplican si el valor NO
+// se envía. El descuento MANUAL de un cliente concreto sí se manda (`conDescuentos`, con el catálogo
+// `descuentosAdmitidos` de qué id admite cada compañía/ramo). Antes (29/09/2026) se mandaba 50.
 
 const ALLIANZ_AUTO_320200: OpcionProducto[] = [
-  { id: 'dtoCap', type: 'number', value: DESCUENTO_POR_DEFECTO },
-  { id: 'dtoVentaCruzada', type: 'number', value: DESCUENTO_POR_DEFECTO },
   { id: 'comissionType', type: 'string', value: 'A' },
   { id: 'mesesVencimiento', type: 'string', value: '12' },
   { id: 'under25', type: 'boolean', value: false },
@@ -53,15 +51,22 @@ const ALLIANZ_AUTO_320200: OpcionProducto[] = [
   { id: 'vehicleUseFrequency', type: 'number', value: 1 },
 ]
 
-// Moto y hogar (ids = `name` del campo, leídos el 03/10/2026 del formulario real de Avant2).
-// Allianz: mismos dos campos que en auto; `comissionType` NO se manda jamás (toca la comisión).
-const ALLIANZ_DESCUENTOS: OpcionProducto[] = [
-  { id: 'dtoCap', type: 'number', value: DESCUENTO_POR_DEFECTO },
-  { id: 'dtoVentaCruzada', type: 'number', value: DESCUENTO_POR_DEFECTO },
-]
-// Generali: la compañía recorta sola (~12 % en moto, 29/09) y no da error.
-const GENERALI_DESCUENTO: OpcionProducto[] = [{ id: 'commercialDiscountNumber', type: 'number', value: DESCUENTO_POR_DEFECTO }]
-// PENDIENTE: Occident (`commercialDiscount` moto, `discount` hogar; ya traen 30) y Fidelidade (`discount` hogar): máximos sin medir.
+// Descuentos que admite cada (compañía, ramo) — ids = `name` del campo del formulario real de Avant2
+// (moto/hogar leídos el 03/10/2026). Solo se mandan si el corredor los pide; `comissionType` NO jamás.
+// Allianz: dtoCap + dtoVentaCruzada. Generali: commercialDiscountNumber (auto: mismo id, sin captura propia).
+// PENDIENTE: Occident (`commercialDiscount` moto, `discount` hogar) y Fidelidade (`discount` hogar).
+const DESCUENTOS_ALLIANZ = ['dtoCap', 'dtoVentaCruzada']
+const DESCUENTOS_GENERALI = ['commercialDiscountNumber']
+
+/** Ids de descuento que admite la compañía en ese ramo (`[]` si ninguno). Sin ramo se asume auto. */
+export function descuentosAdmitidos(compania: string, ramo: string | null = 'auto'): string[] {
+  const r = ramo ?? 'auto'
+  if (r !== 'auto' && r !== 'moto' && r !== 'hogar') return []
+  const c = compania.trim().toLowerCase()
+  if (c.includes('allianz')) return [...DESCUENTOS_ALLIANZ]
+  if (c.includes('generali')) return [...DESCUENTOS_GENERALI]
+  return []
+}
 
 /**
  * Opciones por defecto para una compañía, por nombre (contains normalizado,
@@ -71,43 +76,23 @@ const GENERALI_DESCUENTO: OpcionProducto[] = [{ id: 'commercialDiscountNumber', 
  * vendor lo dirá con su propio 400 real si le hace falta algo).
  */
 export function opcionesPorDefecto(compania: string, ramo: string | null = 'auto'): OpcionProducto[] | null {
-  // Por (compañía, RAMO): las 14 de Allianz son del producto de AUTO 320200.
-  // Mandárselas al ReRate de Allianz Motos sería declarar opciones de otro
-  // producto (auditoría 23/09/2026, plan punto 7). Sin ramo se asume auto,
-  // que es el comportamiento de siempre.
+  // Por (compañía, RAMO): las 12 de Allianz son del producto de AUTO 320200. Mandárselas al ReRate
+  // de Allianz Motos sería declarar opciones de otro producto (auditoría 23/09/2026). Sin ramo = auto.
+  // Nunca incluye descuentos (07/11/2026): ver cabecera de descuentosAdmitidos.
   const r = ramo ?? 'auto'
   const c = compania.trim().toLowerCase()
-  if (r === 'moto' || r === 'hogar') {
-    if (c.includes('allianz')) return ALLIANZ_DESCUENTOS.map((o) => ({ ...o }))
-    if (c.includes('generali')) return GENERALI_DESCUENTO.map((o) => ({ ...o }))
-    return null
-  }
-  if (r !== 'auto') return null
-  // Copia defensiva: el array de arriba es un módulo compartido entre invocaciones
-  // (proceso Node reutilizado en serverless) — devolver la misma referencia dejaría
-  // una mutación accidental del caller filtrarse a la siguiente petición.
-  if (c.includes('allianz')) return ALLIANZ_AUTO_320200.map((o) => ({ ...o }))
-  // Generali auto (05/10/2026): el id `commercialDiscountNumber` está medido en moto/hogar, NO en auto
-  // (sin captura del formulario). Por eso aquí solo sirve con el filtro de `opcionesParaReRate`:
-  // si el vendor ya devolvió sus opciones y no traen el id, no se manda (un id inexistente = 400 de 0,50€).
-  if (c.includes('generali')) return GENERALI_DESCUENTO.map((o) => ({ ...o }))
+  // Copia defensiva: el array es un módulo compartido entre invocaciones (proceso Node reutilizado).
+  if (r === 'auto' && c.includes('allianz')) return ALLIANZ_AUTO_320200.map((o) => ({ ...o }))
   return null
 }
 
 /**
- * PURO. Las opciones de producto del ReRate: las que el vendor devolvió para ESE precio (`delVendor`)
- * y, si no hay, el catálogo por defecto. Generali auto: si el vendor devolvió opciones, el descuento
- * por defecto solo se aplica si traen `commercialDiscountNumber`; si no lo traen, se reenvían tal cual
- * (nunca se inventa un id). Sin opciones del vendor (`null`) no se puede comprobar y manda el catálogo.
+ * PURO. Las opciones de producto del ReRate: las que el vendor devolvió para ESE precio (`delVendor`),
+ * tal cual (07/11/2026: ya no se fuerza ningún descuento, ni en Generali auto), y si no hay, el catálogo.
  */
 export function opcionesParaReRate(delVendor: unknown, compania: string, ramo: string | null = 'auto'): unknown {
   if (delVendor == null) return opcionesPorDefecto(compania, ramo)
-  const esGeneraliAuto = (ramo ?? 'auto') === 'auto' && compania.trim().toLowerCase().includes('generali')
-  if (!esGeneraliAuto || !Array.isArray(delVendor)) return delVendor
-  const id = GENERALI_DESCUENTO[0].id
-  if (!delVendor.some((o) => o && typeof o === 'object' && (o as { id?: unknown }).id === id)) return delVendor
-  const r = conDescuentos(delVendor, { commercialDiscountNumber: DESCUENTO_POR_DEFECTO })
-  return r.ok ? r.opciones : delVendor
+  return delVendor
 }
 
 // ── Descuento comercial en preemisión (29/09/2026) ──
@@ -145,18 +130,25 @@ export function descuentosDelCuerpo(v: unknown): { pedidos: DescuentosPedidos | 
 }
 
 /**
- * PURO. Aplica los descuentos pedidos a las opciones que irán en el ReRate. Solo si esas opciones
- * YA traen el campo (hoy, el catálogo de Allianz auto): meter un `dtoCap` en otra compañía sería
- * declarar un campo de otro producto. Devuelve una copia; nunca muta la entrada.
+ * PURO. Aplica los descuentos pedidos a las opciones que irán en el ReRate. Si el campo ya viene en
+ * `base`, lo pisa. Si no viene: con origen `'catalogo'` y `destino` (compañía + ramo) que lo admite, lo
+ * AÑADE como number (07/11/2026: el catálogo ya no lo trae por defecto); si no lo admite, reparo (meter un
+ * `dtoCap` en otra compañía sería declarar un campo de otro producto). Con `'formulario'` nunca se
+ * inventa un id. Devuelve una copia; nunca muta la entrada.
  */
 export function conDescuentos(
   base: unknown,
   pedidos: DescuentosPedidos,
   origen: 'catalogo' | 'formulario' = 'catalogo',
+  destino?: { compania: string; ramo: string | null },
 ): { ok: true; opciones: unknown[] } | { ok: false; motivo: string } {
   const lista = (Array.isArray(base) ? base : []).map((o) => (o && typeof o === 'object' ? { ...(o as Record<string, unknown>) } : o))
   for (const [id, pct] of Object.entries(pedidos)) {
     const o = lista.find((x) => x && typeof x === 'object' && (x as { id?: unknown }).id === id) as Record<string, unknown> | undefined
+    if (!o && origen === 'catalogo' && destino && descuentosAdmitidos(destino.compania, destino.ramo).includes(id)) {
+      lista.push({ id, type: 'number', value: pct })
+      continue
+    }
     if (!o) {
       return {
         ok: false,
@@ -166,7 +158,7 @@ export function conDescuentos(
       }
     }
     // Respeta el tipo con el que venía el campo (el formulario del vendor puede mandarlo como texto).
-    o.value = typeof o.value === 'string' ? String(pct) : pct
+    o!.value = typeof o!.value === 'string' ? String(pct) : pct
   }
   return { ok: true, opciones: lista }
 }

@@ -73,7 +73,7 @@ Que no haya salido un campo no prueba que no exista: hay que abrir el formulario
 
 ### Decisiones de Alberto (03/10/2026)
 
-- El descuento por defecto se queda en **50** (se valoró 30 y se descartó, PR #4166 cerrado sin mergear). La compañía recorta sola a su máximo; es lo mismo que se decidió el 29/09.
+- ~~El descuento por defecto se queda en 50~~ **SUPERADO el 07/11/2026**: el ReRate ya NO manda descuentos por defecto (Alberto; Codeoscopic confirmó que las afinaciones del panel de Avant2 solo se aplican si NO se envía el valor). Solo el descuento manual del corredor.
 - `comissionType` NO se toca: afecta a la comisión con la compañía.
 - Aplicar en los dos campos de Allianz (CAP + venta cruzada).
 
@@ -125,6 +125,6 @@ exacto de Allianz (prueba con 10 % para ver si baja el precio) y confirmar el pr
 
 ## Pendiente en código
 
-- Descuento por defecto en el ReRate = **50 %**. ✅ Ya lo llevan Allianz auto/moto/hogar y Generali moto/hogar (ids leídos el 03/10/2026). Pendiente: Occident y Fidelidade (máximos sin medir). `comissionType` no se manda nunca.
+- ⚠️ **07/11/2026: ya NO hay descuento por defecto en el ReRate** (antes 50 %): lo aplican las afinaciones del panel de Avant2. El manual del corredor sí se manda (Allianz auto/moto/hogar, Generali). Pendiente: Occident y Fidelidade. `comissionType` no se manda nunca.
 - Aviso «bonificación NO verificada» a partir de `messages[]`.
 - ✅ **Descubrimiento autónomo:** cron `correduria-descubrir-emisiones` implementado (plataforma, `10,40 5-21 * * *` UTC); cola de revisión `seguros.codeoscopic_emisiones_revision` activa; rotación en anillo 40 llamadas/pasada. Acuñado atómico vía `registrarPolizaEmitida` (PR #4158, mergeado). URL del webhook cambiada a `api.grupoasegura.es` (PENDIENTE que Codeoscopic actualice de su lado).
