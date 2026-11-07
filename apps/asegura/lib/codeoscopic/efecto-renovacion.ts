@@ -2,11 +2,11 @@
 //
 // Fecha de efecto de la renovación (coordinador, 05/11/2026, con datos de BD): si `fecha_efecto_actual` > hoy
 // (la compañía YA emitió la anualidad nueva y aún no empezó) → efecto = fecha_efecto_actual; si no → el
-// vencimiento. La ventana de 90 días se mide sobre ESA fecha. «Sospechoso» = duración efecto→vencimiento
+// vencimiento. La ventana de 30 días se mide sobre ESA fecha. «Sospechoso» = duración efecto→vencimiento
 // > 400 días, vencimiento no posterior al efecto, o fecha ausente (NO se usa «año distinto»).
 //
 //   «En una RENOVACIÓN solo se cotiza en Avant2 cuando el vencimiento de la póliza está confirmado
-//    y dentro de la ventana de 90 días; la fecha de efecto = el vencimiento exacto; y se emite con
+//    y dentro de la ventana de 30 días; la fecha de efecto = el vencimiento exacto; y se emite con
 //    esa misma fecha.»
 //
 // Por qué: cada `POST /insurances` cuesta 0,50 € y no es idempotente, y emitir con otra fecha de efecto
@@ -14,7 +14,15 @@
 // guardián lo ve fallar sin reloj real. La fecha de efecto que SÍ puede forzar el operador queda
 // registrada (`forzada`), nunca silenciosa.
 
-import { RE_FECHA_ISO, MAX_DIAS_VISTA, sumarDias } from './fecha-efecto.ts'
+import { RE_FECHA_ISO, sumarDias } from './fecha-efecto.ts'
+
+/**
+ * Ventana de la RENOVACIÓN: solo se cotiza a ≤30 días de la fecha de efecto. Fuente: correo de Codeoscopic del
+ * 06/11/2026 — una oferta vale «entre 15 y 30 días, depende de la compañía»; si se cotiza antes, la oferta caduca
+ * antes de emitir y hay que pagar otro POST /insurances (0,50 €). Era 90 (límite DURO del vendor para la fecha de
+ * efecto, `MAX_DIAS_VISTA` en `fecha-efecto.ts`, que NO cambia: es otra regla).
+ */
+export const VENTANA_RENOVACION_DIAS = 30
 
 /** Duración efecto→vencimiento por encima de la cual la fecha es «sospechosa» (anual + margen; medido: ninguna póliza viva pasa de 400). */
 export const MAX_DIAS_EFECTO_A_VENCIMIENTO = 400
@@ -88,11 +96,11 @@ export function corteDeVencimiento(
       motivo: `el vencimiento (${base}) ya pasó (hoy es ${hoy}): la compañía no emite con efecto pasado y habría que confirmar la fecha real de la póliza`,
     }
   }
-  const tope = sumarDias(hoy, MAX_DIAS_VISTA)
+  const tope = sumarDias(hoy, VENTANA_RENOVACION_DIAS)
   if (base > tope) {
     return {
       causa: 'fuera_de_ventana',
-      motivo: `la fecha de efecto de la renovación (${base}) está a más de ${MAX_DIAS_VISTA} días vista (la ventana abre el ${sumarDias(base, -MAX_DIAS_VISTA)}): todavía no se cotiza`,
+      motivo: `la fecha de efecto de la renovación (${base}) está a más de ${VENTANA_RENOVACION_DIAS} días vista (la ventana abre el ${sumarDias(base, -VENTANA_RENOVACION_DIAS)}): todavía no se cotiza`,
     }
   }
   // Sospechoso: la duración efecto→vencimiento no es la de una póliza anual.
@@ -116,7 +124,7 @@ export function corteDeVencimiento(
 /**
  * La decisión entera de una RENOVACIÓN: la fecha de efecto con la que se cotiza, o el corte GRATIS.
  * `explicita` = la fecha de efecto que el operador puso a mano (correcciones): manda, y queda registrada.
- * Las reglas duras del vendor (no pasada, ≤90 días) las sigue vigilando `motivoFechaEfectoInvalida`.
+ * Las reglas duras del vendor (no pasada, ≤90 días: `MAX_DIAS_VISTA`) las sigue vigilando `motivoFechaEfectoInvalida`.
  */
 export function evaluarEfectoRenovacion(entrada: {
   vencimiento: string | null | undefined

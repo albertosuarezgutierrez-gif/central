@@ -55,3 +55,32 @@ test('huellaEmision: estable, distingue proyecto/precio/efecto y no lleva datos'
   assert.notEqual(e1, huellaEmision({ ...b, extra: { opciones: [{ a: 1, b: 3 }], correcciones: {} } }))
   assert.notEqual(e1, huellaEmision({ ...b, extra: { opciones: [{ a: 1, b: 2 }], correcciones: { x: 'y' } } }))
 })
+
+test('copia con caducidad declarada: se reutiliza hasta ella (más allá de 24 h); caducada o sin fecha, no', async () => {
+  const { caducidadDePrecios, VENTANA_REUTILIZAR_MAX_MIN } = await import('./huella.ts')
+  const ok = { ahora: AHORA, hoy: '2026-10-08', fechaEfecto: '2026-10-20' }
+  const dias = (n: number) => AHORA.getTime() + n * 86_400_000
+  const previas = [fila('facturable', 3 * 24 * 60, 'f3d')]
+  const copias = new Set(['f3d'])
+  // Declara que vale 10 días más: a los 3 días de la copia sigue vigente.
+  assert.deepEqual(decidirDuplicado({ ...ok, previas, copias, caducidades: new Map([['f3d', dias(10)]]) }), { accion: 'reutilizar', intentoId: 'f3d' })
+  // Ya caducada: se llama aunque la copia tenga menos de 30 días.
+  assert.deepEqual(decidirDuplicado({ ...ok, previas, copias, caducidades: new Map([['f3d', dias(-1)]]) }), { accion: 'llamar' })
+  // Sin campo (null) o sin mapa: sigue el límite fijo de 24 h (3 días > 24 h → llamar).
+  assert.deepEqual(decidirDuplicado({ ...ok, previas, copias, caducidades: new Map([['f3d', null]]) }), { accion: 'llamar' })
+  assert.deepEqual(decidirDuplicado({ ...ok, previas, copias }), { accion: 'llamar' })
+  // Con caducidad lejana, el techo sigue siendo 30 días de antigüedad de la copia.
+  assert.equal(VENTANA_REUTILIZAR_MAX_MIN, 30 * 24 * 60)
+  assert.deepEqual(
+    decidirDuplicado({ ...ok, previas: [fila('facturable', 31 * 24 * 60, 'v')], copias: new Set(['v']), caducidades: new Map([['v', dias(60)]]) }),
+    { accion: 'llamar' },
+  )
+  // La guarda de efecto vigente y `forzar` siguen mandando.
+  assert.deepEqual(decidirDuplicado({ ...ok, fechaEfecto: '2026-10-07', previas, copias, caducidades: new Map([['f3d', dias(10)]]) }), { accion: 'llamar' })
+  assert.deepEqual(decidirDuplicado({ ...ok, previas, copias, forzar: true, caducidades: new Map([['f3d', dias(10)]]) }), { accion: 'llamar' })
+  // caducidadDePrecios: la más temprana, y solo si TODOS declaran fecha válida.
+  assert.equal(caducidadDePrecios([{ expiraEn: '2026-10-20T10:00:00+02:00' }, { expiraEn: '2026-10-15T10:00:00+02:00' }]), Date.parse('2026-10-15T10:00:00+02:00'))
+  assert.equal(caducidadDePrecios([{ expiraEn: '2026-10-20T10:00:00+02:00' }, { expiraEn: null }]), null)
+  assert.equal(caducidadDePrecios([{ expiraEn: 'mañana' }]), null)
+  assert.equal(caducidadDePrecios([]), null)
+})

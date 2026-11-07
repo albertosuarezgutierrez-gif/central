@@ -26,7 +26,7 @@ import {
 import { puedeCotizar, eurCents, type Veredicto, type Consumo } from './contador.ts'
 import { consumoActual, reservarSinDuplicado, cerrarFacturable, cerrarEmisionFacturable, cerrarDescartado } from './consumo.ts'
 import { evaluarRamoVivo, ramoDeCuerpo, type FilaCatalogoMin } from './guarda-catalogo.ts'
-import { leerTrasCobro } from './tras-cobro.ts'
+import { leerTrasCobroRecuperando } from './tras-cobro.ts'
 import { huellaCotizacion, MENSAJE_DUPLICADO } from './huella.ts'
 import { peticion, obtenerToken, ErrorCodeoscopic } from './cliente.ts'
 import { leerCotizacion, type Cotizacion } from './respuesta.ts'
@@ -126,6 +126,8 @@ export type DepsCotizar = {
   topes?: { leer: () => Promise<TopesHistorial>; guardar: (t: TopesHistorial, mensaje: string) => Promise<void> }
   /** Instantánea (gratis) del catálogo para la guarda de ramo sin producto vivo. Con `guardar` doblado y sin esto, no se comprueba (test). */
   catalogo?: (correduriaId: string) => Promise<readonly FilaCatalogoMin[] | null>
+  /** GET GRATIS del proyecto cobrado cuyo 200 era ilegible. Con `guardar` doblado y sin esto, no se recupera (test). */
+  recuperar?: (projectId: string) => Promise<unknown>
 }
 
 /** Lectura real de la última instantánea. Sin tabla devuelve `null` (no se sabe ≠ no hay). */
@@ -414,7 +416,7 @@ export async function cotizar(
 
   // 6 — La llamada que cuesta dinero. Un solo intento.
   try {
-    const crudo = await peticion(config, {
+    const crudoPost = await peticion(config, {
       metodo: 'POST',
       path: config.quotePath,
       cuerpo: p.cuerpo,
@@ -423,13 +425,20 @@ export async function cotizar(
 
     // Desde aquí el 200 YA está cobrado: nada de lo que sigue puede acabar en el `catch` de abajo (que diría
     // «error del vendor» y dejaría pagar otra vez a los 15 min).
-    const leida = leerTrasCobro(crudo)
+    // Si es ilegible pero trae projectId, se recupera con un GET GRATIS del proyecto (nunca se repite el POST).
+    const recuperar =
+      deps.recuperar ??
+      (deps.guardar
+        ? null
+        : (id: string) => peticion(config, { metodo: 'GET', path: `${config.quotePath}/${id}`, timeoutMs: config.timeoutGenericoMs }))
+    const leida = await leerTrasCobroRecuperando(crudoPost, recuperar)
     if (!leida.ok) {
       // Sin projectId no hay prueba normal, pero sí cargo: cerrar como facturable (cuenta en el tope y bloquea).
       await cerrarEmisionFacturable(intentoId).catch(() => {})
       return { ok: false, razon: 'vendor', mensaje: leida.mensaje }
     }
     const cotizacion = leida.cotizacion
+    const crudo = leida.crudo // la copia guardada es la que SÍ se pudo leer (la del POST o la del GET de recuperación)
     // 7 — Cierre. El projectId es la prueba del cargo y la clave del webhook. Si la BD falla aquí, la reserva sigue
     // abierta (cuenta igual) y se sigue con la copia: con ella el reintento se reutiliza en vez de pagarse.
     try {

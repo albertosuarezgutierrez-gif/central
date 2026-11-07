@@ -352,7 +352,7 @@ export async function prepararRetarificacion(entrada: {
   }
 
   // 🚨 REGLA DE RENOVACIÓN (Alberto, 05/11/2026): solo se cotiza con el vencimiento confirmado, dentro de
-  // la ventana de 90 días y no sospechoso; efecto = vencimiento exacto. Corte GRATIS (422, `gastado: 0,00€`).
+  // la ventana de 30 días y no sospechoso; efecto = vencimiento exacto. Corte GRATIS (422, `gastado: 0,00€`).
   // Una fecha de efecto explícita del operador (correcciones.fechaEfecto) se permite y queda en el libro.
   let efectoForzado: string | null = null
   if (origen.tipo === 'auto' || origen.tipo === 'moto' || origen.tipo === 'hogar') {

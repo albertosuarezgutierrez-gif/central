@@ -1,6 +1,6 @@
 # Tarificador Grupo ASegura: estado vivo
 
-Actualizado: 04/11/2026
+Actualizado: 07/11/2026
 
 **Regla:** TARIFICAR no es EMITIR. Tarificar (obtener precio) pueden hacerlo el bot RPA o Avant2; emitir lo confirma siempre Alberto. Ningún canal emite sin su OK.
 
@@ -9,6 +9,12 @@ Actualizado: 04/11/2026
 - **Bot RPA** en la intranet de la compañía, para las compañías principales. Controla descuento y comisión con los mismos campos que se rellenan a mano.
 - **Avant2** como comparador de apoyo, con la configuración que ya tenga en su panel. La configuración por compañía (preemisión, descuentos, opciones) vive en el panel de Avant2 y NO es legible por API. Cada alta de riesgo por API cuesta 0,50 €.
 - Un único modelo de datos del riesgo alimenta ambos canales.
+
+## 1b. Coste y estado de compañías en Avant2 (07/11/2026)
+
+- **Coste según contrato** (Codeoscopic, «Contrato Workspace 2025.v2», 20/05/2026, cláusula séptima): «Api Rest modelo 3, importe de cotizaciones, 0.50 euros+IVA/cotiz». El contrato fija precio solo por cotización y NO menciona ReRate, pre-emisión ni emisión (ni como cobrables ni como gratuitas): siguen contándose a 0,50 € en el libro hasta confirmación escrita; no se ha puesto su coste a 0.
+- **Pelayo** en Avant2: conectado, pero devuelve «Riesgo no asegurable» en perfiles fuera de su nicho. No es error: es selección de riesgo (Pelayo es barata para riesgos específicos).
+- **Mapfre** en Avant2: solo producto 2026. Pendiente de verificar con la próxima cotización real si devuelve precio, antes de preguntar a Codeoscopic.
 
 ## 2. Compañía × ramo × canal
 
@@ -66,5 +72,5 @@ Pendiente de Alberto: capturas del panel de Avant2 (prompt de Claude en Chrome),
 Avant2 se usa SOLO para tarificar y emitir. La comisión (de compañía y de correduría) no se toma de Avant2 (`brokerFee` no se usa ni se completa): sale de los movimientos de banco de Alberto y de CIMA.
 
 ## Decisión (05/11/2026, Alberto): renovación de Avant2
-En una RENOVACIÓN solo se cotiza en Avant2 con la fecha confirmada y dentro de la ventana de 90 días; efecto = `fecha_efecto_actual` si es futura (anualidad nueva ya emitida), si no el vencimiento exacto; se emite con esa misma fecha (otra obliga a ReRate = otro cargo de 0,50 €).
-Implementado en `apps/asegura/lib/codeoscopic/efecto-renovacion.ts` (corte gratis 422 en `prepararRetarificacion`: sin fecha, pasada, >90 días o sospechosa: efecto→vencimiento >400 días); una fecha forzada por el operador se permite y queda en el libro (`-efecto-forzado`). Guardián `test/regression-asegura-renovacion-efecto.test.ts`.
+En una RENOVACIÓN solo se cotiza en Avant2 con la fecha confirmada y dentro de la ventana de 30 días (la oferta vale 15-30 días según compañía; correo Codeoscopic 06/11/2026); efecto = `fecha_efecto_actual` si es futura (anualidad nueva ya emitida), si no el vencimiento exacto; se emite con esa misma fecha (otra obliga a ReRate = otro cargo de 0,50 €).
+Implementado en `apps/asegura/lib/codeoscopic/efecto-renovacion.ts` (corte gratis 422 en `prepararRetarificacion`: sin fecha, pasada, >30 días o sospechosa: efecto→vencimiento >400 días); una fecha forzada por el operador se permite y queda en el libro (`-efecto-forzado`). Guardián `test/regression-asegura-renovacion-efecto.test.ts`.

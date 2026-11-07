@@ -2,21 +2,21 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { evaluarEfectoRenovacion, corteDeVencimiento, fechaBaseRenovacion, sumarMeses } from './efecto-renovacion.ts'
+import { VENTANA_RENOVACION_DIAS, evaluarEfectoRenovacion, corteDeVencimiento, fechaBaseRenovacion, sumarMeses } from './efecto-renovacion.ts'
 import { sumarDias } from './fecha-efecto.ts'
 
 const HOY = '2026-11-05'
 const en = (n: number) => sumarDias(HOY, n)
 
 test('vencimiento confirmado dentro de la ventana: efecto = vencimiento EXACTO, sin forzar', () => {
-  for (const n of [0, 1, 45, 90]) {
+  for (const n of [0, 1, 15, 30]) {
     const r = evaluarEfectoRenovacion({ vencimiento: en(n), hoy: HOY })
     assert.deepEqual(r, { ok: true, fechaEfecto: en(n), forzada: false }, `a ${n} días`)
   }
 })
 
 test('anualidad nueva ya emitida (efecto_actual > hoy): el efecto es fecha_efecto_actual, no el vencimiento', () => {
-  const efecto = en(35)
+  const efecto = en(25)
   const venc = sumarDias(efecto, 365) // como la póliza piloto: efecto 10/12 → vencimiento un año después
   const r = evaluarEfectoRenovacion({ vencimiento: venc, efectoActual: efecto, hoy: HOY })
   assert.deepEqual(r, { ok: true, fechaEfecto: efecto, forzada: false })
@@ -29,11 +29,11 @@ test('efecto_actual pasado o hoy: manda el vencimiento', () => {
   assert.equal(evaluarEfectoRenovacion({ vencimiento: en(30), efectoActual: en(-335), hoy: HOY }).ok, true)
 })
 
-test('la ventana de 90 días se mide sobre ESA fecha (la nueva anualidad, no el vencimiento lejano)', () => {
-  const lejos = evaluarEfectoRenovacion({ vencimiento: en(500), efectoActual: en(120), hoy: HOY })
+test('la ventana de 30 días se mide sobre ESA fecha (la nueva anualidad, no el vencimiento lejano)', () => {
+  const lejos = evaluarEfectoRenovacion({ vencimiento: en(500), efectoActual: en(60), hoy: HOY })
   assert.equal(lejos.ok, false)
   if (!lejos.ok) assert.equal(lejos.causa, 'fuera_de_ventana')
-  const dentro = evaluarEfectoRenovacion({ vencimiento: sumarDias(en(60), 365), efectoActual: en(60), hoy: HOY })
+  const dentro = evaluarEfectoRenovacion({ vencimiento: sumarDias(en(20), 365), efectoActual: en(20), hoy: HOY })
   assert.equal(dentro.ok, true)
 })
 
@@ -51,11 +51,14 @@ test('vencimiento pasado: corte gratis', () => {
   if (!r.ok) assert.equal(r.causa, 'vencimiento_pasado')
 })
 
-test('a más de 90 días: corte gratis; a 91 sí, a 90 no', () => {
-  const r = evaluarEfectoRenovacion({ vencimiento: en(91), hoy: HOY })
+test('a más de 30 días (oferta de 15-30 días, Codeoscopic 06/11/2026): corte gratis; a 31 sí, a 30 no', () => {
+  assert.equal(VENTANA_RENOVACION_DIAS, 30)
+  const r = evaluarEfectoRenovacion({ vencimiento: en(31), hoy: HOY })
   assert.equal(r.ok, false)
   if (!r.ok) assert.equal(r.causa, 'fuera_de_ventana')
-  assert.equal(evaluarEfectoRenovacion({ vencimiento: en(90), hoy: HOY }).ok, true)
+  assert.equal(evaluarEfectoRenovacion({ vencimiento: en(30), hoy: HOY }).ok, true)
+  // 90 días ya NO vale en una renovación (sí sigue siendo el tope duro del vendor para cualquier fecha de efecto).
+  assert.equal(evaluarEfectoRenovacion({ vencimiento: en(90), hoy: HOY }).ok, false)
 })
 
 test('sospechoso: efecto→vencimiento > 400 días, vencimiento no posterior al efecto, o vencimiento ausente con efecto futuro', () => {
@@ -77,7 +80,7 @@ test('sospechoso: efecto→vencimiento > 400 días, vencimiento no posterior al 
 
 test('el año distinto NO es motivo de corte (solo cuentan ventana y duración)', () => {
   const hoy = '2026-12-20'
-  const r = evaluarEfectoRenovacion({ vencimiento: '2027-02-10', hoy })
+  const r = evaluarEfectoRenovacion({ vencimiento: '2027-01-10', hoy })
   assert.equal(r.ok, true)
 })
 
@@ -87,7 +90,7 @@ test('sin efecto_actual conocido no se afirma nada sospechoso', () => {
 
 test('fecha explícita del operador: se permite y queda marcada como forzada', () => {
   const otra = en(20)
-  const r = evaluarEfectoRenovacion({ vencimiento: en(45), hoy: HOY, explicita: otra })
+  const r = evaluarEfectoRenovacion({ vencimiento: en(25), hoy: HOY, explicita: otra })
   assert.equal(r.ok, true)
   if (r.ok && r.forzada) {
     assert.equal(r.fechaEfecto, otra)
