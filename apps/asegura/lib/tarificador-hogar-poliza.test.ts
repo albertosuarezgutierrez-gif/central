@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { firmezaPrecioRpa } from '@central/module-tarificacion'
-import { SUPUESTOS_HOGAR_DESDE_POLIZA, callesCompatibles, referenciaCatastralDeHogarElegida, elegirReconstruccionHogar, polizasHogarEnVigor, riesgoHogarDePolizas, type FilaPolizaHogar } from './tarificador-hogar-poliza.ts'
+import { SUPUESTOS_HOGAR_DESDE_POLIZA, tipoViviendaDeClaseInmuebleCima, callesCompatibles, referenciaCatastralDeHogarElegida, elegirReconstruccionHogar, polizasHogarEnVigor, riesgoHogarDePolizas, type FilaPolizaHogar } from './tarificador-hogar-poliza.ts'
 import { decidirRiesgoProbar, type ReconstruccionRiesgo } from './tarificador-relanzar-reglas.ts'
 import { validarEntradaRamo } from './tarificador-reglas.ts'
 
@@ -174,4 +174,12 @@ test('capitales a 0 con superficie: continente = m² × coste de reconstrucción
   const sin = riesgoHogarDePolizas([fila({ datosEspecificos: datos({ metrosCuadrados: 0, continente: 0 }) })], descifrar, AHORA, el)
   assert.equal(sin.reconstruccion.riesgo, null)
   assert.ok('faltan' in sin.reconstruccion && sin.reconstruccion.faltan.some((x) => /Superficie/.test(x)))
+})
+
+test('ClaseInmueble CIMA (EIAC V07.1 §13.3.8): solo los códigos documentados sin ambigüedad se traducen; UU (genérica), UP, otros y vacío → null', () => {
+  assert.equal(tipoViviendaDeClaseInmuebleCima('PP'), 'piso') // «Piso»
+  assert.equal(tipoViviendaDeClaseInmuebleCima('PI'), 'piso') // «Piso intermedio»
+  assert.equal(tipoViviendaDeClaseInmuebleCima('UD'), 'adosada') // «Unifamiliar adosada»
+  assert.equal(tipoViviendaDeClaseInmuebleCima(' ui '), 'independiente') // «Unifamiliar aislada»
+  for (const c of ['UU', 'UP', 'PL', 'PB', 'GA', 'ZZ', '', null, undefined, 7, 'constructor']) assert.equal(tipoViviendaDeClaseInmuebleCima(c), null, String(c))
 })
