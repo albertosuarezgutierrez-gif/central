@@ -2753,8 +2753,9 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
+  // v0.8.62 (07/11/2026): si en el login de wmediadores falta el botón de entrada, el mensaje lleva los controles pulsables visibles (login.ts#describirControlesLogin, sin PII).
   // v0.8.60 (03/11/2026, AS-26-0067): lector de la tabla del PDF del proyecto (garantias.ts): celdas de texto, celdas de varias líneas y «pérdida total».
-  version: '0.8.61',
+  version: '0.8.62',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

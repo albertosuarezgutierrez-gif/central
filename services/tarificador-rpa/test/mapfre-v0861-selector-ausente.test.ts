@@ -17,7 +17,7 @@ import {
   type ProductoVistoMapfre,
 } from '../src/adapters/mapfre/auto.ts'
 
-test('v0.8.61 · versión', () => assert.equal(mapfreAuto.version, '0.8.61'))
+test('v0.8.61 · versión', () => assert.equal(mapfreAuto.version, '0.8.62'))
 
 test('esSelectorAusenteMapfre: SOLO el mensaje exacto del guard (otro fallo de portal no corta las variantes)', () => {
   assert.equal(esSelectorAusenteMapfre(new ErrorTarificador('portal', 'selector ausente o no visible')), true)
