@@ -28,8 +28,8 @@
       "schedule": "0 8 * * *"
     },
     {
-      "path": "/api/cron/reenviar-contabilidad",
-      "schedule": "40 6 * * *"
+      "path": "/api/cron/enviar-hechos-nominas",
+      "schedule": "10 * * * *"
     }
   ]
 }

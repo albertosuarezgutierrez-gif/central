@@ -3,7 +3,7 @@
 import { NextResponse } from 'next/server'
 import { getSesionEmpleado } from '@/lib/empleado-tenant'
 import { AuthError } from '@/lib/tenant'
-import { leerDatosCertificado } from '@/lib/hechos-contabilidad'
+import { leerDatosCertificado } from '@/lib/certificado-retenciones-datos'
 import { anioPedido, certificadoDeNominas } from '@/lib/hechos-contabilidad-certificado'
 import { generarCertificadoPdf } from './certificado-pdf'
 

@@ -22,3 +22,9 @@ export function respuestaDeErrorBd(e: unknown): RespuestaBd {
   if (c === '23505') return { status: 409, body: { error: 'duplicado', errores: ['Esa operación ya estaba registrada (periodo o referencia duplicados).'] } }
   return { status: 500, body: { error: 'error_interno', errores: ['No se pudo completar la operación.'] } }
 }
+
+/** Igual que `respuestaDeErrorBd` pero para una fase concreta: el 503 nombra el fichero SQL que falta (p. ej. `0006_gestoria.sql`). */
+export function respuestaDeErrorBdFase(e: unknown, fichero: string): RespuestaBd {
+  const r = respuestaDeErrorBd(e)
+  return r.status === 503 ? { status: 503, body: { error: 'esquema_pendiente', errores: [`Falta aplicar el esquema (${fichero}).`] } } : r
+}

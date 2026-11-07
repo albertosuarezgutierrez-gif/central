@@ -5,8 +5,9 @@ import { Prisma } from '@prisma/client'
 import { obtenerNomina } from '@/lib/nominas'
 import { generarNominaPdf } from '@/lib/nomina-pdf'
 import { subirObjeto } from '@/lib/storage'
-import { desgloseConfirmable } from '@central/module-nominas'
-import { enviarNominaAContabilidad } from '@/lib/hechos-contabilidad'
+import { desgloseConfirmable, nominaAHecho, ErrorNominaHecho } from '@central/module-nominas'
+import { contabilidadDeNominas } from '@/lib/modulos-empresa'
+import { encolarHechoNomina } from '@/lib/hechos-nominas'
 
 export async function POST(_req: Request, { params }: { params: Promise<{ nominaId: string }> }) {
   try {
@@ -19,6 +20,23 @@ export async function POST(_req: Request, { params }: { params: Promise<{ nomina
     // Fail-closed: no se publica al empleado una nómina calculada con cifras legales sin verificar (o con las tablas antiguas).
     const confirmable = desgloseConfirmable(nomina.datos_calculo)
     if (!confirmable.ok) return NextResponse.json({ error: confirmable.motivo }, { status: 409 })
+
+    // N3: con `contabilidad_nominas` activo, la nómina debe producir un hecho que CUADRE; si no cuadra no se confirma (no queda a medias).
+    // Si no se puede leer el interruptor, la excepción sube: confirmar no sigue «como si estuviera apagado».
+    let hecho: ReturnType<typeof nominaAHecho> | null = null
+    const destinoContabilidad = await contabilidadDeNominas(empresa_id)
+    if (destinoContabilidad) {
+      try {
+        hecho = nominaAHecho({
+          nominaId, empleadoId: nomina.empleado_id, periodo: nomina.periodo, desglose: nomina.datos_calculo,
+          // Perceptor del 190 (NIF solo si es válido; nunca se inventa). Viaja en el hecho del outbox, no a los logs.
+          perceptor: { nombre: nomina.empleado_nombre, apellidos: nomina.empleado_apellidos, dni: nomina.empleado_dni, provincia: nomina.empleado_provincia },
+        })
+      } catch (e) {
+        if (e instanceof ErrorNominaHecho) return NextResponse.json({ error: `No se puede asentar en contabilidad: ${e.message}`, codigo: e.codigo }, { status: 422 })
+        throw e
+      }
+    }
 
     const empRows = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT nombre FROM rrhh.empresas WHERE id = ${empresa_id}::uuid LIMIT 1`)
@@ -44,14 +62,15 @@ export async function POST(_req: Request, { params }: { params: Promise<{ nomina
       INSERT INTO rrhh.documentos (empresa_id, empleado_id, carpeta, nombre, tipo, tamano, storage_path, subido_por, estado_firma)
       VALUES (${empresa_id}::uuid, ${nomina.empleado_id}::uuid, 'nominas', ${docNombre}, 'application/pdf', ${tamano}, ${pdfPath}, 'sistema', 'no_requiere')`)
 
-    await prisma.$executeRaw(Prisma.sql`
+    // Confirmar y encolar el hecho van en UNA transacción (outbox): o ocurren las dos cosas o ninguna. Reintentar no duplica (ref nomina:<id>).
+    const confirmar = prisma.$executeRaw(Prisma.sql`
       UPDATE rrhh.nominas SET estado = 'confirmada', pdf_path = ${pdfPath}, confirmada_at = now()
       WHERE id = ${nominaId}::uuid AND empresa_id = ${empresa_id}::uuid`)
+    if (hecho) await prisma.$transaction([confirmar, encolarHechoNomina(empresa_id, nominaId, hecho, destinoContabilidad!)])
+    else await confirmar
 
-    // DESPUÉS de confirmar: el hecho viaja a contabilidad. Nunca lanza ni deshace la nómina; el estado queda anotado para reintento.
-    const contabilidad = await enviarNominaAContabilidad(empresa_id, nominaId)
-
-    return NextResponse.json({ ok: true, pdf_path: pdfPath, contabilidad: contabilidad.estado })
+    // El envío lo hace el cron `/api/cron/enviar-hechos-nominas` (o el botón «Reintentar envío»): aquí nunca hay HTTP a contabilidad.
+    return NextResponse.json({ ok: true, pdf_path: pdfPath, contabilidad: hecho ? 'encolado' : null })
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: 401 })
     throw e

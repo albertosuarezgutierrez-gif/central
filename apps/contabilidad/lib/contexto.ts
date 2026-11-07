@@ -2,7 +2,7 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { COOKIE_NAME, leerCookie } from './sesion-cookie'
-import { sesionVigenteBd } from './db'
+import { sesionVigenteBd, usuarioVigenteBd } from './db'
 
 export type Contexto = { usuarioId: string; empresaId: string; rol: 'dueno' | 'gestor' }
 
@@ -19,4 +19,14 @@ export async function exigirContexto(): Promise<Contexto> {
   const c = await leerContexto()
   if (!c) redirect('/login')
   return c
+}
+
+/**
+ * Usuario con sesión vigente en BD pero SIN exigir empresa elegida (el portal de la gestoría lista varias). null si no hay sesión, está manipulada,
+ * caducada o el usuario ya no es vigente (baja o «Salir»). Las empresas se leen luego de BD (`empresas_de_usuario`), nunca de la petición.
+ */
+export async function leerUsuario(): Promise<{ usuarioId: string; empresaActual: string | null } | null> {
+  const s = await leerCookie((await cookies()).get(COOKIE_NAME)?.value, new Date())
+  if (!s || !(await usuarioVigenteBd(s.u, s.sv))) return null
+  return { usuarioId: s.u, empresaActual: s.e }
 }

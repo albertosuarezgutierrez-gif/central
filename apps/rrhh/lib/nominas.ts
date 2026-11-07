@@ -313,9 +313,12 @@ export async function listarNominas(empresaId: string, periodo: string) {
   parsePeriodo(periodo)
   const nominas = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT n.id, n.empleado_id, n.periodo, n.estado, n.generada_at, n.confirmada_at,
-           n.datos_calculo, e.nombre AS empleado_nombre
+           n.datos_calculo, e.nombre AS empleado_nombre,
+           h.estado AS contabilidad_estado, h.ultimo_error AS contabilidad_detalle
     FROM rrhh.nominas n
     JOIN rrhh.empleados e ON e.id = n.empleado_id AND e.empresa_id = n.empresa_id
+    -- Estado del envío a contabilidad por nómina = el de SU hecho en el outbox (única fuente). Sin fila = no se encoló (NULL, «no consta»).
+    LEFT JOIN rrhh.hechos_nominas h ON h.empresa_id = n.empresa_id AND h.empresa_id = ${empresaId}::uuid AND h.nomina_id = n.id AND h.tipo = 'nomina'
     WHERE n.empresa_id = ${empresaId}::uuid AND n.periodo = ${periodo}
     ORDER BY e.nombre ASC`)
   if (!nominas.length) return nominas
@@ -337,7 +340,8 @@ export async function obtenerNomina(empresaId: string, nominaId: string) {
   const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT n.id, n.empleado_id, n.periodo, n.estado, n.generada_at, n.confirmada_at,
            n.datos_calculo, n.pdf_path,
-           e.nombre AS empleado_nombre, e.dni AS empleado_dni, e.nss AS empleado_nss
+           e.nombre AS empleado_nombre, e.apellidos AS empleado_apellidos, e.dni AS empleado_dni, e.nss AS empleado_nss,
+           e.provincia AS empleado_provincia
     FROM rrhh.nominas n
     JOIN rrhh.empleados e ON e.id = n.empleado_id AND e.empresa_id = n.empresa_id
     WHERE n.id = ${nominaId}::uuid AND n.empresa_id = ${empresaId}::uuid LIMIT 1`)
@@ -356,8 +360,10 @@ export async function addIncidencia(
     /** 0033: null/undefined = puntual. */
     periodicidad?: Periodicidad | null
     recurrenteHasta?: string | null
+    /** N2: incidencia propuesta desde fichajes aprobados (idempotente por clave). */
+    origen?: { clave: string; fichajeIds: string[] }
   },
-) {
+): Promise<{ id: string; duplicada?: boolean }> {
   const nomina = await prisma.nominas.findFirst({
     where: { id: nominaId, empresa_id: empresaId, estado: 'borrador' },
   })
@@ -365,6 +371,14 @@ export async function addIncidencia(
   if (datos.recurrenteHasta) {
     parsePeriodo(datos.recurrenteHasta)
     if (datos.recurrenteHasta < nomina.periodo) throw new Error('«Hasta» es anterior al periodo de la nómina (inválido)')
+  }
+
+  if (datos.origen) {
+    // Idempotencia de las propuestas desde fichajes (columnas de la migración 0033): la misma clave no entra dos veces.
+    const ya = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
+      SELECT id FROM rrhh.incidencias_mes
+      WHERE empresa_id = ${empresaId}::uuid AND nomina_id = ${nominaId}::uuid AND origen_clave = ${datos.origen.clave} LIMIT 1`)
+    if (ya[0]) return { id: ya[0].id, duplicada: true }
   }
 
   const inc = await prisma.incidencias_mes.create({
@@ -380,6 +394,17 @@ export async function addIncidencia(
       recurrente_hasta: datos.periodicidad ? datos.recurrenteHasta ?? null : null,
     },
   })
+  if (datos.origen) {
+    try {
+      await prisma.$executeRaw(Prisma.sql`
+        UPDATE rrhh.incidencias_mes
+        SET origen = 'fichajes', origen_clave = ${datos.origen.clave}, origen_fichaje_ids = ${datos.origen.fichajeIds}::uuid[]
+        WHERE id = ${inc.id}::uuid AND empresa_id = ${empresaId}::uuid`)
+    } catch (e) {
+      await prisma.incidencias_mes.deleteMany({ where: { id: inc.id, empresa_id: empresaId } })
+      throw e
+    }
+  }
 
   let desglose: NominaDesglose
   try {

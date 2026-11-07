@@ -27,10 +27,10 @@ export async function GET(req: Request) {
 
 /**
  * «Aprobar lote»: confirma varias nóminas en una operación reutilizando TAL CUAL la ruta de confirmar (no se toca ni se
- * duplica su lógica: PDF, documento del empleado, guarda `desgloseConfirmable`, envío a contabilidad). Cada una se confirma
+ * duplica su lógica: PDF, documento del empleado, guarda `desgloseConfirmable`, encolado del hecho contable en el outbox). Cada una se confirma
  * por separado con la sesión de ESTA petición (la ruta llama a su propio `getSesion()` y filtra por su empresa): una que no
  * sea de la empresa da 404 y no se confirma. Secuencial; el resultado dice, POR ID, cuáles salieron y por qué no las demás.
- * Cada confirmación genera un PDF y espera a contabilidad (hasta 10 s): se procesan como mucho LOTE_CONFIRMAR por llamada y
+ * Cada confirmación genera un PDF (contabilidad va por el outbox, sin HTTP aquí): se procesan como mucho LOTE_CONFIRMAR por llamada y
  * con presupuesto de tiempo; las que no caben vuelven en `pendientes` (sin tocar) para la siguiente llamada.
  */
 export const maxDuration = 60

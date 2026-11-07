@@ -1,7 +1,7 @@
 'use client'
 /**
- * «Reintentar envío a contabilidad»: reenvía las nóminas confirmadas de ESTA empresa cuyo envío quedó pendiente o falló
- * (`POST /api/admin/nominas/reenviar-contabilidad`; la empresa la pone la sesión). El cron diario hace lo mismo para todas.
+ * «Reintentar envío a contabilidad»: envía ya los hechos de nómina de ESTA empresa que siguen pendientes o con error en el outbox
+ * (`POST /api/admin/nominas/reenviar-contabilidad`; la empresa la pone la sesión). El cron horario hace lo mismo para todas.
  * Idempotente: una nómina ya asentada no se asienta dos veces.
  */
 import { useState } from 'react'
@@ -9,9 +9,8 @@ import Boton from '@/components/ui/Boton'
 import Aviso from '@/components/ui/Aviso'
 
 const ETIQUETA: Record<string, string> = {
-  enviado: 'enviadas', pendiente_regla: 'guardadas en contabilidad pendientes de regla o ejercicio',
-  pendiente_vincular: 'sin enviar: la empresa no está vinculada a contabilidad', sin_configurar: 'sin enviar: falta configurar la conexión',
-  error: 'con error (se reintentarán)', rechazado: 'rechazadas por contabilidad (hay que revisarlas)', no_enviable: 'no enviables (desglose incompleto)',
+  enviado: 'enviados', error: 'con error (se reintentarán)', rechazado: 'rechazados por contabilidad (hay que revisarlos)',
+  aplazado: 'pagos en espera de su nómina',
 }
 
 export default function ReenviarContabilidadBoton() {
@@ -40,7 +39,7 @@ export default function ReenviarContabilidadBoton() {
       </Boton></div>
       {fallo && <Aviso tono="alerta" titulo="No se pudo reintentar">{fallo}</Aviso>}
       {hecho && (
-        <Aviso tono={hecho.procesadas === 0 ? 'ok' : 'info'} titulo={hecho.procesadas === 0 ? 'No había envíos pendientes' : `${hecho.procesadas} nóminas reintentadas`}>
+        <Aviso tono={hecho.procesadas === 0 ? 'ok' : 'info'} titulo={hecho.procesadas === 0 ? 'No había envíos pendientes' : `${hecho.procesadas} envíos reintentados`}>
           {Object.entries(hecho.porEstado).length > 0 && (
             <ul className="mt-1 list-disc pl-5">
               {Object.entries(hecho.porEstado).map(([k, n]) => <li key={k}>{n} {ETIQUETA[k] ?? k}</li>)}

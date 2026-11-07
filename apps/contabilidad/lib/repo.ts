@@ -91,6 +91,8 @@ export interface RepoContable extends RepoF3 {
   marcarAvisosLeidos(usuarioId: string | null): Promise<void>
   // ── Alta (operador) ──
   contarCuentas(): Promise<number>
+  /** Asientos de apertura (`origen='apertura'`, inicial o de cierre) del ejercicio que NO están rectificados. */
+  contarAperturasVivas(anio: number): Promise<number>
   sembrarPlan(filas: readonly FilaCuenta[]): Promise<void>
   crearEjercicio(e: FilaEjercicio): Promise<boolean>
   vinculos(): Promise<{ usuarioId: string; rol: 'dueno' | 'gestor'; activo: boolean }[]>
@@ -437,6 +439,13 @@ export function repoSql(tx: TxSql, empresaId: string): RepoContable {
         UPDATE contabilidad.avisos SET leido_en = now(), leido_por = ${usuarioId}::uuid WHERE empresa_id = ${e}::uuid AND leido_en IS NULL`
     },
 
+    async contarAperturasVivas(anio) {
+      const f = await tx.$queryRaw<Fila[]>`
+        SELECT count(*)::int AS n FROM contabilidad.asientos a
+         WHERE a.empresa_id = ${e}::uuid AND a.ejercicio = ${anio}::int AND a.origen = 'apertura'
+           AND NOT EXISTS (SELECT 1 FROM contabilidad.asientos r WHERE r.empresa_id = ${e}::uuid AND r.reversa_de = a.id)`
+      return enteroDeBd(f[0]?.n ?? 0)
+    },
     async contarCuentas() {
       const f = await tx.$queryRaw<Fila[]>`SELECT count(*)::int AS n FROM contabilidad.plan_cuentas WHERE empresa_id = ${e}::uuid`
       return enteroDeBd(f[0]?.n ?? 0)

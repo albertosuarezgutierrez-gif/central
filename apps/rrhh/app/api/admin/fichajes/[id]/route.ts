@@ -35,6 +35,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           ELSE horas_totales END
       WHERE id = ${id}::uuid AND empresa_id = ${empresa_id}::uuid`)
 
+    // N2: corregir un fichaje invalida su aprobación (el responsable debe volver a aprobarlo antes de que cuente para la nómina).
+    // Columnas de la migración 0033: si aún no está aplicada, la corrección sigue funcionando (el fichaje tampoco habría contado).
+    try {
+      await prisma.$executeRaw(Prisma.sql`
+        UPDATE rrhh.fichajes SET aprobado_at = NULL, aprobado_por = NULL
+        WHERE id = ${id}::uuid AND empresa_id = ${empresa_id}::uuid AND aprobado_at IS NOT NULL`)
+    } catch (e) { console.warn('[fichajes] no se pudo anular la aprobación (¿falta la migración 0033?)', e instanceof Error ? e.message : e) }
+
     // Registrar auditoría por cada campo modificado
     const cambios: { campo: string; antes: string | null; despues: string | null }[] = []
     if (salida_at && (!prev.salida_at || new Date(salida_at).getTime() !== new Date(prev.salida_at).getTime())) {

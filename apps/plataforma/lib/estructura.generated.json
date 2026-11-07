@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-11-05T09:23:05Z",
+  "generadoEn": "2026-11-07T08:56:51Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -845,7 +845,7 @@
       },
       "contabilidad": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 4
       },
       "housesevillana": {
         "estado": "no",
@@ -931,7 +931,7 @@
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 11
+        "evidencias": 13
       },
       "sivra": {
         "estado": "usado",
@@ -1713,7 +1713,7 @@
       },
       "contabilidad": {
         "estado": "usado",
-        "evidencias": 65
+        "evidencias": 77
       },
       "housesevillana": {
         "estado": "no",
@@ -1736,8 +1736,8 @@
         "evidencias": 2
       },
       "rrhh": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 4
       },
       "sivra": {
         "estado": "usado",
@@ -2295,7 +2295,7 @@
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 7
+        "evidencias": 16
       },
       "sivra": {
         "estado": "no",
@@ -2418,8 +2418,8 @@
         "evidencias": 2
       },
       "rrhh": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 2
       },
       "sivra": {
         "estado": "no",
@@ -4906,7 +4906,9 @@
       "module-materiales"
     ],
     "module-materiales": [],
-    "module-nominas": [],
+    "module-nominas": [
+      "module-contabilidad"
+    ],
     "module-organizador-trabajo": [],
     "module-pagos": [],
     "module-patrimonio": [
@@ -5475,6 +5477,10 @@
       "/api/compras/proveedor",
       "/api/cron/avisos",
       "/api/cuentas-anuales",
+      "/api/exportar",
+      "/api/factura-electronica",
+      "/api/gestoria/comentarios",
+      "/api/gestoria/revisiones",
       "/api/hechos",
       "/api/impuestos/calcular",
       "/api/impuestos/declaraciones/[id]",
@@ -5483,6 +5489,7 @@
       "/api/impuestos/sociedades",
       "/api/informes/[clave]",
       "/api/inmovilizado",
+      "/api/onboarding",
       "/api/operador/empresas",
       "/api/pagos",
       "/api/reglas"
@@ -6776,11 +6783,16 @@
       "/api/admin/material/[id]",
       "/api/admin/mis-empresas",
       "/api/admin/nominas",
+      "/api/admin/nominas/[nominaId]/aprobar-fichajes",
       "/api/admin/nominas/[nominaId]/confirmar",
       "/api/admin/nominas/[nominaId]/incidencias",
       "/api/admin/nominas/[nominaId]/incidencias/[incId]",
+      "/api/admin/nominas/[nominaId]/propuestas-fichajes",
       "/api/admin/nominas/distribuir-pdf",
+      "/api/admin/nominas/finiquito",
       "/api/admin/nominas/generar",
+      "/api/admin/nominas/reenviar-contabilidad",
+      "/api/admin/nominas/remesa",
       "/api/admin/obras",
       "/api/admin/obras/[id]",
       "/api/admin/prl/generar",
@@ -6796,6 +6808,7 @@
       "/api/auth/seleccionar-empresa",
       "/api/cron/alerta-fichajes-abiertos",
       "/api/cron/alerta-jornada-maxima",
+      "/api/cron/enviar-hechos-nominas",
       "/api/cron/nominas",
       "/api/cron/recordatorio-fichaje",
       "/api/cron/recordatorio-firmas",
@@ -6805,6 +6818,7 @@
       "/api/e/asistente",
       "/api/e/avisos",
       "/api/e/avisos/visto",
+      "/api/e/certificado-retenciones",
       "/api/e/chat",
       "/api/e/expediente",
       "/api/e/expediente/[docId]/firmar",
@@ -7190,6 +7204,7 @@
       "contabilidad.auditoria",
       "contabilidad.avisos",
       "contabilidad.cierres_ejercicio",
+      "contabilidad.comentarios",
       "contabilidad.conciliaciones",
       "contabilidad.consentimiento_seguros",
       "contabilidad.declaraciones",
@@ -7204,6 +7219,8 @@
       "contabilidad.proveedores",
       "contabilidad.reglas_asiento",
       "contabilidad.reglas_conciliacion",
+      "contabilidad.revisiones",
+      "contabilidad.terceros",
       "contabilidad.usuario_empresas",
       "contabilidad.usuarios",
       "sin"
@@ -7506,12 +7523,14 @@
       "rrhh.avisos",
       "rrhh.avisos_admin",
       "rrhh.contratos_laborales",
+      "rrhh.convenio_tablas_salariales",
       "rrhh.documentos",
       "rrhh.empleados",
       "rrhh.empresa_modulos",
       "rrhh.empresas",
       "rrhh.firma_otps",
       "rrhh.firmas",
+      "rrhh.hechos_nominas",
       "rrhh.incidencias_mes",
       "rrhh.incidencias_ubicacion",
       "rrhh.material_empleado",
@@ -8318,7 +8337,7 @@
     "packages": 49,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1954,
+    "apis": 1966,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
