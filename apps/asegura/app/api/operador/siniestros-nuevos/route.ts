@@ -3,6 +3,7 @@ import { operadorAutorizado } from '@/lib/operador'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada, prismaAsegura } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
+import { vigenciaSiniestro } from '@central/module-seguros'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -83,6 +84,13 @@ export async function GET(req: Request) {
           clienteId: true,
           polizaId: true,
           estado: true,
+          // Para `vigenciaSiniestro` (lectura: un abierto sin movimiento sale `sin_confirmar`, no se escribe nada).
+          tipo: true,
+          origen: true,
+          fechaDeclaracion: true,
+          situacionesCima: true,
+          accionesCima: true,
+          pagosCima: true,
           cliente: { select: { nombre: true, apellidos: true } },
           poliza: { select: { numeroPoliza: true, aseguradora: true } },
         },
@@ -107,6 +115,21 @@ export async function GET(req: Request) {
         // solo consta la de la entidad, vale igual.
         referencia: s.referencia ?? s.idSiniestroEntidad,
         estado: s.estado,
+        // `sin_confirmar` = abierto sin movimiento desde hace meses: el aviso pide REVISAR con la
+        // compañía, no «sigue abierto, llama».
+        vigencia: vigenciaSiniestro(
+          {
+            estado: String(s.estado),
+            tipo: s.tipo,
+            origen: String(s.origen),
+            fechaHora: s.fechaHora,
+            fechaDeclaracion: s.fechaDeclaracion,
+            situacionesCima: s.situacionesCima,
+            accionesCima: s.accionesCima,
+            pagosCima: s.pagosCima,
+          },
+          new Date(),
+        ),
       })),
     })
   } catch (e) {

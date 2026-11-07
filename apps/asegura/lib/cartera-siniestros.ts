@@ -26,6 +26,8 @@ import {
   type SeguimientoSiniestro,
   type IntervinienteEntrada,
   esVolcadoHistorico,
+  vigenciaSiniestro,
+  type VigenciaSiniestro,
   tercerosDeSiniestro,
   type TerceroFicha,
 } from '@central/module-seguros'
@@ -154,8 +156,6 @@ type FilaParteVinculado = {
   creadoEn: Date
 }
 
-const ESTADOS_ABIERTO = new Set(['abierto', 'en_tramitacion'])
-
 function num(d: unknown): number | null {
   if (d === null || d === undefined) return null
   const n = Number(d)
@@ -216,8 +216,30 @@ function tramitacionDeFila(s: FilaSiniestro): SiniestroFicha['tramitacionCima'] 
   return Object.values(t).every((v) => v === null) ? null : t
 }
 
+/**
+ * Vigencia de LECTURA (`vigenciaSiniestro`): un «abierto» sin movimiento no cuenta como abierto
+ * (queda `sin_confirmar`). No toca el dato. `.map(mapSiniestro)` pasa el índice como 2.º argumento,
+ * por eso `hoy` no es parámetro de `mapSiniestro`.
+ */
+export function vigenciaDeFila(s: FilaSiniestro, hoy: Date): VigenciaSiniestro {
+  return vigenciaSiniestro(
+    {
+      estado: String(s.estado),
+      tipo: s.tipo,
+      origen: String(s.origen),
+      fechaHora: s.fechaHora,
+      fechaDeclaracion: s.fechaDeclaracion,
+      situacionesCima: s.situacionesCima,
+      accionesCima: s.accionesCima,
+      pagosCima: s.pagosCima,
+    },
+    hoy,
+  )
+}
+
 /** Fila de Prisma → `SiniestroFicha`. `null` en reserva/indemnización = no informada, nunca 0. */
 export function mapSiniestro(s: FilaSiniestro): SiniestroFicha {
+  const vigencia = vigenciaDeFila(s, new Date())
   const origen = (String(s.origen) === 'cima' ? 'cima' : 'gestionado_correduria') as OrigenSiniestro
   const lugar = [s.lugarCiudad, s.lugarCp ? `(${s.lugarCp})` : null].filter(Boolean).join(' ') || s.lugarProvincia || null
   return {
@@ -242,7 +264,9 @@ export function mapSiniestro(s: FilaSiniestro): SiniestroFicha {
     lugar,
     origen,
     confirmadoCima: s.idSiniestroEntidad !== null,
-    abierto: ESTADOS_ABIERTO.has(String(s.estado)),
+    // Solo el abierto CONFIRMADO suma a «abiertos»; el resto de «abiertos» viejos va como `sin_confirmar`.
+    abierto: vigencia === 'abierto',
+    vigencia,
     actualizado: s.updatedAt.toISOString(),
     datosRamo: datosRamoDeFila(s.datosRamo),
     danosCima: danosCimaDeFila(s.danosCima),

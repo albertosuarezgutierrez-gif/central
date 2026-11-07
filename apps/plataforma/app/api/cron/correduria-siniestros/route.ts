@@ -90,6 +90,8 @@ function leerFila(v: unknown): SiniestroEntrante | null {
     // `null` = una versión vieja de asegura no lo manda; `textoAvisoSiniestros`
     // lo trata como «sigue abierto» (conservador). No inventar un valor aquí.
     estado: texto(s.estado),
+    // Ausente/ilegible = asegura viejo: sin vigencia, el aviso se comporta como antes.
+    vigencia: s.vigencia === 'abierto' || s.vigencia === 'sin_confirmar' || s.vigencia === 'cerrado' ? s.vigencia : null,
   }
 }
 

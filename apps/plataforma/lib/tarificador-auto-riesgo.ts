@@ -90,6 +90,8 @@ export type RiesgoParaBotsAuto = {
       aniosAsegurado: number | null; aniosSinSiniestros: number | null; siniestrosUltimos5: number | null; tieneSeguroActual: boolean | null; companiaActual?: string | null; numeroPoliza?: string | null
     }
     carnet: { fecha: string | null; legible: boolean } | null
+    /** Siniestros con culpa en 5 años según CIMA (`Riesgo.historial.siniestrosCima`): `N` · `0` revisado · `null`/ausente = no se sabe. */
+    siniestrosCima?: number | null
   } | null
   /** Conductor ocasional (`Riesgo.conductorOcasional`): `null`/ausente = no se sabe (sin preguntar). */
   conductorOcasional?: { ningunoConfirmadoAt: string | null } | null
@@ -169,7 +171,10 @@ export function formularioBotsAutoDeRiesgo(r: RiesgoParaBotsAuto, porPolizas: Co
     tieneSeguroActual: decl?.tieneSeguroActual ?? (ant !== null || compAnt.propuestaDePoliza),
     aniosAsegurado: texto(decl?.aniosAsegurado),
     aniosSinSiniestros: texto(decl?.aniosSinSiniestros ?? ant?.aniosSinSiniestros),
-    siniestrosUltimos5: texto(decl?.siniestrosUltimos5 ?? ant?.siniestrosUltimos5),
+    // Siniestros en 5 años (07/11/2026): lo DECLARADO en el formulario manda; si no, lo que trae CIMA (referencias distintas con
+    // culpa, `siniestrosConCulpaCima`; un N>0 es dato y el supuesto favorable ya no se aplica); si no, lo leído del papel. Sin nada
+    // (CIMA `null` = no se puede afirmar / sin historial CIMA) sigue el supuesto favorable de siempre, declarado como SUPUESTO.
+    siniestrosUltimos5: texto(decl?.siniestrosUltimos5 ?? r.historial?.siniestrosCima ?? ant?.siniestrosUltimos5),
     companiaAnterior: compAnt.compania,
     // Supuestos de Allianz Turismos: lo que el riesgo sabe viaja; lo demás lo supone el bot y lo declara junto al precio.
     fechaMatriculacion: dv?.fechaMatriculacion ?? null,

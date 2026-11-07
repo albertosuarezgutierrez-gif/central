@@ -215,7 +215,7 @@ function RamosContratados({ tiposVivos }: { tiposVivos: string[] }) {
 // hace decir «está todo al día» sobre lo que no se ha mirado.
 
 function Titulares({ resumen, idsConChip }: { resumen: ResumenFicha; idsConChip: ReadonlySet<string> }) {
-  const { conteo, recibos, siniestrosAbiertos: abiertos, proximo } = resumen
+  const { conteo, recibos, siniestrosAbiertos: abiertos, siniestrosSinConfirmar: sinConfirmar, proximo } = resumen
   // Flex que envuelve y estira: una 5.ª tarjeta no se queda sola y pequeña en su fila.
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
@@ -252,7 +252,10 @@ function Titulares({ resumen, idsConChip }: { resumen: ResumenFicha; idsConChip:
         label="Siniestros abiertos"
         valor={abiertos === null ? '—' : String(abiertos)}
         color={abiertos ? 'var(--warning)' : undefined}
-        sub={abiertos === null ? 'no se han podido leer' : abiertos > 0 ? 'en tramitación' : 'ninguno abierto'}
+        sub={
+          abiertos === null ? 'no se han podido leer'
+          : `${abiertos > 0 ? 'en tramitación' : 'ninguno abierto'}${sinConfirmar ? ` · ${sinConfirmar} sin confirmar con la compañía` : ''}`
+        }
       />
       <ProximoVencimiento proximo={proximo} idsConChip={idsConChip} vivas={conteo.vivas} sinFecha={resumen.vivasSinFechaVencimiento} />
     </div>

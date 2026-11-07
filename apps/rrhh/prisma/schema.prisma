@@ -243,3 +243,50 @@ model convenio_tablas_salariales {
 
   @@index([empresa_id])
 }
+
+/// Seguro OBLIGATORIO por convenio (migración 0036), metido a mano con su fuente. Importes en CÉNTIMOS.
+/// `seguro_estado`: NULL = no se sabe ≠ 'no_cubierto' ≠ 'cubierto'. Se lee/escribe por SQL (`lib/seguro-convenio-repo.ts`).
+/// (Las columnas `empresas.convenio_sin_seguro_at/_por` de la misma migración NO están en el modelo `empresas` a propósito.)
+model convenio_seguros_obligatorios {
+  id                 String    @id @default(uuid()) @db.Uuid
+  empresa_id         String    @db.Uuid
+  convenio           String
+  tipo               String
+  contingencias      String[]
+  capital_cent       BigInt
+  ambito             String
+  categorias         String[]
+  articulo           String
+  fuente_url         String
+  vigente_desde      DateTime  @db.Date
+  vigente_hasta      DateTime? @db.Date
+  seguro_estado      String?
+  seguro_aseguradora String?
+  seguro_poliza      String?
+  seguro_vencimiento DateTime? @db.Date
+  seguro_estado_at   DateTime? @db.Timestamptz(6)
+  seguro_estado_por  String?
+  creada_por         String?
+  creada_at          DateTime  @default(now()) @db.Timestamptz(6)
+  actualizada_at     DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@index([empresa_id])
+}
+
+/// Peticiones «Quiero que Grupo ASegura me lo revise» (migración 0036): prueba del consentimiento y resultado del lead.
+/// Sin datos de contacto. Histórico: rrhh_app no tiene DELETE.
+model leads_correduria {
+  id                     String   @id @default(uuid()) @db.Uuid
+  empresa_id             String   @db.Uuid
+  obligacion_id          String?  @db.Uuid
+  usuario_id             String   @db.Uuid
+  consentimiento_version String
+  consentimiento_at      DateTime @db.Timestamptz(6)
+  resumen                String
+  estado                 String
+  detalle                String?
+  creada_at              DateTime @default(now()) @db.Timestamptz(6)
+  actualizada_at         DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([empresa_id])
+}

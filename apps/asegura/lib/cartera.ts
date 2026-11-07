@@ -15,6 +15,7 @@ import {
   type ObjetoAsegurado,
   type Retarificabilidad,
   type UrgenciaRenovacion,
+  vigenciaSiniestro,
 } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
@@ -203,7 +204,11 @@ export async function resumenCartera(correduriaId: string): Promise<ResumenCarte
           where: { ...basePoliza, estado: { in: estadosVigentes }, fechaVencimiento: null },
         }),
         db.poliza.count({ where: basePoliza }),
-        db.siniestro.count({ where: { correduriaId, fusionadoEnSiniestroId: null, estado: { in: ['abierto', 'en_tramitacion'] } } }),
+        // Solo los abiertos CONFIRMADOS (`vigenciaSiniestro`): uno sin movimiento desde hace meses no suma.
+        db.siniestro.findMany({
+          where: { correduriaId, fusionadoEnSiniestroId: null, estado: { in: ['abierto', 'en_tramitacion'] } },
+          select: { estado: true, tipo: true, origen: true, fechaHora: true, fechaDeclaracion: true, situacionesCima: true, accionesCima: true, pagosCima: true },
+        }).then((filas) => filas.filter((f) => vigenciaSiniestro({ ...f, estado: String(f.estado), origen: String(f.origen) }, hoy) === 'abierto').length),
         db.poliza.count({
           where: {
             ...basePoliza, estado: { in: estadosVigentes }, sustituidaAt: null,

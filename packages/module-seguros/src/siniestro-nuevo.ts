@@ -66,6 +66,12 @@ export interface SiniestroEntrante {
    * siniestro que sigue vivo deja a un cliente sin su llamada).
    */
   estado: string | null
+  /**
+   * `vigenciaSiniestro` calculada por asegura. `'sin_confirmar'` = el estado dice abierto pero lleva
+   * meses sin movimiento: el aviso NO lo da por «sigue abierto», pide revisarlo con la compañía.
+   * `null`/ausente = asegura viejo: se trata como antes (conservador, por `estado`).
+   */
+  vigencia?: 'abierto' | 'sin_confirmar' | 'cerrado' | null
 }
 
 /**
@@ -186,6 +192,11 @@ function estaCerrado(s: SiniestroEntrante): boolean {
   return s.estado === 'cerrado' || s.estado === 'rechazado'
 }
 
+/** Abierto en papel pero sin movimiento desde hace meses: «revisar con la compañía», no «llama, sigue abierto». */
+function estaSinConfirmar(s: SiniestroEntrante): boolean {
+  return s.vigencia === 'sin_confirmar' && !estaCerrado(s)
+}
+
 /** Una línea del aviso: quién, con quién, qué póliza, cuándo, con qué referencia y su estado. */
 function lineaSiniestro(s: SiniestroEntrante): string {
   const quien = s.cliente ?? 'cliente sin nombre en la ficha'
@@ -197,7 +208,8 @@ function lineaSiniestro(s: SiniestroEntrante): string {
   const ref = s.referencia ? ` · ref. ${s.referencia}` : ''
   // El estado se dice tal cual, nunca se calla: `null` es «no informado», NO
   // «abierto» — aunque a efectos de la llamada se trate igual (conservador).
-  const estado = s.estado === 'cerrado' ? ' · ✅ cerrado'
+  const estado = estaSinConfirmar(s) ? ' · ❔ sin confirmar con la compañía'
+      : s.estado === 'cerrado' ? ' · ✅ cerrado'
     : s.estado === 'rechazado' ? ' · 🚫 rechazado'
     : s.estado === 'en_tramitacion' ? ' · en tramitación'
     : s.estado === 'abierto' ? ' · abierto'
@@ -222,19 +234,26 @@ export function textoAvisoSiniestros(nuevos: readonly SiniestroEntrante[], resta
   const cola = restantes > 0
     ? `\n\nY ${restantes} más esperando: entran en el aviso de mañana, ninguno se pierde.`
     : ''
-  const abiertos = nuevos.filter(s => !estaCerrado(s)).length
-  const cerrados = nuevos.length - abiertos
+  const sinConfirmar = nuevos.filter(estaSinConfirmar).length
+  const abiertos = nuevos.filter(s => !estaCerrado(s) && !estaSinConfirmar(s)).length
+  const cerrados = nuevos.filter(estaCerrado).length
   const pieCerrados = cerrados > 0
     ? `\n\n✅ ${cerrados} de estos ya constan resueltos en la compañía (marcados abajo) — no hace falta llamar por esos.`
     : ''
+  const pieSinConfirmar = sinConfirmar > 0
+    ? `\n\n❔ ${sinConfirmar} de estos constan abiertos pero llevan meses sin movimiento: revisar con la compañía si siguen vivos (no se dan por abiertos).`
+    : ''
   const pieLlamada = abiertos > 0
     ? '\n\n📞 Para los que siguen <b>abiertos</b>, toca llamar al cliente y hacerle seguimiento.'
-    : '\n\n✅ Todos entraron ya resueltos: no hay ninguna llamada pendiente por este aviso.'
+    : sinConfirmar > 0
+      ? '\n\n✅ Ninguno consta abierto con movimiento reciente: no hay llamada de seguimiento por este aviso.'
+      : '\n\n✅ Todos entraron ya resueltos: no hay ninguna llamada pendiente por este aviso.'
   return (
     `${titulo}\n` +
     'Han entrado por CIMA: la compañía ya tiene el parte del cliente.\n\n' +
     nuevos.map(lineaSiniestro).join('\n') +
     pieCerrados +
+    pieSinConfirmar +
     cola +
     pieLlamada
   )

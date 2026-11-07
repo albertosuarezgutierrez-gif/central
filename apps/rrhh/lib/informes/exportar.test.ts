@@ -3,7 +3,7 @@ import * as XLSX from 'xlsx'
 import { entidad } from './catalogo'
 import { construirCabecera } from './cabecera'
 import { calcularInforme } from './motor'
-import { generarCsv, generarXlsx, nombreArchivo } from './exportar'
+import { generarCsv, generarXlsx, neutralizarFormula, nombreArchivo } from './exportar'
 import { generarPdf } from './exportar-pdf'
 import { dineroEs, fechaEs, fechaHoraEs, numeroEs } from './formato'
 
@@ -58,6 +58,18 @@ describe('exportación de informes', () => {
     expect(lineas[0]).toBe('"Empleado";"Fecha";"Entrada";"Horas"')
     expect(lineas).toContain('"Luis";"03/03/2026";"03/03/2026 09:00";"1234,50"')
     expect(lineas).toContain('"Ana";"03/03/2026";"03/03/2026 08:00";""')
+  })
+
+  it('csv: un texto que empieza por = + - @ (o tabulador) sale con comilla simple delante; los números negativos, no', () => {
+    for (const t of ['=HYPERLINK("http://x","clic")', '+34 600', '-1+2', '@SUMA(A1)', '\t=1']) expect(neutralizarFormula(t)).toBe(`'${t}`)
+    expect(neutralizarFormula('Ana')).toBe('Ana')
+    const malas = [
+      { empleado_id: 'e3', empleado_etiqueta: 'x', empleado: '=HYPERLINK("http://evil","Ana")', fecha: '2026-03-04', entrada: new Date('2026-03-04T07:00:00Z'), horas: -2 },
+    ]
+    const csv = generarCsv(calcularInforme(ENT, pet, malas))
+    expect(csv).toContain(`"'=HYPERLINK(""http://evil"",""Ana"")"`)
+    expect(csv).not.toMatch(/(^|;|\n)"=/)
+    expect(csv).toContain('"-2,00"')
   })
 
   it('nombre de archivo saneado', () => {
