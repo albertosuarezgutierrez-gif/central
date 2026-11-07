@@ -1,11 +1,14 @@
 'use server'
-// Acciones de Ajustes. TODAS: sesión → taller de la sesión → conTaller (RLS) → re-comprobar dueño en BD →
+// Acciones de Ajustes. TODAS: sesión → taller de la sesión → conTaller (RLS) → capacidad re-leída en BD («ajustes», o
+// «usuarios» para personas/roles; ambas reservadas al dueño en module-taller) →
 // cambio validado (validarConfig) → auditoría antes/después. Nada se fía de lo que llega del navegador.
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import { Prisma } from '@prisma/client'
 import { conTaller, type Tx } from '@/lib/db'
 import { getSession } from '@/lib/session'
-import { usuarioConRol, type Acceso } from '@/lib/acceso'
+import { type Acceso } from '@/lib/acceso'
+import { DebeCambiarPinError, exigir, SesionObsoletaError, SinPermisoError, type Capacidad } from '@/lib/permisos'
 import { aplicarAjuste, type CambioAjustes } from '@/lib/ajustes'
 import { auditar, guardarConfig, leerConfig, type TxConfig } from '@/lib/config-repo'
 import { almacenActivo, mimeReal } from '@/lib/almacen'
@@ -13,20 +16,30 @@ import { direccionOpcional } from '@/lib/direccion'
 import { ErrorMarca, guardarColores, guardarLogoRuta, type TxMarca } from '@/lib/marca-repo'
 import { guardarIdentificadorRrhh, type TxVinculo } from '@/lib/vinculo-rrhh'
 import { desbloquearTaller, fijarCodigoTaller } from '@/lib/bloqueos-ajustes'
-import { altaUsuario, bajaUsuario, ErrorPersonal, guardarProveedor, resetPinUsuario, ROLES, type TxPersonal } from '@/lib/personal'
+import { altaUsuario, bajaUsuario, ErrorPersonal, guardarProveedor, guardarRolesUsuario, resetPinUsuario, ROLES, type TxPersonal } from '@/lib/personal'
+import { CAPACIDADES, validarCapacidadesPorRol } from '@central/module-taller'
 
 export type Respuesta<T = object> = ({ ok: true } & T) | { ok: false; errores: string[] }
 
 class NoAutorizado extends Error {}
 
-async function comoDueno<T>(fn: (tx: Tx, s: Acceso) => Promise<T>): Promise<T> {
+/** Capacidad re-leída en BD (roles + config del taller). Un PIN temporal o una sesión obsoleta tampoco pasan. */
+async function comoCon<T>(cap: Capacidad, fn: (tx: Tx, s: Acceso) => Promise<T>): Promise<T> {
   const s = await getSession()
   if (!s) throw new NoAutorizado('sin sesión')
   return conTaller(s.tallerId, async (tx) => {
-    if (!(await usuarioConRol(tx as never, s, ['dueno']))) throw new NoAutorizado('solo el dueño')
+    try {
+      await exigir(tx as never, s, cap)
+    } catch (e) {
+      // Solo los errores de ACCESO se traducen; un fallo de BD sigue siendo un fallo (no «no tienes permiso»).
+      if (e instanceof SinPermisoError || e instanceof DebeCambiarPinError || e instanceof SesionObsoletaError) throw new NoAutorizado(e.message)
+      throw e
+    }
     return fn(tx, s)
   }, { timeout: 20_000 })
 }
+const comoDueno = <T,>(fn: (tx: Tx, s: Acceso) => Promise<T>) => comoCon('ajustes', fn)
+const comoGestorPersonas = <T,>(fn: (tx: Tx, s: Acceso) => Promise<T>) => comoCon('usuarios', fn)
 
 async function responder<T extends object>(fn: () => Promise<T>): Promise<Respuesta<T>> {
   try {
@@ -224,17 +237,20 @@ export async function quitarLogo(): Promise<Respuesta> {
   )
 }
 
-const Alta = z.object({ nombre: txt, rol: z.enum(ROLES) })
+const Rol = z.enum(ROLES)
+const Cap = z.enum(CAPACIDADES)
+// `rol` suelto se sigue aceptando (formularios viejos); lo nuevo es `roles` (uno o varios) + `capacidadesExtra`.
+const Alta = z.object({ nombre: txt, rol: Rol.optional(), roles: z.array(Rol).max(ROLES.length).optional(), capacidadesExtra: z.array(Cap).max(CAPACIDADES.length).optional() })
 
 export async function altaPersona(entrada: unknown): Promise<Respuesta<{ pin: string }>> {
   const p = Alta.safeParse(entrada)
   if (!p.success) return { ok: false, errores: ['Datos inválidos'] }
   return responder(() =>
-    comoDueno(async (tx, s) => {
+    comoGestorPersonas(async (tx, s) => {
       const r = await altaUsuario(tx as unknown as TxPersonal, s.tallerId, p.data)
       await auditar(tx as unknown as TxConfig, {
         tallerId: s.tallerId, usuarioId: s.usuarioId, entidad: 'usuarios_taller', entidadId: r.id, accion: 'alta',
-        antes: null, despues: { nombre: p.data.nombre, rol: p.data.rol },
+        antes: null, despues: { nombre: p.data.nombre, roles: p.data.roles ?? [p.data.rol], capacidadesExtra: p.data.capacidadesExtra ?? [] },
       })
       return { pin: r.pin }
     }),
@@ -243,11 +259,53 @@ export async function altaPersona(entrada: unknown): Promise<Respuesta<{ pin: st
 
 const Id = z.string().uuid()
 
+// ── Roles y capacidades (0014): solo quien tiene «usuarios» (el dueño). Nunca queda el taller sin dueño activo. ──
+export async function guardarRolesPersona(entrada: unknown): Promise<Respuesta> {
+  const p = z.object({ id: Id, roles: z.array(Rol).max(ROLES.length), capacidadesExtra: z.array(Cap).max(CAPACIDADES.length) }).safeParse(entrada)
+  if (!p.success) return { ok: false, errores: ['Datos inválidos'] }
+  return responder(() =>
+    comoGestorPersonas(async (tx, s) => {
+      const r = await guardarRolesUsuario(tx as unknown as TxPersonal, s.tallerId, p.data.id, p.data)
+      await auditar(tx as unknown as TxConfig, {
+        tallerId: s.tallerId, usuarioId: s.usuarioId, entidad: 'usuarios_taller', entidadId: p.data.id, accion: 'roles', antes: r.antes, despues: r.despues,
+      })
+      return {}
+    }),
+  )
+}
+
+/** Qué capacidades lleva cada rol en ESTE taller. `null` = volver a los valores por defecto. El dueño no se edita. */
+export async function guardarCapacidadesPorRol(entrada: unknown): Promise<Respuesta> {
+  const p = z.record(z.array(z.string().max(40)).max(CAPACIDADES.length)).nullable().safeParse(entrada)
+  if (!p.success) return { ok: false, errores: ['Datos inválidos'] }
+  let valor: object | null = null
+  if (p.data !== null) {
+    const v = validarCapacidadesPorRol(p.data)
+    if (!v.ok) return { ok: false, errores: v.errores }
+    valor = v.valor
+  }
+  return responder(() =>
+    comoGestorPersonas(async (tx, s) => {
+      const antes = await tx.configuracion.findFirst({ where: { tallerId: s.tallerId }, select: { capacidadesPorRol: true } })
+      if (!antes) throw { errores: ['El taller no tiene configuración de alta (0002 sin aplicar)'] }
+      await tx.configuracion.update({
+        where: { tallerId: s.tallerId },
+        data: { capacidadesPorRol: valor === null ? Prisma.DbNull : (valor as Prisma.InputJsonValue), actualizadoEn: new Date() },
+      })
+      await auditar(tx as unknown as TxConfig, {
+        tallerId: s.tallerId, usuarioId: s.usuarioId, entidad: 'configuracion', accion: 'ajustes:capacidades_por_rol',
+        antes: antes.capacidadesPorRol ?? null, despues: valor,
+      })
+      return {}
+    }),
+  )
+}
+
 export async function bajaPersona(id: unknown): Promise<Respuesta> {
   const p = Id.safeParse(id)
   if (!p.success) return { ok: false, errores: ['Datos inválidos'] }
   return responder(() =>
-    comoDueno(async (tx, s) => {
+    comoGestorPersonas(async (tx, s) => {
       await bajaUsuario(tx as unknown as TxPersonal, s.tallerId, p.data)
       await auditar(tx as unknown as TxConfig, {
         tallerId: s.tallerId, usuarioId: s.usuarioId, entidad: 'usuarios_taller', entidadId: p.data, accion: 'baja',
@@ -262,7 +320,7 @@ export async function resetPinPersona(id: unknown): Promise<Respuesta<{ pin: str
   const p = Id.safeParse(id)
   if (!p.success) return { ok: false, errores: ['Datos inválidos'] }
   return responder(() =>
-    comoDueno(async (tx, s) => {
+    comoGestorPersonas(async (tx, s) => {
       const r = await resetPinUsuario(tx as unknown as TxPersonal, s.tallerId, p.data)
       // Nunca el PIN ni su hash en la auditoría.
       await auditar(tx as unknown as TxConfig, {
@@ -296,7 +354,7 @@ export async function guardarVinculoRrhhPersona(entrada: unknown): Promise<Respu
   const p = z.object({ id: Id, identificador: z.string().max(100) }).safeParse(entrada)
   if (!p.success) return { ok: false, errores: ['Datos inválidos'] }
   return responder(() =>
-    comoDueno(async (tx, s) => {
+    comoGestorPersonas(async (tx, s) => {
       const identificador = await guardarIdentificadorRrhh(tx as unknown as TxVinculo, s.tallerId, p.data.id, p.data.identificador)
       await auditar(tx as unknown as TxConfig, {
         tallerId: s.tallerId, usuarioId: s.usuarioId, entidad: 'usuarios_taller', entidadId: p.data.id, accion: 'vinculo_rrhh',

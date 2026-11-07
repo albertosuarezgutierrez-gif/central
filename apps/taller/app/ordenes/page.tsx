@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation'
 import { paraPagina } from '@/lib/contexto'
-import { tienePermiso } from '@/lib/permisos'
 import { ESTADOS_OT } from '@central/module-taller'
 import { Cabecera } from '../_marca'
 import { claseEstado } from '../_ui'
@@ -14,7 +13,7 @@ export default async function Pagina({ searchParams }: { searchParams: Promise<{
   const q = await searchParams
   const n = Math.min(Math.max(Number(q.n) || PAGINA, PAGINA), 1000)
   const datos = await paraPagina('ordenes_ver', async (tx, c) => {
-    const mecanico = !tienePermiso(c.rol, 'contacto_cliente_ver')
+    const mecanico = !c.capacidades.has('ordenes_todas')
     const estado = (ESTADOS_OT as readonly string[]).includes(q.estado ?? '') ? q.estado! : null
     const ots = await tx.ordenTrabajo.findMany({
       where: {
@@ -24,7 +23,7 @@ export default async function Pagina({ searchParams }: { searchParams: Promise<{
       orderBy: { numero: 'desc' }, take: n + 1,
     })
     const vehs = await tx.vehiculo.findMany({ where: { tallerId: c.tallerId, id: { in: ots.map((o) => o.vehiculoId) } } })
-    const mias = mecanico || tienePermiso(c.rol, 'partes')
+    const mias = mecanico || c.capacidades.has('partes')
       ? (await tx.parteHoras.findMany({ where: { tallerId: c.tallerId, mecanicoId: c.usuarioId, fin: null } })).map((p) => p.otId)
       : []
     return { mecanico, estado, hayMas: ots.length > n, mias,

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { conTaller } from '@/lib/db'
 import { getSession } from '@/lib/session'
 import { usuarioDeSesion } from '@/lib/acceso'
+import { capacidadesDeSesion, type Capacidad } from '@/lib/permisos'
 import { urlPortalEmpleado } from '@/lib/enlaces'
 import { formatearCantidad } from '@central/module-taller'
 import { cargarAvisosStock } from '@/lib/stock'
@@ -25,14 +26,20 @@ const ICONO = {
   albaranes: 'M3 7h11v9H3zM14 10h4l3 3v3h-7zM7 19a1.5 1.5 0 1 0 0-.01M17 19a1.5 1.5 0 1 0 0-.01',
 } as const
 
-const SECCIONES = [
-  { href: '/recepcion', titulo: 'Recepción', desc: 'Entrada de vehículos', icono: ICONO.recepcion },
-  { href: '/citas', titulo: 'Citas', desc: 'Agenda e invitaciones', icono: ICONO.citas },
-  { href: '/ordenes', titulo: 'Órdenes', desc: 'Órdenes de trabajo', icono: ICONO.ordenes },
-  { href: '/presupuestos', titulo: 'Presupuestos', desc: 'Presupuestos y paquetes', icono: ICONO.presupuestos },
-  { href: '/facturas', titulo: 'Facturas', desc: 'Facturas y cobros', icono: ICONO.facturas },
-  { href: '/ajustes', titulo: 'Ajustes', desc: 'Configuración del taller', icono: ICONO.ajustes },
-  { href: '/cambiar-pin', titulo: 'Mi PIN', desc: 'Cambiar mi PIN', icono: ICONO.pin },
+// Cada tarjeta sale solo si la persona tiene la capacidad (roles + extras + config del taller); el servidor la vuelve a exigir
+// al entrar. `null` = cualquiera con sesión.
+const SECCIONES: { href: string; titulo: string; desc: string; icono: string; cap: Capacidad | null }[] = [
+  { href: '/recepcion', titulo: 'Recepción', desc: 'Entrada de vehículos', icono: ICONO.recepcion, cap: 'recepcion' },
+  { href: '/citas', titulo: 'Citas', desc: 'Agenda e invitaciones', icono: ICONO.citas, cap: 'citas' },
+  { href: '/ordenes', titulo: 'Órdenes', desc: 'Órdenes de trabajo', icono: ICONO.ordenes, cap: 'ordenes_ver' },
+  { href: '/presupuestos', titulo: 'Presupuestos', desc: 'Presupuestos y paquetes', icono: ICONO.presupuestos, cap: 'presupuestos' },
+  { href: '/facturas', titulo: 'Facturas', desc: 'Facturas y cobros', icono: ICONO.facturas, cap: 'facturar' },
+  { href: '/panel', titulo: 'Panel', desc: 'Márgenes, horas y facturación', icono: ICONO.panel, cap: 'margenes_ver' },
+  { href: '/ajustes', titulo: 'Ajustes', desc: 'Configuración del taller', icono: ICONO.ajustes, cap: 'ajustes' },
+  { href: '/cambiar-pin', titulo: 'Mi PIN', desc: 'Cambiar mi PIN', icono: ICONO.pin, cap: null },
+  { href: '/articulos', titulo: 'Artículos', desc: 'Catálogo e inventario', icono: ICONO.almacen, cap: 'almacen' },
+  { href: '/pedidos', titulo: 'Pedidos', desc: 'Pedidos a proveedor', icono: ICONO.pedidos, cap: 'almacen' },
+  { href: '/albaranes', titulo: 'Albaranes', desc: 'Entradas de mercancía', icono: ICONO.albaranes, cap: 'almacen' },
 ]
 
 function Icono({ d }: { d: string }) {
@@ -49,17 +56,12 @@ export default async function Inicio() {
   const u = await conTaller(s.tallerId, (tx) => usuarioDeSesion(tx as never, s))
   if (!u) redirect('/login') // baja, o PIN cambiado/reseteado desde otro sitio: la cookie vieja ya no vale
   if (u.debeCambiarPin === true) redirect('/cambiar-pin')
+  const acceso = await conTaller(s.tallerId, (tx) => capacidadesDeSesion(tx as never, s))
+  if (!acceso) redirect('/login')
   const nominas = urlPortalEmpleado()
-  // Almacén: dueño y administración. Los avisos de stock (negativo, agotado, bajo mínimo) salen en el inicio del dueño.
-  const verAlmacen = u.rol === 'dueno' || u.rol === 'admin'
-  const avisosStock = u.rol === 'dueno' ? await conTaller(s.tallerId, (tx) => cargarAvisosStock(tx as never, s.tallerId)) : []
-  // El panel (márgenes) es solo del dueño; el servidor lo vuelve a comprobar en /panel.
-  const secciones = u.rol === 'dueno'
-    ? [...SECCIONES.slice(0, 5), { href: '/panel', titulo: 'Panel', desc: 'Márgenes, horas y facturación', icono: ICONO.panel }, ...SECCIONES.slice(5)]
-    : SECCIONES
-  const todas = verAlmacen
-    ? [...secciones, { href: '/articulos', titulo: 'Artículos', desc: 'Catálogo e inventario', icono: ICONO.almacen }, { href: '/pedidos', titulo: 'Pedidos', desc: 'Pedidos a proveedor', icono: ICONO.pedidos }, { href: '/albaranes', titulo: 'Albaranes', desc: 'Entradas de mercancía', icono: ICONO.albaranes }]
-    : secciones
+  // Avisos de stock (negativo, agotado, bajo mínimo): a quien gestiona el almacén.
+  const avisosStock = acceso.capacidades.has('almacen') ? await conTaller(s.tallerId, (tx) => cargarAvisosStock(tx as never, s.tallerId)) : []
+  const todas = SECCIONES.filter((x) => x.cap === null || acceso.capacidades.has(x.cap))
   return (
     <>
       <Cabecera conSalir />

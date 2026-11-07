@@ -1,7 +1,9 @@
 import { redirect } from 'next/navigation'
 import { conTaller } from '@/lib/db'
 import { getSession } from '@/lib/session'
-import { usuarioConRol, usuarioDeSesion } from '@/lib/acceso'
+import { usuarioDeSesion } from '@/lib/acceso'
+import { capacidadesDeSesion, capacidadesPorRolDe } from '@/lib/permisos'
+import { capacidadesPorRolEfectivas, rolesDeFila } from '@central/module-taller'
 import { leerConfig, type TxConfig } from '@/lib/config-repo'
 import { leerMarcaGuardada } from '@/lib/marca-repo'
 import { estadoBloqueosLogin } from '@/lib/bloqueos-ajustes'
@@ -19,13 +21,15 @@ export default async function Pagina() {
     const u = await usuarioDeSesion(tx as never, s)
     if (!u) return 'sin_sesion'
     if (u.debeCambiarPin === true) return 'cambiar_pin'
-    if (!(await usuarioConRol(tx as never, s, ['dueno']))) return 'sin_permiso'
+    // «ajustes» (reservada al dueño en module-taller), re-leída en BD con los roles de la persona.
+    const acceso = await capacidadesDeSesion(tx as never, s)
+    if (!acceso || !acceso.capacidades.has('ajustes')) return 'sin_permiso'
     const [config, taller, personas, proveedores, marca, bloqueos] = await Promise.all([
       leerConfig(tx as unknown as TxConfig, s.tallerId),
       tx.taller.findFirst({ where: { id: s.tallerId } }),
       tx.usuarioTaller.findMany({
         where: { tallerId: s.tallerId }, orderBy: [{ activo: 'desc' }, { nombre: 'asc' }],
-        select: { id: true, nombre: true, rol: true, activo: true, rrhhIdentificador: true },
+        select: { id: true, nombre: true, rol: true, roles: true, capacidadesExtra: true, activo: true, rrhhIdentificador: true },
       }),
       tx.proveedor.findMany({
         where: { tallerId: s.tallerId }, orderBy: [{ activo: 'desc' }, { nombre: 'asc' }],
@@ -34,6 +38,7 @@ export default async function Pagina() {
       leerMarcaGuardada(tx as never, s.tallerId),
       estadoBloqueosLogin(tx as never, s.tallerId, new Date()),
     ])
+    const capsGuardadas = await capacidadesPorRolDe(tx as never, s.tallerId)
     if (!config || !taller) return 'sin_config'
     return {
       yoId: s.usuarioId,
@@ -45,7 +50,11 @@ export default async function Pagina() {
         direccion: { cp: taller.cp, provincia: taller.provincia, municipio: taller.municipio, via: taller.via, numero: taller.numero },
       },
       marca: { primario: marca.primario, secundario: marca.secundario, tieneLogo: marca.logoRuta !== null },
-      personas,
+      personas: personas.map((p) => ({
+        id: p.id, nombre: p.nombre, activo: p.activo, rrhhIdentificador: p.rrhhIdentificador,
+        roles: rolesDeFila(p), capacidadesExtra: p.capacidadesExtra ?? [],
+      })),
+      capacidadesPorRol: { efectivas: capacidadesPorRolEfectivas(capsGuardadas), personalizado: capsGuardadas !== null },
       bloqueos,
       proveedores: proveedores.map((p) => ({ id: p.id, nombre: p.nombre, correo: p.correoPedidos, nif: p.nif ?? null, activo: p.activo })),
     }

@@ -1,58 +1,27 @@
-// Permisos por rol (decisión de Alberto, 04/11/2026). Se aplican en SERVIDOR: cada acción y cada página llama a
-// `exigir(tx, sesion, capacidad)`, que RE-LEE el rol en BD (la cookie no basta) y lanza `SinPermisoError`.
-// La UI solo esconde botones; esto es lo que protege.
+// Permisos por CAPACIDAD, aplicados en SERVIDOR: cada acción y cada página llama a `exigir`/`conPermiso(capacidad)`, que
+// RE-LEE en BD los roles de la persona, sus capacidades extra y la config de capacidades por rol de SU taller (la cookie
+// no basta) y lanza `SinPermisoError`. La UI solo esconde botones; esto es lo que protege.
+// Tabla por defecto (decisión de Alberto, 04/11/2026) y reglas (dueño = todo; «ajustes», «usuarios», «pedidos_enviar» solo
+// del dueño; al menos un dueño activo) en `@central/module-taller` src/permisos.ts. Editable por el dueño en Ajustes (0014).
 //
-//   dueno      todo (Ajustes, personal, márgenes).
-//   admin      recepción, ver OT, presupuestos, facturación, almacén y albaranes (costes de compra). Sin personal/PIN ni márgenes.
-//   recepcion  recepción, clientes/vehículos, presupuestos; OT solo ver estado.
-//   mecanico   «mis OT», su parte de horas, notas, fotos y propuestas de ampliación (sin precios). SIN precios de venta ni
-//              datos de contacto del cliente (solo el nombre).
-//
-// OT (decisión de Alberto, 04/11/2026): recepción PUEDE pasar en_curso → terminado y terminado → entregado
-// (`ordenes_avanzar`); el resto de cambios de estado a mano, solo el dueño (`ordenes_gestionar`).
+// OT: `ordenes_avanzar` = en_curso → terminado y terminado → entregado; el resto de cambios de estado a mano exige
+// `ordenes_gestionar`.
 import { SELECT_ACCESO, sesionVigente, usuarioDeSesion, type Acceso } from './acceso.ts'
+import {
+  CAPACIDADES, capacidadesDe, rolesDeFila, rolPrincipal, type Capacidad,
+} from '@central/module-taller'
 
-export const CAPACIDADES = [
-  'recepcion', // alta de recepciones, resguardo
-  'ordenes_ver', // listar/ver OT (el mecánico, solo las abiertas y sin precios ni contacto)
-  'ordenes_gestionar', // cambiar el estado de una OT a mano (cualquier transición)
-  'ordenes_avanzar', // solo en_curso→terminado y terminado→entregado (recepción)
-  'ot_trabajo', // notas, fotos y propuestas de ampliación del mecánico en su OT
-  'ampliaciones', // poner precio a una propuesta y mandarla al cliente
-  'partes', // abrir/cerrar SU parte de horas
-  'presupuestos', // crear/enviar presupuestos
-  'precios_ver', // precios de venta, totales, IVA
-  'contacto_cliente_ver', // teléfono, correo, NIF del cliente
-  'margenes_ver', // baremo vs horas reales y margen
-  'citas', // agenda: invitar a pedir cita, aceptar/rechazar/mover, convertir en recepción
-  'facturar', // emitir la factura de una OT terminada, ver facturas y registrar cobros
-  'facturas_rectificar', // anular o rectificar una factura emitida (solo el dueño)
-  'almacen', // artículos, inventario, pedidos en borrador y albaranes de entrada (con costes)
-  'pedidos_enviar', // marcar un pedido como enviado al proveedor (solo el dueño: nada sale sin su botón)
-] as const
-export type Capacidad = (typeof CAPACIDADES)[number]
+// La tabla de capacidades por rol, los roles múltiples y las reservadas al dueño viven en el módulo PURO (src/permisos.ts).
+// Desde 0014 (07/11/2026): permisos = unión de los roles de la persona (con la config de SU taller) + sus capacidades extra.
+export { CAPACIDADES, type Capacidad }
 
-const MATRIZ: Readonly<Record<Capacidad, readonly string[]>> = {
-  recepcion: ['dueno', 'admin', 'recepcion'],
-  ordenes_ver: ['dueno', 'admin', 'recepcion', 'mecanico'],
-  ordenes_gestionar: ['dueno'],
-  ordenes_avanzar: ['dueno', 'recepcion'],
-  ot_trabajo: ['dueno', 'mecanico'],
-  ampliaciones: ['dueno', 'admin', 'recepcion'],
-  partes: ['dueno', 'mecanico'],
-  presupuestos: ['dueno', 'admin', 'recepcion'],
-  precios_ver: ['dueno', 'admin', 'recepcion'],
-  contacto_cliente_ver: ['dueno', 'admin', 'recepcion'],
-  margenes_ver: ['dueno'],
-  citas: ['dueno', 'admin', 'recepcion'],
-  facturar: ['dueno', 'admin', 'recepcion'],
-  facturas_rectificar: ['dueno'],
-  almacen: ['dueno', 'admin'],
-  pedidos_enviar: ['dueno'],
-}
-
-export function tienePermiso(rol: string | null | undefined, cap: Capacidad): boolean {
-  return typeof rol === 'string' && (MATRIZ[cap] as readonly string[]).includes(rol)
+/**
+ * Compatibilidad: ¿el rol (o los roles) tiene la capacidad con la config POR DEFECTO? Las pantallas NO deben usarlo: usan
+ * `c.capacidades` (la config real del taller, re-leída en BD por `exigir`).
+ */
+export function tienePermiso(rol: string | readonly string[] | null | undefined, cap: Capacidad, capacidadesPorRol: unknown = null): boolean {
+  const roles = typeof rol === 'string' ? [rol] : Array.isArray(rol) ? rol : []
+  return capacidadesDe({ roles }, capacidadesPorRol).has(cap)
 }
 
 export class SinPermisoError extends Error {
@@ -87,22 +56,53 @@ export class DebeCambiarPinError extends Error {
   }
 }
 
-type TxRol = { usuarioTaller: { findFirst(a: unknown): Promise<{ rol: string; activo: boolean; debeCambiarPin?: boolean; sesionVersion?: number } | null> } }
-
-/** Rol VIGENTE en BD (usuario activo del taller de la sesión, con la misma versión de sesión) o null. */
-export async function rolVigente(tx: TxRol, s: Acceso): Promise<string | null> {
-  const u = await usuarioDeSesion(tx, s)
-  return u ? u.rol : null
+type FilaRol = { rol: string; roles?: string[]; capacidadesExtra?: string[]; activo: boolean; debeCambiarPin?: boolean; sesionVersion?: number }
+type TxRol = {
+  usuarioTaller: { findFirst(a: unknown): Promise<FilaRol | null> }
+  configuracion?: { findFirst(a: unknown): Promise<{ capacidadesPorRol?: unknown } | null> }
 }
 
-/** Devuelve el rol si tiene la capacidad; si no, lanza. */
-export async function exigir(tx: TxRol, s: Acceso, cap: Capacidad): Promise<string> {
+/** Lo que el servidor sabe del acceso tras re-leer la BD. */
+export type AccesoVigente = { rol: string; roles: string[]; capacidades: ReadonlySet<Capacidad> }
+
+/** Config de capacidades por rol del taller (NULL / sin fila = valores por defecto del módulo). */
+export async function capacidadesPorRolDe(tx: TxRol, tallerId: string): Promise<unknown> {
+  if (!tx.configuracion) return null
+  const c = await tx.configuracion.findFirst({ where: { tallerId }, select: { capacidadesPorRol: true } })
+  return c?.capacidadesPorRol ?? null
+}
+
+const vigente = async (tx: TxRol, tallerId: string, f: FilaRol): Promise<AccesoVigente> => {
+  const roles = rolesDeFila(f)
+  const capacidades = capacidadesDe({ roles, capacidadesExtra: f.capacidadesExtra ?? [] }, await capacidadesPorRolDe(tx, tallerId))
+  return { rol: rolPrincipal(roles) ?? f.rol, roles, capacidades }
+}
+
+/** Rol PRINCIPAL vigente en BD (usuario activo del taller de la sesión, con la misma versión de sesión) o null. */
+export async function rolVigente(tx: TxRol, s: Acceso): Promise<string | null> {
+  const u = await usuarioDeSesion(tx, s)
+  return u ? rolPrincipal(rolesDeFila(u)) : null
+}
+
+/** Capacidades vigentes del usuario de la sesión (null = sin sesión válida). Para menús; NO sustituye a `exigir`. */
+export async function capacidadesDeSesion(tx: TxRol, s: Acceso): Promise<AccesoVigente | null> {
+  const u = await usuarioDeSesion(tx, s)
+  return u ? vigente(tx, s.tallerId, u) : null
+}
+
+/** Devuelve el acceso vigente si tiene la capacidad; si no, lanza. Roles y config del taller RE-LEÍDOS en BD. */
+export async function exigirAcceso(tx: TxRol, s: Acceso, cap: Capacidad): Promise<AccesoVigente> {
   const f = await tx.usuarioTaller.findFirst({ where: { tallerId: s.tallerId, id: s.usuarioId }, select: SELECT_ACCESO })
   // Usuario activo pero con OTRA versión de sesión (PIN cambiado/reseteado): la cookie vieja ya no vale → a entrar de nuevo.
   if (f && f.activo && !sesionVigente(s, f)) throw new SesionObsoletaError()
   const u = f && f.activo ? f : null
-  const rol = u ? u.rol : null
-  if (!tienePermiso(rol, cap)) throw new SinPermisoError(cap)
+  const a = u ? await vigente(tx, s.tallerId, u) : null
+  if (!a || !a.capacidades.has(cap)) throw new SinPermisoError(cap)
   if (u?.debeCambiarPin === true) throw new DebeCambiarPinError()
-  return rol as string
+  return a
+}
+
+/** Devuelve el rol principal si tiene la capacidad; si no, lanza. */
+export async function exigir(tx: TxRol, s: Acceso, cap: Capacidad): Promise<string> {
+  return (await exigirAcceso(tx, s, cap)).rol
 }

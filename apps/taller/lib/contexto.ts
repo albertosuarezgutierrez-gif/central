@@ -3,11 +3,12 @@
 import { conTaller, type Tx } from './db'
 import { getSession } from './session'
 import { redirect } from 'next/navigation'
-import { DebeCambiarPinError, exigir, SesionObsoletaError, SinPermisoError, type Capacidad } from './permisos'
+import { DebeCambiarPinError, exigirAcceso, SesionObsoletaError, SinPermisoError, type Capacidad } from './permisos'
 import { leerConfig, type TxConfig } from './config-repo'
 
 export class SinSesionError extends Error {}
-export type Contexto = { tallerId: string; usuarioId: string; rol: string; sv: number }
+/** `rol` = principal (compatibilidad); los permisos se miran SIEMPRE en `capacidades` (roles + extras + config del taller). */
+export type Contexto = { tallerId: string; usuarioId: string; rol: string; roles: string[]; capacidades: ReadonlySet<Capacidad>; sv: number }
 
 export async function conPermiso<T>(
   cap: Capacidad, fn: (tx: Tx, c: Contexto) => Promise<T>, opciones?: { timeout?: number },
@@ -16,8 +17,8 @@ export async function conPermiso<T>(
   if (!s) throw new SinSesionError('sin sesión')
   try {
     return await conTaller(s.tallerId, async (tx) => {
-      const rol = await exigir(tx as never, s, cap)
-      return fn(tx, { tallerId: s.tallerId, usuarioId: s.usuarioId, rol, sv: s.sv })
+      const a = await exigirAcceso(tx as never, s, cap)
+      return fn(tx, { tallerId: s.tallerId, usuarioId: s.usuarioId, rol: a.rol, roles: a.roles, capacidades: a.capacidades, sv: s.sv })
     }, { timeout: 20_000, ...opciones })
   } catch (e) {
     if (e instanceof SesionObsoletaError) throw new SinSesionError('sesión obsoleta')

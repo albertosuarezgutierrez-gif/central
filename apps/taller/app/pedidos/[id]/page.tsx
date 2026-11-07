@@ -1,7 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import { formatearCantidad, pendienteDeRecibir, type UnidadStock } from '@central/module-taller'
 import { paraPagina } from '@/lib/contexto'
-import { tienePermiso } from '@/lib/permisos'
 import { textoPedido } from '@/lib/pedidos'
 import { claseEstado } from '../../_ui'
 import { Cabecera } from '../../_marca'
@@ -36,7 +35,7 @@ export default async function Pagina({ params, searchParams }: { params: Promise
     ])
     const urls = await firmarVarias(c.tallerId, docs.map((d) => d.ruta))
     return {
-      p, lineas, prov, texto, puedeEnviar: tienePermiso(c.rol, 'pedidos_enviar'),
+      p, lineas, prov, texto, puedeEnviar: c.capacidades.has('pedidos_enviar'),
       enlace: enlace ? { confirmadoEn: enlace.confirmadoEn as Date | null, caducaEn: enlace.caducaEn as Date, cerradoEn: enlace.cerradoEn as Date | null } : null,
       docsProveedor: docs.map((d) => ({ id: d.id as string, nombre: d.nombre as string, estado: d.estado as string, url: urls.get(d.ruta) ?? null, subidoEn: d.subidoEn as Date })),
     }

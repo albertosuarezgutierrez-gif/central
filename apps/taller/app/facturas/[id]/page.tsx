@@ -4,7 +4,6 @@ import QRCode from 'qrcode'
 import { LEYENDA_VERIFACTU } from '@central/core-fiscal'
 import { formatearEur } from '@central/module-taller'
 import { paraPagina } from '@/lib/contexto'
-import { tienePermiso } from '@/lib/permisos'
 import { cargarFacturaVista } from '@/lib/facturas-vista'
 import { Cabecera } from '../../_marca'
 import { abonoTotalAccion, anularAccion, cobrarAccion } from '../acciones'
@@ -24,7 +23,7 @@ export default async function Pagina({ params, searchParams }: { params: Promise
     if (!f) return null
     const medios = (await tx.medioCobro.findMany({ where: { tallerId: c.tallerId, activo: true }, orderBy: { nombre: 'asc' } }))
       .map((m) => ({ codigo: m.codigo, nombre: m.nombre }))
-    return { f, medios, puedeRectificar: tienePermiso(c.rol, 'facturas_rectificar') }
+    return { f, medios, puedeRectificar: c.capacidades.has('facturas_rectificar') }
   })
   if (datos === 'sin_sesion') redirect('/login')
   if (datos === 'sin_permiso') return <main className="contenido"><p className="tenue">Tu perfil no incluye la facturación.</p></main>

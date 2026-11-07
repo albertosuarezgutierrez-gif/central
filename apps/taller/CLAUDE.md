@@ -19,6 +19,8 @@
   completa ESE taller (404 si no existe; NIF NULL → se fija con el de la entrada; NIF distinto o de otro taller → 409, nunca se pisa). Taller existente
   con configuración y **0 dueños activos** → crea el dueño con PIN temporal (201); con dueño → 409 sin PIN. Candado `alta_dueno:<taller>`. Sin SQL
   nuevo (UPDATE de `nif` concedido en 0002). Migraciones 0001-0012 aplicadas en producción (0009-0012 el 07/11/2026); 0013 aplicada 07/11/2026.
+- **Permisos por CAPACIDAD (07/11/2026; SQL 0014 NO aplicada — aplicar ANTES de desplegar):** helper puro `module-taller/src/permisos.ts` (tabla por defecto, `capacidadesDe`, `errorUltimoDueno`). Persona = VARIOS `roles` + `capacidades_extra`; cada taller ajusta qué lleva cada rol (`configuracion.capacidades_por_rol`, NULL = por defecto). El dueño lo tiene todo y no se edita; `ajustes`, `usuarios` y `pedidos_enviar` son solo suyas; nunca queda el taller sin dueño activo (candado `alta_dueno:<taller>`).
+  `rol` se conserva = rol principal (trigger de 0014). Servidor: `conPermiso`/`paraPagina`/`exigir` re-leen roles y config en BD; las pantallas miran `c.capacidades`, nunca `c.rol`. Se edita en Ajustes → Personal («Roles y permisos») y «Qué puede hacer cada rol».
 - **RR.HH.:** `talleres.rrhh_empresa_id` lo fija SOLO el operador (`/api/operador/talleres`, POST o PATCH); rrhh solo ficha si esa empresa habilitó el taller
   (`empresas.fichaje_taller_id`). `/api/fichar` responde «registrado», sin datos de rrhh.
 - **Consentimiento:** el cliente final es del taller; solo pasa a lead de ASegura con su casilla propia, y el servicio

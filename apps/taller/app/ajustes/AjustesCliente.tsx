@@ -1,11 +1,13 @@
 'use client'
-// Pantalla de Ajustes (rol dueño). Cada sección guarda por su cuenta vía server action; el servidor
+// Pantalla de Ajustes (capacidad «ajustes»; personas y roles, «usuarios»: ambas solo del dueño). Cada sección guarda por su cuenta vía server action; el servidor
 // vuelve a validar TODO (validarConfig) y audita. Aquí solo se convierte lo tecleado a unidades.
 import { useState, useTransition, type ReactNode } from 'react'
 import {
   formatearEur, importeManoObraCent, FOTOS_RETENCION_MIN_DIAS, TIPOS_LINEA,
   type Aceite, type ConfigTaller, type FranjaHorario, type IntervalosAvisos, type SeguridadLogin, type MedioCobro, type SerieFactura, type TipoIva,
   type TipoLinea, type TipoVehiculo,
+  CAPACIDADES, CAPACIDADES_POR_ROL_DEFECTO, CAPACIDADES_RESERVADAS_DUENO, NOMBRE_CAPACIDAD, NOMBRE_ROL, ROLES_EDITABLES, ROLES_TALLER,
+  type Capacidad, type CapacidadesPorRol, type RolEditable,
 } from '@central/module-taller'
 import {
   codigoDesdeNombre, eurosACent, horasAMinutos, minutosAHoras, pbAPorcentaje, porcentajeAPb, type PaqueteEditable,
@@ -15,7 +17,7 @@ import { DIRECCION_VACIA, type Direccion } from '@/lib/direccion'
 import { coloresPorDefecto, fondosMarca } from '@/lib/marca'
 import { DireccionCp } from '../_direccion/DireccionCp'
 import {
-  altaPersona, bajaPersona, guardarAjuste, guardarDatosTaller, guardarMarcaColores, guardarProveedorAccion, desbloquearTallerAccion, guardarCodigoTallerAccion, guardarVinculoRrhhPersona, quitarLogo, resetPinPersona,
+  altaPersona, bajaPersona, guardarAjuste, guardarCapacidadesPorRol, guardarRolesPersona, guardarDatosTaller, guardarMarcaColores, guardarProveedorAccion, desbloquearTallerAccion, guardarCodigoTallerAccion, guardarVinculoRrhhPersona, quitarLogo, resetPinPersona,
   subirLogo, type Respuesta,
 } from './acciones'
 
@@ -32,14 +34,18 @@ export type DatosAjustes = {
     direccion: { cp: string | null; provincia: string | null; municipio: string | null; via: string | null; numero: string | null }
   }
   marca: { primario: string | null; secundario: string | null; tieneLogo: boolean }
-  personas: { id: string; nombre: string; rol: string; activo: boolean; rrhhIdentificador: string | null }[]
+  personas: { id: string; nombre: string; roles: string[]; capacidadesExtra: string[]; activo: boolean; rrhhIdentificador: string | null }[]
+  /** Matriz EFECTIVA del taller (NULL en BD = por defecto) y si el dueño la ha personalizado. */
+  capacidadesPorRol: { efectivas: CapacidadesPorRol; personalizado: boolean }
   bloqueos: { topeMinutos: number | null; usuariosBloqueados: string[] }
   proveedores: { id: string; nombre: string; correo: string | null; nif: string | null; activo: boolean }[]
 }
 
 const TAM_PAGINA = 50
 const NOMBRE_LINEA: Record<TipoLinea, string> = { mano_obra: 'Mano de obra', pieza: 'Piezas', granel: 'Aceite a granel', otro: 'Otros' }
-const NOMBRE_ROL: Record<string, string> = { recepcion: 'Recepción', mecanico: 'Mecánico', dueno: 'Dueño', admin: 'Administración' }
+const nombreRol = (r: string) => (NOMBRE_ROL as Record<string, string>)[r] ?? r
+const DELEGABLES = CAPACIDADES.filter((c) => !CAPACIDADES_RESERVADAS_DUENO.includes(c))
+const alternar = <T,>(xs: readonly T[], x: T, si: boolean): T[] => (si ? [...xs.filter((y) => y !== x), x] : xs.filter((y) => y !== x))
 const centAEuros = (c: number) => formatearEur(c).replace('€', '')
 
 /** Pinta ~50 y «Ver más» (nunca cientos de filas de golpe). */
@@ -728,8 +734,50 @@ function EmpresaRrhh({ vinculada }: { vinculada: boolean }) {
   )
 }
 
-function Personal({ personas, yoId, rrhhVinculada, bloqueados }: { personas: DatosAjustes['personas']; yoId: string; rrhhVinculada: boolean; bloqueados: string[] }) {
-  const [alta, setAlta] = useState({ nombre: '', rol: 'mecanico' })
+/** Roles (uno o varios) y capacidades sueltas de UNA persona. El servidor impide dejar el taller sin dueño activo. */
+function RolesPersona({ p, matriz }: { p: DatosAjustes['personas'][number]; matriz: CapacidadesPorRol }) {
+  const [roles, setRoles] = useState<string[]>(p.roles)
+  const [extra, setExtra] = useState<string[]>(p.capacidadesExtra)
+  const g = useGuardar()
+  // Lo que ya le dan sus roles (para no ofrecerlo como «extra»).
+  const deRoles = new Set<string>(roles.includes('dueno') ? CAPACIDADES : roles.flatMap((r) => (ROLES_EDITABLES as readonly string[]).includes(r) ? matriz[r as RolEditable] : []))
+  return (
+    <details className="seccion">
+      <summary>Roles y permisos</summary>
+      <div className="seccion-cuerpo">
+        <fieldset className="casillas">
+          <legend>Roles (puede tener varios)</legend>
+          {ROLES_TALLER.map((r) => (
+            <label key={r} className="casilla">
+              <input type="checkbox" checked={roles.includes(r)} onChange={(e) => setRoles(alternar(roles, r, e.target.checked))} /> {nombreRol(r)}
+            </label>
+          ))}
+        </fieldset>
+        {!roles.includes('dueno') && (
+          <fieldset className="casillas">
+            <legend>Además de sus roles</legend>
+            {DELEGABLES.filter((c) => !deRoles.has(c) || extra.includes(c)).map((c) => (
+              <label key={c} className="casilla">
+                <input type="checkbox" checked={extra.includes(c)} onChange={(e) => setExtra(alternar(extra, c, e.target.checked))} /> {NOMBRE_CAPACIDAD[c]}
+              </label>
+            ))}
+          </fieldset>
+        )}
+        <button type="button" className="btn" disabled={g.pendiente || roles.length === 0}
+          onClick={() => g.guardar(() => guardarRolesPersona({ id: p.id, roles, capacidadesExtra: roles.includes('dueno') ? [] : extra }))}>
+          Guardar roles
+        </button>
+        {roles.length === 0 && <p className="tenue">Marca al menos un rol.</p>}
+        {g.aviso}
+      </div>
+    </details>
+  )
+}
+
+function Personal({ personas, yoId, rrhhVinculada, bloqueados, matriz }: {
+  personas: DatosAjustes['personas']; yoId: string; rrhhVinculada: boolean; bloqueados: string[]; matriz: CapacidadesPorRol
+}) {
+  const [alta, setAlta] = useState<{ nombre: string; roles: string[] }>({ nombre: '', roles: ['mecanico'] })
   const [pinNuevo, setPinNuevo] = useState<{ nombre: string; pin: string } | null>(null)
   const g = useGuardar()
   return (
@@ -741,7 +789,7 @@ function Personal({ personas, yoId, rrhhVinculada, bloqueados }: { personas: Dat
       <ListaPerezosa items={personas} vacia="Sin personal" render={(p) => (
         <div key={p.id} className={`ficha${p.activo ? '' : ' inactiva'}`}>
           <strong>{p.nombre}{p.id === yoId ? ' (tú)' : ''}</strong>
-          <span className="tenue">{NOMBRE_ROL[p.rol] ?? p.rol}{p.activo ? '' : ' · de baja'}{bloqueados.includes(p.id) ? ' · BLOQUEADO por fallos de PIN (un «Nuevo PIN» lo levanta)' : ''}</span>
+          <span className="tenue">{p.roles.map(nombreRol).join(' + ')}{p.capacidadesExtra.length ? ` · +${p.capacidadesExtra.length} permiso(s)` : ''}{p.activo ? '' : ' · de baja'}{bloqueados.includes(p.id) ? ' · BLOQUEADO por fallos de PIN (un «Nuevo PIN» lo levanta)' : ''}</span>
           {p.activo && (
             <div className="fila">
               <button type="button" className="btn btn-sec" disabled={g.pendiente}
@@ -750,20 +798,58 @@ function Personal({ personas, yoId, rrhhVinculada, bloqueados }: { personas: Dat
                 onClick={() => confirm(`¿Dar de baja a ${p.nombre}?`) && g.guardar(() => bajaPersona(p.id))}>Dar de baja</button>
             </div>
           )}
+          {p.activo && <RolesPersona key={`${p.roles.join()}|${p.capacidadesExtra.join()}`} p={p} matriz={matriz} />}
           {p.activo && <VinculoRrhh id={p.id} inicial={p.rrhhIdentificador} />}
         </div>
       )} />
       <div className="ficha">
         <Campo etiqueta="Nombre"><input value={alta.nombre} onChange={(e) => setAlta({ ...alta, nombre: e.target.value })} /></Campo>
-        <Campo etiqueta="Rol">
-          <select value={alta.rol} onChange={(e) => setAlta({ ...alta, rol: e.target.value })}>
-            {Object.entries(NOMBRE_ROL).map(([k, n]) => <option key={k} value={k}>{n}</option>)}
-          </select>
-        </Campo>
-        <button type="button" className="btn" disabled={g.pendiente || !alta.nombre.trim()}
-          onClick={() => g.guardar(() => altaPersona(alta), (r) => { setPinNuevo({ nombre: alta.nombre.trim(), pin: r.pin }); setAlta({ nombre: '', rol: 'mecanico' }) })}>
+        <fieldset className="casillas">
+          <legend>Roles (puede tener varios: en un taller pequeño, mecánico + recepción)</legend>
+          {ROLES_TALLER.map((r) => (
+            <label key={r} className="casilla">
+              <input type="checkbox" checked={alta.roles.includes(r)} onChange={(e) => setAlta({ ...alta, roles: alternar(alta.roles, r, e.target.checked) })} /> {nombreRol(r)}
+            </label>
+          ))}
+        </fieldset>
+        <button type="button" className="btn" disabled={g.pendiente || !alta.nombre.trim() || alta.roles.length === 0}
+          onClick={() => g.guardar(() => altaPersona(alta), (r) => { setPinNuevo({ nombre: alta.nombre.trim(), pin: r.pin }); setAlta({ nombre: '', roles: ['mecanico'] }) })}>
           Dar de alta (genera PIN)
         </button>
+      </div>
+      {g.aviso}
+    </Seccion>
+  )
+}
+
+// ── Qué puede hacer cada rol EN ESTE TALLER (0014) ───────────────────────────
+function CapacidadesRoles({ inicial }: { inicial: DatosAjustes['capacidadesPorRol'] }) {
+  const [m, setM] = useState<Record<RolEditable, Capacidad[]>>({
+    admin: [...inicial.efectivas.admin], recepcion: [...inicial.efectivas.recepcion], mecanico: [...inicial.efectivas.mecanico],
+  })
+  const g = useGuardar()
+  return (
+    <Seccion titulo="Qué puede hacer cada rol">
+      <p className="tenue">
+        El Dueño puede hacerlo todo y no se cambia. «{CAPACIDADES_RESERVADAS_DUENO.map((c) => NOMBRE_CAPACIDAD[c]).join('», «')}» son solo del Dueño.
+        {inicial.personalizado ? ' Este taller tiene permisos personalizados.' : ' Ahora mismo, los valores por defecto.'}
+      </p>
+      {ROLES_EDITABLES.map((r) => (
+        <fieldset key={r} className="casillas">
+          <legend>{nombreRol(r)}</legend>
+          {DELEGABLES.map((c) => (
+            <label key={c} className="casilla">
+              <input type="checkbox" checked={m[r].includes(c)} onChange={(e) => setM({ ...m, [r]: alternar(m[r], c, e.target.checked) })} /> {NOMBRE_CAPACIDAD[c]}
+            </label>
+          ))}
+        </fieldset>
+      ))}
+      <div className="fila">
+        <button type="button" className="btn" disabled={g.pendiente} onClick={() => g.guardar(() => guardarCapacidadesPorRol(m))}>Guardar permisos</button>
+        <button type="button" className="btn btn-sec" disabled={g.pendiente}
+          onClick={() => confirm('¿Volver a los permisos por defecto?') && g.guardar(() => guardarCapacidadesPorRol(null), () => setM({
+            admin: [...CAPACIDADES_POR_ROL_DEFECTO.admin], recepcion: [...CAPACIDADES_POR_ROL_DEFECTO.recepcion], mecanico: [...CAPACIDADES_POR_ROL_DEFECTO.mecanico],
+          }))}>Valores por defecto</button>
       </div>
       {g.aviso}
     </Seccion>
@@ -822,7 +908,8 @@ export function AjustesCliente({ datos }: { datos: DatosAjustes }) {
       <CodigoTaller inicial={datos.taller.codigoAcceso} />
       <Acceso c={c} />
       <RetiradaYFotos c={c} />
-      <Personal personas={datos.personas} yoId={datos.yoId} rrhhVinculada={datos.taller.rrhhVinculada} bloqueados={datos.bloqueos.usuariosBloqueados} />
+      <Personal personas={datos.personas} yoId={datos.yoId} rrhhVinculada={datos.taller.rrhhVinculada} bloqueados={datos.bloqueos.usuariosBloqueados} matriz={datos.capacidadesPorRol.efectivas} />
+      <CapacidadesRoles inicial={datos.capacidadesPorRol} />
       {/* key: remonta solo si cambia el conjunto (alta nueva), sin perder la edición en curso de los demás */}
       <Proveedores key={datos.proveedores.map((p) => p.id).join()} proveedores={datos.proveedores} />
     </div>

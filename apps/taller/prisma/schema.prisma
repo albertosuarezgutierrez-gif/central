@@ -90,6 +90,8 @@ model Configuracion {
   portalTolImporteLineaCent      Int      @default(1) @map("portal_tol_importe_linea_cent")
   portalTolTotalCent             Int      @default(2) @map("portal_tol_total_cent")
   portalTolCantidadMil           Int      @default(0) @map("portal_tol_cantidad_mil")
+  /// 0014: { admin|recepcion|mecanico: [capacidad] }; NULL = valores por defecto de module-taller. El dueño no se edita.
+  capacidadesPorRol              Json?    @map("capacidades_por_rol")
   creadoEn                       DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
   actualizadoEn                  DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
 
@@ -251,7 +253,12 @@ model UsuarioTaller {
   id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tallerId         String    @map("taller_id") @db.Uuid
   nombre           String
+  /// Rol PRINCIPAL (compatibilidad/login). Desde 0014 lo mantiene un trigger = el de más alcance de `roles`.
   rol              String
+  /// 0014: uno o varios roles (dueno|admin|recepcion|mecanico). Permisos: `capacidadesDe` de module-taller.
+  roles            String[]  @default([])
+  /// 0014: capacidades sueltas además de las de sus roles (nunca las reservadas al dueño).
+  capacidadesExtra String[]  @default([]) @map("capacidades_extra")
   pinHash          String    @map("pin_hash")
   activo           Boolean   @default(true)
   intentosFallidos Int       @default(0) @map("intentos_fallidos")

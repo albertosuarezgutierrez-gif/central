@@ -2,7 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import { fechaInputDe, formatearEur, textoFotoPurgada, TRANSICIONES_OT, type EstadoOt } from '@central/module-taller'
 import { configDe, paraPagina } from '@/lib/contexto'
 import { firmarVarias } from '@/lib/almacen'
-import { capacidadParaTransicion, tienePermiso } from '@/lib/permisos'
+import { capacidadParaTransicion } from '@/lib/permisos'
 import { ESTADOS_ABIERTOS } from '@/lib/trabajo-ot'
 import { horasYMargen, ESTADOS_TRABAJABLES, type TxOrdenes } from '@/lib/ordenes'
 import { ESTADOS_FACTURABLES, facturaVivaDeOt, previsualizarFactura, type TxFacturas } from '@/lib/facturas'
@@ -29,10 +29,11 @@ export default async function Pagina({ params, searchParams }: { params: Promise
   const datos = await paraPagina('ordenes_ver', async (tx, c) => {
     const ot = await tx.ordenTrabajo.findFirst({ where: { tallerId: c.tallerId, id } })
     if (!ot) return null
-    const soloMecanico = c.rol === 'mecanico'
+    // Sin «ver todas las órdenes» (mecánico puro): solo las abiertas y solo sus partes.
+    const soloMecanico = !c.capacidades.has('ordenes_todas')
     // Un mecánico solo entra en las órdenes abiertas («mis OT»).
     if (soloMecanico && !['aceptado', 'en_curso', 'ampliacion_pendiente'].includes(ot.estado)) return null
-    const verPrecios = tienePermiso(c.rol, 'precios_ver')
+    const verPrecios = c.capacidades.has('precios_ver')
     const [veh, rec, lineas, partes, config] = await Promise.all([
       tx.vehiculo.findFirst({ where: { tallerId: c.tallerId, id: ot.vehiculoId } }),
       tx.recepcion.findFirst({ where: { tallerId: c.tallerId, id: ot.recepcionId } }),
@@ -42,11 +43,11 @@ export default async function Pagina({ params, searchParams }: { params: Promise
     ])
     const cli = rec ? await tx.cliente.findFirst({ where: { tallerId: c.tallerId, id: rec.clienteId } }) : null
     const nombres = new Map((await tx.usuarioTaller.findMany({ where: { tallerId: c.tallerId }, select: { id: true, nombre: true } })).map((u) => [u.id, u.nombre]))
-    const margen = tienePermiso(c.rol, 'margenes_ver') && config
+    const margen = c.capacidades.has('margenes_ver') && config
       ? await horasYMargen(tx as unknown as TxOrdenes, { tallerId: c.tallerId, otId: id, precioHoraCent: config.precioHoraCent })
       : null
     const miParte = (await tx.parteHoras.findMany({ where: { tallerId: c.tallerId, mecanicoId: c.usuarioId, fin: null } }))[0] ?? null
-    const pres = ot.presupuestoId && tienePermiso(c.rol, 'presupuestos') ? ot.presupuestoId : null
+    const pres = ot.presupuestoId && c.capacidades.has('presupuestos') ? ot.presupuestoId : null
     const [notas, fotosOt, propuestas] = await Promise.all([
       tx.otNota.findMany({ where: { tallerId: c.tallerId, otId: id }, orderBy: { creadoEn: 'desc' }, take: 50 }),
       tx.otFoto.findMany({ where: { tallerId: c.tallerId, otId: id }, orderBy: { creadoEn: 'desc' }, take: 60 }),
@@ -63,7 +64,7 @@ export default async function Pagina({ params, searchParams }: { params: Promise
       fotos: fotosOt.filter((f) => f.propuestaId === p.id).map((f) => ({ id: f.id as string, url: urls.get(f.ruta) ?? null, nota: (f.nota ?? null) as string | null, purgadaEn: f.purgadaEn ? (f.purgadaEn as Date).toISOString() : null })),
     }))
     // Facturación: factura viva (si la hay) y, si se puede facturar, qué saldría y con qué medios de cobro.
-    const puedeFacturar = tienePermiso(c.rol, 'facturar')
+    const puedeFacturar = c.capacidades.has('facturar')
     const fx = tx as unknown as TxFacturas
     const viva = puedeFacturar ? await facturaVivaDeOt(fx, c.tallerId, id) : null
     let previa: Previa | null = null
@@ -75,7 +76,7 @@ export default async function Pagina({ params, searchParams }: { params: Promise
         .map((m) => ({ codigo: m.codigo, nombre: m.nombre, esEfectivo: m.esEfectivo }))
     }
     // Catálogo para «añadir recambio» (solo quien puede poner precios; sin costes: solo descripción y unidad).
-    const articulos = tienePermiso(c.rol, 'ampliaciones') && ESTADOS_ABIERTOS.includes(ot.estado as EstadoOt)
+    const articulos = c.capacidades.has('ampliaciones') && ESTADOS_ABIERTOS.includes(ot.estado as EstadoOt)
       ? (await tx.articulo.findMany({ where: { tallerId: c.tallerId, activo: true }, orderBy: { descripcion: 'asc' }, take: 1000 }))
           .map((a) => ({ id: a.id as string, texto: `${a.descripcion}${a.referencia ? ` · ${a.referencia}` : ''} (${a.unidad === 'ml' ? 'litros' : 'ud'})` }))
       : []
@@ -88,15 +89,15 @@ export default async function Pagina({ params, searchParams }: { params: Promise
       retirada: config?.retirada ?? null,
       urlFirmaEntrega: ot.entregaFirmaRuta ? urls.get(ot.entregaFirmaRuta) ?? null : null,
       propuestas: vistaProp,
-      puedeTrabajar: tienePermiso(c.rol, 'ot_trabajo') && ESTADOS_ABIERTOS.includes(ot.estado as EstadoOt),
-      puedeAmpliar: tienePermiso(c.rol, 'ampliaciones'),
-      puedeAvanzar: tienePermiso(c.rol, 'ordenes_avanzar'),
+      puedeTrabajar: c.capacidades.has('ot_trabajo') && ESTADOS_ABIERTOS.includes(ot.estado as EstadoOt),
+      puedeAmpliar: c.capacidades.has('ampliaciones'),
+      puedeAvanzar: c.capacidades.has('ordenes_avanzar'),
       rol: c.rol,
       ot, veh, lineas, margen, miParteOtId: miParte?.otId ?? null, pres, verPrecios, soloMecanico,
-      verContacto: tienePermiso(c.rol, 'contacto_cliente_ver'),
-      puedeParte: tienePermiso(c.rol, 'partes'),
-      puedeGestionar: tienePermiso(c.rol, 'ordenes_gestionar'),
-      puedePresupuestar: tienePermiso(c.rol, 'presupuestos'),
+      verContacto: c.capacidades.has('contacto_cliente_ver'),
+      puedeParte: c.capacidades.has('partes'),
+      puedeGestionar: c.capacidades.has('ordenes_gestionar'),
+      puedePresupuestar: c.capacidades.has('presupuestos'),
       cli, firmada: rec?.firmadoEn != null,
       partes: partes
         .filter((p) => !soloMecanico || p.mecanicoId === c.usuarioId)
