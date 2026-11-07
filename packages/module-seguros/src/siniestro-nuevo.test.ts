@@ -229,3 +229,26 @@ test('un detalle ilegible o viejo se lee como «primera vez», que ancla sin man
   assert.equal(leerMarca('texto viejo sin cabecera'), null)
   assert.equal(leerMarca('no-es-fecha|aaa · algo'), null)
 })
+
+test('un sin_confirmar NO se avisa como «sigue abierto»: se pide revisar con la compañía', () => {
+  const t = textoAvisoSiniestros([sin('a', '2026-09-05T05:00:00.000Z', { vigencia: 'sin_confirmar' })])
+  assert.match(t, /sin confirmar con la compañía/)
+  assert.match(t, /revisar con la compañía/)
+  assert.doesNotMatch(t, /toca llamar/)
+  assert.doesNotMatch(t, / · abierto/)
+})
+
+test('con un abierto confirmado y un sin_confirmar, solo el primero pide llamada', () => {
+  const t = textoAvisoSiniestros([
+    sin('a', '2026-09-05T05:00:00.000Z', { vigencia: 'abierto' }),
+    sin('b', '2026-09-05T05:00:01.000Z', { vigencia: 'sin_confirmar' }),
+  ])
+  assert.match(t, /toca llamar/)
+  assert.match(t, /1 de estos constan abiertos pero llevan meses sin movimiento/)
+})
+
+test('sin vigencia (asegura viejo) el aviso se comporta como antes', () => {
+  const t = textoAvisoSiniestros([sin('a', '2026-09-05T05:00:00.000Z')])
+  assert.match(t, /toca llamar/)
+  assert.doesNotMatch(t, /sin confirmar/)
+})

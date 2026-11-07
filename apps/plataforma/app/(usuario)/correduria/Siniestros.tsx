@@ -118,10 +118,13 @@ export default function Siniestros({
   const aseguradoraPorPoliza: Record<string, string> = {}
   for (const p of polizas) { ramoPorPoliza[p.id] = p.tipo; aseguradoraPorPoliza[p.id] = p.aseguradora }
   const nAbiertos = lista === null ? null : lista.filter((s) => s.abierto).length
+  // «Sin confirmar» (abierto sin movimiento desde hace meses) va APARTE y no suma a abiertos.
+  const nSinConfirmar = lista === null ? 0 : lista.filter((s) => s.vigencia === 'sin_confirmar').length
+  const colaSinConfirmar = nSinConfirmar > 0 ? ` · ${nSinConfirmar} sin confirmar con la compañía` : ''
   const resumen =
     lista === null ? 'no se ha podido leer'
-      : nAbiertos === 0 ? (lista.length === 0 ? 'ninguno' : `${lista.length} · ninguno abierto`)
-        : `${nAbiertos} abierto${nAbiertos === 1 ? '' : 's'}`
+      : nAbiertos === 0 ? (lista.length === 0 ? 'ninguno' : `${lista.length} · ninguno abierto${colaSinConfirmar}`)
+        : `${nAbiertos} abierto${nAbiertos === 1 ? '' : 's'}${colaSinConfirmar}`
 
   async function llamar(method: 'POST' | 'PATCH', body: Record<string, unknown>): Promise<RespuestaSiniestro> {
     try {
@@ -808,7 +811,7 @@ function Fila({ s, documentos, onAnotar, onAnadirTercero, onQuitarTercero, ramoP
             —referencia, origen, tramitador, reserva— va al desplegar. */}
         <span style={{ whiteSpace: 'nowrap' }}>{s.fecha ? fechaEs(s.fecha) : <span style={muted}>sin fecha</span>}</span>
         <span style={{ whiteSpace: 'nowrap', color: s.abierto ? 'var(--warning)' : 'var(--muted)' }}>
-          {s.abierto ? '🟠' : '⚪'} {etiquetaEstadoSiniestro(s.estado)}
+          {s.vigencia === 'sin_confirmar' ? '❔ Sin confirmar con la compañía' : `${s.abierto ? '🟠' : '⚪'} ${etiquetaEstadoSiniestro(s.estado)}`}
         </span>
         <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{etiquetaTipoSiniestro(s.tipo)}</span>
         {propio && !s.confirmadoCima && (
@@ -1113,7 +1116,7 @@ function CambioEstado({ s, onAnotar }: { s: SiniestroCartera; onAnotar: (body: R
   return (
     <div style={{ display: 'grid', gap: 8 }}>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <span style={{ alignSelf: 'center' }}>{s.abierto ? '🟠' : '⚪'} {etiquetaEstadoSiniestro(s.estado)}</span>
+        <span style={{ alignSelf: 'center' }}>{s.vigencia === 'sin_confirmar' ? '❔ Sin confirmar con la compañía' : `${s.abierto ? '🟠' : '⚪'} ${etiquetaEstadoSiniestro(s.estado)}`}</span>
         {transiciones.map((a) => (
           <button key={a} type="button" disabled={ocupado !== null} onClick={() => void pasarA(a)} style={{ ...btnStyle('secundario'), minHeight: 44 }}>
             {ocupado === a ? '…' : `→ ${etiquetaEstadoSiniestro(a)}`}

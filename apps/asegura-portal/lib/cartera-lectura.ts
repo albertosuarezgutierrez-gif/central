@@ -87,6 +87,7 @@ import {
   WHERE_CARTERA_VIVA,
   type ReciboVigencia,
   type Vigencia,
+  vigenciaSiniestro,
 } from '@central/module-seguros'
 
 import { decryptField } from '@central/module-seguros-pii'
@@ -153,6 +154,8 @@ export type RecibosPortal = ResumenRecibos & {
 export type SiniestroPortal = {
   id: string
   estado: string
+  /** El estado dice abierto pero lleva meses sin movimiento: se pinta «Sin confirmar», no «Abierto», y no cuenta como abierto. */
+  sinConfirmar?: boolean
   referencia: string | null
   fechaHora: Date | null
   /**
@@ -981,6 +984,8 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
               id: true,
               polizaId: true,
               estado: true,
+              // Para `vigenciaSiniestro` (los abiertos a mano no caducan). GRANT desde el 02/09/2026.
+              origen: true,
               referencia: true,
               fechaHora: true,
               // QUÉ pasó y DÓNDE. `comentario` tiene GRANT desde el 07/09/2026;
@@ -1084,6 +1089,21 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
           (siniestrosPor.get(p.id) ?? []).map((x) => ({
             id: x.id,
             estado: x.estado,
+            // Abierto sin movimiento desde hace meses: la ficha NO dice «abierto» (regla de lectura, no escribe).
+            sinConfirmar:
+              vigenciaSiniestro(
+                {
+                  estado: String(x.estado),
+                  tipo: x.tipo,
+                  origen: String(x.origen),
+                  fechaHora: x.fechaHora,
+                  fechaDeclaracion: x.fechaDeclaracion,
+                  situacionesCima: x.situacionesCima,
+                  accionesCima: x.accionesCima,
+                  pagosCima: x.pagosCima,
+                },
+                hoy,
+              ) === 'sin_confirmar',
             referencia: x.referencia,
             fechaHora: x.fechaHora,
             // Las dos normalizaciones viven en el módulo puro: la provincia es
@@ -1201,7 +1221,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       // el día que la compañía añada uno, y el síntoma sería que un siniestro
       // deja de contar como abierto sin que nada falle.
       siniestros: historial,
-      siniestrosAbiertos: historial === null ? null : historial.filter((s) => siniestroAbierto(s.estado)),
+      siniestrosAbiertos: historial === null ? null : historial.filter((s) => siniestroAbierto(s.estado) && s.sinConfirmar !== true),
     }
   }
 

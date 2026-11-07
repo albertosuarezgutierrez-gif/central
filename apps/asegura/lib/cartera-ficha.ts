@@ -308,7 +308,10 @@ export type SiniestroFicha = {
   origen: 'cima' | 'gestionado_correduria'
   /** Tiene `id_siniestro_entidad`: CIMA lo conoce (o ya le pusimos la referencia de la compañía). */
   confirmadoCima: boolean
+  /** Abierto CONFIRMADO (con movimiento reciente, o a mano). Un abierto viejo NO lo es: ver `vigencia`. */
   abierto: boolean
+  /** `sin_confirmar` = el estado dice abierto pero nadie lo mueve desde hace meses: se pinta aparte y no suma a abiertos. */
+  vigencia: 'abierto' | 'sin_confirmar' | 'cerrado'
   actualizado: string
   /**
    * Campos propios del ramo de la póliza (`@central/module-seguros/siniestro-ramo.ts`).

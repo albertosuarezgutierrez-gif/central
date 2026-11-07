@@ -827,6 +827,18 @@ export {
   type DecisionSiniestros,
 } from './siniestro-nuevo.ts'
 
+export {
+  vigenciaSiniestro,
+  ultimoMovimientoSiniestro,
+  esTipoAsistencia,
+  leerVigenciaSiniestro,
+  DIAS_SIN_MOVIMIENTO_ABIERTO,
+  DIAS_SIN_MOVIMIENTO_ASISTENCIA,
+  PREFIJO_TIPO_ASISTENCIA,
+  type VigenciaSiniestro,
+  type SiniestroParaVigencia,
+} from './vigencia-siniestro.ts'
+
 // El vigía de los partes del portal que nadie ha abierto todavía en la
 // compañía. Lee su cabecera: el corte es `comunicado`, y `recibido` —que
 // parece atendido— sigue dentro a propósito.
