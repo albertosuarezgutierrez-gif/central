@@ -13,6 +13,7 @@ import { computeEmailLookupHash } from '@central/module-seguros-pii'
 import { Prisma } from './generated/asegura-client'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import { descifrarCampo } from './cartera-edicion'
+import { tragarSoloTablaAusente } from './pg-error'
 import { accionPorEvento, reboteEsDeLaFicha } from './email-estado.ts'
 import type { EventoCorreo } from './correo-eventos'
 
@@ -36,7 +37,7 @@ async function origenDelCorreo(resendId: string): Promise<Origen | null> {
     union all
     select cliente_id, correduria_id, null::text, 'recaptacion'
     from recaptacion_envios where resend_message_id = ${resendId} and canal = 'email'
-    limit 1`).catch(() => [] as Origen[])
+    limit 1`).catch(tragarSoloTablaAusente)
   return otros[0] ?? null
 }
 

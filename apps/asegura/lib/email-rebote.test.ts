@@ -2,6 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { tragarSoloTablaAusente } from './pg-error.ts'
 
 const leer = (r: string) => readFileSync(new URL(r, import.meta.url), 'utf8')
 const rebote = leer('./email-rebote.ts')
@@ -43,4 +44,14 @@ test('el SQL es idempotente, limpia la marca al cambiar el email y su backfill e
   assert.match(backfill, /k\.baja_en IS NOT NULL/)
   assert.match(backfill, /email_opt_out_source IS NULL/)
   assert.match(backfill, /email_rebotado_at IS NULL/)
+})
+
+test('🚨 solo 42P01 (tabla ausente) da «sin filas»; cualquier otro fallo de BD se propaga', () => {
+  assert.deepEqual(tragarSoloTablaAusente({ code: 'P2010', meta: { code: '42P01', message: 'relation "campana_envio" does not exist' } }), [])
+  const generico = new Error('Connection terminated unexpectedly')
+  assert.throws(() => tragarSoloTablaAusente(generico), (e) => e === generico)
+  assert.throws(() => tragarSoloTablaAusente({ code: 'P2010', meta: { code: '57014' } }))
+  // El catch de origenDelCorreo usa el helper (no un `() => []` que se lo trague todo).
+  assert.match(rebote, /\.catch\(tragarSoloTablaAusente\)/)
+  assert.doesNotMatch(rebote, /\.catch\(\(\) => \[\]/)
 })
